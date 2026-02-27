@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export interface SelectableItem {
   id: string;
@@ -33,8 +33,7 @@ interface UseSelectableItemsReturn<T extends SelectableItem> {
  */
 export function useSelectableItems<T extends SelectableItem>({
   initialItems,
-  maxSelection,
-}: UseSelectableItemsOptions<T>): UseSelectableItemsReturn<T> {
+  maxSelection }: UseSelectableItemsOptions<T>): UseSelectableItemsReturn<T> {
   const [items, setItems] = useState<T[]>(initialItems);
 
   // Sync internal state when initialItems prop changes
@@ -43,8 +42,7 @@ export function useSelectableItems<T extends SelectableItem>({
   }, [initialItems]);
 
   // Memoized toggle function to prevent unnecessary re-renders
-  const toggleItem = useCallback(
-    (itemId: string) => {
+  const toggleItem = (itemId: string) => {
       setItems(prevItems => {
         const itemToToggle = prevItems.find(item => item.id === itemId);
 
@@ -77,16 +75,14 @@ export function useSelectableItems<T extends SelectableItem>({
             : item,
         );
       });
-    },
-    [maxSelection],
-  );
+    };
 
   // Memoized function to clear all selections
-  const clearSelection = useCallback(() => {
+  const clearSelection = () => {
     setItems(prevItems =>
       prevItems.map(item => ({ ...item, selected: false } as T)),
     );
-  }, []);
+  };
 
   // Compute derived state
   const selectedItems = items.filter(item => item.selected);
@@ -98,6 +94,5 @@ export function useSelectableItems<T extends SelectableItem>({
     selectedItems,
     toggleItem,
     isMaxReached,
-    clearSelection,
-  };
+    clearSelection };
 }

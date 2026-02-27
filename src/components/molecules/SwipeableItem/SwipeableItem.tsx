@@ -1,14 +1,10 @@
-import React, { useCallback, useMemo } from 'react';
+import React from 'react';
 import { View, type AccessibilityActionEvent, type AccessibilityActionInfo } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, {
-  useAnimatedStyle,
-  type SharedValue,
-} from 'react-native-reanimated';
+import { type SharedValue } from 'react-native-reanimated';
 import { RightActions } from './RightActions';
 import { LeftActions } from './LeftActions';
 import { SwipeableContent } from './SwipeableContent';
-import { useSwipeableAnimation } from './hooks/useSwipeableAnimation';
 import { useSwipeableActions } from './hooks/useSwipeableActions';
 import { styles } from './styles';
 import { SwipeableItemProps } from './types';
@@ -31,10 +27,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   onSwipeableWillOpen,
   onSwipeableClose,
   testIDPrefix,
-  swipeMode,
-}) => {
-  const { itemOpacity, animateDelete } = useSwipeableAnimation();
-
+  swipeMode }) => {
   // Calculate thresholds based on number of actions
   // Fewer actions = smaller threshold for more natural swipe feel
   const leftActionCount = [
@@ -51,24 +44,14 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     swipeableRef,
     handleActionPress,
     handleSwipeableWillOpen,
-    handleSwipeableClose,
-  } = useSwipeableActions({
+    handleSwipeableClose } = useSwipeableActions({
     onEdit,
     onDelete,
-    animateDelete,
     enableSwipeToDelete,
     onSwipeableWillOpen,
-    onSwipeableClose,
-  });
+    onSwipeableClose });
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: itemOpacity.value,
-    };
-  });
-
-  const renderRightActions = useCallback(
-    (progress: SharedValue<number>) => {
+  const renderRightActions = (progress: SharedValue<number>) => {
       return (
         <RightActions
           onEdit={onEdit}
@@ -79,12 +62,9 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
           swipeMode={swipeMode}
         />
       );
-    },
-    [onEdit, onDelete, handleActionPress, testIDPrefix, swipeMode],
-  );
+    };
 
-  const renderLeftActions = useCallback(
-    (progress: SharedValue<number>) => {
+  const renderLeftActions = (progress: SharedValue<number>) => {
       return (
         <LeftActions
           onTogglePurchase={onTogglePurchase}
@@ -99,23 +79,11 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
           onActionPress={handleActionPress}
         />
       );
-    },
-    [
-      onTogglePurchase,
-      onConsume,
-      onWaste,
-      onRestock,
-      isPurchased,
-      swipeableRef,
-      swipeMode,
-      onEdit,
-      handleActionPress,
-    ],
-  );
+    };
 
   // Build accessibility actions from available callbacks so VoiceOver/TalkBack
   // users can discover swipe actions without swiping
-  const accessibilityActions = useMemo<AccessibilityActionInfo[]>(() => {
+  const accessibilityActions = (() => {
     const actions: AccessibilityActionInfo[] = [];
     if (onEdit) actions.push({ name: 'edit', label: 'Edit' });
     if (onDelete) actions.push({ name: 'delete', label: 'Delete' });
@@ -124,9 +92,9 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     if (onWaste) actions.push({ name: 'waste', label: 'Record waste' });
     if (onRestock) actions.push({ name: 'restock', label: 'Restock' });
     return actions;
-  }, [onEdit, onDelete, onTogglePurchase, onConsume, onWaste, onRestock, isPurchased]);
+  })();
 
-  const handleAccessibilityAction = useCallback((event: AccessibilityActionEvent) => {
+  const handleAccessibilityAction = (event: AccessibilityActionEvent) => {
     switch (event.nativeEvent.actionName) {
       case 'edit': onEdit?.(); break;
       case 'delete': onDelete?.(); break;
@@ -135,17 +103,14 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
       case 'waste': onWaste?.(); break;
       case 'restock': onRestock?.(); break;
     }
-  }, [onEdit, onDelete, onTogglePurchase, onConsume, onWaste, onRestock]);
+  };
 
-  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View,
-  // animated styles on inner Reanimated.View to avoid "2 unistyles styles" warning
   return (
     <View
       style={styles.gestureContainer}
       accessibilityActions={accessibilityActions}
       onAccessibilityAction={handleAccessibilityAction}
     >
-      <Reanimated.View style={animatedStyle}>
       <Swipeable
         ref={swipeableRef}
         friction={friction}
@@ -165,7 +130,6 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
           {children}
         </SwipeableContent>
       </Swipeable>
-      </Reanimated.View>
     </View>
   );
 };

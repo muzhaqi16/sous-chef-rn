@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import {
   View,
   Text,
@@ -56,7 +56,10 @@ export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLoc
     parentLocationId: initialData?.parentLocationId || undefined,
   });
 
-  useEffect(() => {
+  // Sync form data when initialData changes (render-time state update)
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData);
     if (initialData) {
       setFormData({
         name: initialData.name || '',
@@ -65,7 +68,7 @@ export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLoc
         parentLocationId: initialData.parentLocationId || undefined,
       });
     }
-  }, [initialData]);
+  }
 
   // Filter out current location from parent options (can't be its own parent)
   const parentOptions = availableLocations.filter(

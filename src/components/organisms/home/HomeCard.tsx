@@ -10,8 +10,6 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
-import { HomeInviteFragment } from '#generated';
-
 export type PartialHome = {
   id: string;
   name: string;
@@ -34,7 +32,12 @@ export type PartialHome = {
     };
   }>;
   pantries?: Array<{ id: string }>;
-  invites?: HomeInviteFragment[];
+  invites?: Array<{
+    id: string;
+    email: string | null;
+    recipientName: string | null;
+    status: string;
+  }>;
   myMembership?: {
     id: string;
     role: string;

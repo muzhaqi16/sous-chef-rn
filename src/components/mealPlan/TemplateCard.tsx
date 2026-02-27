@@ -42,6 +42,12 @@ export const TemplateCard: React.FC<TemplateCardProps> =
             <Icon name="people-outline" size={14} color={styles.metaIcon.color} />
             <Text style={styles.metaText}>{template.defaultServings} servings</Text>
           </View>
+          {!!template.home?.name && (
+            <View style={styles.homeBadge}>
+              <Icon name="home-outline" size={12} color={styles.homeBadgeText.color} />
+              <Text style={styles.homeBadgeText}>{template.home.name}</Text>
+            </View>
+          )}
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryText}>
               {template.category.charAt(0) + template.category.slice(1).toLowerCase()}
@@ -117,6 +123,19 @@ const styles = StyleSheet.create(theme => ({
   },
   metaText: {
     fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+  homeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 2,
+    borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.surfaceVariant,
+  },
+  homeBadgeText: {
+    fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
   },
   categoryBadge: {

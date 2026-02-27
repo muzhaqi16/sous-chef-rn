@@ -1,18 +1,16 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import {
   BottomSheetModal,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetView } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { IngredientMatchRow } from '#components/recipe/IngredientMatchRow';
 import type {
   EditableMatch,
-  MatchSummary,
-} from '#hooks/recipe/useRecipeIngredientMatching';
+  MatchSummary } from '#hooks/recipe/useRecipeIngredientMatching';
 
 interface IngredientMatchingSheetProps {
   visible: boolean;
@@ -37,29 +35,21 @@ export const IngredientMatchingSheet: React.FC<IngredientMatchingSheetProps> =
     onConfirm,
     onSkip,
     onClose,
-    confirmLoading,
-  }) => {
+    confirmLoading }) => {
     const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
       visible,
       onDismiss: onClose,
-      snapPoints: ['80%'],
-    });
+      snapPoints: ['80%'] });
 
-    const renderItem = useCallback(
-      ({ item, index }: { item: EditableMatch; index: number }) => (
+    const renderItem = ({ item, index }: { item: EditableMatch; index: number }) => (
         <IngredientMatchRow
           editableMatch={item}
           index={index}
           onUpdate={onUpdate}
         />
-      ),
-      [onUpdate],
-    );
+      );
 
-    const keyExtractor = useCallback(
-      (item: EditableMatch) => item.match.ingredient.id,
-      [],
-    );
+    const keyExtractor = (item: EditableMatch) => item.match.ingredient.id;
 
     return (
       <BottomSheetModal ref={ref} {...modalProps}>
@@ -156,67 +146,53 @@ const SummaryPill: React.FC<{
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    paddingHorizontal: theme.spacing.md,
-  },
+    paddingHorizontal: theme.spacing.md },
   summaryBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
     marginBottom: theme.spacing.md,
-    flexWrap: 'wrap',
-  },
+    flexWrap: 'wrap' },
   pill: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 3,
-    borderRadius: theme.radii.sm,
-  },
+    borderRadius: theme.radii.sm },
   pillText: {
     fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   includedText: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
-    marginLeft: 'auto',
-  },
+    marginLeft: 'auto' },
   list: {
-    flex: 1,
-  },
+    flex: 1 },
   bottomActions: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
-    paddingTop: theme.spacing.md,
-  },
+    paddingTop: theme.spacing.md },
   skipButton: {
     flex: 1,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   skipText: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   confirmButton: {
     flex: 2,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.success,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   confirmText: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.white,
-  },
+    color: theme.colors.white },
   buttonPressed: {
-    opacity: theme.opacity.pressed,
-  },
+    opacity: theme.opacity.pressed },
   buttonDisabled: {
-    opacity: 0.5,
-  },
-}));
+    opacity: 0.5 } }));

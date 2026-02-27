@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, ScrollView, Text, RefreshControl } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '#utils/iconUtils';
 import { Header, HeaderAction, HeaderVariant } from '../molecules/Header';
 import { Button } from '../base/Button';
@@ -38,6 +39,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
   onRefresh,
 }) => {
   const { theme } = useUnistyles();
+  const insets = useSafeAreaInsets();
   return (
     <View style={styles.container}>
       <Header
@@ -49,7 +51,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
       />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingVertical: theme.spacing.sm }}
+        contentContainerStyle={{ paddingVertical: theme.spacing.sm, paddingBottom: insets.bottom || theme.spacing.sm }}
         refreshControl={
           onRefresh ? (
             <RefreshControl

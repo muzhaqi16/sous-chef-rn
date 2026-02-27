@@ -1,11 +1,10 @@
-import React, { useCallback, useMemo } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   Pressable,
   RefreshControl,
-  Alert,
-} from 'react-native';
+  Alert } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -17,6 +16,7 @@ import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAddItemToShoppingListMutation } from '#generated';
 import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
+import { useAddLowStockToShoppingList } from '#hooks/pantry/useAddLowStockToShoppingList';
 import { commonStyles } from '#/styles/commonStyles';
 
 export const LowStockItems: React.FC = () => {
@@ -28,19 +28,22 @@ export const LowStockItems: React.FC = () => {
 
   // Use cache-only hook for pantry resolution (no network requests)
   // This prevents query cascade when switching between pantry screens
-  const { pantry } = useCurrentPantry();
+  const { pantry, selectedHomeId } = useCurrentPantry();
+
+  const { addLowStockToShoppingList, loading: addAllLoading } =
+    useAddLowStockToShoppingList({ homeId: selectedHomeId ?? undefined });
 
   const { items, loading, refetch } = usePantryManagement(pantry?.id);
   const [addToShoppingList] = useAddItemToShoppingListMutation();
 
-  const lowStockItems = useMemo(() => {
+  const lowStockItems = (() => {
     if (!items) return [];
 
     // Match the low stock logic used in usePantryManagement stats
     return items.filter(item => {
       return item.quantity <= 1 || item.lowStockAlert;
     });
-  }, [items]);
+  })();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -48,17 +51,16 @@ export const LowStockItems: React.FC = () => {
     setRefreshing(false);
   };
 
-  const handleAddToList = useCallback(async (itemId: string) => {
+  const handleAddToList = async (itemId: string) => {
     try {
       await addToShoppingList({
-        variables: { input: { shoppingListId: '', itemId } },
-      });
+        variables: { input: { shoppingListId: '', itemId } } });
     } catch {
       Alert.alert('Error', 'Failed to add to shopping list');
     }
-  }, [addToShoppingList]);
+  };
 
-  const renderLowStockItem = useCallback(
+  const renderLowStockItem = 
     ({ item }: { item: (typeof lowStockItems)[number] }) => (
       <SwipeableItem
         onPress={() => navigateTo.pantryItemDetail({ itemId: item.id })}
@@ -82,13 +84,22 @@ export const LowStockItems: React.FC = () => {
           </Pressable>
         </View>
       </SwipeableItem>
-    ),
-    [navigateTo, handleAddToList, theme.colors.primary],
-  );
+    );
 
   return (
     <View style={commonStyles.container}>
-      <Header title="Low Stock Items" onBack={goBack} centerTitle />
+      <Header
+        title="Low Stock Items"
+        onBack={goBack}
+        centerTitle
+        rightActions={[
+          {
+            icon: 'cart-outline',
+            onPress: addLowStockToShoppingList,
+            loading: addAllLoading,
+            testID: 'add-all-low-stock' },
+        ]}
+      />
 
       <FlashList
         style={styles.scrollView}
@@ -127,44 +138,31 @@ export const LowStockItems: React.FC = () => {
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   scrollContent: {
-    padding: theme.spacing.md,
-  },
+    padding: theme.spacing.md },
   emptyState: {
-    padding: theme.spacing['2xl'],
-  },
+    padding: theme.spacing['2xl'] },
   emptyText: {
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.lg,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   loadingContainer: {
-    padding: theme.spacing['2xl'],
-  },
+    padding: theme.spacing['2xl'] },
   skeletonContainer: {
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   itemCard: {
     ...commonStyles.rowSpaceBetween,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   itemInfo: {
-    flex: 1,
-  },
+    flex: 1 },
   itemName: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   itemDetails: {
-    marginTop: theme.spacing.xs,
-  },
+    marginTop: theme.spacing.xs },
   actionButton: {
-    padding: theme.spacing.xs,
-  },
+    padding: theme.spacing.xs },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

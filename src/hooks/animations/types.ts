@@ -70,5 +70,5 @@ export interface UseSlideAnimationReturn {
   /** Reset slide position to origin */
   resetSlide: () => void;
   /** Whether animation is currently in progress */
-  isAnimating: boolean;
+  isAnimating: SharedValue<boolean>;
 }

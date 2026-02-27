@@ -57,22 +57,19 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null,
-    };
+      errorInfo: null};
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return {
       hasError: true,
-      error,
-    };
+      error};
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.setState({
       error,
-      errorInfo,
-    });
+      errorInfo});
 
     // Log error for debugging
     console.error('ErrorBoundary caught an error:', error);
@@ -94,23 +91,20 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       component_stack: errorInfo.componentStack,
       error_boundary_context: this.props.context,
       is_fatal: true,
-      error_source: 'react_error_boundary',
-    });
+      error_source: 'react_error_boundary'});
 
     console.log('Error reported to telemetry:', {
       error: error.message,
       stack: error.stack,
       context: this.props.context,
-      componentStack: errorInfo.componentStack,
-    });
+      componentStack: errorInfo.componentStack});
   };
 
   private retry = () => {
     this.setState({
       hasError: false,
       error: null,
-      errorInfo: null,
-    });
+      errorInfo: null});
   };
 
   render() {
@@ -186,15 +180,14 @@ export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }
 
 // Hook for programmatic error handling
 export const useErrorHandler = () => {
-  return React.useCallback((error: Error, context?: string) => {
+  return (error: Error, context?: string) => {
     console.error(`Error in ${context || 'unknown context'}:`, error);
 
     Telemetry.trackError(error, {
       error_handler_context: context,
       error_source: 'use_error_handler',
-      is_fatal: false,
-    });
-  }, []);
+      is_fatal: false});
+  };
 };
 
 const styles = StyleSheet.create(theme => ({
@@ -202,43 +195,34 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.lg,
-  },
+    padding: theme.spacing.lg},
   content: {
     alignItems: 'center',
-    maxWidth: 300,
-  },
+    maxWidth: 300},
   title: {
     fontSize: theme.typography.fontSize.xl,
     fontWeight: 'bold',
     marginBottom: theme.spacing['3'],
-    textAlign: 'center',
-  },
+    textAlign: 'center'},
   message: {
     fontSize: theme.typography.fontSize.md,
     textAlign: 'center',
     marginBottom: theme.spacing.sm,
-    lineHeight: theme.typography.lineHeight.relaxed,
-  },
+    lineHeight: theme.typography.lineHeight.relaxed},
   context: {
     fontSize: theme.typography.fontSize.xs,
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
-    fontStyle: 'italic',
-  },
+    fontStyle: 'italic'},
   retryButton: {
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing['3'],
     borderRadius: theme.radii.sm,
-    marginTop: theme.spacing.md,
-  },
+    marginTop: theme.spacing.md},
   retryText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold},
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed}}));
 
 export default ErrorBoundary;

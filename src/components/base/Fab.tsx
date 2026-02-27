@@ -1,11 +1,10 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import {Pressable, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
+  withSpring } from 'react-native-reanimated';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon, IconName, IconLibrary} from '#utils/iconUtils';
 import {HapticService} from '#services/haptic/HapticService';
@@ -29,37 +28,31 @@ export const FAB: React.FC<FABProps> = ({
   library,
   position = {bottom: 20, right: 20},
   accessibilityLabel = 'Add',
-  accessibilityHint = 'Tap to add a new item',
-}) => {
+  accessibilityHint = 'Tap to add a new item' }) => {
   const {bottom: safeBottom} = useSafeAreaInsets();
   const {theme} = useUnistyles();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{scale: scale.value}],
-  }));
+    transform: [{scale: scale.value}] }));
 
-  const handlePressIn = useCallback(() => {
+  const handlePressIn = () => {
     scale.set(withSpring(0.9, SPRING.PRESS));
-  }, [scale]);
+  };
 
-  const handlePressOut = useCallback(() => {
+  const handlePressOut = () => {
     scale.set(withSpring(1, SPRING.PRESS));
-  }, [scale]);
+  };
 
-  const handlePress = useCallback(() => {
+  const handlePress = () => {
     HapticService.medium();
     onPress();
-  }, [onPress]);
+  };
 
   // Calculate position above tab bar
-  const fabPosition = React.useMemo(
-    () => ({
-      ...position,
-      bottom: getTabBarBottomPadding(safeBottom) + (position.bottom || 4),
-    }),
-    [position, safeBottom],
-  );
+  const fabPosition = {
+    ...position,
+    bottom: getTabBarBottomPadding(safeBottom) + (position.bottom || 4) };
 
   return (
     <View style={[styles.fab, fabPosition]}>
@@ -85,13 +78,10 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.primary,
     zIndex: theme.zIndex.fab,
-    ...theme.shadows.lg,
-  },
+    ...theme.shadows.lg },
   fabButton: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: theme.radii.full,
-  },
-}));
+    borderRadius: theme.radii.full } }));

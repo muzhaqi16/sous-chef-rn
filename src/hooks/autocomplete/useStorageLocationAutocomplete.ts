@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 
 export interface StorageLocation {
   id: string;
@@ -24,7 +23,7 @@ export function useStorageLocationAutocomplete({
   searchTerm,
 }: UseStorageLocationAutocompleteOptions) {
   // Filter locations based on search term
-  const filteredLocations = useMemo(() => {
+  const filteredLocations = (() => {
     if (!searchTerm || searchTerm.length < 1) {
       return storageLocations;
     }
@@ -35,25 +34,25 @@ export function useStorageLocationAutocomplete({
       const matchesParent = location.parentLocation?.name.toLowerCase().includes(lowerSearch);
       return matchesName || matchesType || matchesParent;
     });
-  }, [searchTerm, storageLocations]);
+  })();
 
   // Sort: default first, then alphabetically
-  const sortedLocations = useMemo(() => {
+  const sortedLocations = (() => {
     return [...filteredLocations].sort((a, b) => {
       if (a.isDefault && !b.isDefault) return -1;
       if (!a.isDefault && b.isDefault) return 1;
       return a.name.localeCompare(b.name);
     });
-  }, [filteredLocations]);
+  })();
 
   // Determine if "Add New" should be shown
-  const showAddNew = useMemo(() => {
+  const showAddNew = (() => {
     if (searchTerm.length < 2) return false;
     const exactMatch = sortedLocations.some(
       loc => loc.name.toLowerCase() === searchTerm.toLowerCase(),
     );
     return !exactMatch;
-  }, [sortedLocations, searchTerm]);
+  })();
 
   return {
     displayItems: sortedLocations,

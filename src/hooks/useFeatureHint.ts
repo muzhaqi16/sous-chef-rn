@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
 import { useAppStore } from '#store/useAppStore';
@@ -69,8 +69,7 @@ export interface UseFeatureHintReturn {
 export const useFeatureHint = ({
   featureId,
   showOnMount = false,
-  delay = 0,
-}: UseFeatureHintOptions): UseFeatureHintReturn => {
+  delay = 0 }: UseFeatureHintOptions): UseFeatureHintReturn => {
   // Per-user storage key scoping
   const userId = useAppStore(state => state.user?.id);
   const storageKey = userId
@@ -85,51 +84,57 @@ export const useFeatureHint = ({
     () => storage.getBoolean(storageKey) ?? false,
   );
 
-  const [isVisible, setIsVisible] = useState(false);
+  // Initialize visibility: show immediately if showOnMount with no delay
+  const [isVisible, setIsVisible] = useState(
+    () => showOnMount && !hasBeenShown && tutorialsEnabled && delay === 0,
+  );
 
-  // Show hint on mount if configured, not shown before, and tutorials are enabled globally
+  // Show hint with delay if configured, not shown before, and tutorials are enabled globally
   useEffect(() => {
-    if (showOnMount && !hasBeenShown && tutorialsEnabled) {
-      if (delay > 0) {
-        const timer = setTimeout(() => {
-          setIsVisible(true);
-        }, delay);
-        return () => clearTimeout(timer);
-      } else {
+    if (showOnMount && !hasBeenShown && tutorialsEnabled && delay > 0) {
+      const timer = setTimeout(() => {
         setIsVisible(true);
-      }
+      }, delay);
+      return () => clearTimeout(timer);
     }
   }, [showOnMount, hasBeenShown, delay, tutorialsEnabled]);
 
-  const show = useCallback(() => {
-    // Only show if tutorials are enabled globally and hint hasn't been dismissed
-    if (tutorialsEnabled && !(storage.getBoolean(storageKey) ?? false)) {
-      setIsVisible(true);
-    }
-  }, [tutorialsEnabled, storageKey]);
+  // Refs for values used by actions — synced via effect so the compiler
+  // sees actions as depending only on stable refs + setState, producing
+  // a stable object reference automatically.
+  const storageKeyRef = useRef(storageKey);
+  const tutorialsEnabledRef = useRef(tutorialsEnabled);
 
-  const hide = useCallback(() => {
-    setIsVisible(false);
-  }, []);
-
-  const dismiss = useCallback(() => {
-    setIsVisible(false);
-    setHasBeenShown(true);
-    storage.set(storageKey, true);
+  useEffect(() => {
+    storageKeyRef.current = storageKey;
   }, [storageKey]);
 
-  const reset = useCallback(() => {
-    storage.remove(storageKey);
-    setHasBeenShown(false);
-    setIsVisible(false);
-  }, [storageKey]);
+  useEffect(() => {
+    tutorialsEnabledRef.current = tutorialsEnabled;
+  }, [tutorialsEnabled]);
 
-  // Stable actions object — all callbacks are stable useCallbacks,
-  // so this object reference is created once and never changes
-  const actions = useMemo<UseFeatureHintActions>(
-    () => ({ show, dismiss, hide, reset }),
-    [show, dismiss, hide, reset],
-  );
+  // Actions object — compiler memoizes this automatically since it only
+  // depends on refs (stable identity) and setState fns (stable identity)
+  const actions: UseFeatureHintActions = {
+    show() {
+      if (tutorialsEnabledRef.current && !(storage.getBoolean(storageKeyRef.current) ?? false)) {
+        setIsVisible(true);
+      }
+    },
+    hide() {
+      setIsVisible(false);
+    },
+    dismiss() {
+      setIsVisible(false);
+      setHasBeenShown(true);
+      storage.set(storageKeyRef.current, true);
+    },
+    reset() {
+      storage.remove(storageKeyRef.current);
+      setHasBeenShown(false);
+      setIsVisible(false);
+    },
+  };
 
   return { isVisible, hasBeenShown, actions };
 };

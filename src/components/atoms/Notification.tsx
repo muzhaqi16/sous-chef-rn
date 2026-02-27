@@ -1,4 +1,4 @@
-import React, {useState, useRef, useEffect} from 'react';
+import React, {useState, useEffect} from 'react';
 import {View, Text, Animated, Pressable} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 
@@ -16,7 +16,7 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
   onClose,
 }) => {
   const [show, setShow] = useState(true);
-  const slide = useRef(new Animated.Value(-100)).current;
+  const [slide] = useState(() => new Animated.Value(-100));
 
   useEffect(() => {
     // slide down

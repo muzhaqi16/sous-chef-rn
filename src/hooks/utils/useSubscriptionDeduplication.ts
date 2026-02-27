@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useRef } from 'react';
 
 /**
  * Subscription payload structure from GraphQL subscriptions
@@ -42,8 +42,7 @@ export function useSubscriptionDeduplication(currentUserId?: string | null) {
   // Track recently processed mutation IDs to prevent duplicates
   const processedMutationsRef = useRef(new Set<string>());
 
-  const shouldProcessUpdate = useCallback(
-    <T extends any>(payload: SubscriptionPayload<T> | null | undefined): boolean => {
+  const shouldProcessUpdate = <T extends any>(payload: SubscriptionPayload<T> | null | undefined): boolean => {
       if (!payload) {
         return false;
       }
@@ -76,9 +75,7 @@ export function useSubscriptionDeduplication(currentUserId?: string | null) {
 
       // Passed all filters
       return true;
-    },
-    [currentUserId],
-  );
+    };
 
   return shouldProcessUpdate;
 }

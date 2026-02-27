@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import {
   useGetStorageLocationsQuery,
@@ -8,14 +8,13 @@ import {
   useDeleteStorageLocationMutation,
   useSetDefaultStorageLocationMutation,
   CreateStorageLocationInput,
-  UpdateStorageLocationInput,
-} from '#generated';
+  UpdateStorageLocationInput } from '#generated';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
   createAddToQueryFieldUpdater,
-  createRemoveFromQueryFieldUpdater,
-} from '#/apollo/utils/cacheUpdaters';
+  createRemoveFromQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
+import { executeMutation, executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 
 /**
  * Build a tree structure from a flat list of locations using parentLocation references
@@ -118,17 +117,18 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     useCreateStorageLocationMutation({
       errorPolicy: 'all',
       update: (cache, { data }) => {
-        if (!data?.createStorageLocation?.storageLocation || !homeId) return;
+        const newLocation = data?.createStorageLocation?.storageLocation;
+        if (!newLocation || !homeId) return;
 
-        try {
-          const addToStorageLocationsCache = createAddToQueryFieldUpdater('storageLocations');
-          addToStorageLocationsCache(cache, data.createStorageLocation.storageLocation, { position: 'end' });
-        } catch (error) {
-          console.warn('Cache update failed for createStorageLocation:', error);
-          refetch();
-        }
-      },
-    });
+        executeCacheUpdate(
+          () => {
+            const addToStorageLocationsCache = createAddToQueryFieldUpdater('storageLocations');
+            addToStorageLocationsCache(cache, newLocation, { position: 'end' });
+          },
+          'Cache update failed for createStorageLocation:',
+          refetch,
+        );
+      } });
 
   const [updateMutation, { loading: updating }] =
     useUpdateStorageLocationMutation({
@@ -137,31 +137,30 @@ export function useStorageLocationManagement(homeId: string | undefined) {
       onError: error => {
         const message = error.message || 'Failed to update storage location';
         Alert.alert('Error', message);
-      },
-    });
+      } });
 
   const [deleteMutation] = useDeleteStorageLocationMutation({
     errorPolicy: 'all',
     update: (cache, { data }, { variables }) => {
       if (!data?.deleteStorageLocation?.success || !variables || !homeId) return;
 
-      try {
-        const removeFromStorageLocationsCache = createRemoveFromQueryFieldUpdater(
-          'storageLocations',
-          'StorageLocation',
-        );
-        removeFromStorageLocationsCache(cache, variables.id, { evictItem: true });
-      } catch (error) {
-        console.warn('Cache update failed for deleteStorageLocation:', error);
-        refetch();
-      }
+      executeCacheUpdate(
+        () => {
+          const removeFromStorageLocationsCache = createRemoveFromQueryFieldUpdater(
+            'storageLocations',
+            'StorageLocation',
+          );
+          removeFromStorageLocationsCache(cache, variables.id, { evictItem: true });
+        },
+        'Cache update failed for deleteStorageLocation:',
+        refetch,
+      );
     },
     onError: error => {
       const message =
         error.message || 'Cannot delete location with items or child locations';
       Alert.alert('Error', message);
-    },
-  });
+    } });
 
   const [setDefaultMutation] = useSetDefaultStorageLocationMutation({
     // SetDefault mutation returns the updated location with isDefault field
@@ -169,8 +168,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     // No manual cache update needed
     onError: error => {
       Alert.alert('Error', error.message || 'Failed to set default location');
-    },
-  });
+    } });
 
   // Action handlers using CRUD utilities
   const createLocation = createAddOperation({
@@ -178,59 +176,36 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     parentId: () => homeId,
     transformInput: (input: Omit<CreateStorageLocationInput, 'homeId'>) => ({
       ...input,
-      homeId,
-    }),
+      homeId }),
     onSuccess: (data: any) => data?.createStorageLocation?.storageLocation,
-    operationName: 'Create Storage Location',
-  });
+    operationName: 'Create Storage Location' });
 
-  const updateLocation = useCallback(
-    async (id: string, input: UpdateStorageLocationInput) => {
-      try {
-        const result = await updateMutation({
-          variables: { id, input },
-        });
+  const updateLocation = async (id: string, input: UpdateStorageLocationInput) => {
+    const result = await executeMutation(
+      () => updateMutation({ variables: { id, input } }),
+      'Update storage location error:',
+    );
+    if (!result) return false;
+    return result.data?.updateStorageLocation?.storageLocation ?? false;
+  };
 
-        return result.data?.updateStorageLocation?.storageLocation ?? false;
-      } catch (error) {
-        console.error('Update storage location error:', error);
-        return false;
-      }
-    },
-    [updateMutation],
-  );
+  const deleteLocation = async (id: string) => {
+    const result = await executeMutation(
+      () => deleteMutation({ variables: { id } }),
+      'Delete storage location error:',
+    );
+    if (!result) return false;
+    return result.data?.deleteStorageLocation?.success ?? false;
+  };
 
-  const deleteLocation = useCallback(
-    async (id: string) => {
-      try {
-        const result = await deleteMutation({
-          variables: { id },
-        });
-
-        return result.data?.deleteStorageLocation?.success ?? false;
-      } catch (error) {
-        console.error('Delete storage location error:', error);
-        return false;
-      }
-    },
-    [deleteMutation],
-  );
-
-  const setDefaultLocation = useCallback(
-    async (id: string) => {
-      try {
-        const result = await setDefaultMutation({
-          variables: { id },
-        });
-
-        return result.data?.setDefaultStorageLocation?.storageLocation ?? false;
-      } catch (error) {
-        console.error('Set default storage location error:', error);
-        return false;
-      }
-    },
-    [setDefaultMutation],
-  );
+  const setDefaultLocation = async (id: string) => {
+    const result = await executeMutation(
+      () => setDefaultMutation({ variables: { id } }),
+      'Set default storage location error:',
+    );
+    if (!result) return false;
+    return result.data?.setDefaultStorageLocation?.storageLocation ?? false;
+  };
 
   // Preserve data even when query fails to prevent cascade failures
   const locations = usePreservedArrayData(data?.storageLocations?.edges?.map(e => e.node));
@@ -254,6 +229,5 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     updateLocation,
     deleteLocation,
     setDefaultLocation,
-    refetch,
-  };
+    refetch };
 }

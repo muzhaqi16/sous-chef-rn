@@ -6,7 +6,6 @@
  * - Cache-first policy for efficient lookups
  */
 
-import { useCallback } from 'react';
 import { useGetUnitBySymbolLazyQuery } from '#generated';
 
 /**
@@ -20,14 +19,12 @@ import { useGetUnitBySymbolLazyQuery } from '#generated';
  */
 export function useResolveUnit() {
   const [unitQuery] = useGetUnitBySymbolLazyQuery({
-    fetchPolicy: 'cache-first',
-  });
+    fetchPolicy: 'cache-first' });
 
   /**
    * Resolve unit ID from symbol if not already set
    */
-  const resolveUnitId = useCallback(
-    async (
+  const resolveUnitId = async (
       currentUnitId: string | null,
       unitSymbol: string,
     ): Promise<string | null> => {
@@ -35,12 +32,9 @@ export function useResolveUnit() {
       if (!unitSymbol.trim()) return null;
 
       const result = await unitQuery({
-        variables: { symbol: unitSymbol.trim() },
-      });
+        variables: { symbol: unitSymbol.trim() } });
       return result.data?.unitBySymbol?.id || null;
-    },
-    [unitQuery],
-  );
+    };
 
   return { resolveUnitId };
 }

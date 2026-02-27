@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useCallback, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import {
   useNotificationChangedSubscription,
-  NotificationType,
-} from '#generated';
+  NotificationType } from '#generated';
 import { useStore } from '#store';
 import { useAppStore } from '#store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -11,31 +10,26 @@ import { showLocalNotification } from '#utils/notifications/localNotificationHel
 import {
   getNotificationTitle,
   getNotificationMessage,
-  getNotificationCategory,
-} from '#utils/notifications/notificationParser';
+  getNotificationCategory } from '#utils/notifications/notificationParser';
 import {
   NotificationCategory,
-  NotificationPriority,
-} from '#store/slices/notificationSlice';
+  NotificationPriority } from '#store/slices/notificationSlice';
 import {
   handleSubscriptionError,
-  clearAllRetryStates,
-} from '#utils/subscriptionErrorHandler';
+  clearAllRetryStates } from '#utils/subscriptionErrorHandler';
 import { useNotificationSettings } from './useNotificationSettings';
 
 // PERFORMANCE: Grouped selectors to reduce subscriptions from 7 to 2
 const selectNotificationState = (state: any) => ({
   notifications: state.notifications,
-  user: state.user,
-});
+  user: state.user });
 
 const selectNotificationActions = (state: any) => ({
   addNotification: state.addNotification,
   markAsRead: state.markAsRead,
   removeNotification: state.removeNotification,
   clearAll: state.clearAll,
-  getNotificationsByCategory: state.getNotificationsByCategory,
-});
+  getNotificationsByCategory: state.getNotificationsByCategory });
 
 interface NotificationConfig {
   skip?: boolean;
@@ -61,15 +55,13 @@ export const useNotifications = (config: NotificationConfig = {}) => {
     markAsRead,
     removeNotification,
     clearAll,
-    getNotificationsByCategory,
-  } = useAppStore(useShallow(selectNotificationActions));
+    getNotificationsByCategory } = useAppStore(useShallow(selectNotificationActions));
 
   // Fetch user notification preferences
   const { settings: userPreferences, isQuietTime } = useNotificationSettings();
 
   // Default configuration
-  const finalConfig = useMemo(
-    () => ({
+  const finalConfig = ({
       enablePantryNotifications: true,
       enableShoppingListNotifications: true,
       enableMembershipNotifications: true,
@@ -78,13 +70,9 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       enableCollaborationNotifications: true,
       showInAppNotifications: true,
       showPushNotifications: true,
-      ...config,
-    }),
-    [config],
-  );
+      ...config });
 
-  const getPriorityFromType = useCallback(
-    (type: NotificationType): NotificationPriority => {
+  const getPriorityFromType = (type: NotificationType): NotificationPriority => {
       switch (type) {
         case NotificationType.ExpiryReminder:
         case NotificationType.LowStock:
@@ -92,13 +80,10 @@ export const useNotifications = (config: NotificationConfig = {}) => {
         default:
           return NotificationPriority.LOW;
       }
-    },
-    [],
-  );
+    };
 
   // Check if notification type is enabled in user preferences
-  const isNotificationTypeEnabled = useCallback(
-    (type: NotificationType): boolean => {
+  const isNotificationTypeEnabled = (type: NotificationType): boolean => {
       if (!userPreferences) return true; // Show by default if preferences not loaded
 
       switch (type) {
@@ -122,12 +107,9 @@ export const useNotifications = (config: NotificationConfig = {}) => {
         default:
           return true; // Show unknown notification types by default
       }
-    },
-    [userPreferences],
-  );
+    };
 
-  const processNotification = useCallback(
-    (
+  const processNotification = (
       notification: any,
       category: NotificationCategory,
       sourceUserId?: string,
@@ -139,8 +121,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
         console.log('🚫 Filtering notification - triggered by current user:', {
           type: notification.type,
           sourceUserId,
-          currentUserId: user.id,
-        });
+          currentUserId: user.id });
         return;
       }
 
@@ -149,8 +130,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
         console.log(
           '🚫 Filtering notification - disabled in user preferences:',
           {
-            type: notification.type,
-          },
+            type: notification.type },
         );
         return;
       }
@@ -158,8 +138,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       // Check if it's quiet time (only affects push notifications)
       if (isQuietTime()) {
         console.log('🔕 Quiet time active - suppressing push notification:', {
-          type: notification.type,
-        });
+          type: notification.type });
         // Continue to show in-app notification but skip push
       }
 
@@ -190,8 +169,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
         isRead: false,
         requiresAction,
         actionType,
-        actionData: notification.payload,
-      };
+        actionData: notification.payload };
 
       addNotification(processedNotification);
 
@@ -204,22 +182,12 @@ export const useNotifications = (config: NotificationConfig = {}) => {
         showLocalNotification({
           id: processedNotification.id,
           title: processedNotification.title,
-          body: processedNotification.message,
-        });
+          body: processedNotification.message });
       }
-    },
-    [
-      finalConfig,
-      addNotification,
-      getPriorityFromType,
-      user,
-      isNotificationTypeEnabled,
-      isQuietTime,
-    ],
-  );
+    };
 
   // Error handler - suppresses expected network errors
-  const handleError = useCallback((subscriptionName: string, error: any) => {
+  const handleError = (subscriptionName: string, error: any) => {
     const errorMessage = error?.message?.toLowerCase() || '';
     const isSocketClosed = errorMessage.includes('socket closed');
     const isNetworkError = errorMessage.includes('network') ||
@@ -233,7 +201,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
 
     console.warn(`${subscriptionName} subscription error:`, error.message);
     handleSubscriptionError(subscriptionName, error);
-  }, []);
+  };
 
   // General notifications
   useNotificationChangedSubscription({
@@ -250,8 +218,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
           type: rawNotification.type,
           id: rawNotification.id,
           payload: rawNotification.payload,
-          changeType: data.data.notificationChanged.changeType,
-        });
+          changeType: data.data.notificationChanged.changeType });
 
         // Create properly structured notification using helper functions
         processNotification(
@@ -266,8 +233,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
               rawNotification.payload,
             ),
             payload: rawNotification.payload,
-            sentAt: rawNotification.sentAt,
-          },
+            sentAt: rawNotification.sentAt },
           getNotificationCategory(rawNotification.type),
         );
       } else {
@@ -279,8 +245,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
     onError: (error: Error) => {
       // Let handleError decide whether to log based on error type
       handleError('NotificationChanged', error);
-    },
-  });
+    } });
 
   // PERFORMANCE: App state handling - store in ref to avoid re-renders
   useEffect(() => {
@@ -316,14 +281,14 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   }, [user?.id, config.skip]);
 
   // PERFORMANCE: Use store getter instead of stale notifications array in closure
-  const handleMarkAllAsRead = useCallback(async () => {
+  const handleMarkAllAsRead = async () => {
     const currentNotifications = useStore.getState().notifications;
     currentNotifications.forEach(notification => {
       if (!notification.isRead) {
         markAsRead(notification.id);
       }
     });
-  }, [markAsRead]);
+  };
 
   // PERFORMANCE: Optimize callback references - remove unnecessary wrappers
   return {
@@ -337,6 +302,5 @@ export const useNotifications = (config: NotificationConfig = {}) => {
     updateConfig: (newConfig: Partial<NotificationConfig>) => {
       // This would typically update stored preferences
       console.log('Updating notification config:', newConfig);
-    },
-  };
+    } };
 };

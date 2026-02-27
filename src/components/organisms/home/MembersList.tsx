@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppStore } from '#store/useAppStore';
-import { HomeInviteFragment } from '#generated';
 import { formatRole } from '#/utils/formatters/roleFormatters';
 import { formatInviteStatus, getInviteStatusColor, getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
 import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
@@ -24,9 +23,16 @@ interface Member {
   };
 }
 
+interface ListInvite {
+  id: string;
+  email: string | null;
+  recipientName: string | null;
+  status: string;
+}
+
 interface MembersListProps {
   members: Member[];
-  invites?: HomeInviteFragment[];
+  invites?: ListInvite[];
 }
 
 export const MembersList: React.FC<MembersListProps> = ({

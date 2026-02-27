@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Alert, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormModal } from '#components/organisms/FormModal';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormTextArea } from '#components/molecules/FormTextArea';
+import { FormSelect } from '#components/molecules/FormSelect';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
@@ -13,6 +14,8 @@ import { TemplatePreviewSheet } from '#components/mealPlan/TemplatePreviewSheet'
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealPlanActions } from '#hooks/mealPlan/useMealPlanActions';
 import { useMealTemplateActions } from '#hooks/mealPlan/useMealTemplateActions';
+import { useHomeQuery } from '#hooks/home/hooks/useHomeQuery';
+import { useAppStore } from '#store/useAppStore';
 import { addDays, addWeeks, addMonths } from 'date-fns';
 import { MealPlanType, type MealTemplateDisplayFragment } from '#generated';
 
@@ -33,29 +36,46 @@ function computeEndDate(startDate: Date, planType: MealPlanType): Date {
   }
 }
 
+const PERSONAL_VALUE = '__personal__';
+
 export const CreateMealPlanScreen: React.FC = () => {
   const { goBack } = useAppNavigation();
   const { createMealPlan, creating } = useMealPlanActions();
   const { createPlanFromTemplate, creatingFromTemplate } = useMealTemplateActions();
+  const { homes } = useHomeQuery();
+  const selectedHomeId = useAppStore(s => s.selectedHomeId);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [planType, setPlanType] = useState<MealPlanType>(MealPlanType.Weekly);
   const [startDate, setStartDate] = useState<Date | null>(new Date());
   const [servings, setServings] = useState('2');
+  const [homeSelection, setHomeSelection] = useState<string>(selectedHomeId ?? PERSONAL_VALUE);
+
+  const homeOptions = (() => {
+    const opts = [{ label: 'Personal', value: PERSONAL_VALUE }];
+    if (homes) {
+      for (const home of homes) {
+        if (home?.id && home?.name) {
+          opts.push({ label: home.name, value: home.id });
+        }
+      }
+    }
+    return opts;
+  })();
 
   // Template state
   const [templateBrowserVisible, setTemplateBrowserVisible] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<MealTemplateDisplayFragment | null>(null);
   const [templatePreviewVisible, setTemplatePreviewVisible] = useState(false);
 
-  const handleSelectTemplate = useCallback((template: MealTemplateDisplayFragment) => {
+  const handleSelectTemplate = (template: MealTemplateDisplayFragment) => {
     setSelectedTemplate(template);
     setTemplateBrowserVisible(false);
     setTemplatePreviewVisible(true);
-  }, []);
+  };
 
-  const handleCreateFromTemplate = useCallback(
+  const handleCreateFromTemplate = 
     async (config: {
       templateId: string;
       startDate: string;
@@ -68,11 +88,9 @@ export const CreateMealPlanScreen: React.FC = () => {
         setSelectedTemplate(null);
         goBack();
       }
-    },
-    [createPlanFromTemplate, goBack],
-  );
+    };
 
-  const handleSave = useCallback(async () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Name Required', 'Please enter a name for your meal plan.');
       return;
@@ -82,26 +100,34 @@ export const CreateMealPlanScreen: React.FC = () => {
       return;
     }
 
+    const endDate = computeEndDate(startDate, planType);
+    const homeId = homeSelection !== PERSONAL_VALUE ? homeSelection : undefined;
+    const descriptionValue = description.trim() || undefined;
+    const servingsValue = parseInt(servings) || 2;
+
+    let result;
     try {
-      const endDate = computeEndDate(startDate, planType);
-      const result = await createMealPlan({
+      result = await createMealPlan({
         name: name.trim(),
-        description: description.trim() || undefined,
+        description: descriptionValue,
         planType,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        servings: parseInt(servings) || 2,
-      });
-
-      if (result?.success) {
-        goBack();
-      } else {
-        Alert.alert('Error', result?.message ?? 'Failed to create meal plan.');
-      }
+        servings: servingsValue,
+        homeId });
     } catch (error: any) {
-      Alert.alert('Error', error.message ?? 'Failed to create meal plan.');
+      const errorMessage = error.message ?? 'Failed to create meal plan.';
+      Alert.alert('Error', errorMessage);
+      return;
     }
-  }, [name, description, planType, startDate, servings, createMealPlan, goBack]);
+
+    if (result?.success) {
+      goBack();
+    } else {
+      const message = result?.message ?? 'Failed to create meal plan.';
+      Alert.alert('Error', message);
+    }
+  };
 
   return (
     <FormModal
@@ -153,6 +179,16 @@ export const CreateMealPlanScreen: React.FC = () => {
         step={1}
       />
 
+      {homeOptions.length > 1 && (
+        <FormSelect
+          label="Share With"
+          value={homeSelection}
+          onValueChange={setHomeSelection}
+          options={homeOptions}
+          placeholder="Personal"
+        />
+      )}
+
       {/* Create from template link */}
       <Pressable
         onPress={() => setTemplateBrowserVisible(true)}
@@ -200,17 +236,12 @@ const createFromTemplateStyles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.lg,
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   linkPressed: {
-    opacity: theme.opacity.pressed,
-  },
+    opacity: theme.opacity.pressed },
   linkIcon: {
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   linkText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-}));
+    fontWeight: theme.fonts.weight.medium } }));

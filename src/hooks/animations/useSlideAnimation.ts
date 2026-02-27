@@ -1,17 +1,15 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   Easing,
-  cancelAnimation,
-} from 'react-native-reanimated';
+  cancelAnimation } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import type {
   SlideDirection,
   UseSlideAnimationOptions,
-  UseSlideAnimationReturn,
-} from './types';
+  UseSlideAnimationReturn } from './types';
 
 /** Default easing: standard cubic bezier for smooth animations */
 const defaultEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
@@ -57,31 +55,23 @@ export function useSlideAnimation({
   withOpacity = false,
   opacityTarget = 0,
   allowedDirections = 'both',
-  disabled = false,
-}: UseSlideAnimationOptions): UseSlideAnimationReturn {
+  disabled = false }: UseSlideAnimationOptions): UseSlideAnimationReturn {
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
   const isAnimatingShared = useSharedValue(false);
   const itemIdRef = useRef(itemId);
 
-  // Track animation state for JS-side consumers
-  const [isAnimating, setIsAnimating] = useState(false);
-
   // Ref to store pending completion callback
   // This allows dynamic callbacks to be invoked via a stable RN-runtime wrapper
   const onCompleteRef = useRef<(() => void) | null>(null);
 
-  const updateAnimatingState = useCallback((animating: boolean) => {
-    setIsAnimating(animating);
-  }, []);
-
   // Stable wrapper for completion callback - defined in RN runtime
   // scheduleOnRN requires functions to be defined in RN runtime scope
-  const executeOnComplete = useCallback(() => {
+  const executeOnComplete = () => {
     const callback = onCompleteRef.current;
     onCompleteRef.current = null;
     callback?.();
-  }, []);
+  };
 
   // Reset when FlashList recycles this view for a different item
   useEffect(() => {
@@ -91,7 +81,6 @@ export function useSlideAnimation({
       translateX.set(0);
       opacity.set(1);
       isAnimatingShared.set(false);
-      setIsAnimating(false);
       onCompleteRef.current = null; // Clear pending callback
       itemIdRef.current = itemId;
     }
@@ -99,23 +88,20 @@ export function useSlideAnimation({
 
   const animatedSlideStyle = useAnimatedStyle(() => {
     const style: { transform: { translateX: number }[]; opacity?: number } = {
-      transform: [{ translateX: translateX.value }],
-    };
+      transform: [{ translateX: translateX.value }] };
     if (withOpacity) {
       style.opacity = opacity.value;
     }
     return style;
   });
 
-  const triggerSlide = useCallback(
-    (direction: SlideDirection, onComplete?: () => void) => {
-      'worklet';
+  const triggerSlide = (direction: SlideDirection, onComplete?: () => void) => {
       // Guard: disabled mode
       if (disabled) {
         if (onComplete) {
           // Store callback and execute via RN-runtime wrapper
           onCompleteRef.current = onComplete;
-          scheduleOnRN(executeOnComplete);
+          executeOnComplete();
         }
         return;
       }
@@ -127,62 +113,42 @@ export function useSlideAnimation({
       // Guard: prevent double-tap / re-entry while animating
       if (isAnimatingShared.value) return;
 
-      isAnimatingShared.value = true;
+      isAnimatingShared.set(true);
 
       // Store callback before animation starts
       if (onComplete) {
         onCompleteRef.current = onComplete;
       }
 
-      scheduleOnRN(updateAnimatingState, true);
-
       const animationEasing = easing ?? defaultEasing;
       const timingConfig = { duration, easing: animationEasing };
 
       // Animate opacity if enabled
       if (withOpacity) {
-        opacity.value = withTiming(opacityTarget, timingConfig);
+        opacity.set(withTiming(opacityTarget, timingConfig));
       }
 
-      translateX.value = withTiming(
+      translateX.set(withTiming(
         direction * slideDistance,
         timingConfig,
         finished => {
           isAnimatingShared.value = false;
-          scheduleOnRN(updateAnimatingState, false);
           if (finished && onComplete) {
             scheduleOnRN(executeOnComplete);
           }
         },
-      );
-    },
-    [
-      duration,
-      slideDistance,
-      translateX,
-      opacity,
-      isAnimatingShared,
-      easing,
-      withOpacity,
-      opacityTarget,
-      allowedDirections,
-      disabled,
-      updateAnimatingState,
-      executeOnComplete,
-    ],
-  );
+      ));
+    };
 
-  const resetSlide = useCallback(() => {
-    'worklet';
+  const resetSlide = () => {
     cancelAnimation(translateX);
     cancelAnimation(opacity);
-    translateX.value = withTiming(0, { duration: duration / 2, easing: defaultEasing });
+    translateX.set(withTiming(0, { duration: duration / 2, easing: defaultEasing }));
     if (withOpacity) {
-      opacity.value = withTiming(1, { duration: duration / 2, easing: defaultEasing });
+      opacity.set(withTiming(1, { duration: duration / 2, easing: defaultEasing }));
     }
-    isAnimatingShared.value = false;
-    scheduleOnRN(updateAnimatingState, false);
-  }, [translateX, opacity, isAnimatingShared, duration, withOpacity, updateAnimatingState]);
+    isAnimatingShared.set(false);
+  };
 
-  return { animatedSlideStyle, triggerSlide, resetSlide, isAnimating };
+  return { animatedSlideStyle, triggerSlide, resetSlide, isAnimating: isAnimatingShared };
 }

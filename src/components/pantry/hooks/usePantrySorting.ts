@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import type { SortOption, SortDirection } from '../PantryContent';
 
 // Item type for sorting (minimal interface)
@@ -61,7 +61,7 @@ interface UsePantrySortingResult<T extends SortableItem> {
  *   onSortChange: persistToStore,
  * });
  *
- * const sortedItems = useMemo(() => sortItems(items), [items, sortItems]);
+ * const sortedItems = sortItems(items);
  * ```
  */
 export function usePantrySorting<T extends SortableItem>(
@@ -70,8 +70,7 @@ export function usePantrySorting<T extends SortableItem>(
   const {
     initialSortOption = 'recent',
     initialSortDirection = 'desc',
-    onSortChange,
-  } = options;
+    onSortChange } = options;
 
   // Sort state (local, initialized from props)
   const [sortOption, setSortOption] = useState<SortOption>(initialSortOption);
@@ -80,17 +79,16 @@ export function usePantrySorting<T extends SortableItem>(
   const [sortModalVisible, setSortModalVisible] = useState(false);
 
   // Modal controls
-  const openSortModal = useCallback(() => {
+  const openSortModal = () => {
     setSortModalVisible(true);
-  }, []);
+  };
 
-  const closeSortModal = useCallback(() => {
+  const closeSortModal = () => {
     setSortModalVisible(false);
-  }, []);
+  };
 
   // Handle sort option selection
-  const handleSortSelect = useCallback(
-    (option: SortOption) => {
+  const handleSortSelect = (option: SortOption) => {
       let newOption = sortOption;
       let newDirection = sortDirection;
 
@@ -109,19 +107,15 @@ export function usePantrySorting<T extends SortableItem>(
       // Persist to store
       onSortChange?.(newOption, newDirection);
       setSortModalVisible(false);
-    },
-    [sortOption, sortDirection, onSortChange],
-  );
+    };
 
   // Sort function - optimized with pre-computed timestamps
-  const sortItems = useCallback(
-    (items: T[]): T[] => {
+  const sortItems = (items: T[]): T[] => {
       // Pre-compute timestamps once (O(n)) instead of inside comparator (O(n log n))
       const itemsWithTs = items.map(item => ({
         item,
         expiryTs: item.expiresAt ? new Date(item.expiresAt).getTime() : Infinity,
-        createdTs: item.createdAt ? new Date(item.createdAt).getTime() : 0,
-      }));
+        createdTs: item.createdAt ? new Date(item.createdAt).getTime() : 0 }));
 
       // Sort using pre-computed values (no Date creation in comparator)
       itemsWithTs.sort((a, b) => {
@@ -146,9 +140,7 @@ export function usePantrySorting<T extends SortableItem>(
       });
 
       return itemsWithTs.map(({ item }) => item);
-    },
-    [sortOption, sortDirection],
-  );
+    };
 
   return {
     sortOption,
@@ -157,6 +149,5 @@ export function usePantrySorting<T extends SortableItem>(
     openSortModal,
     closeSortModal,
     handleSortSelect,
-    sortItems,
-  };
+    sortItems };
 }

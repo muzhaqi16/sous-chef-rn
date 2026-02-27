@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { CartesianChart, Line, Area } from 'victory-native';
@@ -28,13 +28,13 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
   const { theme } = useUnistyles();
   const lineColor = color || theme.colors.primary;
 
-  const chartData = useMemo(() => {
+  const chartData = (() => {
     if (!data || data.length === 0) return [];
     return data.map((point, index) => ({
       x: index,
       y: point.count,
     }));
-  }, [data]);
+  })();
 
   if (chartData.length === 0) {
     return (

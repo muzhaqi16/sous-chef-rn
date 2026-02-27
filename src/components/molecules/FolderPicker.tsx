@@ -1,22 +1,17 @@
 import React, {
   useState,
-  useMemo,
-  useCallback,
-  useRef,
-} from 'react';
+  useRef } from 'react';
 import {
   View,
   Text,
   Pressable,
   Alert,
-  ActivityIndicator,
-} from 'react-native';
+  ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
   BottomSheetView,
-  BottomSheetFlatList,
-} from '@gorhom/bottom-sheet';
+  BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
@@ -52,14 +47,12 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   allowCreate = true,
   onRenameFolder,
   onDeleteFolder,
-  folderActionLoading = false,
-}) => {
+  folderActionLoading = false }) => {
   const { ref: folderPickerRef, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
     visible,
     onDismiss: onCancel,
     snapPoints: ['55%', '70%'],
-    keyboardBehavior: 'interactive',
-  });
+    keyboardBehavior: 'interactive' });
   const manageSheetRef = useRef<BottomSheetModal>(null);
 
   const [showNewFolder, setShowNewFolder] = useState(false);
@@ -75,15 +68,15 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   const hasFolderActions = Boolean(onRenameFolder || onDeleteFolder);
 
   // Check if a folder is protected
-  const isProtectedFolder = useCallback((folder: string) => {
+  const isProtectedFolder = (folder: string) => {
     return PROTECTED_FOLDERS.includes(folder);
-  }, []);
+  };
 
-  const filteredFolders = useMemo(() => {
+  const filteredFolders = (() => {
     if (!searchQuery.trim()) return folders;
     const query = searchQuery.toLowerCase();
     return folders.filter(folder => folder.toLowerCase().includes(query));
-  }, [folders, searchQuery]);
+  })();
 
   const handleSelectFolder = (folder: string | null) => {
     setSearchQuery('');
@@ -111,8 +104,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   };
 
   // Handle long-press on folder item - show manage folder bottom sheet
-  const handleFolderLongPress = useCallback(
-    (folder: string) => {
+  const handleFolderLongPress = (folder: string) => {
       // Don't show menu if no actions available
       if (!hasFolderActions) return;
 
@@ -130,12 +122,10 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
       setTimeout(() => {
         manageSheetRef.current?.present();
       }, 150);
-    },
-    [hasFolderActions, isProtectedFolder, folderPickerRef],
-  );
+    };
 
   // Handle rename confirmation
-  const handleRenameConfirm = useCallback(async () => {
+  const handleRenameConfirm = async () => {
     if (!managingFolder || !renameValue.trim() || !onRenameFolder) return;
 
     const newName = renameValue.trim();
@@ -169,18 +159,10 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
       setManagingFolder(null);
       setRenameValue('');
     }
-  }, [
-    managingFolder,
-    renameValue,
-    onRenameFolder,
-    folders,
-    selectedFolder,
-    onSelect,
-    folderPickerRef,
-  ]);
+  };
 
   // Handle delete confirmation
-  const handleDeleteConfirm = useCallback(async () => {
+  const handleDeleteConfirm = async () => {
     if (!managingFolder || !onDeleteFolder) return;
 
     const success = await onDeleteFolder(managingFolder);
@@ -197,10 +179,10 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
       setRenameValue('');
       setShowDeleteConfirm(false);
     }
-  }, [managingFolder, onDeleteFolder, selectedFolder, onSelect, folderPickerRef]);
+  };
 
   // Handle manage folder bottom sheet close
-  const handleManageFolderClose = useCallback(() => {
+  const handleManageFolderClose = () => {
     manageSheetRef.current?.dismiss();
     setTimeout(() => {
       folderPickerRef.current?.present();
@@ -208,7 +190,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     setManagingFolder(null);
     setRenameValue('');
     setShowDeleteConfirm(false);
-  }, [folderPickerRef]);
+  };
 
   const renderFolderItem = ({ item }: { item: string }) => {
     const isSelected = item === selectedFolder;
@@ -578,71 +560,59 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   title: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.background,
     borderRadius: theme.radii.md,
     paddingHorizontal: theme.spacing['3'],
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   searchInput: {
     flex: 1,
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.sm,
     fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   folderItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
-    gap: theme.spacing['3'],
-  },
+    gap: theme.spacing['3'] },
   folderItemSelected: {
-    backgroundColor: theme.colors.primaryLight,
-  },
+    backgroundColor: theme.colors.primaryLight },
   folderName: {
     flex: 1,
     fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   folderNameSelected: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   divider: {
     height: 1,
     backgroundColor: theme.colors.divider,
-    marginVertical: theme.spacing.md,
-  },
+    marginVertical: theme.spacing.md },
   newFolderButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   newFolderButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   newFolderContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   newFolderInput: {
     flex: 1,
     borderWidth: 1,
@@ -652,79 +622,63 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   createButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing['3'],
-    borderRadius: theme.radii.md,
-  },
+    borderRadius: theme.radii.md },
   createButtonDisabled: {
-    backgroundColor: theme.colors.border,
-  },
+    backgroundColor: theme.colors.border },
   createButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.white,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   createButtonTextDisabled: {
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   folderList: {
-    maxHeight: 250,
-  },
+    maxHeight: 250 },
   folderListContent: {
-    paddingBottom: theme.spacing.sm,
-  },
+    paddingBottom: theme.spacing.sm },
   loadingContainer: {
     paddingVertical: theme.spacing.lg,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   loadingText: {
     fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   emptyContainer: {
     paddingVertical: theme.spacing.lg,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   emptyText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   hintText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: theme.spacing.md,
-    fontStyle: 'italic',
-  },
+    fontStyle: 'italic' },
   // Loading overlay
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: theme.radii.lg,
-  },
+    borderRadius: theme.radii.lg },
   // Bottom sheet content
   bottomSheetContent: {
-    padding: theme.spacing['5'],
-  },
+    padding: theme.spacing['5'] },
   // Manage folder styles
   manageFolderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   manageFolderTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   currentFolderContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -733,26 +687,21 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   currentFolderName: {
     fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   sectionLabel: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   renameSection: {
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   renameInputRow: {
     flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   renameInput: {
     flex: 1,
     borderWidth: 1,
@@ -762,8 +711,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   renameButton: {
     backgroundColor: theme.colors.primary,
     paddingVertical: theme.spacing['3'],
@@ -771,91 +719,73 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     justifyContent: 'center',
     alignItems: 'center',
-    minWidth: 80,
-  },
+    minWidth: 80 },
   renameButtonDisabled: {
-    backgroundColor: theme.colors.border,
-  },
+    backgroundColor: theme.colors.border },
   renameButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.white,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   renameButtonTextDisabled: {
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   deleteSection: {
     borderTopWidth: 1,
     borderTopColor: theme.colors.divider,
-    paddingTop: theme.spacing.md,
-  },
+    paddingTop: theme.spacing.md },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.md,
-  },
+    paddingVertical: theme.spacing.md },
   deleteButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.error,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   deleteDescription: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    marginTop: theme.spacing.xs,
-  },
+    marginTop: theme.spacing.xs },
   // Delete confirmation styles
   deleteConfirmContainer: {
     alignItems: 'center',
-    paddingVertical: theme.spacing.md,
-  },
+    paddingVertical: theme.spacing.md },
   deleteConfirmTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   deleteConfirmText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   deleteConfirmButtons: {
     flexDirection: 'row',
     gap: theme.spacing.md,
-    width: '100%',
-  },
+    width: '100%' },
   deleteConfirmCancelButton: {
     flex: 1,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   deleteConfirmCancelText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   deleteConfirmDeleteButton: {
     flex: 1,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.error,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   deleteConfirmDeleteText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.white,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

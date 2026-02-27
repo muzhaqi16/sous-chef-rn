@@ -1,8 +1,10 @@
-import { useMemo } from 'react';
+
+
 import { useMyRecipesQuery, RecipeCategory, Difficulty } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizeRecipes } from '#/utils/connectionUtils';
 import { usePagination } from '#/hooks/utils/usePagination';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 export interface RecipeFilters {
   category?: RecipeCategory;
@@ -36,16 +38,12 @@ export function useRecipeManagement(filters?: RecipeFilters) {
     errorPolicy: 'all',
   });
 
-  // Normalize recipes data to flatten Connection pattern and preserve pagination metadata
-  const normalizedRecipes = useMemo(
-    () => normalizeRecipes(data?.recipes),
-    [data?.recipes],
-  );
+  useApolloErrorLogger('MyRecipes', error);
 
-  const recipes = useMemo(
-    () => normalizedRecipes?.recipes || [],
-    [normalizedRecipes],
-  );
+  // Normalize recipes data to flatten Connection pattern and preserve pagination metadata
+  const normalizedRecipes = normalizeRecipes(data?.recipes);
+
+  const recipes = normalizedRecipes?.recipes || [];
 
   const totalCount = normalizedRecipes?.totalCount || 0;
 

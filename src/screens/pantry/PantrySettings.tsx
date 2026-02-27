@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,10 @@ import {
 } from 'react-native';
 import { Icon } from '#/utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { commonStyles } from '#/styles/commonStyles';
+import { ScreenHeader } from '#components/molecules/ScreenHeader';
+import { LoadingInline } from '#components/base/Loading';
+import { InfoRow } from '#components/molecules/InfoRow';
 import {
   useGetPantryQuery,
   useUpdatePantryMutation,
@@ -58,10 +62,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
   });
 
   // Memoize normalized pantry to prevent re-creating on every render
-  const pantry = useMemo(
-    () => normalizePantry(pantryData?.pantry),
-    [pantryData?.pantry],
-  );
+  const pantry = normalizePantry(pantryData?.pantry);
 
   const [updatePantry] = useUpdatePantryMutation({
     // Update cache directly - Apollo automatically merges the Pantry entity
@@ -351,53 +352,34 @@ export const PantrySettings: React.FC<StaticScreenProps<{
   if (pantryId && loadingPantry && !pantry) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Pressable onPress={() => goBack()} style={({pressed}) => pressed && styles.pressed}>
-            <Icon
-              name="arrow-back"
-              size={24}
-              color={theme.colors.textPrimary}
-            />
-          </Pressable>
-          <Text style={styles.title}>Loading...</Text>
-          <View style={{ width: 50 }} />
-        </View>
-        <View
-          style={[
-            styles.content,
-            { justifyContent: 'center', alignItems: 'center' },
-          ]}
-        >
-          <Text style={styles.label}>Loading pantry data...</Text>
-        </View>
+        <ScreenHeader title="Loading..." onBack={goBack} />
+        <LoadingInline message="Loading pantry data..." />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => goBack()} style={({pressed}) => pressed && styles.pressed}>
-          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </Pressable>
-        <Text style={styles.title}>
-          {!pantryId ? 'Create New Pantry' : 'Pantry Settings'}
-        </Text>
-        <Pressable onPress={handleSave} disabled={saving} style={({pressed}) => pressed && styles.pressed}>
-          <Text style={styles.saveButton}>
-            {saving ? 'Saving...' : !pantryId ? 'Create' : 'Save'}
-          </Text>
-        </Pressable>
-      </View>
+      <ScreenHeader
+        title={!pantryId ? 'Create New Pantry' : 'Pantry Settings'}
+        onBack={goBack}
+        rightElement={
+          <Pressable onPress={handleSave} disabled={saving} style={({pressed}) => pressed && styles.pressed}>
+            <Text style={styles.saveButton}>
+              {saving ? 'Saving...' : !pantryId ? 'Create' : 'Save'}
+            </Text>
+          </Pressable>
+        }
+      />
 
       <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>General</Text>
+        <View style={commonStyles.settingsSection}>
+          <Text style={commonStyles.settingsSectionTitle}>General</Text>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Pantry Name</Text>
+          <View style={commonStyles.settingsInputGroup}>
+            <Text style={commonStyles.settingsLabel}>Pantry Name</Text>
             <TextInput
-              style={styles.input}
+              style={commonStyles.settingsInput}
               value={name}
               onChangeText={setName}
               placeholder="Enter pantry name (e.g., Kitchen Pantry)"
@@ -405,10 +387,10 @@ export const PantrySettings: React.FC<StaticScreenProps<{
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description (Optional)</Text>
+          <View style={commonStyles.settingsInputGroup}>
+            <Text style={commonStyles.settingsLabel}>Description (Optional)</Text>
             <TextInput
-              style={styles.input}
+              style={commonStyles.settingsInput}
               value={description}
               onChangeText={setDescription}
               placeholder="Enter description"
@@ -418,10 +400,10 @@ export const PantrySettings: React.FC<StaticScreenProps<{
             />
           </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Default Pantry</Text>
-              <Text style={styles.settingDescription}>
+          <View style={commonStyles.settingsRow}>
+            <View style={commonStyles.settingsRowInfo}>
+              <Text style={commonStyles.settingsRowLabel}>Default Pantry</Text>
+              <Text style={commonStyles.settingsRowDescription}>
                 Make this your default pantry for this home
               </Text>
             </View>
@@ -434,29 +416,19 @@ export const PantrySettings: React.FC<StaticScreenProps<{
         </View>
 
         {!!pantryId && !!pantry && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Information</Text>
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>Information</Text>
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Items in pantry</Text>
-              <Text style={styles.infoValue}>
-                {pantry?.items?.length || 0} items
-              </Text>
-            </View>
+            <InfoRow label="Items in pantry" value={`${pantry?.items?.length || 0} items`} />
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Created</Text>
-              <Text style={styles.infoValue}>
-                {new Date(pantry.createdAt).toLocaleDateString()}
-              </Text>
-            </View>
+            <InfoRow label="Created" value={new Date(pantry.createdAt).toLocaleDateString()} />
           </View>
         )}
 
         {/* Only show danger zone if editing existing pantry */}
         {!!pantryId && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Danger Zone</Text>
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>Danger Zone</Text>
 
             <Pressable
               style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
@@ -482,19 +454,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   saveButton: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
@@ -502,71 +461,6 @@ const styles = StyleSheet.create(theme => ({
   },
   content: {
     flex: 1,
-  },
-  section: {
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  sectionTitle: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-  },
-  inputGroup: {
-    marginBottom: theme.spacing.md,
-  },
-  label: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.sm,
-    paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing.sm + 2,
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing['3'],
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: theme.spacing['3'],
-  },
-  settingLabel: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  settingDescription: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: theme.spacing['3'],
-  },
-  infoLabel: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary,
-  },
-  infoValue: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
   },
   deleteButton: {
     flexDirection: 'row',

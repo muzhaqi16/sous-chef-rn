@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { HapticService, HapticFeedbackType } from '#services/haptic/HapticService';
 
 /**
@@ -30,46 +29,46 @@ import { HapticService, HapticFeedbackType } from '#services/haptic/HapticServic
  */
 export function useHaptic() {
   // Memoized trigger function
-  const trigger = useCallback((type: HapticFeedbackType) => {
+  const trigger = (type: HapticFeedbackType) => {
     HapticService.trigger(type);
-  }, []);
+  };
 
   // Memoized convenience methods
-  const light = useCallback(() => {
+  const light = () => {
     HapticService.light();
-  }, []);
+  };
 
-  const medium = useCallback(() => {
+  const medium = () => {
     HapticService.medium();
-  }, []);
+  };
 
-  const heavy = useCallback(() => {
+  const heavy = () => {
     HapticService.heavy();
-  }, []);
+  };
 
-  const success = useCallback(() => {
+  const success = () => {
     HapticService.success();
-  }, []);
+  };
 
-  const warning = useCallback(() => {
+  const warning = () => {
     HapticService.warning();
-  }, []);
+  };
 
-  const error = useCallback(() => {
+  const error = () => {
     HapticService.error();
-  }, []);
+  };
 
-  const selection = useCallback(() => {
+  const selection = () => {
     HapticService.selection();
-  }, []);
+  };
 
-  const longPress = useCallback(() => {
+  const longPress = () => {
     HapticService.longPress();
-  }, []);
+  };
 
-  const cancel = useCallback(() => {
+  const cancel = () => {
     HapticService.cancel();
-  }, []);
+  };
 
   return {
     trigger,
@@ -83,6 +82,5 @@ export function useHaptic() {
     longPress,
     cancel,
     isEnabled: HapticService.isEnabled(),
-    isSupported: HapticService.isSupported(),
-  };
+    isSupported: HapticService.isSupported() };
 }

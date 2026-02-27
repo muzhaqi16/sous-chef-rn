@@ -52,6 +52,7 @@ export interface NavigationState {
   selectedHomeId: string | null;
   selectedPantryId: string | null;
   selectedShoppingListId: string | null;
+  selectedMealPlanId: string | null;
 
   // Home data initialization flag (survives component remounts)
   hasInitializedHomeData: boolean;
@@ -74,6 +75,7 @@ export interface NavigationState {
   setSelectedHomeId: (id: string | null) => void;
   setSelectedPantryId: (id: string | null) => void;
   setSelectedShoppingListId: (id: string | null) => void;
+  setSelectedMealPlanId: (id: string | null) => void;
   setHasInitializedHomeData: (value: boolean) => void;
   setIsHomeSelectionReady: (value: boolean) => void;
   setIsPantryQueryComplete: (value: boolean) => void;
@@ -93,6 +95,7 @@ const initialNavigationState = {
   selectedHomeId: null,
   selectedPantryId: null,
   selectedShoppingListId: null,
+  selectedMealPlanId: null,
   hasInitializedHomeData: false,
   isHomeSelectionReady: false,
   isPantryQueryComplete: false,
@@ -129,6 +132,12 @@ export const createNavigationSlice: StateCreator<
   setSelectedShoppingListId: id => {
     set(state => {
       state.selectedShoppingListId = id;
+    });
+  },
+
+  setSelectedMealPlanId: id => {
+    set(state => {
+      state.selectedMealPlanId = id;
     });
   },
 

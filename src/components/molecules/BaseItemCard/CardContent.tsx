@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import type { CardContentProps } from './types';
 
 /**
@@ -12,26 +12,19 @@ export const CardContent: React.FC<CardContentProps> = ({
   subtitle,
   isPurchased = false,
 }) => {
-  const { theme } = useUnistyles();
+  styles.useVariants({ purchased: isPurchased });
 
   return (
     <View style={styles.container}>
       <Text
-        style={[
-          styles.title,
-          isPurchased && styles.purchasedTitle,
-          { color: isPurchased ? theme.colors.textTertiary : theme.colors.textPrimary },
-        ]}
+        style={[styles.title, isPurchased && styles.purchasedTitle]}
         numberOfLines={1}
       >
         {title}
       </Text>
       {!!subtitle && (typeof subtitle === 'string' ? (
           <Text
-            style={[
-              styles.subtitle,
-              { color: theme.colors.textSecondary },
-            ]}
+            style={styles.subtitle}
             numberOfLines={1}
           >
             {subtitle}
@@ -52,11 +45,23 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.semibold,
     marginBottom: theme.spacing.xs,
+    color: theme.colors.textPrimary,
+    variants: {
+      purchased: {
+        true: {
+          color: theme.colors.textTertiary,
+        },
+        false: {
+          color: theme.colors.textPrimary,
+        },
+      },
+    },
   },
   purchasedTitle: {
     textDecorationLine: 'line-through',
   },
   subtitle: {
     fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
   },
 }));

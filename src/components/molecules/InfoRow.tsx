@@ -85,19 +85,16 @@ export const InfoRow: React.FC<InfoRowProps> = ({
   valueStyle,
   containerStyle,
 }) => {
-  const formattedValue = React.useMemo(() => {
-    if (value === null || value === undefined) {
-      return '—'; // Em dash for empty values
-    }
-
-    if (formatter) {
-      return formatter(value);
-    }
-
+  let formattedValue: string;
+  if (value === null || value === undefined) {
+    formattedValue = '—'; // Em dash for empty values
+  } else if (formatter) {
+    formattedValue = formatter(value);
+  } else {
     // Default formatting
     const stringValue = String(value);
-    return unit ? `${stringValue} ${unit}` : stringValue;
-  }, [value, unit, formatter]);
+    formattedValue = unit ? `${stringValue} ${unit}` : stringValue;
+  }
 
   return (
     <View

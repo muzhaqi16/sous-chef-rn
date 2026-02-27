@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -11,6 +11,7 @@ import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useGetHomeQuery, ReligiousDiet } from '#generated';
 import { transformRecipeForDisplay } from '#/utils/recipeTransform';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 
 export interface RecipeFilters {
@@ -18,6 +19,114 @@ export interface RecipeFilters {
   intolerances: string[];
   mealType: string | null;
   maxReadyTime: number | null;
+}
+
+/** Handles API error alerts — extracted for reuse across search functions */
+function handleSearchError(error: unknown, label: string): void {
+  const err = error as { isQuotaExceeded?: boolean; isRateLimitError?: boolean };
+  console.error(`${label}:`, error);
+  if (err.isQuotaExceeded) {
+    Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
+  } else if (err.isRateLimitError) {
+    Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
+  } else {
+    Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
+  }
+}
+
+/** Module-level pantry ingredient search — extracted for React Compiler compatibility */
+async function executePantrySearch(
+  ingredientNames: string,
+  setLoading: (v: boolean) => void,
+  setSearchPerformed: (v: boolean) => void,
+  setSearchResults: (v: (SearchRecipesResult | RecipeSearchResult)[]) => void,
+): Promise<void> {
+  setLoading(true);
+  setSearchPerformed(true);
+
+  await executeMutationWithErrorHandler(
+    async () => {
+      const results = await spoonacularService.searchRecipesByIngredients({
+        ingredients: ingredientNames,
+        number: 10,
+        ranking: 1,
+        ignorePantry: true });
+      setSearchResults(results);
+      return results;
+    },
+    (error) => handleSearchError(error, 'Pantry search error'),
+  );
+
+  setLoading(false);
+}
+
+/** Module-level text search — extracted for React Compiler compatibility */
+async function executeTextSearch(
+  query: string,
+  activeFilters: RecipeFilters,
+  excludedIngredients: string[],
+  setLoading: (v: boolean) => void,
+  setSearchPerformed: (v: boolean) => void,
+  setSearchResults: (v: (SearchRecipesResult | RecipeSearchResult)[]) => void,
+): Promise<void> {
+  setLoading(true);
+  setSearchPerformed(true);
+
+  await executeMutationWithErrorHandler(
+    async () => {
+      const data = await spoonacularService.searchRecipes({
+        query,
+        number: 10,
+        addRecipeInformation: true,
+        ...(activeFilters.diet && { diet: activeFilters.diet }),
+        ...(activeFilters.intolerances.length > 0 && {
+          intolerances: activeFilters.intolerances.join(',') }),
+        ...(activeFilters.mealType && { type: activeFilters.mealType }),
+        ...(activeFilters.maxReadyTime && { maxReadyTime: activeFilters.maxReadyTime }),
+        ...(excludedIngredients.length > 0 && {
+          excludeIngredients: excludedIngredients.join(',') }) });
+
+      setSearchResults(data.results || []);
+      return data;
+    },
+    (error) => handleSearchError(error, 'Search error'),
+  );
+
+  setLoading(false);
+}
+
+/** Module-level ingredient search — extracted for React Compiler compatibility */
+async function executeIngredientSearch(
+  ingredientString: string,
+  activeFilters: RecipeFilters,
+  excludedIngredients: string[],
+  setLoading: (v: boolean) => void,
+  setSearchPerformed: (v: boolean) => void,
+  setSearchResults: (v: (SearchRecipesResult | RecipeSearchResult)[]) => void,
+): Promise<void> {
+  setLoading(true);
+  setSearchPerformed(true);
+
+  await executeMutationWithErrorHandler(
+    async () => {
+      const results = await spoonacularService.searchRecipesByIngredients({
+        ingredients: ingredientString,
+        number: 10,
+        ...(activeFilters.diet && { diet: activeFilters.diet }),
+        ...(activeFilters.intolerances.length > 0 && {
+          intolerances: activeFilters.intolerances.join(',') }),
+        ...(activeFilters.mealType && { type: activeFilters.mealType }),
+        ...(activeFilters.maxReadyTime && { maxReadyTime: activeFilters.maxReadyTime }),
+        ...(excludedIngredients.length > 0 && {
+          excludeIngredients: excludedIngredients.join(',') }) });
+
+      setSearchResults(results);
+      return results;
+    },
+    (error) => handleSearchError(error, 'Ingredient search error'),
+  );
+
+  setLoading(false);
 }
 
 export function useRecipeSearch() {
@@ -34,8 +143,7 @@ export function useRecipeSearch() {
     variables: { homeId: selectedHomeId ?? '' },
     skip: !selectedHomeId,
     fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
 
   // Get pantry for ingredient selection
   const defaultPantry = getDefaultPantry(homeData);
@@ -55,15 +163,14 @@ export function useRecipeSearch() {
     diet: null,
     intolerances: [],
     mealType: null,
-    maxReadyTime: null,
-  });
+    maxReadyTime: null });
 
   const ingredientSheetRef = useRef<BottomSheetModal>(null);
   const filterSheetRef = useRef<BottomSheetModal>(null);
   const hasAutoSearchedRef = useRef(false);
 
   // Memoize excluded ingredients
-  const excludedIngredients = useMemo(() => {
+  const excludedIngredients = (() => {
     const restrictions = dietaryProfile?.restrictions || [];
     const excluded: string[] = [];
 
@@ -86,14 +193,14 @@ export function useRecipeSearch() {
     }
 
     return excluded;
-  }, [dietaryProfile?.restrictions]);
+  })();
 
   // Note: Filters are NOT auto-initialized from dietary profile
   // User can manually apply filters via the filter sheet when needed
   // This allows unfiltered searches by default
 
   // Text-based search (with pantry fallback when empty)
-  const handleTextSearch = useCallback(async () => {
+  const handleTextSearch = async () => {
     // If no query, fall back to pantry ingredient search
     if (!searchQuery.trim()) {
       if (pantryItems?.length) {
@@ -104,29 +211,7 @@ export function useRecipeSearch() {
           .join(',');
 
         if (ingredientNames) {
-          setLoading(true);
-          setSearchPerformed(true);
-
-          try {
-            const results = await spoonacularService.searchRecipesByIngredients({
-              ingredients: ingredientNames,
-              number: 10,
-              ranking: 1,
-              ignorePantry: true,
-            });
-            setSearchResults(results);
-          } catch (error: any) {
-            console.error('Pantry search error:', error);
-            if (error.isQuotaExceeded) {
-              Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
-            } else if (error.isRateLimitError) {
-              Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
-            } else {
-              Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
-            }
-          } finally {
-            setLoading(false);
-          }
+          await executePantrySearch(ingredientNames, setLoading, setSearchPerformed, setSearchResults);
           return;
         }
       }
@@ -134,67 +219,8 @@ export function useRecipeSearch() {
       return;
     }
 
-    setLoading(true);
-    setSearchPerformed(true);
-
-    try {
-      const data = await spoonacularService.searchRecipes({
-        query: searchQuery,
-        number: 10,
-        addRecipeInformation: true,
-        ...(activeFilters.diet && { diet: activeFilters.diet }),
-        ...(activeFilters.intolerances.length > 0 && {
-          intolerances: activeFilters.intolerances.join(','),
-        }),
-        ...(activeFilters.mealType && { type: activeFilters.mealType }),
-        ...(activeFilters.maxReadyTime && { maxReadyTime: activeFilters.maxReadyTime }),
-        ...(excludedIngredients.length > 0 && {
-          excludeIngredients: excludedIngredients.join(','),
-        }),
-      });
-
-      setSearchResults(data.results || []);
-    } catch (error: any) {
-      console.error('Search error:', error);
-      if (error.isQuotaExceeded) {
-        Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
-      } else if (error.isRateLimitError) {
-        Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
-      } else {
-        Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [searchQuery, activeFilters, excludedIngredients, pantryItems]);
-
-  // Pantry-based search (auto-search on mount)
-  const handlePantrySearch = useCallback(async (ingredients: string) => {
-    setLoading(true);
-    setSearchPerformed(true);
-
-    try {
-      const results = await spoonacularService.searchRecipesByIngredients({
-        ingredients,
-        number: 10,
-        ranking: 1, // Maximize used ingredients
-        ignorePantry: true,
-      });
-
-      setSearchResults(results);
-    } catch (error: any) {
-      console.error('Pantry search error:', error);
-      if (error.isQuotaExceeded) {
-        Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
-      } else if (error.isRateLimitError) {
-        Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
-      } else {
-        Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await executeTextSearch(searchQuery, activeFilters, excludedIngredients, setLoading, setSearchPerformed, setSearchResults);
+  };
 
   // Auto-trigger search on mount
   useEffect(() => {
@@ -203,7 +229,7 @@ export function useRecipeSearch() {
     if (initialQuery && initialQuery.trim()) {
       // Text search from navigation params
       hasAutoSearchedRef.current = true;
-      handleTextSearch();
+      executeTextSearch(initialQuery, activeFilters, excludedIngredients, setLoading, setSearchPerformed, setSearchResults);
     } else if (pantryItems?.length) {
       // Auto-search with pantry ingredients
       const ingredientNames = pantryItems
@@ -214,63 +240,33 @@ export function useRecipeSearch() {
 
       if (ingredientNames) {
         hasAutoSearchedRef.current = true;
-        handlePantrySearch(ingredientNames);
+        executePantrySearch(ingredientNames, setLoading, setSearchPerformed, setSearchResults);
       }
     }
-  }, [initialQuery, pantryItems, handleTextSearch, handlePantrySearch]);
+  }, [initialQuery, pantryItems, activeFilters, excludedIngredients]);
 
   // Ingredient-based search
-  const handleIngredientSearch = useCallback(async () => {
+  const handleIngredientSearch = async () => {
     if (selectedIngredients.size === 0) {
       Alert.alert('No Ingredients Selected', 'Please select at least one ingredient');
       return;
     }
 
     const ingredientString = Array.from(selectedIngredients).join(',');
-
-    setLoading(true);
-    setSearchPerformed(true);
     ingredientSheetRef.current?.close();
 
-    try {
-      const results = await spoonacularService.searchRecipesByIngredients({
-        ingredients: ingredientString,
-        number: 10,
-        ...(activeFilters.diet && { diet: activeFilters.diet }),
-        ...(activeFilters.intolerances.length > 0 && {
-          intolerances: activeFilters.intolerances.join(','),
-        }),
-        ...(activeFilters.mealType && { type: activeFilters.mealType }),
-        ...(activeFilters.maxReadyTime && { maxReadyTime: activeFilters.maxReadyTime }),
-        ...(excludedIngredients.length > 0 && {
-          excludeIngredients: excludedIngredients.join(','),
-        }),
-      });
+    await executeIngredientSearch(ingredientString, activeFilters, excludedIngredients, setLoading, setSearchPerformed, setSearchResults);
+  };
 
-      setSearchResults(results);
-    } catch (error: any) {
-      console.error('Ingredient search error:', error);
-      if (error.isQuotaExceeded) {
-        Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
-      } else if (error.isRateLimitError) {
-        Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
-      } else {
-        Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedIngredients, activeFilters, excludedIngredients]);
-
-  const openIngredientSelector = useCallback(() => {
+  const openIngredientSelector = () => {
     if (!pantryItems || pantryItems.length === 0) {
       Alert.alert('No Pantry Items', 'Add items to your pantry first to search by ingredients.');
       return;
     }
     ingredientSheetRef.current?.present();
-  }, [pantryItems]);
+  };
 
-  const toggleIngredient = useCallback((itemName: string) => {
+  const toggleIngredient = (itemName: string) => {
     setSelectedIngredients(prev => {
       const next = new Set(prev);
       if (next.has(itemName)) {
@@ -280,56 +276,51 @@ export function useRecipeSearch() {
       }
       return next;
     });
-  }, []);
+  };
 
-  const openFilterSheet = useCallback(() => {
+  const openFilterSheet = () => {
     filterSheetRef.current?.present();
-  }, []);
+  };
 
-  const clearFilters = useCallback(() => {
+  const clearFilters = () => {
     setActiveFilters({
       diet: null,
       intolerances: [],
       mealType: null,
-      maxReadyTime: null,
-    });
-  }, []);
+      maxReadyTime: null });
+  };
 
-  const applyFilters = useCallback(() => {
+  const applyFilters = () => {
     filterSheetRef.current?.dismiss();
     if (searchQuery.trim()) {
       handleTextSearch();
     } else if (selectedIngredients.size > 0) {
       handleIngredientSearch();
     }
-  }, [searchQuery, selectedIngredients, handleTextSearch, handleIngredientSearch]);
+  };
 
-  const activeFilterCount = useMemo(() => {
+  const activeFilterCount = (() => {
     let count = 0;
     if (activeFilters.diet) count++;
     if (activeFilters.intolerances.length > 0) count += activeFilters.intolerances.length;
     if (activeFilters.mealType) count++;
     if (activeFilters.maxReadyTime) count++;
     return count;
-  }, [activeFilters]);
+  })();
 
   // Transform results to list items
-  const items = useMemo(() => {
+  const items = (() => {
     return searchResults.map(recipe => transformRecipeForDisplay(recipe));
-  }, [searchResults]);
+  })();
 
-  const handleItemPress = useCallback(
-    (id: string) => {
+  const handleItemPress = (id: string) => {
       const item = items.find(i => i.id === id);
       if (!item) return;
 
       navigate('RecipeDetail', {
         externalSource: 'SPOONACULAR',
-        externalId: String(item.spoonacularId),
-      });
-    },
-    [items, navigate],
-  );
+        externalId: String(item.spoonacularId) });
+    };
 
   return {
     navigate,
@@ -354,6 +345,5 @@ export function useRecipeSearch() {
     applyFilters,
     activeFilterCount,
     items,
-    handleItemPress,
-  };
+    handleItemPress };
 }

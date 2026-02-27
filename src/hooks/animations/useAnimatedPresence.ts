@@ -1,11 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { useSharedValue, withSpring } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import type {
   UseAnimatedPresenceProps,
   UseAnimatedPresenceReturn,
-  SpringConfig,
-} from './types';
+  SpringConfig } from './types';
 
 const DEFAULT_SPRING: SpringConfig = { mass: 0.4, damping: 15, stiffness: 150 };
 
@@ -15,8 +14,7 @@ export function useAnimatedPresence(
   const {
     springConfig = DEFAULT_SPRING,
     callbacks = {},
-    initialVisible = false,
-  } = props;
+    initialVisible = false } = props;
 
   // Destructure callbacks for granular memoization dependencies
   const { onOpenStart, onOpenComplete, onCloseStart, onCloseComplete } =
@@ -26,69 +24,48 @@ export function useAnimatedPresence(
   const isVisible = useSharedValue(initialVisible);
   const progress = useSharedValue(initialVisible ? 1 : 0);
 
-  // Create stable function references for scheduleOnRN
-  // These run on the JS thread and can safely access callbacks
-  const setRenderTrue = useCallback(() => setShouldRender(true), []);
-  const setRenderFalse = useCallback(() => setShouldRender(false), []);
-
-  const handleOpenStart = useCallback(() => {
-    onOpenStart?.();
-  }, [onOpenStart]);
-
-  const handleOpenComplete = useCallback(() => {
-    onOpenComplete?.();
-  }, [onOpenComplete]);
-
-  const handleCloseStart = useCallback(() => {
-    onCloseStart?.();
-  }, [onCloseStart]);
-
-  const handleCloseComplete = useCallback(() => {
-    onCloseComplete?.();
-  }, [onCloseComplete]);
-
-  const open = useCallback(() => {
+  const open = () => {
     'worklet';
     if (isVisible.value) return;
 
     isVisible.value = true;
-    scheduleOnRN(setRenderTrue);
-    scheduleOnRN(handleOpenStart);
+    scheduleOnRN(setShouldRender, true);
+    if (onOpenStart) scheduleOnRN(onOpenStart);
 
     progress.value = withSpring(1, springConfig, finished => {
       'worklet';
       if (finished) {
-        scheduleOnRN(handleOpenComplete);
+        if (onOpenComplete) scheduleOnRN(onOpenComplete);
       }
     });
-  }, [isVisible, progress, springConfig, setRenderTrue, handleOpenStart, handleOpenComplete]);
+  };
 
-  const close = useCallback(() => {
+  const close = () => {
     'worklet';
     if (!isVisible.value) return;
 
     isVisible.value = false;
-    scheduleOnRN(handleCloseStart);
+    if (onCloseStart) scheduleOnRN(onCloseStart);
 
     progress.value = withSpring(0, springConfig, finished => {
       'worklet';
       if (finished) {
-        scheduleOnRN(setRenderFalse);
-        scheduleOnRN(handleCloseComplete);
+        scheduleOnRN(setShouldRender, false);
+        if (onCloseComplete) scheduleOnRN(onCloseComplete);
       }
     });
-  }, [isVisible, progress, springConfig, handleCloseStart, setRenderFalse, handleCloseComplete]);
+  };
 
-  const toggle = useCallback(() => {
+  const toggle = () => {
     'worklet';
     if (isVisible.value) {
       close();
     } else {
       open();
     }
-  }, [isVisible, open, close]);
+  };
 
-  const isActive = useCallback(() => isVisible.value, [isVisible]);
+  const isActive = () => isVisible.value;
 
   return { shouldRender, isVisible, progress, open, close, toggle, isActive };
 }

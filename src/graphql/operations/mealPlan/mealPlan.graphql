@@ -119,6 +119,11 @@ mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPl
       id
       name
       totalItems
+      homeId
+      home {
+        id
+        name
+      }
     }
   }
 }

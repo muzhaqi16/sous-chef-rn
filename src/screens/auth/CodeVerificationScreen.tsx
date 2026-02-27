@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { Text } from 'react-native';
+import { Text, Linking, ActivityIndicator, View } from 'react-native';
 import { GraphQLError } from 'graphql';
+import { useUnistyles } from 'react-native-unistyles';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
 import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
 import { CodeInputAdapter } from '#components/molecules/CodeInputAdapter';
@@ -9,9 +10,21 @@ import { useAppStore } from '#store/useAppStore';
 import { useToast } from '#/hooks/useToast';
 import {
   useVerifyEmailMutation,
-  useResendVerificationEmailMutation,
-} from '#generated';
+  useResendVerificationEmailMutation } from '#generated';
 import { errorService } from '#/services/errorService';
+import { logger } from '#/utils/environment';
+
+function extractVerificationToken(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.pathname.includes('verify-email')) return null;
+    const token = parsed.searchParams.get('token');
+    if (!token || !/^[0-9a-fA-F]{32 }$/.test(token)) return null;
+    return token;
+  } catch {
+    return null;
+  }
+}
 
 // Exponential backoff delays in seconds: immediate, then 30s, 1m, 3m, 5m
 const RESEND_BACKOFF_DELAYS = [0, 30, 60, 180, 300];
@@ -25,12 +38,17 @@ type CodeVerificationValues = {
   code: string;
 };
 
-export function CodeVerificationScreen() {
+export function CodeVerificationScreen(): React.JSX.Element | null {
   const user = useAppStore(state => state.user);
   const updateUser = useAppStore(state => state.updateUser);
   const toast = useToast();
+  const { theme } = useUnistyles();
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
+
+  // Auto-verify state for deep link handling
+  const [isAutoVerifying, setIsAutoVerifying] = useState(false);
+  const autoVerifyProcessedRef = useRef(false);
 
   // Backoff state for resend rate limiting
   const [resendAttempts, setResendAttempts] = useState(0);
@@ -40,10 +58,8 @@ export function CodeVerificationScreen() {
   const {
     control,
     handleSubmit,
-    formState: { errors },
-  } = useForm({
-    defaultValues: { code: '' },
-  });
+    formState: { errors } } = useForm({
+    defaultValues: { code: '' } });
 
   // Cleanup countdown interval on unmount
   useEffect(() => {
@@ -53,6 +69,53 @@ export function CodeVerificationScreen() {
       }
     };
   }, []);
+
+  // Listen for deep link URLs (cold start + warm start)
+  useEffect(() => {
+    const handleUrl = (url: string) => {
+      const token = extractVerificationToken(url);
+      if (token) {
+        // Inline autoVerify logic to avoid dependency on function that changes every render
+        if (autoVerifyProcessedRef.current) return;
+        autoVerifyProcessedRef.current = true;
+        setIsAutoVerifying(true);
+
+        (async () => {
+          try {
+            logger.info('Auto-verifying email from deep link', {
+              tokenPrefix: token.substring(0, 8) + '...' });
+
+            const result = await verifyEmail({ variables: { code: token } });
+
+            if (result.data?.verifyEmail?.success) {
+              updateUser({ emailVerified: true });
+              toast({ message: 'Email verified successfully!', type: 'success' });
+            } else {
+              throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
+            }
+          } catch (error: any) {
+            logger.error('Auto-verify failed', { error });
+            const errorMsg = error.message || 'Verification failed. The link may be expired or invalid.';
+            toast({ message: errorMsg, type: 'error' });
+            setIsAutoVerifying(false);
+            autoVerifyProcessedRef.current = false;
+          }
+        })();
+      }
+    };
+
+    // Cold start: app was killed, opened via deep link
+    Linking.getInitialURL().then(url => {
+      if (url) handleUrl(url);
+    });
+
+    // Warm start: app in background, opened via deep link
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleUrl(url);
+    });
+
+    return () => subscription.remove();
+  }, [verifyEmail, updateUser, toast]);
 
   // No navigation effects needed - conditional groups handle it
   useEffect(() => {
@@ -64,7 +127,7 @@ export function CodeVerificationScreen() {
   }, [user?.emailVerified]);
 
   // Start countdown timer for backoff
-  const startCountdown = useCallback((seconds: number) => {
+  const startCountdown = (seconds: number) => {
     if (countdownRef.current) {
       clearInterval(countdownRef.current);
     }
@@ -83,13 +146,12 @@ export function CodeVerificationScreen() {
         return prev - 1;
       });
     }, 1000);
-  }, []);
+  };
 
   const onVerifyCode = async (data: CodeVerificationValues) => {
     try {
       const response = await verifyEmail({
-        variables: { code: data.code },
-      });
+        variables: { code: data.code } });
 
       if (response.data?.verifyEmail.success) {
         // Just update the user state
@@ -110,8 +172,7 @@ export function CodeVerificationScreen() {
 
     try {
       const response = await resendVerificationEmail({
-        variables: { email: user.email },
-      });
+        variables: { email: user.email } });
 
       // Increment attempts and start countdown for next request
       const newAttempts = resendAttempts + 1;
@@ -151,6 +212,19 @@ export function CodeVerificationScreen() {
   // Don't render if no user or already verified
   if (!user || user.emailVerified) {
     return null;
+  }
+
+  if (isAutoVerifying) {
+    return (
+      <AuthWrapper>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={{ color: theme.colors.textPrimary, fontSize: 18, marginTop: 16 }}>
+            Verifying your email...
+          </Text>
+        </View>
+      </AuthWrapper>
+    );
   }
 
   return (

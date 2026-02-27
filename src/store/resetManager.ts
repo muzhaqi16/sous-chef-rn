@@ -62,6 +62,7 @@ export const createResetManager = (
         selectedHomeId: null,
         selectedPantryId: null,
         selectedShoppingListId: null,
+        selectedMealPlanId: null,
         // Reset home data initialization flag to allow re-fetch on next login
         hasInitializedHomeData: false,
         // Reset home selection ready flag to prevent stale pantry queries on next login
@@ -204,6 +205,7 @@ const clearAuthFromStorage = async () => {
         delete parsedData.state.selectedHomeId;
         delete parsedData.state.selectedPantryId;
         delete parsedData.state.selectedShoppingListId;
+        delete parsedData.state.selectedMealPlanId;
         // Reset home data initialization flag
         delete parsedData.state.hasInitializedHomeData;
         // Reset home selection ready flag

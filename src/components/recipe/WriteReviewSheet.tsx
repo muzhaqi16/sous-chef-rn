@@ -1,10 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
-  BottomSheetTextInput,
-} from '@gorhom/bottom-sheet';
+  BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { StarRatingInput } from './StarRatingInput';
 import type { RecipeReviewFragment } from '#generated';
@@ -23,33 +22,41 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
   existingReview,
   onSubmit,
   onClose,
-  submitting,
-}) => {
+  submitting }) => {
   const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
     onDismiss: onClose,
     snapPoints: ['55%'],
-    keyboardBehavior: 'fillParent',
-  });
+    keyboardBehavior: 'fillParent' });
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
 
-  // Reset / populate form when sheet opens (complex: resets form state)
+  // Reset / populate form when sheet opens (render-time state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevExistingReview, setPrevExistingReview] = useState(existingReview);
+  if (visible !== prevVisible || existingReview !== prevExistingReview) {
+    setPrevVisible(visible);
+    setPrevExistingReview(existingReview);
+    if (visible) {
+      setRating(existingReview?.rating ?? 0);
+      setComment(existingReview?.comment ?? '');
+    }
+  }
+
+  // Present/dismiss bottom sheet
   useEffect(() => {
     if (visible) {
       ref.current?.present();
-      setRating(existingReview?.rating ?? 0);
-      setComment(existingReview?.comment ?? '');
     } else {
       ref.current?.dismiss();
     }
-  }, [visible, existingReview]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visible, ref]);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = async () => {
     if (submitting || rating === 0) return;
     await onSubmit(rating, comment.trim() || undefined);
     onClose();
-  }, [submitting, rating, comment, onSubmit, onClose]);
+  };
 
   const isEditing = !!existingReview;
 
@@ -113,28 +120,23 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    padding: theme.spacing.lg,
-  },
+    padding: theme.spacing.lg },
   title: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   ratingSection: {
     marginBottom: theme.spacing.lg,
     alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   label: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   commentSection: {
     marginBottom: theme.spacing.lg,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   textInput: {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -143,25 +145,19 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
     minHeight: 100,
-    textAlignVertical: 'top',
-  },
+    textAlignVertical: 'top' },
   submitButton: {
     backgroundColor: theme.colors.primary,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
     alignItems: 'center',
     minHeight: 48,
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   submitButtonDisabled: {
-    opacity: 0.5,
-  },
+    opacity: 0.5 },
   submitText: {
     color: theme.colors.onPrimary,
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

@@ -13,18 +13,17 @@
  * Invitations are not time-critical - users can wait a few seconds to see them.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   useMyShoppingListInvitesLazyQuery,
   useGetMyPendingInvitesLazyQuery,
-  NotificationType,
-} from '#generated';
+  NotificationType } from '#generated';
 import { useAppStore } from '#store/useAppStore';
 import {
   NotificationCategory,
-  NotificationPriority,
-} from '#store/slices/notificationSlice';
+  NotificationPriority } from '#store/slices/notificationSlice';
 import { useDeferredCallback } from '#hooks/performance/useDeferredCallback';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 /**
  * Hook to fetch and display all pending invitations (home + shopping list)
@@ -62,7 +61,7 @@ export function useAllPendingInvites(userId?: string) {
     });
 
   // Fetch both invitation types in parallel
-  const fetchInvitations = useCallback(() => {
+  const fetchInvitations = () => {
     if (hasFetchedRef.current || !userId) return;
     hasFetchedRef.current = true;
 
@@ -73,7 +72,7 @@ export function useAllPendingInvites(userId?: string) {
     if (__DEV__) {
       console.log('📬 [useAllPendingInvites] Deferred invitation queries started');
     }
-  }, [userId, fetchShoppingListInvites, fetchHomeInvites]);
+  };
 
   // PERFORMANCE: Defer invitation queries by 10000ms to avoid competing with
   // screen-critical queries (GetHomes, GetPantry) at startup.
@@ -88,20 +87,8 @@ export function useAllPendingInvites(userId?: string) {
     }
   }, [userId]);
 
-  // Log partial errors in development
-  useEffect(() => {
-    if (__DEV__) {
-      if (shoppingListError) {
-        console.warn(
-          '⚠️ Partial error loading shopping list invites:',
-          shoppingListError,
-        );
-      }
-      if (homeError) {
-        console.warn('⚠️ Partial error loading home invites:', homeError);
-      }
-    }
-  }, [shoppingListError, homeError]);
+  useApolloErrorLogger('MyShoppingListInvites', shoppingListError);
+  useApolloErrorLogger('GetMyPendingInvites', homeError);
 
   // Process and add all pending invites to notification store
   useEffect(() => {
@@ -137,8 +124,7 @@ export function useAllPendingInvites(userId?: string) {
             inviterName:
               invite.invitedBy?.profile?.displayName || invite.invitedBy?.email,
             inviterEmail: invite.invitedBy?.email,
-            role: invite.role,
-          },
+            role: invite.role },
           sentAt: invite.invitedAt,
           isRead: false,
           requiresAction: true,
@@ -146,11 +132,9 @@ export function useAllPendingInvites(userId?: string) {
           actionData: {
             inviteId: invite.id,
             token: invite.token,
-            listId: invite.shoppingListId,
-          },
+            listId: invite.shoppingListId },
           expiresAt: invite.expiresAt,
-          source: 'server' as const,
-        }));
+          source: 'server' as const }));
 
       allInviteNotifications.push(...shoppingListInvites);
     }
@@ -178,19 +162,16 @@ export function useAllPendingInvites(userId?: string) {
             inviterName:
               invite.inviter?.profile?.displayName || invite.inviter?.email,
             inviterEmail: invite.inviter?.email,
-            role: invite.role,
-          },
+            role: invite.role },
           sentAt: invite.sentAt,
           isRead: false,
           requiresAction: true,
           actionType: 'ACCEPT_HOME_INVITE',
           actionData: {
             inviteId: invite.id,
-            homeId: invite.homeId,
-          },
+            homeId: invite.homeId },
           expiresAt: invite.expiresAt,
-          source: 'server' as const,
-        }));
+          source: 'server' as const }));
 
       allInviteNotifications.push(...homeInvites);
     }
@@ -210,8 +191,7 @@ export function useAllPendingInvites(userId?: string) {
             ).length,
             homes: allInviteNotifications.filter(
               n => n.type === NotificationType.HomeInvitation,
-            ).length,
-          },
+            ).length },
         );
       }
     }

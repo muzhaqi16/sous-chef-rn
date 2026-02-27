@@ -1,13 +1,18 @@
-import React, { useCallback } from 'react';
+import React, { useEffect } from 'react';
 import { Text, Dimensions } from 'react-native';
-import Animated from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+  cancelAnimation } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import { StyleSheet } from 'react-native-unistyles';
 import { BaseItemCard } from '../molecules/BaseItemCard/BaseItemCard';
 import { CardLeftSlot } from '../molecules/BaseItemCard/CardLeftSlot';
 import { CardContent } from '../molecules/BaseItemCard/CardContent';
 import { CardRightSlot } from '../molecules/BaseItemCard/CardRightSlot';
 import type { CardVariant } from '../molecules/BaseItemCard/types';
-import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { SLIDE_PRESETS } from '#/constants/animations';
 import { usePantryActions } from './PantryActionsContext';
 
@@ -23,9 +28,9 @@ interface PantryItemCardProps {
   name: string;
   expirationText?: string | null;
   expirationVariant?: ExpirationVariant;
+  expirationColor?: string;
   quantity: string;
   location: string;
-  storageState?: string | null;
   variant?: ItemVariant;
   imageUrl?: string | null;
   isOutOfStock?: boolean;
@@ -34,183 +39,220 @@ interface PantryItemCardProps {
   quantityBreakdownText?: string | null;
 }
 
+/**
+ * Expiration text — pure presentational, color precomputed by parent list.
+ * Eliminates per-item useUnistyles subscription.
+ * Memoized to prevent re-renders from context-triggered parent re-renders.
+ */
+const ExpirationText = React.memo<{
+  text: string;
+  color: string;
+  bold: boolean;
+}>(({ text, color, bold }) => (
+  <Text
+    style={[styles.expiration, { color }, bold && styles.expirationBold]}
+    numberOfLines={1}
+  >
+    {text}
+  </Text>
+));
 
 /**
- * Expiration text component with color based on variant
+ * Lightweight slide-right + fade animation wrapper for delete.
+ * Always renders <Animated.View> so the React tree structure never changes,
+ * preventing image flicker caused by View → Animated.View swaps.
  */
-const ExpirationText: React.FC<{
-  text: string;
-  variant: ExpirationVariant;
-}> = ({ text, variant }) => {
-  const { theme } = useUnistyles();
+const SlideAnimatedWrapper: React.FC<{
+  itemId: string;
+  children: (handleDelete: () => void) => React.ReactNode;
+}> = ({ itemId, children }) => {
+  const { actions } = usePantryActions();
 
-  // Select variant for bold styling
-  styles.useVariants({ bold: variant !== 'normal' });
+  const translateX = useSharedValue(0);
+  const slideOpacity = useSharedValue(1);
+  const isAnimating = useSharedValue(false);
 
-  const getColor = () => {
-    switch (variant) {
-      case 'expired':
-      case 'critical':
-        return theme.colors.expiration.expiredText;
-      case 'warning':
-        return theme.colors.expiration.warningText;
-      default:
-        return theme.colors.textSecondary;
-    }
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    opacity: slideOpacity.value }));
+
+  // Reset on FlashList cell recycling — runs synchronously on layout commit.
+  useEffect(() => {
+    cancelAnimation(translateX);
+    cancelAnimation(slideOpacity);
+    translateX.set(0);
+    slideOpacity.set(1);
+    isAnimating.set(false);
+  }, [itemId, translateX, slideOpacity, isAnimating]);
+
+  // Stable callback for scheduleOnRN — captures actions/itemId via closure
+  const doDelete = () => {
+    actions.onItemDelete?.(itemId);
+  };
+
+  const handleDelete = () => {
+    if (isAnimating.get()) return;
+    isAnimating.set(true);
+
+    const config = {
+      duration: SLIDE_PRESETS.exitWithFade.duration,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1) };
+
+    slideOpacity.set(withTiming(
+      SLIDE_PRESETS.exitWithFade.opacityTarget,
+      config,
+    ));
+    translateX.set(withTiming(SCREEN_WIDTH, config, finished => {
+      'worklet';
+      isAnimating.value = false;
+      if (finished) {
+        scheduleOnRN(doDelete);
+      }
+    }));
   };
 
   return (
-    <Text
-      style={[
-        styles.expiration,
-        { color: getColor() },
-      ]}
-      numberOfLines={1}
-    >
-      {text}
-    </Text>
+    <Animated.View style={animatedStyle}>
+      {children(handleDelete)}
+    </Animated.View>
   );
 };
 
 /**
  * Pantry item card using BaseItemCard composition
  * Displays item with emoji/image, name, expiration status, quantity, and location
- * Includes slide animation for delete/consume/waste actions
+ * Slide animation handled by SlideAnimatedWrapper (always renders Animated.View)
  */
 const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
   id,
   name,
   expirationText,
   expirationVariant,
+  expirationColor,
   quantity,
   location,
-  storageState: _storageState,
   variant = 'normal',
   imageUrl,
   isOutOfStock,
   packageBreakdownText,
   remainingNetWeightText,
-  quantityBreakdownText,
-}) => {
+  quantityBreakdownText }) => {
   const { actions, swipeable } = usePantryActions();
 
-  // Bind context actions to this item's id — always call useCallback (rules of hooks)
-  const onPress = useCallback(() => actions.onItemPress(id), [actions, id]);
-  const onEdit = useCallback(() => actions.onItemEdit?.(id), [actions, id]);
-  const onConsume = useCallback(() => actions.onItemConsume?.(id), [actions, id]);
-  const onWaste = useCallback(() => actions.onItemWaste?.(id), [actions, id]);
-  const onRestock = useCallback(() => actions.onItemRestock?.(id), [actions, id]);
-
-  // Slide animation for delete action
-  const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
-    itemId: id,
-    slideDistance: SCREEN_WIDTH,
-    duration: SLIDE_PRESETS.exitWithFade.duration,
-    withOpacity: SLIDE_PRESETS.exitWithFade.withOpacity,
-    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
-  });
-
-  // Wrap delete action with slide animation (callback after animation completes)
-  const handleDelete = useCallback(() => {
-    if (actions.onItemDelete) {
-      triggerSlide(1, () => actions.onItemDelete!(id));
-    }
-  }, [actions, id, triggerSlide]);
-
+  // PERFORMANCE: Single object for all item action callbacks
+  const itemActions = ({
+      onPress: () => actions.onItemPress(id),
+      onEdit: actions.onItemEdit ? () => actions.onItemEdit!(id) : undefined,
+      onConsume: actions.onItemConsume
+        ? () => actions.onItemConsume!(id)
+        : undefined,
+      onWaste: actions.onItemWaste ? () => actions.onItemWaste!(id) : undefined,
+      onRestock: actions.onItemRestock
+        ? () => actions.onItemRestock!(id)
+        : undefined });
 
   // Map ItemVariant to CardVariant
   const cardVariant: CardVariant = variant;
 
   // Only show image if available, no placeholder
-  const renderLeftElement = () => {
-    if (imageUrl) {
+  const leftElement = imageUrl ? (
+    <CardLeftSlot type="image" imageUrl={imageUrl} variant={cardVariant} />
+  ) : undefined;
+
+  const expirationBold = !!expirationVariant && expirationVariant !== 'normal';
+
+  const getSubtitle = () => {
+    if (isOutOfStock) {
+      return <Text style={styles.outOfStock}>Out of stock</Text>;
+    }
+    if (expirationText && expirationColor) {
       return (
-        <CardLeftSlot
-          type="image"
-          imageUrl={imageUrl}
-          variant={cardVariant}
+        <ExpirationText
+          text={expirationText}
+          color={expirationColor}
+          bold={expirationBold}
         />
       );
     }
-    // No left element if no image - just show name directly
     return undefined;
   };
 
-  return (
-    <Animated.View style={animatedSlideStyle}>
-      <BaseItemCard
-        variant={cardVariant}
-        onPress={onPress}
-        onEdit={actions.onItemEdit ? onEdit : undefined}
-        onDelete={actions.onItemDelete ? handleDelete : undefined}
-        onConsume={actions.onItemConsume ? onConsume : undefined}
-        onWaste={actions.onItemWaste ? onWaste : undefined}
-        onRestock={actions.onItemRestock ? onRestock : undefined}
-        onSwipeableWillOpen={swipeable.onSwipeableWillOpen}
-        leftThreshold={80}
-        rightThreshold={80}
-        testID={`pantry-item-${id}`}
-        leftElement={renderLeftElement()}
-        rightElement={
-          <CardRightSlot
-            type="meta"
-            primary={quantity}
-            secondary={quantityBreakdownText || packageBreakdownText || remainingNetWeightText || location}
-            tertiary={
-              (quantityBreakdownText || packageBreakdownText || remainingNetWeightText) ? location : undefined
-            }
-          />
-        }
-      >
-        <CardContent
-          title={name}
-          subtitle={
-            isOutOfStock ? (
-              <Text style={styles.outOfStock}>Out of stock</Text>
-            ) : expirationText ? (
-              <ExpirationText text={expirationText} variant={expirationVariant || 'normal'} />
-            ) : undefined
+  // Shared card content — used with or without slide animation wrapper
+  const renderCard = (onDelete?: () => void) => (
+    <BaseItemCard
+      variant={cardVariant}
+      onPress={itemActions.onPress}
+      onEdit={itemActions.onEdit}
+      onDelete={onDelete}
+      onConsume={itemActions.onConsume}
+      onWaste={itemActions.onWaste}
+      onRestock={itemActions.onRestock}
+      onSwipeableWillOpen={swipeable.onSwipeableWillOpen}
+      leftThreshold={80}
+      rightThreshold={80}
+      testID={`pantry-item-${id}`}
+      leftElement={leftElement}
+      rightElement={
+        <CardRightSlot
+          type="meta"
+          primary={quantity}
+          secondary={
+            quantityBreakdownText ||
+            packageBreakdownText ||
+            remainingNetWeightText ||
+            location
+          }
+          tertiary={
+            quantityBreakdownText ||
+            packageBreakdownText ||
+            remainingNetWeightText
+              ? location
+              : undefined
           }
         />
-      </BaseItemCard>
-    </Animated.View>
+      }
+    >
+      <CardContent title={name} subtitle={getSubtitle()} />
+    </BaseItemCard>
   );
+
+  if (actions.onItemDelete) {
+    return (
+      <SlideAnimatedWrapper itemId={id}>{renderCard}</SlideAnimatedWrapper>
+    );
+  }
+
+  return renderCard();
 };
 
 const styles = StyleSheet.create(theme => ({
   expiration: {
-    fontSize: theme.typography.fontSize.sm - 1,
-    variants: {
-      bold: {
-        true: {
-          fontWeight: theme.fonts.weight.medium,
-        },
-      },
-    },
-  },
+    fontSize: theme.typography.fontSize.sm - 1 },
+  expirationBold: {
+    fontWeight: theme.fonts.weight.medium },
   outOfStock: {
     fontSize: theme.typography.fontSize.sm - 1,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.warning,
-  },
-}));
+    color: theme.colors.warning } }));
 
 // PERFORMANCE: Custom comparator only checks data primitives — action callbacks come
 // from context and don't appear in props, so every prop is a stable primitive/string.
-export const PantryItemCard = React.memo(PantryItemCardComponent, (prev, next) =>
-  prev.id === next.id &&
-  prev.name === next.name &&
-  prev.expirationText === next.expirationText &&
-  prev.expirationVariant === next.expirationVariant &&
-  prev.quantity === next.quantity &&
-  prev.location === next.location &&
-  prev.storageState === next.storageState &&
-  prev.variant === next.variant &&
-  prev.imageUrl === next.imageUrl &&
-  prev.isOutOfStock === next.isOutOfStock &&
-  prev.packageBreakdownText === next.packageBreakdownText &&
-  prev.remainingNetWeightText === next.remainingNetWeightText &&
-  prev.quantityBreakdownText === next.quantityBreakdownText,
+export const PantryItemCard = React.memo(
+  PantryItemCardComponent,
+  (prev, next) =>
+    prev.id === next.id &&
+    prev.name === next.name &&
+    prev.expirationText === next.expirationText &&
+    prev.expirationVariant === next.expirationVariant &&
+    prev.expirationColor === next.expirationColor &&
+    prev.quantity === next.quantity &&
+    prev.location === next.location &&
+    prev.variant === next.variant &&
+    prev.imageUrl === next.imageUrl &&
+    prev.isOutOfStock === next.isOutOfStock &&
+    prev.packageBreakdownText === next.packageBreakdownText &&
+    prev.remainingNetWeightText === next.remainingNetWeightText &&
+    prev.quantityBreakdownText === next.quantityBreakdownText,
 );
 
 // PantryItemVariant alias for backwards compatibility

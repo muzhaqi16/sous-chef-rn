@@ -6,24 +6,9 @@ query GetShoppingList($id: ID!) {
   shoppingList(id: $id) {
     id
     name
-    description
     isDefault
-    isPublic
-    shareCode
-    tags
-    budgetAmount
-    totalCost
-    estimatedTotal
-    currency
-    category
-    priority
-    status
-    isCompleted
-    completedAt
     totalItems
     completedItems
-    createdAt
-    updatedAt
     homeId
     home {
       id
@@ -60,10 +45,7 @@ query GetShoppingList($id: ID!) {
         cursor
         node {
           ...ShoppingListCollaboratorFragment
-          canEdit
-          canInviteOthers
           invitedAt
-          lastViewedAt
         }
       }
       pageInfo {
@@ -71,11 +53,6 @@ query GetShoppingList($id: ID!) {
         endCursor
       }
       totalCount
-    }
-    targetStore {
-      id
-      name
-      address
     }
   }
 }
@@ -448,13 +425,6 @@ mutation ToggleShoppingListItemPurchased(
     code
     shoppingListItem {
       ...ShoppingListItemDisplayFragment
-      # Additional fields for purchase state cache consistency
-      normalizedQuantity
-      purchaseInfo {
-        purchasedQuantity
-        purchasedPrice
-        purchaseDate
-      }
     }
   }
 }

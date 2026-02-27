@@ -5,13 +5,23 @@ import { Counter } from './Counter';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
 
+interface ItemData {
+  id: string;
+  name?: string;
+  itemName?: string;
+  description?: string;
+  quantity: number;
+  unitName?: string;
+  item?: {
+    imageUrl?: string;
+  };
+}
+
 type ItemCardProps = {
-  item: any;
-  onPress: () => void; // For item press action
+  item: ItemData;
+  onPress: () => void;
   onIncrement: () => void;
   onDecrement: () => void;
-  onMoreOptions?: () => void; // For ellipsis menu
-  onRemove?: () => void; // For remove button
 };
 
 const ItemCard: React.FC<ItemCardProps> = ({
@@ -28,6 +38,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
         resizeMode="contain"
         uri={item?.item?.imageUrl || undefined}
         style={styles.cardImg}
+        displaySize={68}
       />
       <View style={styles.cardBody}>
         <Text style={styles.cardTitle}>{item?.itemName}</Text>

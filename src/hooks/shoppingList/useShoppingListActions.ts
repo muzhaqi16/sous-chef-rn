@@ -1,16 +1,14 @@
-import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
   ShoppingListItemDisplayFragmentDoc,
-  useUpdateShoppingListItemQuantityMutation,
-} from '#generated';
+  useUpdateShoppingListItemQuantityMutation } from '#generated';
 import { toastService } from '#/services/toastService';
 import {
   handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 import { useHaptic } from '#hooks/haptic/useHaptic';
 import { Telemetry } from '#/services/telemetry';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
@@ -23,6 +21,134 @@ interface UseShoppingListActionsOptions {
   removeItem: (itemId: string) => Promise<any>;
   refetchItems: () => Promise<any>;
   setSearchQuery: (query: string) => void;
+}
+
+// --- Module-level helpers (outside hook body for React Compiler) ---
+
+async function executeQuantityUpdate(
+  updateFn: () => Promise<void>,
+  revertCache: () => void,
+  clearPersistence: () => void,
+  refetchItems: () => Promise<any>,
+): Promise<void> {
+  const result = await executeMutationWithErrorHandler(
+    updateFn,
+    (error: any) => {
+      revertCache();
+      clearPersistence();
+
+      if (handleVersionConflict(error)) {
+        Alert.alert('Item Updated', getVersionConflictMessage(error), [
+          { text: 'Refresh', onPress: () => refetchItems() },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+        return;
+      }
+      console.error('Failed to update quantity:', error);
+      toastService.error('Failed to update quantity');
+    },
+  );
+  if (result === false) return;
+}
+
+async function executeTogglePurchase(
+  haptic: { selection: () => void; error: () => void },
+  toggleItem: (itemId: string) => Promise<any>,
+  itemId: string,
+): Promise<void> {
+  const result = await executeMutationWithErrorHandler(
+    async () => {
+      haptic.selection();
+      await toggleItem(itemId);
+      Telemetry.trackEvent('toggle_item_purchase_success');
+    },
+    (error) => {
+      Telemetry.trackError(
+        error instanceof Error ? error : 'Failed to toggle item purchase',
+        { component: 'ShoppingListMain', operation: 'togglePurchase' },
+      );
+      haptic.error();
+      toastService.error('Failed to toggle item');
+    },
+  );
+  if (result === false) return;
+}
+
+async function executeDeleteItem(
+  haptic: { warning: () => void; error: () => void },
+  removeItem: (itemId: string) => Promise<any>,
+  itemId: string,
+): Promise<void> {
+  const result = await executeMutationWithErrorHandler(
+    async () => {
+      haptic.warning();
+      await removeItem(itemId);
+      Telemetry.trackEvent('delete_item_success');
+    },
+    (error) => {
+      Telemetry.trackError(
+        error instanceof Error ? error : 'Failed to delete item',
+        { component: 'ShoppingListMain', operation: 'deleteItem' },
+      );
+      haptic.error();
+      toastService.error('Failed to delete item');
+    },
+  );
+  if (result === false) return;
+}
+
+async function executeClearItems(
+  haptic: { warning: () => void; error: () => void },
+  clearItems: (purchased: boolean) => Promise<void>,
+  purchased: boolean,
+): Promise<void> {
+  const result = await executeMutationWithErrorHandler(
+    async () => {
+      haptic.warning();
+      await clearItems(purchased);
+    },
+    () => {
+      haptic.error();
+      toastService.error(purchased ? 'Failed to clear purchased items' : 'Failed to clear shopping items');
+    },
+  );
+  if (result === false) return;
+}
+
+async function executeAddItemFromSearch(
+  addItem: (input: { itemName: string; quantity?: number }) => Promise<any>,
+  haptic: { success: () => void; error: () => void },
+  itemName: string,
+  setSearchQuery: (query: string) => void,
+): Promise<void> {
+  const trimmed = itemName.trim();
+  const result = await executeMutationWithErrorHandler(
+    async () => {
+      const addResult = await addItem({
+        itemName: trimmed,
+        quantity: 1 });
+
+      if (addResult) {
+        Telemetry.trackEvent('add_item_success', { source: 'search' });
+        haptic.success();
+      } else {
+        Telemetry.trackEvent('add_item_failed', { source: 'search' });
+        haptic.error();
+        toastService.error('Failed to add item');
+        setSearchQuery(trimmed);
+      }
+    },
+    (error) => {
+      Telemetry.trackError(
+        error instanceof Error ? error : 'Failed to add item from search',
+        { component: 'ShoppingListMain', operation: 'addItemFromSearch' },
+      );
+      haptic.error();
+      toastService.error('Failed to add item');
+      setSearchQuery(trimmed);
+    },
+  );
+  if (result === false) return;
 }
 
 /**
@@ -45,34 +171,28 @@ export function useShoppingListActions({
   toggleItem,
   removeItem,
   refetchItems,
-  setSearchQuery,
-}: UseShoppingListActionsOptions) {
+  setSearchQuery }: UseShoppingListActionsOptions) {
   const client = useApolloClient();
   const haptic = useHaptic();
 
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
 
   // Quantity increment handler - uses cache.modify for instant UI without warnings
-  const handleIncrementQuantity = useCallback(
-    async (itemId: string) => {
+  const handleIncrementQuantity = async (itemId: string) => {
       const cacheId = client.cache.identify({
         __typename: 'ShoppingListItem',
-        id: itemId,
-      });
+        id: itemId });
 
       if (!cacheId) {
         console.warn('Item not in cache, cannot increment:', itemId);
         return;
       }
 
-      // Read current quantity from cache using lightweight display fragment
       const cachedItem = client.readFragment<any>({
         id: cacheId,
         fragment: ShoppingListItemDisplayFragmentDoc,
-        fragmentName: 'ShoppingListItemDisplayFragment',
-      });
+        fragmentName: 'ShoppingListItemDisplayFragment' });
 
       if (!cachedItem) {
         console.warn('Item not in cache, cannot increment:', itemId);
@@ -81,88 +201,57 @@ export function useShoppingListActions({
 
       const newQuantity = (cachedItem.quantity || 0) + 1;
 
-      // Immediate cache update for instant UI feedback (Pattern 5 from apollo-client-patterns.md)
       client.cache.modify({
         id: cacheId,
         fields: {
           quantity() {
             return newQuantity;
-          },
+          } } });
+
+      optimisticDataPersistence.save('ShoppingListItem', itemId, 'quantity', newQuantity);
+
+      await executeQuantityUpdate(
+        async () => {
+          await updateQuantity({
+            variables: {
+              itemId,
+              quantity: newQuantity.toString(),
+              version: cachedItem.version },
+            onCompleted: data => {
+              const updatedItem = data?.updateShoppingListItemQuantity?.shoppingListItem;
+              if (updatedItem) {
+                optimisticDataPersistence.clear('ShoppingListItem', updatedItem.id, 'quantity');
+              }
+            } });
         },
-      });
-
-      try {
-        optimisticDataPersistence.save(
-          'ShoppingListItem',
-          itemId,
-          'quantity',
-          newQuantity,
-        );
-
-        await updateQuantity({
-          variables: {
-            itemId,
-            quantity: newQuantity.toString(),
-            version: cachedItem.version,
-          },
-          // NO optimisticResponse - cache.modify handles instant UI
-          onCompleted: data => {
-            const updatedItem = data?.updateShoppingListItemQuantity?.shoppingListItem;
-            if (updatedItem) {
-              optimisticDataPersistence.clear(
-                'ShoppingListItem',
-                updatedItem.id,
-                'quantity',
-              );
-            }
-          },
-        });
-      } catch (error: any) {
-        // Revert cache on error
-        client.cache.modify({
-          id: cacheId,
-          fields: {
-            quantity() {
-              return cachedItem.quantity;
-            },
-          },
-        });
-        // Clear persisted optimistic data to prevent stale quantity on app restart
-        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity');
-
-        if (handleVersionConflict(error)) {
-          Alert.alert('Item Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetchItems() },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
-          return;
-        }
-        console.error('Failed to update quantity:', error);
-        toastService.error('Failed to update quantity');
-      }
-    },
-    [client, refetchItems, updateQuantity],
-  );
+        () => {
+          client.cache.modify({
+            id: cacheId,
+            fields: {
+              quantity() {
+                return cachedItem.quantity;
+              } } });
+        },
+        () => optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity'),
+        refetchItems,
+      );
+    };
 
   // Quantity decrement handler - uses cache.modify for instant UI without warnings
-  const handleDecrementQuantity = useCallback(
-    async (itemId: string) => {
+  const handleDecrementQuantity = async (itemId: string) => {
       const cacheId = client.cache.identify({
         __typename: 'ShoppingListItem',
-        id: itemId,
-      });
+        id: itemId });
 
       if (!cacheId) {
         console.warn('Item not in cache, cannot decrement:', itemId);
         return;
       }
 
-      // Read current quantity from cache using lightweight display fragment
       const cachedItem = client.readFragment<any>({
         id: cacheId,
         fragment: ShoppingListItemDisplayFragmentDoc,
-        fragmentName: 'ShoppingListItemDisplayFragment',
-      });
+        fragmentName: 'ShoppingListItemDisplayFragment' });
 
       if (!cachedItem) {
         console.warn('Item not in cache, cannot decrement:', itemId);
@@ -171,153 +260,83 @@ export function useShoppingListActions({
 
       const newQuantity = Math.max(1, (cachedItem.quantity ?? 1) - 1);
 
-      // Immediate cache update for instant UI feedback (Pattern 5 from apollo-client-patterns.md)
       client.cache.modify({
         id: cacheId,
         fields: {
           quantity() {
             return newQuantity;
-          },
+          } } });
+
+      optimisticDataPersistence.save('ShoppingListItem', itemId, 'quantity', newQuantity);
+
+      await executeQuantityUpdate(
+        async () => {
+          await updateQuantity({
+            variables: {
+              itemId,
+              quantity: newQuantity.toString(),
+              version: cachedItem.version },
+            onCompleted: data => {
+              const updatedItem = data?.updateShoppingListItemQuantity?.shoppingListItem;
+              if (updatedItem) {
+                optimisticDataPersistence.clear('ShoppingListItem', updatedItem.id, 'quantity');
+              }
+            } });
         },
-      });
-
-      try {
-        optimisticDataPersistence.save(
-          'ShoppingListItem',
-          itemId,
-          'quantity',
-          newQuantity,
-        );
-
-        await updateQuantity({
-          variables: {
-            itemId,
-            quantity: newQuantity.toString(),
-            version: cachedItem.version,
-          },
-          // NO optimisticResponse - cache.modify handles instant UI
-          onCompleted: data => {
-            const updatedItem = data?.updateShoppingListItemQuantity?.shoppingListItem;
-            if (updatedItem) {
-              optimisticDataPersistence.clear(
-                'ShoppingListItem',
-                updatedItem.id,
-                'quantity',
-              );
-            }
-          },
-        });
-      } catch (error: any) {
-        // Revert cache on error
-        client.cache.modify({
-          id: cacheId,
-          fields: {
-            quantity() {
-              return cachedItem.quantity;
-            },
-          },
-        });
-        // Clear persisted optimistic data to prevent stale quantity on app restart
-        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity');
-
-        if (handleVersionConflict(error)) {
-          Alert.alert('Item Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetchItems() },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
-          return;
-        }
-        console.error('Failed to update quantity:', error);
-        toastService.error('Failed to update quantity');
-      }
-    },
-    [client, refetchItems, updateQuantity],
-  );
+        () => {
+          client.cache.modify({
+            id: cacheId,
+            fields: {
+              quantity() {
+                return cachedItem.quantity;
+              } } });
+        },
+        () => optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity'),
+        refetchItems,
+      );
+    };
 
   // Toggle purchase handler
-  // Animation timing is handled by AnimatedCheckbox via onToggleComplete callback
-  const handleTogglePurchase = useCallback(
-    async (itemId: string) => {
+  const handleTogglePurchase = async (itemId: string) => {
       Telemetry.trackEvent('toggle_item_purchase', { item_id: itemId });
-      try {
-        haptic.selection();
-        await toggleItem(itemId);
-        Telemetry.trackEvent('toggle_item_purchase_success');
-      } catch (error) {
-        Telemetry.trackError(
-          error instanceof Error ? error : 'Failed to toggle item purchase',
-          { component: 'ShoppingListMain', operation: 'togglePurchase' },
-        );
-        haptic.error();
-        toastService.error('Failed to toggle item');
-      }
-    },
-    [toggleItem, haptic],
-  );
+      await executeTogglePurchase(haptic, toggleItem, itemId);
+    };
 
   // Delete item handler
-  const handleDeleteItem = useCallback(
-    async (itemId: string) => {
+  const handleDeleteItem = async (itemId: string) => {
       Telemetry.trackEvent('delete_item', { item_id: itemId });
-      try {
-        haptic.warning();
-        await removeItem(itemId);
-        Telemetry.trackEvent('delete_item_success');
-      } catch (error) {
-        Telemetry.trackError(
-          error instanceof Error ? error : 'Failed to delete item',
-          { component: 'ShoppingListMain', operation: 'deleteItem' },
-        );
-        haptic.error();
-        toastService.error('Failed to delete item');
-      }
-    },
-    [removeItem, haptic],
-  );
+      await executeDeleteItem(haptic, removeItem, itemId);
+    };
 
   // Clear items handler - uses optimistic cache clearing for instant UI
   const { clearItems } = useClearShoppingListItems({
     listId: currentListId,
     items,
-    refetch: refetchItems,
-  });
+    refetch: refetchItems });
 
-  const handleClearAllPurchased = useCallback(async () => {
+  const handleClearAllPurchased = async () => {
     const purchasedItems = items.filter(
       (item: any) => item.purchaseInfo?.isPurchased,
     );
 
     if (purchasedItems.length === 0) return;
 
-    try {
-      haptic.warning();
-      await clearItems(true);
-    } catch {
-      haptic.error();
-      toastService.error('Failed to clear purchased items');
-    }
-  }, [items, clearItems, haptic]);
+    await executeClearItems(haptic, clearItems, true);
+  };
 
   // Clear all shopping (unpurchased) items handler
-  const handleClearAllShopping = useCallback(async () => {
+  const handleClearAllShopping = async () => {
     const unpurchasedItems = items.filter(
       (item: any) => !item.purchaseInfo?.isPurchased,
     );
 
     if (unpurchasedItems.length === 0) return;
 
-    try {
-      haptic.warning();
-      await clearItems(false);
-    } catch {
-      haptic.error();
-      toastService.error('Failed to clear shopping items');
-    }
-  }, [items, clearItems, haptic]);
+    await executeClearItems(haptic, clearItems, false);
+  };
 
   // Add item from search handler
-  const handleAddItemFromSearch = useCallback(
-    async (itemName: string) => {
+  const handleAddItemFromSearch = async (itemName: string) => {
       if (!currentListId) {
         toastService.error('Please select a shopping list first');
         return;
@@ -325,39 +344,13 @@ export function useShoppingListActions({
 
       Telemetry.trackEvent('add_item_from_search', {
         list_id: currentListId,
-        item_name_length: itemName.trim().length,
-      });
+        item_name_length: itemName.trim().length });
 
       // Clear search input immediately for instant feedback
       setSearchQuery('');
 
-      try {
-        const result = await addItem({
-          itemName: itemName.trim(),
-          quantity: 1,
-        });
-
-        if (result) {
-          Telemetry.trackEvent('add_item_success', { source: 'search' });
-          haptic.success();
-        } else {
-          Telemetry.trackEvent('add_item_failed', { source: 'search' });
-          haptic.error();
-          toastService.error('Failed to add item');
-          setSearchQuery(itemName.trim());
-        }
-      } catch (error) {
-        Telemetry.trackError(
-          error instanceof Error ? error : 'Failed to add item from search',
-          { component: 'ShoppingListMain', operation: 'addItemFromSearch' },
-        );
-        haptic.error();
-        toastService.error('Failed to add item');
-        setSearchQuery(itemName.trim());
-      }
-    },
-    [currentListId, addItem, setSearchQuery, haptic],
-  );
+      await executeAddItemFromSearch(addItem, haptic, itemName, setSearchQuery);
+    };
 
   return {
     // Quantity
@@ -369,6 +362,5 @@ export function useShoppingListActions({
     handleDeleteItem,
     handleClearAllPurchased,
     handleClearAllShopping,
-    handleAddItemFromSearch,
-  };
+    handleAddItemFromSearch };
 }

@@ -84,7 +84,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
         {/* Avatar */}
         <Pressable onPress={onAvatarPress} style={styles.avatarContainer}>
           {avatarUrl ? (
-            <CachedImage uri={avatarUrl} style={styles.avatarImage} />
+            <CachedImage uri={avatarUrl} style={styles.avatarImage} displaySize={48} />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Icon
@@ -98,8 +98,6 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
       </View>
     );
   };
-
-PantryHeader.displayName = 'PantryHeader';
 
 const styles = StyleSheet.create(theme => ({
   greetingRow: {

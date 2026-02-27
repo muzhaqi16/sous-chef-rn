@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useAppStore } from '#store/useAppStore';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
@@ -11,9 +10,9 @@ import {
   Diet,
   Intolerance,
   HealthGoal,
-  RestrictionSeverity,
-} from '#generated';
+  RestrictionSeverity } from '#generated';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useErrorService } from '#/services/errorService';
 
 export interface DietaryRestriction {
@@ -57,8 +56,7 @@ export const useDietaryProfile = () => {
     skip: !user?.id,
     fetchPolicy: 'cache-first',
     errorPolicy: 'ignore',
-    notifyOnNetworkStatusChange: true,
-  });
+    notifyOnNetworkStatusChange: true });
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
   const profile = usePreservedQueryData(data?.me?.dietaryProfile, null);
@@ -81,17 +79,13 @@ export const useDietaryProfile = () => {
           dietaryProfile: enhanceWithVersion(
             profile,
             variables.input,
-          ),
-        },
-      };
+          ) } };
     },
     onError: error => {
       const { message } = handleApolloError(error, {
-        operation: 'Update Dietary Profile',
-      });
+        operation: 'Update Dietary Profile' });
       Alert.alert('Error', message);
-    },
-  });
+    } });
 
   // ===== MUTATION 2: Add Dietary Restriction =====
   const [addRestriction] = useAddDietaryRestrictionMutation({
@@ -119,17 +113,13 @@ export const useDietaryProfile = () => {
 
             // Add to end of array
             return [...existingRestrictions, newRestrictionRef];
-          },
-        },
-      });
+          } } });
     },
     onError: error => {
       const { message } = handleApolloError(error, {
-        operation: 'Add Dietary Restriction',
-      });
+        operation: 'Add Dietary Restriction' });
       Alert.alert('Error', message);
-    },
-  });
+    } });
 
   // ===== MUTATION 3: Update Dietary Restriction =====
   const [updateRestriction] = useUpdateDietaryRestrictionMutation({
@@ -152,17 +142,13 @@ export const useDietaryProfile = () => {
           dietaryRestriction: enhanceWithVersion(
             currentRestriction,
             variables.input,
-          ),
-        },
-      };
+          ) } };
     },
     onError: error => {
       const { message } = handleApolloError(error, {
-        operation: 'Update Dietary Restriction',
-      });
+        operation: 'Update Dietary Restriction' });
       Alert.alert('Error', message);
-    },
-  });
+    } });
 
   // ===== MUTATION 4: Remove Dietary Restriction =====
   const [removeRestriction] = useRemoveDietaryRestrictionMutation({
@@ -182,30 +168,24 @@ export const useDietaryProfile = () => {
             return existingRestrictions.filter(
               (ref: any) => readField('id', ref) !== restrictionId,
             );
-          },
-        },
-      });
+          } } });
 
       // Step 2: Evict the entity from cache
       cache.evict({
         id: cache.identify({
           __typename: 'DietaryRestriction',
-          id: restrictionId,
-        }),
-      });
+          id: restrictionId }) });
 
       // Step 3: CRITICAL - Garbage collect orphaned data
       cache.gc();
     },
     onError: error => {
       const { message } = handleApolloError(error, {
-        operation: 'Remove Dietary Restriction',
-      });
+        operation: 'Remove Dietary Restriction' });
       Alert.alert('Error', message);
-    },
-  });
+    } });
 
-  const getDietaryProfile = useCallback((): DietaryProfileData | null => {
+  const getDietaryProfile = (): DietaryProfileData | null => {
     if (!profile) return null;
 
     return {
@@ -219,8 +199,7 @@ export const useDietaryProfile = () => {
           healthGoal: r.healthGoal,
           severity: r.severity,
           notes: r.notes,
-          appliesToHomeId: r.appliesToHomeId,
-        })) || [],
+          appliesToHomeId: r.appliesToHomeId })) || [],
       preferredCuisines: profile.preferredCuisines || [],
       dislikedIngredients: profile.dislikedIngredients || [],
       favoriteIngredients: profile.favoriteIngredients || [],
@@ -233,12 +212,10 @@ export const useDietaryProfile = () => {
       cookingSkillLevel: profile.cookingSkillLevel,
       maxPrepTimeMinutes: profile.maxPrepTimeMinutes,
       maxCookTimeMinutes: profile.maxCookTimeMinutes,
-      budgetPerMeal: profile.budgetPerMeal,
-    };
-  }, [profile]);
+      budgetPerMeal: profile.budgetPerMeal };
+  };
 
-  const updateDietaryProfile = useCallback(
-    async (updates: {
+  const updateDietaryProfile = async (updates: {
       preferredCuisines?: string[];
       dislikedIngredients?: string[];
       favoriteIngredients?: string[];
@@ -253,33 +230,22 @@ export const useDietaryProfile = () => {
       maxCookTimeMinutes?: number | null;
       budgetPerMeal?: number | null;
     }) => {
-      try {
-        // Convert null to undefined for GraphQL input
-        const cleanedUpdates = Object.fromEntries(
-          Object.entries(updates).map(([key, value]) => [
-            key,
-            value === null ? undefined : value,
-          ]),
-        );
+      // Convert null to undefined for GraphQL input
+      const cleanedUpdates = Object.fromEntries(
+        Object.entries(updates).map(([key, value]) => [
+          key,
+          value === null ? undefined : value,
+        ]),
+      );
 
-        const result = await updateProfile({
-          variables: {
-            input: cleanedUpdates,
-          },
-        });
+      const result = await executeMutation(
+        () => updateProfile({ variables: { input: cleanedUpdates } }),
+        'Failed to update dietary profile',
+      );
+      return result ? !!result.data : false;
+    };
 
-        // No refetch needed - automatic normalization + optimistic response handle UI updates
-        return !!result.data;
-      } catch {
-        // Error handled by onError handler
-        return false;
-      }
-    },
-    [updateProfile],
-  );
-
-  const addDietaryRestriction = useCallback(
-    async (
+  const addDietaryRestriction = async (
       restriction: {
         diet?: Diet;
         intolerance?: Intolerance;
@@ -289,76 +255,38 @@ export const useDietaryProfile = () => {
       notes?: string,
       appliesToHomeId?: string,
     ) => {
-      try {
-        const result = await addRestriction({
+      const result = await executeMutation(
+        () => addRestriction({
           variables: {
-            input: {
-              ...restriction,
-              severity,
-              notes,
-              appliesToHomeId,
-            },
-          },
-        });
+            input: { ...restriction, severity, notes, appliesToHomeId } } }),
+        'Failed to add dietary restriction',
+      );
+      return result ? !!result.data : false;
+    };
 
-        // No refetch needed - cache.modify() + optimistic response handle UI updates
-        return !!result.data;
-      } catch {
-        // Error handled by onError handler
-        return false;
-      }
-    },
-    [addRestriction],
-  );
-
-  const updateDietaryRestriction = useCallback(
-    async (
+  const updateDietaryRestriction = async (
       id: string,
       updates: {
         severity?: RestrictionSeverity;
         notes?: string;
       },
     ) => {
-      try {
-        const result = await updateRestriction({
-          variables: {
-            input: {
-              id,
-              ...updates,
-            },
-          },
-        });
+      const result = await executeMutation(
+        () => updateRestriction({
+          variables: { input: { id, ...updates } } }),
+        'Failed to update dietary restriction',
+      );
+      return result ? !!result.data : false;
+    };
 
-        // No refetch needed - automatic normalization + optimistic response handle UI updates
-        return !!result.data;
-      } catch {
-        // Error handled by onError handler
-        return false;
-      }
-    },
-    [updateRestriction],
-  );
-
-  const removeDietaryRestriction = useCallback(
-    async (id: string) => {
-      try {
-        const result = await removeRestriction({
-          variables: {
-            input: {
-              id,
-            },
-          },
-        });
-
-        // No refetch needed - cache.modify() + cache.evict() + cache.gc() handle UI updates
-        return !!result.data;
-      } catch {
-        // Error handled by onError handler
-        return false;
-      }
-    },
-    [removeRestriction],
-  );
+  const removeDietaryRestriction = async (id: string) => {
+      const result = await executeMutation(
+        () => removeRestriction({
+          variables: { input: { id } } }),
+        'Failed to remove dietary restriction',
+      );
+      return result ? !!result.data : false;
+    };
 
   return {
     profile: getDietaryProfile(),
@@ -367,6 +295,5 @@ export const useDietaryProfile = () => {
     updateDietaryProfile,
     addDietaryRestriction,
     updateDietaryRestriction,
-    removeDietaryRestriction,
-  };
+    removeDietaryRestriction };
 };

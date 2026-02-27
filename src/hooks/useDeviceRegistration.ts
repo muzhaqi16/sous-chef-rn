@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import {
   collectDeviceInformation,
   validateDeviceInformation,
-  type DeviceInformation,
-} from '#/utils/deviceInfo';
+  type DeviceInformation } from '#/utils/deviceInfo';
 import { logger } from '#/utils/environment';
+import { executeMutationWithErrorHandler, executeQuery } from '#/utils/compilerSafeWrappers';
 import { useErrorService } from '#/services/errorService';
 import { useRegisterDeviceMutation, DeviceRegistrationInput } from '#generated';
 
@@ -14,73 +14,50 @@ interface DeviceRegistrationState {
   registrationError: string | null;
 }
 
-export const useDeviceRegistration = () => {
-  const [state, setState] = useState<DeviceRegistrationState>({
-    isRegistering: false,
-    lastRegisteredDevice: null,
-    registrationError: null,
-  });
+// --- Module-level helper (outside hook body for React Compiler) ---
 
-  const { handleApolloError } = useErrorService();
-  const [registerDeviceMutation] = useRegisterDeviceMutation();
+async function registerDeviceImpl(
+  registerDeviceMutation: (opts: any) => Promise<any>,
+  handleApolloError: ReturnType<typeof useErrorService>['handleApolloError'],
+  setState: React.Dispatch<React.SetStateAction<DeviceRegistrationState>>,
+): Promise<boolean> {
+  setState(prev => ({
+    ...prev,
+    isRegistering: true,
+    registrationError: null }));
 
-  /**
-   * Registers the current device with the backend
-   */
-  const registerDevice = useCallback(async (): Promise<boolean> => {
-    try {
-      setState(prev => ({
-        ...prev,
-        isRegistering: true,
-        registrationError: null,
-      }));
+  logger.info('Starting device registration...');
 
-      logger.info('Starting device registration...');
-
-      // Collect device information
+  const result = await executeMutationWithErrorHandler(
+    async () => {
       const deviceInfo = await collectDeviceInformation();
 
-      // Validate device information
       if (!validateDeviceInformation(deviceInfo)) {
         throw new Error('Invalid device information collected');
       }
 
       logger.info('Device information validated, registering with backend...');
 
-      // Map comprehensive device information to GraphQL input fields
-      // using the new nested sub-input structure
       const deviceInput: DeviceRegistrationInput = {
-        // Core device identification
         deviceId: deviceInfo.deviceId,
         deviceName: deviceInfo.deviceName,
         deviceType: deviceInfo.deviceType,
         platform: deviceInfo.platform,
         appVersion: deviceInfo.appVersion,
-
-        // Push token
         pushToken: undefined,
-
-        // Nested sub-inputs
         details: {
-          // Browser/OS details
           browserOs: {
             osName: deviceInfo.osName,
             osVersion: deviceInfo.osVersion,
             userAgent: deviceInfo.userAgent,
             browserName: deviceInfo.browserName,
             browserVersion: deviceInfo.browserVersion,
-            screenResolution: deviceInfo.screenResolution,
-          },
-
-          // Device characteristics
+            screenResolution: deviceInfo.screenResolution },
           characteristics: {
             hasNotch: deviceInfo.hasNotch,
             hasDynamicIsland: deviceInfo.hasDynamicIsland,
             isEmulator: deviceInfo.isEmulator,
-            isTablet: deviceInfo.isTablet,
-          },
-
-          // Device identification
+            isTablet: deviceInfo.isTablet },
           identification: {
             manufacturer: deviceInfo.manufacturer,
             model: deviceInfo.model,
@@ -96,105 +73,94 @@ export const useDeviceRegistration = () => {
             systemVersion: deviceInfo.systemVersion,
             readableVersion: deviceInfo.readableVersion,
             buildNumber: deviceInfo.buildNumber,
-            bundleId: deviceInfo.bundleId,
-          },
-
-          // Hardware specifications
+            bundleId: deviceInfo.bundleId },
           hardware: {
             totalMemory: deviceInfo.totalMemory,
             usedMemory: deviceInfo.usedMemory,
             maxMemory: deviceInfo.maxMemory,
             totalDiskCapacity: deviceInfo.totalDiskCapacity,
             freeDiskStorage: deviceInfo.freeDiskStorage,
-            supportedAbis: deviceInfo.supportedAbis,
-          },
-
-          // Connectivity
+            supportedAbis: deviceInfo.supportedAbis },
           connectivity: {
             carrier: deviceInfo.carrier,
             isAirplaneMode: deviceInfo.isAirplaneMode,
-            isLocationEnabled: deviceInfo.isLocationEnabled,
-          },
-
-          // Power status
+            isLocationEnabled: deviceInfo.isLocationEnabled },
           power: {
             batteryLevel: deviceInfo.batteryLevel,
             isBatteryCharging: deviceInfo.isBatteryCharging,
             powerState: deviceInfo.powerState
               ? JSON.parse(deviceInfo.powerState)
-              : undefined,
-          },
-
-          // Peripheral detection
+              : undefined },
           peripherals: {
             isHeadphonesConnected: deviceInfo.isHeadphonesConnected,
             isKeyboardConnected: deviceInfo.isKeyboardConnected,
-            isMouseConnected: deviceInfo.isMouseConnected,
-          },
-
-          // Additional tracking
+            isMouseConnected: deviceInfo.isMouseConnected },
           availableLocationProviders: deviceInfo.availableLocationProviders,
           hostNames: deviceInfo.hostNames,
-          supportedMediaTypes: deviceInfo.supportedMediaTypes,
-        },
-
-        // Network location
+          supportedMediaTypes: deviceInfo.supportedMediaTypes },
         location: {
           ipAddress: deviceInfo.deviceIpAddress,
           ipCountry: deviceInfo.country,
           timezone: deviceInfo.timezone,
-          language: deviceInfo.language,
-        },
-      };
+          language: deviceInfo.language } };
 
-      // Register device with backend
-      const result = await registerDeviceMutation({
-        variables: {
-          input: deviceInput,
-        },
-      });
+      const mutationResult = await registerDeviceMutation({
+        variables: { input: deviceInput } });
 
-      if (!result.data?.registerDevice?.success) {
-        throw new Error(result.data?.registerDevice?.message || 'Device registration failed');
+      if (!mutationResult.data?.registerDevice?.success) {
+        throw new Error(mutationResult.data?.registerDevice?.message || 'Device registration failed');
       }
+
       logger.info('Device registered successfully:', {
         deviceId: deviceInfo.deviceId,
         deviceType: deviceInfo.deviceType,
-        platform: deviceInfo.platform,
-      });
+        platform: deviceInfo.platform });
 
       setState(prev => ({
         ...prev,
         isRegistering: false,
         lastRegisteredDevice: deviceInfo.deviceId,
-        registrationError: null,
-      }));
+        registrationError: null }));
 
       return true;
-    } catch (error: any) {
+    },
+    (error: any) => {
       logger.error('Device registration failed:', error);
 
       const { message } = handleApolloError(error, {
         operation: 'Device Registration',
-        logError: true,
-      });
+        logError: true });
 
       setState(prev => ({
         ...prev,
         isRegistering: false,
-        registrationError: message,
-      }));
+        registrationError: message }));
+    },
+  );
 
-      // Don't throw - device registration should not block auth flow
-      return false;
-    }
-  }, [handleApolloError, registerDeviceMutation]);
+  return result || false;
+}
+
+export const useDeviceRegistration = () => {
+  const [state, setState] = useState<DeviceRegistrationState>({
+    isRegistering: false,
+    lastRegisteredDevice: null,
+    registrationError: null });
+
+  const { handleApolloError } = useErrorService();
+  const [registerDeviceMutation] = useRegisterDeviceMutation();
+
+  /**
+   * Registers the current device with the backend
+   */
+  const registerDevice = async (): Promise<boolean> => {
+    return registerDeviceImpl(registerDeviceMutation, handleApolloError, setState);
+  };
 
   /**
    * Registers device with retry logic
    */
-  const registerDeviceWithRetry = useCallback(
-    async (maxRetries: number = 2): Promise<boolean> => {
+  const registerDeviceWithRetry = async (maxRetries: number = 2): Promise<boolean> => {
       let attempts = 0;
 
       while (attempts < maxRetries) {
@@ -216,14 +182,12 @@ export const useDeviceRegistration = () => {
 
       logger.warn(`Device registration failed after ${maxRetries} attempts`);
       return false;
-    },
-    [registerDevice],
-  );
+    };
 
   /**
    * Silently registers device in background (non-blocking)
    */
-  const registerDeviceInBackground = useCallback((): void => {
+  const registerDeviceInBackground = (): void => {
     // Fire and forget - don't block the calling function
     // Properly handle promise to prevent unhandled rejection warnings
     registerDeviceWithRetry(3)
@@ -240,32 +204,29 @@ export const useDeviceRegistration = () => {
         // Log but don't throw - device registration is optional and shouldn't block auth
         logger.error('Background device registration error:', error);
       });
-  }, [registerDeviceWithRetry]);
+  };
 
   /**
    * Clears device registration state
    */
-  const clearDeviceRegistrationState = useCallback(() => {
+  const clearDeviceRegistrationState = () => {
     setState({
       isRegistering: false,
       lastRegisteredDevice: null,
-      registrationError: null,
-    });
-  }, []);
+      registrationError: null });
+  };
 
   /**
    * Gets collected device information without registering
    */
   const getDeviceInformation =
-    useCallback(async (): Promise<DeviceInformation | null> => {
-      try {
-        const deviceInfo = await collectDeviceInformation();
-        return validateDeviceInformation(deviceInfo) ? deviceInfo : null;
-      } catch (error) {
-        logger.error('Error getting device information:', error);
-        return null;
-      }
-    }, []);
+    async (): Promise<DeviceInformation | null> => {
+      const deviceInfo = await executeQuery(
+        () => collectDeviceInformation(),
+        'Error getting device information',
+      );
+      return deviceInfo && validateDeviceInformation(deviceInfo) ? deviceInfo : null;
+    };
 
   return {
     // State
@@ -278,6 +239,5 @@ export const useDeviceRegistration = () => {
     registerDeviceWithRetry,
     registerDeviceInBackground,
     clearDeviceRegistrationState,
-    getDeviceInformation,
-  };
+    getDeviceInformation };
 };

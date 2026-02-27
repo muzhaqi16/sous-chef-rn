@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,7 @@ import {
   Alert,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+  Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { PasswordInput } from '#components/atoms/PasswordInput';
@@ -27,15 +26,13 @@ export const BiometricSetupModal = ({
   onComplete,
   userEmail,
   userPassword,
-  mode = 'onboarding',
-}: BiometricSetupModalProps) => {
+  mode = 'onboarding' }: BiometricSetupModalProps) => {
   const { theme } = useUnistyles();
   const {
     getBiometricInfo,
     storeCredentials,
     loadStoredCredentials,
-    checkStoredCredentials,
-  } = useAuth();
+    checkStoredCredentials } = useAuth();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
     biometryType: string | null;
@@ -48,32 +45,31 @@ export const BiometricSetupModal = ({
     (mode === 'onboarding' && !userPassword) ||
     (mode === 'settings' && !hasExistingCredentials);
 
-  const loadBiometricInfo = useCallback(async () => {
-    try {
-      const [info, credentialsExist] = await Promise.all([
-        getBiometricInfo(),
-        mode === 'settings'
-          ? checkStoredCredentials(userEmail)
-          : Promise.resolve(false),
-      ]);
-
-      setBiometricInfo(info);
-      setHasExistingCredentials(credentialsExist);
-      setHasCheckedBiometric(true);
-
-      // No additional setup needed since we removed authentication steps
-    } catch (error) {
-      console.error('Error loading biometric info:', error);
-      setHasCheckedBiometric(true); // Set to true even on error
-    }
-  }, [getBiometricInfo, checkStoredCredentials, mode, userEmail]);
-
   useEffect(() => {
     if (visible) {
       setHasCheckedBiometric(false); // Reset check state
+      const loadBiometricInfo = async () => {
+        try {
+          const [info, credentialsExist] = await Promise.all([
+            getBiometricInfo(),
+            mode === 'settings'
+              ? checkStoredCredentials(userEmail)
+              : Promise.resolve(false),
+          ]);
+
+          setBiometricInfo(info);
+          setHasExistingCredentials(credentialsExist);
+          setHasCheckedBiometric(true);
+
+          // No additional setup needed since we removed authentication steps
+        } catch (error) {
+          console.error('Error loading biometric info:', error);
+          setHasCheckedBiometric(true); // Set to true even on error
+        }
+      };
       loadBiometricInfo();
     }
-  }, [visible, loadBiometricInfo]);
+  }, [visible, getBiometricInfo, checkStoredCredentials, mode, userEmail]);
 
   // Handle biometric unavailable case after checking
   useEffect(() => {
@@ -296,37 +292,31 @@ export const BiometricSetupModal = ({
 
 const styles = StyleSheet.create(theme => ({
   keyboardAvoidingView: {
-    flex: 1,
-  },
+    flex: 1 },
   scrollContent: {
-    flexGrow: 1,
-  },
+    flexGrow: 1 },
   overlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: theme.colors.overlays.medium,
-  },
+    backgroundColor: theme.colors.overlays.medium },
   contentContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.xl,
-  },
+    paddingVertical: theme.spacing.xl },
   container: {
     backgroundColor: theme.colors.background,
     borderRadius: theme.spacing.lg,
     padding: theme.spacing.xl,
     alignItems: 'center',
     maxWidth: 360,
-    width: '100%',
-  },
+    width: '100%' },
   iconContainer: {
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   iconBackground: {
     width: 80,
     height: 80,
@@ -335,88 +325,69 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: theme.colors.primary,
-  },
+    borderColor: theme.colors.primary },
   title: {
     fontSize: theme.fonts.size.xl,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   description: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: theme.fonts.size.md * 1.5,
-    marginBottom: theme.spacing.xl,
-  },
+    marginBottom: theme.spacing.xl },
   benefits: {
     alignSelf: 'stretch',
-    marginBottom: theme.spacing.xl,
-  },
+    marginBottom: theme.spacing.xl },
   benefitItem: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   benefitText: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    flex: 1,
-  },
+    flex: 1 },
   buttons: {
     alignSelf: 'stretch',
     gap: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   button: {
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.spacing.md,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   primaryButton: {
-    backgroundColor: theme.colors.primary,
-  },
+    backgroundColor: theme.colors.primary },
   secondaryButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
+    borderColor: theme.colors.border },
   buttonText: {
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   primaryButtonText: {
-    color: theme.colors.background,
-  },
+    color: theme.colors.background },
   secondaryButtonText: {
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   footer: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   passwordSection: {
     alignSelf: 'stretch',
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   passwordLabel: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   passwordInput: {
     paddingVertical: theme.spacing.sm,
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface,
-  },
+    backgroundColor: theme.colors.surface },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

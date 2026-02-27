@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text } from 'react-native';
 import {
   type FieldValues,
@@ -71,7 +71,7 @@ export function DynamicFormFields<T extends FieldValues>({
   errors,
 }: DynamicFormFieldsProps<T>) {
   // Memoize the field components to prevent recreation
-  const memoizedFields = useMemo(() => {
+  const memoizedFields = (() => {
     return fields.map(
       (
         {
@@ -115,7 +115,7 @@ export function DynamicFormFields<T extends FieldValues>({
         key: `${String(name)}-${idx}`,
       }),
     );
-  }, [fields]);
+  })();
 
   return (
     <View style={styles.container}>

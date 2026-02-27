@@ -85,6 +85,58 @@ export const formDefs = (theme: AnyTheme) => ({
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
   },
+
+  // Settings screen shared styles (PantrySettings, ListSettings, etc.)
+  settingsSection: {
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  settingsSectionTitle: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+  },
+  settingsInputGroup: {
+    marginBottom: theme.spacing.md,
+  },
+  settingsLabel: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
+  },
+  settingsInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.sm,
+    paddingHorizontal: theme.spacing['3'],
+    paddingVertical: theme.spacing.sm + 2,
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.surface,
+  },
+  settingsRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingVertical: theme.spacing['3'],
+  },
+  settingsRowInfo: {
+    flex: 1,
+    marginRight: theme.spacing['3'],
+  },
+  settingsRowLabel: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textPrimary,
+  },
+  settingsRowDescription: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
+  },
 });
 
 export const formStyles = StyleSheet.create(theme => formDefs(theme));

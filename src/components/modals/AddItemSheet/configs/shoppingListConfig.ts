@@ -5,8 +5,8 @@ import type { AddItemSheetConfig } from '../types';
  *
  * Features:
  * - 3 suggestion groups (Add Again, Favorites, Popular)
- * - Fire-and-forget quick add with exit animations (NOW OPTIMIZED)
- * - Deferred fetch for smooth sheet animation (NOW OPTIMIZED)
+ * - Fire-and-forget quick add with exit animations
+ * - Deferred fetch for smooth sheet animation
  * - No add details sub-sheet (navigates to separate screen)
  */
 export const shoppingListSheetConfig: AddItemSheetConfig = {

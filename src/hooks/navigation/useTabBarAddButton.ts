@@ -1,10 +1,12 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { useAppNavigation } from './useAppNavigation';
+import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 
 /**
  * Register a handler for the tab bar add button when the screen is focused.
  * Automatically cleans up when unfocused or unmounted.
+ *
+ * Uses useFocusEffect instead of useIsFocused to avoid breaking freezeOnBlur.
  *
  * @param handler - Function to call when add button is pressed
  * @param disabled - Whether the button should be disabled (default: false)
@@ -28,8 +30,8 @@ export const useTabBarAddButton = (
   disabled: boolean = false,
   disabledTooltip?: string,
 ) => {
-  const { isFocused } = useAppNavigation();
   const { setAddProps } = useTabBarSetters();
+  const setAddPropsRef = useRef(setAddProps);
 
   // Store handler in ref to avoid stale closures
   const handlerRef = useRef(handler);
@@ -37,38 +39,66 @@ export const useTabBarAddButton = (
   // Store disabled state in ref to avoid unnecessary re-registrations
   const disabledRef = useRef(disabled);
   const tooltipRef = useRef(disabledTooltip);
+  const isFocusedRef = useRef(false);
 
   // Keep refs up to date
   useEffect(() => {
     handlerRef.current = handler;
     disabledRef.current = disabled;
     tooltipRef.current = disabledTooltip;
-  });
+  }, [handler, disabled, disabledTooltip]);
+
+  useEffect(() => {
+    setAddPropsRef.current = setAddProps;
+  }, [setAddProps]);
 
   // Create stable wrapper that always calls the latest handler
-  const stableHandler = useCallback(() => {
+  const [stableHandler] = useState(() => () => {
     if (handlerRef.current) {
       handlerRef.current();
     }
-  }, []);
+  });
 
+  const [onFocusEffect] = useState(() => () => {
+    isFocusedRef.current = true;
+
+    if (!handlerRef.current) {
+      setAddPropsRef.current(undefined);
+      return () => {
+        isFocusedRef.current = false;
+        setAddPropsRef.current(undefined);
+      };
+    }
+
+    // Register on focus with a stable callback reference.
+    setAddPropsRef.current(
+      stableHandler,
+      disabledRef.current,
+      tooltipRef.current,
+    );
+
+    // Unregister on blur
+    return () => {
+      isFocusedRef.current = false;
+      setAddPropsRef.current(undefined);
+    };
+  });
+  useFocusEffect(onFocusEffect);
+
+  const hasHandler = !!handler;
+
+  // Keep disabled state and handler presence in sync while focused.
+  // This avoids re-register loops from unstable inline handler references.
   useEffect(() => {
-    // Early return if screen is not focused or no handler provided
-    if (!isFocused || !handler) {
-      setAddProps(undefined);
+    if (!isFocusedRef.current) {
       return;
     }
 
-    // Register the handler with current disabled state and tooltip
-    setAddProps(stableHandler, disabledRef.current, tooltipRef.current);
+    if (!hasHandler) {
+      setAddPropsRef.current(undefined);
+      return;
+    }
 
-    // Cleanup: always unregister when effect re-runs or component unmounts
-    return () => {
-      setAddProps(undefined);
-    };
-  }, [isFocused, handler, stableHandler, setAddProps]);
-
-  // Note: disabled and disabledTooltip are intentionally NOT in dependencies
-  // They're accessed via refs to avoid unnecessary re-registrations
-  // This prevents flickering when only disabled state changes
+    setAddPropsRef.current(stableHandler, disabledRef.current, tooltipRef.current);
+  }, [hasHandler, disabled, disabledTooltip, stableHandler]);
 };

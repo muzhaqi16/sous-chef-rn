@@ -2,8 +2,6 @@ import React, {
   createContext,
   useContext,
   useState,
-  useCallback,
-  useMemo,
   useRef,
   useEffect,
   ReactNode,
@@ -119,77 +117,67 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     {},
   );
 
-  const setScannerProps = useCallback(
-    (scanPress?: () => void, showButton: boolean = false) => {
-      // Only update if values have changed to prevent unnecessary re-renders
-      setOnScanPress(prev => {
-        // Compare function references - only update if different
-        if (prev === scanPress) return prev;
-        return scanPress || undefined;
-      });
-      setShowScannerButton(prev => {
-        // Only update if showButton value has changed
-        if (prev === showButton) return prev;
-        return showButton;
-      });
-    },
-    [],
-  );
+  const setScannerProps = (scanPress?: () => void, showButton: boolean = false) => {
+    // Only update if values have changed to prevent unnecessary re-renders
+    setOnScanPress(prev => {
+      // Compare function references - only update if different
+      if (prev === scanPress) return prev;
+      return scanPress || undefined;
+    });
+    setShowScannerButton(prev => {
+      // Only update if showButton value has changed
+      if (prev === showButton) return prev;
+      return showButton;
+    });
+  };
 
-  const setAddProps = useCallback(
-    (
-      handler?: () => void,
-      disabled: boolean = false,
-      disabledMessage?: string,
-    ) => {
-      // Store handler by active tab to prevent flickering during tab transitions
-      // When a screen registers its handler, we store it for that tab
-      if (handler) {
-        setTabHandlers(prev => {
-          const currentTab = activeTabRef.current;
-          if (currentTab && prev[currentTab] !== handler) {
-            return { ...prev, [currentTab]: handler };
-          }
-          return prev;
-        });
-      }
+  const setAddProps = (
+    handler?: () => void,
+    disabled: boolean = false,
+    disabledMessage?: string,
+  ) => {
+    // Store handler by active tab to prevent flickering during tab transitions
+    // When a screen registers its handler, we store it for that tab
+    if (handler) {
+      setTabHandlers(prev => {
+        const currentTab = activeTabRef.current;
+        if (currentTab && prev[currentTab] !== handler) {
+          return { ...prev, [currentTab]: handler };
+        }
+        return prev;
+      });
+    }
 
-      // Only update if values have changed to prevent unnecessary re-renders
-      setOnAddPress(prev => {
-        if (prev === handler) return prev;
-        return handler || undefined;
-      });
-      setIsAddButtonDisabled(prev => {
-        if (prev === disabled) return prev;
-        return disabled;
-      });
-      setAddButtonDisabledMessage(prev => {
-        if (prev === disabledMessage) return prev;
-        return disabledMessage;
-      });
-    },
-    [],
-  );
+    // Only update if values have changed to prevent unnecessary re-renders
+    setOnAddPress(prev => {
+      if (prev === handler) return prev;
+      return handler || undefined;
+    });
+    setIsAddButtonDisabled(prev => {
+      if (prev === disabled) return prev;
+      return disabled;
+    });
+    setAddButtonDisabledMessage(prev => {
+      if (prev === disabledMessage) return prev;
+      return disabledMessage;
+    });
+  };
 
-  const setOverlayOpenCb = useCallback((isOpen: boolean) => {
+  const setOverlayOpenCb = (isOpen: boolean) => {
     setIsOverlayOpen(isOpen);
-  }, []);
+  };
 
-  const handleSetActiveTab = useCallback((tabName: string) => {
+  const handleSetActiveTab = (tabName: string) => {
     activeTabRef.current = tabName; // Sync update before state change to prevent race condition
     setActiveTab(tabName);
-  }, []);
+  };
 
-  // Memoize setters context - very stable, only changes if callbacks change (they don't)
-  const settersValue = useMemo<TabBarSettersContextType>(
-    () => ({
-      setScannerProps,
-      setAddProps,
-      setActiveTab: handleSetActiveTab,
-      setOverlayOpen: setOverlayOpenCb,
-    }),
-    [setScannerProps, setAddProps, handleSetActiveTab, setOverlayOpenCb],
-  );
+  const settersValue: TabBarSettersContextType = {
+    setScannerProps,
+    setAddProps,
+    setActiveTab: handleSetActiveTab,
+    setOverlayOpen: setOverlayOpenCb,
+  };
 
   // Only show buttons if the current tab is in the allowed list and button is enabled
   const shouldShowScanner =
@@ -204,43 +192,31 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     onAddPress || (activeTab ? tabHandlers[activeTab] : undefined);
 
   // Get icon configuration based on active tab
-  const addButtonConfig = useMemo((): AddButtonConfig => {
-    switch (activeTab) {
-      case 'Recipe':
-        return { icon: 'search', iconLibrary: 'Feather' };
-      case 'MealPlan':
-        return { icon: 'add', iconLibrary: 'Ionicons' };
-      default:
-        // Pantry, ShoppingList use the default add icon
-        return { icon: 'add', iconLibrary: 'Ionicons' };
-    }
-  }, [activeTab]);
+  let addButtonConfig: AddButtonConfig;
+  switch (activeTab) {
+    case 'Recipe':
+      addButtonConfig = { icon: 'search', iconLibrary: 'Feather' };
+      break;
+    case 'MealPlan':
+      addButtonConfig = { icon: 'add', iconLibrary: 'Ionicons' };
+      break;
+    default:
+      // Pantry, ShoppingList use the default add icon
+      addButtonConfig = { icon: 'add', iconLibrary: 'Ionicons' };
+      break;
+  }
 
-  // Memoize state context - changes when tab/button state changes
-  const stateValue = useMemo<TabBarStateContextType>(
-    () => ({
-      onScanPress,
-      showScannerButton: shouldShowScanner,
-      onAddPress: effectiveAddPress,
-      showAddButton: shouldShowAdd,
-      addButtonConfig,
-      isAddButtonDisabled,
-      addButtonDisabledMessage,
-      activeTab,
-      isOverlayOpen,
-    }),
-    [
-      onScanPress,
-      shouldShowScanner,
-      effectiveAddPress,
-      shouldShowAdd,
-      addButtonConfig,
-      isAddButtonDisabled,
-      addButtonDisabledMessage,
-      activeTab,
-      isOverlayOpen,
-    ],
-  );
+  const stateValue: TabBarStateContextType = {
+    onScanPress,
+    showScannerButton: shouldShowScanner,
+    onAddPress: effectiveAddPress,
+    showAddButton: shouldShowAdd,
+    addButtonConfig,
+    isAddButtonDisabled,
+    addButtonDisabledMessage,
+    activeTab,
+    isOverlayOpen,
+  };
 
   return (
     <TabBarSettersContext.Provider value={settersValue}>

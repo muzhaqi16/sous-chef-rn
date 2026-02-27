@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -22,19 +22,22 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   visible,
   pantryItem,
   onClose,
-  onConfirm,
-}) => {
+  onConfirm }) => {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible: visible && !!pantryItem,
     onDismiss: onClose,
-    snapPoints: ['65%', '85%'],
-  });
+    snapPoints: ['65%', '85%'] });
   const [weightInput, setWeightInput] = useState('');
   const [unitDisplay, setUnitDisplay] = useState('');
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
 
-  useEffect(() => {
+  // Reset state when sheet opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevPantryItem, setPrevPantryItem] = useState(pantryItem);
+  if (visible !== prevVisible || pantryItem !== prevPantryItem) {
+    setPrevVisible(visible);
+    setPrevPantryItem(pantryItem);
     if (visible && pantryItem) {
       setWeightInput(pantryItem.netWeight?.toString() || '');
       setUnitDisplay(
@@ -43,17 +46,14 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
       setSelectedUnitId(pantryItem.netWeightUnit?.id || null);
       setReason('');
     }
-  }, [visible, pantryItem]);
+  }
 
-  const handleUnitSelected = useCallback(
-    (unitId: string | null, unitName: string | null) => {
+  const handleUnitSelected = (unitId: string | null, unitName: string | null) => {
       setSelectedUnitId(unitId);
       if (unitName) setUnitDisplay(unitName);
-    },
-    [],
-  );
+    };
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = () => {
     if (!pantryItem) return;
 
     const netWeight = parseFloat(weightInput);
@@ -75,7 +75,7 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
         : undefined,
     );
     onClose();
-  }, [pantryItem, weightInput, reason, selectedUnitId, onConfirm, onClose]);
+  };
 
   const currentWeightText = formatNetWeightDisplay(
     pantryItem?.netWeight,

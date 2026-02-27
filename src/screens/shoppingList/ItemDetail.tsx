@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useGetShoppingListItemQuery } from '#generated';
@@ -52,14 +52,8 @@ export const ShoppingListItemDetail: React.FC<{
 
   // Images and nutrition from catalog item
   // Must be called before early return to follow rules of hooks
-  const itemImages = useMemo(
-    () => parseImages(item?.item?.images),
-    [item?.item?.images],
-  );
-  const itemNutritions = useMemo(
-    () => parseNutritions(item?.item?.nutritions),
-    [item?.item?.nutritions],
-  );
+  const itemImages = parseImages(item?.item?.images);
+  const itemNutritions = parseNutritions(item?.item?.nutritions);
   const showImages = hasImages(itemImages);
   const showNutrition = hasNutritionData(itemNutritions);
 
@@ -82,7 +76,7 @@ export const ShoppingListItemDetail: React.FC<{
     );
   }
 
-  const imageUrl = resolveImageUrl(item);
+  const imageUrl = resolveImageUrl(item, 'large');
 
   const sections = [
     {

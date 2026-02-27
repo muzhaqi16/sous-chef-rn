@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -15,7 +15,7 @@ interface FilterTabBarProps {
   navigationState: NavigationState<FilterTabBarRoute>;
   jumpTo: (key: string) => void;
   counts?: Record<string, number>;
-  actionButton?: FilterTabActionButton;
+  actionButtons?: FilterTabActionButton[];
   testIDPrefix?: string;
 }
 
@@ -23,17 +23,13 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
   navigationState,
   jumpTo,
   counts,
-  actionButton,
-  testIDPrefix = 'filter-tab',
-}) => {
+  actionButtons,
+  testIDPrefix = 'filter-tab' }) => {
   const { theme } = useUnistyles();
 
-  const handleTabPress = useCallback(
-    (key: string) => {
+  const handleTabPress = (key: string) => {
       jumpTo(key);
-    },
-    [jumpTo],
-  );
+    };
 
   return (
     <View style={styles.container}>
@@ -55,28 +51,34 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
           />
         ))}
       </ScrollView>
-      {!!actionButton && (
-        <Pressable
-          onPress={actionButton.onPress}
-          testID={actionButton.testID || `${testIDPrefix}-action`}
-          style={[
-            actionButton.label ? styles.actionLabelButton : styles.actionButton,
-            !actionButton.label && styles.actionButtonWithBg,
-          ]}
-        >
-          {actionButton.label ? (
-            <Text style={styles.actionLabel}>
-              {actionButton.label}
-            </Text>
-          ) : actionButton.icon ? (
-            <Icon
-              name={actionButton.icon}
-              size={20}
-              color={theme.colors.primary}
-              library={actionButton.iconLibrary}
-            />
-          ) : null}
-        </Pressable>
+      {!!actionButtons?.length && (
+        <View style={styles.actionsRow}>
+          {actionButtons.map((btn, idx) => (
+            <Pressable
+              key={btn.testID || `${testIDPrefix}-action-${idx}`}
+              onPress={btn.disabled ? undefined : btn.onPress}
+              testID={btn.testID || `${testIDPrefix}-action-${idx}`}
+              style={[
+                btn.label ? styles.actionLabelButton : styles.actionButton,
+                !btn.label && styles.actionButtonWithBg,
+                btn.disabled && styles.actionDisabled,
+              ]}
+            >
+              {btn.label ? (
+                <Text style={styles.actionLabel}>
+                  {btn.label}
+                </Text>
+              ) : btn.icon ? (
+                <Icon
+                  name={btn.icon}
+                  size={20}
+                  color={theme.colors.primary}
+                  library={btn.iconLibrary}
+                />
+              ) : null}
+            </Pressable>
+          ))}
+        </View>
       )}
     </View>
   );
@@ -91,33 +93,31 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-  },
+    paddingHorizontal: theme.spacing.md },
   scrollView: {
-    flexShrink: 1,
-  },
+    flexShrink: 1 },
   scrollContent: {
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   actionButton: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.sm + 2,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.xl,
-  },
+    borderRadius: theme.radii.xl },
   actionButtonWithBg: {
-    backgroundColor: theme.colors.filterTab.inactiveBg,
-  },
+    backgroundColor: theme.colors.filterTab.inactiveBg },
   actionLabelButton: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
-  },
+    paddingVertical: theme.spacing.sm },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs },
+  actionDisabled: {
+    opacity: 0.4 },
   actionLabel: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
-  },
-}));
+    color: theme.colors.primary } }));

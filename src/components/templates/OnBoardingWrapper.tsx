@@ -1,4 +1,4 @@
-import { Icon } from '#/utils/iconUtils';
+import { BackButton } from '#components/atoms/BackButton';
 import React, { ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
@@ -62,17 +62,12 @@ export const OnBoardingWrapper = ({
     <SafeAreaView style={styles.safeArea} testID={testID}>
       <View style={styles.headerContainer}>
         {onBack ? (
-          <Pressable
+          <BackButton
             onPress={onBack}
-            style={({pressed}) => [styles.iconButton, pressed && styles.pressed]}
+            style={styles.iconButton}
+            color={theme.colors.primary}
             testID={testID ? `${testID}-back-button` : undefined}
-          >
-            <Icon
-              name="arrow-back"
-              size={24}
-              color={theme.colors.primary}
-            />
-          </Pressable>
+          />
         ) : (
           <View style={styles.iconButton} />
         )}

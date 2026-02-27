@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
@@ -36,13 +36,12 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   visible,
   pantryItem,
   onClose,
-  onConfirm,
-}) => {
+  onConfirm }) => {
   const { theme } = useUnistyles();
   const [quantityInput, setQuantityInput] = useState('1');
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
 
-  const handleReset = useCallback((item: PantryItemFragment, setSelectedUnit: (u: 'tracking' | 'content' | 'weight') => void) => {
+  const handleReset = (item: PantryItemFragment, setSelectedUnit: (u: 'tracking' | 'content' | 'weight') => void) => {
     const defaultIncrement = item.item?.defaultConsumeIncrement;
     setQuantityInput(defaultIncrement ? defaultIncrement.toString() : '1');
     setPurpose(UsagePurpose.General);
@@ -68,9 +67,9 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
     } else {
       setSelectedUnit('tracking');
     }
-  }, []);
+  };
 
-  const handleConfirm = useCallback((shared: PantryActionSharedState) => {
+  const handleConfirm = (shared: PantryActionSharedState) => {
     if (!pantryItem) return;
 
     const quantityValue = parseFractionalInput(quantityInput);
@@ -85,7 +84,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
 
     onConfirm(quantityValue, quantityInput, purpose, shared.notes, shared.activeUnitId);
     onClose();
-  }, [pantryItem, quantityInput, purpose, onConfirm, onClose]);
+  };
 
   // Note: remaining is computed in renderActionFields where shared.availableQuantity is available
 
@@ -182,6 +181,4 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

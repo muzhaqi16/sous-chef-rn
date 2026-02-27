@@ -1,19 +1,30 @@
 import type { ItemImage, ImageSize, ImageTab } from '#/types/nutrition';
 
-/**
- * Extracts the image URL from an item
- * The API resolver populates the imageUrl field with the appropriate image
- *
- * @param item - Item object with imageUrl field
- * @returns Image URL or null if no image is available
- */
+// =============================================================================
+// IMAGE SIZE SELECTION
+// =============================================================================
+
+export type PreferredSize = ImageSize['size'];
+
+const SIZE_PRIORITY: PreferredSize[] = [
+  'small',
+  'medium',
+  'large',
+  'xlarge',
+  'thumbnail',
+];
+
 /**
  * Resolves the best available image URL from any common data shape.
  * Handles: Item (direct), PantryItem/ShoppingListItem (nested .item),
  * PantryItemSuggestion (own imageUrl + nested .item fallback).
+ *
+ * @param preferredSize - Preferred image size. Defaults to 'small' for list/card
+ *   contexts. Pass 'large' for detail/gallery screens.
  */
 export function resolveImageUrl(
   source: { imageUrl?: string | null; images?: unknown; item?: { imageUrl?: string | null; images?: unknown } | null } | null | undefined,
+  preferredSize: PreferredSize = 'small',
 ): string | null {
   if (!source) return null;
 
@@ -25,13 +36,13 @@ export function resolveImageUrl(
 
   // 2. Try nested .item via getItemImageUrl (handles imageUrl + images fallback)
   if (source.item) {
-    const fromItem = getItemImageUrl(source.item);
+    const fromItem = getItemImageUrl(source.item, preferredSize);
     if (fromItem) return fromItem;
   }
 
   // 3. Try own images array (for direct Item objects)
   if (source.images) {
-    return getItemImageUrl(source);
+    return getItemImageUrl(source, preferredSize);
   }
 
   return null;
@@ -39,6 +50,7 @@ export function resolveImageUrl(
 
 export const getItemImageUrl = (
   item: { imageUrl?: string | null; images?: unknown } | null | undefined,
+  preferredSize: PreferredSize = 'small',
 ): string | null => {
   const imageUrl = item?.imageUrl;
   if (imageUrl) {
@@ -56,7 +68,7 @@ export const getItemImageUrl = (
     const parsed = parseImages(item.images);
     const primary = getPrimaryImage(parsed);
     if (primary) {
-      return getBestImageUrl(primary);
+      return getBestImageUrl(primary, preferredSize);
     }
   }
 
@@ -91,26 +103,13 @@ export function hasImages(images: ItemImage[]): boolean {
   return images.length > 0 && images.some(img => img.sizes.length > 0);
 }
 
-// =============================================================================
-// IMAGE SIZE SELECTION
-// =============================================================================
-
-type PreferredSize = ImageSize['size'];
-
-const SIZE_PRIORITY: PreferredSize[] = [
-  'large',
-  'xlarge',
-  'medium',
-  'small',
-  'thumbnail',
-];
-
 /**
- * Get best available image URL for a given image, preferring the specified size
+ * Get best available image URL for a given image, preferring the specified size.
+ * Falls back through SIZE_PRIORITY order if preferred size is unavailable.
  */
 export function getBestImageUrl(
   image: ItemImage,
-  preferredSize: PreferredSize = 'large',
+  preferredSize: PreferredSize = 'small',
 ): string | null {
   if (!image.sizes || image.sizes.length === 0) {
     return null;

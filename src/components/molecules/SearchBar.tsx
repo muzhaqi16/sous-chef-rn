@@ -1,4 +1,4 @@
-import { type FC, type ReactNode } from 'react';
+import type { FC, ReactNode } from 'react';
 import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';

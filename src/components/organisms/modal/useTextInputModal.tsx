@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, {useState} from 'react';
 import {TextInputProps} from 'react-native';
 import {TextInputModal} from './TextInputModal';
 import {ValidationRule} from './types';
@@ -37,10 +37,7 @@ export const useTextInputModal = () => {
     setVisible(false);
   };
 
-  const TextModalComponent = useMemo(
-    () => <TextInputModal visible={visible} onClose={hide} {...modalConfig} />,
-    [visible, modalConfig],
-  );
+  const TextModalComponent = <TextInputModal visible={visible} onClose={hide} {...modalConfig} />;
 
   return {
     show,

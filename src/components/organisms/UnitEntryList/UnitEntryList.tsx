@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -27,66 +27,52 @@ const generateEntryId = () => `unit-entry-${++entryCounter}-${Date.now()}`;
 
 const createDefaultEntry = (isDefault: boolean): UnitEntry => ({
   id: generateEntryId(),
-  isDefault,
-});
+  isDefault });
 
 export const UnitEntryList: React.FC<UnitEntryListProps> = ({
   entries,
   onEntriesChanged,
-  disabled = false,
-}) => {
+  disabled = false }) => {
   const { theme } = useUnistyles();
 
-  const handleAddEntry = useCallback(() => {
+  const handleAddEntry = () => {
     const isFirst = entries.length === 0;
     onEntriesChanged([...entries, createDefaultEntry(isFirst)]);
-  }, [entries, onEntriesChanged]);
+  };
 
-  const handleRemoveEntry = useCallback(
-    (index: number) => {
+  const handleRemoveEntry = (index: number) => {
       const updated = entries.filter((_, i) => i !== index);
       // If we removed the default entry, make the first one default
       if (updated.length > 0 && !updated.some(e => e.isDefault)) {
         updated[0] = { ...updated[0], isDefault: true };
       }
       onEntriesChanged(updated);
-    },
-    [entries, onEntriesChanged],
-  );
+    };
 
-  const handleEntryChange = useCallback(
-    (index: number, field: keyof UnitEntry, value: any) => {
+  const handleEntryChange = (index: number, field: keyof UnitEntry, value: any) => {
       const updated = entries.map((entry, i) =>
         i === index ? { ...entry, [field]: value } : entry,
       );
       onEntriesChanged(updated);
-    },
-    [entries, onEntriesChanged],
-  );
+    };
 
-  const handleUnitSelected = useCallback(
-    (index: number, unitId: string | null, unitName: string | null) => {
+  const handleUnitSelected = (index: number, unitId: string | null, unitName: string | null) => {
       const updated = entries.map((entry, i) =>
         i === index
           ? { ...entry, unitId: unitId ?? undefined, unitName: unitName ?? undefined }
           : entry,
       );
       onEntriesChanged(updated);
-    },
-    [entries, onEntriesChanged],
-  );
+    };
 
-  const handleContentUnitSelected = useCallback(
-    (index: number, unitId: string | null, unitName: string | null) => {
+  const handleContentUnitSelected = (index: number, unitId: string | null, unitName: string | null) => {
       const updated = entries.map((entry, i) =>
         i === index
           ? { ...entry, contentUnitId: unitId ?? undefined, contentUnitName: unitName ?? undefined }
           : entry,
       );
       onEntriesChanged(updated);
-    },
-    [entries, onEntriesChanged],
-  );
+    };
 
   return (
     <View style={styles.container}>
@@ -160,8 +146,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   sectionTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
@@ -169,34 +154,26 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
-  },
+    borderBottomColor: theme.colors.borderLight },
   entryRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   packageSizeField: {
-    flex: 0.35,
-  },
+    flex: 0.35 },
   unitField: {
-    flex: 0.55,
-  },
+    flex: 0.55 },
   deleteButton: {
     flex: 0.1,
     alignItems: 'center',
-    paddingTop: theme.spacing.xl,
-  },
+    paddingTop: theme.spacing.xl },
   contentUnitRow: {
     marginTop: -theme.spacing.sm,
     marginBottom: theme.spacing.md,
     marginLeft: theme.spacing.sm,
     paddingLeft: theme.spacing.md,
     borderLeftWidth: 2,
-    borderLeftColor: theme.colors.borderLight,
-  },
+    borderLeftColor: theme.colors.borderLight },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

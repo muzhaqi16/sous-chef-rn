@@ -1,17 +1,17 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { ChipScrollRow, type ChipOption } from '#components/atoms/ChipScrollRow';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormTextArea } from '#components/molecules/FormTextArea';
 import { TemplateCategory } from '#generated';
 
-const CATEGORY_OPTIONS: { key: TemplateCategory; label: string }[] = [
+const CATEGORY_OPTIONS: ChipOption<TemplateCategory>[] = [
   { key: TemplateCategory.Weekly, label: 'Weekly' },
   { key: TemplateCategory.Monthly, label: 'Monthly' },
   { key: TemplateCategory.Breakfast, label: 'Breakfast' },
@@ -26,6 +26,7 @@ interface SaveAsTemplateSheetProps {
   visible: boolean;
   mealPlanId: string | null;
   mealPlanName?: string;
+  homeName?: string | null;
   onClose: () => void;
   onSave: (input: {
     mealPlanId: string;
@@ -41,32 +42,36 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
   visible,
   mealPlanId,
   mealPlanName,
+  homeName,
   onClose,
   onSave,
-  saving,
-}) => {
+  saving }) => {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
     snapPoints: ['70%'],
-    keyboardBehavior: 'interactive',
-  });
+    keyboardBehavior: 'interactive' });
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<TemplateCategory>(TemplateCategory.Weekly);
   const [tagsInput, setTagsInput] = useState('');
 
-  useEffect(() => {
+  // Reset state when sheet opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevMealPlanName, setPrevMealPlanName] = useState(mealPlanName);
+  if (visible !== prevVisible || mealPlanName !== prevMealPlanName) {
+    setPrevVisible(visible);
+    setPrevMealPlanName(mealPlanName);
     if (visible) {
       setName(mealPlanName ? `${mealPlanName} Template` : '');
       setDescription('');
       setCategory(TemplateCategory.Weekly);
       setTagsInput('');
     }
-  }, [visible, mealPlanName]);
+  }
 
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     if (!mealPlanId || !name.trim()) return;
     const tags = tagsInput
       .split(',')
@@ -77,9 +82,8 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
       name: name.trim(),
       description: description.trim() || undefined,
       category,
-      tags: tags.length > 0 ? tags : undefined,
-    });
-  }, [mealPlanId, name, description, category, tagsInput, onSave]);
+      tags: tags.length > 0 ? tags : undefined });
+  };
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -100,6 +104,14 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
           confirmColor="primary"
         />
 
+        {!!homeName && (
+          <View style={styles.infoNote}>
+            <Text style={styles.infoNoteText}>
+              This template will be shared with {homeName}
+            </Text>
+          </View>
+        )}
+
         <FormInput
           label="Template Name"
           value={name}
@@ -118,28 +130,11 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
         {/* Category selector */}
         <View style={styles.section}>
           <Text style={styles.label}>Category</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipRow}
-          >
-            {CATEGORY_OPTIONS.map(cat => {
-              const isActive = category === cat.key;
-              return (
-                <Pressable
-                  key={cat.key}
-                  onPress={() => setCategory(cat.key)}
-                  style={[styles.chip, isActive && styles.chipActive]}
-                >
-                  <Text
-                    style={[styles.chipText, isActive && styles.chipTextActive]}
-                  >
-                    {cat.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          <ChipScrollRow
+            options={CATEGORY_OPTIONS}
+            selected={category}
+            onSelect={setCategory}
+          />
         </View>
 
         <FormInput
@@ -155,41 +150,21 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
     padding: theme.spacing.md,
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   section: {
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   label: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
-  chipRow: {
-    gap: theme.spacing.sm,
-  },
-  chip: {
+    color: theme.colors.textSecondary },
+  infoNote: {
+    paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.lg,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  chipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  chipText: {
+    backgroundColor: theme.colors.primaryLight,
+    borderRadius: theme.radii.md },
+  infoNoteText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  chipTextActive: {
-    color: theme.colors.white,
-    fontWeight: theme.fonts.weight.medium,
-  },
-}));
+    color: theme.colors.primary } }));

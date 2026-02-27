@@ -64,6 +64,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
           <CachedImage
             uri={imageUrl}
             style={styles.image}
+            displaySize={24}
           />
         )}
         <Animated.Text style={[styles.label, animatedTextStyle]}>

@@ -1,24 +1,23 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Pressable,
   Text,
   Image,
   Dimensions,
-  Alert,
-} from 'react-native';
+  Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  clamp,
-} from 'react-native-reanimated';
+  clamp } from 'react-native-reanimated';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Header } from '#components/molecules/Header';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import ImageEditor from '@react-native-community/image-editor';
 import { ImageFile } from '#components/molecules/ImagePicker';
@@ -44,7 +43,7 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
   const startOffset = useSharedValue({ x: 0, y: 0 });
 
   // Get image dimensions when loaded
-  const handleImageLoad = useCallback(() => {
+  const handleImageLoad = () => {
     setImageLoaded(true);
 
     Image.getSize(imageFile.uri, (width, height) => {
@@ -71,7 +70,7 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
       offset.set({ x: 0, y: 0 });
       startOffset.set({ x: 0, y: 0 });
     });
-  }, [imageFile.uri, scale, startScale, offset, startOffset]);
+  };
 
   // Create pinch gesture
   const pinch = Gesture.Pinch()
@@ -116,8 +115,7 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
         { translateX: offset.value.x },
         { translateY: offset.value.y },
         { scale: scale.value },
-      ],
-    };
+      ] };
   });
 
   const handleCrop = async () => {
@@ -152,8 +150,7 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
       // Calculate the offset from image center to crop center
       const offsetFromImageCenter = {
         x: cropCenterX - imageCenterX,
-        y: cropCenterY - imageCenterY,
-      };
+        y: cropCenterY - imageCenterY };
 
       // Convert display coordinates to original image coordinates
       const scaleRatio = originalImageSize.width / imageSize.width;
@@ -197,18 +194,14 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
       const cropData = {
         offset: {
           x: finalCropX,
-          y: finalCropY,
-        },
+          y: finalCropY },
         size: {
           width: finalCropSize,
-          height: finalCropSize,
-        },
+          height: finalCropSize },
         displaySize: {
           width: CROP_SIZE,
-          height: CROP_SIZE,
-        },
-        resizeMode: 'contain' as const,
-      };
+          height: CROP_SIZE },
+        resizeMode: 'contain' as const };
 
       const { uri: croppedUri } = await ImageEditor.cropImage(
         imageFile.uri,
@@ -229,8 +222,7 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
         uri: croppedUri,
         fileName: `cropped_${imageFile.fileName || 'profile.jpg'}`,
         fileSize: estimatedFileSize,
-        type: imageFile.type || 'image/jpeg',
-      };
+        type: imageFile.type || 'image/jpeg' };
 
       // Store to MMKV
       storage.set('temp_cropped_image', JSON.stringify(croppedImage));
@@ -238,8 +230,7 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
         uri: croppedUri,
         fileName: croppedImage.fileName,
         fileSize: estimatedFileSize,
-        type: croppedImage.type,
-      });
+        type: croppedImage.type });
 
       goBack();
     } catch (error) {
@@ -261,39 +252,12 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      <View style={styles.header}>
-        <Pressable
-          onPress={goBack}
-          style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
-          disabled={isCropping}
-        >
-          <Icon
-            color={theme.colors.textPrimary}
-            name="chevron-back"
-            size={24}
-          />
-        </Pressable>
-
-        <View style={styles.headerTitleContainer}>
-          <Text
-            style={[styles.headerTitle, { color: theme.colors.textPrimary }]}
-          >
-            Crop Photo
-          </Text>
-        </View>
-
-        <Pressable
-          onPress={resetTransforms}
-          style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
-          disabled={isCropping}
-        >
-          <Icon
-            color={theme.colors.textPrimary}
-            name="refresh"
-            size={20}
-          />
-        </Pressable>
-      </View>
+      <Header
+        title="Crop Photo"
+        onBack={goBack}
+        centerTitle
+        rightActions={[{ icon: 'refresh', onPress: resetTransforms, disabled: isCropping, size: 20 }]}
+      />
 
       <View style={styles.content}>
         <Text
@@ -312,8 +276,7 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
               {
                 width: CROP_SIZE,
                 height: CROP_SIZE,
-                borderColor: theme.colors.primary,
-              },
+                borderColor: theme.colors.primary },
             ]}
           />
 
@@ -327,8 +290,7 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
                     animatedStyle,
                     {
                       width: CROP_SIZE,
-                      height: CROP_SIZE,
-                    },
+                      height: CROP_SIZE },
                   ]}
                 >
                   <Image
@@ -385,70 +347,38 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerButton: {
-    padding: theme.spacing.sm,
-    width: 40,
-    alignItems: 'center',
-  },
-  headerTitleContainer: {
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  debugText: {
-    fontSize: theme.typography.fontSize.xs - 2,
-    marginTop: 2,
-  },
+    flex: 1 },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.xl,
-  },
+    paddingVertical: theme.spacing.xl },
   instructions: {
     textAlign: 'center',
     paddingHorizontal: theme.spacing.xl,
     marginBottom: theme.spacing.xl,
-    fontSize: theme.typography.fontSize.sm,
-  },
+    fontSize: theme.typography.fontSize.sm },
   cropContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-  },
+    position: 'relative' },
   cropOverlay: {
     position: 'absolute',
     borderWidth: 2,
     borderRadius: CROP_SIZE / 2,
     zIndex: 2,
     backgroundColor: 'transparent',
-    pointerEvents: 'none',
-  },
+    pointerEvents: 'none' },
   imageContainer: {
     overflow: 'hidden',
     width: CROP_SIZE,
     height: CROP_SIZE,
     borderRadius: CROP_SIZE / 2,
-    backgroundColor: 'transparent',
-  },
+    backgroundColor: 'transparent' },
   animatedImageContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   image: {
     // Dynamic size set by imageSize state
   },
@@ -462,30 +392,23 @@ const styles = StyleSheet.create(theme => ({
     height: CROP_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-  },
+    position: 'relative' },
   loadingIconContainer: {
     position: 'absolute',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   buttonContainer: {
     paddingHorizontal: theme.spacing.xl,
     paddingTop: theme.spacing.xl,
-    width: '100%',
-  },
+    width: '100%' },
   cropButton: {
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.sm,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   cropButtonText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));
 
 export default ImageCropScreen;

@@ -16,7 +16,7 @@ import { useAuth } from '#hooks/auth/useAuth';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { Telemetry } from '#/services/telemetry';
 
-export function LoginScreen() {
+export function LoginScreen(): React.JSX.Element {
   const { theme } = useUnistyles();
   const { navigateToForgotPassword, navigateToSignUp } = useAuthNavigation();
   const {
@@ -32,7 +32,6 @@ export function LoginScreen() {
     handleRememberMeDecline,
   } = useAuth();
 
-  const [_hasStoredCreds, setHasStoredCreds] = useState(false);
   const [shouldShowBiometricButton, setShouldShowBiometricButton] =
     useState(false);
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
@@ -56,8 +55,6 @@ export function LoginScreen() {
         ]);
 
         setBiometricInfo(biometric);
-        setHasStoredCreds(hasCredentials);
-
         // Track screen view after loading auth info
         Telemetry.trackScreen('LoginScreen', {
           has_stored_credentials: hasCredentials,
@@ -76,7 +73,6 @@ export function LoginScreen() {
           error instanceof Error ? error : 'Failed to load auth info',
           { component: 'LoginScreen', operation: 'loadAuthInfo' },
         );
-        setHasStoredCreds(false);
         setShouldShowBiometricButton(false);
       }
     };
@@ -96,7 +92,7 @@ export function LoginScreen() {
         component: 'LoginScreen',
         operation: 'email_password_login',
       });
-      handleAuthError(err, 'Login failed. Please try again.');
+      handleAuthError(err, 'Login');
     }
   };
 
@@ -136,7 +132,7 @@ export function LoginScreen() {
           biometric_type: biometricInfo.biometryType,
         },
       );
-      handleAuthError(error, 'Biometric authentication failed');
+      handleAuthError(error, 'Biometric login');
     } finally {
       setIsBiometricLoading(false);
     }

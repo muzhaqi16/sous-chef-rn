@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useCallback } from 'react';
+import React, { createContext, useContext } from 'react';
 import { useSharedValue } from 'react-native-reanimated';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import type { OnboardingStep } from '#components/navigation/OnboardingSteps/types';
@@ -83,35 +83,33 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   } = useOnboardingNavigation();
 
   // Current step calculation
-  const currentStep = useMemo(() => {
-    const index = Math.floor(currentIndex);
-    return ONBOARDING_STEPS[index] || null;
-  }, [currentIndex]);
+  const currentStepIndex = Math.floor(currentIndex);
+  const currentStep = ONBOARDING_STEPS[currentStepIndex] || null;
 
   // Navigation state
-  const isFirstStep = useMemo(() => currentIndex <= 0, [currentIndex]);
-  const isLastStep = useMemo(() => currentIndex >= ONBOARDING_STEPS.length - 1, [currentIndex]);
-  const canGoBack = useMemo(() => !isFirstStep, [isFirstStep]);
-  const canGoNext = useMemo(() => !isLastStep, [isLastStep]);
+  const isFirstStep = currentIndex <= 0;
+  const isLastStep = currentIndex >= ONBOARDING_STEPS.length - 1;
+  const canGoBack = !isFirstStep;
+  const canGoNext = !isLastStep;
 
   // Navigation methods
-  const goToNextStep = useCallback(() => {
+  const goToNextStep = () => {
     if (canGoNext && currentStep) {
       const nextIndex = activeStepIndex.get() + 1;
       activeStepIndex.set(nextIndex);
       navigateToNextStep(currentStep.id);
     }
-  }, [canGoNext, currentStep, activeStepIndex, navigateToNextStep]);
+  };
 
-  const goToPreviousStep = useCallback(() => {
+  const goToPreviousStep = () => {
     if (canGoBack && currentStep) {
       const prevIndex = activeStepIndex.get() - 1;
       activeStepIndex.set(prevIndex);
       navigateToPreviousStep(currentStep.id);
     }
-  }, [canGoBack, currentStep, activeStepIndex, navigateToPreviousStep]);
+  };
 
-  const goToStep = useCallback((stepIndex: number) => {
+  const goToStep = (stepIndex: number) => {
     if (stepIndex >= 0 && stepIndex < ONBOARDING_STEPS.length) {
       activeStepIndex.set(stepIndex);
       const targetStep = ONBOARDING_STEPS[stepIndex];
@@ -119,25 +117,25 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
         navigationSkipToStep(targetStep.id);
       }
     }
-  }, [activeStepIndex, navigationSkipToStep]);
+  };
 
-  const skipToStep = useCallback((stepName: string) => {
+  const skipToStep = (stepName: string) => {
     const stepIndex = ONBOARDING_STEPS.findIndex(step => step.id === stepName);
     if (stepIndex !== -1) {
       goToStep(stepIndex);
     }
-  }, [goToStep]);
+  };
 
   // Utility methods
-  const getStepByIndex = useCallback((index: number): OnboardingStep | null => {
+  const getStepByIndex = (index: number): OnboardingStep | null => {
     return ONBOARDING_STEPS[index] || null;
-  }, []);
+  };
 
-  const getStepProgress = useCallback(() => {
+  const getStepProgress = () => {
     return Math.round(((currentIndex + 1) / ONBOARDING_STEPS.length) * 100);
-  }, [currentIndex]);
+  };
 
-  const contextValue: OnboardingContextType = useMemo(() => ({
+  const contextValue: OnboardingContextType = {
     steps: ONBOARDING_STEPS,
     activeStepIndex,
     currentStep,
@@ -151,20 +149,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     isLastStep,
     getStepByIndex,
     getStepProgress,
-  }), [
-    activeStepIndex,
-    currentStep,
-    goToNextStep,
-    goToPreviousStep,
-    goToStep,
-    skipToStep,
-    canGoBack,
-    canGoNext,
-    isFirstStep,
-    isLastStep,
-    getStepByIndex,
-    getStepProgress,
-  ]);
+  };
 
   return (
     <OnboardingContext.Provider value={contextValue}>

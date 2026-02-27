@@ -1,9 +1,8 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -11,10 +10,12 @@ import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
 import { Icon } from '#utils/iconUtils';
 import type { MealPlanFullFragment } from '#generated';
+import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;
   mealPlan: MealPlanFullFragment | null;
+  permissions: MealPlanPermissions;
   onClose: () => void;
   onDuplicate: () => void;
   onGenerateShoppingList: () => void;
@@ -28,8 +29,7 @@ function ActionItem({
   description,
   onPress,
   color,
-  disabled,
-}: {
+  disabled }: {
   icon: string;
   label: string;
   description?: string;
@@ -59,22 +59,21 @@ function ActionItem({
 export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   visible,
   mealPlan,
+  permissions,
   onClose,
   onDuplicate,
   onGenerateShoppingList,
   onDelete,
-  deleting,
-}) => {
+  deleting }) => {
   const { theme } = useUnistyles();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
-    snapPoints: ['80%'],
-  });
+    snapPoints: ['80%'] });
 
   const [showNutrition, setShowNutrition] = useState(false);
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = () => {
     if (!mealPlan) return;
     Alert.alert(
       'Delete Meal Plan',
@@ -87,11 +86,10 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           onPress: () => {
             onDelete(mealPlan.id);
             onClose();
-          },
-        },
+          } },
       ],
     );
-  }, [mealPlan, onDelete, onClose]);
+  };
 
   if (!mealPlan) return null;
 
@@ -118,6 +116,12 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
             <Text style={styles.planDescription}>{mealPlan.description}</Text>
           ) : null}
           <Text style={styles.planDate}>{dateRange}</Text>
+          {!!mealPlan.home?.name && (
+            <Text style={styles.planDate}>Shared with {mealPlan.home.name}</Text>
+          )}
+          {!!mealPlan.createdBy?.profile?.displayName && (
+            <Text style={styles.planDate}>Created by {mealPlan.createdBy.profile.displayName}</Text>
+          )}
         </View>
 
         {/* Actions */}
@@ -179,19 +183,21 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
         )}
 
         {/* Danger zone */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Danger Zone</Text>
-          <View style={styles.actionsCard}>
-            <ActionItem
-              icon="trash-outline"
-              label={deleting ? 'Deleting...' : 'Delete Plan'}
-              description="Permanently remove this meal plan"
-              onPress={handleDelete}
-              color={theme.colors.error}
-              disabled={deleting}
-            />
+        {permissions.canDelete ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Danger Zone</Text>
+            <View style={styles.actionsCard}>
+              <ActionItem
+                icon="trash-outline"
+                label={deleting ? 'Deleting...' : 'Delete Plan'}
+                description="Permanently remove this meal plan"
+                onPress={handleDelete}
+                color={theme.colors.error}
+                disabled={deleting}
+              />
+            </View>
           </View>
-        </View>
+        ) : null}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
@@ -199,70 +205,56 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
     padding: theme.spacing.md,
-    gap: theme.spacing.lg,
-  },
+    gap: theme.spacing.lg },
   planInfo: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     padding: theme.spacing.md,
-    gap: 4,
-  },
+    gap: 4 },
   planName: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   planDescription: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   planDate: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textTertiary,
-    marginTop: 4,
-  },
+    marginTop: 4 },
   section: {
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   sectionTitle: {
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textTertiary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+    letterSpacing: 0.5 },
   actionsCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
-    overflow: 'hidden',
-  },
+    overflow: 'hidden' },
   divider: {
     height: 1,
     backgroundColor: theme.colors.border,
-    marginHorizontal: theme.spacing.md,
-  },
+    marginHorizontal: theme.spacing.md },
   nutritionContainer: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
-    padding: theme.spacing.md,
-  },
+    padding: theme.spacing.md },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-  },
+    paddingHorizontal: theme.spacing.md },
   listName: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
-    flex: 1,
-  },
-}));
+    flex: 1 } }));
 
 const actionStyles = StyleSheet.create(theme => ({
   item: {
@@ -270,22 +262,16 @@ const actionStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
+    opacity: theme.opacity.pressed },
   content: {
-    flex: 1,
-  },
+    flex: 1 },
   label: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   description: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-}));
+    marginTop: 2 } }));

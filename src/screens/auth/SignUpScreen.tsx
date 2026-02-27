@@ -15,7 +15,7 @@ import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 
 type SignUpValues = RegisterInput & { confirmPassword: string; name: string };
 
-export const SignUpScreen = () => {
+export const SignUpScreen = (): React.JSX.Element => {
   const navigation = useNavigation();
   const { register, handleAuthError, isLoading: isRegistering } = useAuth();
   const { navigateToLogin } = useAuthNavigation();
@@ -45,7 +45,7 @@ export const SignUpScreen = () => {
     <AuthWrapper testID="signup-screen">
       <AuthFormTemplate<SignUpValues>
         title="Create account"
-        subtitle="Join Sous Chef App today"
+        subtitle="Join Sous Chef today"
         onBackPress={() => navigation.goBack()}
         fields={[
           {

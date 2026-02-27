@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 
 export interface ModalManagerResult {
   /**
@@ -101,33 +101,26 @@ export interface ModalManagerResult {
 export function useModalManager(): ModalManagerResult {
   const [activeModal, setActiveModal] = useState<string | null>(null);
 
-  const openModal = useCallback((modalName: string) => {
+  const openModal = (modalName: string) => {
     setActiveModal(modalName);
-  }, []);
+  };
 
-  const closeModal = useCallback(() => {
+  const closeModal = () => {
     setActiveModal(null);
-  }, []);
+  };
 
-  const isOpen = useCallback(
-    (modalName: string) => {
+  const isOpen = (modalName: string) => {
       return activeModal === modalName;
-    },
-    [activeModal],
-  );
+    };
 
-  const toggleModal = useCallback(
-    (modalName: string) => {
+  const toggleModal = (modalName: string) => {
       setActiveModal((current) => (current === modalName ? null : modalName));
-    },
-    [],
-  );
+    };
 
   return {
     activeModal,
     openModal,
     closeModal,
     isOpen,
-    toggleModal,
-  };
+    toggleModal };
 }

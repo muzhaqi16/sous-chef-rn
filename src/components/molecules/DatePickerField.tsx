@@ -1,8 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, Platform } from 'react-native';
 import DateTimePicker, {
-  DateTimePickerEvent,
-} from '@react-native-community/datetimepicker';
+  DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Label } from '#components/atoms/Label';
@@ -32,13 +31,11 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   maximumDate,
   required,
   error,
-  testID,
-}) => {
+  testID }) => {
   const { theme } = useUnistyles();
   const [showPicker, setShowPicker] = useState(false);
 
-  const handleDateChange = useCallback(
-    (event: DateTimePickerEvent, selectedDate?: Date) => {
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
       // On Android, the picker closes automatically
       if (Platform.OS === 'android') {
         setShowPicker(false);
@@ -50,20 +47,17 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
         // User cancelled
         setShowPicker(false);
       }
-    },
-    [onChange],
-  );
+    };
 
-  const handlePress = useCallback(() => {
+  const handlePress = () => {
     setShowPicker(true);
-  }, []);
+  };
 
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
-    });
+      day: 'numeric' });
   };
 
   return (
@@ -101,17 +95,14 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   label: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   required: {
-    color: theme.colors.error,
-  },
+    color: theme.colors.error },
   input: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -121,28 +112,20 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.inputBackground,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   inputError: {
-    borderColor: theme.colors.error,
-  },
+    borderColor: theme.colors.error },
   dateText: {
     flex: 1,
     fontSize: theme.fonts.size.md,
-    color: theme.colors.inputText,
-  },
+    color: theme.colors.inputText },
   placeholder: {
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   errorText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.error,
-    marginTop: theme.spacing.xs,
-  },
+    marginTop: theme.spacing.xs },
   calendarPicker: {
-    alignSelf: 'center',
-  },
+    alignSelf: 'center' },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

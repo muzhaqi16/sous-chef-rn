@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Alert } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,8 +33,7 @@ export const CookingPreferencesSheet: React.FC<CookingPreferencesSheetProps> = (
   visible,
   onClose,
   onSave,
-  initialValues,
-}) => {
+  initialValues }) => {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -48,21 +46,30 @@ export const CookingPreferencesSheet: React.FC<CookingPreferencesSheetProps> = (
   const [budget, setBudget] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Control bottom sheet visibility based on visible prop
-  useEffect(() => {
+  // Reset form when modal opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevInitialValues, setPrevInitialValues] = useState(initialValues);
+  if (visible !== prevVisible || initialValues !== prevInitialValues) {
+    setPrevVisible(visible);
+    setPrevInitialValues(initialValues);
     if (visible) {
-      bottomSheetRef.current?.present();
-      // Reset form when modal opens
       setSkillLevel(initialValues?.cookingSkillLevel || '');
       setPrepTime(initialValues?.maxPrepTimeMinutes?.toString() || '');
       setCookTime(initialValues?.maxCookTimeMinutes?.toString() || '');
       setBudget(initialValues?.budgetPerMeal?.toString() || '');
+    }
+  }
+
+  // Control bottom sheet visibility based on visible prop
+  useEffect(() => {
+    if (visible) {
+      bottomSheetRef.current?.present();
     } else {
       bottomSheetRef.current?.dismiss();
     }
-  }, [visible, initialValues]);
+  }, [visible]);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = async () => {
     const updates: {
       cookingSkillLevel?: string;
       maxPrepTimeMinutes?: number;
@@ -133,7 +140,7 @@ export const CookingPreferencesSheet: React.FC<CookingPreferencesSheetProps> = (
     if (!success) {
       Alert.alert('Error', 'Failed to update cooking preferences');
     }
-  }, [skillLevel, prepTime, cookTime, budget, onSave]);
+  };
 
   return (
     <BottomSheetModal
@@ -234,28 +241,21 @@ export const CookingPreferencesSheet: React.FC<CookingPreferencesSheetProps> = (
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
-    padding: theme.spacing.md,
-  },
+    padding: theme.spacing.md },
   section: {
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   label: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   pickerContainer: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    overflow: 'hidden',
-  },
+    overflow: 'hidden' },
   picker: {
-    backgroundColor: 'transparent',
-  },
-}));
+    backgroundColor: 'transparent' } }));

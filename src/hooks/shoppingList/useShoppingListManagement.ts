@@ -1,4 +1,3 @@
-import { useMemo, useCallback } from 'react';
 import { useSearchableList } from '../useSearchableList';
 import { shoppingListItemSearch } from '#/utils/searchUtils';
 import { useShoppingListItemsQuery } from './useShoppingListItemsQuery';
@@ -49,10 +48,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
   const totalCountPurchased = purchased.totalCount;
 
   // Combined items for backwards compatibility
-  const items = useMemo(
-    () => [...unpurchasedItems, ...purchasedItems],
-    [unpurchasedItems, purchasedItems],
-  );
+  const items = [...unpurchasedItems, ...purchasedItems];
 
   // Combined loading/error state
   const loading = itemsLoading;
@@ -73,34 +69,26 @@ export function useShoppingListManagement(currentListId: string | undefined) {
   } = useSearchableList(items, shoppingListItemSearch);
 
   // Filter unpurchased/purchased items by search query
-  const filteredUnpurchasedItems = useMemo(() => {
-    if (!searchQuery.trim()) return unpurchasedItems;
-    return unpurchasedItems.filter(item =>
-      shoppingListItemSearch(item, searchQuery),
-    );
-  }, [unpurchasedItems, searchQuery]);
+  const filteredUnpurchasedItems = !searchQuery.trim()
+    ? unpurchasedItems
+    : unpurchasedItems.filter(item =>
+        shoppingListItemSearch(item, searchQuery),
+      );
 
-  const filteredPurchasedItems = useMemo(() => {
-    if (!searchQuery.trim()) return purchasedItems;
-    return purchasedItems.filter(item =>
-      shoppingListItemSearch(item, searchQuery),
-    );
-  }, [purchasedItems, searchQuery]);
+  const filteredPurchasedItems = !searchQuery.trim()
+    ? purchasedItems
+    : purchasedItems.filter(item =>
+        shoppingListItemSearch(item, searchQuery),
+      );
 
   // Helper functions
-  const getItemById = useCallback(
-    (itemId: string) => items.find(item => item.id === itemId),
-    [items],
-  );
+  const getItemById = (itemId: string) => items.find(item => item.id === itemId);
 
-  const getCompletedItems = useCallback(() => purchasedItems, [purchasedItems]);
+  const getCompletedItems = () => purchasedItems;
 
-  const getPendingItems = useCallback(() => unpurchasedItems, [unpurchasedItems]);
+  const getPendingItems = () => unpurchasedItems;
 
-  const getItemsByCategory = useCallback(
-    (category: string) => items.filter(item => item.category === category),
-    [items],
-  );
+  const getItemsByCategory = (category: string) => items.filter(item => item.category === category);
 
   return {
     // Data

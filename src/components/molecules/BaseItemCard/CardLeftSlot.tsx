@@ -7,13 +7,30 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import type { CardLeftSlotProps } from './types';
 
 /**
- * Left slot component for BaseItemCard
- * Renders emoji, image, icon, or custom content
+ * Lightweight image slot — no useUnistyles, all styles from stylesheet
  */
-export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
+const ImageSlot: React.FC<{ imageUrl: string; dimmed: boolean }> = ({ imageUrl, dimmed }) => (
+  <View
+    style={[
+      commonStyles.listItemImageContainerCompact,
+      styles.imageContainer,
+      dimmed && styles.dimmed,
+    ]}
+  >
+    <CachedImage
+      uri={imageUrl}
+      style={commonStyles.listItemImageCompact}
+      displaySize={48}
+    />
+  </View>
+);
+
+/**
+ * Themed slot — needs useUnistyles for dynamic backgroundColor and icon colors
+ */
+const ThemedSlot: React.FC<CardLeftSlotProps> = ({
   type,
   emoji,
-  imageUrl,
   icon,
   iconLibrary,
   backgroundColor,
@@ -44,28 +61,11 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
     );
   }
 
-  if (type === 'image' && imageUrl) {
-    return (
-      <View
-        style={[
-          commonStyles.listItemImageContainerCompact,
-          styles.imageContainer,
-          dimmed && styles.dimmed,
-        ]}
-      >
-        <CachedImage
-          uri={imageUrl}
-          style={commonStyles.listItemImageCompact}
-        />
-      </View>
-    );
-  }
-
   if (type === 'icon' && icon) {
     return (
       <View
         style={[
-          styles.iconContainer,
+          styles.slotContainer,
           { backgroundColor: getBackgroundColor() },
           dimmed && styles.dimmed,
         ]}
@@ -84,7 +84,7 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
   return (
     <View
       style={[
-        styles.emojiContainer,
+        styles.slotContainer,
         { backgroundColor: getBackgroundColor() },
         dimmed && styles.dimmed,
       ]}
@@ -94,20 +94,26 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
   );
 };
 
+/**
+ * Left slot component for BaseItemCard
+ * Renders emoji, image, icon, or custom content
+ */
+export const CardLeftSlot: React.FC<CardLeftSlotProps> = (props) => {
+  // Image path is lightweight — no useUnistyles needed
+  if (props.type === 'image' && props.imageUrl) {
+    return <ImageSlot imageUrl={props.imageUrl} dimmed={props.dimmed ?? false} />;
+  }
+
+  // All other types need theme access
+  return <ThemedSlot {...props} />;
+};
+
 const styles = StyleSheet.create(theme => ({
   container: {},
   imageContainer: {
     overflow: 'hidden',
   },
-  iconContainer: {
-    width: theme.sizes.avatar.md,
-    height: theme.sizes.avatar.md,
-    borderRadius: theme.radii.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing['3'],
-  },
-  emojiContainer: {
+  slotContainer: {
     width: theme.sizes.avatar.md,
     height: theme.sizes.avatar.md,
     borderRadius: theme.radii.md,

@@ -8,7 +8,7 @@
  * - Preserve data during failures
  */
 
-import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useGetPantryQuery } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizePantry } from '#/utils/connectionUtils';
@@ -18,6 +18,34 @@ import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { useSearchableList } from '../../useSearchableList';
 import { pantryItemSearch } from '#/utils/searchUtils';
 import { useAppStore, selectIsHomeSelectionReady, selectSetIsPantryQueryComplete } from '#store/useAppStore';
+
+// Module-level helpers — outside hook body so React Compiler doesn't bail out on try-catch
+async function executePantryRefetch(
+  refetchFn: () => Promise<unknown>,
+  setIsRefreshing: (v: boolean) => void,
+) {
+  setIsRefreshing(true);
+  try {
+    await refetchFn();
+  } catch (error) {
+    throw error;
+  } finally {
+    setIsRefreshing(false);
+  }
+}
+
+async function executeAutoRefetch(
+  refetchFn: () => Promise<unknown>,
+  guard: React.RefObject<boolean>,
+) {
+  try {
+    await refetchFn();
+  } catch (error) {
+    console.warn('[usePantryQuery] Auto-refetch failed:', error);
+  } finally {
+    guard.current = false;
+  }
+}
 
 /**
  * Hook for fetching and managing pantry query with pagination
@@ -45,8 +73,7 @@ export function usePantryQuery(pantryId: string | undefined) {
     variables: {
       id: pantryId || '',
       itemsFirst: 25, // Initial page size
-      storageLocationsFirst: 50,
-    },
+      storageLocationsFirst: 50 },
     skip: !hasValidPantryId,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',
@@ -59,26 +86,19 @@ export function usePantryQuery(pantryId: string | undefined) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Normalize pantry data to flatten Connection pattern
-  const normalizedPantry = useMemo(
-    () => normalizePantry(data?.pantry),
-    [data?.pantry],
-  );
+  const normalizedPantry = normalizePantry(data?.pantry);
 
   // Preserve pantry items across network failures
   const preservedItems = usePreservedArrayData(normalizedPantry?.items);
 
   // Filter out items that are pending deletion to prevent flicker
-  const pantryItems = useMemo(
-    () => subscriptionService.filterPendingDeletes(preservedItems),
-    [preservedItems],
-  );
+  const pantryItems = subscriptionService.filterPendingDeletes(preservedItems);
 
   // Search functionality
   const {
     query: searchQuery,
     setQuery: setSearchQuery,
-    filtered: filteredItems,
-  } = useSearchableList(pantryItems, pantryItemSearch);
+    filtered: filteredItems } = useSearchableList(pantryItems, pantryItemSearch);
 
   // Pagination using generic utility hook
   const { hasMore, loadMore, isLoadingMore } = usePagination({
@@ -87,18 +107,10 @@ export function usePantryQuery(pantryId: string | undefined) {
     itemCount: pantryItems.length,
     fetchMore,
     fetchMoreVariables: { id: pantryId },
-    cursorVariableName: 'itemsCursor',
-  });
+    cursorVariableName: 'itemsCursor' });
 
   // Wrap refetch to track pull-to-refresh state
-  const memoizedRefetch = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [refetch]);
+  const memoizedRefetch = () => executePantryRefetch(refetch, setIsRefreshing);
 
   // Guard to prevent multiple auto-refetches when edges are depleted
   const isAutoRefetchingRef = useRef(false);
@@ -131,15 +143,7 @@ export function usePantryQuery(pantryId: string | undefined) {
     if (totalCount > 0 && pantryItems.length === 0) {
       isAutoRefetchingRef.current = true;
 
-      const timeoutId = setTimeout(async () => {
-        try {
-          await refetch();
-        } catch (error) {
-          console.warn('[usePantryQuery] Auto-refetch failed:', error);
-        } finally {
-          isAutoRefetchingRef.current = false;
-        }
-      }, 100);
+      const timeoutId = setTimeout(() => executeAutoRefetch(refetch, isAutoRefetchingRef), 100);
 
       return () => {
         clearTimeout(timeoutId);
@@ -166,6 +170,5 @@ export function usePantryQuery(pantryId: string | undefined) {
 
     // Search
     searchQuery,
-    setSearchQuery,
-  };
+    setSearchQuery };
 }

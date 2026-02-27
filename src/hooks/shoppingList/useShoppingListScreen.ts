@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+
+
 import { useAuth } from '#/hooks/auth/useAuth';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
 import { useShoppingListsQuery } from './useShoppingListsQuery';
@@ -35,15 +36,36 @@ export function useShoppingListScreen() {
 
   // 3. Items: Fetch and manage items for current list (with pagination)
   // Returns paginated unpurchasedItems and purchasedItems
-  const shoppingListManagement = useShoppingListManagement(currentListId);
+  // PERF: Destructure all fields individually to enable useMemo on final return
   const {
     items,
+    allItems,
     unpurchasedItems: rawUnpurchasedItems,
     purchasedItems: rawPurchasedItems,
     shoppingList: currentListDetails,
     loading: itemsLoading,
+    error,
     isTransitioning,
-  } = shoppingListManagement;
+    totalCountUnpurchased,
+    totalCountPurchased,
+    loadMoreUnpurchased,
+    hasMoreUnpurchased,
+    isLoadingMoreUnpurchased,
+    loadMorePurchased,
+    hasMorePurchased,
+    isLoadingMorePurchased,
+    searchQuery,
+    setSearchQuery,
+    addItem,
+    updateItem,
+    removeItem,
+    toggleItem,
+    refetch,
+    getItemById,
+    getCompletedItems,
+    getPendingItems,
+    getItemsByCategory,
+  } = useShoppingListManagement(currentListId);
 
   // 4. Transform: Convert raw items to UI format (single consolidated call)
   // Transforms all arrays in one useMemo call for better performance
@@ -55,28 +77,20 @@ export function useShoppingListScreen() {
     });
 
   // 5. Ownership: Enrich lists with ownership info
-  const listDataWithOwnership = useMemo(
-    () =>
-      lists.map(list => ({
-        ...list,
-        _isOwner: isShoppingListOwner(list, user?.id),
-      })),
-    [lists, user?.id],
-  );
+  const listDataWithOwnership = lists.map(list => ({
+    ...list,
+    _isOwner: isShoppingListOwner(list, user?.id),
+  }));
 
   // Derived: Initial loading state (loading with no data)
   const isLoadingInitial = (listsLoading || itemsLoading) && items.length === 0;
+  const loading = listsLoading || itemsLoading;
 
   return {
-    // Spread management hook props (mutations, search, pagination)
-    ...shoppingListManagement,
-
     // Lists
     lists,
     listDataWithOwnership,
-    // currentList from selection is lightweight (for list display only)
     currentList,
-    // currentListDetails from detail query has full data (for permissions)
     currentListDetails,
     currentListId,
     defaultList,
@@ -90,12 +104,42 @@ export function useShoppingListScreen() {
     sortableItems,
     unpurchasedItems: transformedUnpurchasedItems,
     purchasedItems: transformedPurchasedItems,
-    // Raw items (for hooks that need GraphQL fragment fields like version)
     rawUnpurchasedItems,
 
     // Loading states
-    loading: listsLoading || itemsLoading,
+    loading,
     isLoadingInitial,
     isTransitioning,
+    error,
+
+    // Total counts
+    totalCountUnpurchased,
+    totalCountPurchased,
+
+    // Pagination
+    loadMoreUnpurchased,
+    hasMoreUnpurchased,
+    isLoadingMoreUnpurchased,
+    loadMorePurchased,
+    hasMorePurchased,
+    isLoadingMorePurchased,
+
+    // Search
+    searchQuery,
+    setSearchQuery,
+
+    // Actions
+    addItem,
+    updateItem,
+    removeItem,
+    toggleItem,
+    refetch,
+
+    // Helpers
+    allItems,
+    getItemById,
+    getCompletedItems,
+    getPendingItems,
+    getItemsByCategory,
   };
 }

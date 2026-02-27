@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { NutritionsData, NutrientCategory } from '#/types/nutrition';
@@ -26,23 +26,13 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
   actualServingGrams,
   style,
 }) => {
-  const nutritions = useMemo(
-    () =>
-      typeof nutritionsRaw === 'object' && nutritionsRaw !== null
+  const nutritions = typeof nutritionsRaw === 'object' && nutritionsRaw !== null
         ? (nutritionsRaw as NutritionsData)
-        : parseNutritions(nutritionsRaw),
-    [nutritionsRaw],
-  );
+        : parseNutritions(nutritionsRaw);
 
-  const entries = useMemo(
-    () => getNutrientEntries(nutritions, actualServingGrams),
-    [nutritions, actualServingGrams],
-  );
+  const entries = getNutrientEntries(nutritions, actualServingGrams);
 
-  const groupedEntries = useMemo(
-    () => groupNutrientsByCategory(entries),
-    [entries],
-  );
+  const groupedEntries = groupNutrientsByCategory(entries);
 
   // Display serving size - use actual if provided, otherwise use base
   const displayServingSize = actualServingGrams

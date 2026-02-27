@@ -21,7 +21,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   const recipeName = item.recipe?.name ?? item.customMealName ?? 'Unnamed meal';
   const imageUrl = item.recipe?.imageUrl;
   const totalTime = item.recipe?.totalTimeMinutes;
-  const usedPantryItems = item.usedPantryItems as unknown[] | null;
+  const usedPantryItems = item.usedPantryItems;
   const hasPantryDeductions = item.isCompleted && Array.isArray(usedPantryItems) && usedPantryItems.length > 0;
 
   return (
@@ -43,7 +43,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
       </Pressable>
 
       {/* Image */}
-      {!!imageUrl && <CachedImage uri={imageUrl} style={styles.image} />}
+      {!!imageUrl && <CachedImage uri={imageUrl} style={styles.image} displaySize={44} />}
 
       {/* Content */}
       <View style={styles.content}>
@@ -54,23 +54,13 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
           {recipeName}
         </Text>
         <View style={styles.meta}>
-          {totalTime != null && (
-            <Text style={styles.metaText}>
-              {totalTime} min
-            </Text>
-          )}
-          {item.servings != null && (
-            <Text style={styles.metaText}>
-              {totalTime != null ? ' \u00B7 ' : ''}
-              {item.servings} servings
-            </Text>
-          )}
-          {item.calories != null && item.calories > 0 && (
-            <Text style={styles.metaText}>
-              {(totalTime != null || item.servings != null) ? ' \u00B7 ' : ''}
-              {Math.round(item.calories)} cal
-            </Text>
-          )}
+          <Text style={styles.metaText}>
+            {[
+              totalTime != null && `${totalTime} min`,
+              item.servings != null && `${item.servings} servings`,
+              item.calories != null && item.calories > 0 && `${Math.round(item.calories)} cal`,
+            ].filter(Boolean).join(' \u00B7 ')}
+          </Text>
         </View>
         {!!hasPantryDeductions && (
           <View style={styles.pantryBadge}>

@@ -21,12 +21,20 @@ const NotificationListener: React.FC = () => {
 
   // Defer subscription by 3s to avoid competing with startup queries on the JS thread
   const [ready, setReady] = useState(false);
+
+  // Render-time reset: clear ready state when user logs out
+  const [prevIsAuthenticated, setPrevIsAuthenticated] = useState(isAuthenticated);
+  if (isAuthenticated !== prevIsAuthenticated) {
+    setPrevIsAuthenticated(isAuthenticated);
+    if (!isAuthenticated) {
+      setReady(false);
+    }
+  }
+
   useEffect(() => {
     if (isAuthenticated && user) {
       const timer = setTimeout(() => setReady(true), 3000);
       return () => clearTimeout(timer);
-    } else {
-      setReady(false);
     }
   }, [isAuthenticated, user]);
 

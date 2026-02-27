@@ -1,18 +1,18 @@
-import React, { useCallback } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import React from 'react';
+import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import {
   BottomSheetModal,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { TemplateCard } from './TemplateCard';
+import { ChipScrollRow, type ChipOption } from '#components/atoms/ChipScrollRow';
 import { useMealTemplates } from '#hooks/mealPlan/useMealTemplates';
 import { TemplateCategory, type MealTemplateDisplayFragment } from '#generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
-const CATEGORIES: { key: TemplateCategory | undefined; label: string }[] = [
+const CATEGORIES: ChipOption<TemplateCategory | undefined>[] = [
   { key: undefined, label: 'All' },
   { key: TemplateCategory.Weekly, label: 'Weekly' },
   { key: TemplateCategory.Monthly, label: 'Monthly' },
@@ -33,13 +33,11 @@ interface TemplateBrowserSheetProps {
 export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   visible,
   onClose,
-  onSelectTemplate,
-}) => {
+  onSelectTemplate }) => {
   const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
-    snapPoints: ['85%'],
-  });
+    snapPoints: ['85%'] });
 
   const {
     templates,
@@ -49,20 +47,13 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
     selectedCategory,
     setSelectedCategory,
     loadMore,
-    hasMore,
-  } = useMealTemplates();
+    hasMore } = useMealTemplates();
 
-  const renderTemplate = useCallback(
-    ({ item }: { item: MealTemplateDisplayFragment }) => (
+  const renderTemplate = ({ item }: { item: MealTemplateDisplayFragment }) => (
       <TemplateCard template={item} onPress={onSelectTemplate} />
-    ),
-    [onSelectTemplate],
-  );
+    );
 
-  const keyExtractor = useCallback(
-    (item: MealTemplateDisplayFragment) => item.id,
-    [],
-  );
+  const keyExtractor = (item: MealTemplateDisplayFragment) => item.id;
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -90,27 +81,13 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         </View>
 
         {/* Category chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
+        <ChipScrollRow
+          options={CATEGORIES}
+          selected={selectedCategory}
+          onSelect={setSelectedCategory}
           style={styles.chipScroll}
-        >
-          {CATEGORIES.map(cat => {
-            const isActive = selectedCategory === cat.key;
-            return (
-              <Pressable
-                key={cat.label}
-                onPress={() => setSelectedCategory(cat.key)}
-                style={[styles.chip, isActive && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                  {cat.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+          contentContainerStyle={styles.chipRowContent}
+        />
 
         {/* Template list */}
         {loading && templates.length === 0 ? (
@@ -144,20 +121,17 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    flex: 1,
-  },
+    flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
-  },
+    paddingBottom: theme.spacing.sm },
   title: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -169,58 +143,28 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
+    borderColor: theme.colors.border },
   searchInput: {
     flex: 1,
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
-    padding: 0,
-  },
+    padding: 0 },
   chipScroll: {
     maxHeight: 44,
-    marginBottom: theme.spacing.sm,
-  },
-  chipRow: {
-    paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.lg,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  chipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  chipText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  chipTextActive: {
-    color: theme.colors.white,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    marginBottom: theme.spacing.sm },
+  chipRowContent: {
+    paddingHorizontal: theme.spacing.md },
   list: {
-    flex: 1,
-  },
+    flex: 1 },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   emptyText: {
     fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary,
-  },
-}));
+    color: theme.colors.textSecondary } }));

@@ -9,6 +9,7 @@
  * deduplication to prevent self-echo and duplicate updates.
  */
 
+import type { ApolloCache } from '@apollo/client';
 import { useAppStore } from '#store/useAppStore';
 import {
   useShoppingListChangesSubscription,
@@ -20,15 +21,47 @@ import { subscriptionService } from '#/services/subscriptions/SubscriptionServic
 import { CacheStrategy } from '#/services/subscriptions/types';
 import { MutationType } from '#generated';
 import {
-  addToShoppingListItemsConnection,
   removeFromShoppingListItemsConnection,
-  addToUnpurchasedItems,
-  removeFromUnpurchasedItems,
-  removeFromPurchasedItems,
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
   clearAllPurchasedItemsFromCache,
+  addNewItemToShoppingListCache,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+
+/** Re-sort shopping list edges by sortOrder after a subscription update */
+function resortEdges(cache: ApolloCache, shoppingListId: string): void {
+  executeCacheUpdate(
+    () => {
+      const queryResult = cache.readQuery({
+        query: GetShoppingListDocument,
+        variables: { id: shoppingListId },
+      }) as GetShoppingListQuery | null;
+
+      if (queryResult?.shoppingList?.itemsConnection?.edges) {
+        const sortedEdges = [...queryResult.shoppingList.itemsConnection.edges].sort(
+          (a, b) =>
+            (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''),
+        );
+
+        cache.writeQuery({
+          query: GetShoppingListDocument,
+          variables: { id: shoppingListId },
+          data: {
+            shoppingList: {
+              ...queryResult.shoppingList,
+              itemsConnection: {
+                ...queryResult.shoppingList.itemsConnection,
+                edges: sortedEdges,
+              },
+            },
+          },
+        });
+      }
+    },
+    'Failed to re-sort edges after subscription update:',
+  );
+}
 
 /**
  * Animation scheduler function type for coordinating exit animations
@@ -115,34 +148,36 @@ export function useShoppingListSubscriptions(
           }
 
           if (mutation === MutationType.Created || mutation === MutationType.ItemAdded) {
-            addToShoppingListItemsConnection(client.cache, selectedShoppingListId, item);
-            addToUnpurchasedItems(client.cache, selectedShoppingListId, item);
+            // PERF: Batch so the internal modify + any follow-up writes coalesce into one notification
+            client.cache.batch({
+              update(cache: ApolloCache) {
+                addNewItemToShoppingListCache(cache, selectedShoppingListId, item);
+              },
+            });
           } else if (mutation === MutationType.Deleted || mutation === MutationType.ItemRemoved) {
             if (scheduleAnimation) {
               scheduleAnimation(item.id, -1, () => {
-                removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
-                  evictItem: true,
+                // PERF: Batch remove + evict + gc into a single observer notification
+                client.cache.batch({
+                  update(cache: ApolloCache) {
+                    removeFromShoppingListItemsConnection(cache, selectedShoppingListId, item.id, {
+                      evictItem: true,
+                    });
+                  },
                 });
-                removeFromUnpurchasedItems(client.cache, selectedShoppingListId, item.id);
-                removeFromPurchasedItems(client.cache, selectedShoppingListId, item.id);
               });
             } else {
-              removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
-                evictItem: true,
+              // PERF: Batch remove + evict + gc into a single observer notification
+              client.cache.batch({
+                update(cache: ApolloCache) {
+                  removeFromShoppingListItemsConnection(cache, selectedShoppingListId, item.id, {
+                    evictItem: true,
+                  });
+                },
               });
-              removeFromUnpurchasedItems(client.cache, selectedShoppingListId, item.id);
-              removeFromPurchasedItems(client.cache, selectedShoppingListId, item.id);
             }
           } else if (mutation === MutationType.ItemUpdated || mutation === MutationType.ItemCompleted || mutation === MutationType.ItemUncompleted) {
             const sortOrderChanged = item.sortOrder != null;
-
-            client.cache.writeFragment({
-              id: client.cache.identify({ __typename: 'ShoppingListItem', id: item.id }),
-              fragment: ShoppingListItemDisplayFragmentDoc,
-              fragmentName: 'ShoppingListItemDisplayFragment',
-              data: item,
-            });
-
             const isCompletedMutation = mutation === MutationType.ItemCompleted;
             const isUncompletedMutation = mutation === MutationType.ItemUncompleted;
 
@@ -156,84 +191,57 @@ export function useShoppingListSubscriptions(
               });
             }
 
-            if (isCompletedMutation) {
-              if (scheduleAnimation) {
-                scheduleAnimation(item.id, 1, () => {
-                  moveShoppingListItemToPurchased(client.cache, selectedShoppingListId, item);
-                  scheduleEntryAnimation?.(item.id, 1);
-                });
-              } else {
-                moveShoppingListItemToPurchased(client.cache, selectedShoppingListId, item);
-              }
-            } else if (isUncompletedMutation) {
-              if (scheduleAnimation) {
-                scheduleAnimation(item.id, -1, () => {
-                  moveShoppingListItemToUnpurchased(client.cache, selectedShoppingListId, item);
-                  scheduleEntryAnimation?.(item.id, -1);
-                });
-              } else {
-                moveShoppingListItemToUnpurchased(client.cache, selectedShoppingListId, item);
-              }
-            }
+            if (scheduleAnimation && (isCompletedMutation || isUncompletedMutation)) {
+              // Animated path: write fragment immediately for visual feedback,
+              // then batch the move + sort in the animation callback
+              client.cache.writeFragment({
+                id: client.cache.identify({ __typename: 'ShoppingListItem', id: item.id }),
+                fragment: ShoppingListItemDisplayFragmentDoc,
+                fragmentName: 'ShoppingListItemDisplayFragment',
+                data: item,
+              });
 
-            if (sortOrderChanged) {
-              try {
-                const queryResult = client.cache.readQuery({
-                  query: GetShoppingListDocument,
-                  variables: { id: selectedShoppingListId },
-                }) as GetShoppingListQuery | null;
+              const direction: 1 | -1 = isCompletedMutation ? 1 : -1;
+              const moveOp = isCompletedMutation
+                ? moveShoppingListItemToPurchased
+                : moveShoppingListItemToUnpurchased;
 
-                if (queryResult?.shoppingList?.itemsConnection?.edges) {
-                  const sortedEdges = [...queryResult.shoppingList.itemsConnection.edges].sort(
-                    (a, b) =>
-                      (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''),
-                  );
-
-                  client.cache.writeQuery({
-                    query: GetShoppingListDocument,
-                    variables: { id: selectedShoppingListId },
-                    data: {
-                      shoppingList: {
-                        ...queryResult.shoppingList,
-                        itemsConnection: {
-                          ...queryResult.shoppingList.itemsConnection,
-                          edges: sortedEdges,
-                        },
-                      },
-                    },
-                  });
-                }
-
-                client.cache.modify({
-                  id: client.cache.identify({ __typename: 'ShoppingList', id: selectedShoppingListId }),
-                  fields: {
-                    unpurchasedItems(existing: any, { readField }: any) {
-                      if (!existing?.edges) return existing;
-                      const sortedAliasedEdges = [...existing.edges].sort((a: any, b: any) => {
-                        const nodeA = readField('node', a);
-                        const nodeB = readField('node', b);
-                        const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
-                        const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
-                        return sortA.localeCompare(sortB);
-                      });
-                      return { ...existing, edges: sortedAliasedEdges };
-                    },
-                    purchasedItems(existing: any, { readField }: any) {
-                      if (!existing?.edges) return existing;
-                      const sortedAliasedEdges = [...existing.edges].sort((a: any, b: any) => {
-                        const nodeA = readField('node', a);
-                        const nodeB = readField('node', b);
-                        const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
-                        const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
-                        return sortA.localeCompare(sortB);
-                      });
-                      return { ...existing, edges: sortedAliasedEdges };
-                    },
+              scheduleAnimation(item.id, direction, () => {
+                // PERF: Batch move + sort into a single cache notification
+                client.cache.batch({
+                  update(cache: ApolloCache) {
+                    moveOp(cache, selectedShoppingListId, item);
+                    if (sortOrderChanged) {
+                      resortEdges(cache, selectedShoppingListId);
+                    }
                   },
                 });
-              } catch (error) {
-                console.warn('Failed to re-sort edges after subscription update:', error);
-              }
+                scheduleEntryAnimation?.(item.id, direction);
+              });
+            } else {
+              // PERF: Non-animated path — batch ALL cache operations into a single
+              // observer notification. This prevents cascading re-renders when
+              // writeFragment + move + sort would otherwise trigger 2-3 notifications.
+              client.cache.batch({
+                update(cache: ApolloCache) {
+                  cache.writeFragment({
+                    id: cache.identify({ __typename: 'ShoppingListItem', id: item.id }),
+                    fragment: ShoppingListItemDisplayFragmentDoc,
+                    fragmentName: 'ShoppingListItemDisplayFragment',
+                    data: item,
+                  });
+
+                  if (isCompletedMutation) {
+                    moveShoppingListItemToPurchased(cache, selectedShoppingListId, item);
+                  } else if (isUncompletedMutation) {
+                    moveShoppingListItemToUnpurchased(cache, selectedShoppingListId, item);
+                  }
+
+                  if (sortOrderChanged) {
+                    resortEdges(cache, selectedShoppingListId);
+                  }
+                },
+              });
             }
           }
           break;

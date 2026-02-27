@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { CategorySuggestion, CategoryType } from '#generated';
 import { useCategoryAutocomplete } from '#hooks/autocomplete/useCategoryAutocomplete';
 import { AutocompleteField } from './AutocompleteField';
@@ -27,39 +27,29 @@ export const CategoryAutocompleteField: React.FC<CategoryAutocompleteFieldProps>
   error,
   testID,
   onCategorySelected,
-  categoryType = CategoryType.General,
-}) => {
+  categoryType = CategoryType.General }) => {
   const category = useCategoryAutocomplete({ categoryType });
 
-  const handleTextChange = useCallback(
-    (text: string) => {
+  const handleTextChange = (text: string) => {
       onChangeText(text);
       category.handleSearchTermChange(text);
       onCategorySelected?.(null);
-    },
-    [onChangeText, category, onCategorySelected],
-  );
+    };
 
-  const handleSelect = useCallback(
-    (item: CategorySuggestion) => {
+  const handleSelect = (item: CategorySuggestion) => {
       onChangeText(item.name);
       onCategorySelected?.(item.id);
       category.setSearchTerm('');
-    },
-    [onChangeText, onCategorySelected, category],
-  );
+    };
 
-  const renderItem = useCallback(
-    (item: CategorySuggestion) => (
+  const renderItem = (item: CategorySuggestion) => (
       <AutocompleteRow
         icon={item.icon ?? undefined}
         title={item.name}
       />
-    ),
-    [],
-  );
+    );
 
-  const keyExtractor = useCallback((item: CategorySuggestion) => item.id, []);
+  const keyExtractor = (item: CategorySuggestion) => item.id;
 
   if (variant === 'inline') {
     return (

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
@@ -21,15 +21,14 @@ const IngredientItem = ({
     selected,
     onToggle,
     primaryColor,
-    textSecondary,
-  }: {
+    textSecondary }: {
     name: string;
     selected: boolean;
     onToggle: (name: string) => void;
     primaryColor: string;
     textSecondary: string;
   }) => {
-    const handlePress = useCallback(() => onToggle(name), [name, onToggle]);
+    const handlePress = () => onToggle(name);
 
     return (
       <Pressable style={({pressed}) => [styles.ingredientItem, pressed && styles.pressed]} onPress={handlePress}>
@@ -96,13 +95,11 @@ export const RecipeSearch: React.FC = () => {
     applyFilters,
     activeFilterCount,
     items,
-    handleItemPress,
-  } = useRecipeSearch();
+    handleItemPress } = useRecipeSearch();
 
-  const ingredientKeyExtractor = useCallback((item: any) => item.id, []);
+  const ingredientKeyExtractor = (item: any) => item.id;
 
-  const renderIngredientItem = useCallback(
-    ({ item }: { item: any }) => {
+  const renderIngredientItem = ({ item }: { item: any }) => {
       const itemName = item.itemName || '';
       return (
         <IngredientItem
@@ -113,64 +110,52 @@ export const RecipeSearch: React.FC = () => {
           textSecondary={theme.colors.textSecondary}
         />
       );
-    },
-    [selectedIngredients, toggleIngredient, theme.colors.primary, theme.colors.textSecondary],
-  );
+    };
 
   // Transform items to add leftElement
-  const displayItems = useMemo(() => {
+  const displayItems = (() => {
     return items.map(item => ({
       ...item,
       leftElement: item.imageUrl ? (
         <View style={commonStyles.listItemImageContainerCompact}>
-          <CachedImage uri={item.imageUrl} style={commonStyles.listItemImageCompact} />
+          <CachedImage uri={item.imageUrl} style={commonStyles.listItemImageCompact} displaySize={48} />
         </View>
-      ) : undefined,
-    }));
-  }, [items]);
+      ) : undefined }));
+  })();
 
   // Search bar right actions
-  const searchBarRightActions = useMemo(
-    () =>
-      [
+  const searchBarRightActions = [
         {
           icon: 'restaurant',
           onPress: openIngredientSelector,
           color: selectedIngredients.size > 0 ? theme.colors.white : theme.colors.primary,
           backgroundColor: selectedIngredients.size > 0 ? theme.colors.primary : theme.colors.surface,
-          badge: selectedIngredients.size > 0 ? String(selectedIngredients.size) : undefined,
-        },
+          badge: selectedIngredients.size > 0 ? String(selectedIngredients.size) : undefined },
         {
           icon: 'options',
           onPress: openFilterSheet,
           color: activeFilterCount > 0 ? theme.colors.white : theme.colors.primary,
           backgroundColor: activeFilterCount > 0 ? theme.colors.primary : theme.colors.surface,
-          badge: activeFilterCount > 0 ? String(activeFilterCount) : undefined,
-        },
+          badge: activeFilterCount > 0 ? String(activeFilterCount) : undefined },
         {
           icon: 'search',
           onPress: handleTextSearch,
           color: theme.colors.primary,
           backgroundColor: theme.colors.surface,
-          testID: 'recipe-search-submit',
-        },
-      ] as SearchBarAction[],
-    [handleTextSearch, openIngredientSelector, openFilterSheet, selectedIngredients.size, activeFilterCount, theme],
-  );
+          testID: 'recipe-search-submit' },
+      ] as SearchBarAction[];
 
   const emptyStateConfig = searchPerformed
     ? {
         icon: 'search-off',
         title: 'No recipes found',
         description: 'Try a different search term or different ingredients',
-        action: { label: 'Search by Ingredients', onPress: openIngredientSelector },
-      }
+        action: { label: 'Search by Ingredients', onPress: openIngredientSelector } }
     : {
         icon: 'search',
         title: 'Search for Recipes',
         description: 'Enter a search term or select pantry ingredients',
-        action: { label: 'Search by Ingredients', onPress: openIngredientSelector },
-      };
+        action: { label: 'Search by Ingredients', onPress: openIngredientSelector } };
 
   return (
     <View style={styles.container} testID="recipe-search-screen">
@@ -245,8 +230,7 @@ export const RecipeSearch: React.FC = () => {
                 onPress={() =>
                   setActiveFilters(prev => ({
                     ...prev,
-                    diet: prev.diet === diet.toLowerCase() ? null : diet.toLowerCase(),
-                  }))
+                    diet: prev.diet === diet.toLowerCase() ? null : diet.toLowerCase() }))
                 }
               >
                 <Text
@@ -278,8 +262,7 @@ export const RecipeSearch: React.FC = () => {
                       ...prev,
                       intolerances: isSelected
                         ? prev.intolerances.filter(i => i !== intolerance.toLowerCase())
-                        : [...prev.intolerances, intolerance.toLowerCase()],
-                    }))
+                        : [...prev.intolerances, intolerance.toLowerCase()] }))
                   }
                 >
                   <Ionicons
@@ -306,8 +289,7 @@ export const RecipeSearch: React.FC = () => {
                 onPress={() =>
                   setActiveFilters(prev => ({
                     ...prev,
-                    mealType: prev.mealType === type.toLowerCase() ? null : type.toLowerCase(),
-                  }))
+                    mealType: prev.mealType === type.toLowerCase() ? null : type.toLowerCase() }))
                 }
               >
                 <Text
@@ -340,8 +322,7 @@ export const RecipeSearch: React.FC = () => {
                 onPress={() =>
                   setActiveFilters(prev => ({
                     ...prev,
-                    maxReadyTime: prev.maxReadyTime === time.value ? null : time.value,
-                  }))
+                    maxReadyTime: prev.maxReadyTime === time.value ? null : time.value }))
                 }
               >
                 <Text
@@ -378,135 +359,107 @@ export const RecipeSearch: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   skeletonContainer: {
     padding: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   ingredientList: {
-    flex: 1,
-  },
+    flex: 1 },
   ingredientListContent: {
-    paddingBottom: theme.spacing.xl,
-  },
+    paddingBottom: theme.spacing.xl },
   ingredientItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   ingredientText: {
     marginLeft: theme.spacing.md,
     fontSize: theme.fonts.size.md,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   emptyText: {
     textAlign: 'center',
     color: theme.colors.textSecondary,
     fontSize: theme.fonts.size.md,
-    marginTop: theme.spacing.xl,
-  },
+    marginTop: theme.spacing.xl },
   headerSearchButton: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-  },
+    borderRadius: theme.radii.full },
   headerSearchButtonDisabled: {
-    opacity: theme.opacity.disabled,
-  },
+    opacity: theme.opacity.disabled },
   headerSearchButtonText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   filterSection: {
-    marginBottom: theme.spacing.xl,
-  },
+    marginBottom: theme.spacing.xl },
   filterSectionTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   filterSectionSubtitle: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   filterChip: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.full,
     borderWidth: 1.5,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   filterChipActive: {
     backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
+    borderColor: theme.colors.primary },
   filterChipText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   filterChipTextActive: {
-    color: theme.colors.white,
-  },
+    color: theme.colors.white },
   checkboxGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   checkboxItem: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '48%',
     padding: theme.spacing.sm,
     borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.surface,
-  },
+    backgroundColor: theme.colors.surface },
   checkboxText: {
     marginLeft: theme.spacing.sm,
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   filterActions: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
     marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   filterActionButton: {
     flex: 1,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   clearButton: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
+    borderColor: theme.colors.border },
   clearButtonText: {
     color: theme.colors.textPrimary,
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   applyButton: {},
   applyButtonText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

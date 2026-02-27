@@ -1,12 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { View, useWindowDimensions, ActivityIndicator, Text } from 'react-native';
 import {
   TabView as RNTabView,
   TabBar,
   SceneRendererProps,
   NavigationState,
-  Route,
-} from 'react-native-tab-view';
+  Route } from 'react-native-tab-view';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export interface TabRoute extends Route {
@@ -51,22 +50,17 @@ export const TabView: React.FC<TabViewProps> = ({
   lazyPreloadDistance = 0,
   onIndexChange,
   renderLazyPlaceholder,
-  swipeEnabled = true,
-}) => {
+  swipeEnabled = true }) => {
   const { theme } = useUnistyles();
   const layout = useWindowDimensions();
   const [index, setIndex] = useState(initialTabIndex);
 
-  const handleIndexChange = useCallback(
-    (newIndex: number) => {
+  const handleIndexChange = (newIndex: number) => {
       setIndex(newIndex);
       onIndexChange?.(newIndex);
-    },
-    [onIndexChange],
-  );
+    };
 
-  const renderTabBar = useCallback(
-    (
+  const renderTabBar = (
       props: SceneRendererProps & {
         navigationState: NavigationState<TabRoute>;
       },
@@ -77,8 +71,7 @@ export const TabView: React.FC<TabViewProps> = ({
         title:
           route.badge !== undefined && route.badge > 0
             ? `${route.title} (${route.badge})`
-            : route.title,
-      }));
+            : route.title }));
 
       return (
         <View style={styles.tabBarContainer}>
@@ -86,31 +79,25 @@ export const TabView: React.FC<TabViewProps> = ({
             {...props}
             navigationState={{
               ...props.navigationState,
-              routes: routesWithLabels,
-            }}
+              routes: routesWithLabels }}
             indicatorStyle={{
               backgroundColor: theme.colors.primary,
-              height: 3,
-            }}
+              height: 3 }}
             scrollEnabled={false}
             tabStyle={{
-              flex: 1,
-            }}
+              flex: 1 }}
             style={{
               backgroundColor: theme.colors.surface,
               elevation: 0,
               shadowOpacity: 0,
               borderBottomWidth: 1,
-              borderBottomColor: theme.colors.border,
-            }}
+              borderBottomColor: theme.colors.border }}
             activeColor={theme.colors.primary}
             inactiveColor={theme.colors.textSecondary}
           />
         </View>
       );
-    },
-    [theme],
-  );
+    };
 
   return (
     <RNTabView
@@ -139,13 +126,9 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   placeholderText: {
-    fontSize: theme.typography.fontSize.md,
-  },
+    fontSize: theme.typography.fontSize.md },
   tabBarContainer: {
     paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.background,
-  },
-}));
+    backgroundColor: theme.colors.background } }));

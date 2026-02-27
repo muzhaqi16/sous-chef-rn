@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo} from 'react';
+import React from 'react';
 import {View, Text, Pressable} from 'react-native';
 import {Icon} from '#utils/iconUtils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
@@ -16,24 +16,23 @@ interface NotificationItemProps {
 export const NotificationItem: React.FC<NotificationItemProps> = ({
   notification,
   onPress,
-  onDismiss,
-}) => {
+  onDismiss }) => {
   const {theme} = useUnistyles();
 
-  const handlePress = useCallback(() => {
+  const handlePress = () => {
     onPress(notification);
-  }, [notification, onPress]);
+  };
 
-  const handleDismiss = useCallback(() => {
+  const handleDismiss = () => {
     onDismiss?.(notification.id);
-  }, [notification.id, onDismiss]);
+  };
 
-  const formattedTimestamp = useMemo(() => {
+  const formattedTimestamp = (() => {
     const date = safeParseDate(notification.sentAt);
     return date
       ? formatDistanceToNow(date, {addSuffix: true})
       : 'Recently';
-  }, [notification.sentAt]);
+  })();
 
   return (
     <Pressable
@@ -90,11 +89,9 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   unreadContainer: {
-    backgroundColor: theme.colors.primaryLight,
-  },
+    backgroundColor: theme.colors.primaryLight },
   iconContainer: {
     width: 40,
     height: 40,
@@ -102,39 +99,29 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.md,
-  },
+    marginRight: theme.spacing.md },
   unreadIconContainer: {
     backgroundColor: theme.colors.primary,
-    opacity: 0.2,
-  },
+    opacity: 0.2 },
   contentContainer: {
-    flex: 1,
-  },
+    flex: 1 },
   title: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   unreadTitle: {
-    fontWeight: theme.fonts.weight.bold,
-  },
+    fontWeight: theme.fonts.weight.bold },
   message: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
-    lineHeight: 20,
-  },
+    lineHeight: 20 },
   timestamp: {
     fontSize: theme.fonts.size.xs,
-    color: theme.colors.textTertiary,
-  },
+    color: theme.colors.textTertiary },
   dismissButton: {
     padding: theme.spacing.xs,
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

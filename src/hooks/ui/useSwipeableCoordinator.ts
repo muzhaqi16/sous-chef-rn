@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef } from 'react';
 
 /**
  * Hook to coordinate swipeable items, ensuring only one is open at a time
@@ -30,7 +30,7 @@ export function useSwipeableCoordinator() {
    *
    * @param ref - Reference to the swipeable component being opened
    */
-  const handleSwipeableWillOpen = useCallback((ref: any) => {
+  const handleSwipeableWillOpen = (ref: any) => {
     // If there's a currently open swipeable and it's different from the new one
     if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
       // Close the previously open swipeable
@@ -39,19 +39,18 @@ export function useSwipeableCoordinator() {
 
     // Update to track the newly opening swipeable
     openSwipeableRef.current = ref;
-  }, []);
+  };
 
   /**
    * Handler to be called when a swipeable item closes
    *
    * Clears the reference to the open swipeable.
    */
-  const handleSwipeableClose = useCallback(() => {
+  const handleSwipeableClose = () => {
     openSwipeableRef.current = null;
-  }, []);
+  };
 
   return {
     handleSwipeableWillOpen,
-    handleSwipeableClose,
-  };
+    handleSwipeableClose };
 }

@@ -9,6 +9,7 @@ import {
   useAddItemToShoppingListMutation,
 } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
@@ -20,13 +21,6 @@ const addToPantryItemsConnection = createAddToParentConnectionUpdater<any>(
   'Pantry',
   'itemsConnection',
   'PantryItem',
-);
-
-// Cache updater for ShoppingList.itemsConnection
-const addToShoppingListItemsConnection = createAddToParentConnectionUpdater<any>(
-  'ShoppingList',
-  'itemsConnection',
-  'ShoppingListItem',
 );
 
 interface SearchResultsProps {
@@ -67,8 +61,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     update: (cache, { data }) => {
       const shoppingListItem = data?.addItemToShoppingList?.shoppingListItem;
       if (shoppingListItem && shoppingListId) {
-        // Add item to ShoppingList.itemsConnection using parent connection pattern
-        addToShoppingListItemsConnection(cache, shoppingListId, shoppingListItem);
+        addNewItemToShoppingListCache(cache, shoppingListId, shoppingListItem);
       }
     },
   });

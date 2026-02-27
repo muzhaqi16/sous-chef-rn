@@ -4,6 +4,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useHomeDetailManagement } from '#hooks/home/useHomeDetailManagement';
+
 import { commonStyles } from '#/styles/commonStyles';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { EditableField } from '#components/molecules/EditableField';
@@ -181,7 +182,7 @@ export const HomeDetailScreen: React.FC<{
       ),
     },
     {
-      title: 'Storage Management',
+      title: 'Storage',
       content: (
         <NavigationRow
           icon="folder-open"
@@ -201,7 +202,7 @@ export const HomeDetailScreen: React.FC<{
               <View style={styles.leaveHomeSection}>
                 <Text style={styles.leaveHomeDescription}>
                   Leaving this home will remove your access to all shared
-                  pantries and shopping lists.
+                  pantries, shopping lists, meal plans, and templates.
                 </Text>
                 <Button
                   title="Leave Home"

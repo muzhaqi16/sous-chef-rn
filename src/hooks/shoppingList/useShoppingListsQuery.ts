@@ -1,6 +1,6 @@
-import { useMemo, useCallback } from 'react';
 import { useGetShoppingListsLiteQuery, GetShoppingListsLiteQuery } from '#generated';
 import { extractNodes } from '#/utils/connectionUtils';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 // Extract the shopping list type from the lite query (metadata only)
 // Uses NonNullable to extract the node type from the connection edges
@@ -35,24 +35,20 @@ export function useShoppingListsQuery() {
       variables: {},
       fetchPolicy: 'cache-and-network',
       nextFetchPolicy: 'cache-first',
-      errorPolicy: 'all',
-    });
+      errorPolicy: 'all' });
+
+  useApolloErrorLogger('GetShoppingListsLite', error);
 
   // Function to trigger fresh fetch - call when selector opens for latest data
-  const fetchLists = useCallback(() => {
+  const fetchLists = () => {
     refetch();
-  }, [refetch]);
+  };
 
   // Stable lists array with fallback to previous data (graceful degradation on network error)
   // Extract nodes from connection type (shoppingLists returns ShoppingListConnection)
-  const lists = useMemo(
-    (): ShoppingListFromQuery[] => {
-      const currentNodes = extractNodes(data?.shoppingLists);
-      const previousNodes = extractNodes(previousData?.shoppingLists);
-      return currentNodes.length > 0 ? currentNodes : previousNodes;
-    },
-    [data?.shoppingLists, previousData?.shoppingLists],
-  );
+  const currentNodes = extractNodes(data?.shoppingLists);
+  const previousNodes = extractNodes(previousData?.shoppingLists);
+  const lists: ShoppingListFromQuery[] = currentNodes.length > 0 ? currentNodes : previousNodes;
 
   return {
     lists,

@@ -22,7 +22,6 @@ let resourceObserver: InstanceType<typeof PerformanceObserver> | null = null;
 // Duplicate-prevention flags for one-shot native metrics
 let reportedNativeLaunch = false;
 let reportedBundleLoad = false;
-let reportedContentAppeared = false;
 
 function getGraphQLHost(): string {
   const apiConfig = Environment.getApiConfig();
@@ -62,17 +61,6 @@ function handleNativeMarks(entries: PerformanceEntry[]) {
     }
   }
 
-  if (!reportedContentAppeared) {
-    const contentAppeared = find('contentAppeared');
-    if (contentAppeared) {
-      reportedContentAppeared = true;
-      Telemetry.histogram(
-        'app_content_appeared_ms',
-        contentAppeared.startTime,
-        { type: 'content_appeared' },
-      );
-    }
-  }
 }
 
 function handleMeasure(entry: PerformanceEntry) {
@@ -172,7 +160,6 @@ export const NativePerformanceService = {
     initialized = false;
     reportedNativeLaunch = false;
     reportedBundleLoad = false;
-    reportedContentAppeared = false;
   },
 
   mark(name: string) {

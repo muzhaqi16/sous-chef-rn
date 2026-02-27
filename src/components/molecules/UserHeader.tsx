@@ -34,6 +34,7 @@ export const UserHeader: React.FC = () => {
               <CachedImage
                 uri={user.profilePicture}
                 style={styles.avatarImg}
+                displaySize={48}
               />
             ) : (
               <View style={styles.avatarPlaceholder}>
@@ -74,16 +75,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-  },
-  headerNotifications: {
-    width: 48,
-    height: 48,
-    borderRadius: theme.radii.full,
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    marginRight: theme.spacing['3'],
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   /** Avatar */
   avatar: {

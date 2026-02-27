@@ -19,6 +19,12 @@ export const ProfileSkeleton: React.FC = () => {
         <SkeletonCircle size={44} />
       </View>
 
+      {/* Name and email placeholders */}
+      <View style={styles.nameContainer}>
+        <SkeletonLine width="40%" height={20} />
+        <SkeletonLine width="50%" height={14} style={styles.email} />
+      </View>
+
       {/* Settings sections */}
       {[1, 2, 3].map(section => (
         <View key={section} style={styles.section}>
@@ -27,8 +33,8 @@ export const ProfileSkeleton: React.FC = () => {
             {[1, 2, 3].map(row => (
               <SkeletonLine
                 key={row}
-                width="60%"
-                height={16}
+                width="100%"
+                height={44}
                 style={styles.row}
               />
             ))}
@@ -51,6 +57,13 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: 0,
     marginBottom: theme.spacing.sm,
+  },
+  nameContainer: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  email: {
+    marginTop: theme.spacing.xs,
   },
   section: {
     marginBottom: theme.spacing.xl,

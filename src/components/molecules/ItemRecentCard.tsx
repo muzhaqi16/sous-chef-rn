@@ -51,7 +51,7 @@ export function ItemRecentCard<T extends RecentItem>({
       {/* Item Image or Placeholder */}
       <View style={styles.imageContainer}>
         {imageUrl ? (
-          <CachedImage uri={imageUrl} style={styles.image} />
+          <CachedImage uri={imageUrl} style={styles.image} displaySize={48} />
         ) : (
           <View style={styles.imagePlaceholder}>
             <Icon

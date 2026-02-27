@@ -31,32 +31,9 @@ fragment ShoppingListItemCore on ShoppingListItem {
 fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   ...ShoppingListItemCore
   sortOrder
-  # NEW: Brand and netWeight fields for custom shopping list items
-  brand {
-    id
-    name
-  }
-  brandId
-  netWeight
-  netWeightUnit {
-    id
-    name
-    symbol
-  }
-  netWeightUnitId
   item {
     id
     imageUrl
-    categories {
-      id
-      isPrimary
-      category {
-        id
-        name
-      }
-    }
-    # NOTE: Full `units` array omitted from Display tier — list views don't need all unit details.
-    # Use ShoppingListItemFragment (FULL tier) for detail views that need units.
   }
 }
 
@@ -64,13 +41,7 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
 # Spreads Display (which includes Core) and adds all extended fields
 fragment ShoppingListItemFragment on ShoppingListItem {
   ...ShoppingListItemDisplayFragment
-  # Extended fields not in Display
-  shoppingList {
-    id
-    totalItems
-    completedItems
-    estimatedTotal
-  }
+  # Extended item fields for detail view
   item {
     id
     name
@@ -100,63 +71,22 @@ fragment ShoppingListItemFragment on ShoppingListItem {
       }
     }
   }
-  # Extended unit fields (Core has id, name, symbol, displayAsFraction, minPrecision, autoConvertThreshold)
-  unit {
-    type
-    isMetric
-    baseUnitId
-    conversionFactor
-    notes
-    isCommon
-    sortOrder
-    createdAt
-    updatedAt
-  }
-  # NEW: Price fields in nested object
+  # Price fields (only fields consumed by detail view)
   priceEstimate {
     estimated
-    budget
     lastKnown
-    lowest
-    highest
-    lastUpdated
   }
-  # NEW: Purchase fields in nested object
+  # Purchase status
   purchaseInfo {
-    isPurchased # Already in Core
-    purchasedQuantity
-    purchasedPrice
-    purchaseDate
-    purchasedBy {
-      ...UserSummary
-    }
+    isPurchased
   }
-  # NEW: Source fields in nested object
+  # Source fields
   source {
     isAutoAdded
     autoAddReason
     isFromMealPlan
-    mealPlan {
-      id
-      name
-    }
   }
-  # NEW: Store/location fields in nested object
-  storeInfo {
-    aisle
-    storeSection
-    preferredStore {
-      id
-      name
-    }
-  }
-  # NEW: Purchase history fields in nested object
-  purchaseHistory {
-    previouslyPurchased
-    lastPurchaseDate
-    purchaseCount
-  }
-  # Metadata fields (unchanged)
+  # Metadata fields
   priority
   sortOrder
   createdAt
@@ -184,10 +114,6 @@ fragment ShoppingListItemFragment on ShoppingListItem {
 fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
   id
   userId
-  shoppingListId
-  createdAt
-  transferredAt
-  transferredFrom
   user {
     id
     email
@@ -216,14 +142,6 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
       id
       displayName
       avatar
-    }
-  }
-  invitedBy {
-    id
-    email
-    profile {
-      id
-      displayName
     }
   }
 }
@@ -263,8 +181,6 @@ fragment LoginUser on User {
   ...AuthUser
   defaultHomeId
   defaultShoppingListId
-  preferredCurrency
-  language
   defaultHome {
     id
     name
@@ -273,7 +189,6 @@ fragment LoginUser on User {
       edges {
         node {
           id
-          homeId
           isDefault
         }
       }
@@ -281,8 +196,6 @@ fragment LoginUser on User {
   }
   profile {
     id
-    firstName
-    lastName
     displayName
     avatar
   }
@@ -491,14 +404,6 @@ fragment PantryItemDisplay on PantryItem {
   item {
     id
     imageUrl
-    # NOTE: `images` array omitted — list views only need `imageUrl` for thumbnails.
-    # Use PantryItemFragment (FULL tier) for detail views that need full images.
-    name
-    netWeight
-    displayUnit {
-      id
-      symbol
-    }
   }
   unit {
     id
@@ -516,11 +421,6 @@ fragment PantryItemDisplay on PantryItem {
     name
     type
   }
-  brand {
-    id
-    name
-  }
-  tags
   packageBreakdown {
     count
     contentUnit {
@@ -560,9 +460,10 @@ fragment PantryItemDisplay on PantryItem {
 fragment PantryItemFragment on PantryItem {
   ...PantryItemDisplay
   # Extended item fields for detail view (images, nutrition, categories)
-  # NOTE: id, name, imageUrl, displayUnit already provided by PantryItemDisplay
+  # NOTE: id, imageUrl already provided by PantryItemDisplay
   # Intentionally avoids ...ItemFragment to stay under 175-field complexity limit
   item {
+    name
     images {
       id
       url
@@ -571,6 +472,10 @@ fragment PantryItemFragment on PantryItem {
     nutritions
     defaultConsumeIncrement
     defaultConsumeUnitId
+    displayUnit {
+      id
+      symbol
+    }
     categories {
       isPrimary
       category {
@@ -579,6 +484,7 @@ fragment PantryItemFragment on PantryItem {
       }
     }
   }
+  # Extended unit fields for detail view (Display has id, name, symbol)
   unit {
     type
     isMetric
@@ -589,6 +495,12 @@ fragment PantryItemFragment on PantryItem {
     minPrecision
     autoConvertThreshold
   }
+  # Detail-only fields not needed in list views
+  brand {
+    id
+    name
+  }
+  tags
   storageNotes
   createdAt
   restockQuantity
@@ -615,31 +527,11 @@ fragment PantryItemFragment on PantryItem {
         quantityUsed
         usageUnit {
           id
-          name
           symbol
         }
         usedAt
         purpose
-        notes
-        wasteReason
         adjustmentReason
-        isComposted
-        isRecycled
-        pantryItem {
-          id
-        }
-        usedBy {
-          id
-        }
-        cookingLog {
-          id
-        }
-        mealPlanItem {
-          id
-        }
-        recipe {
-          id
-        }
       }
     }
   }
@@ -653,24 +545,10 @@ fragment HomeInviteFragment on HomeInvite {
   invitedUserId
   recipientName
   role
-  customPermissions {
-    canViewPantry
-    canEditPantry
-    canAddItems
-    canRemoveItems
-    canInviteOthers
-    canManageHome
-  }
   status
   expiresAt
   sentAt
-  lastReminderAt
-  reminderCount
-  acceptedAt
-  declinedAt
-  revokedAt
   message
-  createdAt
   home {
     id
     name
@@ -718,17 +596,6 @@ fragment MemberShipFragment on Membership {
   role
   status
   displayName
-  canViewPantry
-  canEditPantry
-  canAddItems
-  canRemoveItems
-  canInviteOthers
-  canManageHome
-  lastActiveAt
-  joinedAt
-  leftAt
-  createdAt
-  updatedAt
 }
 
 fragment BasicPantryFragment on Pantry {
@@ -813,13 +680,59 @@ fragment HomeDisplay on Home {
   }
 }
 
+# LIST: Lightweight fragment for home lists and creation responses
+# Contains only fields consumed by GetHomes callers and CreateHome onCompleted
+# Used in: GetHomes query, CreateHome mutation
+fragment HomeListFragment on Home {
+  id
+  name
+  isDefault
+  version
+  membersConnection(first: 10) {
+    edges {
+      node {
+        id
+        role
+        status
+        userId
+        displayName
+      }
+    }
+    totalCount
+  }
+  invitesConnection(first: 10) {
+    edges {
+      node {
+        id
+        email
+        recipientName
+        status
+      }
+    }
+    totalCount
+  }
+  pantriesConnection(first: 50) {
+    edges {
+      node {
+        id
+        name
+        isDefault
+      }
+    }
+  }
+  myMembership {
+    id
+    role
+    canManageHome
+  }
+}
+
 # FULL: Home detail views and management
 # Contains full home data with all connections (invites, members, pantries with items)
 # Used in: GetHome query (home detail screen)
 fragment HomeFragment on Home {
   id
   name
-  type
   description
   timezone
   currency
@@ -827,8 +740,6 @@ fragment HomeFragment on Home {
   joinCode
   allowJoinCode
   maxMembers
-  tags
-  metadata
   version
   createdAt
   updatedAt
@@ -874,6 +785,7 @@ fragment HomeFragment on Home {
     }
     totalCount
   }
+
 }
 
 fragment NotificationFragment on Notification {
@@ -940,6 +852,22 @@ fragment MealPlanDisplay on MealPlan {
   totalFat
   actualCost
   budgetAmount
+  homeId
+  home {
+    id
+    name
+    myMembership {
+      id
+      role
+    }
+  }
+  createdBy {
+    id
+    profile {
+      id
+      displayName
+    }
+  }
   version
   createdAt
   updatedAt
@@ -1026,6 +954,11 @@ fragment MealTemplateDisplay on MealTemplate {
   tags
   usageCount
   lastUsedAt
+  homeId
+  home {
+    id
+    name
+  }
   createdAt
   updatedAt
 }
@@ -1116,24 +1049,13 @@ fragment RecipeFragment on Recipe {
   # Extended fields not in BasicRecipeFragment
   instructions
   notes
-  tips
   videoUrl
   sourceUrl
   source
-  originalAuthor
 
-  # Extended external source fields
-  externalUrl
-  externalData
-
-  # Nutrition
-  nutritionData
-
-  # Tags and metadata
-  tags
+  # Metadata
   visibility
   isPublished
-  publishedAt
   averageRating
   totalReviews
   rating1Count
@@ -1149,7 +1071,6 @@ fragment RecipeFragment on Recipe {
     }
     totalCount
   }
-  matchPercentage
 
   # Relations
   createdBy {
@@ -1159,5 +1080,4 @@ fragment RecipeFragment on Recipe {
   ingredients {
     ...RecipeIngredientFragment
   }
-
 }

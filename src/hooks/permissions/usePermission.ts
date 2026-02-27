@@ -1,49 +1,50 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import {
   PermissionService,
   type AppPermission,
-  type PermissionStatus,
-} from '#/services/permissions/PermissionService';
+  type PermissionStatus } from '#/services/permissions/PermissionService';
 
 export function usePermission(permission: AppPermission) {
   const [status, setStatus] = useState<PermissionStatus>('undetermined');
 
-  const checkPermission = useCallback(async () => {
-    const result = await PermissionService.check(permission);
-    setStatus(result);
-  }, [permission]);
-
-  const requestPermission = useCallback(async () => {
+  const requestPermission = async () => {
     const result = await PermissionService.request(permission);
     setStatus(result);
     return result;
-  }, [permission]);
+  };
 
-  const openSettings = useCallback(() => {
+  const openSettings = () => {
     return PermissionService.openSettings();
-  }, []);
+  };
 
   // Check on mount
   useEffect(() => {
-    checkPermission();
-  }, [checkPermission]);
+    const check = async () => {
+      const result = await PermissionService.check(permission);
+      setStatus(result);
+    };
+    check();
+  }, [permission]);
 
   // Re-check when returning from settings
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextState => {
       if (nextState === 'active') {
-        checkPermission();
+        const check = async () => {
+          const result = await PermissionService.check(permission);
+          setStatus(result);
+        };
+        check();
       }
     });
     return () => subscription.remove();
-  }, [checkPermission]);
+  }, [permission]);
 
   return {
     status,
     request: requestPermission,
     openSettings,
     isGranted: status === 'granted',
-    isBlocked: status === 'blocked',
-  };
+    isBlocked: status === 'blocked' };
 }

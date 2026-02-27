@@ -1,6 +1,6 @@
-import { useMemo, useCallback } from 'react';
 import { useMySavedRecipesQuery } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -42,22 +42,20 @@ export function useSavedRecipes(folder?: string | null) {
   const { data, loading, error, refetch, fetchMore } = useMySavedRecipesQuery({
     variables: {
       folder: folder ?? undefined,
-      first: DEFAULT_PAGE_SIZE,
-    },
+      first: DEFAULT_PAGE_SIZE },
     skip: shouldSkip,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',
     notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
+
+  useApolloErrorLogger('MySavedRecipes', error);
 
   const connection = data?.me?.savedRecipesConnection;
 
   // Normalize saved recipes to flatten the recipe data
-  const recipes = useMemo<SavedRecipe[]>(() => {
-    if (!connection?.edges) return [];
-
-    return connection.edges.map(edge => edge.node).map(savedRecipe => ({
+  const recipes: SavedRecipe[] = !connection?.edges ? [] :
+    connection.edges.map(edge => edge.node).map(savedRecipe => ({
       // Use saved recipe ID as the primary ID for list operations
       id: savedRecipe.id,
       recipeId: savedRecipe.recipe.id,
@@ -80,21 +78,18 @@ export function useSavedRecipes(folder?: string | null) {
       cookedCount: savedRecipe.cookedCount ?? 0,
       lastCookedAt: savedRecipe.lastCookedAt,
       createdAt: savedRecipe.createdAt,
-      updatedAt: savedRecipe.updatedAt,
-    }));
-  }, [connection]);
+      updatedAt: savedRecipe.updatedAt }));
 
   const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
   const endCursor = connection?.pageInfo?.endCursor;
   const totalCount = connection?.totalCount ?? recipes.length;
 
-  const loadMore = useCallback(() => {
+  const loadMore = () => {
     if (!hasNextPage || loading || !endCursor) return;
 
     fetchMore({
-      variables: { after: endCursor },
-    });
-  }, [hasNextPage, loading, endCursor, fetchMore]);
+      variables: { after: endCursor } });
+  };
 
   return {
     // Data
@@ -114,6 +109,5 @@ export function useSavedRecipes(folder?: string | null) {
     getRecipesByFolder: (folderName: string) =>
       recipes.filter(recipe => recipe.folder === folderName),
     getRecipesByTag: (tag: string) =>
-      recipes.filter(recipe => recipe.tags.includes(tag)),
-  };
+      recipes.filter(recipe => recipe.tags.includes(tag)) };
 }

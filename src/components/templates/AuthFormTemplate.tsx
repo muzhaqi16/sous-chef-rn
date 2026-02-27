@@ -4,7 +4,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { FieldValues, Control, FieldErrors } from 'react-hook-form';
 import { DynamicFormFields, FieldDef } from '../molecules/DynamicFormFields';
 import { Button } from '../base/Button';
-import { IconButton } from '../atoms/IconButton';
+import { BackButton } from '../atoms/BackButton';
 
 interface Props<T extends FieldValues> {
   title: string;
@@ -53,13 +53,10 @@ export function AuthFormTemplate<T extends FieldValues>({
     <View style={styles.formContainer}>
       <View>
         {!!onBackPress && (
-          <IconButton
-            name="chevron-left"
+          <BackButton
             onPress={onBackPress}
-            size="md"
             style={styles.headerAction}
             color={theme.colors.textOnSurfaceVariant}
-            accessibilityLabel="Go back"
           />
         )}
 
@@ -144,17 +141,6 @@ const styles = StyleSheet.create(theme => ({
   },
   action: {
     marginVertical: theme.spacing.xl,
-  },
-  button: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.sm,
-    alignItems: 'center',
-    alignSelf: 'center',
-  },
-  buttonText: {
-    color: theme.colors.onPrimary,
-    textTransform: 'uppercase',
   },
   footer: {
     marginTop: 'auto',

@@ -33,7 +33,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
       disabled={isAdded}
     >
       {imageUrl ? (
-        <CachedImage uri={imageUrl} style={styles.image} />
+        <CachedImage uri={imageUrl} style={styles.image} displaySize={64} />
       ) : (
         <View style={styles.imagePlaceholder}>
           <Ionicons name="leaf-outline" size={32} color={theme.colors.textSecondary} />

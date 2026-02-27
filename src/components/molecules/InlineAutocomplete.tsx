@@ -1,9 +1,8 @@
 import React, {
-  useCallback,
+  
   useEffect,
   useRef,
-  useState,
-} from 'react';
+  useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { Pressable, ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -64,8 +63,7 @@ export function InlineAutocomplete<T>({
   keyExtractor,
   onSelect,
   footerComponent,
-  autoCapitalize = 'none',
-}: InlineAutocompleteProps<T>) {
+  autoCapitalize = 'none' }: InlineAutocompleteProps<T>) {
   const { theme } = useUnistyles();
 
   // Track internal search term for visibility logic
@@ -93,17 +91,19 @@ export function InlineAutocomplete<T>({
     };
   }, []);
 
-  // Sync local state when value prop changes externally (e.g., after selection)
+  // Sync local state when value prop changes externally (render-time state update)
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setSearchTerm(value);
+  }
+
+  // Keep ref in sync with value prop
   useEffect(() => {
-    // If no debounce is pending, this is an external change — sync local state
-    if (!debounceTimerRef.current) {
-      setSearchTerm(value);
-    }
     inputValueRef.current = value;
   }, [value]);
 
-  const handleTextChange = useCallback(
-    (text: string) => {
+  const handleTextChange = (text: string) => {
       // Store value immediately in ref
       inputValueRef.current = text;
       setSearchTerm(text);
@@ -119,12 +119,9 @@ export function InlineAutocomplete<T>({
         onChangeText(text);
         debounceTimerRef.current = null;
       }, debounceMs);
-    },
-    [onChangeText, debounceMs],
-  );
+    };
 
-  const handleSelect = useCallback(
-    (item: T) => {
+  const handleSelect = (item: T) => {
       setShowDropdown(false);
 
       // Clear pending debounce so value sync effect works immediately
@@ -134,20 +131,18 @@ export function InlineAutocomplete<T>({
       }
 
       onSelect(item);
-    },
-    [onSelect],
-  );
+    };
 
-  const handleBlur = useCallback(() => {
+  const handleBlur = () => {
     // Delay hiding to allow tap on suggestion
     setTimeout(() => setShowDropdown(false), 200);
-  }, []);
+  };
 
-  const handleFocus = useCallback(() => {
+  const handleFocus = () => {
     if (searchTerm.length >= minSearchLength && slicedItems.length > 0) {
       setShowDropdown(true);
     }
-  }, [searchTerm.length, minSearchLength, slicedItems.length]);
+  };
 
   return (
     <View style={styles.container}>
@@ -205,13 +200,11 @@ export function InlineAutocomplete<T>({
 const styles = StyleSheet.create(theme => ({
   container: {
     position: 'relative',
-    zIndex: 10,
-  },
+    zIndex: 10 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative',
-  },
+    position: 'relative' },
   input: {
     flex: 1,
     height: theme.sizes.input.md,
@@ -222,20 +215,16 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.inputBackground,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: theme.colors.inputText,
-  },
+    color: theme.colors.inputText },
   inputError: {
-    borderColor: theme.colors.error,
-  },
+    borderColor: theme.colors.error },
   errorText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.error,
-    marginTop: theme.spacing.xs,
-  },
+    marginTop: theme.spacing.xs },
   loadingIndicator: {
     position: 'absolute',
-    right: theme.spacing.sm,
-  },
+    right: theme.spacing.sm },
   suggestionsContainer: {
     position: 'absolute',
     top: '100%',
@@ -249,13 +238,9 @@ const styles = StyleSheet.create(theme => ({
     maxHeight: 220,
     zIndex: theme.zIndex.dropdown,
     overflow: 'hidden',
-    ...theme.shadows.lg,
-  },
+    ...theme.shadows.lg },
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   separator: {
     height: 1,
-    backgroundColor: theme.colors.borderLight,
-  },
-}));
+    backgroundColor: theme.colors.borderLight } }));

@@ -1,9 +1,4 @@
-import React, {
-  useMemo,
-  useEffect,
-  useCallback,
-  useState,
-} from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -81,8 +76,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       hasMorePurchased,
       isLoadingMorePurchased,
       setSelectedShoppingListId,
-      isTransitioning,
-    } = screenData;
+      isTransitioning } = screenData;
 
     // Get modal actions from context (provided by ShoppingListModalsProvider)
     const { addItemSheet, quantityEdit, moveToPantry } =
@@ -91,8 +85,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     // Feature hint for swipe gesture (shows once, after items load)
     const swipeHint = useFeatureHint({
       featureId: 'shopping_list_swipe',
-      showOnMount: false,
-    });
+      showOnMount: false });
 
     const { navigate, navigateTo } = useAppNavigation();
     const { setScannerProps } = useTabBarSetters();
@@ -109,16 +102,14 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       handleTogglePurchase,
       handleDeleteItem,
       handleClearAllPurchased,
-      handleClearAllShopping,
-    } = useShoppingListActions({
+      handleClearAllShopping } = useShoppingListActions({
       currentListId,
       items,
       addItem,
       toggleItem,
       removeItem,
       refetchItems,
-      setSearchQuery,
-    });
+      setSearchQuery });
 
     // --- Batch Move to Pantry Hook ---
     const { batchMoveToPantry, loading: batchMoveToPantryLoading } =
@@ -128,19 +119,15 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     const { handleSortOrderUpdate: reorderItem } = useItemReordering({
       listId: currentListId,
       items: rawUnpurchasedItems,
-      refetch: refetchItems,
-    });
+      refetch: refetchItems });
 
-    const handleSortOrderUpdate = useCallback(
-      (
+    const handleSortOrderUpdate = (
         itemId: string,
         afterItemId: string | null,
         beforeItemId: string | null,
       ) => {
         reorderItem(itemId, afterItemId, beforeItemId, null, null);
-      },
-      [reorderItem],
-    );
+      };
 
     // --- Selector Hook ---
     const {
@@ -148,12 +135,10 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       listConfig,
       handleOpenSelector,
       handleOverlayOpen,
-      handleOverlayClose,
-    } = useShoppingListSelectorModal({
+      handleOverlayClose } = useShoppingListSelectorModal({
       listDataWithOwnership,
       currentListId,
-      setSelectedShoppingListId,
-    });
+      setSelectedShoppingListId });
 
     // Local state
     const [refreshing, setRefreshing] = useState(false);
@@ -177,7 +162,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     }, [items, swipeHint.hasBeenShown, swipeHint.actions]);
 
     // Handle refresh
-    const handleRefresh = useCallback(async () => {
+    const handleRefresh = async () => {
       setRefreshing(true);
       try {
         optimisticDataPersistence.clearType('ShoppingListItem');
@@ -185,24 +170,22 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       } finally {
         setRefreshing(false);
       }
-    }, [refetchItems]);
+    };
 
     // Calculate permissions for the current list
-    const permissions = useMemo(() => {
+    const permissions = (() => {
       if (!currentListDetails) {
         return {
           canAddItems: true,
           canRemoveItems: true,
           canEditItems: true,
-          canMarkPurchased: true,
-        };
+          canMarkPurchased: true };
       }
 
       const listData = {
         homeId: currentListDetails.homeId,
         collaboratorsConnection: currentListDetails.collaboratorsConnection,
-        ownership: currentListDetails.ownerships?.[0],
-      };
+        ownership: currentListDetails.ownerships?.[0] };
 
       const homeMembership = currentListDetails.home?.myMembership ?? null;
 
@@ -211,11 +194,10 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         user?.id,
         homeMembership,
       );
-    }, [currentListDetails, user?.id]);
+    })();
 
     // Header right action - list selector button
-    const headerRight = useMemo(
-      () => (
+    const headerRight = (
         <Pressable
           onPress={handleOpenSelector}
           hitSlop={8}
@@ -229,73 +211,69 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
             color={theme.colors.textSecondary}
           />
         </Pressable>
-      ),
-      [handleOpenSelector, theme.colors.textSecondary],
-    );
+      );
 
-    // Memoized customListProps
-    const customListProps = useMemo(
-      () => ({
-        loading: isLoadingInitial,
-        onTogglePurchase: handleTogglePurchase,
-        onMoveToPantry: moveToPantry.openForItem,
-        onQuantityPress: quantityEdit.openForItem,
-        onSortOrderUpdate: handleSortOrderUpdate,
-        onRefresh: handleRefresh,
-        refreshing,
-        disabled: !!searchQuery.trim(),
-        onClearAllPurchased: handleClearAllPurchased,
-        onClearAllShopping: handleClearAllShopping,
-        onSwipeableWillOpen: handleSwipeableWillOpen,
-        onSwipeableClose: handleSwipeableClose,
-        unpurchasedItems,
-        purchasedItems,
-        totalCountUnpurchased,
-        totalCountPurchased,
-        onEndReachedUnpurchased: loadMoreUnpurchased,
-        hasMoreUnpurchased,
-        isLoadingMoreUnpurchased,
-        onEndReachedPurchased: loadMorePurchased,
-        hasMorePurchased,
-        isLoadingMorePurchased,
-        canAddItems: permissions.canAddItems,
-        canRemoveItems: permissions.canRemoveItems,
-        canEditItems: permissions.canEditItems,
-        canMarkPurchased: permissions.canMarkPurchased,
-        canReorderItems: permissions.canEditItems,
-        isTransitioning,
-        onBatchMoveToPantry: batchMoveToPantry,
-        batchMoveToPantryLoading,
-      }),
-      [
-        isLoadingInitial,
-        searchQuery,
-        handleTogglePurchase,
-        moveToPantry.openForItem,
-        quantityEdit.openForItem,
-        handleSortOrderUpdate,
-        handleRefresh,
-        refreshing,
-        handleClearAllPurchased,
-        handleClearAllShopping,
-        handleSwipeableWillOpen,
-        handleSwipeableClose,
-        unpurchasedItems,
-        purchasedItems,
-        totalCountUnpurchased,
-        totalCountPurchased,
-        loadMoreUnpurchased,
-        hasMoreUnpurchased,
-        isLoadingMoreUnpurchased,
-        loadMorePurchased,
-        hasMorePurchased,
-        isLoadingMorePurchased,
-        permissions,
-        isTransitioning,
-        batchMoveToPantry,
-        batchMoveToPantryLoading,
-      ],
-    );
+    // SearchBar rendered above tab pills (positioned above TabView in ShoppingListTabs)
+    const searchBarHeader = (
+        <View style={styles.searchBarContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search shopping list..."
+            showSearchIcon
+          />
+        </View>
+      );
+
+    // PERFORMANCE: Split customListProps into stable groups so each group is independently
+    // memoized. When only one group changes (e.g. refreshing), the others retain references.
+    const listActions = ({
+      onTogglePurchase: handleTogglePurchase,
+      onMoveToPantry: moveToPantry.openForItem,
+      onQuantityPress: quantityEdit.openForItem,
+      onSortOrderUpdate: handleSortOrderUpdate,
+      onRefresh: handleRefresh,
+      onClearAllPurchased: handleClearAllPurchased,
+      onClearAllShopping: handleClearAllShopping,
+      onSwipeableWillOpen: handleSwipeableWillOpen,
+      onSwipeableClose: handleSwipeableClose,
+      onBatchMoveToPantry: batchMoveToPantry });
+
+    const listState = ({
+      loading: isLoadingInitial,
+      refreshing,
+      disabled: !!searchQuery.trim(),
+      isTransitioning,
+      batchMoveToPantryLoading });
+
+    const listData = ({
+      unpurchasedItems,
+      purchasedItems,
+      totalCountUnpurchased,
+      totalCountPurchased });
+
+    const paginationState = ({
+      onEndReachedUnpurchased: loadMoreUnpurchased,
+      hasMoreUnpurchased,
+      isLoadingMoreUnpurchased,
+      onEndReachedPurchased: loadMorePurchased,
+      hasMorePurchased,
+      isLoadingMorePurchased });
+
+    const permissionsState = ({
+      canAddItems: permissions.canAddItems,
+      canRemoveItems: permissions.canRemoveItems,
+      canEditItems: permissions.canEditItems,
+      canMarkPurchased: permissions.canMarkPurchased,
+      canReorderItems: permissions.canEditItems });
+
+    const customListProps = ({
+      ...listActions,
+      ...listState,
+      ...listData,
+      ...paginationState,
+      ...permissionsState,
+      listHeaderComponent: searchBarHeader });
 
     // Track screen view once on mount (avoid re-firing on every item/list change)
     useScreenTelemetry('ShoppingListMain', () => ({
@@ -304,20 +282,17 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       purchased_count: items.filter(
         (item: { purchaseInfo?: { isPurchased?: boolean } }) => item.purchaseInfo?.isPurchased,
       ).length,
-      has_lists: lists.length > 0,
-    }));
+      has_lists: lists.length > 0 }));
 
     // Set up scanner button
     useEffect(() => {
       const handleScanPress = () => {
         Telemetry.trackEvent('barcode_scanner_opened', {
           source: 'shopping_list',
-          list_id: currentListId,
-        });
+          list_id: currentListId });
         navigateTo.barcode({
           source: 'shoppingList',
-          shoppingListId: currentListId,
-        });
+          shoppingListId: currentListId });
       };
 
       setScannerProps(handleScanPress, true);
@@ -332,8 +307,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     useTabBarAddButton(
       () => {
         Telemetry.trackEvent('add_item_from_tab_bar', {
-          list_id: currentListId,
-        });
+          list_id: currentListId });
         addItemSheet.open();
       },
       !permissions.canAddItems,
@@ -346,17 +320,14 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     const hasMore = hasMoreUnpurchased || hasMorePurchased;
     const isLoadingMore = isLoadingMoreUnpurchased || isLoadingMorePurchased;
 
-    const footerComponent = useMemo(
-      () => (
+    const footerComponent = (
         <PaginationFooter
           isLoadingMore={isLoadingMore}
           hasMore={hasMore}
           loading={loading}
           itemCount={items.length}
         />
-      ),
-      [isLoadingMore, hasMore, loading, items.length],
-    );
+      );
 
     // Empty state when no lists exist
     if (lists.length === 0) {
@@ -366,9 +337,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         description: 'Create a shopping list to get started',
         action: {
           label: 'Create List',
-          onPress: () => navigate('ListSettings'),
-        },
-      };
+          onPress: () => navigate('ListSettings') } };
 
       return (
         <View style={styles.container} testID="shopping-list-screen">
@@ -390,9 +359,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       description: 'Add some items to get started',
       action: {
         label: 'Add Item',
-        onPress: addItemSheet.open,
-      },
-    };
+        onPress: addItemSheet.open } };
 
     return (
       <View style={styles.container} testID="shopping-list-screen">
@@ -401,14 +368,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           title={currentList?.name || 'Shopping List'}
           headerRight={headerRight}
         />
-        <View style={styles.searchBarContainer}>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search shopping list..."
-            showSearchIcon
-          />
-        </View>
         <ListTemplate
           items={sortableItems}
           loading={isLoadingInitial}
@@ -481,9 +440,6 @@ export const ShoppingListMain: React.FC = () => (
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   searchBarContainer: {
-    paddingHorizontal: theme.spacing.md,
-  },
-}));
+    paddingHorizontal: theme.spacing.md } }));

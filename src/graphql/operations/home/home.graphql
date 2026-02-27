@@ -13,7 +13,7 @@ query GetHomes($first: Int, $after: String) {
     edges {
       cursor
       node {
-        ...HomeDisplay
+        ...HomeListFragment
       }
     }
     pageInfo {
@@ -49,7 +49,7 @@ mutation CreateHome($input: CreateHomeInput!) {
     message
     code
     home {
-      ...HomeFragment
+      ...HomeListFragment
     }
   }
 }

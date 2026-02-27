@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
@@ -9,8 +9,7 @@ import {
   Intolerance,
   HealthGoal,
   Cuisine,
-  RestrictionSeverity,
-} from '#generated';
+  RestrictionSeverity } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#/utils/iconUtils';
 import { StringArrayManager } from '#/components/organisms/StringArrayManager/StringArrayManager';
@@ -29,14 +28,13 @@ export const DietaryProfileScreen: React.FC = () => {
     loading,
     updateDietaryProfile,
     addDietaryRestriction,
-    removeDietaryRestriction,
-  } = useDietaryProfile();
+    removeDietaryRestriction } = useDietaryProfile();
 
   // State for modals and editing
   const [editingMeals, setEditingMeals] = useState(false);
   const [editingSnacks, setEditingSnacks] = useState(false);
 
-  const handleRemoveRestriction = useCallback((id: string) => {
+  const handleRemoveRestriction = (id: string) => {
     Alert.alert(
       'Remove Restriction',
       'Are you sure you want to remove this dietary restriction?',
@@ -49,15 +47,14 @@ export const DietaryProfileScreen: React.FC = () => {
             if (!success) {
               Alert.alert('Error', 'Failed to remove restriction');
             }
-          },
-        },
+          } },
         { text: 'Cancel', style: 'cancel' },
       ],
     );
-  }, [removeDietaryRestriction]);
+  };
 
   // Batch add restrictions handler
-  const handleAddRestrictions = useCallback(async (
+  const handleAddRestrictions = async (
     restrictions: {
       diet?: Diet;
       intolerance?: Intolerance;
@@ -79,12 +76,12 @@ export const DietaryProfileScreen: React.FC = () => {
       errorService.reportError(error, { operation: 'DietaryProfile.addRestrictions' });
       return false;
     }
-  }, [addDietaryRestriction]);
+  };
 
   // Cooking preferences state
   const [editingCookingPrefs, setEditingCookingPrefs] = useState(false);
 
-  const handleSaveCookingPrefs = useCallback(async (values: {
+  const handleSaveCookingPrefs = async (values: {
     cookingSkillLevel?: string;
     maxPrepTimeMinutes?: number;
     maxCookTimeMinutes?: number;
@@ -95,12 +92,12 @@ export const DietaryProfileScreen: React.FC = () => {
       setEditingCookingPrefs(false);
     }
     return success;
-  }, [updateDietaryProfile]);
+  };
 
   // Macro targets state
   const [editingMacros, setEditingMacros] = useState(false);
 
-  const handleSaveMacros = useCallback(async (values: {
+  const handleSaveMacros = async (values: {
     calorieTarget?: number;
     proteinTarget?: number;
     carbsTarget?: number;
@@ -111,78 +108,72 @@ export const DietaryProfileScreen: React.FC = () => {
       setEditingMacros(false);
     }
     return success;
-  }, [updateDietaryProfile]);
+  };
 
   // Cuisine handlers
-  const handleAddCuisine = useCallback(async (cuisine: Cuisine) => {
+  const handleAddCuisine = async (cuisine: Cuisine) => {
     const currentCuisines = (profile?.preferredCuisines || []) as Cuisine[];
     return await updateDietaryProfile({
-      preferredCuisines: [...currentCuisines, cuisine],
-    });
-  }, [profile?.preferredCuisines, updateDietaryProfile]);
+      preferredCuisines: [...currentCuisines, cuisine] });
+  };
 
-  const handleRemoveCuisine = useCallback(async (cuisine: Cuisine) => {
+  const handleRemoveCuisine = async (cuisine: Cuisine) => {
     const currentCuisines = (profile?.preferredCuisines || []) as Cuisine[];
     await updateDietaryProfile({
-      preferredCuisines: currentCuisines.filter(c => c !== cuisine),
-    });
-  }, [profile?.preferredCuisines, updateDietaryProfile]);
+      preferredCuisines: currentCuisines.filter(c => c !== cuisine) });
+  };
 
   // Ingredient handlers
-  const handleAddFavoriteIngredient = useCallback(async (ingredient: string) => {
+  const handleAddFavoriteIngredient = async (ingredient: string) => {
     return await updateDietaryProfile({
-      favoriteIngredients: [...(profile?.favoriteIngredients || []), ingredient],
-    });
-  }, [profile?.favoriteIngredients, updateDietaryProfile]);
+      favoriteIngredients: [...(profile?.favoriteIngredients || []), ingredient] });
+  };
 
-  const handleRemoveFavoriteIngredient = useCallback(async (ingredient: string) => {
+  const handleRemoveFavoriteIngredient = async (ingredient: string) => {
     await updateDietaryProfile({
       favoriteIngredients: (profile?.favoriteIngredients || []).filter(
         i => i !== ingredient,
-      ),
-    });
-  }, [profile?.favoriteIngredients, updateDietaryProfile]);
+      ) });
+  };
 
-  const handleAddDislikedIngredient = useCallback(async (ingredient: string) => {
+  const handleAddDislikedIngredient = async (ingredient: string) => {
     return await updateDietaryProfile({
-      dislikedIngredients: [...(profile?.dislikedIngredients || []), ingredient],
-    });
-  }, [profile?.dislikedIngredients, updateDietaryProfile]);
+      dislikedIngredients: [...(profile?.dislikedIngredients || []), ingredient] });
+  };
 
-  const handleRemoveDislikedIngredient = useCallback(async (ingredient: string) => {
+  const handleRemoveDislikedIngredient = async (ingredient: string) => {
     await updateDietaryProfile({
       dislikedIngredients: (profile?.dislikedIngredients || []).filter(
         i => i !== ingredient,
-      ),
-    });
-  }, [profile?.dislikedIngredients, updateDietaryProfile]);
+      ) });
+  };
 
   // Modal handlers
-  const handleOpenMeals = useCallback(() => setEditingMeals(true), []);
-  const handleCloseMeals = useCallback(() => setEditingMeals(false), []);
-  const handleOpenSnacks = useCallback(() => setEditingSnacks(true), []);
-  const handleCloseSnacks = useCallback(() => setEditingSnacks(false), []);
-  const handleOpenCookingPrefs = useCallback(() => setEditingCookingPrefs(true), []);
-  const handleCloseCookingPrefs = useCallback(() => setEditingCookingPrefs(false), []);
-  const handleOpenMacros = useCallback(() => setEditingMacros(true), []);
-  const handleCloseMacros = useCallback(() => setEditingMacros(false), []);
+  const handleOpenMeals = () => setEditingMeals(true);
+  const handleCloseMeals = () => setEditingMeals(false);
+  const handleOpenSnacks = () => setEditingSnacks(true);
+  const handleCloseSnacks = () => setEditingSnacks(false);
+  const handleOpenCookingPrefs = () => setEditingCookingPrefs(true);
+  const handleCloseCookingPrefs = () => setEditingCookingPrefs(false);
+  const handleOpenMacros = () => setEditingMacros(true);
+  const handleCloseMacros = () => setEditingMacros(false);
 
-  const handleSaveMeals = useCallback(async (value: number) => {
+  const handleSaveMeals = async (value: number) => {
     return await updateDietaryProfile({ mealsPerDay: value });
-  }, [updateDietaryProfile]);
+  };
 
-  const handleSaveSnacks = useCallback(async (value: number) => {
+  const handleSaveSnacks = async (value: number) => {
     return await updateDietaryProfile({ snacksPerDay: value });
-  }, [updateDietaryProfile]);
+  };
 
   // Memoize container style
-  const favoriteContainerStyle = useMemo(() => (
+  const favoriteContainerStyle = (
     { marginTop: theme.spacing.md }
-  ), [theme.spacing.md]);
+  );
 
-  const dislikedContainerStyle = useMemo(() => (
+  const dislikedContainerStyle = (
     { marginTop: theme.spacing.md }
-  ), [theme.spacing.md]);
+  );
 
   if (loading) {
     return (
@@ -403,8 +394,7 @@ export const DietaryProfileScreen: React.FC = () => {
           cookingSkillLevel: profile?.cookingSkillLevel,
           maxPrepTimeMinutes: profile?.maxPrepTimeMinutes,
           maxCookTimeMinutes: profile?.maxCookTimeMinutes,
-          budgetPerMeal: profile?.budgetPerMeal,
-        }}
+          budgetPerMeal: profile?.budgetPerMeal }}
       />
 
       {/* Macro Targets Sheet */}
@@ -416,8 +406,7 @@ export const DietaryProfileScreen: React.FC = () => {
           calorieTarget: profile?.calorieTarget,
           proteinTarget: profile?.proteinTarget,
           carbsTarget: profile?.carbsTarget,
-          fatTarget: profile?.fatTarget,
-        }}
+          fatTarget: profile?.fatTarget }}
       />
     </ProfileScreenWrapper>
   );
@@ -427,28 +416,22 @@ const styles = StyleSheet.create(theme => ({
   sectionContainer: {
     paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
-    marginTop: theme.spacing.xs,
-  },
+    marginTop: theme.spacing.xs },
   sectionCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: theme.spacing.sm,
-    marginTop: theme.spacing.xs,
-  },
+    marginTop: theme.spacing.xs },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   editButton: {
-    padding: theme.spacing.xs,
-  },
+    padding: theme.spacing.xs },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));
 
 export default DietaryProfileScreen;

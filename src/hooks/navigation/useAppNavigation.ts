@@ -1,56 +1,40 @@
-import {useNavigation, useRoute, useIsFocused, StackActions, CommonActions} from '@react-navigation/native';
-import {useMemo, useCallback} from 'react';
+import {useNavigation, useRoute, StackActions, CommonActions} from '@react-navigation/native';
 
 export function useAppNavigation() {
   const navigation = useNavigation();
   const route = useRoute();
-  const isFocused = useIsFocused();
 
-  const navigate = useCallback(
-    (name: string, params?: object) => {
+  const navigate = (name: string, params?: object) => {
       navigation.dispatch(CommonActions.navigate(name, params));
-    },
-    [navigation],
-  );
+    };
 
   // Navigate to nested stack screens
-  const navigateToNested = useCallback(
-    (stackName: string, screenName: string, params?: object) => {
+  const navigateToNested = (stackName: string, screenName: string, params?: object) => {
       navigation.dispatch(CommonActions.navigate(stackName, {
         screen: screenName,
-        params,
-      }));
-    },
-    [navigation],
-  );
+        params }));
+    };
 
-  const goBack = useCallback(() => {
+  const goBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
     }
-  }, [navigation]);
+  };
 
-  const replace = useCallback(
-    (name: string, params?: object) => {
+  const replace = (name: string, params?: object) => {
       navigation.dispatch(StackActions.replace(name, params));
-    },
-    [navigation],
-  );
+    };
 
-  const push = useCallback(
-    (name: string, params?: object) => {
+  const push = (name: string, params?: object) => {
       navigation.dispatch(StackActions.push(name, params));
-    },
-    [navigation],
-  );
+    };
 
-  const popToTop = useCallback(() => {
+  const popToTop = () => {
     navigation.dispatch(StackActions.popToTop());
-  }, [navigation]);
+  };
 
   // Feature-specific navigation shortcuts
-  const navigateTo = useMemo(
-    () => ({
+  const navigateTo = {
       // Auth stack screens (when in Auth stack)
       login: () => navigate('Login'),
       signUp: () => navigate('SignUp'),
@@ -70,9 +54,7 @@ export function useAppNavigation() {
         navigate('Home', {
           screen: 'Pantry',
           params: {
-            screen: 'PantryMain',
-          },
-        }),
+            screen: 'PantryMain' } }),
       pantryItem: (params?: { itemId?: string }) => navigate('PantryItem', params),
       pantryItemDetail: (params: { itemId: string }) => navigate('PantryItemDetail', params),
       nutritionScreen: (params: {itemId: string; itemName: string; nutritions: unknown; actualServingGrams?: number}) =>
@@ -81,39 +63,29 @@ export function useAppNavigation() {
         navigate('Home', {
           screen: 'ShoppingList',
           params: {
-            screen: 'ShoppingListMain',
-          },
-        }),
+            screen: 'ShoppingListMain' } }),
       profile: () => navigate('Profile'),
       mealPlanMain: () =>
         navigate('Home', {
           screen: 'MealPlan',
           params: {
-            screen: 'MealPlanMain',
-          },
-        }),
+            screen: 'MealPlanMain' } }),
       createMealPlan: () =>
         navigate('Home', {
           screen: 'MealPlan',
           params: {
-            screen: 'CreateMealPlan',
-          },
-        }),
+            screen: 'CreateMealPlan' } }),
       createRecipe: () =>
         navigate('Home', {
           screen: 'Recipe',
           params: {
-            screen: 'RecipeCreate',
-          },
-        }),
+            screen: 'RecipeCreate' } }),
       editRecipe: (params: { recipeId: string }) =>
         navigate('Home', {
           screen: 'Recipe',
           params: {
             screen: 'RecipeEdit',
-            params,
-          },
-        }),
+            params } }),
 
       // Root level screens
       homeManagement: (params?: { homeId?: string }) => navigate('HomeManagement', params),
@@ -138,17 +110,12 @@ export function useAppNavigation() {
       notifications: () => navigate('Notifications'),
       barcode: (params?: { source?: 'pantry' | 'shoppingList'; pantryId?: string; shoppingListId?: string }) => navigate('Barcode', {
         screen: 'BarcodeScanner',
-        params: params,
-      }),
-    }),
-    [navigate, navigateToNested],
-  );
+        params: params }) };
 
   return {
     // Navigation state
     currentRoute: route.name,
     params: route.params,
-    isFocused,
     canGoBack: navigation.canGoBack(),
 
     // Core navigation
@@ -163,6 +130,5 @@ export function useAppNavigation() {
     navigation,
 
     // Feature navigation
-    navigateTo,
-  };
+    navigateTo };
 }

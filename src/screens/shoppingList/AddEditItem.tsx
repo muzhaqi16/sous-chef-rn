@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import {
   useAddItemToShoppingListMutation,
@@ -17,7 +17,7 @@ import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useShoppingListItemForm } from '#/hooks/shoppingList/useShoppingListItemForm';
 import {
   handleVersionConflict,
@@ -51,16 +51,6 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
   // Store version for optimistic concurrency control (strict version checking)
   const itemVersionRef = useRef<number | undefined>(undefined);
 
-  const addToShoppingListCache = useMemo(
-    () =>
-      createAddToParentConnectionUpdater(
-        'ShoppingList',
-        'itemsConnection',
-        'ShoppingListItem',
-      ),
-    [],
-  );
-
   // GraphQL hooks
   const { data } = useGetShoppingListItemQuery({
     variables: { id: itemId || '' },
@@ -73,7 +63,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       const newItem = mutationData?.addItemToShoppingList?.shoppingListItem;
       if (!newItem) return;
 
-      addToShoppingListCache(cache, listId, newItem);
+      addNewItemToShoppingListCache(cache, listId, newItem);
     },
     onError: error => {
       errorService.reportError(error, { operation: 'ShoppingListItem.addItem' });
@@ -301,6 +291,16 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
         />
       )}
 
+      {/* Category Field */}
+      <CategoryAutocompleteField
+        variant="modal"
+        label="Category"
+        value={category}
+        onChangeText={text => updateField('category', text)}
+        placeholder="e.g., Dairy, Produce"
+        categoryType={CategoryType.General}
+      />
+
       {/* Quantity + Unit (inline) */}
       <FieldRow>
         <EditableCounter
@@ -321,16 +321,6 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
           testID={isEdit ? 'edit-item-unit-picker' : 'add-item-unit-picker'}
         />
       </FieldRow>
-
-      {/* Category Field */}
-      <CategoryAutocompleteField
-        variant="modal"
-        label="Category"
-        value={category}
-        onChangeText={text => updateField('category', text)}
-        placeholder="e.g., Dairy, Produce"
-        categoryType={CategoryType.General}
-      />
 
       {/* Estimated Price Field */}
       <BaseInput

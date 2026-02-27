@@ -1,10 +1,9 @@
-import React, { useCallback, useMemo, useEffect, useRef, useImperativeHandle } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, useDeferredValue } from 'react';
 import { View, Pressable, RefreshControl } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
+  withTiming } from 'react-native-reanimated';
 import { FlashList, type FlashListRef, ListRenderItemInfo } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -19,15 +18,13 @@ import { PantryHeader } from './PantryHeader';
 import { PantrySortModal } from './PantrySortModal';
 import {
   PantryActionsProvider,
-  type PantryItemActions,
-} from './PantryActionsContext';
+  type PantryItemActions } from './PantryActionsContext';
 import { usePantrySorting } from './hooks/usePantrySorting';
 import {
   getExpirationStatus,
   formatPackageBreakdown,
   formatRemainingNetWeight,
-  formatQuantityBreakdown,
-} from '#hooks/pantry/usePantryItemTransformation';
+  formatQuantityBreakdown } from '#hooks/pantry/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { StorageState, type PantryStats } from '#generated';
 import { PantryAlertBar } from '#components/pantry/PantryAlertBar';
@@ -103,7 +100,7 @@ interface PantryContentProps {
   notificationCount?: number;
 
   // Stats
-  stats?: PantryStats | null;
+  stats?: Pick<PantryStats, 'totalItems' | 'expiringCount' | 'lowStockCount'> | null;
 
   // Items
   items: PantryItem[];
@@ -140,8 +137,7 @@ interface PantryContentProps {
   onNotificationPress?: () => void;
   onSettingsPress?: () => void;
   onAnalyticsPress?: () => void;
-  onLowStockPress?: () => void;
-  lowStockLoading?: boolean;
+  onLowStockNavigate?: () => void;
 
   // List actions
   onRefresh?: () => void;
@@ -168,6 +164,7 @@ interface ItemDisplayData {
   imageUrl: string | null;
   expirationText: string | null;
   expirationVariant?: ExpirationVariant;
+  expirationColor?: string;
   variant: ItemVariant;
   quantityDisplay: string;
   location: string;
@@ -175,6 +172,101 @@ interface ItemDisplayData {
   packageBreakdownText: string | null;
   remainingNetWeightText: string | null;
   quantityBreakdownText: string | null;
+}
+
+const getItemVariant = (isExpired: boolean, isExpiringSoon: boolean): ItemVariant => {
+  if (isExpired) return 'expired';
+  if (isExpiringSoon) return 'warning';
+  return 'normal';
+};
+
+/**
+ * Compute display data for a single pantry item.
+ * Pure function — only depends on the item and shared expiration colors.
+ */
+function computeItemDisplay(
+  item: PantryItem,
+  now: number,
+  expirationColors: { expired: string; warning: string; normal: string },
+  getLocation: (storageState?: string | null, storageLocation?: { name: string } | null) => string,
+): ItemDisplayData {
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+  const expiresIn = item.expiresAt
+    ? Math.ceil((new Date(item.expiresAt).getTime() - now) / MS_PER_DAY)
+    : null;
+  const expStatus = getExpirationStatus(expiresIn);
+  const isExpired = expiresIn !== null && expiresIn < 0;
+  const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
+  const variant: ItemVariant = getItemVariant(isExpired, isExpiringSoon);
+  const hasExpiry = item.expiresAt != null;
+
+  let expirationColor: string | undefined;
+  if (hasExpiry) {
+    const expType = expStatus.type;
+    if (expType === 'expired' || expType === 'critical') {
+      expirationColor = expirationColors.expired;
+    } else if (expType === 'warning') {
+      expirationColor = expirationColors.warning;
+    } else {
+      expirationColor = expirationColors.normal;
+    }
+  }
+
+  return {
+    imageUrl: resolveImageUrl(item),
+    expirationText: hasExpiry ? expStatus.text : null,
+    expirationVariant: hasExpiry ? expStatus.type : undefined,
+    expirationColor,
+    variant,
+    quantityDisplay: formatQuantityDisplay(item.quantity, item.unit?.symbol),
+    location: getLocation(item.storageState, item.storageLocation),
+    isOutOfStock: item.quantity === 0,
+    packageBreakdownText: formatPackageBreakdown(item.packageBreakdown, item.quantityBreakdown?.totalContentUnits),
+    remainingNetWeightText: formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit),
+    quantityBreakdownText: formatQuantityBreakdown(item.quantityBreakdown, item.unit?.symbol) };
+}
+
+// Get location string from storage state (pure function — no component state dependency)
+const getLocationString = (storageState?: string | null, storageLocation?: { name: string } | null): string => {
+  if (storageLocation?.name) return storageLocation.name;
+  switch (storageState) {
+    case StorageState.Refrigerated:
+      return 'Fridge';
+    case StorageState.Frozen:
+      return 'Freezer';
+    default:
+      return 'Pantry';
+  }
+};
+
+/**
+ * Compute display data for all items, reusing cached entries when possible.
+ * Calls Date.now() internally for expiration calculations.
+ */
+function computeDisplayCache(
+  items: PantryItem[],
+  prevCache: Map<string, { item: PantryItem; data: ItemDisplayData }>,
+  expirationColors: { expired: string; warning: string; normal: string },
+) {
+  const now = Date.now();
+  const map = new Map<string, ItemDisplayData>();
+  const nextCache = new Map<string, { item: PantryItem; data: ItemDisplayData }>();
+
+  for (const item of items) {
+    const cached = prevCache.get(item.id);
+
+    if (cached && cached.item === item) {
+      // Same object reference — Apollo hasn't updated this pantry item
+      map.set(item.id, cached.data);
+      nextCache.set(item.id, cached);
+    } else {
+      const data = computeItemDisplay(item, now, expirationColors, getLocationString);
+      map.set(item.id, data);
+      nextCache.set(item.id, { item, data });
+    }
+  }
+
+  return { map, nextCache };
 }
 
 // Default filter tabs for pantry (fallback if none provided)
@@ -185,7 +277,7 @@ const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
 ];
 
-export const PantryContent = React.memo(React.forwardRef<PantryContentRef, PantryContentProps>(({
+export const PantryContent = React.forwardRef<PantryContentRef, PantryContentProps>(({
   userName,
   householdName,
   avatarUrl,
@@ -213,16 +305,14 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   onNotificationPress,
   onSettingsPress,
   onAnalyticsPress,
-  onLowStockPress,
-  lowStockLoading = false,
+  onLowStockNavigate,
   totalCount,
   onAddItem,
   onRefresh,
   onEndReached,
   refreshing = false,
   loading = false,
-  onSwipeableWillOpen: _onSwipeableWillOpen,
-  onSwipeableClose: _onSwipeableClose,
+  // onSwipeableWillOpen and onSwipeableClose are handled by PantryActionsContext
 }, ref) => {
   useRenderTime('PantryContent');
   const { theme } = useUnistyles();
@@ -231,20 +321,24 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   useImperativeHandle(ref, () => ({
     scrollToTop() {
       flashListRef.current?.scrollToTop({ animated: true });
-    },
-  }));
+    } }));
 
   // PERFORMANCE: Defer heavy list render until after navigation animation
   const isReady = useDeferredRender(500);
 
-  // Once content has been shown, latch the module-level flag so skeletons
-  // never reappear on remounts or stack navigation (only resets on app restart).
-  if (!loading && isReady && items.length > 0) {
-    hasEverShownContent = true;
-  }
+  // Derive latch from module-level flag + current conditions — no setState needed.
+  // Once true, hasEverShownContent persists across unmount/remount (module scope).
+  const hasShownContent = hasEverShownContent || (!loading && isReady && items.length > 0);
+
+  // Sync the module-level flag so it persists across unmount/remount.
+  useEffect(() => {
+    if (hasShownContent) {
+      hasEverShownContent = true;
+    }
+  }, [hasShownContent]);
 
   // Show skeletons only on the very first data load
-  const showSkeletons = !hasEverShownContent && (!isReady || loading);
+  const showSkeletons = !hasShownContent && (!isReady || loading);
 
   // Crossfade animation - opacity-based transition to avoid gap
   const skeletonOpacity = useSharedValue(1);
@@ -262,12 +356,10 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   }, [showSkeletons, skeletonOpacity, contentOpacity]);
 
   const skeletonAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: skeletonOpacity.value,
-  }));
+    opacity: skeletonOpacity.value }));
 
   const contentAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: contentOpacity.value,
-  }));
+    opacity: contentOpacity.value }));
 
   // Use sorting hook for sort state and logic
   const {
@@ -277,94 +369,45 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     openSortModal,
     closeSortModal,
     handleSortSelect,
-    sortItems,
-  } = usePantrySorting<PantryItem>({
+    sortItems } = usePantrySorting<PantryItem>({
     initialSortOption,
     initialSortDirection,
-    onSortChange,
-  });
+    onSortChange });
 
-  // Memoize actions for context provider
-  const itemActions = useMemo<PantryItemActions>(
-    () => ({
-      onItemPress,
-      onItemEdit,
-      onItemDelete,
-      onItemConsume,
-      onItemWaste,
-      onItemRestock,
-    }),
-    [
-      onItemPress,
-      onItemEdit,
-      onItemDelete,
-      onItemConsume,
-      onItemWaste,
-      onItemRestock,
-    ],
-  );
-
-  // Get location string from storage state
-  const getLocationString = useCallback(
-    (storageState?: string | null, storageLocation?: { name: string } | null): string => {
-      if (storageLocation?.name) return storageLocation.name;
-      switch (storageState) {
-        case StorageState.Refrigerated:
-          return 'Fridge';
-        case StorageState.Frozen:
-          return 'Freezer';
-        default:
-          return 'Pantry';
-      }
-    },
-    [],
-  );
+  // Actions for context provider
+  const itemActions: PantryItemActions = {
+    onItemPress,
+    onItemEdit,
+    onItemDelete,
+    onItemConsume,
+    onItemWaste,
+    onItemRestock,
+  };
 
   // Sorted items - filter out any null/undefined items to prevent FlashList layout crashes
-  const sortedItems = useMemo(() => {
+  const sortedItems = (() => {
     const sorted = sortItems(items);
     return sorted.filter(item => item?.id);
-  }, [items, sortItems]);
+  })();
 
-  // Pre-compute ALL per-item display data once to avoid per-render Date allocations and string formatting
-  const itemDisplayMap = useMemo(() => {
-    const map = new Map<string, ItemDisplayData>();
-    const now = Date.now();
-    const MS_PER_DAY = 1000 * 60 * 60 * 24;
-    for (const item of sortedItems) {
-      const expiresIn = item.expiresAt
-        ? Math.ceil((new Date(item.expiresAt).getTime() - now) / MS_PER_DAY)
-        : null;
-      const expStatus = getExpirationStatus(expiresIn);
-      const isExpired = expiresIn !== null && expiresIn < 0;
-      const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-      const variant: ItemVariant = isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal';
-      const hasExpiry = item.expiresAt != null;
+  // Defer sorted items so FlashList keeps showing old content during transitions
+  const deferredSortedItems = useDeferredValue(sortedItems);
 
-      const quantityDisplay = formatQuantityDisplay(item.quantity, item.unit?.symbol);
-      const pkgBreakdownText = formatPackageBreakdown(item.packageBreakdown, item.quantityBreakdown?.totalContentUnits);
-      const remainingNetWeightText = formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit);
-      const qtyBreakdownText = formatQuantityBreakdown(item.quantityBreakdown, item.unit?.symbol);
+  // Precomputed expiration colors — avoids per-item useUnistyles in ExpirationText
+  const expirationColors = ({
+    expired: theme.colors.expiration.expiredText,
+    warning: theme.colors.expiration.warningText,
+    normal: theme.colors.textSecondary });
 
-      map.set(item.id, {
-        imageUrl: resolveImageUrl(item),
-        expirationText: hasExpiry ? expStatus.text : null,
-        expirationVariant: hasExpiry ? expStatus.type : undefined,
-        variant,
-        quantityDisplay,
-        location: getLocationString(item.storageState, item.storageLocation),
-        isOutOfStock: item.quantity === 0,
-        packageBreakdownText: pkgBreakdownText,
-        remainingNetWeightText,
-        quantityBreakdownText: qtyBreakdownText,
-      });
-    }
-    return map;
-  }, [sortedItems, getLocationString]);
+  // PERFORMANCE: Compute display data for all items. The React Compiler auto-memoizes
+  // this expression — recomputation only happens when deferredSortedItems changes.
+  const itemDisplayMap = computeDisplayCache(deferredSortedItems, new Map(), expirationColors).map;
 
   // Stable ref for callbacks — avoids FlashList re-rendering all visible items on data changes
   const itemDisplayMapRef = useRef(itemDisplayMap);
-  itemDisplayMapRef.current = itemDisplayMap;
+  useEffect(() => {
+    itemDisplayMapRef.current = itemDisplayMap;
+  });
 
   // Scroll to top when filter or sort changes — FlashList v2's
   // maintainVisibleContentPosition causes layout corruption on data reorder
@@ -386,8 +429,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   }, [locationFilter, sortOption, sortDirection]);
 
   // Render list item — stable callback via ref pattern to avoid FlashList full re-renders
-  const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<PantryItem>) => {
+  const renderItem = ({ item }: ListRenderItemInfo<PantryItem>) => {
       if (!item) return null;
       const display = itemDisplayMapRef.current.get(item.id);
       if (!display) return null;
@@ -398,9 +440,9 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
           name={item.itemName || 'Unknown Item'}
           expirationText={display.expirationText}
           expirationVariant={display.expirationVariant}
+          expirationColor={display.expirationColor}
           quantity={display.quantityDisplay}
           location={display.location}
-          storageState={item.storageState}
           variant={display.variant}
           imageUrl={display.imageUrl}
           isOutOfStock={display.isOutOfStock}
@@ -409,12 +451,10 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
           quantityBreakdownText={display.quantityBreakdownText}
         />
       );
-    },
-    [],
-  );
+    };
 
   // Build tabs with optional add button at the end
-  const tabsWithAddButton = useMemo((): FilterTabConfig<LocationFilter>[] => {
+  const tabsWithAddButton = (() => {
     if (!onAddLocation) return tabs;
     return [
       ...tabs,
@@ -423,50 +463,37 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
         label: '',
         icon: 'add',
         onPress: onAddLocation,
-        isAction: true,
-      },
+        isAction: true },
     ];
-  }, [tabs, onAddLocation]);
+  })();
 
-  const sectionTitle = useMemo(() => {
+  const sectionTitle = (() => {
     const activeTab = tabs.find(tab => tab.id === locationFilter);
     const label = activeTab?.label ?? 'All';
     return `${label.toUpperCase()} ITEMS`;
-  }, [tabs, locationFilter]);
+  })();
 
   // Stable keyExtractor - sortedItems already guarantees every item has an id
-  const keyExtractor = useCallback(
-    (item: PantryItem) => item.id,
-    [],
-  );
+  const keyExtractor = (item: PantryItem) => item.id;
 
   // Item type function for better FlashList cell recycling
   // Items with different variants have different visual layouts
-  const getItemType = useCallback(
-    (item: PantryItem) => {
+  const getItemType = (item: PantryItem) => {
       const display = itemDisplayMapRef.current.get(item.id);
       return display?.variant ?? 'normal';
-    },
-    [],
-  );
+    };
 
-  // Memoize extraData to avoid new array reference every render
-  const extraData = useMemo(
-    () => [sortOption, sortDirection, locationFilter],
-    [sortOption, sortDirection, locationFilter],
-  );
+  // Stable extraData — string avoids new array reference every render
+  const extraData = `${sortOption}-${sortDirection}-${locationFilter}`;
 
-  const isEmpty = !showSkeletons && sortedItems.length === 0;
+  const isEmpty = !showSkeletons && deferredSortedItems.length === 0;
 
   // Use flexGrow when empty so ListEmptyComponent can center properly;
   // drop the large paddingBottom that creates excess space below the empty state
-  const listContentStyle = useMemo(
-    () => (isEmpty ? styles.listContentEmpty : styles.listContent),
-    [isEmpty],
-  );
+  const listContentStyle = (isEmpty ? styles.listContentEmpty : styles.listContent);
 
   // Empty state for FlashList — varies by context
-  const emptyStateContent = useMemo(() => {
+  const emptyStateContent = (() => {
     // Don't show empty state while skeletons are visible
     if (showSkeletons) return null;
 
@@ -503,58 +530,44 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
         action={onAddItem ? { label: 'Add Items', onPress: onAddItem } : undefined}
       />
     );
-  }, [showSkeletons, searchQuery, totalCount, items.length, tabs, locationFilter, onAddItem]);
+  })();
 
-  return (
-    <PantryActionsProvider actions={itemActions}>
-      <View style={styles.container}>
-        {/* Header Section */}
-        <View style={styles.header}>
-          <PantryHeader
-            userName={userName}
-            householdName={householdName}
-            avatarUrl={avatarUrl}
-            notificationCount={notificationCount}
-            onAvatarPress={onAvatarPress}
-            onHomePress={onHomePress}
-            onNotificationPress={onNotificationPress}
-          />
+  // Memoize the settings icon separately so it doesn't cause listHeaderComponent to re-create
+  const settingsIcon = (
+      <Pressable
+        onPress={onSettingsPress}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Pantry settings"
+      >
+        <Icon
+          name="settings-outline"
+          size={18}
+          color={theme.colors.textTertiary}
+        />
+      </Pressable>
+    );
 
-          {/* Search Bar */}
+  // Memoized list header — SearchBar, AlertBar, FilterTabs, SectionHeader scroll with the list
+  const listHeaderComponent = (
+      <>
+        <View style={styles.searchContainer}>
           <SearchBar
             value={searchQuery}
             onChangeText={onSearchChange}
             placeholder="Search your pantry..."
             showSearchIcon={true}
             testID="pantry-search-input"
-            innerRightIcon={
-              <Pressable
-                onPress={onSettingsPress}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Pantry settings"
-              >
-                <Icon
-                  name="settings-outline"
-                  size={18}
-                  color={theme.colors.textTertiary}
-                />
-              </Pressable>
-            }
+            innerRightIcon={settingsIcon}
           />
-
-          {/* Alert Bar */}
           {!!stats && (
             <PantryAlertBar
               stats={stats}
               onAnalyticsPress={onAnalyticsPress}
-              onLowStockPress={onLowStockPress}
-              lowStockLoading={lowStockLoading}
+              onLowStockNavigate={onLowStockNavigate}
             />
           )}
         </View>
-
-        {/* Always visible — not part of crossfade */}
         <FilterTabs<LocationFilter>
           tabs={tabsWithAddButton}
           activeTabId={locationFilter}
@@ -569,6 +582,24 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
           onActionPress={openSortModal}
           testID="pantry-sort-button"
         />
+      </>
+    );
+
+  return (
+    <PantryActionsProvider actions={itemActions}>
+      <View style={styles.container}>
+        {/* Header Section - only PantryHeader stays fixed */}
+        <View style={styles.header}>
+          <PantryHeader
+            userName={userName}
+            householdName={householdName}
+            avatarUrl={avatarUrl}
+            notificationCount={notificationCount}
+            onAvatarPress={onAvatarPress}
+            onHomePress={onHomePress}
+            onNotificationPress={onNotificationPress}
+          />
+        </View>
 
         {/* Content List - Crossfade between skeleton and content */}
         <View style={styles.listContainer}>
@@ -580,7 +611,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
             <FlashList<PantryItem>
               ref={flashListRef}
               testID="pantry-list"
-              data={showSkeletons ? EMPTY_ARRAY : sortedItems}
+              data={showSkeletons ? EMPTY_ARRAY : deferredSortedItems}
               renderItem={renderItem}
               keyExtractor={keyExtractor}
               extraData={extraData}
@@ -595,6 +626,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
                   />
                 ) : undefined
               }
+              ListHeaderComponent={listHeaderComponent}
               ListEmptyComponent={emptyStateContent}
               getItemType={getItemType}
               onEndReached={onEndReached}
@@ -620,51 +652,46 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
         </View>
 
         {/* Sort Modal */}
-        <PantrySortModal
-          visible={sortModalVisible}
-          sortOption={sortOption}
-          sortDirection={sortDirection}
-          onSelect={handleSortSelect}
-          onClose={closeSortModal}
-        />
+        {!!sortModalVisible && (
+          <PantrySortModal
+            visible={sortModalVisible}
+            sortOption={sortOption}
+            sortDirection={sortDirection}
+            onSelect={handleSortSelect}
+            onClose={closeSortModal}
+          />
+        )}
       </View>
     </PantryActionsProvider>
   );
-}));
+});
 
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   header: {
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.xs,
-  },
+    paddingTop: theme.spacing.xs },
+  searchContainer: {
+    paddingHorizontal: theme.spacing.md },
   listContainer: {
-    flex: 1,
-  },
+    flex: 1 },
   contentFill: {
-    flex: 1,
-  },
+    flex: 1 },
   absoluteFill: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-  },
+    bottom: 0 },
   listContent: {
     paddingHorizontal: 0,
-    paddingBottom: theme.spacing['3xl'] * 2,
-  },
+    paddingBottom: theme.spacing['3xl'] * 2 },
   listContentEmpty: {
     paddingHorizontal: 0,
-    flexGrow: 1,
-  },
+    flexGrow: 1 },
   skeletonListContent: {
     paddingHorizontal: 0,
-    paddingTop: 0,
-  },
-}));
+    paddingTop: 0 } }));

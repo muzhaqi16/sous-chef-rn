@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { useBrandAutocomplete, type BrandItem } from '#hooks/autocomplete/useBrandAutocomplete';
 import { AutocompleteField } from './AutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
@@ -26,40 +26,30 @@ export const BrandAutocompleteField: React.FC<BrandAutocompleteFieldProps> = ({
   error,
   testID,
   suggestedBrands = [],
-  onBrandSelected,
-}) => {
+  onBrandSelected }) => {
   const brand = useBrandAutocomplete({ suggestedBrands });
 
-  const handleTextChange = useCallback(
-    (text: string) => {
+  const handleTextChange = (text: string) => {
       onChangeText(text);
       brand.handleSearchTermChange(text);
       onBrandSelected?.(null, null);
-    },
-    [onChangeText, brand, onBrandSelected],
-  );
+    };
 
-  const handleSelect = useCallback(
-    (item: BrandItem) => {
+  const handleSelect = (item: BrandItem) => {
       onChangeText(item.name);
       onBrandSelected?.(item.id, item.name);
       brand.setSearchTerm('');
-    },
-    [onChangeText, onBrandSelected, brand],
-  );
+    };
 
-  const renderItem = useCallback(
-    (item: BrandItem) => (
+  const renderItem = (item: BrandItem) => (
       <AutocompleteRow
         title={item.name}
         badge={item.isSuggested ? 'Suggested' : undefined}
         highlighted={item.isSuggested}
       />
-    ),
-    [],
-  );
+    );
 
-  const keyExtractor = useCallback((item: BrandItem) => item.id, []);
+  const keyExtractor = (item: BrandItem) => item.id;
 
   if (variant === 'inline') {
     return (

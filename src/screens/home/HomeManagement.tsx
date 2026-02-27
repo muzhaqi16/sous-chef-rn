@@ -1,17 +1,15 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   ActivityIndicator,
   RefreshControl,
   Pressable,
-} from 'react-native';
-import { FlashList, type ListRenderItem } from '@shopify/flash-list';
+  ScrollView } from 'react-native';
 import Animated, {
   LinearTransition,
   FadeInDown,
-  FadeOutUp,
-} from 'react-native-reanimated';
+  FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -29,8 +27,7 @@ import { HomeCard, type PartialHome } from '#/components/organisms/home/HomeCard
 import {
   findUserMembership,
   getInvitableRoles,
-  canInviteToHome,
-} from '#/utils/permissions/homePermissions';
+  canInviteToHome } from '#/utils/permissions/homePermissions';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
@@ -68,16 +65,14 @@ export const HomeManagement: React.FC = () => {
     joinHomeByCode,
     previewHomeByCode,
     stats,
-    refetch: refetchHomes,
-  } = useHomeManagement();
+    refetch: refetchHomes } = useHomeManagement();
 
   // Note: Removed useFocusEffect refetch to prevent flickering
   // Apollo's cache-and-network + cache-first strategy handles data freshness
   // Mutations (create, delete, update) automatically update the cache
 
   const { show, InviteModalComponent } = useInviteUserModal();
-  const inviteUserPrompt = useCallback(
-    (homeId: string) => {
+  const inviteUserPrompt = (homeId: string) => {
       // Find the home and user's membership
       const home = homes?.find(h => h.id === homeId);
       if (!home) {
@@ -110,11 +105,8 @@ export const HomeManagement: React.FC = () => {
           // The modal will handle displaying the error and keeping itself open
           await inviteUserToHome(homeId, email, role);
           // If we reach here, the invitation was successful and the modal will close
-        },
-      });
-    },
-    [homes, user, show, inviteUserToHome],
-  );
+        } });
+    };
 
   const handleCreateHome = async () => {
     if (!homeName.trim()) return;
@@ -151,15 +143,7 @@ export const HomeManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteHome = useCallback(
-    async (homeId: string, name: string) => {
-      await deleteHome(homeId, name);
-    },
-    [deleteHome],
-  );
-
-  const handleSetDefault = useCallback(
-    async (homeId: string) => {
+  const handleSetDefault = async (homeId: string) => {
       // Clear any existing highlight timeout
       if (highlightTimeoutRef.current) {
         clearTimeout(highlightTimeoutRef.current);
@@ -174,23 +158,11 @@ export const HomeManagement: React.FC = () => {
       highlightTimeoutRef.current = setTimeout(() => {
         setHighlightedHomeId(null);
       }, 2000);
-    },
-    [setDefaultHome],
-  );
+    };
 
-  const handleInviteMember = useCallback(
-    (homeId: string) => {
-      inviteUserPrompt(homeId);
-    },
-    [inviteUserPrompt],
-  );
-
-  const handleViewHomeDetail = useCallback(
-    (homeId: string) => {
+  const handleViewHomeDetail = (homeId: string) => {
       navigate('HomeDetail', { homeId });
-    },
-    [navigate],
-  );
+    };
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -204,57 +176,14 @@ export const HomeManagement: React.FC = () => {
   };
 
   // Sort homes with default home first
-  const sortedHomes = useMemo(() => {
+  const sortedHomes = (() => {
     if (!homes) return [];
     return [...homes].sort((a, b) => {
       if (a.id === defaultHomeId) return -1;
       if (b.id === defaultHomeId) return 1;
       return 0;
     });
-  }, [homes, defaultHomeId]);
-
-  // Render individual home item
-  const renderHomeItem: ListRenderItem<(typeof sortedHomes)[0]> = useCallback(
-    ({ item: home, index }) => {
-      const membership = findUserMembership(home.members, user?.id);
-      const userCanInvite = membership
-        ? canInviteToHome(membership.role)
-        : false;
-      const userCanDelete = home.myMembership?.canManageHome ?? false;
-
-      return (
-        <Animated.View
-          entering={FadeInDown.delay(index * 50).springify()}
-          layout={LinearTransition.duration(600)
-            .springify()
-            .damping(30)
-            .stiffness(180)
-            .mass(1.5)}
-        >
-          <HomeCard
-            home={home as PartialHome}
-            isDefault={home.id === defaultHomeId}
-            isHighlighted={home.id === highlightedHomeId}
-            canInvite={userCanInvite}
-            canDelete={userCanDelete}
-            onPress={handleViewHomeDetail}
-            onSetDefault={handleSetDefault}
-            onInvite={handleInviteMember}
-            onDelete={handleDeleteHome}
-          />
-        </Animated.View>
-      );
-    },
-    [
-      defaultHomeId,
-      highlightedHomeId,
-      user,
-      handleViewHomeDetail,
-      handleSetDefault,
-      handleInviteMember,
-      handleDeleteHome,
-    ],
-  );
+  })();
 
   // Only show loading screen on initial load (no cached data)
   // Once we have data, show it immediately even if refetching
@@ -278,8 +207,7 @@ export const HomeManagement: React.FC = () => {
             {
               icon: 'add',
               onPress: () => setShowCreateForm(true),
-              variant: 'primary',
-            },
+              variant: 'primary' },
           ]}
         />
 
@@ -404,17 +332,15 @@ export const HomeManagement: React.FC = () => {
           </Animated.View>
         )}
 
-        {/* Homes List - Virtualized */}
+        {/* Homes List */}
         <Animated.View
           layout={LinearTransition.duration(300)}
           style={[styles.scrollView, { paddingBottom: insets.bottom }]}
         >
-          <FlashList
-            data={sortedHomes}
-            keyExtractor={item => item.id}
-            renderItem={renderHomeItem}
+          <ScrollView
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
+            contentContainerStyle={{ flexGrow: 1 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -423,8 +349,39 @@ export const HomeManagement: React.FC = () => {
                 colors={[theme.colors.primary]}
               />
             }
-            contentContainerStyle={{ flexGrow: 1 }}
-          />
+          >
+            {sortedHomes.map((home, index) => {
+              const membership = findUserMembership(home.members, user?.id);
+              const userCanInvite = membership
+                ? canInviteToHome(membership.role)
+                : false;
+              const userCanDelete = home.myMembership?.canManageHome ?? false;
+
+              return (
+                <Animated.View
+                  key={home.id}
+                  entering={FadeInDown.delay(index * 50).springify()}
+                  layout={LinearTransition.duration(600)
+                    .springify()
+                    .damping(30)
+                    .stiffness(180)
+                    .mass(1.5)}
+                >
+                  <HomeCard
+                    home={home as PartialHome}
+                    isDefault={home.id === defaultHomeId}
+                    isHighlighted={home.id === highlightedHomeId}
+                    canInvite={userCanInvite}
+                    canDelete={userCanDelete}
+                    onPress={handleViewHomeDetail}
+                    onSetDefault={handleSetDefault}
+                    onInvite={inviteUserPrompt}
+                    onDelete={deleteHome}
+                  />
+                </Animated.View>
+              );
+            })}
+          </ScrollView>
         </Animated.View>
       </View>
       {InviteModalComponent}
@@ -434,72 +391,55 @@ export const HomeManagement: React.FC = () => {
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   formContainer: {
     marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   modeSwitcher: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
     padding: theme.spacing.xs,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   modeButton: {
     flex: 1,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.sm,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   modeButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
+    backgroundColor: theme.colors.primary },
   modeButtonText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   modeButtonTextActive: {
-    color: theme.colors.white,
-  },
+    color: theme.colors.white },
   joinForm: {
-    backgroundColor: theme.colors.surface,
-  },
+    backgroundColor: theme.colors.surface },
   formActions: {
     flexDirection: 'row',
     marginTop: theme.spacing.md,
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   actionButton: {
-    flex: 1,
-  },
+    flex: 1 },
   previewLoader: {
-    marginVertical: theme.spacing.sm,
-  },
+    marginVertical: theme.spacing.sm },
   previewCard: {
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   previewTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   previewSubtitle: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   previewDescription: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
-    marginTop: theme.spacing.xs,
-  },
+    marginTop: theme.spacing.xs },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

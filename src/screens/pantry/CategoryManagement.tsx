@@ -1,8 +1,9 @@
-import React, {useCallback, useMemo} from 'react';
+import React from 'react';
 import {View, Text, Pressable} from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import {Icon} from '#utils/iconUtils';
 import {useNavigation} from '@react-navigation/native';
+import {Header} from '#components/molecules/Header';
 import {usePantryManagement} from '#hooks/home/pantry/usePantryManagement';
 import {useCurrentPantry} from '#hooks/pantry/useCurrentPantry';
 import {commonStyles} from '#/styles/commonStyles';
@@ -18,7 +19,7 @@ export const CategoryManagement: React.FC = () => {
 
   const {items} = usePantryManagement(pantry?.id);
 
-  const categorizedItems = useMemo(() => {
+  const categorizedItems = (() => {
     if (!items) return {};
 
     const grouped: Record<string, any[]> = {};
@@ -31,12 +32,11 @@ export const CategoryManagement: React.FC = () => {
     });
 
     return grouped;
-  }, [items]);
+  })();
 
   const categories = Object.keys(categorizedItems).sort();
 
-  const renderCategoryItem = useCallback(
-    ({ item: category }: { item: string }) => (
+  const renderCategoryItem = ({ item: category }: { item: string }) => (
       <Pressable
         style={({pressed}) => [commonStyles.card, styles.categoryCard, pressed && styles.pressed]}
         onPress={() => {}}>
@@ -52,19 +52,11 @@ export const CategoryManagement: React.FC = () => {
           color={theme.colors.textSecondary}
         />
       </Pressable>
-    ),
-    [categorizedItems, theme.colors.textSecondary],
-  );
+    );
 
   return (
     <View style={commonStyles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={({pressed}) => pressed && styles.pressed}>
-          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </Pressable>
-        <Text style={[commonStyles.title, styles.headerTitle]}>Categories</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <Header title="Categories" onBack={() => navigation.goBack()} centerTitle />
 
       <FlashList
         style={styles.scrollView}
@@ -78,44 +70,21 @@ export const CategoryManagement: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  placeholder: {
-    width: 24,
-  },
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   scrollContent: {
-    padding: theme.spacing.md,
-  },
+    padding: theme.spacing.md },
   categoryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   categoryInfo: {
-    flex: 1,
-  },
+    flex: 1 },
   categoryName: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   categoryDetails: {
-    marginTop: theme.spacing.xs,
-  },
+    marginTop: theme.spacing.xs },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

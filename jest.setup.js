@@ -24,7 +24,7 @@ jest.mock('react-native-unistyles', () => {
 
   return {
     StyleSheet: {
-      create: (styleFnOrObj) => {
+      create: styleFnOrObj => {
         if (typeof styleFnOrObj === 'function') {
           return styleFnOrObj(lightTheme);
         }
@@ -36,12 +36,15 @@ jest.mock('react-native-unistyles', () => {
       theme: lightTheme,
       styles: {},
     })),
-    useStyles: jest.fn((stylesheet) => ({
-      styles: typeof stylesheet === 'function' ? stylesheet(lightTheme) : stylesheet || {},
+    useStyles: jest.fn(stylesheet => ({
+      styles:
+        typeof stylesheet === 'function'
+          ? stylesheet(lightTheme)
+          : stylesheet || {},
       theme: lightTheme,
     })),
     useInitialTheme: jest.fn(),
-    withUnistyles: jest.fn((component) => component),
+    withUnistyles: jest.fn(component => component),
     UnistylesRuntime: {
       setTheme: jest.fn(),
       getTheme: jest.fn(() => lightTheme),
@@ -66,15 +69,19 @@ jest.mock('react-native-unistyles', () => {
 jest.mock('react-native-reanimated', () => {
   const { View } = require('react-native');
   const noOp = jest.fn();
-  const returnSelf = jest.fn(function () { return this; });
-  const mockSharedValue = (initialValue) => {
+  const returnSelf = jest.fn(function () {
+    return this;
+  });
+  const mockSharedValue = initialValue => {
     const sv = {
       value: initialValue,
       addListener: noOp,
       removeListener: noOp,
       modify: noOp,
       get: jest.fn(() => sv.value),
-      set: jest.fn((v) => { sv.value = v; }),
+      set: jest.fn(v => {
+        sv.value = v;
+      }),
     };
     return sv;
   };
@@ -82,7 +89,7 @@ jest.mock('react-native-reanimated', () => {
   return {
     __esModule: true,
     default: {
-      createAnimatedComponent: (component) => component,
+      createAnimatedComponent: component => component,
       addWhitelistedNativeProps: noOp,
       addWhitelistedUIProps: noOp,
       call: noOp,
@@ -98,17 +105,17 @@ jest.mock('react-native-reanimated', () => {
     useSharedValue: jest.fn(mockSharedValue),
     useAnimatedStyle: jest.fn(() => ({})),
     useAnimatedProps: jest.fn(() => ({})),
-    useDerivedValue: jest.fn((fn) => mockSharedValue(fn())),
+    useDerivedValue: jest.fn(fn => mockSharedValue(fn())),
     useAnimatedGestureHandler: jest.fn(() => ({})),
     useAnimatedScrollHandler: jest.fn(() => ({})),
     useAnimatedRef: jest.fn(() => ({ current: null })),
     useReducedMotion: jest.fn(() => false),
-    withTiming: jest.fn((toValue) => toValue),
-    withSpring: jest.fn((toValue) => toValue),
-    withDecay: jest.fn((config) => config),
+    withTiming: jest.fn(toValue => toValue),
+    withSpring: jest.fn(toValue => toValue),
+    withDecay: jest.fn(config => config),
     withDelay: jest.fn((_, animation) => animation),
     withSequence: jest.fn((...animations) => animations[animations.length - 1]),
-    withRepeat: jest.fn((animation) => animation),
+    withRepeat: jest.fn(animation => animation),
     cancelAnimation: noOp,
     Easing: {
       linear: noOp,
@@ -130,28 +137,78 @@ jest.mock('react-native-reanimated', () => {
       inOut: noOp,
     },
     Extrapolation: { EXTEND: 'extend', CLAMP: 'clamp', IDENTITY: 'identity' },
-    interpolate: jest.fn((value) => value),
+    interpolate: jest.fn(value => value),
     interpolateColor: jest.fn(() => 'rgba(0,0,0,0)'),
-    runOnJS: jest.fn((fn) => fn),
-    runOnUI: jest.fn((fn) => fn),
-    createAnimatedComponent: (component) => component,
+    runOnUI: jest.fn(fn => fn),
+    createAnimatedComponent: component => component,
     FadeIn: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
     FadeOut: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
-    FadeInDown: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
-    FadeInUp: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
-    FadeOutDown: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
-    FadeOutUp: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
-    SlideInRight: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
-    SlideOutRight: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
-    SlideInLeft: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
-    SlideOutLeft: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
+    FadeInDown: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+    },
+    FadeInUp: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+    },
+    FadeOutDown: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+    },
+    FadeOutUp: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+    },
+    SlideInRight: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+    },
+    SlideOutRight: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+    },
+    SlideInLeft: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+    },
+    SlideOutLeft: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+    },
     ZoomIn: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
     ZoomOut: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
     Layout: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
-    LinearTransition: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
-    SequencedTransition: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
-    EntryExitTransition: { duration: returnSelf, delay: returnSelf, springify: returnSelf },
-    measure: jest.fn(() => ({ x: 0, y: 0, width: 0, height: 0, pageX: 0, pageY: 0 })),
+    LinearTransition: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+    },
+    SequencedTransition: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+    },
+    EntryExitTransition: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+    },
+    measure: jest.fn(() => ({
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      pageX: 0,
+      pageY: 0,
+    })),
     scrollTo: noOp,
     setGestureState: noOp,
   };
@@ -165,12 +222,12 @@ jest.mock('react-native-mmkv', () => {
     const store = new Map();
     return {
       set: jest.fn((key, value) => store.set(key, value)),
-      getString: jest.fn((key) => store.get(key)),
-      getNumber: jest.fn((key) => store.get(key)),
-      getBoolean: jest.fn((key) => store.get(key)),
-      delete: jest.fn((key) => store.delete(key)),
-      remove: jest.fn((key) => store.delete(key)),
-      contains: jest.fn((key) => store.has(key)),
+      getString: jest.fn(key => store.get(key)),
+      getNumber: jest.fn(key => store.get(key)),
+      getBoolean: jest.fn(key => store.get(key)),
+      delete: jest.fn(key => store.delete(key)),
+      remove: jest.fn(key => store.delete(key)),
+      contains: jest.fn(key => store.has(key)),
       clearAll: jest.fn(() => store.clear()),
       getAllKeys: jest.fn(() => [...store.keys()]),
     };
@@ -207,7 +264,7 @@ jest.mock('@shopify/react-native-skia', () => ({
         reset: jest.fn().mockReturnThis(),
       }),
     },
-    Color: jest.fn((c) => c),
+    Color: jest.fn(c => c),
   },
 }));
 
@@ -256,7 +313,7 @@ jest.mock('@react-navigation/native', () => {
       key: 'test-key',
       name: 'TestScreen',
     })),
-    useFocusEffect: jest.fn((cb) => cb()),
+    useFocusEffect: jest.fn(cb => cb()),
     useIsFocused: jest.fn(() => true),
     NavigationContainer: ({ children }) => children,
     createNavigationContainerRef: jest.fn(() => ({
@@ -301,7 +358,7 @@ jest.mock('react-native-gesture-handler', () => {
     RectButton: View,
     BorderlessButton: View,
     FlatList: require('react-native').FlatList,
-    gestureHandlerRootHOC: jest.fn((c) => c),
+    gestureHandlerRootHOC: jest.fn(c => c),
     Directions: {},
     GestureHandlerRootView: View,
     Gesture: {
@@ -371,13 +428,13 @@ jest.mock('@gorhom/bottom-sheet', () => {
       return React.createElement(View, props);
     }),
     BottomSheetModalProvider: ({ children }) => children,
-    BottomSheetBackdrop: (props) => React.createElement(View, props),
-    BottomSheetView: (props) => React.createElement(View, props),
-    BottomSheetScrollView: (props) => React.createElement(View, props),
-    BottomSheetFlatList: (props) => React.createElement(View, props),
-    BottomSheetTextInput: (props) => React.createElement(TextInput, props),
-    BottomSheetFooter: (props) => React.createElement(View, props),
-    BottomSheetHandle: (props) => React.createElement(View, props),
+    BottomSheetBackdrop: props => React.createElement(View, props),
+    BottomSheetView: props => React.createElement(View, props),
+    BottomSheetScrollView: props => React.createElement(View, props),
+    BottomSheetFlatList: props => React.createElement(View, props),
+    BottomSheetTextInput: props => React.createElement(TextInput, props),
+    BottomSheetFooter: props => React.createElement(View, props),
+    BottomSheetHandle: props => React.createElement(View, props),
     useBottomSheet: jest.fn(() => ({
       snapToIndex: jest.fn(),
       expand: jest.fn(),
@@ -420,9 +477,11 @@ jest.mock('react-native-keychain', () => ({
     WHEN_UNLOCKED: 'AccessibleWhenUnlocked',
     AFTER_FIRST_UNLOCK: 'AccessibleAfterFirstUnlock',
     ALWAYS: 'AccessibleAlways',
-    WHEN_PASSCODE_SET_THIS_DEVICE_ONLY: 'AccessibleWhenPasscodeSetThisDeviceOnly',
+    WHEN_PASSCODE_SET_THIS_DEVICE_ONLY:
+      'AccessibleWhenPasscodeSetThisDeviceOnly',
     WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'AccessibleWhenUnlockedThisDeviceOnly',
-    AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: 'AccessibleAfterFirstUnlockThisDeviceOnly',
+    AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY:
+      'AccessibleAfterFirstUnlockThisDeviceOnly',
   },
   ACCESS_CONTROL: {
     USER_PRESENCE: 'UserPresence',
@@ -496,8 +555,12 @@ jest.mock('react-native-device-info', () => ({
 jest.mock('@notifee/react-native', () => ({
   __esModule: true,
   default: {
-    requestPermission: jest.fn(() => Promise.resolve({ authorizationStatus: 1 })),
-    getNotificationSettings: jest.fn(() => Promise.resolve({ authorizationStatus: 1 })),
+    requestPermission: jest.fn(() =>
+      Promise.resolve({ authorizationStatus: 1 }),
+    ),
+    getNotificationSettings: jest.fn(() =>
+      Promise.resolve({ authorizationStatus: 1 }),
+    ),
     displayNotification: jest.fn(() => Promise.resolve('notification-id')),
     cancelNotification: jest.fn(() => Promise.resolve()),
     cancelAllNotifications: jest.fn(() => Promise.resolve()),
@@ -509,7 +572,12 @@ jest.mock('@notifee/react-native', () => ({
   },
   AndroidImportance: { HIGH: 4, DEFAULT: 3, LOW: 2, MIN: 1 },
   EventType: { DISMISSED: 0, PRESS: 1, ACTION_PRESS: 2, DELIVERED: 3 },
-  AuthorizationStatus: { AUTHORIZED: 1, DENIED: 0, NOT_DETERMINED: -1, PROVISIONAL: 2 },
+  AuthorizationStatus: {
+    AUTHORIZED: 1,
+    DENIED: 0,
+    NOT_DETERMINED: -1,
+    PROVISIONAL: 2,
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -519,10 +587,22 @@ jest.mock('react-native-permissions', () => ({
   check: jest.fn(() => Promise.resolve('granted')),
   request: jest.fn(() => Promise.resolve('granted')),
   PERMISSIONS: {
-    IOS: { CAMERA: 'ios.permission.CAMERA', PHOTO_LIBRARY: 'ios.permission.PHOTO_LIBRARY' },
-    ANDROID: { CAMERA: 'android.permission.CAMERA', READ_EXTERNAL_STORAGE: 'android.permission.READ_EXTERNAL_STORAGE' },
+    IOS: {
+      CAMERA: 'ios.permission.CAMERA',
+      PHOTO_LIBRARY: 'ios.permission.PHOTO_LIBRARY',
+    },
+    ANDROID: {
+      CAMERA: 'android.permission.CAMERA',
+      READ_EXTERNAL_STORAGE: 'android.permission.READ_EXTERNAL_STORAGE',
+    },
   },
-  RESULTS: { UNAVAILABLE: 'unavailable', DENIED: 'denied', GRANTED: 'granted', BLOCKED: 'blocked', LIMITED: 'limited' },
+  RESULTS: {
+    UNAVAILABLE: 'unavailable',
+    DENIED: 'denied',
+    GRANTED: 'granted',
+    BLOCKED: 'blocked',
+    LIMITED: 'limited',
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -531,7 +611,10 @@ jest.mock('react-native-permissions', () => ({
 jest.mock('react-native-vision-camera', () => ({
   Camera: 'Camera',
   useCameraDevice: jest.fn(() => null),
-  useCameraPermission: jest.fn(() => ({ hasPermission: true, requestPermission: jest.fn() })),
+  useCameraPermission: jest.fn(() => ({
+    hasPermission: true,
+    requestPermission: jest.fn(),
+  })),
   useCodeScanner: jest.fn(),
 }));
 
@@ -630,13 +713,23 @@ jest.mock('react-native-performance', () => {
   const performance = {
     timeOrigin: 0,
     now: jest.fn(() => Date.now()),
-    mark: jest.fn((name) => {
-      const entry = { name, entryType: 'mark', startTime: Date.now(), duration: 0 };
+    mark: jest.fn(name => {
+      const entry = {
+        name,
+        entryType: 'mark',
+        startTime: Date.now(),
+        duration: 0,
+      };
       entries.push(entry);
       return entry;
     }),
-    measure: jest.fn((name) => {
-      const entry = { name, entryType: 'measure', startTime: Date.now(), duration: 0 };
+    measure: jest.fn(name => {
+      const entry = {
+        name,
+        entryType: 'measure',
+        startTime: Date.now(),
+        duration: 0,
+      };
       entries.push(entry);
       return entry;
     }),

@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
@@ -45,21 +45,29 @@ export function MultiSelectChipSheet<T extends string = string>({
   });
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Sync visible prop with bottom sheet ref (complex: resets search query)
+  // Reset search query when sheet opens (render-time state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    if (visible) {
+      setSearchQuery('');
+    }
+  }
+
+  // Sync visible prop with bottom sheet ref
   useEffect(() => {
     if (visible) {
       ref.current?.present();
-      setSearchQuery('');
     } else {
       ref.current?.dismiss();
     }
-  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visible, ref]);
 
-  const filteredItems = useMemo(() => {
+  const filteredItems = (() => {
     if (!searchQuery.trim()) return items;
     const query = searchQuery.toLowerCase();
     return items.filter(item => item.label.toLowerCase().includes(query));
-  }, [items, searchQuery]);
+  })();
 
   const handleToggleItem = (id: T) => {
     const newSelection = selectedItems.includes(id)

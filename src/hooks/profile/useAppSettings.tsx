@@ -1,11 +1,11 @@
-import {useCallback, useEffect, useMemo} from 'react';
+import {useEffect} from 'react';
 import {useAppStore} from '#store/useAppStore';
 import {
   useGetUserSettingsQuery,
   useUpdateUserPreferencesMutation,
   AppTheme,
-  UnitSystem,
-} from '#generated';
+  UnitSystem } from '#generated';
+import {executeMutation} from '#/utils/compilerSafeWrappers';
 import {storage} from '#/storage/mmkv';
 
 export interface AppSettings {
@@ -22,13 +22,12 @@ export interface AppSettings {
 export const useAppSettings = () => {
   const user = useAppStore(state => state.user);
   const {data, loading, refetch} = useGetUserSettingsQuery({
-    skip: !user?.id,
-  });
+    skip: !user?.id });
   const [updateSettings] = useUpdateUserPreferencesMutation();
 
   const settings = data?.me?.settings;
 
-  const getAppSettings = useCallback((): AppSettings => {
+  const getAppSettings = (): AppSettings => {
     return {
       theme: settings?.theme || AppTheme.System,
       compactMode: settings?.compactMode ?? false,
@@ -37,60 +36,38 @@ export const useAppSettings = () => {
       offlineMode: settings?.offlineMode ?? false,
       preferredUnitSystem: settings?.preferredUnitSystem || UnitSystem.Metric,
       enabledFeatures: settings?.enabledFeatures || [],
-      betaFeatures: settings?.betaFeatures || [],
+      betaFeatures: settings?.betaFeatures || [] };
+  };
+
+  const updateAppSetting = async (key: keyof AppSettings, value: any) => {
+      const result = await executeMutation(
+        () => updateSettings({ variables: { input: {[key]: value} } }),
+        'Failed to update app setting',
+      );
+      return result !== false;
     };
-  }, [settings]);
 
-  const updateAppSetting = useCallback(
-    async (key: keyof AppSettings, value: any) => {
-      try {
-        await updateSettings({
-          variables: {
-            input: {[key]: value},
-          },
-        });
+  const updateMultipleSettings = async (updates: Partial<AppSettings>) => {
+      const result = await executeMutation(
+        () => updateSettings({ variables: { input: updates } }),
+        'Failed to update app settings',
+      );
+      return result !== false;
+    };
 
-        return true;
-      } catch (error) {
-        console.error('Failed to update app setting:', error);
-        return false;
-      }
-    },
-    [updateSettings],
-  );
-
-  const updateMultipleSettings = useCallback(
-    async (updates: Partial<AppSettings>) => {
-      try {
-        await updateSettings({
-          variables: {
-            input: updates,
-          },
-        });
-
-        return true;
-      } catch (error) {
-        console.error('Failed to update app settings:', error);
-        return false;
-      }
-    },
-    [updateSettings],
-  );
-
-  const resetToDefaults = useCallback(async () => {
+  const resetToDefaults = async () => {
     const defaultSettings: Partial<AppSettings> = {
       theme: AppTheme.System,
       compactMode: false,
       showTutorials: true,
       autoSync: true,
       offlineMode: false,
-      preferredUnitSystem: UnitSystem.Metric,
-    };
+      preferredUnitSystem: UnitSystem.Metric };
 
     return updateMultipleSettings(defaultSettings);
-  }, [updateMultipleSettings]);
+  };
 
-  const memoizedSettings = useMemo(() => getAppSettings(), [getAppSettings]);
+  const memoizedSettings = getAppSettings();
 
   // PERFORMANCE: Sync settings to MMKV so startup-path hooks can read them
   // without triggering the GetUserSettings GraphQL query at startup.
@@ -111,6 +88,5 @@ export const useAppSettings = () => {
     updateAppSetting,
     updateMultipleSettings,
     resetToDefaults,
-    refetch,
-  };
+    refetch };
 };

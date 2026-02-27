@@ -31,7 +31,9 @@ export function useAfterInteraction(
   const callbackRef = useRef(callback);
 
   // Keep callback ref fresh to avoid stale closures
-  callbackRef.current = callback;
+  useEffect(() => {
+    callbackRef.current = callback;
+  });
 
   useEffect(() => {
     if (!enabled) return;

@@ -73,16 +73,3 @@ export function buildOptimisticDeleteResponse<TResult = any>(
   } as any; // justified: dynamic computed property [mutationField] can't satisfy specific generated mutation types
 }
 
-/**
- * Build a typed optimistic response for the ShoppingListItem remove mutation
- * which has a non-standard response shape (returns the item directly, not a payload).
- */
-export function buildOptimisticRemoveItemResponse<TEntity extends { __typename: string; id: string }, TResult = any>(
-  mutationField: string,
-  entity: TEntity,
-): TResult {
-  return {
-    __typename: 'Mutation' as const,
-    [mutationField]: entity,
-  } as any; // justified: dynamic computed property [mutationField] can't satisfy specific generated mutation types
-}

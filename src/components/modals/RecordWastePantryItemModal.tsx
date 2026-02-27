@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
@@ -44,22 +44,21 @@ export const RecordWastePantryItemModal: React.FC<RecordWastePantryItemModalProp
   visible,
   pantryItem,
   onClose,
-  onConfirm,
-}) => {
+  onConfirm }) => {
   const { theme } = useUnistyles();
   const [wasteAmountInput, setWasteAmountInput] = useState('');
   const [wasteReason, setWasteReason] = useState<WasteReason>(WasteReason.Expired);
   const [isComposted, setIsComposted] = useState(false);
   const [isRecycled, setIsRecycled] = useState(false);
 
-  const handleReset = useCallback((item: PantryItemFragment) => {
+  const handleReset = (item: PantryItemFragment) => {
     setWasteAmountInput(item.quantity.toString());
     setWasteReason(WasteReason.Expired);
     setIsComposted(false);
     setIsRecycled(false);
-  }, []);
+  };
 
-  const handleConfirm = useCallback((shared: PantryActionSharedState) => {
+  const handleConfirm = (shared: PantryActionSharedState) => {
     if (!pantryItem) return;
 
     const wasteValue = parseFractionalInput(wasteAmountInput);
@@ -74,7 +73,7 @@ export const RecordWastePantryItemModal: React.FC<RecordWastePantryItemModalProp
 
     onConfirm(wasteValue, wasteReason, isComposted, isRecycled, shared.notes, shared.activeUnitId);
     onClose();
-  }, [pantryItem, wasteAmountInput, wasteReason, isComposted, isRecycled, onConfirm, onClose]);
+  };
 
   return (
     <PantryActionModal
@@ -189,9 +188,6 @@ export const RecordWastePantryItemModal: React.FC<RecordWastePantryItemModalProp
 
 const styles = StyleSheet.create(theme => ({
   checkboxContainer: {
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import PagerView from 'react-native-pager-view';
@@ -47,8 +47,7 @@ const PageIndicator: React.FC<{
                 backgroundColor:
                   currentPage === index
                     ? theme.colors.primary
-                    : theme.colors.border,
-              },
+                    : theme.colors.border },
             ]}
           />
           <Text
@@ -59,8 +58,7 @@ const PageIndicator: React.FC<{
                   currentPage === index
                     ? theme.colors.primary
                     : theme.colors.textSecondary,
-                fontWeight: currentPage === index ? '600' : '400',
-              },
+                fontWeight: currentPage === index ? '600' : '400' },
             ]}
           >
             {label}
@@ -79,24 +77,18 @@ const indicatorStyles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   item: {
     alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   dot: {
     width: 8,
     height: 8,
-    borderRadius: theme.radii.full,
-  },
+    borderRadius: theme.radii.full },
   label: {
-    fontSize: theme.fonts.size.sm,
-  },
+    fontSize: theme.fonts.size.sm },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));
 
 export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   visible,
@@ -104,13 +96,11 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   prefilledItemName = '',
   storageLocations = [],
   onClose,
-  onSuccess,
-}) => {
+  onSuccess }) => {
   const { ref, modalProps, insets } = useStandardBottomSheet({
     visible: visible && !!pantryId,
     onDismiss: onClose,
-    snapPoints: ['75%', '90%'],
-  });
+    snapPoints: ['75%', '90%'] });
   const pagerRef = useRef<PagerView>(null);
 
   // Page state
@@ -159,84 +149,80 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const [minQuantity, setMinQuantity] = useState('');
   const [restockQuantity, setRestockQuantity] = useState('');
 
-  // Reset form for adding another item
-  const resetForm = useCallback(() => {
-    setItemName('');
-    setQuantityInput('1');
-    setUnit('');
-    setUnitId(null);
-    setStorageState(StorageState.Ambient);
-    setShowPackageDetails(false);
-    setPackageSize('');
-    setContentUnit('');
-    setContentUnitId(null);
-    setItemNetWeight('');
-    setWeightUnit('');
-    setWeightUnitId(null);
-    setPantryNetWeight('');
-    setPantryNetWeightUnit('');
-    setPantryNetWeightUnitId(null);
-    setExpirationDate(null);
-    setStorageLocation('');
-    setSelectedStorageLocationId(null);
-    setStorageNotes('');
-    setTags('');
-    setBrand('');
-    setSelectedBrandId(null);
-    setSuggestedBrands([]);
-    setMinQuantity('');
-    setRestockQuantity('');
-  }, []);
+  // Render-time form reset: detect when sheet opens and reset all fields
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevPantryId, setPrevPantryId] = useState(pantryId);
+  const [prevPrefilledItemName, setPrevPrefilledItemName] = useState(prefilledItemName);
 
-  // Reset form when visible
+  if (visible !== prevVisible || pantryId !== prevPantryId || prefilledItemName !== prevPrefilledItemName) {
+    setPrevVisible(visible);
+    setPrevPantryId(pantryId);
+    setPrevPrefilledItemName(prefilledItemName);
+
+    if (visible && pantryId) {
+      // Reset all form state inline
+      setItemName(prefilledItemName);
+      setQuantityInput('1');
+      setUnit('');
+      setUnitId(null);
+      setStorageState(StorageState.Ambient);
+      setShowPackageDetails(false);
+      setPackageSize('');
+      setContentUnit('');
+      setContentUnitId(null);
+      setItemNetWeight('');
+      setWeightUnit('');
+      setWeightUnitId(null);
+      setPantryNetWeight('');
+      setPantryNetWeightUnit('');
+      setPantryNetWeightUnitId(null);
+      setExpirationDate(null);
+      setStorageLocation('');
+      setSelectedStorageLocationId(null);
+      setStorageNotes('');
+      setTags('');
+      setBrand('');
+      setSelectedBrandId(null);
+      setSuggestedBrands([]);
+      setMinQuantity('');
+      setRestockQuantity('');
+      setCurrentPage(0);
+    }
+  }
+
+  // Reset pager position when sheet opens (imperative ref call needs useEffect)
   useEffect(() => {
     if (visible && pantryId) {
-      resetForm();
-      setItemName(prefilledItemName);
-      setCurrentPage(0);
       pagerRef.current?.setPage(0);
     }
-  }, [visible, pantryId, prefilledItemName, resetForm]);
+  }, [visible, pantryId]);
 
   // Handle unit selection
-  const handleUnitSelected = useCallback(
-    (id: string | null, name: string | null) => {
+  const handleUnitSelected = (id: string | null, name: string | null) => {
       setUnitId(id);
       if (name) setUnit(name);
-    },
-    [],
-  );
+    };
 
   // Handle content unit selection
-  const handleContentUnitSelected = useCallback(
-    (id: string | null, name: string | null) => {
+  const handleContentUnitSelected = (id: string | null, name: string | null) => {
       setContentUnitId(id);
       if (name) setContentUnit(name);
-    },
-    [],
-  );
+    };
 
   // Handle pantry net weight unit selection
-  const handlePantryNetWeightUnitSelected = useCallback(
-    (id: string | null, name: string | null) => {
+  const handlePantryNetWeightUnitSelected = (id: string | null, name: string | null) => {
       setPantryNetWeightUnitId(id);
       if (name) setPantryNetWeightUnit(name);
-    },
-    [],
-  );
+    };
 
   // Handle weight unit selection
-  const handleWeightUnitSelected = useCallback(
-    (id: string | null, name: string | null) => {
+  const handleWeightUnitSelected = (id: string | null, name: string | null) => {
       setWeightUnitId(id);
       if (name) setWeightUnit(name);
-    },
-    [],
-  );
+    };
 
   // Handle storage location selection
-  const handleStorageLocationSelected = useCallback(
-    (locationId: string | null, location: StorageLocation | null) => {
+  const handleStorageLocationSelected = (locationId: string | null, location: StorageLocation | null) => {
       setSelectedStorageLocationId(locationId);
       // Auto-set storage state based on location temperature
       if (location?.temperature) {
@@ -246,29 +232,24 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           setStorageState(StorageState.Refrigerated);
         else setStorageState(StorageState.Ambient);
       }
-    },
-    [],
-  );
+    };
 
   // Handle add new storage location
-  const handleAddNewLocation = useCallback((name: string) => {
+  const handleAddNewLocation = (name: string) => {
     setStorageLocation(name);
     setSelectedStorageLocationId(null);
-  }, []);
+  };
 
   // Handle brand selection
-  const handleBrandSelected = useCallback(
-    (brandId: string | null, _brandName: string | null) => {
+  const handleBrandSelected = (brandId: string | null, _brandName: string | null) => {
       setSelectedBrandId(brandId);
-    },
-    [],
-  );
+    };
 
   // Handle page change
-  const handlePageChange = useCallback((index: number) => {
+  const handlePageChange = (index: number) => {
     setCurrentPage(index);
     pagerRef.current?.setPage(index);
-  }, []);
+  };
 
   // Submission hook
   const { handleConfirm, loading } = usePantryItemSubmission({
@@ -295,8 +276,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     minQuantity,
     restockQuantity,
     onSuccess,
-    handlePageChange,
-  });
+    handlePageChange });
 
   return (
     <BottomSheetModal
@@ -414,48 +394,37 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    flex: 1,
-  },
+    flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-  },
+    paddingVertical: theme.spacing.md },
   cancelButton: {
-    minWidth: 60,
-  },
+    minWidth: 60 },
   cancelButtonText: {
     color: theme.colors.textSecondary,
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   title: {
     flex: 1,
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   saveButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-  },
+    borderRadius: theme.radii.md },
   saveButtonDisabled: {
-    opacity: theme.opacity.disabled,
-  },
+    opacity: theme.opacity.disabled },
   saveButtonText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   pager: {
-    flex: 1,
-  },
+    flex: 1 },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

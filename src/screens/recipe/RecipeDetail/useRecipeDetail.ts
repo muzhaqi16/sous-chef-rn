@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRoute } from '@react-navigation/native';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
@@ -17,13 +17,12 @@ import {
   SavedRecipeFoldersDocument,
   type MySavedRecipesQuery,
   type SavedRecipeFoldersQuery,
-  type BatchAddShoppingListItemInput,
-} from '#generated';
+  type BatchAddShoppingListItemInput } from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { normalizeRecipes, extractNodes } from '#/utils/connectionUtils';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { useRecipePreload } from '#/hooks/recipe/useRecipePreload';
 import { useRecipeIngredientMatching } from '#/hooks/recipe/useRecipeIngredientMatching';
@@ -65,20 +64,16 @@ export function useRecipeDetail() {
   // Get shopping lists - uses lightweight query for list metadata only
   const { data: shoppingListsData, loading: shoppingListsLoading } =
     useGetShoppingListsLiteQuery({
-      fetchPolicy: 'cache-and-network',
-    });
+      fetchPolicy: 'cache-and-network' });
   // Extract nodes from connection type (shoppingLists returns ShoppingListConnection)
-  const shoppingLists = useMemo(
-    () => extractNodes(shoppingListsData?.shoppingLists),
-    [shoppingListsData],
-  );
+  const shoppingLists = extractNodes(shoppingListsData?.shoppingLists);
 
   // Get user's selected shopping list ID from app store
   const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
 
   // Helper to get the target list for single ingredient adds
   // Priority: user's selected list > default list > first list
-  const getTargetShoppingList = useCallback(() => {
+  const getTargetShoppingList = () => {
     if (shoppingLists.length === 0) return null;
 
     // First try user's selected list
@@ -95,19 +90,15 @@ export function useRecipeDetail() {
 
     // Fall back to first list
     return shoppingLists[0];
-  }, [shoppingLists, selectedShoppingListId]);
+  };
 
   // Helper to get list by ID
-  const getShoppingListById = useCallback(
-    (listId: string) => {
+  const getShoppingListById = (listId: string) => {
       return shoppingLists.find(list => list.id === listId) || null;
-    },
-    [shoppingLists],
-  );
+    };
 
   // Open list picker for "Add All" flow
-  const openListPicker = useCallback(
-    (action: { type: 'all' | 'selected' }) => {
+  const openListPicker = (action: { type: 'all' | 'selected' }) => {
       if (shoppingListsLoading) {
         toastService.info('Loading shopping lists...');
         return;
@@ -118,9 +109,7 @@ export function useRecipeDetail() {
       }
       setPendingAction(action);
       listPickerRef.current?.present();
-    },
-    [shoppingLists.length, shoppingListsLoading],
-  );
+    };
 
   // State for external recipes
   const [loading, setLoading] = useState(true);
@@ -165,12 +154,10 @@ export function useRecipeDetail() {
     preloadedRecipe,
     preloadRecipe,
     saveRecipeToFavorites,
-    savingToFavorites,
-  } = useRecipePreload({
+    savingToFavorites } = useRecipePreload({
     onFavoriteSuccess: () => {
       setRecipeSaved(true);
-    },
-  });
+    } });
 
   // Refs for bottom sheets
   const shoppingListOptionsRef = useRef<BottomSheetModal>(null);
@@ -185,14 +172,8 @@ export function useRecipeDetail() {
         try {
           const result = data.createShoppingListItemsFromRecipe;
           const shoppingListId = variables.input.shoppingListId;
-          const addToShoppingListItemsCache =
-            createAddToParentConnectionUpdater(
-              'ShoppingList',
-              'itemsConnection',
-              'ShoppingListItem',
-            );
           result.addedItems.forEach((item: any) => {
-            addToShoppingListItemsCache(cache, shoppingListId, item);
+            addNewItemToShoppingListCache(cache, shoppingListId, item);
           });
         } catch (err) {
           console.warn('Cache update failed for addRecipeToShoppingList:', err);
@@ -203,8 +184,7 @@ export function useRecipeDetail() {
         const errorMessage =
           err.message || 'Failed to add ingredients to shopping list';
         toastService.error(`Could not add ingredients: ${errorMessage}`);
-      },
-    });
+      } });
 
   const [addRecipeIngredientMutation] =
     useCreateShoppingListItemFromRecipeIngredientMutation({
@@ -215,23 +195,12 @@ export function useRecipeDetail() {
           const result = data.createShoppingListItemFromRecipeIngredient;
           const shoppingListId = variables.shoppingListId;
           if (!result.wasUpdated) {
-            const addToShoppingListItemsCache =
-              createAddToParentConnectionUpdater(
-                'ShoppingList',
-                'itemsConnection',
-                'ShoppingListItem',
-              );
-            addToShoppingListItemsCache(
-              cache,
-              shoppingListId,
-              result.shoppingListItem,
-            );
+            addNewItemToShoppingListCache(cache, shoppingListId, result.shoppingListItem);
           }
         } catch (err) {
           console.warn('Cache update failed for addRecipeIngredient:', err);
         }
-      },
-    });
+      } });
 
   const [addItemToShoppingListMutation] = useAddItemToShoppingListMutation({
     update: (cache, { data }, { variables }) => {
@@ -239,17 +208,11 @@ export function useRecipeDetail() {
       try {
         const item = data.addItemToShoppingList.shoppingListItem;
         const shoppingListId = variables.input.shoppingListId;
-        const addToShoppingListItemsCache = createAddToParentConnectionUpdater(
-          'ShoppingList',
-          'itemsConnection',
-          'ShoppingListItem',
-        );
-        addToShoppingListItemsCache(cache, shoppingListId, item);
+        addNewItemToShoppingListCache(cache, shoppingListId, item);
       } catch (err) {
         console.warn('Cache update failed for addItemToShoppingList:', err);
       }
-    },
-  });
+    } });
 
   const [addItemsToShoppingListMutation] = useAddItemsToShoppingListMutation({
     update: (cache, { data }, { variables }) => {
@@ -257,15 +220,10 @@ export function useRecipeDetail() {
       try {
         const { results } = data.addItemsToShoppingList;
         const shoppingListId = variables.shoppingListId;
-        const addToShoppingListItemsCache = createAddToParentConnectionUpdater(
-          'ShoppingList',
-          'itemsConnection',
-          'ShoppingListItem',
-        );
         // Add each successfully created item to the cache
         results.forEach(result => {
           if (result.success && result.item) {
-            addToShoppingListItemsCache(cache, shoppingListId, result.item);
+            addNewItemToShoppingListCache(cache, shoppingListId, result.item);
           }
         });
       } catch (err) {
@@ -277,15 +235,13 @@ export function useRecipeDetail() {
       const errorMessage =
         err.message || 'Failed to add ingredients to shopping list';
       toastService.error(`Could not add ingredients: ${errorMessage}`);
-    },
-  });
+    } });
 
   const [markRecipeAsCookedMutation] = useMarkRecipeAsCookedMutation({
     onError: err => {
       console.error('Mark recipe as cooked error:', err);
       toastService.error(err.message || 'Failed to mark recipe as cooked');
-    },
-  });
+    } });
 
   const [updateFavoriteRecipeMutation] = useUpdateFavoriteRecipeMutation({
     update: (cache, { data }) => {
@@ -305,8 +261,7 @@ export function useRecipeDetail() {
             }
             return {
               ...existing,
-              savedRecipeFolders: [...existing.savedRecipeFolders, folder],
-            };
+              savedRecipeFolders: [...existing.savedRecipeFolders, folder] };
           },
         );
       }
@@ -326,18 +281,14 @@ export function useRecipeDetail() {
                   edge.node.id === updatedSavedRecipe.id
                     ? { ...edge, node: { ...edge.node, ...updatedSavedRecipe } }
                     : edge,
-                ),
-              },
-            },
-          };
+                ) } } };
         },
       );
     },
     onError: err => {
       console.error('Update favorite recipe error:', err);
       toastService.error(err.message || 'Failed to update recipe');
-    },
-  });
+    } });
 
   const [unfavoriteRecipeMutation] = useUnfavoriteRecipeMutation({
     // Use cache updates instead of refetchQueries for better performance and offline support
@@ -358,10 +309,7 @@ export function useRecipeDetail() {
                 edges: existing.me.savedRecipesConnection.edges.filter(
                   edge => edge.node.recipe.id !== variables.recipeId,
                 ),
-                totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
-              },
-            },
-          };
+                totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) - 1 } } };
         },
       );
 
@@ -371,34 +319,28 @@ export function useRecipeDetail() {
         fields: {
           savedDetails() {
             return null;
-          },
-        },
-      });
+          } } });
     },
     onError: err => {
       console.error('Unfavorite recipe error:', err);
       toastService.error(err.message || 'Failed to remove recipe from saved');
-    },
-  });
+    } });
 
   // Fetch backend recipe if recipeId is provided
   const {
     data: backendRecipeData,
     loading: backendLoading,
-    error: backendError,
-  } = useGetRecipeQuery({
+    error: backendError } = useGetRecipeQuery({
     variables: { id: recipeId ?? '' },
     skip: !recipeId,
-    fetchPolicy: 'network-only',
-  });
+    fetchPolicy: 'network-only' });
 
   const backendRecipe = backendRecipeData?.recipe;
 
   // Fetch user's saved recipes to check if current recipe is already saved
   const { data: myRecipesData } = useMyRecipesQuery({
     fetchPolicy: 'cache-and-network',
-    skip: !externalSource || !externalId,
-  });
+    skip: !externalSource || !externalId });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -422,8 +364,7 @@ export function useRecipeDetail() {
         if (externalSource === 'SPOONACULAR') {
           const data = await spoonacularService.getRecipeInformation({
             id: Number(externalId),
-            includeNutrition: true,
-          }, controller.signal);
+            includeNutrition: true }, controller.signal);
           setExternalRecipe(data);
 
           // Preload recipe to backend (fire-and-forget)
@@ -448,25 +389,19 @@ export function useRecipeDetail() {
     return () => controller.abort();
   }, [externalSource, externalId, recipeId, backendLoading, preloadRecipe]);
 
-  // Normalize recipes data
-  const normalizedRecipes = useMemo(
-    () => normalizeRecipes(myRecipesData?.recipes),
-    [myRecipesData?.recipes],
-  );
-  const savedRecipes = useMemo(
-    () => normalizedRecipes?.recipes || [],
-    [normalizedRecipes],
-  );
-
   // Check if current external recipe is already saved
   useEffect(() => {
-    if (!externalSource || !externalId || savedRecipes.length === 0) {
+    // Normalize recipes data inside the effect to avoid the unstable reference issue
+    const normalizedRecipes = normalizeRecipes(myRecipesData?.recipes);
+    const savedRecipesList = normalizedRecipes?.recipes || [];
+
+    if (!externalSource || !externalId || savedRecipesList.length === 0) {
       setRecipeSaved(false);
       setSavedFolderLocal(null); // Reset local folder when recipe is not saved
       return;
     }
 
-    const savedRecipe = savedRecipes.find(
+    const savedRecipe = savedRecipesList.find(
       (recipe: any) =>
         recipe.externalSource === externalSource &&
         recipe.externalId === externalId,
@@ -480,7 +415,7 @@ export function useRecipeDetail() {
       setRecipeSaved(false);
       setSavedFolderLocal(null);
     }
-  }, [externalSource, externalId, savedRecipes]);
+  }, [externalSource, externalId, myRecipesData?.recipes]);
 
   const isBackendRecipe = !!recipeId && !!backendRecipe;
 
@@ -488,8 +423,7 @@ export function useRecipeDetail() {
   // savedDetails is non-null when the recipe is in user's favorites
   const isSaved = isBackendRecipe ? !!backendRecipe?.savedDetails : recipeSaved;
 
-  const handleSaveRecipe = useCallback(
-    async (folder?: string | null, tags?: string[], notes?: string) => {
+  const handleSaveRecipe = async (folder?: string | null, tags?: string[], notes?: string) => {
       if (!externalRecipe || !externalSource || !externalId) return;
 
       setSaving(true);
@@ -500,8 +434,7 @@ export function useRecipeDetail() {
         const result = await saveRecipeToFavorites(externalRecipe, {
           folder: folder ?? undefined,
           tags: tags && tags.length > 0 ? tags : undefined,
-          notes: notes || undefined,
-        });
+          notes: notes || undefined });
 
         if (result.success) {
           setRecipeSaved(true);
@@ -514,13 +447,10 @@ export function useRecipeDetail() {
       } finally {
         setSaving(false);
       }
-    },
-    [externalRecipe, externalSource, externalId, saveRecipeToFavorites],
-  );
+    };
 
   // Add single ingredient to user's selected/default list (no picker)
-  const handleAddSingleIngredient = useCallback(
-    async (ingredient: any) => {
+  const handleAddSingleIngredient = async (ingredient: any) => {
       const targetList = getTargetShoppingList();
       if (!targetList) {
         toastService.error('Please create a shopping list first.');
@@ -532,9 +462,7 @@ export function useRecipeDetail() {
           await addRecipeIngredientMutation({
             variables: {
               recipeIngredientId: ingredient.id,
-              shoppingListId: targetList.id,
-            },
-          });
+              shoppingListId: targetList.id } });
         } else {
           await addItemToShoppingListMutation({
             variables: {
@@ -548,15 +476,11 @@ export function useRecipeDetail() {
                   unitName:
                     ingredient.measures?.us?.unitShort ||
                     ingredient.measures?.metric?.unitShort ||
-                    undefined,
-                },
+                    undefined },
                 shoppingListId: targetList.id,
                 storePrefs: ingredient.aisle
                   ? { aisle: ingredient.aisle }
-                  : undefined,
-              },
-            },
-          });
+                  : undefined } } });
         }
 
         setAddedIngredients(prev => new Set(prev).add(ingredient.id));
@@ -565,18 +489,10 @@ export function useRecipeDetail() {
         console.error('Failed to add ingredient:', err);
         toastService.error('Failed to add ingredient to shopping list.');
       }
-    },
-    [
-      isBackendRecipe,
-      getTargetShoppingList,
-      addItemToShoppingListMutation,
-      addRecipeIngredientMutation,
-    ],
-  );
+    };
 
   // Execute adding all ingredients to a specific list (called after list selection)
-  const executeAddAllIngredientsToList = useCallback(
-    async (listId: string) => {
+  const executeAddAllIngredientsToList = async (listId: string) => {
       const targetList = getShoppingListById(listId);
       if (!targetList) {
         toastService.error('Shopping list not found.');
@@ -592,10 +508,7 @@ export function useRecipeDetail() {
               input: {
                 recipeId,
                 shoppingListId: targetList.id,
-                servings: backendRecipe.servings,
-              },
-            },
-          });
+                servings: backendRecipe.servings } } });
 
           const data = result.data?.createShoppingListItemsFromRecipe;
           if (data) {
@@ -625,19 +538,15 @@ export function useRecipeDetail() {
                 unitName:
                   ingredient.measures?.us?.unitShort ||
                   ingredient.measures?.metric?.unitShort ||
-                  '',
-              },
+                  '' },
               storePrefs: ingredient.aisle
                 ? { aisle: ingredient.aisle }
-                : undefined,
-            }));
+                : undefined }));
 
           const result = await addItemsToShoppingListMutation({
             variables: {
               shoppingListId: targetList.id,
-              items,
-            },
-          });
+              items } });
 
           const data = result.data?.addItemsToShoppingList;
           if (data) {
@@ -668,21 +577,10 @@ export function useRecipeDetail() {
       } finally {
         setAddingToList(false);
       }
-    },
-    [
-      isBackendRecipe,
-      backendRecipe,
-      recipeId,
-      externalRecipe,
-      getShoppingListById,
-      addItemsToShoppingListMutation,
-      addRecipeToShoppingListMutation,
-    ],
-  );
+    };
 
   // Execute adding selected ingredients to a specific list (called after list selection)
-  const executeAddSelectedIngredientsToList = useCallback(
-    async (listId: string) => {
+  const executeAddSelectedIngredientsToList = async (listId: string) => {
       if (!backendRecipe || !recipeId) return;
 
       const targetList = getShoppingListById(listId);
@@ -701,9 +599,7 @@ export function useRecipeDetail() {
           const result = await addRecipeIngredientMutation({
             variables: {
               recipeIngredientId: ingredientId,
-              shoppingListId: targetList.id,
-            },
-          });
+              shoppingListId: targetList.id } });
 
           if (result.data?.createShoppingListItemFromRecipeIngredient) {
             const wasUpdated =
@@ -728,24 +624,15 @@ export function useRecipeDetail() {
       } finally {
         setAddingToList(false);
       }
-    },
-    [
-      backendRecipe,
-      recipeId,
-      selectedIngredients,
-      getShoppingListById,
-      addRecipeIngredientMutation,
-    ],
-  );
+    };
 
   // Open list picker for "Add All" (shows bottom sheet to choose list)
-  const handleAddAllIngredientsToList = useCallback(() => {
+  const handleAddAllIngredientsToList = () => {
     openListPicker({ type: 'all' });
-  }, [openListPicker]);
+  };
 
   // Handle list selection from picker
-  const handleListSelected = useCallback(
-    (listId: string) => {
+  const handleListSelected = (listId: string) => {
       listPickerRef.current?.dismiss();
 
       if (pendingAction?.type === 'all') {
@@ -756,17 +643,11 @@ export function useRecipeDetail() {
       }
 
       setPendingAction(null);
-    },
-    [
-      pendingAction,
-      executeAddAllIngredientsToList,
-      executeAddSelectedIngredientsToList,
-    ],
-  );
+    };
 
   // This is called from the shopping list options bottom sheet
   // Now opens the list picker instead of directly adding
-  const handleAddAllIngredients = useCallback(() => {
+  const handleAddAllIngredients = () => {
     if (!backendRecipe || !recipeId) {
       toastService.error(
         'Cannot add ingredients from external recipes yet. Please save the recipe first.',
@@ -778,16 +659,16 @@ export function useRecipeDetail() {
     setTimeout(() => {
       openListPicker({ type: 'all' });
     }, 200);
-  }, [backendRecipe, recipeId, openListPicker]);
+  };
 
-  const openIngredientSelector = useCallback(() => {
+  const openIngredientSelector = () => {
     shoppingListOptionsRef.current?.dismiss();
     setTimeout(() => {
       ingredientSelectorRef.current?.present();
     }, 300);
-  }, []);
+  };
 
-  const toggleIngredient = useCallback((ingredientId: string) => {
+  const toggleIngredient = (ingredientId: string) => {
     setSelectedIngredients(prev => {
       const next = new Set(prev);
       if (next.has(ingredientId)) {
@@ -797,10 +678,10 @@ export function useRecipeDetail() {
       }
       return next;
     });
-  }, []);
+  };
 
   // Opens the list picker for "Add Selected" flow
-  const handleAddSelectedIngredients = useCallback(() => {
+  const handleAddSelectedIngredients = () => {
     if (!backendRecipe || !recipeId) return;
     if (selectedIngredients.size === 0) {
       toastService.error('Please select at least one ingredient.');
@@ -812,10 +693,9 @@ export function useRecipeDetail() {
     setTimeout(() => {
       openListPicker({ type: 'selected' });
     }, 200);
-  }, [backendRecipe, recipeId, selectedIngredients.size, openListPicker]);
+  };
 
-  const handleMarkAsCooked = useCallback(
-    async (input: {
+  const handleMarkAsCooked = async (input: {
       servings: number;
       deductFromPantry: boolean;
       useGranularDeduction: boolean;
@@ -841,10 +721,7 @@ export function useRecipeDetail() {
                   recipeId,
                   servings: input.servings,
                   deductFromPantry: input.deductFromPantry,
-                  notes: input.notes,
-                },
-              },
-            });
+                  notes: input.notes } } });
             toastService.success('Recipe marked as cooked! Ingredients deducted from pantry.');
           }
           // If loaded successfully, the sheet is now visible - user will confirm from there
@@ -866,10 +743,7 @@ export function useRecipeDetail() {
               recipeId,
               servings: input.servings,
               deductFromPantry: input.deductFromPantry,
-              notes: input.notes,
-            },
-          },
-        });
+              notes: input.notes } } });
 
         if (input.deductFromPantry) {
           toastService.success(
@@ -883,12 +757,10 @@ export function useRecipeDetail() {
       } finally {
         setMarkingAsCooked(false);
       }
-    },
-    [recipeId, markRecipeAsCookedMutation, ingredientMatching],
-  );
+    };
 
   // Skip review handler - falls back to simple markRecipeAsCooked with deductFromPantry: true
-  const handleSkipReview = useCallback(async () => {
+  const handleSkipReview = async () => {
     if (!recipeId) return;
     ingredientMatching.closeSheet();
     setMarkingAsCooked(true);
@@ -898,21 +770,17 @@ export function useRecipeDetail() {
           input: {
             recipeId,
             servings: undefined,
-            deductFromPantry: true,
-          },
-        },
-      });
+            deductFromPantry: true } } });
       toastService.success('Recipe marked as cooked! Ingredients deducted from pantry.');
     } catch {
       // Error handled by mutation onError
     } finally {
       setMarkingAsCooked(false);
     }
-  }, [recipeId, markRecipeAsCookedMutation, ingredientMatching]);
+  };
 
   // Update recipe folder
-  const handleUpdateFolder = useCallback(
-    async (folder: string | null) => {
+  const handleUpdateFolder = async (folder: string | null) => {
       if (!recipeId) return;
 
       setUpdatingFolderTags(true);
@@ -923,10 +791,7 @@ export function useRecipeDetail() {
           variables: {
             recipeId,
             input: {
-              folder: folder ?? undefined,
-            },
-          },
-        });
+              folder: folder ?? undefined } } });
         toastService.success(
           folder ? `Moved to "${folder}"` : 'Removed from folder',
         );
@@ -935,13 +800,10 @@ export function useRecipeDetail() {
       } finally {
         setUpdatingFolderTags(false);
       }
-    },
-    [recipeId, updateFavoriteRecipeMutation],
-  );
+    };
 
   // Update recipe tags
-  const handleUpdateTags = useCallback(
-    async (tags: string[]) => {
+  const handleUpdateTags = async (tags: string[]) => {
       if (!recipeId) return;
 
       setUpdatingFolderTags(true);
@@ -951,23 +813,17 @@ export function useRecipeDetail() {
           variables: {
             recipeId,
             input: {
-              tags,
-            },
-          },
-        });
+              tags } } });
         toastService.success('Tags updated');
       } catch {
         // Error handled by mutation onError
       } finally {
         setUpdatingFolderTags(false);
       }
-    },
-    [recipeId, updateFavoriteRecipeMutation],
-  );
+    };
 
   // Update recipe notes
-  const handleUpdateNotes = useCallback(
-    async (notes: string) => {
+  const handleUpdateNotes = async (notes: string) => {
       if (!recipeId) return;
 
       setUpdatingFolderTags(true);
@@ -977,23 +833,17 @@ export function useRecipeDetail() {
           variables: {
             recipeId,
             input: {
-              notes: notes || undefined,
-            },
-          },
-        });
+              notes: notes || undefined } } });
         toastService.success('Notes updated');
       } catch {
         // Error handled by mutation onError
       } finally {
         setUpdatingFolderTags(false);
       }
-    },
-    [recipeId, updateFavoriteRecipeMutation],
-  );
+    };
 
   // Update recipe rating
-  const handleUpdateRating = useCallback(
-    async (rating: number | null) => {
+  const handleUpdateRating = async (rating: number | null) => {
       if (!recipeId) return;
 
       setUpdatingFolderTags(true);
@@ -1003,22 +853,17 @@ export function useRecipeDetail() {
           variables: {
             recipeId,
             input: {
-              personalRating: rating,
-            },
-          },
-        });
+              personalRating: rating } } });
         toastService.success(rating ? `Rated ${rating}/5` : 'Rating removed');
       } catch {
         // Error handled by mutation onError
       } finally {
         setUpdatingFolderTags(false);
       }
-    },
-    [recipeId, updateFavoriteRecipeMutation],
-  );
+    };
 
   // Unfavorite (remove from saved) recipe
-  const handleUnfavoriteRecipe = useCallback(async () => {
+  const handleUnfavoriteRecipe = async () => {
     // For backend recipes, use recipeId
     // For external recipes, use preloadedRecipe.id from the preload cache
     const targetRecipeId = recipeId || preloadedRecipe?.id;
@@ -1032,8 +877,7 @@ export function useRecipeDetail() {
 
     try {
       await unfavoriteRecipeMutation({
-        variables: { recipeId: targetRecipeId },
-      });
+        variables: { recipeId: targetRecipeId } });
       setRecipeSaved(false);
       setSavedFolderLocal(null); // Clear local folder tracking
       toastService.success('Recipe removed from saved');
@@ -1042,10 +886,10 @@ export function useRecipeDetail() {
     } finally {
       setUpdatingFolderTags(false);
     }
-  }, [recipeId, preloadedRecipe?.id, unfavoriteRecipeMutation]);
+  };
 
   // Normalize recipe data for display
-  const displayData = useMemo((): RecipeDisplayData | null => {
+  const displayData = (() => {
     if (isBackendRecipe && backendRecipe) {
       return {
         title: backendRecipe.name,
@@ -1056,8 +900,7 @@ export function useRecipeDetail() {
         ingredients: backendRecipe.ingredients || [],
         instructions: backendRecipe.instructions,
         sourceName: backendRecipe.source ?? undefined,
-        sourceUrl: backendRecipe.sourceUrl ?? undefined,
-      };
+        sourceUrl: backendRecipe.sourceUrl ?? undefined };
     } else if (externalRecipe) {
       return {
         title: externalRecipe.title,
@@ -1074,16 +917,15 @@ export function useRecipeDetail() {
         glutenFree: externalRecipe.glutenFree,
         dairyFree: externalRecipe.dairyFree,
         sourceName: externalRecipe.sourceName,
-        sourceUrl: externalRecipe.sourceUrl,
-      };
+        sourceUrl: externalRecipe.sourceUrl };
     }
     return null;
-  }, [isBackendRecipe, backendRecipe, externalRecipe]);
+  })();
 
   // Simple goBack - works for both Pantry stack and Recipe stack
-  const handleGoBack = useCallback(() => {
+  const handleGoBack = () => {
     goBack();
-  }, [goBack]);
+  };
 
   return {
     // Navigation
@@ -1153,6 +995,5 @@ export function useRecipeDetail() {
     cookedCount: backendRecipe?.savedDetails?.cookedCount ?? 0,
 
     // Unfavorite
-    handleUnfavoriteRecipe,
-  };
+    handleUnfavoriteRecipe };
 }

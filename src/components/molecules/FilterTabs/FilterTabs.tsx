@@ -1,4 +1,3 @@
-import React, { useCallback } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -29,20 +28,17 @@ function FilterTabsComponent<T extends string = string>({
   variant = 'default',
   testIDPrefix = 'filter-tab',
   actionButton,
-  filteredTabIds,
-}: FilterTabsProps<T>): React.ReactElement {
+  filteredTabIds }: FilterTabsProps<T>): React.ReactElement {
   const { theme } = useUnistyles();
 
-  const handleTabPress = useCallback(
-    (tab: FilterTabConfig<T>) => {
-      if (tab.onPress) {
+  const handleTabPress = (tabId: T) => {
+      const tab = tabs.find(t => t.id === tabId);
+      if (tab?.onPress) {
         tab.onPress();
       } else {
-        onTabChange(tab.id);
+        onTabChange(tabId);
       }
-    },
-    [onTabChange],
-  );
+    };
 
   const isCompact = variant === 'compact';
 
@@ -65,7 +61,7 @@ function FilterTabsComponent<T extends string = string>({
             count={counts?.[tab.id]}
             showCounts={showCounts}
             isCompact={isCompact}
-            onPress={() => handleTabPress(tab)}
+            onPress={handleTabPress}
             testID={`${testIDPrefix}-${tab.id}`}
           />
         ))}
@@ -107,22 +103,19 @@ function FilterTabsComponent<T extends string = string>({
   );
 }
 
-export const FilterTabs = FilterTabsComponent as typeof FilterTabsComponent;
+export const FilterTabs = FilterTabsComponent;
 
 const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-  },
+    paddingVertical: theme.spacing.sm },
   scrollView: {
-    flexShrink: 1,
-  },
+    flexShrink: 1 },
   scrollContent: {
     gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-  },
+    paddingHorizontal: theme.spacing.md },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -130,19 +123,14 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'] + 2,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
-    gap: theme.spacing.xs + 2,
-  },
+    gap: theme.spacing.xs + 2 },
   tabCompact: {
     paddingHorizontal: theme.spacing.sm + 2,
     paddingVertical: theme.spacing.xs + 2,
     borderRadius: theme.radii.lg,
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   tabLabel: {
     fontSize: theme.typography.fontSize.sm - 1,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   tabLabelCompact: {
-    fontSize: theme.typography.fontSize.xs,
-  },
-}));
+    fontSize: theme.typography.fontSize.xs } }));

@@ -1,5 +1,5 @@
 import { useStoreWithEqualityFn } from 'zustand/traditional';
-import { useStore, RootState } from './index';
+import { storeApi, RootState } from './index';
 
 /**
  * Typed selector hook for Zustand store
@@ -28,7 +28,7 @@ export function useAppStore<T>(
   selector: (state: RootState) => T,
   equalityFn?: (a: T, b: T) => boolean,
 ): T {
-  return useStoreWithEqualityFn(useStore, selector, equalityFn);
+  return useStoreWithEqualityFn(storeApi, selector, equalityFn);
 }
 
 // Common selectors for frequently accessed state
@@ -36,8 +36,12 @@ export const selectUser = (state: RootState) => state.user;
 export const selectAccessToken = (state: RootState) => state.accessToken;
 export const selectRefreshToken = (state: RootState) => state.refreshToken;
 export const selectSelectedHomeId = (state: RootState) => state.selectedHomeId;
-export const selectSelectedPantryId = (state: RootState) => state.selectedPantryId;
-export const selectSelectedShoppingListId = (state: RootState) => state.selectedShoppingListId;
+export const selectSelectedPantryId = (state: RootState) =>
+  state.selectedPantryId;
+export const selectSelectedShoppingListId = (state: RootState) =>
+  state.selectedShoppingListId;
+export const selectSelectedMealPlanId = (state: RootState) =>
+  state.selectedMealPlanId;
 export const selectIsLoggedOut = (state: RootState) => !state.accessToken;
 export const selectIsLoggingOut = (state: RootState) => state.isLoggingOut;
 export const selectHydrated = (state: RootState) => state.isHydrated;
@@ -117,13 +121,20 @@ export const selectPantryState = (state: RootState) => ({
 });
 
 // Atomic home+pantry action selector - prevents race conditions during home switch
-export const selectSetHomeAndPantry = (state: RootState) => state.setHomeAndPantry;
+export const selectSetHomeAndPantry = (state: RootState) =>
+  state.setHomeAndPantry;
 
 // PERFORMANCE: Shopping list state selector - reduces multiple subscriptions to 1
 // Note: selectedHomeId removed - shopping lists are independent of homes
 export const selectShoppingListState = (state: RootState) => ({
   selectedShoppingListId: state.selectedShoppingListId,
   setSelectedShoppingListId: state.setSelectedShoppingListId,
+});
+
+// PERFORMANCE: Meal plan state selector - reduces multiple subscriptions to 1
+export const selectMealPlanState = (state: RootState) => ({
+  selectedMealPlanId: state.selectedMealPlanId,
+  setSelectedMealPlanId: state.setSelectedMealPlanId,
 });
 
 // PERFORMANCE: Home state selector - reduces multiple subscriptions to 1
@@ -133,16 +144,22 @@ export const selectHomeState = (state: RootState) => ({
 });
 
 // Home initialization flag selector (for useDefaultHome)
-export const selectHasInitializedHomeData = (state: RootState) => state.hasInitializedHomeData;
-export const selectSetHasInitializedHomeData = (state: RootState) => state.setHasInitializedHomeData;
+export const selectHasInitializedHomeData = (state: RootState) =>
+  state.hasInitializedHomeData;
+export const selectSetHasInitializedHomeData = (state: RootState) =>
+  state.setHasInitializedHomeData;
 
 // Home selection ready flag selectors - gates pantry queries until home selection is complete
-export const selectIsHomeSelectionReady = (state: RootState) => state.isHomeSelectionReady;
-export const selectSetIsHomeSelectionReady = (state: RootState) => state.setIsHomeSelectionReady;
+export const selectIsHomeSelectionReady = (state: RootState) =>
+  state.isHomeSelectionReady;
+export const selectSetIsHomeSelectionReady = (state: RootState) =>
+  state.setIsHomeSelectionReady;
 
 // Pantry query complete flag selectors - gates GetCommonUnits until GetPantry first settles
-export const selectIsPantryQueryComplete = (state: RootState) => state.isPantryQueryComplete;
-export const selectSetIsPantryQueryComplete = (state: RootState) => state.setIsPantryQueryComplete;
+export const selectIsPantryQueryComplete = (state: RootState) =>
+  state.isPantryQueryComplete;
+export const selectSetIsPantryQueryComplete = (state: RootState) =>
+  state.setIsPantryQueryComplete;
 
 // PERFORMANCE: Theme/preferences selector - reduces multiple subscriptions to 1
 export const selectPreferences = (state: RootState) => ({

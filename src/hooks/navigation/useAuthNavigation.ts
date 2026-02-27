@@ -1,5 +1,4 @@
 import {useNavigation, CommonActions} from '@react-navigation/native';
-import {useCallback} from 'react';
 import {useAppStore} from '#store/useAppStore';
 import {useStore} from '#store';
 
@@ -11,8 +10,7 @@ export function useAuthNavigation() {
     state => state.setUserNavigationState,
   );
 
-  const handleSuccessfulLogin = useCallback(
-    (authData: any, rememberMe?: boolean) => {
+  const handleSuccessfulLogin = (authData: any, rememberMe?: boolean) => {
       const {user, accessToken, refreshToken} = authData;
       // Save preferences
       if (rememberMe !== undefined) {
@@ -22,17 +20,13 @@ export function useAuthNavigation() {
       if (user?.id) {
         setUserNavigationState(user.id, {
           lastLoginTimestamp: Date.now(),
-          rememberMeChoice: rememberMe,
-        });
+          rememberMeChoice: rememberMe });
       }
       // Update auth state - navigation happens automatically
       setAuth(user, accessToken, refreshToken);
-    },
-    [setAuth, setRememberMe, setUserNavigationState],
-  );
+    };
 
-  const handleSuccessfulRegistration = useCallback(
-    (authData: any, rememberMe?: boolean) => {
+  const handleSuccessfulRegistration = (authData: any, rememberMe?: boolean) => {
       const {user, accessToken, refreshToken} = authData;
       // Save preferences
       if (rememberMe !== undefined) {
@@ -43,40 +37,37 @@ export function useAuthNavigation() {
         setUserNavigationState(user.id, {
           lastLoginTimestamp: Date.now(),
           rememberMeChoice: rememberMe,
-          isNewUser: true,
-        });
+          isNewUser: true });
       }
       // Update auth state - navigation happens automatically
       setAuth(user, accessToken, refreshToken);
-    },
-    [setAuth, setRememberMe, setUserNavigationState],
-  );
+    };
 
-  const handleLogout = useCallback(async () => {
+  const handleLogout = async () => {
     // Use the store's logout method which handles everything
     const logout = useStore.getState().logout;
     await logout();
     // Navigation to auth screen happens automatically
-  }, []);
+  };
 
   // These are for navigating within the auth stack only
-  const navigateToVerification = useCallback(() => {
+  const navigateToVerification = () => {
     // This is actually handled by conditional navigation now
     // When user.emailVerified is false, it automatically shows verification
     console.log('Verification navigation handled by conditional groups');
-  }, []);
+  };
 
-  const navigateToForgotPassword = useCallback(() => {
+  const navigateToForgotPassword = () => {
     navigation.dispatch(CommonActions.navigate('ForgotPassword'));
-  }, [navigation]);
+  };
 
-  const navigateToLogin = useCallback(() => {
+  const navigateToLogin = () => {
     navigation.dispatch(CommonActions.navigate('Login'));
-  }, [navigation]);
+  };
 
-  const navigateToSignUp = useCallback(() => {
+  const navigateToSignUp = () => {
     navigation.dispatch(CommonActions.navigate('SignUp'));
-  }, [navigation]);
+  };
 
   return {
     handleSuccessfulLogin,
@@ -85,6 +76,5 @@ export function useAuthNavigation() {
     navigateToVerification,
     navigateToForgotPassword,
     navigateToLogin,
-    navigateToSignUp,
-  };
+    navigateToSignUp };
 }

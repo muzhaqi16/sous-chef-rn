@@ -14,7 +14,7 @@ const getContainerWidth = (buttonCount: number): number => {
   return 180; // 3 buttons
 };
 
-export const LeftActions: React.FC<SwipeActionsProps> = ({
+const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
     onTogglePurchase,
     onConsume,
     onWaste,
@@ -224,3 +224,5 @@ export const LeftActions: React.FC<SwipeActionsProps> = ({
       </Animated.View>
     );
   };
+
+export const LeftActions = LeftActionsComponent;

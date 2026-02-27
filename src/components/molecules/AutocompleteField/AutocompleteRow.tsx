@@ -32,6 +32,7 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
         <CachedImage
           uri={image}
           style={styles.image}
+          displaySize={44}
         />
       ) : (
         <View style={styles.imagePlaceholder} />

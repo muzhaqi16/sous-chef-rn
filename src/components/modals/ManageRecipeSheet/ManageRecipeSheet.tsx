@@ -1,14 +1,12 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   Pressable,
-  ActivityIndicator,
-} from 'react-native';
+  ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetTextInput,
-} from '@gorhom/bottom-sheet';
+  BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { StyleSheet } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
@@ -48,13 +46,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   onUpdateRating,
   onRemove,
   updating = false,
-  recipeName,
-}) => {
+  recipeName }) => {
   const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
-    snapPoints: ['85%', '95%'],
-  });
+    snapPoints: ['85%', '95%'] });
 
   // Local state for editing
   const [selectedFolder, setSelectedFolder] = useState<string | null>(
@@ -67,8 +63,24 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   const [newFolderName, setNewFolderName] = useState('');
   const [localFolders, setLocalFolders] = useState<string[]>([]);
 
-  // Sync local state when props change
-  useEffect(() => {
+  // Sync local state when props change (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevCurrentFolder, setPrevCurrentFolder] = useState(currentFolder);
+  const [prevCurrentTags, setPrevCurrentTags] = useState(currentTags);
+  const [prevCurrentNotes, setPrevCurrentNotes] = useState(currentNotes);
+  const [prevCurrentRating, setPrevCurrentRating] = useState(currentRating);
+  if (
+    visible !== prevVisible ||
+    currentFolder !== prevCurrentFolder ||
+    currentTags !== prevCurrentTags ||
+    currentNotes !== prevCurrentNotes ||
+    currentRating !== prevCurrentRating
+  ) {
+    setPrevVisible(visible);
+    setPrevCurrentFolder(currentFolder);
+    setPrevCurrentTags(currentTags);
+    setPrevCurrentNotes(currentNotes);
+    setPrevCurrentRating(currentRating);
     if (visible) {
       setSelectedFolder(currentFolder ?? null);
       setTags(currentTags);
@@ -78,19 +90,16 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       setNewFolderName('');
       setLocalFolders([]);
     }
-  }, [visible, currentFolder, currentTags, currentNotes, currentRating]);
+  }
 
-  const handleSelectFolder = useCallback(
-    async (folder: string | null) => {
+  const handleSelectFolder = async (folder: string | null) => {
       setSelectedFolder(folder);
       setShowNewFolder(false);
       setNewFolderName('');
       await onUpdateFolder(folder);
-    },
-    [onUpdateFolder],
-  );
+    };
 
-  const handleCreateFolder = useCallback(async () => {
+  const handleCreateFolder = async () => {
     const trimmedName = newFolderName.trim();
     if (trimmedName) {
       // Add to local folders list so it appears in the UI
@@ -102,36 +111,30 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       setNewFolderName('');
       await onUpdateFolder(trimmedName);
     }
-  }, [newFolderName, onUpdateFolder]);
+  };
 
-  const handleTagsChange = useCallback(
-    async (newTags: string[]) => {
+  const handleTagsChange = async (newTags: string[]) => {
       setTags(newTags);
       await onUpdateTags(newTags);
-    },
-    [onUpdateTags],
-  );
+    };
 
-  const handleNotesBlur = useCallback(async () => {
+  const handleNotesBlur = async () => {
     if (notes !== (currentNotes ?? '')) {
       await onUpdateNotes(notes);
     }
-  }, [notes, currentNotes, onUpdateNotes]);
+  };
 
-  const handleRatingPress = useCallback(
-    async (star: number) => {
+  const handleRatingPress = async (star: number) => {
       // Toggle off if pressing same rating, otherwise set new rating
       const newRating = rating === star ? null : star;
       setRating(newRating);
       await onUpdateRating(newRating);
-    },
-    [rating, onUpdateRating],
-  );
+    };
 
-  const handleRemove = useCallback(async () => {
+  const handleRemove = async () => {
     await onRemove();
     onClose();
-  }, [onRemove, onClose]);
+  };
 
   // Dedupe folders with "Favorites" first, then existing folders, then locally created
   const allFolders = [...new Set([...folders, ...localFolders])];
@@ -343,36 +346,29 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
-    padding: theme.spacing.lg,
-  },
+    padding: theme.spacing.lg },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   headerLeft: {
     flex: 1,
-    marginRight: theme.spacing.md,
-  },
+    marginRight: theme.spacing.md },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   title: {
     fontSize: theme.fonts.size.xl,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   recipeName: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
+    marginTop: theme.spacing.xs },
   updatingBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -382,30 +378,25 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   updatingText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   sectionLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-  },
+    marginTop: theme.spacing.lg },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   ratingText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginLeft: theme.spacing.sm,
-  },
+    marginLeft: theme.spacing.sm },
   folderList: {},
   folderOption: {
     flexDirection: 'row',
@@ -414,39 +405,32 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   folderOptionSelected: {
-    backgroundColor: theme.colors.primaryLight,
-  },
+    backgroundColor: theme.colors.primaryLight },
   folderOptionText: {
     flex: 1,
     fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   folderOptionTextSelected: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   newFolderButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-  },
+    marginTop: theme.spacing.lg },
   newFolderButtonText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   newFolderContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-  },
+    marginTop: theme.spacing.lg },
   newFolderInput: {
     flex: 1,
     borderWidth: 1,
@@ -456,25 +440,20 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface,
-  },
+    backgroundColor: theme.colors.surface },
   createButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-  },
+    borderRadius: theme.radii.md },
   createButtonDisabled: {
-    backgroundColor: theme.colors.border,
-  },
+    backgroundColor: theme.colors.border },
   createButtonText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.white,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   createButtonTextDisabled: {
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   notesInput: {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -484,9 +463,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
-    minHeight: 80,
-  },
+    minHeight: 80 },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

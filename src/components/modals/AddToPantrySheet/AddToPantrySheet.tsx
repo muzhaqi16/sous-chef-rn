@@ -1,10 +1,9 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   usePantryItemSuggestions,
-  type PantryItemSuggestion,
-} from '#hooks/pantry/usePantryItemSuggestions';
+  type PantryItemSuggestion } from '#hooks/pantry/usePantryItemSuggestions';
 import { toastService } from '#/services/toastService';
 import {
   useCreatePantryItemMutation,
@@ -12,14 +11,12 @@ import {
   useGetPantryQuery,
   GetPantryItemSuggestionsDocument,
   type GetPantryItemSuggestionsQuery,
-  ItemSuggestion,
-} from '#generated';
+  ItemSuggestion } from '#generated';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import {
   isPantryItemDuplicateError,
-  getPantryItemDuplicateInfo,
-} from '#/utils/errors/pantryItemDuplicate';
+  getPantryItemDuplicateInfo } from '#/utils/errors/pantryItemDuplicate';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type { BaseSuggestionItem, SuggestionsHookResult } from '../AddItemSheet/types';
@@ -37,8 +34,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   visible,
   pantryId,
   onClose,
-  onItemAdded,
-}) => {
+  onItemAdded }) => {
   const { navigateTo } = useAppNavigation();
   const client = useApolloClient();
 
@@ -50,43 +46,55 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const state = useAddItemSheetState({
     visible,
     contextId: pantryId,
-    deferFetch: pantrySheetConfig.deferFetch,
-  });
+    deferFetch: pantrySheetConfig.deferFetch });
 
   // Fetch pantry item suggestions
   const suggestionsResult = usePantryItemSuggestions({
     pantryId,
     limit: 15,
-    skip: !visible || !state.shouldFetch,
-  });
+    skip: !visible || !state.shouldFetch });
 
   // Adapt suggestions to the expected interface
-  const suggestions: SuggestionsHookResult = useMemo(() => ({
-    grouped: suggestionsResult.grouped as unknown as Record<string, BaseSuggestionItem[]>,
+  const suggestions: SuggestionsHookResult = ({
+    grouped: suggestionsResult.grouped,
     loading: suggestionsResult.loading,
     hasSuggestions: suggestionsResult.hasSuggestions,
-    refetch: suggestionsResult.refetch,
-  }), [suggestionsResult]);
+    refetch: suggestionsResult.refetch });
+
+  // Auto-refetch when suggestions are nearly depleted
+  const REFETCH_THRESHOLD = 3;
+  const hasAddedItemRef = useRef(false);
+
+  const totalFilteredCount = Object.values(suggestions.grouped).reduce((sum, items) => sum + items.length, 0);
+
+  const isRefetchingRef = useRef(false);
+
+  useEffect(() => {
+    if (totalFilteredCount <= REFETCH_THRESHOLD && hasAddedItemRef.current && !isRefetchingRef.current) {
+      isRefetchingRef.current = true;
+      suggestionsResult.refetch().then(() => {
+        isRefetchingRef.current = false;
+        hasAddedItemRef.current = false;
+      });
+    }
+  });
 
   // Fetch pantry to get storage locations
   const { data: pantryData } = useGetPantryQuery({
     variables: { id: pantryId ?? '' },
     skip: !pantryId || !visible,
-    fetchPolicy: 'cache-first',
-  });
+    fetchPolicy: 'cache-first' });
 
   const normalizedPantry = pantryData?.pantry
     ? normalizePantry(pantryData.pantry)
     : null;
   const storageLocations = normalizedPantry?.storageLocations || [];
 
-  const removeFromSuggestionsCache = useCallback(
-    (itemId: string) => {
+  const removeFromSuggestionsCache = (itemId: string) => {
       client.cache.updateQuery<GetPantryItemSuggestionsQuery>(
         {
           query: GetPantryItemSuggestionsDocument,
-          variables: { pantryId: pantryId!, limit: 15 },
-        },
+          variables: { pantryId: pantryId!, limit: 15 } },
         data => {
           if (!data?.pantry) return data;
           return {
@@ -95,14 +103,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
               ...data.pantry,
               suggestions: data.pantry.suggestions.filter(
                 s => s.itemId !== itemId,
-              ),
-            },
-          };
+              ) } };
         },
       );
-    },
-    [client.cache, pantryId],
-  );
+    };
 
   // Create pantry item mutation
   const [createPantryItem, { loading: creating }] = useCreatePantryItemMutation({
@@ -121,44 +125,38 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       } catch (error) {
         console.warn('Cache update failed for createPantryItem:', error);
       }
-    },
-  });
+    } });
 
   // Restock pantry item mutation
   const [restockPantryItem] = useRestockPantryItemMutation({
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
 
   // Track items currently being added to prevent duplicate rapid-fire mutations
   const pendingItemIds = useRef(new Set<string>());
 
   // Handle scan barcode press
-  const handleScanPress = useCallback(() => {
+  const handleScanPress = () => {
     onClose();
     navigateTo.barcode({
       source: 'pantry',
-      pantryId,
-    });
-  }, [onClose, navigateTo, pantryId]);
+      pantryId });
+  };
 
   // Handle add manually press
-  const handleAddManually = useCallback((searchValue: string) => {
+  const handleAddManually = (searchValue: string) => {
     setPrefilledItemName(searchValue);
     setShowAddDetails(true);
-  }, []);
+  };
 
   // Handle quick add from autocomplete suggestion (fire-and-forget)
   // On duplicate: auto-restock by 1 silently
-  const handleQuickAddSearchSuggestion = useCallback(
-    (item: ItemSuggestion) => {
+  const handleQuickAddSearchSuggestion = (item: ItemSuggestion) => {
       if (!pantryId || creating || pendingItemIds.current.has(item.id)) return;
 
       const variables = {
         input: {
           pantryId,
-          itemId: item.id,
-        },
-      };
+          itemId: item.id } };
 
       // Mark as pending to prevent duplicate rapid-fire adds
       pendingItemIds.current.add(item.id);
@@ -178,9 +176,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             restockPantryItem({
               variables: {
                 id: duplicateInfo.existingPantryItemId,
-                input: { quantity: 1 },
-              },
-            }).then(() => onItemAdded?.())
+                input: { quantity: 1 } } }).then(() => onItemAdded?.())
               .catch(() => toastService.error('Failed to restock item.'))
               .finally(() => pendingItemIds.current.delete(item.id));
             return;
@@ -194,14 +190,11 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         pendingItemIds.current.delete(item.id);
         toastService.error('Failed to add item. Please try again.');
       });
-    },
-    [pantryId, creating, createPantryItem, restockPantryItem, removeFromSuggestionsCache, onItemAdded],
-  );
+    };
 
   // Handle quick add from pantry item suggestion (fire-and-forget)
   // On duplicate: auto-restock by 1 silently
-  const handleQuickAddSuggestion = useCallback(
-    (item: BaseSuggestionItem) => {
+  const handleQuickAddSuggestion = (item: BaseSuggestionItem) => {
       // Cast to PantryItemSuggestion for full type info
       const pantryItem = item as unknown as PantryItemSuggestion;
       if (!pantryId || creating || state.exitingItems.has(pantryItem.itemId)) return;
@@ -213,12 +206,11 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       const variables = {
         input: {
           pantryId,
-          itemId: pantryItem.itemId,
-        },
-      };
+          itemId: pantryItem.itemId } };
 
-      // 1. Start exit animation immediately
+      // 1. Start exit animation and mark as having added an item
       state.startExitAnimation(pantryItem.itemId);
+      hasAddedItemRef.current = true;
 
       // 2. Show toast immediately
       toastService.success(pantrySheetConfig.quickAdd.toastMessage(pantryItem.name));
@@ -232,9 +224,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             restockPantryItem({
               variables: {
                 id: duplicateInfo.existingPantryItemId,
-                input: { quantity: 1 },
-              },
-            }).then(() => onItemAdded?.())
+                input: { quantity: 1 } } }).then(() => onItemAdded?.())
               .catch(() => toastService.error('Failed to restock item.'))
               .finally(() => pendingItemIds.current.delete(pantryItem.itemId));
             return;
@@ -250,33 +240,28 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         state.completeExitAnimation(pantryItem.itemId);
         toastService.error('Failed to add item');
       });
-    },
-    [pantryId, creating, state, createPantryItem, restockPantryItem, onItemAdded],
-  );
+    };
 
   // Handle exit animation complete
-  const handleExitComplete = useCallback(
-    (itemId: string) => {
+  const handleExitComplete = (itemId: string) => {
       removeFromSuggestionsCache(itemId);
       state.completeExitAnimation(itemId);
-    },
-    [removeFromSuggestionsCache, state],
-  );
+    };
 
   // Handle successful add from details sheet
-  const handleAddSuccess = useCallback(() => {
+  const handleAddSuccess = () => {
     setShowAddDetails(false);
     suggestionsResult.refetch();
     toastService.success('Item added to pantry');
     onItemAdded?.();
     onClose();
-  }, [suggestionsResult, onItemAdded, onClose]);
+  };
 
   // Handle close details sheet
-  const handleCloseDetails = useCallback(() => {
+  const handleCloseDetails = () => {
     setShowAddDetails(false);
     setPrefilledItemName('');
-  }, []);
+  };
 
   return (
     <AddItemSheet

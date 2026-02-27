@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Pressable, Animated as RNAnimated } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -36,12 +36,11 @@ export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
     const { theme } = useUnistyles();
     const colors = {
       primary: primaryColor ?? theme.colors.primary,
-      border: borderColor ?? theme.colors.border,
-    };
+      border: borderColor ?? theme.colors.border };
 
     // PERFORMANCE: Use RN Animated for lightweight micro-animation
     // Reanimated would add overhead for this simple bounce effect
-    const scaleAnim = useRef(new RNAnimated.Value(1)).current;
+    const [scaleAnim] = useState(() => new RNAnimated.Value(1));
     const prevCheckedRef = useRef(checked);
 
     // Trigger micro-animation when checked state changes
@@ -53,24 +52,22 @@ export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
           RNAnimated.timing(scaleAnim, {
             toValue: 0.85,
             duration: 40,
-            useNativeDriver: true,
-          }),
+            useNativeDriver: true }),
           RNAnimated.spring(scaleAnim, {
             toValue: 1,
             friction: 5,
             tension: 400,
-            useNativeDriver: true,
-          }),
+            useNativeDriver: true }),
         ]).start();
       }
     }, [checked, scaleAnim]);
 
-    const handlePress = useCallback(() => {
+    const handlePress = () => {
       if (disabled) return;
 
       HapticService.light();
       onPress?.();
-    }, [disabled, onPress]);
+    };
 
     return (
       <Pressable
@@ -87,8 +84,7 @@ export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
               borderRadius: 6,
               backgroundColor: checked ? colors.primary : 'transparent',
               borderColor: checked ? colors.primary : colors.border,
-              transform: [{ scale: scaleAnim }],
-            },
+              transform: [{ scale: scaleAnim }] },
           ]}
         >
           {!!checked && <Icon name="checkmark" size={size * 0.66} color="white" />}
@@ -103,6 +99,4 @@ const styles = StyleSheet.create(() => ({
   container: {
     borderWidth: 2,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-}));
+    alignItems: 'center' } }));

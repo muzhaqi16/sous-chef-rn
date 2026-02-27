@@ -35,7 +35,6 @@ interface StorageDetailsSectionProps {
   expirationDate?: Date;
   onStorageStateChange: (state: StorageState) => void;
   onDateChange: (date: Date | null) => void;
-  onCategorySelected?: (categoryId: string | null) => void;
   storageLocations?: StorageLocation[];
   onStorageLocationSelected?: (locationId: string | null, location: StorageLocation | null) => void;
   onAddNewLocation?: (name: string) => void;
@@ -49,13 +48,11 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   expirationDate,
   onStorageStateChange,
   onDateChange,
-  onCategorySelected,
   storageLocations = [],
   onStorageLocationSelected,
   onAddNewLocation,
 }) => {
-  // Fields that use DynamicFormFields (react-hook-form integrated)
-  const getFields = (): FieldDef<any>[] => [
+  const locationFields: FieldDef<any>[] = [
     {
       name: 'location',
       label: 'Location',
@@ -65,13 +62,9 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
       onStorageLocationSelected,
       onAddNewLocation,
     },
-    {
-      name: 'category',
-      label: 'Category',
-      placeholder: 'e.g., Grains, Dairy',
-      component: 'categoryAutocomplete',
-      onCategorySelected,
-    },
+  ];
+
+  const notesFields: FieldDef<any>[] = [
     {
       name: 'notes',
       label: mode === 'edit' ? 'Storage Notes' : 'Notes',
@@ -87,10 +80,17 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
 
       {/* Storage State - using reusable SegmentedControl molecule */}
       <SegmentedControl
-        label="Storage Type"
+        label="Storage State"
         options={STORAGE_STATES}
         value={storageState}
         onChange={onStorageStateChange}
+      />
+
+      {/* Location */}
+      <DynamicFormFields
+        fields={locationFields}
+        control={control}
+        errors={errors}
       />
 
       {/* Expiration Date - using reusable DatePickerField molecule */}
@@ -101,9 +101,9 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
         placeholder="Select date"
       />
 
-      {/* Remaining fields using DynamicFormFields */}
+      {/* Notes */}
       <DynamicFormFields
-        fields={getFields()}
+        fields={notesFields}
         control={control}
         errors={errors}
       />

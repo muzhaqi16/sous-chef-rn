@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   Pressable,
   Switch,
   Alert,
-  TextInput,
-} from 'react-native';
+  TextInput } from 'react-native';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { commonStyles } from '#/styles/commonStyles';
+import { ScreenHeader } from '#components/molecules/ScreenHeader';
+import { InfoRow } from '#components/molecules/InfoRow';
 import { useShoppingListDetails } from '#hooks/shoppingList/useShoppingListDetails';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useLazyHomeData } from '#/hooks/home/useLazyHomeData';
@@ -19,11 +21,10 @@ import {
   useUpdateShoppingListMutation,
   useDeleteShoppingListMutation,
   useCreateShoppingListMutation,
-} from '#generated';
+  useRemoveCollaboratorMutation } from '#generated';
 import {
   createRemoveFromQueryConnectionUpdater,
-  createAddToQueryConnectionUpdater,
-} from '#/apollo/utils/cacheUpdaters';
+  createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useAppStore } from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
 import { useAuth } from '#/hooks/auth/useAuth';
@@ -33,8 +34,7 @@ import {
   isShoppingListOwner,
   getShoppingListRole,
   formatRoleDisplay,
-  getShoppingListOwnerInfo,
-} from '#utils/ownershipHelpers';
+  getShoppingListOwnerInfo } from '#utils/ownershipHelpers';
 
 import type { StaticScreenProps } from '@react-navigation/native';
 
@@ -52,6 +52,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
   const [showHomePicker, setShowHomePicker] = useState(false);
 
@@ -69,20 +70,26 @@ export const ListSettings: React.FC<StaticScreenProps<{
   const isOwner =
     listId && shoppingList ? isShoppingListOwner(shoppingList, user?.id) : true; // For new lists, user is always the owner
   const role = shoppingList
-    ? getShoppingListRole(shoppingList, user?.id)
+    ? getShoppingListRole(shoppingList, user?.id, shoppingList.home?.myMembership)
     : null;
   const roleDisplay = formatRoleDisplay(role);
   const ownerInfo = shoppingList
     ? getShoppingListOwnerInfo(shoppingList)
     : null;
 
+  // Find current user's collaborator entry for leave functionality
+  const currentUserCollaborator = collaborators.find(
+    c => c.email === user?.email || c.collaboratorId === user?.id,
+  );
+  const isHomeLinked = !!shoppingList?.homeId;
+
+  const [removeMember] = useRemoveCollaboratorMutation();
   const [updateList] = useUpdateShoppingListMutation();
   const [deleteList] = useDeleteShoppingListMutation({
     errorPolicy: 'all',
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
-        operation: 'Delete Shopping List',
-      });
+        operation: 'Delete Shopping List' });
       toastService.error(message);
     },
     update: (cache, { data }, { variables }) => {
@@ -97,8 +104,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
       } catch (error) {
         console.warn('Cache update failed for deleteList:', error);
       }
-    },
-  });
+    } });
   const addToShoppingListsCache = createAddToQueryConnectionUpdater(
     'shoppingLists',
     'ShoppingList',
@@ -121,8 +127,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
     },
     onError: () => {
       toastService.error('Failed to create list');
-    },
-  });
+    } });
 
   useEffect(() => {
     if (shoppingList && listId) {
@@ -152,22 +157,17 @@ export const ListSettings: React.FC<StaticScreenProps<{
               description: 'Created from list settings',
               isDefault,
               tags: ['user-created'],
-              homeId: selectedHomeId || undefined,
-            },
-          },
-        });
+              homeId: selectedHomeId || undefined } } });
       } else {
         // Update existing list
         await updateList({
           variables: {
             id: listId!,
-            input: { name: name.trim(), isDefault },
-          },
-        });
+            input: { name: name.trim(), isDefault } } });
       }
     } catch {
       toastService.error(
-        listId ? 'Failed to create list' : 'Failed to save settings',
+        listId ? 'Failed to save settings' : 'Failed to create list',
       );
     } finally {
       setSaving(false);
@@ -205,92 +205,128 @@ export const ListSettings: React.FC<StaticScreenProps<{
               // Deletion failed — list wasn't actually deleted, so unregister immediately
               subscriptionService.unregisterParentDeletion(listId);
             }
-          },
-        },
+          } },
       ],
     );
   };
 
   // Lazy-load homes when opening the picker
-  const handleOpenHomePicker = useCallback(() => {
+  const handleOpenHomePicker = () => {
     if (!homesLoaded) {
       fetchHomeData();
     }
     setShowHomePicker(true);
-  }, [homesLoaded, fetchHomeData]);
+  };
+
+  const handleLeaveList = () => {
+    Alert.alert(
+      'Leave Shopping List',
+      `Are you sure you want to leave "${name || 'this list'}"? You will lose access to all shared items.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            if (!currentUserCollaborator?.id) {
+              toastService.error('Could not determine your membership');
+              return;
+            }
+
+            setLeaving(true);
+            try {
+              await removeMember({
+                variables: { id: currentUserCollaborator.id } });
+              setSelectedShoppingListId(null);
+              goBack();
+            } catch {
+              toastService.error('Failed to leave list');
+            } finally {
+              setLeaving(false);
+            }
+          } },
+      ],
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => goBack()} style={({pressed}) => pressed && styles.pressed}>
-          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </Pressable>
-        <Text style={styles.title}>
-          {!listId
-            ? 'Create New List'
-            : isOwner
-            ? 'List Settings'
-            : 'List Info'}
-        </Text>
-        {!!isOwner && (
-          <Pressable onPress={handleSave} disabled={saving} style={({pressed}) => pressed && styles.pressed}>
-            <Text style={styles.saveButton}>
-              {saving ? 'Saving...' : !listId ? 'Create' : 'Save'}
-            </Text>
-          </Pressable>
-        )}
-        {!isOwner && <View style={{ width: 60 }} />}
-      </View>
+      <ScreenHeader
+        title={!listId ? 'Create New List' : isOwner ? 'List Settings' : 'List Info'}
+        onBack={goBack}
+        rightElement={
+          isOwner ? (
+            <Pressable onPress={handleSave} disabled={saving} style={({pressed}) => pressed && styles.pressed}>
+              <Text style={styles.saveButton}>
+                {saving ? 'Saving...' : !listId ? 'Create' : 'Save'}
+              </Text>
+            </Pressable>
+          ) : undefined
+        }
+      />
 
       <ScrollView style={styles.content}>
         {!isOwner && listId ? (
-          // Read-only view for collaborators
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>List Information</Text>
+          <>
+          {/* Read-only view for collaborators */}
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>List Information</Text>
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>List Name</Text>
-              <Text style={styles.infoValue}>{name}</Text>
-            </View>
+            <InfoRow label="List Name" value={name} />
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Your Role</Text>
-              <View style={styles.roleBadgeContainer}>
-                <View style={styles.collaboratorBadge}>
-                  <Text style={styles.collaboratorBadgeText}>
-                    {roleDisplay}
-                  </Text>
-                </View>
-              </View>
-            </View>
+            <InfoRow label="Your Role" value={roleDisplay} />
 
             {!!ownerInfo && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Owner</Text>
-                <Text style={styles.infoValue}>
-                  {ownerInfo.displayName || ownerInfo.email || 'Unknown'}
-                </Text>
-              </View>
+              <InfoRow label="Owner" value={ownerInfo.displayName || ownerInfo.email || 'Unknown'} />
             )}
 
             {!!isShared && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Shared With</Text>
-                <Text style={styles.infoValue}>
-                  {collaborators.length} members
-                </Text>
-              </View>
+              <InfoRow label="Shared With" value={`${collaborators.length} members`} />
             )}
           </View>
+
+          {/* Leave List section for non-owner collaborators */}
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>Leave List</Text>
+
+            {isHomeLinked ? (
+              <>
+                <View style={[styles.deleteButton, styles.disabledButton]}>
+                  <Icon name="log-out-outline" size={20} color={theme.colors.textSecondary} />
+                  <Text style={styles.disabledButtonText}>Leave List</Text>
+                </View>
+                <Text style={styles.leaveDescription}>
+                  This list is linked to the home "{shoppingList?.home?.name}". To leave this list, you must leave the home first.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Pressable
+                  style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
+                  onPress={handleLeaveList}
+                  disabled={leaving}
+                >
+                  <Icon name="log-out-outline" size={20} color={theme.colors.error} />
+                  <Text style={styles.deleteButtonText}>
+                    {leaving ? 'Leaving...' : 'Leave List'}
+                  </Text>
+                </Pressable>
+                <Text style={styles.leaveDescription}>
+                  Leaving this list will remove your access to all shared items.
+                </Text>
+              </>
+            )}
+          </View>
+          </>
         ) : (
           // Editable view for owners
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>General</Text>
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>General</Text>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>List Name</Text>
+            <View style={commonStyles.settingsInputGroup}>
+              <Text style={commonStyles.settingsLabel}>List Name</Text>
               <TextInput
-                style={styles.input}
+                style={commonStyles.settingsInput}
                 value={name}
                 onChangeText={setName}
                 placeholder="Enter list name"
@@ -300,8 +336,8 @@ export const ListSettings: React.FC<StaticScreenProps<{
 
             {/* Home selector - only show for new lists */}
             {!listId && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Link to Home (Optional)</Text>
+              <View style={commonStyles.settingsInputGroup}>
+                <Text style={commonStyles.settingsLabel}>Link to Home (Optional)</Text>
                 <Pressable
                   style={({pressed}) => [styles.pickerButton, pressed && styles.pressed]}
                   onPress={handleOpenHomePicker}
@@ -319,10 +355,10 @@ export const ListSettings: React.FC<StaticScreenProps<{
               </View>
             )}
 
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Default List</Text>
-                <Text style={styles.settingDescription}>
+            <View style={commonStyles.settingsRow}>
+              <View style={commonStyles.settingsRowInfo}>
+                <Text style={commonStyles.settingsRowLabel}>Default List</Text>
+                <Text style={commonStyles.settingsRowDescription}>
                   Make this your default shopping list
                 </Text>
               </View>
@@ -337,8 +373,8 @@ export const ListSettings: React.FC<StaticScreenProps<{
 
         {/* Only show sharing section if editing existing list and user is owner */}
         {!!listId && !!isOwner && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sharing</Text>
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>Sharing</Text>
 
             <Pressable
               style={({pressed}) => [styles.actionRow, pressed && styles.pressed]}
@@ -363,8 +399,8 @@ export const ListSettings: React.FC<StaticScreenProps<{
 
         {/* Only show danger zone if editing existing list and user is owner */}
         {!!listId && !!isOwner && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Danger Zone</Text>
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>Danger Zone</Text>
 
             <Pressable
               style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
@@ -385,8 +421,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
           { label: 'Personal (No Home)', value: '' },
           ...(homes?.map(home => ({
             label: home.name,
-            value: home.id,
-          })) || []),
+            value: home.id })) || []),
         ]}
         selected={selectedHomeId || ''}
         onSelect={value => {
@@ -402,95 +437,26 @@ export const ListSettings: React.FC<StaticScreenProps<{
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    backgroundColor: theme.colors.background },
   saveButton: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   content: {
-    flex: 1,
-  },
-  section: {
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  sectionTitle: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-  },
-  inputGroup: {
-    marginBottom: theme.spacing.md,
-  },
-  label: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.sm,
-    paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing.sm + 2,
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing['3'],
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: theme.spacing['3'],
-  },
-  settingLabel: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  settingDescription: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
+    flex: 1 },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing['3'],
-  },
+    paddingVertical: theme.spacing['3'] },
   actionText: {
     flex: 1,
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.primary,
-    marginLeft: theme.spacing['3'],
-  },
+    marginLeft: theme.spacing['3'] },
   sharedInfo: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -498,47 +464,12 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     borderWidth: 1,
     borderColor: theme.colors.error,
-    borderRadius: theme.radii.sm,
-  },
+    borderRadius: theme.radii.sm },
   deleteButtonText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.error,
-    marginLeft: theme.spacing.sm,
-  },
-  // Read-only view styles for collaborators
-  infoRow: {
-    paddingVertical: theme.spacing['3'],
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  infoLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs + 2,
-  },
-  infoValue: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  roleBadgeContainer: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.xs,
-  },
-  collaboratorBadge: {
-    paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing.xs + 2,
-    borderRadius: theme.radii.xs + 2,
-    backgroundColor: theme.colors.border,
-  },
-  collaboratorBadgeText: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
-    textTransform: 'uppercase',
-  },
+    marginLeft: theme.spacing.sm },
   pickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -548,13 +479,21 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.sm,
     paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.sm + 2,
-    backgroundColor: theme.colors.surface,
-  },
+    backgroundColor: theme.colors.surface },
   pickerText: {
     fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
+  leaveDescription: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.sm },
+  disabledButton: {
+    borderColor: theme.colors.border,
+    opacity: 0.6 },
+  disabledButtonText: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textSecondary,
+    marginLeft: theme.spacing.sm },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

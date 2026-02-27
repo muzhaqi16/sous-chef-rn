@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem/SwipeableItem';
 import type { BaseItemCardProps } from './types';
@@ -111,12 +111,15 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
     );
   }
 
-  // No swipe actions - render as pressable card
-  return (
-    <View style={styles.swipeableWrapper}>
-      <SwipeableItem onPress={onPress}>{cardContent}</SwipeableItem>
-    </View>
-  );
+  if (onPress) {
+    return (
+      <View style={styles.swipeableWrapper}>
+        <Pressable onPress={onPress}>{cardContent}</Pressable>
+      </View>
+    );
+  }
+
+  return <View style={styles.swipeableWrapper}>{cardContent}</View>;
 };
 
 const styles = StyleSheet.create(theme => ({

@@ -1,7 +1,7 @@
 module.exports = {
   root: true,
-  extends: '@react-native',
-  plugins: ['no-barrel-files'],
+  extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
+  plugins: ['no-barrel-files', 'react-compiler'],
   ignorePatterns: ['e2e/**/*'],
   env: {
     jest: true,
@@ -27,7 +27,12 @@ module.exports = {
     // Prevent barrel file imports for better tree shaking
     'no-barrel-files/no-barrel-files': 'error',
 
+    // Detect React Compiler bail-outs at lint time
+    // Warn level — existing eslint-disable comments cause bail-outs in a few files
+    'react-compiler/react-compiler': 'warn',
+
     // Enforce StyleSheet from react-native-unistyles instead of react-native
+    // Prevent useMemo/useCallback — React Compiler handles memoization automatically
     'no-restricted-imports': [
       'error',
       {
@@ -37,11 +42,18 @@ module.exports = {
             importNames: ['StyleSheet'],
             message: 'Import StyleSheet from "react-native-unistyles" instead.',
           },
+          {
+            name: 'react',
+            importNames: ['useMemo', 'useCallback'],
+            message:
+              'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+          },
         ],
       },
     ],
 
     'react-hooks/rules-of-hooks': 'error',
+    // Warn level — React Compiler handles memoization deps, but this catches stale closures in useEffect
     'react-hooks/exhaustive-deps': 'warn',
 
     // Warn on unused variables (underscore prefix indicates intentionally unused)
