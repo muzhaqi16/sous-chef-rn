@@ -5,25 +5,21 @@
  * Creates a WEIGHT_CORRECTED audit record with mandatory reason.
  */
 
-import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import {
   useCorrectPantryItemWeightMutation,
-  PantryItemDisplayFragmentDoc,
-} from '#generated';
+  PantryItemDisplayFragmentDoc } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  getVersionConflictMessage } from '#/utils/errors/versionConflict';
 
 interface UseCorrectPantryItemWeightOptions {
   onSuccess?: () => void;
 }
 
 export function useCorrectPantryItemWeight({
-  onSuccess,
-}: UseCorrectPantryItemWeightOptions = {}) {
+  onSuccess }: UseCorrectPantryItemWeightOptions = {}) {
   const { handleApolloError } = useErrorService();
 
   const [correctMutation, { loading }] = useCorrectPantryItemWeightMutation({
@@ -35,17 +31,13 @@ export function useCorrectPantryItemWeight({
       cache.writeFragment({
         id: cache.identify({
           __typename: 'PantryItem',
-          id: pantryItem.id,
-        }),
+          id: pantryItem.id }),
         fragment: PantryItemDisplayFragmentDoc,
         fragmentName: 'PantryItemDisplay',
-        data: pantryItem,
-      });
-    },
-  });
+        data: pantryItem });
+    } });
 
-  const correctWeight = useCallback(
-    async (
+  const correctWeight = async (
       pantryItemId: string,
       netWeight: number,
       reason: string,
@@ -59,10 +51,7 @@ export function useCorrectPantryItemWeight({
             netWeight,
             reason,
             version,
-            ...(netWeightUnitId ? { netWeightUnitId } : {}),
-          },
-        },
-      });
+            ...(netWeightUnitId ? { netWeightUnitId } : {}) } } });
 
       if (result.data?.correctPantryItemWeight?.pantryItem) {
         onSuccess?.();
@@ -74,16 +63,13 @@ export function useCorrectPantryItemWeight({
           Alert.alert('Item Updated', getVersionConflictMessage(result.error));
         } else {
           const { message } = handleApolloError(result.error, {
-            operation: 'Correct Weight',
-          });
+            operation: 'Correct Weight' });
           Alert.alert('Error', message);
         }
       }
 
       return false;
-    },
-    [correctMutation, onSuccess, handleApolloError],
-  );
+    };
 
   return { correctWeight, loading };
 }

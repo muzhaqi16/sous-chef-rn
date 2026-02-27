@@ -1,20 +1,18 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   Alert,
   ScrollView,
   Pressable,
-  ActivityIndicator,
-} from 'react-native';
+  ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import Animated from 'react-native-reanimated';
 import {
   useGetPantryItemQuery,
   useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
-  UsagePurpose,
-} from '#generated';
+  UsagePurpose } from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -56,8 +54,7 @@ const getExpiryInfo = (expiresAt: string | null | undefined) => {
   return {
     text: `${diffDays} days to expire`,
     isExpired: false,
-    isUrgent: diffDays <= 3,
-  };
+    isUrgent: diffDays <= 3 };
 };
 
 // Format date
@@ -67,8 +64,7 @@ const formatDate = (dateString: string | null | undefined) => {
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
-  });
+    year: 'numeric' });
 };
 
 // Calculate days in pantry
@@ -166,8 +162,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
 
   const { data } = useGetPantryItemQuery({
     variables: { id: itemId },
-    fetchPolicy: 'cache-and-network',
-  });
+    fetchPolicy: 'cache-and-network' });
 
   const [deleteItem] = useDeletePantryItemMutation();
   const [addToShoppingList] = useAddItemToShoppingListMutation({
@@ -181,8 +176,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
       } catch (error) {
         console.warn('Cache update failed for addToShoppingList:', error);
       }
-    },
-  });
+    } });
 
   // Adjust quantity modal state
   const [adjustModalVisible, setAdjustModalVisible] = useState(false);
@@ -193,8 +187,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   const { convertExpiredToWaste } = useConvertExpiredToWaste({
     onSuccess: () => {
       Alert.alert('Done', 'Expired item has been discarded.');
-    },
-  });
+    } });
 
   // Adjust quantity mutation
   const { adjustQuantity } = useAdjustPantryItemQuantity();
@@ -225,8 +218,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         const recipes = await spoonacularService.searchRecipes({
           query: itemName,
           number: 5,
-          addRecipeInformation: true,
-        }, controller.signal);
+          addRecipeInformation: true }, controller.signal);
         const results = recipes.results as unknown as RecipeInformation[];
         setSuggestedRecipes(results);
 
@@ -254,19 +246,17 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         onPress: async () => {
           try {
             await deleteItem({
-              variables: { id: itemId },
-            });
+              variables: { id: itemId } });
             goBack();
           } catch (error) {
             errorService.reportError(error, { operation: 'PantryItemDetail.deleteItem' });
             Alert.alert('Error', 'Failed to delete item');
           }
-        },
-      },
+        } },
     ]);
   };
 
-  const handleAddToShoppingList = useCallback(async () => {
+  const handleAddToShoppingList = async () => {
     if (!selectedShoppingListId) {
       Alert.alert(
         'No Shopping List Selected',
@@ -275,8 +265,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Go to Shopping Lists',
-            onPress: () => navigateTo.shoppingListMain(),
-          },
+            onPress: () => navigateTo.shoppingListMain() },
         ],
       );
       return;
@@ -298,10 +287,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
             unit: data?.pantryItem?.unit?.id
               ? { unitId: data.pantryItem.unit.id }
               : undefined,
-            itemName: data?.pantryItem?.itemName || '',
-          },
-        },
-      });
+            itemName: data?.pantryItem?.itemName || '' } } });
       setAddToListStatus('success');
       statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
     } catch (error) {
@@ -309,27 +295,20 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
       setAddToListStatus('error');
       statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
     }
-  }, [
-    selectedShoppingListId,
-    addToListStatus,
-    addToShoppingList,
-    data?.pantryItem,
-    navigateTo,
-  ]);
+  };
 
   const handleEdit = () => {
     navigateTo.pantryItem({ itemId });
   };
 
-  const handleRecipePress = useCallback((recipeId: number) => {
+  const handleRecipePress = (recipeId: number) => {
     // Navigate within Pantry stack - back navigation works automatically
     navigate('RecipeDetail', {
       externalSource: 'SPOONACULAR',
-      externalId: String(recipeId),
-    });
-  }, [navigate]);
+      externalId: String(recipeId) });
+  };
 
-  const handleDiscardExpired = useCallback(() => {
+  const handleDiscardExpired = () => {
     if (!item) return;
     Alert.alert(
       'Discard Expired Item',
@@ -339,27 +318,20 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         {
           text: 'Discard',
           style: 'destructive',
-          onPress: () => convertExpiredToWaste(item.id),
-        },
+          onPress: () => convertExpiredToWaste(item.id) },
       ],
     );
-  }, [item, convertExpiredToWaste]);
+  };
 
-  const handleConfirmAdjust = useCallback(
-    (newQuantity: number, reason: string, remainingNetWeight?: number) => {
+  const handleConfirmAdjust = (newQuantity: number, reason: string, remainingNetWeight?: number) => {
       if (!item) return;
       adjustQuantity(item.id, newQuantity, reason, item.version ?? undefined, remainingNetWeight);
-    },
-    [item, adjustQuantity],
-  );
+    };
 
-  const handleCorrectWeight = useCallback(
-    (netWeight: number, reason: string, netWeightUnitId?: string) => {
+  const handleCorrectWeight = (netWeight: number, reason: string, netWeightUnitId?: string) => {
       if (!item) return;
       correctWeight(item.id, netWeight, reason, item.version ?? 0, netWeightUnitId);
-    },
-    [item, correctWeight],
-  );
+    };
 
   // Computed values
   const imageUrl = resolveImageUrl(item, 'large');
@@ -380,8 +352,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   const remainingNetWeightText = formatNetWeightDisplay(item?.remainingNetWeight, item?.netWeightUnit);
   const quantityBreakdownText = formatQuantityBreakdown(item?.quantityBreakdown, item?.unit?.symbol);
 
-  const renderSuggestedRecipeItem = useCallback(
-    ({ item: recipe }: { item: RecipeInformation }) => (
+  const renderSuggestedRecipeItem = ({ item: recipe }: { item: RecipeInformation }) => (
       <Pressable
         style={({pressed}) => [styles.recipeCard, pressed && styles.pressed]}
         onPress={() => handleRecipePress(recipe.id)}
@@ -396,9 +367,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
           {recipe.title}
         </Text>
       </Pressable>
-    ),
-    [handleRecipePress],
-  );
+    );
 
   if (!item) {
     return (
@@ -424,32 +393,27 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
             onPress: handleAddToShoppingList,
             variant: addToListStatus === 'success' ? 'success' : 'primary',
             loading: addToListStatus === 'loading',
-            testID: 'pantry-item-add-to-list-button',
-          },
+            testID: 'pantry-item-add-to-list-button' },
           ...(item.condition === 'EXPIRED' && item.quantity > 0
             ? [{
                 icon: 'close-circle-outline' as const,
                 onPress: handleDiscardExpired,
                 variant: 'error' as const,
-                testID: 'pantry-item-discard-button',
-              }]
+                testID: 'pantry-item-discard-button' }]
             : []),
           {
             icon: 'swap-vertical-outline',
             onPress: () => setAdjustModalVisible(true),
-            testID: 'pantry-item-adjust-button',
-          },
+            testID: 'pantry-item-adjust-button' },
           {
             icon: 'create-outline',
             onPress: handleEdit,
-            testID: 'pantry-item-edit-button',
-          },
+            testID: 'pantry-item-edit-button' },
           {
             icon: 'trash-outline',
             onPress: handleDelete,
             variant: 'error',
-            testID: 'pantry-item-delete-button',
-          },
+            testID: 'pantry-item-delete-button' },
         ]}
       />
 
@@ -531,8 +495,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 navigateTo.nutritionScreen({
                   itemId: item.id,
                   itemName: item.itemName,
-                  nutritions: item.item?.nutritions,
-                })
+                  nutritions: item.item?.nutritions })
               }
             />
           </View>
@@ -809,53 +772,43 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   scrollContent: {
-    flexGrow: 1,
-  },
+    flexGrow: 1 },
   imageSection: {
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-  },
+    paddingTop: theme.spacing.sm },
   itemTitle: {
     flex: 1,
     fontSize: theme.fonts.size['2xl'],
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginRight: theme.spacing.md,
-  },
+    marginRight: theme.spacing.md },
   quantityBadge: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   categoryText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   infoColumns: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -863,41 +816,33 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   infoColumn: {
     alignItems: 'center',
-    flex: 1,
-  },
+    flex: 1 },
   infoColumnLabel: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+    letterSpacing: 0.5 },
   infoColumnValue: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   expiryColumnUrgent: {
-    color: theme.colors.warning,
-  },
+    color: theme.colors.warning },
   expiryColumnExpired: {
-    color: theme.colors.error,
-  },
+    color: theme.colors.error },
   nutritionSection: {
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-  },
+    paddingVertical: theme.spacing.md },
   nutritionTitle: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -905,37 +850,28 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   infoLabel: {
     fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   infoValueContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   infoIcon: {
-    marginRight: theme.spacing.xs,
-  },
+    marginRight: theme.spacing.xs },
   infoIconColor: {
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   infoValue: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   correctWeightButton: {
     marginLeft: theme.spacing.sm,
-    padding: theme.spacing.xs,
-  },
+    padding: theme.spacing.xs },
   infoValueError: {
-    color: theme.colors.error,
-  },
+    color: theme.colors.error },
   infoValueWarning: {
-    color: theme.colors.warning,
-  },
+    color: theme.colors.warning },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -944,139 +880,109 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     marginTop: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   sectionTitle: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   purchaseHistoryContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-  },
+    paddingVertical: theme.spacing.sm },
   purchaseRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-  },
+    paddingVertical: theme.spacing.sm },
   purchaseDateStore: {
-    flex: 1,
-  },
+    flex: 1 },
   purchaseDate: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   purchaseStore: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
+    marginTop: 2 },
   purchasePrice: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   noPurchaseData: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    fontStyle: 'italic',
-  },
+    fontStyle: 'italic' },
   adjustmentPurpose: {
-    color: theme.colors.info,
-  },
+    color: theme.colors.info },
   adjustmentReason: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.textTertiary,
-    marginTop: 1,
-  },
+    marginTop: 1 },
   adjustmentQuantity: {
-    color: theme.colors.info,
-  },
+    color: theme.colors.info },
   notesSection: {
     marginHorizontal: theme.spacing.lg,
     marginTop: theme.spacing.md,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-  },
+    borderRadius: theme.radii.md },
   notesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   notesLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
-    marginLeft: theme.spacing.xs,
-  },
+    marginLeft: theme.spacing.xs },
   notesText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
-    lineHeight: 22,
-  },
+    lineHeight: 22 },
   tagsSection: {
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-  },
+    paddingVertical: theme.spacing.md },
   tagsLabel: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   tagChip: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     backgroundColor: theme.colors.primaryLight,
-    borderRadius: theme.radii.full,
-  },
+    borderRadius: theme.radii.full },
   tagText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   recipesSection: {
     marginTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
-  },
+    paddingHorizontal: theme.spacing.lg },
   recipesLoading: {
-    marginTop: theme.spacing.md,
-  },
+    marginTop: theme.spacing.md },
   recipesList: {
     paddingTop: theme.spacing.md,
-    paddingRight: theme.spacing.lg,
-  },
+    paddingRight: theme.spacing.lg },
   recipeCard: {
     width: 140,
-    marginRight: theme.spacing.md,
-  },
+    marginRight: theme.spacing.md },
   recipeImage: {
     width: 140,
     height: 100,
     borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.surface,
-  },
+    backgroundColor: theme.colors.surface },
   recipeTitle: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     marginTop: theme.spacing.xs,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   noRecipes: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
-    fontStyle: 'italic',
-  },
+    fontStyle: 'italic' },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

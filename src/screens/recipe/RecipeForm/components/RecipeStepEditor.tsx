@@ -1,9 +1,10 @@
-import React, { forwardRef, useImperativeHandle, useRef, useState, useCallback } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native-unistyles';
 import BottomSheet, { BottomSheetBackdropProps, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { FormTextArea } from '#components/molecules/FormTextArea';
 import { Header } from '#components/molecules/Header';
+import { generateId } from '#/utils/generateId';
 import type { StepFormState } from '../useRecipeForm';
 
 export interface RecipeStepEditorRef {
@@ -14,8 +15,6 @@ export interface RecipeStepEditorRef {
 interface RecipeStepEditorProps {
   onSave: (step: StepFormState) => void;
 }
-
-let stepTempIdCounter = 100;
 
 export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditorProps>(
   ({ onSave }, ref) => {
@@ -34,25 +33,20 @@ export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditor
         }
         bottomSheetRef.current?.expand();
       },
-      close: () => bottomSheetRef.current?.close(),
-    }));
+      close: () => bottomSheetRef.current?.close() }));
 
-    const handleSave = useCallback(() => {
+    const handleSave = () => {
       if (!instruction.trim()) return;
       onSave({
-        id: editingId ?? `temp-step-${stepTempIdCounter++}`,
+        id: editingId ?? `temp-step-${generateId()}`,
         instruction: instruction.trim(),
-        sortOrder: 0,
-      });
+        sortOrder: 0 });
       bottomSheetRef.current?.close();
-    }, [editingId, instruction, onSave]);
+    };
 
-    const renderBackdrop = useCallback(
-      (props: BottomSheetBackdropProps) => (
+    const renderBackdrop = (props: BottomSheetBackdropProps) => (
         <GlobalBottomSheetBackdrop {...props} />
-      ),
-      [],
-    );
+      );
 
     return (
       <BottomSheet
@@ -69,12 +63,10 @@ export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditor
           centerTitle
           leftActions={[{
             icon: 'close',
-            onPress: () => bottomSheetRef.current?.close(),
-          }]}
+            onPress: () => bottomSheetRef.current?.close() }]}
           rightActions={[{
             icon: 'checkmark',
-            onPress: handleSave,
-          }]}
+            onPress: handleSave }]}
         />
 
         <BottomSheetScrollView contentContainerStyle={styles.content}>
@@ -95,13 +87,9 @@ RecipeStepEditor.displayName = 'RecipeStepEditor';
 
 const styles = StyleSheet.create(theme => ({
   handleIndicator: {
-    backgroundColor: theme.colors.textTertiary,
-  },
+    backgroundColor: theme.colors.textTertiary },
   sheetBackground: {
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   content: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
-  },
-}));
+    paddingBottom: theme.spacing.xl } }));

@@ -1,15 +1,13 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import {
   StorageLocationForm,
-  type StorageLocationFormRef,
-} from '#components/organisms/storageLocation/StorageLocationForm';
+  type StorageLocationFormRef } from '#components/organisms/storageLocation/StorageLocationForm';
 
 interface StorageLocationData {
   name: string;
@@ -41,28 +39,23 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
   onSubmit,
   initialData,
   availableLocations,
-  isSubmitting = false,
-}) => {
+  isSubmitting = false }) => {
   const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
-    snapPoints: ['70%', '90%'],
-  });
+    snapPoints: ['70%', '90%'] });
   const formRef = useRef<StorageLocationFormRef>(null);
 
-  const handleSubmit = useCallback(
-    async (data: StorageLocationData) => {
+  const handleSubmit = async (data: StorageLocationData) => {
       const result = await onSubmit(data);
       if (result !== false) {
         onClose();
       }
-    },
-    [onSubmit, onClose],
-  );
+    };
 
-  const handleHeaderSave = useCallback(() => {
+  const handleHeaderSave = () => {
     formRef.current?.submit();
-  }, []);
+  };
 
   const isEditing = !!initialData;
   const title = isEditing ? 'Edit Storage Location' : 'Add Storage Location';
@@ -137,40 +130,31 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
 const styles = StyleSheet.create(theme => ({
   content: {
     flex: 1,
-    paddingHorizontal: theme.spacing.lg,
-  },
+    paddingHorizontal: theme.spacing.lg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-  },
+    paddingVertical: theme.spacing.sm },
   headerButton: {
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.xs,
-    minWidth: 60,
-  },
+    minWidth: 60 },
   title: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
-    flex: 1,
-  },
+    flex: 1 },
   cancelText: {
-    fontSize: theme.typography.fontSize.md,
-  },
+    fontSize: theme.typography.fontSize.md },
   saveText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'right',
-  },
+    textAlign: 'right' },
   divider: {
     height: 1,
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));
 
 export default StorageLocationSheet;

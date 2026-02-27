@@ -16,6 +16,7 @@ import { ScannedItem } from '../store/slices/barcodeScannerSlice';
 import { Alert } from 'react-native';
 import { useImageUpload } from './useImageUpload';
 import { storage } from '#/storage/mmkv';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 // Map Vision Camera barcode format to GraphQL UpcFormat enum
 const mapVisionCameraFormatToUpcFormat = (
@@ -123,6 +124,47 @@ const convertToScannedItem = (
   };
 };
 
+/** Upload pending images after item creation (module-level to avoid try-catch in hook body) */
+async function uploadPendingImages<T extends { id: string; imageUrl?: string | null }>(
+  createdItem: T,
+  uploadItemImage: (image: any, itemId: string) => Promise<string | null>,
+): Promise<T> {
+  let finalItem = createdItem;
+
+  const pendingImagesJson = storage.getString('temp_pending_item_images');
+  if (pendingImagesJson && createdItem.id) {
+    const images = JSON.parse(pendingImagesJson);
+    let firstImageUrl: string | null = null;
+    for (const image of images) {
+      const imageUrl = await uploadItemImage(image, createdItem.id);
+      if (imageUrl && !firstImageUrl) {
+        firstImageUrl = imageUrl;
+      }
+    }
+    if (firstImageUrl) {
+      finalItem = { ...createdItem, imageUrl: firstImageUrl };
+    }
+  }
+
+  // Backward compat: also check old singular key
+  const pendingImageUpload = storage.getString('temp_pending_item_image');
+  if (pendingImageUpload && createdItem.id) {
+    const imageFile = JSON.parse(pendingImageUpload);
+    const imageUrl = await uploadItemImage(imageFile, createdItem.id);
+    if (imageUrl) {
+      finalItem = { ...createdItem, imageUrl };
+    }
+  }
+
+  return finalItem;
+}
+
+/** Clean up temporary image storage keys */
+function cleanupPendingImageStorage(): void {
+  storage.remove('temp_pending_item_images');
+  storage.remove('temp_pending_item_image');
+}
+
 export const useSearchResults = (barcode: string, format?: string) => {
   const upcFormat = mapVisionCameraFormatToUpcFormat(format);
   const {
@@ -153,63 +195,28 @@ export const useSearchResults = (barcode: string, format?: string) => {
     onCompleted: async (data: CreateItemMutation) => {
       if (data.createItem?.item) {
         const createdItem = data.createItem.item;
-        let finalItem = createdItem;
 
-        // If there were images selected, upload them after item creation
-        try {
-          const pendingImagesJson = storage.getString(
-            'temp_pending_item_images',
-          );
-          if (pendingImagesJson && createdItem.id) {
-            const images = JSON.parse(pendingImagesJson);
-            let firstImageUrl: string | null = null;
-            for (const image of images) {
-              const imageUrl = await uploadItemImage(image, createdItem.id);
-              if (imageUrl && !firstImageUrl) {
-                firstImageUrl = imageUrl;
-              }
-            }
-            if (firstImageUrl) {
-              // Update the finalItem with the first image URL for display
-              finalItem = { ...createdItem, imageUrl: firstImageUrl };
-            }
-          }
-
-          // Backward compat: also check old singular key
-          const pendingImageUpload = storage.getString(
-            'temp_pending_item_image',
-          );
-          if (pendingImageUpload && createdItem.id) {
-            const imageFile = JSON.parse(pendingImageUpload);
-            const imageUrl = await uploadItemImage(imageFile, createdItem.id);
-            if (imageUrl) {
-              finalItem = { ...createdItem, imageUrl };
-            }
-          }
-        } catch (error) {
-          console.error('Error handling pending image upload:', error);
-          // Continue without showing error since item was created successfully
-        } finally {
-          // Clean up both storage keys
-          storage.remove('temp_pending_item_images');
-          storage.remove('temp_pending_item_image');
-        }
+        // Upload pending images (module-level function avoids try-catch in hook)
+        const result = await executeMutation(
+          () => uploadPendingImages(createdItem, uploadItemImage),
+          'Error handling pending image upload:',
+        );
+        const finalItem = result !== false ? result : createdItem;
+        cleanupPendingImageStorage();
 
         const newItem = convertToScannedItem(
           finalItem,
           barcode,
           pendingBrandNameRef.current,
         );
-        pendingBrandNameRef.current = undefined; // Clear after use
+        pendingBrandNameRef.current = undefined;
         setSearchResults([newItem]);
         addToRecentlyScanned(newItem);
         hideBottomSheet();
       }
     },
     onError: error => {
-      // Clean up pending data on error
-      storage.remove('temp_pending_item_images');
-      storage.remove('temp_pending_item_image');
+      cleanupPendingImageStorage();
       pendingBrandNameRef.current = undefined;
 
       Alert.alert('Error', `Failed to add item: ${error.message}`);
@@ -357,57 +364,40 @@ export const useSearchResults = (barcode: string, format?: string) => {
   }, [upcLoading, skuLoading, setSearching]);
 
   const handleAddItem = async (formData: any) => {
-    try {
-      // Store brand name for use in mutation callback
-      pendingBrandNameRef.current = formData.brand?.brandName;
+    // Store brand name for use in mutation callback
+    pendingBrandNameRef.current = formData.brand?.brandName;
 
-      // Store the selected images in MMKV for post-creation upload
-      if (formData.selectedImages && formData.selectedImages.length > 0) {
-        storage.set(
-          'temp_pending_item_images',
-          JSON.stringify(formData.selectedImages),
-        );
-      } else if (formData.selectedImage) {
-        // Backward compat: support singular selectedImage
-        storage.set(
-          'temp_pending_item_image',
-          JSON.stringify(formData.selectedImage),
-        );
-      }
-
-      // Process the form data to match the new nested CreateItemInput structure
-      const processedInput = {
-        name: formData.name,
-        description: formData.description || undefined,
-        type: formData.type || undefined,
-
-        // Brand reference
-        brand: formData.brand || undefined,
-
-        // Classification (storageState, categories, tags)
-        classification: formData.classification || undefined,
-
-        // Product details (primaryUpc, vendor, shelfLifeDays)
-        productDetails: formData.productDetails || undefined,
-
-        // Media (imageUrl)
-        media: formData.media || undefined,
-
-        // Net weights (manufacturer-provided dual-label values)
-        netWeights: formData.netWeights || undefined,
-
-        // Unit configuration
-        unitConfig: formData.unitConfig || undefined,
-      };
-
-      await addNewItem({
-        variables: {
-          input: processedInput,
-        },
-      });
-    } catch (error) {
-      console.error('Error adding item:', error);
+    // Store the selected images in MMKV for post-creation upload
+    if (formData.selectedImages && formData.selectedImages.length > 0) {
+      storage.set(
+        'temp_pending_item_images',
+        JSON.stringify(formData.selectedImages),
+      );
+    } else if (formData.selectedImage) {
+      // Backward compat: support singular selectedImage
+      storage.set(
+        'temp_pending_item_image',
+        JSON.stringify(formData.selectedImage),
+      );
     }
+
+    // Process the form data to match the new nested CreateItemInput structure
+    const processedInput = {
+      name: formData.name,
+      description: formData.description || undefined,
+      type: formData.type || undefined,
+      brand: formData.brand || undefined,
+      classification: formData.classification || undefined,
+      productDetails: formData.productDetails || undefined,
+      media: formData.media || undefined,
+      netWeights: formData.netWeights || undefined,
+      unitConfig: formData.unitConfig || undefined,
+    };
+
+    await executeMutation(
+      () => addNewItem({ variables: { input: processedInput } }),
+      'Error adding item:',
+    );
   };
 
   const handleRetry = () => {

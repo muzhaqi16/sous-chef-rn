@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, selectShoppingListState } from '#store/useAppStore';
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
@@ -17,16 +17,13 @@ export function useShoppingListSelection(lists: ShoppingListFromQuery[]) {
   );
 
   // Show all lists - grouping by home is handled in the UI layer
-  const relevantLists = useMemo(() => lists, [lists]);
+  const relevantLists = lists;
 
   // Default: first with isDefault flag from relevant lists, or first relevant list
-  const defaultList = useMemo(
-    () => relevantLists.find(list => list.isDefault) || relevantLists[0],
-    [relevantLists],
-  );
+  const defaultList = relevantLists.find(list => list.isDefault) || relevantLists[0];
 
   // Derive currentListId: use selected if valid, otherwise use default
-  const currentListId = useMemo(() => {
+  const currentListId = (() => {
     if (
       selectedShoppingListId &&
       relevantLists.some(l => l.id === selectedShoppingListId)
@@ -34,13 +31,10 @@ export function useShoppingListSelection(lists: ShoppingListFromQuery[]) {
       return selectedShoppingListId;
     }
     return defaultList?.id;
-  }, [selectedShoppingListId, relevantLists, defaultList?.id]);
+  })();
 
   // Current list object
-  const currentList = useMemo(
-    () => relevantLists.find(list => list.id === currentListId) || defaultList,
-    [relevantLists, currentListId, defaultList],
-  );
+  const currentList = relevantLists.find(list => list.id === currentListId) || defaultList;
 
   // Auto-select when lists load and current selection is invalid
   useEffect(() => {

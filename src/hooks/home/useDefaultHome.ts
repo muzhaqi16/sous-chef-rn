@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useApolloClient } from '@apollo/client/react';
 import { useGetHomesLazyQuery, useSetDefaultHomeMutation } from '#generated';
@@ -116,14 +116,11 @@ export const useDefaultHome = () => {
   );
 
   // Derive default home from isDefault field (no separate query needed)
-  const remoteDefaultHomeId = useMemo(
-    () => homesList?.find(h => h.isDefault)?.id ?? null,
-    [homesList],
-  );
+  const remoteDefaultHomeId = homesList?.find(h => h.isDefault)?.id ?? null;
 
   // PERFORMANCE: Extract default pantry ID with stable reference to prevent infinite loops
   // Using useMemo ensures we only recalculate when the underlying data changes
-  const defaultPantryId = useMemo(() => {
+  const defaultPantryId = (() => {
     // Find the default home from the homes list
     const defaultHome = homesList?.find(h => h.isDefault);
     if (!defaultHome?.pantries?.length) return null;
@@ -131,13 +128,13 @@ export const useDefaultHome = () => {
       defaultHome.pantries.find((p: { isDefault?: boolean; id?: string }) => p.isDefault) ||
       defaultHome.pantries[0];
     return defaultPantry?.id || null;
-  }, [homesList]);
+  })();
 
   // Validate that selectedHomeId still exists in the homes list
-  const isSelectedHomeValid = useMemo(() => {
+  const isSelectedHomeValid = (() => {
     if (!selectedHomeId || !homesList || homesList.length === 0) return false;
     return homesList.some(h => h.id === selectedHomeId);
-  }, [selectedHomeId, homesList]);
+  })();
 
   // Clear stale selectedHomeId if home was deleted while app was in background
   // Also reset ready state to force re-initialization
@@ -151,6 +148,7 @@ export const useDefaultHome = () => {
       console.warn(
         '[HomeSelector] Selected home no longer exists, clearing selection',
       );
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- coordinating with cache eviction side effect
       setIsClearingStaleIds(true);
 
       // Evict stale Home and Pantry entities from Apollo cache
@@ -193,6 +191,7 @@ export const useDefaultHome = () => {
   // Reset clearing flag after state updates propagate
   useEffect(() => {
     if (isClearingStaleIds && !selectedHomeId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting flag after cache eviction propagates
       setIsClearingStaleIds(false);
     }
   }, [isClearingStaleIds, selectedHomeId]);

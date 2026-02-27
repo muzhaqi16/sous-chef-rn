@@ -129,6 +129,13 @@ const App = () => {
         Telemetry.histogram('app_startup_duration_ms', startupDuration, {
           type: 'js_to_hydrated',
         });
+
+        // Report content appeared timing (full time from native launch to content visible)
+        const contentAppearedDuration = Date.now() - global.__APP_START_TIMESTAMP;
+        Telemetry.histogram('app_content_appeared_ms', contentAppearedDuration, {
+          type: 'full',
+        });
+
         global.__APP_START_TIMESTAMP = undefined; // Prevent re-reporting on HMR
       }
 
@@ -163,8 +170,7 @@ const App = () => {
       // Cleanup AppState token refresh listener
       cleanupAppStateTokenRefresh();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHydrated]);
+  }, [isHydrated, theme, setHasStoredCredentials, getTelemetryConfig]);
 
   // Track theme changes separately
   const prevThemeRef = useRef(theme);

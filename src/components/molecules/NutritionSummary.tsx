@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, Pressable, ScrollView, ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -91,23 +91,13 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
 }) => {
   const { theme } = useUnistyles();
 
-  const nutritions = useMemo(
-    () =>
-      typeof nutritionsRaw === 'object' && nutritionsRaw !== null
+  const nutritions = typeof nutritionsRaw === 'object' && nutritionsRaw !== null
         ? (nutritionsRaw as NutritionsData)
-        : parseNutritions(nutritionsRaw),
-    [nutritionsRaw],
-  );
+        : parseNutritions(nutritionsRaw);
 
-  const macros = useMemo(
-    () => extractMacroSummary(nutritions, actualServingGrams),
-    [nutritions, actualServingGrams],
-  );
+  const macros = extractMacroSummary(nutritions, actualServingGrams);
 
-  const highlights = useMemo(
-    () => (showHighlights ? generateHighlights(nutritions) : []),
-    [nutritions, showHighlights],
-  );
+  const highlights = showHighlights ? generateHighlights(nutritions) : [];
 
   if (!hasNutritionData(nutritions)) {
     return null;

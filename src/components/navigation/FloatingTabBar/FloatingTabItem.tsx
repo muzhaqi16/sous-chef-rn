@@ -6,6 +6,7 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { SPRING } from '#/constants/animations';
 import type { FloatingTabItemProps } from './types';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -25,10 +26,7 @@ export const FloatingTabItem: React.FC<FloatingTabItemProps> = ({
     const isActiveTab = activeIndex.value === index;
 
     // Scale animation for active tab
-    const scale = withSpring(isActiveTab ? 1.1 : 1, {
-      damping: 15,
-      stiffness: 150,
-    });
+    const scale = withSpring(isActiveTab ? 1.1 : 1, SPRING.DEFAULT);
 
     // Subtle bounce animation when pressed
     const translateY = interpolate(

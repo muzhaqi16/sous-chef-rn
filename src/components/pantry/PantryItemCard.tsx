@@ -1,12 +1,11 @@
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { Text, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   Easing,
-  cancelAnimation,
-} from 'react-native-reanimated';
+  cancelAnimation } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseItemCard } from '../molecules/BaseItemCard/BaseItemCard';
@@ -68,7 +67,6 @@ const SlideAnimatedWrapper: React.FC<{
   children: (handleDelete: () => void) => React.ReactNode;
 }> = ({ itemId, children }) => {
   const { actions } = usePantryActions();
-  const prevItemIdRef = useRef(itemId);
 
   const translateX = useSharedValue(0);
   const slideOpacity = useSharedValue(1);
@@ -76,45 +74,42 @@ const SlideAnimatedWrapper: React.FC<{
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
-    opacity: slideOpacity.value,
-  }));
+    opacity: slideOpacity.value }));
 
-  // Reset on FlashList cell recycling (synchronous — no useEffect needed)
-  if (prevItemIdRef.current !== itemId) {
+  // Reset on FlashList cell recycling — runs synchronously on layout commit.
+  useEffect(() => {
     cancelAnimation(translateX);
     cancelAnimation(slideOpacity);
-    translateX.value = 0;
-    slideOpacity.value = 1;
-    isAnimating.value = false;
-    prevItemIdRef.current = itemId;
-  }
+    translateX.set(0);
+    slideOpacity.set(1);
+    isAnimating.set(false);
+  }, [itemId, translateX, slideOpacity, isAnimating]);
 
   // Stable callback for scheduleOnRN — captures actions/itemId via closure
-  const doDelete = useCallback(() => {
+  const doDelete = () => {
     actions.onItemDelete?.(itemId);
-  }, [actions, itemId]);
+  };
 
-  const handleDelete = useCallback(() => {
-    if (isAnimating.value) return;
-    isAnimating.value = true;
+  const handleDelete = () => {
+    if (isAnimating.get()) return;
+    isAnimating.set(true);
 
     const config = {
       duration: SLIDE_PRESETS.exitWithFade.duration,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-    };
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1) };
 
-    slideOpacity.value = withTiming(
+    slideOpacity.set(withTiming(
       SLIDE_PRESETS.exitWithFade.opacityTarget,
       config,
-    );
-    translateX.value = withTiming(SCREEN_WIDTH, config, finished => {
+    ));
+    translateX.set(withTiming(SCREEN_WIDTH, config, finished => {
       'worklet';
       isAnimating.value = false;
       if (finished) {
         scheduleOnRN(doDelete);
       }
-    });
-  }, [isAnimating, slideOpacity, translateX, doDelete]);
+    }));
+  };
 
   return (
     <Animated.View style={animatedStyle}>
@@ -141,13 +136,11 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
   isOutOfStock,
   packageBreakdownText,
   remainingNetWeightText,
-  quantityBreakdownText,
-}) => {
+  quantityBreakdownText }) => {
   const { actions, swipeable } = usePantryActions();
 
-  // PERFORMANCE: Single useMemo replaces 5 useCallback allocations
-  const itemActions = useMemo(
-    () => ({
+  // PERFORMANCE: Single object for all item action callbacks
+  const itemActions = ({
       onPress: () => actions.onItemPress(id),
       onEdit: actions.onItemEdit ? () => actions.onItemEdit!(id) : undefined,
       onConsume: actions.onItemConsume
@@ -156,10 +149,7 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
       onWaste: actions.onItemWaste ? () => actions.onItemWaste!(id) : undefined,
       onRestock: actions.onItemRestock
         ? () => actions.onItemRestock!(id)
-        : undefined,
-    }),
-    [actions, id],
-  );
+        : undefined });
 
   // Map ItemVariant to CardVariant
   const cardVariant: CardVariant = variant;
@@ -237,17 +227,13 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   expiration: {
-    fontSize: theme.typography.fontSize.sm - 1,
-  },
+    fontSize: theme.typography.fontSize.sm - 1 },
   expirationBold: {
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   outOfStock: {
     fontSize: theme.typography.fontSize.sm - 1,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.warning,
-  },
-}));
+    color: theme.colors.warning } }));
 
 // PERFORMANCE: Custom comparator only checks data primitives — action callbacks come
 // from context and don't appear in props, so every prop is a stable primitive/string.

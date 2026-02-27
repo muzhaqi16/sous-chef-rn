@@ -105,8 +105,16 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     };
 
     initializeWebSocket();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
+
+  // Render-time reset: clear subscriptions ready state when token becomes invalid
+  const [prevIsTokenReady, setPrevIsTokenReady] = useState(isTokenReady);
+  if (isTokenReady !== prevIsTokenReady) {
+    setPrevIsTokenReady(isTokenReady);
+    if (!isTokenReady) {
+      setSubscriptionsReady(false);
+    }
+  }
 
   // Delay subscription mounting by 3s so startup queries (GetHomes, GetPantry)
   // complete without competing with 12+ WebSocket subscription setups on the JS thread
@@ -114,8 +122,6 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     if (isTokenReady) {
       const timer = setTimeout(() => setSubscriptionsReady(true), 3000);
       return () => clearTimeout(timer);
-    } else {
-      setSubscriptionsReady(false);
     }
   }, [isTokenReady]);
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useMemo, type ReactNode } from 'react';
+import React, { createContext, useContext, useRef, type ReactNode } from 'react';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 /**
@@ -56,26 +56,19 @@ export const PantryActionsProvider: React.FC<PantryActionsProviderProps> = ({
   const openSwipeableRef = useRef<SwipeableMethods | null>(null);
 
   // Swipeable coordination
-  const swipeable = useMemo<SwipeableCoordination>(
-    () => ({
-      onSwipeableWillOpen: (ref: React.RefObject<SwipeableMethods>) => {
-        if (
-          openSwipeableRef.current &&
-          openSwipeableRef.current !== ref.current
-        ) {
-          openSwipeableRef.current?.close();
-        }
-        openSwipeableRef.current = ref.current;
-      },
-    }),
-    [],
-  );
+  const swipeable: SwipeableCoordination = {
+    onSwipeableWillOpen: (ref: React.RefObject<SwipeableMethods>) => {
+      if (
+        openSwipeableRef.current &&
+        openSwipeableRef.current !== ref.current
+      ) {
+        openSwipeableRef.current?.close();
+      }
+      openSwipeableRef.current = ref.current;
+    },
+  };
 
-  // Context value is memoized to prevent unnecessary re-renders
-  const value = useMemo<PantryActionsContextValue>(
-    () => ({ actions, swipeable }),
-    [actions, swipeable],
-  );
+  const value: PantryActionsContextValue = { actions, swipeable };
 
   return (
     <PantryActionsContext.Provider value={value}>

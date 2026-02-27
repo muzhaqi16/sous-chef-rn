@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useRef, useState, useCallback } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { View, Switch, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import BottomSheet, { BottomSheetBackdropProps, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -6,6 +6,7 @@ import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBa
 import { FormInput } from '#components/molecules/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { Header } from '#components/molecules/Header';
+import { generateId } from '#/utils/generateId';
 import type { IngredientFormState } from '../useRecipeForm';
 
 export interface RecipeIngredientEditorRef {
@@ -16,8 +17,6 @@ export interface RecipeIngredientEditorRef {
 interface RecipeIngredientEditorProps {
   onSave: (ingredient: IngredientFormState) => void;
 }
-
-let tempIdCounter = 100;
 
 export const RecipeIngredientEditor = forwardRef<RecipeIngredientEditorRef, RecipeIngredientEditorProps>(
   ({ onSave }, ref) => {
@@ -51,30 +50,25 @@ export const RecipeIngredientEditor = forwardRef<RecipeIngredientEditorRef, Reci
         }
         bottomSheetRef.current?.expand();
       },
-      close: () => bottomSheetRef.current?.close(),
-    }));
+      close: () => bottomSheetRef.current?.close() }));
 
-    const handleSave = useCallback(() => {
+    const handleSave = () => {
       if (!name.trim()) return;
       onSave({
-        id: editingId ?? `temp-ing-${tempIdCounter++}`,
+        id: editingId ?? `temp-ing-${generateId()}`,
         name: name.trim(),
         quantity: parseFloat(quantity) || 1,
         preparation: preparation.trim(),
         section: section.trim(),
         notes: notes.trim(),
         isOptional,
-        sortOrder: 0,
-      });
+        sortOrder: 0 });
       bottomSheetRef.current?.close();
-    }, [editingId, name, quantity, preparation, section, notes, isOptional, onSave]);
+    };
 
-    const renderBackdrop = useCallback(
-      (props: BottomSheetBackdropProps) => (
+    const renderBackdrop = (props: BottomSheetBackdropProps) => (
         <GlobalBottomSheetBackdrop {...props} />
-      ),
-      [],
-    );
+      );
 
     return (
       <BottomSheet
@@ -91,12 +85,10 @@ export const RecipeIngredientEditor = forwardRef<RecipeIngredientEditorRef, Reci
           centerTitle
           leftActions={[{
             icon: 'close',
-            onPress: () => bottomSheetRef.current?.close(),
-          }]}
+            onPress: () => bottomSheetRef.current?.close() }]}
           rightActions={[{
             icon: 'checkmark',
-            onPress: handleSave,
-          }]}
+            onPress: handleSave }]}
         />
 
         <BottomSheetScrollView contentContainerStyle={styles.content}>
@@ -155,23 +147,17 @@ RecipeIngredientEditor.displayName = 'RecipeIngredientEditor';
 
 const styles = StyleSheet.create(theme => ({
   handleIndicator: {
-    backgroundColor: theme.colors.textTertiary,
-  },
+    backgroundColor: theme.colors.textTertiary },
   sheetBackground: {
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   content: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
-  },
+    paddingBottom: theme.spacing.xl },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.md,
-  },
+    paddingVertical: theme.spacing.md },
   switchLabel: {
     fontSize: theme.fonts.size.md,
-    color: theme.colors.textPrimary,
-  },
-}));
+    color: theme.colors.textPrimary } }));

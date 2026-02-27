@@ -1,4 +1,3 @@
-import React, { useCallback } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -30,14 +29,13 @@ function FilterTabsItemComponent<T extends string>({
   showCounts,
   isCompact,
   onPress,
-  testID,
-}: FilterTabsItemProps<T>): React.ReactElement {
+  testID }: FilterTabsItemProps<T>): React.ReactElement {
   const hasCount = showCounts && count !== undefined;
   const iconColor = tab.isAction
     ? UnistylesRuntime.getTheme().colors.primary
     : getIconColor(isActive, isFiltered);
 
-  const handlePress = useCallback(() => onPress(tab.id), [onPress, tab.id]);
+  const handlePress = () => onPress(tab.id);
 
   return (
     <Pressable
@@ -101,7 +99,7 @@ function FilterTabsItemComponent<T extends string>({
   );
 }
 
-export const FilterTabsItem = React.memo(FilterTabsItemComponent) as typeof FilterTabsItemComponent;
+export const FilterTabsItem = FilterTabsItemComponent;
 
 const styles = StyleSheet.create(theme => ({
   tab: {
@@ -112,66 +110,48 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
     gap: theme.spacing.xs + 2,
-    backgroundColor: theme.colors.filterTab.inactiveBg,
-  },
+    backgroundColor: theme.colors.filterTab.inactiveBg },
   tabActive: {
-    backgroundColor: theme.colors.filterTab.activeBg,
-  },
+    backgroundColor: theme.colors.filterTab.activeBg },
   tabFiltered: {
-    backgroundColor: theme.colors.filterTab.filteredBg,
-  },
+    backgroundColor: theme.colors.filterTab.filteredBg },
   tabCompact: {
     paddingHorizontal: theme.spacing.sm + 2,
     paddingVertical: theme.spacing.xs + 2,
     borderRadius: theme.radii.lg,
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   tabIcon: {
-    fontSize: theme.typography.fontSize.sm,
-  },
+    fontSize: theme.typography.fontSize.sm },
   tabIconCompact: {
-    fontSize: theme.typography.fontSize.xs,
-  },
+    fontSize: theme.typography.fontSize.xs },
   tabLabel: {
     fontSize: theme.typography.fontSize.sm - 1,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.filterTab.inactiveText,
-  },
+    color: theme.colors.filterTab.inactiveText },
   tabLabelActive: {
-    color: theme.colors.filterTab.activeText,
-  },
+    color: theme.colors.filterTab.activeText },
   tabLabelFiltered: {
-    color: theme.colors.filterTab.filteredText,
-  },
+    color: theme.colors.filterTab.filteredText },
   tabLabelCompact: {
-    fontSize: theme.typography.fontSize.xs,
-  },
+    fontSize: theme.typography.fontSize.xs },
   countBadge: {
     paddingHorizontal: theme.spacing.xs + 3,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.filterTab.countBg,
-  },
+    backgroundColor: theme.colors.filterTab.countBg },
   countBadgeActive: {
-    backgroundColor: theme.colors.filterTab.activeCountBg,
-  },
+    backgroundColor: theme.colors.filterTab.activeCountBg },
   countBadgeCompact: {
     paddingHorizontal: theme.spacing.xs + 1,
     paddingVertical: 1,
-    borderRadius: theme.radii.sm,
-  },
+    borderRadius: theme.radii.sm },
   countText: {
     fontSize: theme.typography.fontSize.xs - 1,
     fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.filterTab.countText,
-  },
+    color: theme.colors.filterTab.countText },
   countTextActive: {
-    color: theme.colors.filterTab.activeText,
-  },
+    color: theme.colors.filterTab.activeText },
   countTextFiltered: {
-    color: theme.colors.filterTab.filteredText,
-  },
+    color: theme.colors.filterTab.filteredText },
   countTextCompact: {
-    fontSize: theme.typography.fontSize.xs - 2,
-  },
-}));
+    fontSize: theme.typography.fontSize.xs - 2 } }));

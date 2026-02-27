@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   ViewStyle,
@@ -38,18 +38,11 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
 }) => {
   const { theme } = useUnistyles();
 
-  const parsedImages = useMemo(
-    () =>
-      Array.isArray(imagesRaw)
+  const parsedImages = Array.isArray(imagesRaw)
         ? (imagesRaw as ItemImage[])
-        : parseImages(imagesRaw),
-    [imagesRaw],
-  );
+        : parseImages(imagesRaw);
 
-  const tabs = useMemo(
-    () => groupImagesByPerspective(parsedImages),
-    [parsedImages],
-  );
+  const tabs = groupImagesByPerspective(parsedImages);
 
   const [selectedTab, setSelectedTab] = useState<string>(
     tabs[0]?.key ?? 'front',
@@ -58,14 +51,16 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // Reset loading/error states when selected tab changes
-  useEffect(() => {
+  // Render-time reset: clear loading/error states when selected tab changes
+  const [prevSelectedTab, setPrevSelectedTab] = useState(selectedTab);
+  if (selectedTab !== prevSelectedTab) {
+    setPrevSelectedTab(selectedTab);
     setImageLoading(false);
     setImageError(false);
-  }, [selectedTab]);
+  }
 
   // Get current image URL
-  const currentImageUrl = useMemo(() => {
+  const currentImageUrl = (() => {
     if (!hasImages(parsedImages)) {
       return fallbackImageUrl ?? null;
     }
@@ -78,9 +73,9 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
     // Fallback to primary image
     const primary = getPrimaryImage(parsedImages);
     return primary ? getBestImageUrl(primary, 'large') : fallbackImageUrl;
-  }, [parsedImages, tabs, selectedTab, fallbackImageUrl]);
+  })();
 
-  const tabOptions = useMemo(() => tabs.map(t => t.key), [tabs]);
+  const tabOptions = tabs.map(t => t.key);
 
   // If no images and no fallback, show placeholder
   if (!currentImageUrl) {

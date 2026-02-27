@@ -1,17 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useShoppingListSuggestions,
-  ShoppingListSuggestionItem,
-} from '#hooks/shoppingList/useShoppingListSuggestions';
+  ShoppingListSuggestionItem } from '#hooks/shoppingList/useShoppingListSuggestions';
 import { toastService } from '#/services/toastService';
 import {
   useAddItemToShoppingListMutation,
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
-  ItemSuggestion,
-} from '#generated';
+  ItemSuggestion } from '#generated';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
@@ -33,8 +31,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   shoppingListId,
   onClose,
   initialSearchQuery = '',
-  onItemAdded,
-}) => {
+  onItemAdded }) => {
   const { navigate, navigateTo } = useAppNavigation();
   const client = useApolloClient();
 
@@ -42,32 +39,26 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const state = useAddItemSheetState({
     visible,
     contextId: shoppingListId,
-    deferFetch: shoppingListSheetConfig.deferFetch,
-  });
+    deferFetch: shoppingListSheetConfig.deferFetch });
 
   // Fetch shopping list suggestions (deferred until sheet animation completes)
   const suggestionsResult = useShoppingListSuggestions({
     shoppingListId,
     limit: 15,
-    skip: !visible || !state.shouldFetch,
-  });
+    skip: !visible || !state.shouldFetch });
 
   // Adapt suggestions to the expected interface
-  const suggestions: SuggestionsHookResult = useMemo(() => ({
+  const suggestions: SuggestionsHookResult = ({
     grouped: suggestionsResult.grouped,
     loading: suggestionsResult.loading,
     hasSuggestions: suggestionsResult.hasSuggestions,
-    refetch: suggestionsResult.refetch,
-  }), [suggestionsResult]);
+    refetch: suggestionsResult.refetch });
 
   // Auto-refetch when suggestions are nearly depleted
   const REFETCH_THRESHOLD = 3;
   const hasAddedItemRef = useRef(false);
 
-  const totalFilteredCount = useMemo(
-    () => Object.values(suggestions.grouped).reduce((sum, items) => sum + items.length, 0),
-    [suggestions.grouped],
-  );
+  const totalFilteredCount = Object.values(suggestions.grouped).reduce((sum, items) => sum + items.length, 0);
 
   const isRefetchingRef = useRef(false);
 
@@ -79,15 +70,13 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         hasAddedItemRef.current = false;
       });
     }
-  }, [totalFilteredCount, suggestionsResult]);
+  });
 
-  const removeFromSuggestionsCache = useCallback(
-    (itemId: string) => {
+  const removeFromSuggestionsCache = (itemId: string) => {
       client.cache.updateQuery<GetShoppingListSuggestionsQuery>(
         {
           query: GetShoppingListSuggestionsDocument,
-          variables: { id: shoppingListId!, limit: 15 },
-        },
+          variables: { id: shoppingListId!, limit: 15 } },
         data => {
           if (!data?.shoppingList) return data;
           return {
@@ -96,14 +85,10 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
               ...data.shoppingList,
               suggestions: data.shoppingList.suggestions.filter(
                 s => s.itemId !== itemId,
-              ),
-            },
-          };
+              ) } };
         },
       );
-    },
-    [client.cache, shoppingListId],
-  );
+    };
 
   // Add shopping list item mutation (fire-and-forget pattern)
   const [addItemMutation, { loading: adding }] = useAddItemToShoppingListMutation({
@@ -116,32 +101,28 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       } catch (error) {
         console.error('Cache update failed:', error);
       }
-    },
-  });
+    } });
 
   // Handle scan barcode press
-  const handleScanPress = useCallback(() => {
+  const handleScanPress = () => {
     onClose();
     navigateTo.barcode({
       source: 'shoppingList',
-      shoppingListId,
-    });
-  }, [onClose, navigateTo, shoppingListId]);
+      shoppingListId });
+  };
 
   // Handle add manually press - navigates to AddItem screen
-  const handleAddManually = useCallback((searchValue: string) => {
+  const handleAddManually = (searchValue: string) => {
     onClose();
     if (shoppingListId) {
       navigate('AddItem', {
         listId: shoppingListId,
-        initialItemName: searchValue || undefined,
-      });
+        initialItemName: searchValue || undefined });
     }
-  }, [onClose, navigate, shoppingListId]);
+  };
 
   // Handle quick add from search autocomplete (fire-and-forget)
-  const handleQuickAddSearchSuggestion = useCallback(
-    (item: ItemSuggestion) => {
+  const handleQuickAddSearchSuggestion = (item: ItemSuggestion) => {
       if (!shoppingListId || adding) return;
 
       // 1. Show toast immediately (don't wait for mutation)
@@ -157,23 +138,17 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             quantity: null,
             unit: item.defaultUnit?.id
               ? { unitId: item.defaultUnit.id }
-              : undefined,
-          },
-        },
-      })
+              : undefined } } })
         .then(() => {
           onItemAdded?.();
         })
         .catch(() => {
           toastService.error('Failed to add item. Please try again.');
         });
-    },
-    [shoppingListId, adding, addItemMutation, onItemAdded],
-  );
+    };
 
   // Handle quick add from suggestion (fire-and-forget with exit animations)
-  const handleQuickAddSuggestion = useCallback(
-    (item: BaseSuggestionItem) => {
+  const handleQuickAddSuggestion = (item: BaseSuggestionItem) => {
       // Cast to ShoppingListSuggestionItem for full type info
       const shoppingItem = item as unknown as ShoppingListSuggestionItem;
       if (!shoppingListId || adding || state.exitingItems.has(shoppingItem.itemId)) return;
@@ -196,10 +171,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             itemId: shoppingItem.itemId,
             itemName: shoppingItem.name,
             quantity: null,
-            unit: unitId ? { unitId } : undefined,
-          },
-        },
-      })
+            unit: unitId ? { unitId } : undefined } } })
         .then(() => {
           onItemAdded?.();
         })
@@ -208,18 +180,13 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           state.completeExitAnimation(shoppingItem.itemId);
           toastService.error('Failed to add item. Please try again.');
         });
-    },
-    [shoppingListId, adding, state, addItemMutation, onItemAdded],
-  );
+    };
 
   // Handle exit animation complete
-  const handleExitComplete = useCallback(
-    (itemId: string) => {
+  const handleExitComplete = (itemId: string) => {
       removeFromSuggestionsCache(itemId);
       state.completeExitAnimation(itemId);
-    },
-    [removeFromSuggestionsCache, state],
-  );
+    };
 
   return (
     <AddItemSheet

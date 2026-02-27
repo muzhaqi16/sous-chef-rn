@@ -1,12 +1,11 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import Icon from '@react-native-vector-icons/ionicons';
 import {Text, View, Pressable} from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSequence,
-  withSpring,
-} from 'react-native-reanimated';
+  withSpring } from 'react-native-reanimated';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {HapticService} from '#services/haptic/HapticService';
 import {SPRING} from '#/constants/animations';
@@ -16,8 +15,7 @@ export const Counter = ({
   onIncrement,
   onDecrement,
   disabled = false,
-  label = 'quantity',
-}: {
+  label = 'quantity' }: {
   count: number;
   onIncrement: () => void;
   onDecrement: () => void;
@@ -36,30 +34,23 @@ export const Counter = ({
   }, [count, countScale]);
 
   const countAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{scale: countScale.value}],
-  }));
+    transform: [{scale: countScale.value}] }));
 
-  const handleDecrement = useCallback(
-    (e: any) => {
+  const handleDecrement = (e: any) => {
       e.stopPropagation();
       if (!disabled) {
         HapticService.selection();
         onDecrement();
       }
-    },
-    [disabled, onDecrement],
-  );
+    };
 
-  const handleIncrement = useCallback(
-    (e: any) => {
+  const handleIncrement = (e: any) => {
       e.stopPropagation();
       if (!disabled) {
         HapticService.selection();
         onIncrement();
       }
-    },
-    [disabled, onIncrement],
-  );
+    };
 
   const iconColor = disabled ? theme.colors.textTertiary : theme.colors.textPrimary;
 
@@ -72,8 +63,7 @@ export const Counter = ({
       accessibilityValue={{
         min: 0,
         now: count,
-        text: String(count),
-      }}
+        text: String(count) }}
       accessibilityActions={[
         {name: 'increment', label: `Increase ${label}`},
         {name: 'decrement', label: `Decrease ${label}`},
@@ -138,8 +128,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderColor: theme.colors.borderLight,
     borderStyle: 'solid',
-    borderRadius: theme.radii.full,
-  },
+    borderRadius: theme.radii.full },
   counterButton: {
     zIndex: theme.zIndex.base,
     backgroundColor: theme.colors.surface,
@@ -148,23 +137,17 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radii.full,
-    ...theme.shadows.sm,
-  },
+    ...theme.shadows.sm },
   counterActionText: {
     fontSize: theme.typography.fontSize.xl,
     paddingHorizontal: theme.spacing['2.5'],
     lineHeight: 20,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   pressed: {
     opacity: theme.opacity.pressed,
-    transform: [{scale: 0.92}],
-  },
+    transform: [{scale: 0.92}] },
   containerDisabled: {
-    borderColor: theme.colors.border,
-  },
+    borderColor: theme.colors.border },
   textDisabled: {
-    color: theme.colors.textTertiary,
-  },
-}));
+    color: theme.colors.textTertiary } }));

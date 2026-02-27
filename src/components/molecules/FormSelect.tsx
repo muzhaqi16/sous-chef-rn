@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useState} from 'react';
 import {View, Text, Pressable, Modal, FlatList, ViewStyle} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils/iconUtils';
@@ -28,19 +28,18 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   error,
   required = false,
   placeholder = 'Select an option',
-  containerStyle,
-}) => {
+  containerStyle }) => {
   const {theme} = useUnistyles();
   const [modalVisible, setModalVisible] = useState(false);
 
   const selectedOption = options.find(option => option.value === value);
 
-  const handleSelect = useCallback((optionValue: string) => {
+  const handleSelect = (optionValue: string) => {
     onValueChange(optionValue);
     setModalVisible(false);
-  }, [onValueChange]);
+  };
 
-  const renderOption = useCallback(({item}: {item: SelectOption}) => {
+  const renderOption = ({item}: {item: SelectOption}) => {
     const isSelected = item.value === value;
     return (
       <Pressable
@@ -51,7 +50,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         </Text>
       </Pressable>
     );
-  }, [value, handleSelect]);
+  };
 
   return (
     <FormFieldWrapper
@@ -114,68 +113,53 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   selectButtonError: {
-    borderColor: theme.colors.error,
-  },
+    borderColor: theme.colors.error },
   selectText: {
     fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   selectTextPlaceholder: {
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   modal: {
     flex: 1,
     backgroundColor: theme.colors.overlays.medium,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   modalContent: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
     padding: theme.spacing['5'],
     maxHeight: '80%',
-    width: '90%',
-  },
+    width: '90%' },
   modalTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   option: {
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-  },
+    borderRadius: theme.radii.md },
   selectedOption: {
-    backgroundColor: theme.colors.primaryLight,
-  },
+    backgroundColor: theme.colors.primaryLight },
   optionText: {
     fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   selectedOptionText: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   closeButton: {
     marginTop: theme.spacing.md,
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.lg,
     backgroundColor: theme.colors.border,
     borderRadius: theme.radii.md,
-    alignSelf: 'center',
-  },
+    alignSelf: 'center' },
   closeButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

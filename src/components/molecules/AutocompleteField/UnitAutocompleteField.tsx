@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { useUnitAutocomplete, type UnitItem } from '#hooks/autocomplete/useUnitAutocomplete';
 import { AutocompleteField } from './AutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
@@ -24,43 +24,33 @@ export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
   required,
   error,
   testID,
-  onUnitSelected,
-}) => {
+  onUnitSelected }) => {
   const unit = useUnitAutocomplete();
 
-  const handleTextChange = useCallback(
-    (text: string) => {
+  const handleTextChange = (text: string) => {
       onChangeText(text);
       unit.handleSearchTermChange(text);
       // Clear unit selection when user types manually
       if (!text) {
         onUnitSelected?.(null, null, null);
       }
-    },
-    [onChangeText, unit, onUnitSelected],
-  );
+    };
 
-  const handleSelect = useCallback(
-    (item: UnitItem) => {
+  const handleSelect = (item: UnitItem) => {
       onChangeText(item.symbol);
       onUnitSelected?.(item.id, item.name, item.type);
       unit.setSearchTerm('');
-    },
-    [onChangeText, onUnitSelected, unit],
-  );
+    };
 
-  const renderItem = useCallback(
-    (item: UnitItem) => (
+  const renderItem = (item: UnitItem) => (
       <AutocompleteRow
         symbolText={item.symbol}
         title={item.name}
         trailingText={item.abbreviation ? `(${item.abbreviation})` : undefined}
       />
-    ),
-    [],
-  );
+    );
 
-  const keyExtractor = useCallback((item: UnitItem) => item.id, []);
+  const keyExtractor = (item: UnitItem) => item.id;
 
   if (variant === 'inline') {
     return (

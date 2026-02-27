@@ -28,52 +28,6 @@ export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
     skip: !userId,
   });
 
-  // Sync server notifications to local store using server-first approach
-  useEffect(() => {
-    if (serverNotifications?.me?.notificationsConnection?.edges) {
-      const serverNotifs = serverNotifications.me.notificationsConnection.edges.map(
-        (edge: any) => {
-          const node = edge.node;
-          return {
-            id: node.id,
-            type: node.type,
-            category: getCategoryFromNotificationType(node.type),
-            priority: NotificationPriority.MEDIUM,
-            title: getNotificationTitle(node.type),
-            message: getNotificationMessage(node.type, node.payload),
-            payload: node.payload,
-            sentAt: node.sentAt,
-            readAt: node.readAt,
-            isRead: Boolean(node.readAt), // Proper read state sync
-            requiresAction:
-              node.type === 'HOME_INVITATION' ||
-              node.type === 'COLLABORATION_INVITE',
-            actionType:
-              node.type === 'HOME_INVITATION'
-                ? 'ACCEPT_HOME_INVITE'
-                : node.type === 'COLLABORATION_INVITE'
-                  ? 'ACCEPT_SHOPPING_LIST_INVITE'
-                  : undefined,
-            source: 'server' as const, // Mark as server notifications
-          };
-        },
-      );
-
-      syncNotificationsFromServer(serverNotifs); // Use server-first sync
-    }
-  }, [serverNotifications, syncNotificationsFromServer]);
-
-  // Periodic cleanup to ensure data consistency
-  useEffect(() => {
-    // Run cleanup when user context changes (home, pantry, shopping list selection)
-    cleanupOrphanedSubscriptions();
-  }, [
-    selectedHomeId,
-    selectedPantryId,
-    selectedShoppingListId,
-    cleanupOrphanedSubscriptions,
-  ]);
-
   // Helper functions for server notifications
   const getCategoryFromNotificationType = (
     type: string,
@@ -121,6 +75,52 @@ export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
         return 'You have a new notification';
     }
   };
+
+  // Sync server notifications to local store using server-first approach
+  useEffect(() => {
+    if (serverNotifications?.me?.notificationsConnection?.edges) {
+      const serverNotifs = serverNotifications.me.notificationsConnection.edges.map(
+        (edge: any) => {
+          const node = edge.node;
+          return {
+            id: node.id,
+            type: node.type,
+            category: getCategoryFromNotificationType(node.type),
+            priority: NotificationPriority.MEDIUM,
+            title: getNotificationTitle(node.type),
+            message: getNotificationMessage(node.type, node.payload),
+            payload: node.payload,
+            sentAt: node.sentAt,
+            readAt: node.readAt,
+            isRead: Boolean(node.readAt), // Proper read state sync
+            requiresAction:
+              node.type === 'HOME_INVITATION' ||
+              node.type === 'COLLABORATION_INVITE',
+            actionType:
+              node.type === 'HOME_INVITATION'
+                ? 'ACCEPT_HOME_INVITE'
+                : node.type === 'COLLABORATION_INVITE'
+                  ? 'ACCEPT_SHOPPING_LIST_INVITE'
+                  : undefined,
+            source: 'server' as const, // Mark as server notifications
+          };
+        },
+      );
+
+      syncNotificationsFromServer(serverNotifs); // Use server-first sync
+    }
+  }, [serverNotifications, syncNotificationsFromServer]);
+
+  // Periodic cleanup to ensure data consistency
+  useEffect(() => {
+    // Run cleanup when user context changes (home, pantry, shopping list selection)
+    cleanupOrphanedSubscriptions();
+  }, [
+    selectedHomeId,
+    selectedPantryId,
+    selectedShoppingListId,
+    cleanupOrphanedSubscriptions,
+  ]);
 
   // Return refetch function for parent components
   return { refetch };

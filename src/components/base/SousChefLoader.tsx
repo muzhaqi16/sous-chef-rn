@@ -15,6 +15,7 @@ import {
   withRepeat,
   withSequence,
   withTiming,
+  withDelay,
   Easing,
 } from 'react-native-reanimated';
 
@@ -59,46 +60,31 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
   const tomatoY = useSharedValue(0);
   const leavesY = useSharedValue(0);
 
-  // Start animations on mount with staggered timing
+  // Start animations on mount with staggered timing (all on UI thread)
   useEffect(() => {
     const bounceConfig = {
       duration: 600,
       easing: Easing.bezier(0.25, 0.1, 0.25, 1),
     };
 
+    const bounce = (amplitude: number) =>
+      withRepeat(
+        withSequence(
+          withTiming(-amplitude, bounceConfig),
+          withTiming(0, bounceConfig),
+        ),
+        -1,
+        false,
+      );
+
     // Baguette bounce (first)
-    baguetteY.set(withRepeat(
-      withSequence(
-        withTiming(-12, bounceConfig),
-        withTiming(0, bounceConfig),
-      ),
-      -1,
-      false,
-    ));
+    baguetteY.set(bounce(12));
 
-    // Tomato bounce (delayed by 200ms)
-    setTimeout(() => {
-      tomatoY.set(withRepeat(
-        withSequence(
-          withTiming(-10, bounceConfig),
-          withTiming(0, bounceConfig),
-        ),
-        -1,
-        false,
-      ));
-    }, 200);
+    // Tomato bounce (delayed by 200ms on UI thread)
+    tomatoY.set(withDelay(200, bounce(10)));
 
-    // Leaves bounce (delayed by 400ms)
-    setTimeout(() => {
-      leavesY.set(withRepeat(
-        withSequence(
-          withTiming(-8, bounceConfig),
-          withTiming(0, bounceConfig),
-        ),
-        -1,
-        false,
-      ));
-    }, 400);
+    // Leaves bounce (delayed by 400ms on UI thread)
+    leavesY.set(withDelay(400, bounce(8)));
   }, [baguetteY, tomatoY, leavesY]);
 
   // Derived transforms for Skia
@@ -119,74 +105,51 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
   const cy = config.canvas / 2;
   const scale = config.scale;
 
-  // Create baguette path (elongated bread shape)
-  const baguettePath = Skia.Path.Make();
-  baguettePath.moveTo(cx - 25 * scale, cy - 45 * scale);
-  baguettePath.quadTo(
-    cx - 30 * scale,
-    cy - 55 * scale,
-    cx - 20 * scale,
-    cy - 70 * scale,
-  );
-  baguettePath.quadTo(
-    cx - 15 * scale,
-    cy - 80 * scale,
-    cx - 10 * scale,
-    cy - 75 * scale,
-  );
-  baguettePath.quadTo(
-    cx - 5 * scale,
-    cy - 65 * scale,
-    cx - 15 * scale,
-    cy - 45 * scale,
-  );
-  baguettePath.close();
+  // Memoize all Skia path objects to avoid re-creating native objects on every render
+  const baguette = Skia.Path.Make();
+  baguette.moveTo(cx - 25 * scale, cy - 45 * scale);
+  baguette.quadTo(cx - 30 * scale, cy - 55 * scale, cx - 20 * scale, cy - 70 * scale);
+  baguette.quadTo(cx - 15 * scale, cy - 80 * scale, cx - 10 * scale, cy - 75 * scale);
+  baguette.quadTo(cx - 5 * scale, cy - 65 * scale, cx - 15 * scale, cy - 45 * scale);
+  baguette.close();
 
-  // Create baguette scoring lines
-  const baguetteLine1 = Skia.Path.Make();
-  baguetteLine1.moveTo(cx - 22 * scale, cy - 55 * scale);
-  baguetteLine1.lineTo(cx - 14 * scale, cy - 52 * scale);
+  const line1 = Skia.Path.Make();
+  line1.moveTo(cx - 22 * scale, cy - 55 * scale);
+  line1.lineTo(cx - 14 * scale, cy - 52 * scale);
 
-  const baguetteLine2 = Skia.Path.Make();
-  baguetteLine2.moveTo(cx - 20 * scale, cy - 62 * scale);
-  baguetteLine2.lineTo(cx - 12 * scale, cy - 59 * scale);
+  const line2 = Skia.Path.Make();
+  line2.moveTo(cx - 20 * scale, cy - 62 * scale);
+  line2.lineTo(cx - 12 * scale, cy - 59 * scale);
 
-  const baguetteLine3 = Skia.Path.Make();
-  baguetteLine3.moveTo(cx - 17 * scale, cy - 69 * scale);
-  baguetteLine3.lineTo(cx - 11 * scale, cy - 67 * scale);
+  const line3 = Skia.Path.Make();
+  line3.moveTo(cx - 17 * scale, cy - 69 * scale);
+  line3.lineTo(cx - 11 * scale, cy - 67 * scale);
 
-  // Create leaf paths
-  const leaf1Path = Skia.Path.Make();
-  leaf1Path.moveTo(cx + 20 * scale, cy - 40 * scale);
-  leaf1Path.quadTo(
-    cx + 30 * scale,
-    cy - 60 * scale,
-    cx + 25 * scale,
-    cy - 70 * scale,
-  );
-  leaf1Path.quadTo(
-    cx + 20 * scale,
-    cy - 65 * scale,
-    cx + 15 * scale,
-    cy - 50 * scale,
-  );
-  leaf1Path.close();
+  const leaf1 = Skia.Path.Make();
+  leaf1.moveTo(cx + 20 * scale, cy - 40 * scale);
+  leaf1.quadTo(cx + 30 * scale, cy - 60 * scale, cx + 25 * scale, cy - 70 * scale);
+  leaf1.quadTo(cx + 20 * scale, cy - 65 * scale, cx + 15 * scale, cy - 50 * scale);
+  leaf1.close();
 
-  const leaf2Path = Skia.Path.Make();
-  leaf2Path.moveTo(cx + 30 * scale, cy - 35 * scale);
-  leaf2Path.quadTo(
-    cx + 45 * scale,
-    cy - 50 * scale,
-    cx + 40 * scale,
-    cy - 60 * scale,
-  );
-  leaf2Path.quadTo(
-    cx + 35 * scale,
-    cy - 55 * scale,
-    cx + 25 * scale,
-    cy - 40 * scale,
-  );
-  leaf2Path.close();
+  const leaf2 = Skia.Path.Make();
+  leaf2.moveTo(cx + 30 * scale, cy - 35 * scale);
+  leaf2.quadTo(cx + 45 * scale, cy - 50 * scale, cx + 40 * scale, cy - 60 * scale);
+  leaf2.quadTo(cx + 35 * scale, cy - 55 * scale, cx + 25 * scale, cy - 40 * scale);
+  leaf2.close();
+
+  const stem = Skia.Path.Make();
+  stem.moveTo(cx + 5 * scale, cy - 68 * scale);
+  stem.quadTo(cx + 8 * scale, cy - 73 * scale, cx + 12 * scale, cy - 71 * scale);
+  stem.quadTo(cx + 8 * scale, cy - 69 * scale, cx + 5 * scale, cy - 68 * scale);
+  const { baguettePath, baguetteLine1, baguetteLine2, baguetteLine3, leaf1Path, leaf2Path, stemPath } = {
+      baguettePath: baguette,
+      baguetteLine1: line1,
+      baguetteLine2: line2,
+      baguetteLine3: line3,
+      leaf1Path: leaf1,
+      leaf2Path: leaf2,
+      stemPath: stem,
+    };
 
   return (
     <View style={componentStyles.container}>
@@ -253,26 +216,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
             opacity={0.4}
           />
           {/* Tomato stem */}
-          <Path
-            path={(() => {
-              const stemPath = Skia.Path.Make();
-              stemPath.moveTo(cx + 5 * scale, cy - 68 * scale);
-              stemPath.quadTo(
-                cx + 8 * scale,
-                cy - 73 * scale,
-                cx + 12 * scale,
-                cy - 71 * scale,
-              );
-              stemPath.quadTo(
-                cx + 8 * scale,
-                cy - 69 * scale,
-                cx + 5 * scale,
-                cy - 68 * scale,
-              );
-              return stemPath;
-            })()}
-            color={COLORS.tomatoStem}
-          />
+          <Path path={stemPath} color={COLORS.tomatoStem} />
         </Group>
 
         {/* Leaves (bounce independently) */}

@@ -16,6 +16,7 @@ import {
 } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import { normalizeHome } from '#/utils/connectionUtils';
+import { executeCacheUpdate, executeMutation, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 interface UseHomeInvitationsOptions {
   homes: any[] | null;
@@ -51,24 +52,25 @@ export function useHomeInvitations({
     update: (cache, { data }, { variables }) => {
       if (!data?.inviteToHome?.homeInvite || !variables) return;
 
-      try {
-        const homeId = variables.input.homeId;
+      executeCacheUpdate(
+        () => {
+          const homeId = variables.input.homeId;
 
-        // Empty cache.modify - subscription handles the actual update
-        if (data.inviteToHome.homeInvite) {
-          cache.modify({
-            id: cache.identify({ __typename: 'Home', id: homeId }),
-            fields: {
-              members(existingMembers = []) {
-                // Return unchanged - subscription will handle the update when invite is accepted
-                return existingMembers;
+          // Empty cache.modify - subscription handles the actual update
+          if (data.inviteToHome!.homeInvite) {
+            cache.modify({
+              id: cache.identify({ __typename: 'Home', id: homeId }),
+              fields: {
+                members(existingMembers = []) {
+                  // Return unchanged - subscription will handle the update when invite is accepted
+                  return existingMembers;
+                },
               },
-            },
-          });
-        }
-      } catch (error) {
-        console.warn('Cache update failed for inviteUser:', error);
-      }
+            });
+          }
+        },
+        'Cache update failed for inviteUser:',
+      );
     },
 
     onError: (error: any) => {
@@ -89,12 +91,10 @@ export function useHomeInvitations({
       update: (_cache, { data }) => {
         if (!data?.joinHomeByCode?.membership) return;
 
-        try {
-          // Refetch homes list to get the newly joined home with all fields
-          refetch();
-        } catch (error) {
-          console.warn('Failed to refetch homes after join:', error);
-        }
+        executeCacheUpdate(
+          () => { refetch(); },
+          'Failed to refetch homes after join:',
+        );
       },
       onCompleted: data => {
         if (data?.joinHomeByCode?.membership) {
@@ -150,15 +150,15 @@ export function useHomeInvitations({
       return false;
     }
 
-    try {
-      const result = await joinHomeByCodeMutation({
+    const result = await executeMutation(
+      () => joinHomeByCodeMutation({
         variables: { joinCode: joinCode.trim() },
-      });
+      }),
+      'Join home by code error:',
+    );
+    if (!result) return false;
 
-      return result.data?.joinHomeByCode?.membership || false;
-    } catch {
-      return false;
-    }
+    return result.data?.joinHomeByCode?.membership || false;
   };
 
   const previewHomeByCode = async (joinCode: string) => {
@@ -166,19 +166,20 @@ export function useHomeInvitations({
       return null;
     }
 
-    try {
-      const result = await getHomeByJoinCode({
+    const result = await executeMutationWithErrorHandler(
+      () => getHomeByJoinCode({
         variables: { joinCode: joinCode.trim() },
-      });
+      }),
+      (error: any) => {
+        const { message } = handleApolloError(error, {
+          operation: 'Preview Home',
+        });
+        Alert.alert('Error', message);
+      },
+    );
+    if (!result) return null;
 
-      return result.data?.homeByJoinCode || null;
-    } catch (error: any) {
-      const { message } = handleApolloError(error, {
-        operation: 'Preview Home',
-      });
-      Alert.alert('Error', message);
-      return null;
-    }
+    return result.data?.homeByJoinCode || null;
   };
 
   const previewHome = previewData?.homeByJoinCode

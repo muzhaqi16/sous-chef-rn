@@ -2,8 +2,6 @@ import React, {
   createContext,
   useContext,
   useRef,
-  useCallback,
-  useMemo,
   ReactNode,
 } from 'react';
 import { staggeredEntryAnimation } from '#constants/animations';
@@ -38,26 +36,23 @@ export const StaggeredEntryProvider: React.FC<StaggeredEntryProviderProps> = ({
 }) => {
   const initialRenderCompleteRef = useRef(false);
 
-  const getEntryDelay = useCallback((index: number): number => {
+  const getEntryDelay = (index: number): number => {
     if (initialRenderCompleteRef.current) return 0;
     return (
       staggeredEntryAnimation.initialDelay +
       Math.min(index, staggeredEntryAnimation.maxItems) *
         staggeredEntryAnimation.delayPerItem
     );
-  }, []);
+  };
 
-  const markInitialRenderComplete = useCallback(() => {
+  const markInitialRenderComplete = () => {
     initialRenderCompleteRef.current = true;
-  }, []);
+  };
 
-  const contextValue = useMemo(
-    () => ({
-      getEntryDelay,
-      markInitialRenderComplete,
-    }),
-    [getEntryDelay, markInitialRenderComplete],
-  );
+  const contextValue = {
+    getEntryDelay,
+    markInitialRenderComplete,
+  };
 
   return (
     <StaggeredEntryContext.Provider value={contextValue}>

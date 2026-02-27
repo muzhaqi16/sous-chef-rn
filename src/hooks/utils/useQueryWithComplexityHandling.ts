@@ -59,14 +59,24 @@ export function useQueryWithComplexityHandling<T extends { error?: ErrorLike; re
     ) {
       lastErrorRef.current = queryHookResult.error;
       hasShownAlertRef.current = true;
-      handleComplexityError();
+
+      // Inline handleComplexityError logic to avoid dependency on function that changes every render
+      const error = queryHookResult.error;
+      handleQueryComplexityError(error, onRetry);
+      Alert.alert(
+        'Request Too Large',
+        'The request was too complex. Please try with fewer items or simplify your request.',
+        ([
+          { text: 'Cancel', style: 'cancel' },
+          onRetry ? { text: 'Retry', onPress: onRetry } : undefined,
+        ] as (AlertButton | undefined)[]).filter((b): b is AlertButton => b != null)
+      );
     } else if (!queryHookResult.error) {
       // Reset when error clears
       hasShownAlertRef.current = false;
       lastErrorRef.current = null;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryHookResult.error]);
+  }, [queryHookResult.error, onRetry]);
 
   return {
     ...queryHookResult,

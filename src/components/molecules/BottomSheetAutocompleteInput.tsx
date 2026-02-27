@@ -1,26 +1,21 @@
 import React, {
   useState,
   useRef,
-  useCallback,
-  useEffect,
-  memo,
-} from 'react';
+  
+  useEffect } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
   BottomSheetView,
-  BottomSheetFlatList,
-} from '@gorhom/bottom-sheet';
+  BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { useAppStore } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
-// Memoized separator component to prevent re-renders
-const AutocompleteSeparator = memo(() => <View style={styles.separator} />);
-AutocompleteSeparator.displayName = 'AutocompleteSeparator';
+const AutocompleteSeparator = () => <View style={styles.separator} />;
 
 interface BottomSheetAutocompleteInputProps<T> {
   // Input field props
@@ -97,35 +92,37 @@ export function BottomSheetAutocompleteInput<T>({
   // Callbacks
   onSearchChange,
   onModalOpen,
-  onModalClose,
-}: BottomSheetAutocompleteInputProps<T>) {
+  onModalClose }: BottomSheetAutocompleteInputProps<T>) {
   const userDismissedRef = useRef(false);
   const hasInteractedRef = useRef(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
 
-  const handleDismiss = useCallback(() => {
+  const handleDismiss = () => {
     userDismissedRef.current = true; // Mark as user-dismissed
     hasInteractedRef.current = false; // Reset interaction flag to prevent auto-reopen
     setShowAutocomplete(false);
     onModalClose?.();
-  }, [onModalClose]);
+  };
 
   const { ref: bottomSheetRef, modalProps, theme } = useStandardBottomSheet({
     onDismiss: handleDismiss,
-    snapPoints: [snapPoint],
-  });
+    snapPoints: [snapPoint] });
 
   // Check online status to prevent autocomplete when offline
   const isOnline = useAppStore(state => state.isOnline);
 
-  // Sync searchTerm with external value changes only when modal is closed
+  // Sync searchTerm with external value changes only when modal is closed (render-time state update)
   // When modal is open, searchTerm is the source of truth to avoid cursor jumping
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState(value);
+  const [prevShowAutocomplete, setPrevShowAutocomplete] = useState(showAutocomplete);
+  if (value !== prevValue || showAutocomplete !== prevShowAutocomplete) {
+    setPrevValue(value);
+    setPrevShowAutocomplete(showAutocomplete);
     if (!showAutocomplete && value !== searchTerm) {
       setSearchTerm(value || '');
     }
-  }, [value, showAutocomplete]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   // Show modal only when we have results (search-first pattern)
   // Don't re-open if user explicitly dismissed (via selection or backdrop tap)
@@ -139,6 +136,7 @@ export function BottomSheetAutocompleteInput<T>({
       !userDismissedRef.current &&
       hasInteractedRef.current
     ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- must sync state with imperative present() and ref guards
       setShowAutocomplete(true);
       bottomSheetRef.current?.present();
       onModalOpen?.();
@@ -172,16 +170,16 @@ export function BottomSheetAutocompleteInput<T>({
     onSearchChange?.(text);
   };
 
-  const handleSelectItem = useCallback((item: T) => {
+  const handleSelectItem = (item: T) => {
     userDismissedRef.current = true; // Mark as user-dismissed
     hasInteractedRef.current = false; // Reset interaction flag to prevent auto-reopen
     setShowAutocomplete(false);
     bottomSheetRef.current?.dismiss();
     onSelectItem(item);
     onModalClose?.();
-  }, [onSelectItem, onModalClose, bottomSheetRef]);
+  };
 
-  const handleSubmitCustomValue = useCallback(() => {
+  const handleSubmitCustomValue = () => {
     // Accept the current searchTerm as the custom value
     if (searchTerm.trim()) {
       onChangeText(searchTerm.trim());
@@ -192,7 +190,7 @@ export function BottomSheetAutocompleteInput<T>({
     setShowAutocomplete(false);
     bottomSheetRef.current?.dismiss();
     onModalClose?.();
-  }, [searchTerm, onChangeText, onModalClose, bottomSheetRef]);
+  };
 
   const defaultEmptyComponent = () => {
     // Show offline-specific message when not online
@@ -220,17 +218,14 @@ export function BottomSheetAutocompleteInput<T>({
     );
   };
 
-  const renderAutocompleteItem = useCallback(
-    ({ item }: { item: T }) => (
+  const renderAutocompleteItem = ({ item }: { item: T }) => (
       <Pressable
         onPress={() => handleSelectItem(item)}
         style={({ pressed }) => ({ opacity: pressed ? theme.opacity.pressed : 1 })}
       >
         {renderItem(item)}
       </Pressable>
-    ),
-    [handleSelectItem, renderItem, theme.opacity.pressed],
-  );
+    );
 
   const defaultLoadingComponent = () => (
     <BottomSheetView
@@ -316,26 +311,21 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     fontSize: theme.typography.fontSize.base,
     backgroundColor: theme.colors.surface,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   fieldInputError: {
-    borderColor: theme.colors.error,
-  },
+    borderColor: theme.colors.error },
   headerSection: {
     paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
-  },
+    paddingTop: theme.spacing.sm },
   listContent: {
     paddingBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
-  },
+    backgroundColor: theme.colors.surface },
   autocompleteTitle: {
     fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   bottomSheetInput: {
     marginBottom: theme.spacing.md,
     borderRadius: theme.radii.md,
@@ -345,34 +335,27 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.inputBackground,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: theme.colors.inputText,
-  },
+    color: theme.colors.inputText },
   separator: {
     height: 1,
     backgroundColor: theme.colors.borderLight,
-    marginHorizontal: theme.spacing.md,
-  },
+    marginHorizontal: theme.spacing.md },
   messageContainer: {
     flex: 1,
     padding: theme.spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-  },
+    backgroundColor: theme.colors.surface },
   emptyText: {
     fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   emptySubtext: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   loadingText: {
     fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textSecondary,
-  },
-}));
+    color: theme.colors.textSecondary } }));

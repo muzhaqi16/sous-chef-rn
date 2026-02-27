@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { ShoppingListItemFragment } from '#generated';
 import { parseFractionalInput } from '#/utils/fractionUtils';
@@ -30,8 +30,7 @@ const DEFAULT_FORM_STATE: FormState = {
   selectedUnitId: null,
   notes: '',
   category: '',
-  estimatedPrice: '',
-};
+  estimatedPrice: '' };
 
 const DEFAULT_DIRTY_FIELDS: DirtyFields = {
   itemName: false,
@@ -40,20 +39,18 @@ const DEFAULT_DIRTY_FIELDS: DirtyFields = {
   selectedUnitId: false,
   notes: false,
   category: false,
-  estimatedPrice: false,
-};
+  estimatedPrice: false };
 
 export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   const [formState, setFormState] = useState<FormState>({
     ...DEFAULT_FORM_STATE,
-    ...initialState,
-  });
+    ...initialState });
 
   // Track initial state for dirty field comparison (edit mode)
   const [savedInitialState, setSavedInitialState] = useState<FormState | null>(null);
 
   // Compute dirty fields by comparing current state with initial state
-  const dirtyFields = useMemo<DirtyFields>(() => {
+  const dirtyFields: DirtyFields = (() => {
     if (!savedInitialState) return DEFAULT_DIRTY_FIELDS;
     return {
       itemName: formState.itemName !== savedInitialState.itemName,
@@ -64,21 +61,15 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       category: formState.category !== savedInitialState.category,
       estimatedPrice: formState.estimatedPrice !== savedInitialState.estimatedPrice,
     };
-  }, [formState, savedInitialState]);
+  })();
 
-  const hasDirtyFields = useMemo(
-    () => Object.values(dirtyFields).some(Boolean),
-    [dirtyFields],
-  );
+  const hasDirtyFields = Object.values(dirtyFields).some(Boolean);
 
-  const updateField = useCallback(
-    <K extends keyof FormState>(field: K, value: FormState[K]) => {
+  const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
       setFormState(prev => ({ ...prev, [field]: value }));
-    },
-    [],
-  );
+    };
 
-  const setFromItem = useCallback((item: ShoppingListItemFragment) => {
+  const setFromItem = (item: ShoppingListItemFragment) => {
     const state: FormState = {
       itemName: item.itemName || '',
       quantityInput: item.quantityInput || item.quantity?.toString() || '1',
@@ -86,22 +77,20 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       notes: item.notes || '',
       category: item.category || '',
       selectedUnitId: item.unit?.id || null,
-      estimatedPrice: item.priceEstimate?.estimated?.toString() || '',
-    };
+      estimatedPrice: item.priceEstimate?.estimated?.toString() || '' };
     setFormState(state);
     setSavedInitialState(state); // Save initial state for dirty comparison
-  }, []);
+  };
 
-  const buildUnitInput = useCallback(() => {
+  const buildUnitInput = () => {
     return {
       unitName: formState.unit,
-      ...(formState.selectedUnitId && { unitId: formState.selectedUnitId }),
-    };
-  }, [formState.selectedUnitId, formState.unit]);
+      ...(formState.selectedUnitId && { unitId: formState.selectedUnitId }) };
+  };
 
   // Build partial input with only dirty fields (for edit mode)
   // Sends raw quantityInput string - server handles conversion via FlexibleQuantity
-  const buildDirtyInput = useCallback(() => {
+  const buildDirtyInput = () => {
     const input: Record<string, any> = {};
 
     if (dirtyFields.itemName) {
@@ -134,15 +123,15 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
     }
 
     return input;
-  }, [dirtyFields, formState]);
+  };
 
-  const parseQuantityInput = useCallback(() => {
+  const parseQuantityInput = () => {
     const result = parseFractionalInput(formState.quantityInput);
     if (result === null || result <= 0) {
       return null;
     }
     return result;
-  }, [formState.quantityInput]);
+  };
 
   return {
     formState,
@@ -152,6 +141,5 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
     setFromItem,
     parseQuantityInput,
     buildUnitInput,
-    buildDirtyInput,
-  } as const;
+    buildDirtyInput } as const;
 }

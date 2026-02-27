@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Pie, PolarChart } from 'victory-native';
@@ -37,14 +37,14 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
 }) => {
   const { theme } = useUnistyles();
 
-  const chartData = useMemo(() => {
+  const chartData = (() => {
     if (!data || data.length === 0) return [];
     return data.map((item, index) => ({
       label: item.label,
       value: item.value,
       color: colorScale[index % colorScale.length],
     }));
-  }, [data, colorScale]);
+  })();
 
   if (chartData.length === 0) {
     return (

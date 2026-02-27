@@ -11,7 +11,7 @@ interface PantryAlertBarProps {
   onLowStockNavigate?: () => void;
 }
 
-export const PantryAlertBar: React.FC<PantryAlertBarProps> = React.memo(({
+export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
   stats,
   onAnalyticsPress,
   onLowStockNavigate,
@@ -57,9 +57,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = React.memo(({
 
     </View>
   );
-});
-
-PantryAlertBar.displayName = 'PantryAlertBar';
+};
 
 const styles = StyleSheet.create(theme => ({
   container: {

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { View, Text } from 'react-native';
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -32,19 +32,17 @@ export const PurchaseHistoryScreen: React.FC<{
   const { theme } = useUnistyles();
   const { itemName, purchases } = route.params;
 
-  const formatDate = useCallback((dateString: string) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
       hour: 'numeric',
-      minute: '2-digit',
-    });
-  }, []);
+      minute: '2-digit' });
+  };
 
-  const renderPurchaseItem: ListRenderItem<RouteParams['purchases'][0]> = useCallback(
-    ({ item: purchase, index }) => (
+  const renderPurchaseItem: ListRenderItem<RouteParams['purchases'][0]> = ({ item: purchase, index }) => (
       <View key={purchase.id} style={styles.purchaseCard}>
         <View style={styles.purchaseHeader}>
           <View style={styles.purchaseNumber}>
@@ -88,25 +86,19 @@ export const PurchaseHistoryScreen: React.FC<{
           )}
         </View>
       </View>
-    ),
-    [purchases.length, formatDate, theme.colors.iconSecondary],
-  );
+    );
 
   // PERFORMANCE: Memoize render functions to avoid recreation on every render
-  const renderListHeader = useCallback(
-    () => (
+  const renderListHeader = () => (
       <View style={styles.statsContainer}>
         <Text style={styles.statsText}>
           Total Purchases:{' '}
           <Text style={styles.statsValue}>{purchases.length}</Text>
         </Text>
       </View>
-    ),
-    [purchases.length],
-  );
+    );
 
-  const renderEmptyComponent = useCallback(
-    () => (
+  const renderEmptyComponent = () => (
       <View style={styles.emptyContainer}>
         <Icon
           name="receipt-outline"
@@ -119,9 +111,7 @@ export const PurchaseHistoryScreen: React.FC<{
           Mark this item as purchased to start tracking history
         </Text>
       </View>
-    ),
-    [theme.colors.iconDisabled],
-  );
+    );
 
   return (
     <View style={styles.container}>
@@ -152,8 +142,7 @@ export const PurchaseHistoryScreen: React.FC<{
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -161,125 +150,101 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
+    backgroundColor: theme.colors.surface },
   backButton: {
-    padding: theme.spacing.xs,
-  },
+    padding: theme.spacing.xs },
   headerContent: {
     flex: 1,
-    marginLeft: theme.spacing.sm,
-  },
+    marginLeft: theme.spacing.sm },
   headerTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   headerSubtitle: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
+    marginTop: 2 },
   headerSpacer: {
     width: 40, // Balance the back button
   },
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   content: {
     padding: theme.spacing.md,
-    flexGrow: 1,
-  },
+    flexGrow: 1 },
   statsContainer: {
     backgroundColor: theme.colors.infoLight,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
     marginBottom: theme.spacing.md,
     borderWidth: 1,
-    borderColor: theme.colors.info,
-  },
+    borderColor: theme.colors.info },
   statsText: {
     fontSize: theme.fonts.size.md,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   statsValue: {
     fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.info,
-  },
+    color: theme.colors.info },
   purchaseCard: {
     borderRadius: theme.radii.md,
     padding: theme.spacing.md,
     borderWidth: 1,
     marginVertical: theme.spacing.sm,
     borderColor: theme.colors.border,
-    ...commonStyles.shadow,
-  },
+    ...commonStyles.shadow },
   purchaseHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   purchaseNumber: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: theme.radii.sm,
-    marginRight: theme.spacing.sm,
-  },
+    marginRight: theme.spacing.sm },
   purchaseNumberText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.bold,
-  },
+    fontWeight: theme.fonts.weight.bold },
   purchaseDate: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    flex: 1,
-  },
+    flex: 1 },
   purchaseDetails: {
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   purchaseDetailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.xs,
-  },
+    paddingVertical: theme.spacing.xs },
   purchaseDetailLabel: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginLeft: theme.spacing.xs,
-    marginRight: theme.spacing.xs,
-  },
+    marginRight: theme.spacing.xs },
   purchaseDetailValue: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    flex: 1,
-  },
+    flex: 1 },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.xl * 2,
-  },
+    paddingVertical: theme.spacing.xl * 2 },
   emptyText: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginTop: theme.spacing.md,
-  },
+    marginTop: theme.spacing.md },
   emptySubtext: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
     textAlign: 'center',
-    paddingHorizontal: theme.spacing.xl,
-  },
+    paddingHorizontal: theme.spacing.xl },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

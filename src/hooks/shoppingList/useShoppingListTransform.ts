@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import type { ShoppingListItemDisplayFragment } from '#generated';
@@ -105,8 +104,8 @@ function transformItems(
  * - Partition items by purchase status
  *
  * This hook removes the need for ref-based caching by relying on:
- * 1. useMemo for transformation (recalculates only when items change)
- * 2. React.memo on child components with stable keys
+ * 1. React Compiler for automatic memoization (recalculates only when items change)
+ * 2. Stable keys on child components
  * 3. Accepting that config objects are recreated when item data changes (which is correct behavior)
  */
 export function useShoppingListTransform(
@@ -117,19 +116,11 @@ export function useShoppingListTransform(
   const showImages = useShowShoppingListImages();
 
   // Transform items using the extracted helper function
-  const sortableItems = useMemo(
-    () => transformItems(items, forcePurchasedState, showImages),
-    [items, forcePurchasedState, showImages],
-  );
+  const sortableItems = transformItems(items, forcePurchasedState, showImages);
 
   // Partition by purchase status
-  const { unpurchasedItems, purchasedItems } = useMemo(
-    () => ({
-      unpurchasedItems: sortableItems.filter(item => !item.isPurchased),
-      purchasedItems: sortableItems.filter(item => item.isPurchased),
-    }),
-    [sortableItems],
-  );
+  const unpurchasedItems = sortableItems.filter(item => !item.isPurchased);
+  const purchasedItems = sortableItems.filter(item => item.isPurchased);
 
   return {
     sortableItems,
@@ -142,7 +133,7 @@ export function useShoppingListTransform(
  * useShoppingListTransformMulti - Consolidated transform for multiple item sources
  *
  * Use this when you have multiple arrays to transform (e.g., from paginated queries).
- * Transforms all arrays in a single useMemo call for better performance.
+ * Transforms all arrays in a single call for better performance.
  *
  * @example
  * ```tsx
@@ -157,18 +148,15 @@ export function useShoppingListTransformMulti(options: MultiSourceTransformOptio
   const { items, rawUnpurchasedItems, rawPurchasedItems } = options;
   const showImages = useShowShoppingListImages();
 
-  // Transform all arrays in a single useMemo call
-  const result = useMemo(
-    () => ({
-      // All items (for backwards compatibility / search)
-      sortableItems: transformItems(items, undefined, showImages),
-      // Paginated unpurchased items (force isPurchased: false for checkbox consistency)
-      unpurchasedItems: transformItems(rawUnpurchasedItems, false, showImages),
-      // Paginated purchased items (force isPurchased: true for checkbox consistency)
-      purchasedItems: transformItems(rawPurchasedItems, true, showImages),
-    }),
-    [items, rawUnpurchasedItems, rawPurchasedItems, showImages],
-  );
+  // Transform all arrays
+  const result = {
+    // All items (for backwards compatibility / search)
+    sortableItems: transformItems(items, undefined, showImages),
+    // Paginated unpurchased items (force isPurchased: false for checkbox consistency)
+    unpurchasedItems: transformItems(rawUnpurchasedItems, false, showImages),
+    // Paginated purchased items (force isPurchased: true for checkbox consistency)
+    purchasedItems: transformItems(rawPurchasedItems, true, showImages),
+  };
 
   return result;
 }

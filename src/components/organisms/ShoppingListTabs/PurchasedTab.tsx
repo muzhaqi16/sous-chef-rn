@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
 import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
@@ -6,21 +6,18 @@ import { EmptyState } from '#components/base/EmptyState';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { StaggeredEntryProvider } from '#context/StaggeredEntryContext';
 import { StaggeredTabContent } from './StaggeredTabContent';
+import { useShoppingListTabsActions } from './ShoppingListTabsActionsContext';
+
+// Module-level flag: once purchased tab content has been shown, skip skeletons on remount.
+// Persists across component unmount/remount (stack navigation), resets on app restart.
+let hasPurchasedTabShownContent = false;
 
 interface PurchasedTabProps {
   items: SortableShoppingListItem[];
-  onItemPress: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
-  onTogglePurchase?: (id: string) => void;
-  onMoveToPantry?: (id: string) => void;
-  onQuantityPress?: (id: string) => void;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   loading?: boolean;
   disabled?: boolean;
-  onSwipeableWillOpen?: (ref: any) => void;
-  onSwipeableClose?: () => void;
   // Pagination props
   onEndReached?: () => void;
   hasMore?: boolean;
@@ -35,29 +32,41 @@ interface PurchasedTabProps {
 
 const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   items,
-  onItemPress,
-  onItemEdit,
-  onItemDelete,
-  onTogglePurchase,
-  onMoveToPantry,
-  onQuantityPress,
   onRefresh,
   refreshing,
   disabled,
-  onSwipeableWillOpen,
-  onSwipeableClose,
   onEndReached,
   canRemoveItems = true,
   canEditItems = true,
   canMarkPurchased = true,
   isTransitioning = false,
 }) => {
+  // PERF: Action callbacks from context (not props) so renderScene in
+  // ShoppingListTabs doesn't depend on them and stays stable.
+  const actions = useShoppingListTabsActions();
   // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
   // This ensures smooth screen transitions by showing skeletons during navigation animation
   const isReady = useDeferredRender();
 
-  // Show skeletons during initial render OR during list transitions
-  if (!isReady || isTransitioning) {
+  // Track the module-level flag in state so we can read it during render.
+  // Uses React's "adjusting state during render" pattern to stay in sync.
+  const [hasShownContent, setHasShownContent] = useState(hasPurchasedTabShownContent);
+
+  // Once content has been shown, latch state so skeletons never reappear.
+  if (!hasShownContent && isReady && !isTransitioning && items.length > 0) {
+    setHasShownContent(true);
+  }
+
+  // Sync the module-level flag so it persists across unmount/remount (side effect).
+  useEffect(() => {
+    if (hasShownContent) {
+      hasPurchasedTabShownContent = true;
+    }
+  }, [hasShownContent]);
+
+  // Show skeletons only on the very first data load
+  const showSkeletons = !hasShownContent && (!isReady || isTransitioning);
+  if (showSkeletons) {
     return <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />;
   }
 
@@ -76,17 +85,17 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
     <StaggeredEntryProvider>
       <StaggeredTabContent
         items={items}
-        onItemPress={onItemPress}
-        onItemEdit={onItemEdit}
-        onItemDelete={onItemDelete}
-        onTogglePurchase={onTogglePurchase}
-        onMoveToPantry={onMoveToPantry}
-        onQuantityPress={onQuantityPress}
+        onItemPress={actions.onItemPress}
+        onItemEdit={actions.onItemEdit}
+        onItemDelete={actions.onItemDelete}
+        onTogglePurchase={actions.onTogglePurchase}
+        onMoveToPantry={actions.onMoveToPantry}
+        onQuantityPress={actions.onQuantityPress}
         onRefresh={onRefresh}
         refreshing={refreshing}
         disabled={disabled}
-        onSwipeableWillOpen={onSwipeableWillOpen}
-        onSwipeableClose={onSwipeableClose}
+        onSwipeableWillOpen={actions.onSwipeableWillOpen}
+        onSwipeableClose={actions.onSwipeableClose}
         onEndReached={onEndReached}
         canRemoveItems={canRemoveItems}
         canEditItems={canEditItems}
@@ -95,8 +104,5 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
     </StaggeredEntryProvider>
   );
 };
-
-export const MemoizedPurchasedTab = React.memo(PurchasedTabComponent);
-MemoizedPurchasedTab.displayName = 'PurchasedTab';
 
 export const PurchasedTab = PurchasedTabComponent;

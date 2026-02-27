@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState } from 'react';
 import {
   startOfWeek,
   endOfWeek,
@@ -13,8 +13,7 @@ import {
   isSameDay,
   isBefore,
   isAfter,
-  startOfDay,
-} from 'date-fns';
+  startOfDay } from 'date-fns';
 
 export type CalendarView = 'week' | 'month';
 
@@ -31,89 +30,94 @@ export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
   const [referenceDate, setReferenceDate] = useState(new Date());
 
   // Clamp selected/reference dates when boundaries change (plan loads)
-  useEffect(() => {
-    if (!minDate && !maxDate) return;
+  const minTime = minDate?.getTime();
+  const maxTime = maxDate?.getTime();
 
-    const today = new Date();
-    const todayStart = startOfDay(today);
+  // Render-time conditional state update: track boundary changes
+  const [prevMinTime, setPrevMinTime] = useState(minTime);
+  const [prevMaxTime, setPrevMaxTime] = useState(maxTime);
 
-    const withinBounds =
-      (!minDate || !isBefore(todayStart, startOfDay(minDate))) &&
-      (!maxDate || !isAfter(todayStart, startOfDay(maxDate)));
+  if (minTime !== prevMinTime || maxTime !== prevMaxTime) {
+    setPrevMinTime(minTime);
+    setPrevMaxTime(maxTime);
 
-    const clampedDate = withinBounds ? today : minDate ?? today;
+    if (minDate || maxDate) {
+      const today = new Date();
+      const todayStart = startOfDay(today);
 
-    setSelectedDate(clampedDate);
-    setReferenceDate(clampedDate);
-  }, [minDate, maxDate]);
+      const withinBounds =
+        (!minDate || !isBefore(todayStart, startOfDay(minDate))) &&
+        (!maxDate || !isAfter(todayStart, startOfDay(maxDate)));
+
+      const clampedDate = withinBounds ? today : minDate ?? today;
+
+      setSelectedDate(clampedDate);
+      setReferenceDate(clampedDate);
+    }
+  }
 
   // Week days for the current week view
-  const weekDays = useMemo(() => {
+  const weekDays = (() => {
     const start = startOfWeek(referenceDate, { weekStartsOn: 1 }); // Monday
     const end = endOfWeek(referenceDate, { weekStartsOn: 1 });
     return eachDayOfInterval({ start, end });
-  }, [referenceDate]);
+  })();
 
   // Date range for filtering meal plan items
-  const dateRange = useMemo(() => {
+  const dateRange = (() => {
     if (viewMode === 'week') {
       return {
         startDate: startOfWeek(referenceDate, { weekStartsOn: 1 }),
-        endDate: endOfWeek(referenceDate, { weekStartsOn: 1 }),
-      };
+        endDate: endOfWeek(referenceDate, { weekStartsOn: 1 }) };
     }
     return {
       startDate: startOfMonth(referenceDate),
-      endDate: endOfMonth(referenceDate),
-    };
-  }, [referenceDate, viewMode]);
+      endDate: endOfMonth(referenceDate) };
+  })();
 
   // Compute navigation boundary flags
-  const canGoPrevWeek = useMemo(() => {
+  const canGoPrevWeek = (() => {
     if (!minDate) return true;
     const prevWeekEnd = endOfWeek(subWeeks(referenceDate, 1), { weekStartsOn: 1 });
     return !isBefore(startOfDay(prevWeekEnd), startOfDay(minDate));
-  }, [referenceDate, minDate]);
+  })();
 
-  const canGoNextWeek = useMemo(() => {
+  const canGoNextWeek = (() => {
     if (!maxDate) return true;
     const nextWeekStart = startOfWeek(addWeeks(referenceDate, 1), { weekStartsOn: 1 });
     return !isAfter(startOfDay(nextWeekStart), startOfDay(maxDate));
-  }, [referenceDate, maxDate]);
+  })();
 
-  const goToNextWeek = useCallback(() => {
+  const goToNextWeek = () => {
     if (!canGoNextWeek) return;
     setReferenceDate(prev => addWeeks(prev, 1));
-  }, [canGoNextWeek]);
+  };
 
-  const goToPrevWeek = useCallback(() => {
+  const goToPrevWeek = () => {
     if (!canGoPrevWeek) return;
     setReferenceDate(prev => subWeeks(prev, 1));
-  }, [canGoPrevWeek]);
+  };
 
-  const goToNextMonth = useCallback(() => {
+  const goToNextMonth = () => {
     setReferenceDate(prev => addMonths(prev, 1));
-  }, []);
+  };
 
-  const goToPrevMonth = useCallback(() => {
+  const goToPrevMonth = () => {
     setReferenceDate(prev => subMonths(prev, 1));
-  }, []);
+  };
 
-  const goToToday = useCallback(() => {
+  const goToToday = () => {
     const today = new Date();
     setSelectedDate(today);
     setReferenceDate(today);
-  }, []);
+  };
 
-  const selectDate = useCallback(
-    (date: Date) => {
+  const selectDate = (date: Date) => {
       if (minDate && isBefore(startOfDay(date), startOfDay(minDate))) return;
       if (maxDate && isAfter(startOfDay(date), startOfDay(maxDate))) return;
       setSelectedDate(date);
       setReferenceDate(date);
-    },
-    [minDate, maxDate],
-  );
+    };
 
   const formattedMonth = format(referenceDate, 'MMMM yyyy');
   const isToday = isSameDay(selectedDate, new Date());
@@ -136,6 +140,5 @@ export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
     canGoPrevWeek,
     canGoNextWeek,
     minDate,
-    maxDate,
-  };
+    maxDate };
 }

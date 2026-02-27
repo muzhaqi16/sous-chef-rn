@@ -1,9 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   useGetShoppingListsLiteQuery,
   useGetPantriesQuery,
-  useGetHomesQuery,
-} from '../graphql/generated';
+  useGetHomesQuery } from '../graphql/generated';
 import { usePreservedArrayData } from './apollo/usePreservedQueryData';
 import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
@@ -21,8 +20,7 @@ export const useItemSelector = ({
   customData,
   customLoading = false,
   onSelect,
-  initialSelected,
-}: UseItemSelectorConfig) => {
+  initialSelected }: UseItemSelectorConfig) => {
   const [selectedId, setSelectedId] = useState<string | undefined>(
     initialSelected,
   );
@@ -45,8 +43,7 @@ export const useItemSelector = ({
     useGetShoppingListsLiteQuery({
       fetchPolicy: 'cache-and-network',
       errorPolicy: 'ignore', // Return cached data on network errors
-      skip: type !== 'shoppingList',
-    });
+      skip: type !== 'shoppingList' });
 
   const { data: pantryData, loading: pantryLoading } = useGetPantriesQuery({
     variables: { homeId: selectedHomeId || '' },
@@ -58,8 +55,7 @@ export const useItemSelector = ({
   const { data: homeData, loading: homeLoading } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
     errorPolicy: 'ignore', // Return cached data on network errors
-    skip: type !== 'home',
-  });
+    skip: type !== 'home' });
 
   // Preserve data even when queries fail
   // Extract nodes from connection types (all return Connection types)
@@ -118,8 +114,7 @@ export const useItemSelector = ({
     }
   };
 
-  const handleSelect = useCallback(
-    (id: string, item: any) => {
+  const handleSelect = (id: string, item: any) => {
       if (__DEV__) {
         console.log(
           `[useItemSelector:${type}] User selected: ${id}`,
@@ -128,13 +123,11 @@ export const useItemSelector = ({
       }
       setSelectedId(id);
       onSelect?.(id, item);
-    },
-    [onSelect, type],
-  );
+    };
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setSelectedId(undefined);
-  }, []);
+  };
 
   return {
     data: getData(),
@@ -143,8 +136,7 @@ export const useItemSelector = ({
     emptyMessage: getEmptyMessage(),
     handleSelect,
     reset,
-    setSelectedId,
-  };
+    setSelectedId };
 };
 
 // Convenience hooks for specific types

@@ -1,4 +1,3 @@
-import React, { useCallback } from 'react';
 import { Pressable, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { LinearTransition, FadeInUp } from 'react-native-reanimated';
@@ -11,11 +10,10 @@ const SelectorItemComponent = <T extends SelectableItem>({
   onSelect,
   displayProperty,
   renderCustomItem,
-  extraData: _extraData,
-}: SelectorItemProps<T>) => {
+  extraData: _extraData }: SelectorItemProps<T>) => {
   const { theme } = useUnistyles();
 
-  const handlePress = useCallback(() => onSelect(item.id, item), [onSelect, item]);
+  const handlePress = () => onSelect(item.id, item);
 
   if (renderCustomItem) {
     return (
@@ -47,7 +45,7 @@ const SelectorItemComponent = <T extends SelectableItem>({
   );
 };
 
-export const SelectorItem = React.memo(SelectorItemComponent) as typeof SelectorItemComponent;
+export const SelectorItem = SelectorItemComponent;
 
 const styles = StyleSheet.create(theme => ({
   item: {
@@ -60,26 +58,19 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   selectedItem: {
     backgroundColor: theme.colors.primaryLight || '#E3F2FD',
-    borderColor: theme.colors.primary,
-  },
+    borderColor: theme.colors.primary },
   itemText: {
     flex: 1,
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   selectedItemText: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   checkIcon: {
-    marginLeft: theme.spacing.sm,
-  },
+    marginLeft: theme.spacing.sm },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

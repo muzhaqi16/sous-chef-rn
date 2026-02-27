@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useRef,
-  useMemo,
-  forwardRef,
-  useImperativeHandle,
-} from 'react';
+import React, { useRef, forwardRef, useImperativeHandle } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
@@ -12,22 +6,18 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   FlashList,
   type FlashListRef,
-  type ListRenderItemInfo,
-} from '@shopify/flash-list';
+  type ListRenderItemInfo } from '@shopify/flash-list';
 import type {
   SortableShoppingListProps,
-  SortableShoppingListItem,
-} from './types';
+  SortableShoppingListItem } from './types';
 import { SwipeableListItem } from './SortableItem';
 import {
   SortableListActionsProvider,
   type SortableListActions,
-  type SortableListPermissions,
-} from './SortableListActionsContext';
+  type SortableListPermissions } from './SortableListActionsContext';
 import {
   SortableListThemeContext,
-  type SortableListThemeColors,
-} from './SortableListThemeContext';
+  type SortableListThemeColors } from './SortableListThemeContext';
 import { getTabBarBottomPadding } from '#constants/layout';
 
 /**
@@ -78,26 +68,15 @@ const SortableShoppingListComponent = forwardRef<
     const { theme } = useUnistyles();
     // PERFORMANCE: Single useWindowDimensions call - shared via context to avoid N subscriptions in items
     const { width: screenWidth } = useWindowDimensions();
-    const themeColors = useMemo<SortableListThemeColors>(
-      () => ({
-        primary: theme.colors.primary,
-        textPrimary: theme.colors.textPrimary,
-        textSecondary: theme.colors.textSecondary,
-        surfaceVariant: theme.colors.surfaceVariant,
-        surface: theme.colors.surface,
-        border: theme.colors.border,
-        screenWidth,
-      }),
-      [
-        theme.colors.primary,
-        theme.colors.textPrimary,
-        theme.colors.textSecondary,
-        theme.colors.surfaceVariant,
-        theme.colors.surface,
-        theme.colors.border,
-        screenWidth,
-      ],
-    );
+    const themeColors: SortableListThemeColors = {
+      primary: theme.colors.primary,
+      textPrimary: theme.colors.textPrimary,
+      textSecondary: theme.colors.textSecondary,
+      surfaceVariant: theme.colors.surfaceVariant,
+      surface: theme.colors.surface,
+      border: theme.colors.border,
+      screenWidth,
+    };
 
     // Safe area insets for bottom padding
     const insets = useSafeAreaInsets();
@@ -108,85 +87,47 @@ const SortableShoppingListComponent = forwardRef<
     const handleSwipeableClose = internalCoordinator.handleSwipeableClose;
 
     // Key extractor - validItems already guarantees every item has an id
-    const keyExtractor = useCallback(
-      (item: SortableShoppingListItem) => item.id,
-      [],
-    );
+    const keyExtractor = (item: SortableShoppingListItem) => item.id;
 
     // Item type for better FlashList cell recycling — purchased/unpurchased have different styling
-    const getItemType = useCallback(
-      (item: SortableShoppingListItem) => (item.isPurchased ? 'purchased' : 'unpurchased'),
-      [],
-    );
+    const getItemType = (item: SortableShoppingListItem) => (item.isPurchased ? 'purchased' : 'unpurchased');
 
-    // Memoize actions for context
-    const actions = useMemo<SortableListActions>(
-      () => ({
-        onItemPress,
-        onItemEdit,
-        onItemDelete,
-        onTogglePurchase,
-        onMoveToPantry,
-        onQuantityPress,
-        onSwipeableWillOpen: handleSwipeableWillOpen,
-        onSwipeableClose: handleSwipeableClose,
-        onSortOrderUpdate,
-      }),
-      [
-        onItemPress,
-        onItemEdit,
-        onItemDelete,
-        onTogglePurchase,
-        onMoveToPantry,
-        onQuantityPress,
-        handleSwipeableWillOpen,
-        handleSwipeableClose,
-        onSortOrderUpdate,
-      ],
-    );
+    // Actions for context
+    const actions: SortableListActions = {
+      onItemPress,
+      onItemEdit,
+      onItemDelete,
+      onTogglePurchase,
+      onMoveToPantry,
+      onQuantityPress,
+      onSwipeableWillOpen: handleSwipeableWillOpen,
+      onSwipeableClose: handleSwipeableClose,
+      onSortOrderUpdate,
+    };
 
-    const permissions = useMemo<SortableListPermissions>(
-      () => ({
-        canRemoveItems,
-        canEditItems,
-        canMarkPurchased,
-        canReorderItems,
-        disabled,
-      }),
-      [
-        canRemoveItems,
-        canEditItems,
-        canMarkPurchased,
-        canReorderItems,
-        disabled,
-      ],
-    );
+    const permissions: SortableListPermissions = {
+      canRemoveItems,
+      canEditItems,
+      canMarkPurchased,
+      canReorderItems,
+      disabled,
+    };
 
     // Filter out invalid items to prevent empty card renders
     // This handles edge cases where Apollo cache returns items with missing data
-    const validItems = useMemo(
-      () => items.filter(item => item?.id && item?.title),
-      [items],
-    );
+    const validItems = items.filter(item => item?.id && item?.title);
 
     // PERFORMANCE: Memoize contentContainerStyle to prevent FlashList v2 re-renders
     // FlashList v2 is aggressive about prop changes - new object refs trigger internal updates
-    const contentContainerStyle = useMemo(
-      () => ({
+    const contentContainerStyle = ({
         paddingTop: 8,
-        paddingBottom: getTabBarBottomPadding(insets.bottom),
-      }),
-      [insets.bottom],
-    );
+        paddingBottom: getTabBarBottomPadding(insets.bottom) });
 
     // Render item function - passes FlashList info to SwipeableListItem
     // Note: Invalid items are already filtered in validItems, no null check needed
-    const renderItem = useCallback(
-      (info: ListRenderItemInfo<SortableShoppingListItem>) => (
+    const renderItem = (info: ListRenderItemInfo<SortableShoppingListItem>) => (
         <SwipeableListItem {...info} />
-      ),
-      [],
-    );
+      );
 
     // Early validation
     if (!items || !Array.isArray(items)) {
@@ -241,8 +182,6 @@ const SortableShoppingListComponent = forwardRef<
 
 const styles = StyleSheet.create(() => ({
   container: {
-    flex: 1,
-  },
-}));
+    flex: 1 } }));
 
 export const SortableShoppingList = SortableShoppingListComponent;

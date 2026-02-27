@@ -34,7 +34,7 @@ export interface SectionHeaderProps {
  *   onActionPress={handleSort}
  * />
  */
-export const SectionHeader: React.FC<SectionHeaderProps> = React.memo(({
+export const SectionHeader: React.FC<SectionHeaderProps> = ({
   icon,
   title,
   count,
@@ -74,9 +74,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = React.memo(({
       )}
     </View>
   );
-});
-
-SectionHeader.displayName = 'SectionHeader';
+};
 
 const styles = StyleSheet.create(theme => ({
   container: {

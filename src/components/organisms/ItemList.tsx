@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState } from 'react';
 import { RefreshControl } from 'react-native';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -59,18 +59,13 @@ export const ItemList: React.FC<ItemListProps> = ({
   ListHeaderComponent,
   ListFooterComponent,
   testIDPrefix,
-  emptyState,
-}) => {
+  emptyState }) => {
   const [refreshing, setRefreshing] = useState(false);
   const { bottom: safeBottom} = useSafeAreaInsets();
 
   // Dynamic content style with proper bottom padding for tab bar
-  const contentStyle = useMemo(
-    () => ({
-      paddingBottom: getTabBarBottomPadding(safeBottom),
-    }),
-    [safeBottom],
-  );
+  const contentStyle = ({
+      paddingBottom: getTabBarBottomPadding(safeBottom) });
 
   const handleRefresh = async () => {
     if (onRefresh) {
@@ -81,8 +76,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   };
 
   // Performance optimization: memoize renderItem
-  const renderItem = useCallback(
-    ({ item, index }: ListRenderItemInfo<Item>) => (
+  const renderItem = ({ item, index }: ListRenderItemInfo<Item>) => (
       <ItemCard
         id={item.id}
         title={item.title}
@@ -99,11 +93,9 @@ export const ItemList: React.FC<ItemListProps> = ({
         onSwipeableWillOpen={onSwipeableWillOpen}
         testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
       />
-    ),
-    [onItemPress, onItemEdit, onItemDelete, onItemConsume, onItemWaste, onItemRestock, onSwipeableWillOpen, testIDPrefix],
-  );
+    );
 
-  const keyExtractor = useCallback((item: Item) => item.id, []);
+  const keyExtractor = (item: Item) => item.id;
 
   if (items.length === 0 && emptyState) {
     return (

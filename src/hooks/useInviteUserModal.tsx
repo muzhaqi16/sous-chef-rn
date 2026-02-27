@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { InviteUserModal } from '#components/organisms/InviteUserModal';
 import { MembershipRole } from '#generated';
 
@@ -26,8 +26,7 @@ export const useInviteUserModal = () => {
   };
 
   // Memoize the component to prevent recreation on every render
-  const InviteModalComponent = useMemo(
-    () => (
+  const InviteModalComponent = (
       <InviteUserModal
         visible={visible}
         onClose={hide}
@@ -35,9 +34,7 @@ export const useInviteUserModal = () => {
         title={modalConfig.title}
         allowedRoles={modalConfig.allowedRoles}
       />
-    ),
-    [visible, modalConfig.onSubmit, modalConfig.title, modalConfig.allowedRoles],
-  );
+    );
 
   return {
     show,

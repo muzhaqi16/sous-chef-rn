@@ -1,11 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useSharedValue, withSpring } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import type {
   UseAnimatedPresenceProps,
   UseAnimatedPresenceReturn,
-  SpringConfig,
-} from './types';
+  SpringConfig } from './types';
 
 const DEFAULT_SPRING: SpringConfig = { mass: 0.4, damping: 15, stiffness: 150 };
 
@@ -15,8 +14,7 @@ export function useAnimatedPresence(
   const {
     springConfig = DEFAULT_SPRING,
     callbacks = {},
-    initialVisible = false,
-  } = props;
+    initialVisible = false } = props;
 
   // Destructure callbacks for granular memoization dependencies
   const { onOpenStart, onOpenComplete, onCloseStart, onCloseComplete } =
@@ -26,7 +24,7 @@ export function useAnimatedPresence(
   const isVisible = useSharedValue(initialVisible);
   const progress = useSharedValue(initialVisible ? 1 : 0);
 
-  const open = useCallback(() => {
+  const open = () => {
     'worklet';
     if (isVisible.value) return;
 
@@ -40,9 +38,9 @@ export function useAnimatedPresence(
         if (onOpenComplete) scheduleOnRN(onOpenComplete);
       }
     });
-  }, [isVisible, progress, springConfig, setShouldRender, onOpenStart, onOpenComplete]);
+  };
 
-  const close = useCallback(() => {
+  const close = () => {
     'worklet';
     if (!isVisible.value) return;
 
@@ -56,18 +54,18 @@ export function useAnimatedPresence(
         if (onCloseComplete) scheduleOnRN(onCloseComplete);
       }
     });
-  }, [isVisible, progress, springConfig, onCloseStart, setShouldRender, onCloseComplete]);
+  };
 
-  const toggle = useCallback(() => {
+  const toggle = () => {
     'worklet';
     if (isVisible.value) {
       close();
     } else {
       open();
     }
-  }, [isVisible, open, close]);
+  };
 
-  const isActive = useCallback(() => isVisible.value, [isVisible]);
+  const isActive = () => isVisible.value;
 
   return { shouldRender, isVisible, progress, open, close, toggle, isActive };
 }

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { ItemSuggestion } from '#generated';
 import { useItemAutocomplete } from '#hooks/autocomplete/useItemAutocomplete';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -29,39 +29,29 @@ export const ItemAutocompleteField: React.FC<ItemAutocompleteFieldProps> = ({
   error,
   testID,
   onSelectItem,
-  showBrand = false,
-}) => {
+  showBrand = false }) => {
   const item = useItemAutocomplete();
 
-  const handleTextChange = useCallback(
-    (text: string) => {
+  const handleTextChange = (text: string) => {
       onChangeText(text);
       item.handleSearchTermChange(text);
-    },
-    [onChangeText, item],
-  );
+    };
 
-  const handleSelect = useCallback(
-    (selected: ItemSuggestion) => {
+  const handleSelect = (selected: ItemSuggestion) => {
       onChangeText(selected.name.trim());
       onSelectItem?.(selected);
       item.setSearchTerm('');
-    },
-    [onChangeText, onSelectItem, item],
-  );
+    };
 
-  const renderItem = useCallback(
-    (i: ItemSuggestion) => (
+  const renderItem = (i: ItemSuggestion) => (
       <AutocompleteRow
         image={resolveImageUrl(i) ?? null}
         title={i.name}
         subtitle={showBrand && i.brands?.length === 1 ? i.brands[0].name : undefined}
       />
-    ),
-    [showBrand],
-  );
+    );
 
-  const keyExtractor = useCallback((i: ItemSuggestion) => i.id, []);
+  const keyExtractor = (i: ItemSuggestion) => i.id;
 
   if (variant === 'inline') {
     return (

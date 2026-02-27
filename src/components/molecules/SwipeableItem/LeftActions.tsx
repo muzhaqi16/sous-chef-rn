@@ -225,4 +225,4 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
     );
   };
 
-export const LeftActions = React.memo(LeftActionsComponent);
+export const LeftActions = LeftActionsComponent;

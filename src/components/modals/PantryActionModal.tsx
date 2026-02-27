@@ -104,17 +104,27 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     return pantryItem?.unit?.id;
   })();
 
-  // Present/dismiss + reset
-  useEffect(() => {
+  // Reset state when modal opens (render-time state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevPantryItem, setPrevPantryItem] = useState(pantryItem);
+  if (visible !== prevVisible || pantryItem !== prevPantryItem) {
+    setPrevVisible(visible);
+    setPrevPantryItem(pantryItem);
     if (visible && pantryItem) {
-      ref.current?.present();
       setNotes('');
       setSelectedUnit('tracking');
       onReset?.(pantryItem, setSelectedUnit);
+    }
+  }
+
+  // Present/dismiss bottom sheet
+  useEffect(() => {
+    if (visible && pantryItem) {
+      ref.current?.present();
     } else {
       ref.current?.dismiss();
     }
-  }, [visible, pantryItem, onReset, ref]);
+  }, [visible, pantryItem, ref]);
 
   const shared: PantryActionSharedState = {
     selectedUnit,

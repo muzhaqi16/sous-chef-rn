@@ -16,7 +16,6 @@
  * ```
  */
 
-import { useMemo } from 'react';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import {
@@ -443,8 +442,7 @@ export const getErrorMessage = (error: unknown): string => {
 // Export hook for use in components
 // Returns an object matching the legacy useErrorHandler shape for easy migration
 export const useErrorService = () => {
-  return useMemo(
-    () => ({
+  return ({
       handleApolloError: errorService.handleApolloError.bind(errorService),
       parseApolloError: errorService.parseApolloError.bind(errorService),
       handleMutation: errorService.handleMutation.bind(errorService),
@@ -457,7 +455,5 @@ export const useErrorService = () => {
       isAuthError: errorService.isAuthError.bind(errorService),
       reportError: errorService.reportError.bind(errorService),
       getErrorMessage,
-    }),
-    [],
-  );
+    });
 };

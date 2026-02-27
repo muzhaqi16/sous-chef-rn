@@ -1,15 +1,19 @@
-import React, { useMemo, useCallback, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { RefreshControl, Alert, useWindowDimensions, View, Platform } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { TabView, type Route } from 'react-native-tab-view';
 import { FilterTabBar } from './FilterTabBar';
 import type { FilterTabActionButton } from '#components/molecules/FilterTabs/types';
-import { MemoizedShoppingTab } from './ShoppingTab';
-import { MemoizedPurchasedTab } from './PurchasedTab';
+import { ShoppingTab } from './ShoppingTab';
+import { PurchasedTab } from './PurchasedTab';
 import { EmptyState } from '#components/base/EmptyState';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
 import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
+import {
+  ShoppingListTabsActionsProvider,
+  type ShoppingListTabsActions,
+} from './ShoppingListTabsActionsContext';
 
 type ShoppingListTabId = 'shopping' | 'purchased';
 
@@ -115,8 +119,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onBatchMoveToPantry,
   batchMoveToPantryLoading = false,
   // List header
-  listHeaderComponent,
-}) => {
+  listHeaderComponent }) => {
   const layout = useWindowDimensions();
 
   // Track open swipeable across both tabs
@@ -127,15 +130,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   // PERFORMANCE: Use pre-filtered items when provided (stable references from useShoppingListScreen)
   // Fall back to internal filtering for backwards compatibility
-  const unpurchasedItems = useMemo(() => {
-    if (preFilteredUnpurchased) return preFilteredUnpurchased;
-    return items.filter(item => !item.isPurchased);
-  }, [preFilteredUnpurchased, items]);
+  const unpurchasedItems = preFilteredUnpurchased ?? items.filter(item => !item.isPurchased);
 
-  const purchasedItems = useMemo(() => {
-    if (preFilteredPurchased) return preFilteredPurchased;
-    return items.filter(item => item.isPurchased);
-  }, [preFilteredPurchased, items]);
+  const purchasedItems = preFilteredPurchased ?? items.filter(item => item.isPurchased);
 
   // Use GraphQL totalCount for accurate counts (handles pagination)
   // Fall back to array length for backwards compatibility
@@ -143,34 +140,43 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   const purchasedCount = totalCountPurchased ?? purchasedItems.length;
 
   // Handle tab change - close any open swipeable
-  const handleIndexChange = useCallback((newIndex: number) => {
+  const handleIndexChange = (newIndex: number) => {
     if (openSwipeableRef.current) {
       openSwipeableRef.current.current?.close();
       openSwipeableRef.current = null;
     }
     setIndex(newIndex);
-  }, []);
+  };
 
   // Wrap swipeable handlers to use shared ref across tabs
-  const handleSwipeableWillOpen = useCallback(
-    (ref: any) => {
+  const handleSwipeableWillOpen = (ref: any) => {
       if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
         openSwipeableRef.current.current?.close();
       }
       openSwipeableRef.current = ref;
       onSwipeableWillOpen?.(ref);
-    },
-    [onSwipeableWillOpen],
-  );
+    };
 
   // Handle swipeable close
-  const handleSwipeableClose = useCallback(() => {
+  const handleSwipeableClose = () => {
     openSwipeableRef.current = null;
     onSwipeableClose?.();
-  }, [onSwipeableClose]);
+  };
 
-  const confirmAction = useCallback(
-    (
+  // Action callbacks for context provider — consumed by ShoppingTab/PurchasedTab
+  const tabActions: ShoppingListTabsActions = {
+    onItemPress,
+    onItemEdit,
+    onItemDelete,
+    onTogglePurchase,
+    onMoveToPantry,
+    onQuantityPress,
+    onSortOrderUpdate,
+    onSwipeableWillOpen: handleSwipeableWillOpen,
+    onSwipeableClose: handleSwipeableClose,
+  };
+
+  const confirmAction = (
       title: string,
       message: string,
       confirmText: string,
@@ -182,14 +188,11 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
         {
           text: confirmText,
           style: destructive ? 'destructive' : 'default',
-          onPress: onConfirm,
-        },
+          onPress: onConfirm },
       ]);
-    },
-    [],
-  );
+    };
 
-  const handleClearAllWithConfirmation = useCallback(() => {
+  const handleClearAllWithConfirmation = () => {
     if (purchasedItems.length === 0) return;
     const count = purchasedItems.length;
     confirmAction(
@@ -198,9 +201,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       'Clear All',
       () => { onClearAllPurchased?.(); },
     );
-  }, [purchasedItems.length, onClearAllPurchased, confirmAction]);
+  };
 
-  const handleBatchMoveToPantryWithConfirmation = useCallback(() => {
+  const handleBatchMoveToPantryWithConfirmation = () => {
     if (purchasedItems.length === 0 || !onBatchMoveToPantry) return;
     const count = purchasedItems.length;
     confirmAction(
@@ -210,9 +213,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       onBatchMoveToPantry,
       false,
     );
-  }, [purchasedItems.length, onBatchMoveToPantry, confirmAction]);
+  };
 
-  const handleClearAllShoppingWithConfirmation = useCallback(() => {
+  const handleClearAllShoppingWithConfirmation = () => {
     if (unpurchasedItems.length === 0) return;
     const count = unpurchasedItems.length;
     confirmAction(
@@ -221,7 +224,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       'Clear All',
       () => { onClearAllShopping?.(); },
     );
-  }, [unpurchasedItems.length, onClearAllShopping, confirmAction]);
+  };
 
   // Get the current clear handler based on active tab (by index)
   const currentClearHandler =
@@ -234,79 +237,60 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   const showClear = canRemoveItems && currentItems.length > 0;
 
   // Tab badge counts
-  const counts = useMemo(
-    () => ({
-      shopping: unpurchasedCount,
-      purchased: purchasedCount,
-    }),
-    [unpurchasedCount, purchasedCount],
-  );
+  const counts = {
+    shopping: unpurchasedCount,
+    purchased: purchasedCount,
+  };
 
   // Standalone jumpTo for FilterTabBar inside ListHeaderComponent
-  const jumpTo = useCallback((key: string) => {
+  const jumpTo = (key: string) => {
     const routeIndex = ROUTES.findIndex(r => r.key === key);
     if (routeIndex >= 0) handleIndexChange(routeIndex);
-  }, [handleIndexChange]);
+  };
 
   // Build action buttons array: pantry icon (purchased tab only) + clear
-  const actionButtons = useMemo(() => {
-    const buttons: FilterTabActionButton[] = [];
+  const actionButtons: FilterTabActionButton[] = [];
 
-    // Show pantry move icon on purchased tab when there are items and handler exists
-    if (index === 1 && purchasedItems.length > 0 && onBatchMoveToPantry) {
-      buttons.push({
-        icon: 'archive-outline',
-        onPress: handleBatchMoveToPantryWithConfirmation,
-        disabled: batchMoveToPantryLoading,
-        testID: 'shopping-list-batch-move-pantry',
-      });
-    }
+  // Show pantry move icon on purchased tab when there are items and handler exists
+  if (index === 1 && purchasedItems.length > 0 && onBatchMoveToPantry) {
+    actionButtons.push({
+      icon: 'archive-outline',
+      onPress: handleBatchMoveToPantryWithConfirmation,
+      disabled: batchMoveToPantryLoading,
+      testID: 'shopping-list-batch-move-pantry',
+    });
+  }
 
-    if (showClear) {
-      buttons.push({
-        label: 'Clear',
-        onPress: currentClearHandler,
-        testID: 'shopping-list-clear-all',
-      });
-    }
-
-    return buttons;
-  }, [index, purchasedItems.length, onBatchMoveToPantry, handleBatchMoveToPantryWithConfirmation, batchMoveToPantryLoading, showClear, currentClearHandler]);
+  if (showClear) {
+    actionButtons.push({
+      label: 'Clear',
+      onPress: currentClearHandler,
+      testID: 'shopping-list-clear-all',
+    });
+  }
 
   // Render FilterTabBar as the TabView's tab bar so it's always visible,
   // even when a tab's FlashList is replaced by an empty state
-  const renderTabBar = useCallback(
-    () => (
+  const renderTabBar = () => (
       <FilterTabBar
         navigationState={{ index, routes: ROUTES }}
         jumpTo={jumpTo}
         counts={counts}
         actionButtons={actionButtons.length > 0 ? actionButtons : undefined}
       />
-    ),
-    [index, jumpTo, counts, actionButtons],
-  );
+    );
 
   // Render scene for TabView
-  const renderScene = useCallback(
-    ({ route }: { route: TabRoute }) => {
+  const renderScene = ({ route }: { route: TabRoute }) => {
       switch (route.key) {
         case 'shopping':
           return (
-            <MemoizedShoppingTab
+            <ShoppingTab
               items={unpurchasedItems}
-              onItemPress={onItemPress}
-              onItemEdit={onItemEdit}
-              onItemDelete={onItemDelete}
-              onTogglePurchase={onTogglePurchase}
-              onQuantityPress={onQuantityPress}
-              onSortOrderUpdate={onSortOrderUpdate}
               onRefresh={onRefresh}
               refreshing={refreshing}
               loading={loading}
               disabled={disabled}
-              onSwipeableWillOpen={handleSwipeableWillOpen}
-              onSwipeableClose={handleSwipeableClose}
               onEndReached={onEndReachedUnpurchased}
               hasMore={hasMoreUnpurchased}
               isLoadingMore={isLoadingMoreUnpurchased}
@@ -319,20 +303,12 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
           );
         case 'purchased':
           return (
-            <MemoizedPurchasedTab
+            <PurchasedTab
               items={purchasedItems}
-              onItemPress={onItemPress}
-              onItemEdit={onItemEdit}
-              onItemDelete={onItemDelete}
-              onTogglePurchase={onTogglePurchase}
-              onMoveToPantry={onMoveToPantry}
-              onQuantityPress={onQuantityPress}
               onRefresh={onRefresh}
               refreshing={refreshing}
               disabled={disabled}
               loading={loading}
-              onSwipeableWillOpen={handleSwipeableWillOpen}
-              onSwipeableClose={handleSwipeableClose}
               onEndReached={onEndReachedPurchased}
               hasMore={hasMorePurchased}
               isLoadingMore={isLoadingMorePurchased}
@@ -345,36 +321,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
         default:
           return null;
       }
-    },
-    [
-      unpurchasedItems,
-      purchasedItems,
-      onItemPress,
-      onItemEdit,
-      onItemDelete,
-      onTogglePurchase,
-      onMoveToPantry,
-      onQuantityPress,
-      onSortOrderUpdate,
-      onRefresh,
-      refreshing,
-      loading,
-      disabled,
-      handleSwipeableWillOpen,
-      handleSwipeableClose,
-      onEndReachedUnpurchased,
-      hasMoreUnpurchased,
-      isLoadingMoreUnpurchased,
-      onEndReachedPurchased,
-      hasMorePurchased,
-      isLoadingMorePurchased,
-      canRemoveItems,
-      canEditItems,
-      canMarkPurchased,
-      canReorderItems,
-      isTransitioning,
-    ],
-  );
+    };
 
   // Handle all empty-items cases before the TabView so tabs never appear for empty lists.
   if (items.length === 0) {
@@ -404,19 +351,21 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   }
 
   return (
-    <View style={{ flex: 1, ...(Platform.OS === 'android' && { elevation: 0 }) }}>
-      {listHeaderComponent}
-      <TabView
-        navigationState={{ index, routes: ROUTES }}
-        renderScene={renderScene}
-        renderTabBar={renderTabBar}
-        onIndexChange={handleIndexChange}
-        initialLayout={{ width: layout.width }}
-        swipeEnabled={true}
-        lazy={false}
-        overScrollMode="never"
-      />
-    </View>
+    <ShoppingListTabsActionsProvider actions={tabActions}>
+      <View style={{ flex: 1, ...(Platform.OS === 'android' && { elevation: 0 }) }}>
+        {listHeaderComponent}
+        <TabView
+          navigationState={{ index, routes: ROUTES }}
+          renderScene={renderScene}
+          renderTabBar={renderTabBar}
+          onIndexChange={handleIndexChange}
+          initialLayout={{ width: layout.width }}
+          swipeEnabled={true}
+          lazy={false}
+          overScrollMode="never"
+        />
+      </View>
+    </ShoppingListTabsActionsProvider>
   );
 };
 

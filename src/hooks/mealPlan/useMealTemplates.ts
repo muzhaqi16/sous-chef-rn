@@ -1,9 +1,8 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
   useGetMealTemplatesQuery,
   type TemplateCategory,
-  type MealTemplateDisplayFragment,
-} from '#generated';
+  type MealTemplateDisplayFragment } from '#generated';
 import { extractNodes } from '#/utils/connectionUtils';
 
 interface UseMealTemplatesOptions {
@@ -21,27 +20,20 @@ export function useMealTemplates(options: UseMealTemplatesOptions = {}) {
       variables: {
         filters: {
           category: selectedCategory,
-          search: searchQuery.trim() || undefined,
-        },
-        first: 20,
-      },
-      fetchPolicy: 'cache-and-network',
-    });
+          search: searchQuery.trim() || undefined },
+        first: 20 },
+      fetchPolicy: 'cache-and-network' });
 
-  const templates = useMemo(
-    () => extractNodes(data?.mealTemplates) as MealTemplateDisplayFragment[],
-    [data],
-  );
+  const templates = extractNodes(data?.mealTemplates) as MealTemplateDisplayFragment[];
 
   const pageInfo = data?.mealTemplates?.pageInfo;
   const totalCount = data?.mealTemplates?.totalCount ?? 0;
 
-  const loadMore = useCallback(() => {
+  const loadMore = () => {
     if (!pageInfo?.hasNextPage || !pageInfo?.endCursor) return;
     fetchMore({
-      variables: { after: pageInfo.endCursor },
-    });
-  }, [pageInfo, fetchMore]);
+      variables: { after: pageInfo.endCursor } });
+  };
 
   return {
     templates,
@@ -54,6 +46,5 @@ export function useMealTemplates(options: UseMealTemplatesOptions = {}) {
     searchQuery,
     setSearchQuery,
     selectedCategory,
-    setSelectedCategory,
-  };
+    setSelectedCategory };
 }

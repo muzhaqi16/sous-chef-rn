@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, SectionList, RefreshControl } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
@@ -11,14 +11,12 @@ import { UrgentNotificationsBanner } from '#components/notifications/UrgentNotif
 import { useNotifications } from '#hooks/notifications/useNotifications';
 import {
   NotificationItem as NotificationType,
-  NotificationCategory,
-} from '#store/slices/notificationSlice';
+  NotificationCategory } from '#store/slices/notificationSlice';
 import { Header } from '#components/molecules/Header';
 import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
 import {
   groupNotificationsByDate,
-  createSectionListData,
-} from '#utils/notificationGrouping';
+  createSectionListData } from '#utils/notificationGrouping';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const NotificationListScreen: React.FC = () => {
@@ -33,8 +31,7 @@ export const NotificationListScreen: React.FC = () => {
     handleMarkAllAsRead,
     handleRemoveNotification,
     clearAll,
-    getNotificationsByCategory,
-  } = useNotifications();
+    getNotificationsByCategory } = useNotifications();
 
   // Initialize real-time notifications (already handled by consolidated useNotifications)
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -49,25 +46,24 @@ export const NotificationListScreen: React.FC = () => {
     };
   }, []);
 
-  const handleRefresh = useCallback(async () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
     // Add server sync logic here if needed
     refreshTimeoutRef.current = setTimeout(() => setIsRefreshing(false), 1000);
-  }, []);
+  };
 
   // Filter notifications based on selected category
-  const filteredNotifications = useMemo(() => {
+  const filteredNotifications = (() => {
     if (!filterCategory) return notifications;
     return getNotificationsByCategory(filterCategory);
-  }, [notifications, filterCategory, getNotificationsByCategory]);
+  })();
 
   // Group filtered notifications using utility
-  const filteredGroups = useMemo(() => {
+  const filteredGroups = (() => {
     return groupNotificationsByDate(filteredNotifications);
-  }, [filteredNotifications]);
+  })();
 
-  const handleNotificationPress = useCallback(
-    async (
+  const handleNotificationPress = async (
       notification: NotificationType,
       actionHandler?: (notification: NotificationType) => void,
     ) => {
@@ -109,8 +105,7 @@ export const NotificationListScreen: React.FC = () => {
             break;
           default:
             navigate('NotificationDetail', {
-              notification,
-            });
+              notification });
         }
       } else {
         // Default navigation based on category
@@ -126,26 +121,17 @@ export const NotificationListScreen: React.FC = () => {
             break;
           default:
             navigate('NotificationDetail', {
-              notification,
-            });
+              notification });
         }
       }
-    },
-    [handleMarkAsRead, navigate, navigateTo],
-  );
+    };
 
   // Prepare sections for SectionList using utility
-  const sections = useMemo(
-    () => createSectionListData(filteredGroups),
-    [filteredGroups],
-  );
+  const sections = createSectionListData(filteredGroups);
 
   const hasNotifications = sections.length > 0;
 
-  const keyExtractor = useCallback(
-    (item: NotificationType) => item.id,
-    [],
-  );
+  const keyExtractor = (item: NotificationType) => item.id;
 
   const renderHeader = () => (
     <Header
@@ -155,16 +141,14 @@ export const NotificationListScreen: React.FC = () => {
       rightActions={[
         {
           icon: 'settings',
-          onPress: () => navigate('NotificationSettings'),
-        },
+          onPress: () => navigate('NotificationSettings') },
       ]}
     />
   );
 
   const notificationActionRef = useRef<((notification: NotificationType) => void) | null>(null);
 
-  const renderNotificationItem = useCallback(
-    ({ item }: { item: NotificationType }) => (
+  const renderNotificationItem = ({ item }: { item: NotificationType }) => (
       <NotificationItem
         notification={item}
         onPress={notification =>
@@ -175,16 +159,11 @@ export const NotificationListScreen: React.FC = () => {
         }
         onDismiss={handleRemoveNotification}
       />
-    ),
-    [handleNotificationPress, handleRemoveNotification],
-  );
+    );
 
-  const renderSectionHeader = useCallback(
-    ({ section }: { section: { title: string } }) => (
+  const renderSectionHeader = ({ section }: { section: { title: string } }) => (
       <NotificationGroupHeader title={section.title} />
-    ),
-    [],
-  );
+    );
 
   return (
     <NotificationActionHandler>
@@ -235,9 +214,6 @@ export const NotificationListScreen: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   emptyContainer: {
-    flex: 1,
-  },
-}));
+    flex: 1 } }));

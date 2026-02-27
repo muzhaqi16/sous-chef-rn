@@ -1,11 +1,10 @@
-import React, { createContext, useContext, useCallback, useMemo, useRef, useState } from 'react';
+import React, { createContext, useContext, useRef, useState } from 'react';
 import { Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  type SharedValue,
-} from 'react-native-reanimated';
+  type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -38,8 +37,7 @@ interface OverlayBackdropProviderProps {
  * This only provides the context - the actual backdrop is rendered by GlobalBackdrop.
  */
 export const OverlayBackdropProvider: React.FC<OverlayBackdropProviderProps> = ({
-  children,
-}) => {
+  children }) => {
   // Use shared values only for animation-related values
   const opacity = useSharedValue(0);
 
@@ -48,15 +46,15 @@ export const OverlayBackdropProvider: React.FC<OverlayBackdropProviderProps> = (
   const onPressCallbackRef = useRef<(() => void) | null>(null);
   const activeCountRef = useRef(0);
 
-  const showBackdrop = useCallback((options?: ShowBackdropOptions) => {
+  const showBackdrop = (options?: ShowBackdropOptions) => {
     activeCountRef.current += 1;
     const targetOpacity = options?.opacity ?? 0.5;
     onPressCallbackRef.current = options?.onPress ?? null;
     setIsVisible(true);
     opacity.set(withTiming(targetOpacity, { duration: 100 }));
-  }, [opacity]);
+  };
 
-  const hideBackdrop = useCallback(() => {
+  const hideBackdrop = () => {
     activeCountRef.current = Math.max(0, activeCountRef.current - 1);
     if (activeCountRef.current === 0) {
       onPressCallbackRef.current = null;
@@ -66,21 +64,16 @@ export const OverlayBackdropProvider: React.FC<OverlayBackdropProviderProps> = (
         }
       }));
     }
-  }, [opacity]);
+  };
 
-  const contextValue = useMemo(
-    () => ({
+  const contextValue = ({
       showBackdrop,
       hideBackdrop,
       // Internal: expose state for GlobalBackdrop component
       _internal: {
         opacity,
         isVisible,
-        onPressCallbackRef,
-      },
-    }),
-    [showBackdrop, hideBackdrop, opacity, isVisible],
-  );
+        onPressCallbackRef } });
 
   return (
     <OverlayBackdropContext.Provider value={contextValue as OverlayBackdropContextType}>
@@ -111,13 +104,12 @@ export const GlobalBackdrop: React.FC = () => {
   const isVisible = context?._internal?.isVisible ?? false;
   const onPressCallbackRef = context?._internal?.onPressCallbackRef;
 
-  const handlePress = useCallback(() => {
+  const handlePress = () => {
     onPressCallbackRef?.current?.();
-  }, [onPressCallbackRef]);
+  };
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity?.value ?? 0,
-  }));
+    opacity: opacity?.value ?? 0 }));
 
   // If used outside provider, render nothing
   if (!context) {
@@ -145,6 +137,4 @@ const styles = StyleSheet.create({
     // No zIndex - relies on render order. Must be rendered after content but before modal portals.
   },
   pressable: {
-    flex: 1,
-  },
-});
+    flex: 1 } });

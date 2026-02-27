@@ -7,7 +7,7 @@
  * PERFORMANCE: Single-pass algorithm computes all values in O(n)
  */
 
-import { useMemo } from 'react';
+;
 import { StorageState } from '#generated';
 import type { LocationCounts } from './types';
 
@@ -21,7 +21,7 @@ import type { LocationCounts } from './types';
  */
 export function usePantryStats(pantryItems: any[], totalCount?: number) {
   // PERFORMANCE: Single-pass computation for all values
-  return useMemo(() => {
+  return (() => {
     if (!pantryItems || pantryItems.length === 0) {
       return {
         locationCounts: {
@@ -71,5 +71,5 @@ export function usePantryStats(pantryItems: any[], totalCount?: number) {
         ...customLocationCounts,
       } as LocationCounts,
     };
-  }, [pantryItems, totalCount]);
+  })();
 }

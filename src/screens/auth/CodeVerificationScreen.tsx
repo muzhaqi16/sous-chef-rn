@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { Text, Linking, ActivityIndicator, View } from 'react-native';
 import { GraphQLError } from 'graphql';
@@ -10,8 +10,7 @@ import { useAppStore } from '#store/useAppStore';
 import { useToast } from '#/hooks/useToast';
 import {
   useVerifyEmailMutation,
-  useResendVerificationEmailMutation,
-} from '#generated';
+  useResendVerificationEmailMutation } from '#generated';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 
@@ -20,7 +19,7 @@ function extractVerificationToken(url: string): string | null {
     const parsed = new URL(url);
     if (!parsed.pathname.includes('verify-email')) return null;
     const token = parsed.searchParams.get('token');
-    if (!token || !/^[0-9a-fA-F]{32,}$/.test(token)) return null;
+    if (!token || !/^[0-9a-fA-F]{32 }$/.test(token)) return null;
     return token;
   } catch {
     return null;
@@ -59,10 +58,8 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
   const {
     control,
     handleSubmit,
-    formState: { errors },
-  } = useForm({
-    defaultValues: { code: '' },
-  });
+    formState: { errors } } = useForm({
+    defaultValues: { code: '' } });
 
   // Cleanup countdown interval on unmount
   useEffect(() => {
@@ -73,40 +70,37 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     };
   }, []);
 
-  // Auto-verify email from deep link token
-  const autoVerify = useCallback(async (token: string) => {
-    if (autoVerifyProcessedRef.current) return;
-    autoVerifyProcessedRef.current = true;
-    setIsAutoVerifying(true);
-
-    try {
-      logger.info('Auto-verifying email from deep link', {
-        tokenPrefix: token.substring(0, 8) + '...',
-      });
-
-      const result = await verifyEmail({ variables: { code: token } });
-
-      if (result.data?.verifyEmail?.success) {
-        updateUser({ emailVerified: true });
-        toast({ message: 'Email verified successfully!', type: 'success' });
-      } else {
-        throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
-      }
-    } catch (error: any) {
-      logger.error('Auto-verify failed', { error });
-      const errorMsg = error.message || 'Verification failed. The link may be expired or invalid.';
-      toast({ message: errorMsg, type: 'error' });
-      setIsAutoVerifying(false);
-      autoVerifyProcessedRef.current = false;
-    }
-  }, [verifyEmail, updateUser, toast]);
-
   // Listen for deep link URLs (cold start + warm start)
   useEffect(() => {
     const handleUrl = (url: string) => {
       const token = extractVerificationToken(url);
       if (token) {
-        autoVerify(token);
+        // Inline autoVerify logic to avoid dependency on function that changes every render
+        if (autoVerifyProcessedRef.current) return;
+        autoVerifyProcessedRef.current = true;
+        setIsAutoVerifying(true);
+
+        (async () => {
+          try {
+            logger.info('Auto-verifying email from deep link', {
+              tokenPrefix: token.substring(0, 8) + '...' });
+
+            const result = await verifyEmail({ variables: { code: token } });
+
+            if (result.data?.verifyEmail?.success) {
+              updateUser({ emailVerified: true });
+              toast({ message: 'Email verified successfully!', type: 'success' });
+            } else {
+              throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
+            }
+          } catch (error: any) {
+            logger.error('Auto-verify failed', { error });
+            const errorMsg = error.message || 'Verification failed. The link may be expired or invalid.';
+            toast({ message: errorMsg, type: 'error' });
+            setIsAutoVerifying(false);
+            autoVerifyProcessedRef.current = false;
+          }
+        })();
       }
     };
 
@@ -121,7 +115,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     });
 
     return () => subscription.remove();
-  }, [autoVerify]);
+  }, [verifyEmail, updateUser, toast]);
 
   // No navigation effects needed - conditional groups handle it
   useEffect(() => {
@@ -133,7 +127,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
   }, [user?.emailVerified]);
 
   // Start countdown timer for backoff
-  const startCountdown = useCallback((seconds: number) => {
+  const startCountdown = (seconds: number) => {
     if (countdownRef.current) {
       clearInterval(countdownRef.current);
     }
@@ -152,13 +146,12 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
         return prev - 1;
       });
     }, 1000);
-  }, []);
+  };
 
   const onVerifyCode = async (data: CodeVerificationValues) => {
     try {
       const response = await verifyEmail({
-        variables: { code: data.code },
-      });
+        variables: { code: data.code } });
 
       if (response.data?.verifyEmail.success) {
         // Just update the user state
@@ -179,8 +172,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
 
     try {
       const response = await resendVerificationEmail({
-        variables: { email: user.email },
-      });
+        variables: { email: user.email } });
 
       // Increment attempts and start countdown for next request
       const newAttempts = resendAttempts + 1;

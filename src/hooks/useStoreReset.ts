@@ -1,32 +1,28 @@
-import {useCallback} from 'react';
 import {useAppStore} from '#store/useAppStore';
 import {RESET_SCENARIOS, ResetOptions} from '#store/resetManager';
 
 export const useStoreReset = () => {
   const resetStore = useAppStore(state => state.resetStore);
 
-  const logout = useCallback(() => {
+  const logout = () => {
     resetStore('LOGOUT');
-  }, [resetStore]);
+  };
 
-  const fullReset = useCallback(() => {
+  const fullReset = () => {
     resetStore('FULL_RESET');
-  }, [resetStore]);
+  };
 
-  const sessionExpired = useCallback(() => {
+  const sessionExpired = () => {
     resetStore('SESSION_EXPIRED');
-  }, [resetStore]);
+  };
 
-  const resetOnboarding = useCallback(() => {
+  const resetOnboarding = () => {
     resetStore('ONBOARDING_RESET');
-  }, [resetStore]);
+  };
 
-  const customReset = useCallback(
-    (options: ResetOptions) => {
+  const customReset = (options: ResetOptions) => {
       resetStore(options);
-    },
-    [resetStore],
-  );
+    };
 
   return {
     logout,
@@ -35,8 +31,7 @@ export const useStoreReset = () => {
     resetOnboarding,
     customReset,
     // Direct access to reset scenarios for flexibility
-    scenarios: RESET_SCENARIOS,
-  };
+    scenarios: RESET_SCENARIOS };
 };
 
 // Alternative: Individual hooks for specific use cases
@@ -55,12 +50,11 @@ export const useAuth = () => {
 export const useSession = () => {
   const {sessionExpired} = useStoreReset();
 
-  const handleSessionExpiry = useCallback(() => {
+  const handleSessionExpiry = () => {
     // Could add additional logic here like showing a modal
     sessionExpired();
-  }, [sessionExpired]);
+  };
 
   return {
-    handleSessionExpiry,
-  };
+    handleSessionExpiry };
 };

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
@@ -16,26 +16,23 @@ export const DebugInfo: React.FC = () => {
   const actualApiUrl = Config.API_URL || apiConfig.baseUrl;
   const actualWsUrl = Config.WEB_SOCKET_URL || apiConfig.wsUrl;
 
-  const debugData = useMemo(() => ({
+  const debugData = ({
     'Environment': {
       'Build Mode': config.buildMode,
       'Is Development': config.isDevelopment ? 'Yes' : 'No',
       'Is Staging': config.isStaging ? 'Yes' : 'No',
       'Is Production': config.isProduction ? 'Yes' : 'No',
-      'Is Testing': config.isTesting ? 'Yes' : 'No',
-    },
+      'Is Testing': config.isTesting ? 'Yes' : 'No' },
     'API Configuration': {
       'API URL': actualApiUrl,
       'WebSocket URL': actualWsUrl,
       'API Key': Config.API_KEY ? `${Config.API_KEY.substring(0, 20)}...` : 'Not set',
       'Timeout': `${apiConfig.timeout}ms`,
-      'Max Retries': apiConfig.retries.toString(),
-    },
+      'Max Retries': apiConfig.retries.toString() },
     'Telemetry': {
       'Prometheus Endpoint': Config.PROMETHEUS_ENDPOINT || 'Not set',
       'Loki Endpoint': Config.LOKI_ENDPOINT || 'Not set',
-      'Auth Username': Config.TELEMETRY_AUTH_USERNAME || 'Not set',
-    },
+      'Auth Username': Config.TELEMETRY_AUTH_USERNAME || 'Not set' },
     'Device Info': {
       'Platform': Platform.OS,
       'Version': Platform.Version.toString(),
@@ -43,15 +40,12 @@ export const DebugInfo: React.FC = () => {
       'Build Number': DeviceInfo.getBuildNumber(),
       'Bundle ID': DeviceInfo.getBundleId(),
       'Device Brand': DeviceInfo.getBrand(),
-      'Device Model': DeviceInfo.getModel(),
-    },
+      'Device Model': DeviceInfo.getModel() },
     'Build Configuration': {
       'NODE_ENV': Config.NODE_ENV || 'Not set',
-      'Web App URL': Config.WEB_APP_URL || 'Not set',
-    },
-  }), [config, apiConfig, actualApiUrl, actualWsUrl]);
+      'Web App URL': Config.WEB_APP_URL || 'Not set' } });
 
-  const handleCopyAll = useCallback(() => {
+  const handleCopyAll = () => {
     const allDebugInfo = Object.entries(debugData)
       .map(([section, data]) => {
         const items = Object.entries(data)
@@ -63,16 +57,16 @@ export const DebugInfo: React.FC = () => {
 
     Clipboard.setString(allDebugInfo);
     Alert.alert('Copied', 'Debug information copied to clipboard');
-  }, [debugData]);
+  };
 
-  const handleCopySection = useCallback((sectionName: string, data: Record<string, string>) => {
+  const handleCopySection = (sectionName: string, data: Record<string, string>) => {
     const sectionInfo = Object.entries(data)
       .map(([key, value]) => `${key}: ${value}`)
       .join('\n');
 
     Clipboard.setString(sectionInfo);
     Alert.alert('Copied', `${sectionName} copied to clipboard`);
-  }, []);
+  };
 
   // Only show in development, local, or staging builds
   if (!Environment.shouldEnableDebugFeatures()) {
@@ -135,110 +129,90 @@ export const DebugInfo: React.FC = () => {
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   notAvailableContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl,
-  },
+    padding: theme.spacing.xl },
   notAvailableText: {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   header: {
     padding: theme.spacing.md,
     backgroundColor: theme.colors.backgroundSecondary,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   headerText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing['3'],
-    lineHeight: theme.typography.lineHeight.normal,
-  },
+    lineHeight: theme.typography.lineHeight.normal },
   copyAllButton: {
     backgroundColor: theme.colors.primary,
     paddingVertical: theme.spacing.sm + 2,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.sm,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   copyAllButtonText: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.white,
-  },
+    color: theme.colors.white },
   section: {
     marginVertical: theme.spacing['3'],
-    paddingHorizontal: theme.spacing.md,
-  },
+    paddingHorizontal: theme.spacing.md },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   sectionTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   copySectionButton: {
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing['3'],
     borderRadius: theme.radii.xs + 2,
     borderWidth: 1,
-    borderColor: theme.colors.primary,
-  },
+    borderColor: theme.colors.primary },
   copySectionButtonText: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   infoContainer: {
     backgroundColor: theme.colors.backgroundSecondary,
     borderRadius: theme.radii.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    overflow: 'hidden',
-  },
+    overflow: 'hidden' },
   infoRow: {
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   infoLabel: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+    letterSpacing: 0.5 },
   infoValue: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textPrimary,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   footer: {
     padding: theme.spacing.md,
     marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.xl,
-  },
+    marginBottom: theme.spacing.xl },
   footerText: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    fontStyle: 'italic',
-  },
+    fontStyle: 'italic' },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));
 
 export default DebugInfo;

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useAppStore } from '#/store/useAppStore';
 import { useAppSettings } from '#hooks/profile/useAppSettings';
 import { storage } from '#/storage/mmkv';
@@ -59,8 +59,7 @@ export const useSettings = () => {
     settings: serverSettings,
     loading: serverLoading,
     updateAppSetting,
-    resetToDefaults: resetServerDefaults,
-  } = useAppSettings();
+    resetToDefaults: resetServerDefaults } = useAppSettings();
 
   // Local settings from Zustand
   const hapticFeedbackEnabled = useAppStore(state => state.hapticFeedbackEnabled);
@@ -70,7 +69,7 @@ export const useSettings = () => {
   const resetPreferences = useAppStore(state => state.resetPreferences);
 
   // Unified settings object
-  const settings = useMemo<UnifiedSettings>(() => ({
+  const settings = ({
     // Server settings
     showTutorials: serverSettings.showTutorials,
     autoSync: serverSettings.autoSync,
@@ -78,59 +77,34 @@ export const useSettings = () => {
 
     // Local settings
     hapticFeedbackEnabled,
-    showNavigationLabels,
-  }), [
-    serverSettings.showTutorials,
-    serverSettings.autoSync,
-    serverSettings.offlineMode,
-    hapticFeedbackEnabled,
-    showNavigationLabels,
-  ]);
+    showNavigationLabels });
 
   // Settings actions
-  const setShowTutorials = useCallback(
-    (enabled: boolean) => updateAppSetting('showTutorials', enabled),
-    [updateAppSetting]
-  );
+  const setShowTutorials = (enabled: boolean) => updateAppSetting('showTutorials', enabled);
 
-  const setAutoSync = useCallback(
-    (enabled: boolean) => updateAppSetting('autoSync', enabled),
-    [updateAppSetting]
-  );
+  const setAutoSync = (enabled: boolean) => updateAppSetting('autoSync', enabled);
 
-  const setOfflineMode = useCallback(
-    (enabled: boolean) => updateAppSetting('offlineMode', enabled),
-    [updateAppSetting]
-  );
+  const setOfflineMode = (enabled: boolean) => updateAppSetting('offlineMode', enabled);
 
-  const resetToDefaults = useCallback(async () => {
+  const resetToDefaults = async () => {
     // Reset both server and local settings
     const serverSuccess = await resetServerDefaults();
     resetPreferences();
     return serverSuccess;
-  }, [resetServerDefaults, resetPreferences]);
+  };
 
-  const actions = useMemo<SettingsActions>(() => ({
+  const actions = ({
     setShowTutorials,
     setAutoSync,
     setOfflineMode,
     setHapticFeedbackEnabled,
     setShowNavigationLabels,
-    resetToDefaults,
-  }), [
-    setShowTutorials,
-    setAutoSync,
-    setOfflineMode,
-    setHapticFeedbackEnabled,
-    setShowNavigationLabels,
-    resetToDefaults,
-  ]);
+    resetToDefaults });
 
   return {
     settings,
     actions,
-    loading: serverLoading,
-  };
+    loading: serverLoading };
 };
 
 /**

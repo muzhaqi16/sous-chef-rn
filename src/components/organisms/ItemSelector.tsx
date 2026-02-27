@@ -1,16 +1,13 @@
-import React, {useCallback, useMemo, memo} from 'react';
+import React from 'react';
 import {
   Pressable,
   Text,
   ActivityIndicator,
-  View,
-} from 'react-native';
+  View } from 'react-native';
 import {FlashList} from '@shopify/flash-list';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
-// Memoized separator component to prevent re-renders
-const ItemSeparator = memo(() => <View style={separatorStyle} />);
-ItemSeparator.displayName = 'ItemSeparator';
+const ItemSeparator = () => <View style={separatorStyle} />;
 
 const separatorStyle = {height: 8};
 
@@ -43,18 +40,17 @@ export function ItemSelector<T extends SelectableItem>({
   loading = false,
   emptyMessage = 'No items available',
   keyExtractor,
-  renderCustomItem,
-}: ItemSelectorProps<T>) {
+  renderCustomItem }: ItemSelectorProps<T>) {
   const {theme} = useUnistyles();
 
-  const defaultKeyExtractor = useCallback((item: T) => item.id, []);
+  const defaultKeyExtractor = (item: T) => item.id;
   const getKey = keyExtractor || defaultKeyExtractor;
 
-  const handleItemSelect = useCallback((item: T) => {
+  const handleItemSelect = (item: T) => {
     onSelect(item.id, item);
-  }, [onSelect]);
+  };
 
-  const renderItem = useCallback(({item}: {item: T}) => {
+  const renderItem = ({item}: {item: T}) => {
     const isSelected = item.id === selectedId;
 
     if (renderCustomItem) {
@@ -76,9 +72,9 @@ export function ItemSelector<T extends SelectableItem>({
         </Text>
       </Pressable>
     );
-  }, [selectedId, renderCustomItem, displayProperty, handleItemSelect]);
+  };
 
-  const listStyle = useMemo(() => ({flexGrow: 0}), []);
+  const listStyle = ({flexGrow: 0});
 
   if (loading) {
     return (
@@ -117,40 +113,31 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'transparent',
-  },
+    borderColor: 'transparent' },
   selectedItem: {
     backgroundColor: theme.colors.primary + '10',
-    borderColor: theme.colors.primary,
-  },
+    borderColor: theme.colors.primary },
   itemText: {
     fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   selectedItemText: {
     fontWeight: 'bold',
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
-  },
+    paddingVertical: theme.spacing.xl },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
-  },
+    paddingVertical: theme.spacing.xl },
   emptyText: {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));
 
 export default ItemSelector;

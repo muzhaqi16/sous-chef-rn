@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState } from 'react';
 import { Alert } from 'react-native';
 import { ShoppingListItemDisplayFragment } from '#generated';
 import { useLazyHomeData } from '#hooks/home/useLazyHomeData';
@@ -79,8 +79,7 @@ export function useMoveToPantryModal(
     selectedPantryId,
     isLoaded: homeDataLoaded,
     fetchHomeData,
-    loading: homeLoading,
-  } = useLazyHomeData();
+    loading: homeLoading } = useLazyHomeData();
 
   // Move to pantry mutation
   const { moveToPantry, loading: moveLoading } = useMoveToPantry({
@@ -88,11 +87,9 @@ export function useMoveToPantryModal(
     onSuccess: () => {
       setVisible(false);
       setSelectedItem(null);
-    },
-  });
+    } });
 
-  const openForItem = useCallback(
-    async (itemId: string) => {
+  const openForItem = async (itemId: string) => {
       // Fetch home data if not already loaded (lazy load on demand)
       if (!homeDataLoaded) {
         await fetchHomeData();
@@ -115,44 +112,25 @@ export function useMoveToPantryModal(
         setSelectedItem(item as ShoppingListItemDisplayFragment);
         setVisible(true);
       }
-    },
-    [homeDataLoaded, fetchHomeData, pantries.length, items],
-  );
+    };
 
-  const close = useCallback(() => {
+  const close = () => {
     setVisible(false);
     setSelectedItem(null);
-  }, []);
+  };
 
-  const confirm = useCallback(
-    async (input: MoveToPantryInput) => {
+  const confirm = async (input: MoveToPantryInput) => {
       if (!selectedItem) return;
       await moveToPantry(selectedItem, input);
-    },
-    [selectedItem, moveToPantry],
-  );
+    };
 
-  return useMemo(
-    () => ({
-      visible,
-      selectedItem,
-      pantries,
-      selectedPantryId: selectedPantryId ?? null,
-      isLoading: homeLoading || moveLoading,
-      openForItem,
-      close,
-      confirm,
-    }),
-    [
-      visible,
-      selectedItem,
-      pantries,
-      selectedPantryId,
-      homeLoading,
-      moveLoading,
-      openForItem,
-      close,
-      confirm,
-    ],
-  );
+  return {
+    visible,
+    selectedItem,
+    pantries,
+    selectedPantryId: selectedPantryId ?? null,
+    isLoading: homeLoading || moveLoading,
+    openForItem,
+    close,
+    confirm };
 }

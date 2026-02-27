@@ -1,4 +1,4 @@
-import { useEffect, startTransition, useMemo } from 'react';
+import { useEffect, startTransition } from 'react';
 import { gql } from '@apollo/client';
 import { client } from '#/apollo/client';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -108,8 +108,7 @@ export function useOptimisticDataRestorationMultiple(
 
   // Serialize array for stable dependency comparison
   // This allows consumers to pass inline arrays without causing infinite loops
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stableEntityTypes = useMemo(() => entityTypes, [JSON.stringify(entityTypes)]);
+  const stableEntityTypes = entityTypes;
 
   useEffect(() => {
     if (!user?.id || !enabled || stableEntityTypes.length === 0) return;

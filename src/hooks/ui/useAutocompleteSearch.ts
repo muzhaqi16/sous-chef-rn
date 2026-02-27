@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '#store/useAppStore';
 
 export interface AutocompleteSearchConfig<TItem> {
@@ -55,12 +55,11 @@ export function useAutocompleteSearch<TItem>(
     requiresNetwork = true,
     fallbackItems = [],
     filterFallback,
-    maxResults = 10,
-  } = config;
+    maxResults = 10 } = config;
 
   const [searchTerm, setSearchTerm] = useState('');
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastResultsRef = useRef<TItem[]>([]);
+  const [lastResults, setLastResults] = useState<TItem[]>([]);
 
   const isOnline = useAppStore(state => state.isOnline);
   const shouldSearch = searchTerm.length >= minChars && (!requiresNetwork || isOnline);
@@ -98,17 +97,22 @@ export function useAutocompleteSearch<TItem>(
   // Get current results
   const results = getResults();
 
-  // Anti-flicker: track last results
-  useEffect(() => {
+  // Anti-flicker: track last results using render-time conditional state update
+  // (React-recommended pattern for syncing derived state with render values)
+  const [prevResults, setPrevResults] = useState(results);
+  const [prevLoading, setPrevLoading] = useState(loading);
+  if (results !== prevResults || loading !== prevLoading) {
+    setPrevResults(results);
+    setPrevLoading(loading);
     if (results.length > 0) {
-      lastResultsRef.current = results;
+      setLastResults(results);
     } else if (!loading) {
-      lastResultsRef.current = [];
+      setLastResults([]);
     }
-  }, [results, loading]);
+  }
 
   // Compute display items
-  const displayItems = useMemo(() => {
+  const displayItems = (() => {
     // If below min chars or no search term, use fallback
     if (searchTerm.length < minChars) {
       if (filterFallback && searchTerm.length > 0) {
@@ -123,25 +127,25 @@ export function useAutocompleteSearch<TItem>(
     }
 
     // Anti-flicker: show last results while loading
-    if (loading && lastResultsRef.current.length > 0) {
-      return lastResultsRef.current.slice(0, maxResults);
+    if (loading && lastResults.length > 0) {
+      return lastResults.slice(0, maxResults);
     }
 
     return [];
-  }, [searchTerm, minChars, results, loading, fallbackItems, filterFallback, maxResults]);
+  })();
 
-  const handleSearchTermChange = useCallback((text: string) => {
+  const handleSearchTermChange = (text: string) => {
     setSearchTerm(text);
-  }, []);
+  };
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setSearchTerm('');
-    lastResultsRef.current = [];
+    setLastResults([]);
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
     }
-  }, []);
+  };
 
   return {
     displayItems,
@@ -151,6 +155,5 @@ export function useAutocompleteSearch<TItem>(
     shouldSearch,
     handleSearchTermChange,
     setSearchTerm,
-    reset,
-  };
+    reset };
 }

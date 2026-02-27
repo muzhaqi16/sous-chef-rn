@@ -1,28 +1,23 @@
-import { useCallback, useDeferredValue } from 'react';
+import { useDeferredValue } from 'react';
 import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
 export function useItemAutocomplete(options?: { debounceMs?: number }) {
   const [fetchItems, { data, loading }] = useAutocompleteItemsLazyQuery({
-    fetchPolicy: 'cache-and-network',
-  });
+    fetchPolicy: 'cache-and-network' });
 
-  const search = useCallback(
-    (term: string) => {
+  const search = (term: string) => {
       fetchItems({
-        variables: { input: { query: term, limit: 10 } },
-      });
-    },
-    [fetchItems],
-  );
+        variables: { input: { query: term, limit: 10 } } });
+    };
 
   const items = data?.autocompleteItems?.suggestions || [];
   const deferredItems = useDeferredValue(items);
   const isStale = items !== deferredItems;
 
-  const getResults = useCallback((): ItemSuggestion[] => {
+  const getResults = (): ItemSuggestion[] => {
     return deferredItems as ItemSuggestion[];
-  }, [deferredItems]);
+  };
 
   const autocomplete = useAutocompleteSearch<ItemSuggestion>({
     search,
@@ -32,8 +27,7 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
     minChars: 2,
     debounceMs: options?.debounceMs ?? 250,
     requiresNetwork: true,
-    maxResults: 10,
-  });
+    maxResults: 10 });
 
   return autocomplete;
 }

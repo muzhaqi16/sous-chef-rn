@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Pressable } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
@@ -53,12 +53,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // Staggered entry animation (only during initial render, disabled after)
   const staggerCtx = useStaggeredEntry();
   const entryDelay = staggerCtx?.getEntryDelay(index) ?? 0;
-  const entering = useMemo(() => {
+  const entering = (() => {
     if (entryDelay <= 0) return undefined;
     return FadeIn.delay(entryDelay)
       .duration(staggeredEntryAnimation.duration)
       .easing(standardEasing.factory());
-  }, [entryDelay]);
+  })();
 
   // PERFORMANCE: Get screen width from context (single subscription at list level, not per-item)
   const screenWidth = themeColors?.screenWidth ?? 375;
@@ -71,7 +71,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   });
 
   // Get actions and permissions from context (stable references)
-  const { actions, permissionsRef } = useSortableListActions();
+  const { actions, permissions } = useSortableListActions();
   const {
     onItemPress,
     onItemEdit,
@@ -83,17 +83,17 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     onSwipeableClose,
   } = actions;
 
-  // Read permissions from ref to always get latest values
+  // Read permissions from context snapshot
   const {
     canRemoveItems = true,
     canEditItems = true,
     canMarkPurchased = true,
-  } = permissionsRef.current;
+  } = permissions;
 
   // === ELEMENT CREATION ===
 
   // Create rightElement from config or use provided element
-  const rightElement = useMemo(() => {
+  const rightElement = (() => {
     if (item.rightElementConfig?.type === 'quantity') {
       const config = item.rightElementConfig;
       return (
@@ -124,18 +124,10 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       );
     }
     return item.rightElement;
-  }, [
-    item.isPurchased,
-    item.id,
-    item.rightElement,
-    item.rightElementConfig,
-    onQuantityPress,
-    onMoveToPantry,
-    themeColors,
-  ]);
+  })();
 
   // Create leftElement from config or use provided element
-  const leftElement = useMemo(() => {
+  const leftElement = (() => {
     if (item.leftElementConfig?.type === 'image') {
       const config = item.leftElementConfig;
       return (
@@ -154,12 +146,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       );
     }
     return item.leftElement;
-  }, [item.leftElement, item.leftElementConfig]);
+  })();
 
   // Create checkbox element for marking items as purchased
   // Uses AnimatedCheckbox with pendingChecked state for immediate visual feedback
   // Slide animation triggers state change via callback AFTER animation completes
-  const checkboxElement = useMemo(() => {
+  const checkboxElement = (() => {
     if (!onTogglePurchase || !canMarkPurchased) return null;
     return (
       <AnimatedCheckbox
@@ -178,7 +170,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         testID={`shopping-item-checkbox-${item.id}`}
       />
     );
-  }, [item.id, item.isPurchased, onTogglePurchase, canMarkPurchased, triggerSlide]);
+  })();
 
   // Safety guard: skip rendering if item is invalid
   if (!item?.id || !item?.title) {

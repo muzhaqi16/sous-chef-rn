@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Text, ActivityIndicator, ScrollView, View } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { StyleSheet } from 'react-native-unistyles';
@@ -64,29 +64,23 @@ export const SelectPantryItems = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   // Map catalog item IDs to pantry item IDs for existing pantry items
-  const { existingItemMap, existingCatalogIds } = useMemo(() => {
-    const pantryItems = extractNodes(pantryData?.pantry?.itemsConnection);
-    const map = new Map<string, string>();
-    const ids = new Set<string>();
-    for (const pantryItem of pantryItems) {
-      const catalogId = pantryItem.item?.id ?? pantryItem.itemId;
-      if (catalogId) {
-        map.set(catalogId, pantryItem.id);
-        ids.add(catalogId);
-      }
+  const pantryItems = extractNodes(pantryData?.pantry?.itemsConnection);
+  const map = new Map<string, string>();
+  const ids = new Set<string>();
+  for (const pantryItem of pantryItems) {
+    const catalogId = pantryItem.item?.id ?? pantryItem.itemId;
+    if (catalogId) {
+      map.set(catalogId, pantryItem.id);
+      ids.add(catalogId);
     }
-    return { existingItemMap: map, existingCatalogIds: ids };
-  }, [pantryData?.pantry?.itemsConnection]);
+  }
+  const { existingItemMap, existingCatalogIds } = { existingItemMap: map, existingCatalogIds: ids };
 
   // Transform onboarding items into selectable items, pre-selecting existing pantry items
-  const selectableItems = useMemo(
-    () =>
-      (data?.items?.edges?.map(edge => edge.node) || []).map((item: any) => ({
+  const selectableItems = (data?.items?.edges?.map(edge => edge.node) || []).map((item: any) => ({
         ...item,
         selected: existingCatalogIds.has(item.id),
-      })),
-    [data?.items?.edges, existingCatalogIds],
-  );
+      }))
 
   // Use the custom hook for managing selection state
   const { items, selectedItems, toggleItem, isMaxReached } = useSelectableItems(

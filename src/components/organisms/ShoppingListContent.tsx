@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
 import { SortableShoppingList } from '#components/organisms/SortableShoppingList/SortableList';
 import { CollapsiblePurchasedSection } from '#components/molecules/CollapsiblePurchasedSection';
@@ -45,14 +45,8 @@ export const ShoppingListContent: React.FC<ShoppingListContentProps> = ({
 }) => {
   // Separate items by purchased status (memoized to prevent unnecessary re-renders)
   // Must be called before any early returns to comply with React hooks rules
-  const unpurchasedItems = useMemo(
-    () => items.filter(item => !item.isPurchased),
-    [items],
-  );
-  const purchasedItems = useMemo(
-    () => items.filter(item => item.isPurchased),
-    [items],
-  );
+  const unpurchasedItems = items.filter(item => !item.isPurchased);
+  const purchasedItems = items.filter(item => item.isPurchased);
 
   // Show skeleton screens during initial load
   if (loading && items.length === 0) {

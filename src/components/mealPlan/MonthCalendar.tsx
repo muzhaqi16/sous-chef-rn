@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Calendar, type DateData } from 'react-native-calendars';
 import { useUnistyles } from 'react-native-unistyles';
 import { format } from 'date-fns';
@@ -24,7 +24,7 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = ({
   const minDateStr = minDate ? format(minDate, 'yyyy-MM-dd') : undefined;
   const maxDateStr = maxDate ? format(maxDate, 'yyyy-MM-dd') : undefined;
 
-  const markedDates = useMemo(() => {
+  const markedDates = (() => {
     const marks: Record<string, any> = {};
 
     // Mark days with meals
@@ -46,7 +46,7 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = ({
     };
 
     return marks;
-  }, [daysWithMeals, selectedDateStr, theme.colors]);
+  })();
 
   const handleDayPress = (day: DateData) => {
     onSelectDate(new Date(day.dateString + 'T12:00:00'));

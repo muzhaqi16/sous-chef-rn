@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useMemo, type ReactNode } from 'react';
+import React, { createContext, useContext, useRef, useEffect, type ReactNode } from 'react';
 
 /**
  * Actions available for list items.
@@ -75,42 +75,39 @@ export const SortableListActionsProvider: React.FC<SortableListActionsProviderPr
   permissions,
   children,
 }) => {
-  // Store latest actions in ref - updated on every render but doesn't trigger re-renders
+  // Store latest actions in ref - updated via effect but doesn't trigger re-renders
   const actionsRef = useRef(actions);
-  actionsRef.current = actions;
+  useEffect(() => {
+    actionsRef.current = actions;
+  });
 
   // Store latest permissions in ref - consumers can read current values via ref
   const permissionsRef = useRef(permissions);
-  permissionsRef.current = permissions;
+  useEffect(() => {
+    permissionsRef.current = permissions;
+  });
 
   // Create stable callbacks that delegate to ref
   // Empty dependency array = these never change = no consumer re-renders
-  const stableActions = useMemo<SortableListActions>(
-    () => ({
-      onItemPress: (id: string) => actionsRef.current.onItemPress?.(id),
-      onItemEdit: (id: string) => actionsRef.current.onItemEdit?.(id),
-      onItemDelete: (id: string) => actionsRef.current.onItemDelete?.(id),
-      onTogglePurchase: (id: string) => actionsRef.current.onTogglePurchase?.(id),
-      onMoveToPantry: (id: string) => actionsRef.current.onMoveToPantry?.(id),
-      onQuantityPress: (id: string) => actionsRef.current.onQuantityPress?.(id),
-      onSwipeableWillOpen: (ref: any) => actionsRef.current.onSwipeableWillOpen?.(ref),
-      onSwipeableClose: () => actionsRef.current.onSwipeableClose?.(),
-      onSortOrderUpdate: (itemId: string, afterItemId: string | null, beforeItemId: string | null) =>
-        actionsRef.current.onSortOrderUpdate?.(itemId, afterItemId, beforeItemId),
-    }),
-    [],
-  );
+  const stableActions: SortableListActions = {
+    onItemPress: (id: string) => actionsRef.current.onItemPress?.(id),
+    onItemEdit: (id: string) => actionsRef.current.onItemEdit?.(id),
+    onItemDelete: (id: string) => actionsRef.current.onItemDelete?.(id),
+    onTogglePurchase: (id: string) => actionsRef.current.onTogglePurchase?.(id),
+    onMoveToPantry: (id: string) => actionsRef.current.onMoveToPantry?.(id),
+    onQuantityPress: (id: string) => actionsRef.current.onQuantityPress?.(id),
+    onSwipeableWillOpen: (ref: any) => actionsRef.current.onSwipeableWillOpen?.(ref),
+    onSwipeableClose: () => actionsRef.current.onSwipeableClose?.(),
+    onSortOrderUpdate: (itemId: string, afterItemId: string | null, beforeItemId: string | null) =>
+      actionsRef.current.onSortOrderUpdate?.(itemId, afterItemId, beforeItemId),
+  };
 
-  // Memoize context value - stable reference (empty deps after stableActions)
-  // permissionsRef allows consumers to read latest permissions without context changes
-  const contextValue = useMemo<SortableListActionsContextValue>(
-    () => ({
-      actions: stableActions,
-      permissions: permissionsRef.current, // Snapshot for initial render
-      permissionsRef, // Ref for latest values - always current
-    }),
-    [stableActions], // Only stableActions - permissions accessed via ref
-  );
+  // Context value - permissionsRef allows consumers to read latest permissions without context changes
+  const contextValue: SortableListActionsContextValue = {
+    actions: stableActions,
+    permissions, // Snapshot for current render
+    permissionsRef, // Ref for latest values - always current
+  };
 
   return (
     <SortableListActionsContext.Provider value={contextValue}>

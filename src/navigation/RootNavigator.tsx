@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useRef, useMemo } from 'react';
+import React, { Suspense, useEffect, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import {
   createStaticNavigation,
@@ -292,34 +292,28 @@ export function Navigation() {
   }, [user, isHydrated, setNavigationState]);
 
   // Stable style object for Suspense fallback
-  const suspenseFallbackStyle = useMemo(
-    () => ({
-      flex: 1,
-      backgroundColor: theme.colors.background,
-      justifyContent: 'center' as const,
-      alignItems: 'center' as const,
-    }),
-    [theme.colors.background],
-  );
+  const suspenseFallbackStyle = {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  };
 
   // Create navigation theme based on current Unistyles theme
-  const navigationTheme: Theme = useMemo(
-    () => ({
-      ...(theme.colors.background === '#FFFFFF' ? DefaultTheme : DarkTheme),
-      colors: {
-        ...(theme.colors.background === '#FFFFFF'
-          ? DefaultTheme.colors
-          : DarkTheme.colors),
-        primary: theme.colors.primary,
-        background: theme.colors.background,
-        card: theme.colors.surface,
-        text: theme.colors.textPrimary,
-        border: theme.colors.border,
-        notification: theme.colors.error,
-      },
-    }),
-    [theme],
-  );
+  const navigationTheme: Theme = {
+    ...(theme.colors.background === '#FFFFFF' ? DefaultTheme : DarkTheme),
+    colors: {
+      ...(theme.colors.background === '#FFFFFF'
+        ? DefaultTheme.colors
+        : DarkTheme.colors),
+      primary: theme.colors.primary,
+      background: theme.colors.background,
+      card: theme.colors.surface,
+      text: theme.colors.textPrimary,
+      border: theme.colors.border,
+      notification: theme.colors.error,
+    },
+  };
 
   // Show splash while app is hydrating or determining navigation state
   if (!isHydrated || navigationState === 'loading') {

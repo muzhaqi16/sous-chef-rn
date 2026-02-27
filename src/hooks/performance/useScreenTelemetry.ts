@@ -39,7 +39,9 @@ export function useScreenTelemetry(
 ) {
   const firedRef = useRef(false);
   const getPropertiesRef = useRef(getProperties);
-  getPropertiesRef.current = getProperties;
+  useEffect(() => {
+    getPropertiesRef.current = getProperties;
+  });
 
   useEffect(() => {
     if (!isReady || firedRef.current) return;
@@ -51,6 +53,5 @@ export function useScreenTelemetry(
 
     return () => clearTimeout(timer);
     // Fire once — getProperties is read from ref at fire time
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReady, screenName]);
 }

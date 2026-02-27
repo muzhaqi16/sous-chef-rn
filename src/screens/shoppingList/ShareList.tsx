@@ -1,12 +1,11 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
   Pressable,
   Alert,
-  ActivityIndicator,
-} from 'react-native';
+  ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import { useNavigation } from '@react-navigation/native';
@@ -17,12 +16,10 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useRemoveCollaboratorMutation,
   useAddCollaboratorMutation,
-  CollaboratorRole,
-} from '#generated';
+  CollaboratorRole } from '#generated';
 import { useShoppingListDetails } from '#hooks/shoppingList/useShoppingListDetails';
 import CollaboratorPermissionsBottomSheet, {
-  CollaboratorPermissionsBottomSheetRef,
-} from '#/components/organisms/CollaboratorPermissionsBottomSheet';
+  CollaboratorPermissionsBottomSheetRef } from '#/components/organisms/CollaboratorPermissionsBottomSheet';
 import { useAppStore, selectUser } from '#store/useAppStore';
 import { Button } from '#components/base/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
@@ -79,8 +76,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
     isRefetching,
     collaborators,
     name: listName,
-    refetch,
-  } = useShoppingListDetails(listId);
+    refetch } = useShoppingListDetails(listId);
 
   const [shareList] = useAddCollaboratorMutation();
   const [removeMember] = useRemoveCollaboratorMutation();
@@ -109,9 +105,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
             shoppingListId: listId,
             email: email.trim(),
             role: CollaboratorRole.Contributor, // Assuming a role is required
-          },
-        },
-      });
+          } } });
       setEmail('');
       refetch();
     } catch {
@@ -121,8 +115,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
     }
   };
 
-  const handleRemoveMember = useCallback(
-    (memberId: string) => {
+  const handleRemoveMember = (memberId: string) => {
       Alert.alert(
         'Remove Member',
         'Are you sure you want to remove this member?',
@@ -134,21 +127,17 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
             onPress: async () => {
               try {
                 await removeMember({
-                  variables: { id: memberId },
-                });
+                  variables: { id: memberId } });
                 refetch();
               } catch {
                 Alert.alert('Error', 'Failed to remove member');
               }
-            },
-          },
+            } },
         ],
       );
-    },
-    [removeMember, refetch],
-  );
+    };
 
-  const handleLeaveList = useCallback(() => {
+  const handleLeaveList = () => {
     // Block owners from leaving
     if (isOwner) {
       Alert.alert(
@@ -178,23 +167,20 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
             setLeaving(true);
             try {
               await removeMember({
-                variables: { id: currentUserCollaborator.id },
-              });
+                variables: { id: currentUserCollaborator.id } });
               navigation.goBack();
             } catch {
               Alert.alert('Error', 'Failed to leave list');
             } finally {
               setLeaving(false);
             }
-          },
-        },
+          } },
       ],
     );
-  }, [isOwner, listName, currentUserCollaborator?.id, removeMember, navigation]);
+  };
 
   // PERFORMANCE: Memoized renderItem to avoid recreating on every render
-  const renderMemberItem = useCallback(
-    ({ item: member }: { item: any }) => {
+  const renderMemberItem = ({ item: member }: { item: any }) => {
       const statusColor = getStatusColor(member.status, theme.colors);
       const statusText = formatStatus(member.status);
 
@@ -218,8 +204,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                     styles.statusBadge,
                     {
                       backgroundColor: statusColor + '20',
-                      borderColor: statusColor,
-                    },
+                      borderColor: statusColor },
                   ]}
                 >
                   <Text style={[styles.statusText, { color: statusColor }]}>
@@ -247,9 +232,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
           </Pressable>
         </Pressable>
       );
-    },
-    [handleRemoveMember, theme.colors],
-  );
+    };
 
   if (loading) {
     return <LoadingInline />;
@@ -330,23 +313,19 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   inviteSection: {
     padding: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   sectionTitle: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing['3'],
-  },
+    marginBottom: theme.spacing['3'] },
   inputRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   input: {
     flex: 1,
     borderWidth: 1,
@@ -355,8 +334,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.sm,
     fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   sendButton: {
     marginLeft: theme.spacing['3'],
     backgroundColor: theme.colors.primary,
@@ -364,11 +342,9 @@ const styles = StyleSheet.create(theme => ({
     height: 44,
     borderRadius: theme.radii.full,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   membersSection: {
-    padding: theme.spacing.md,
-  },
+    padding: theme.spacing.md },
   memberCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -376,16 +352,13 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing['3'],
     backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.sm,
-    borderRadius: theme.radii.sm,
-  },
+    borderRadius: theme.radii.sm },
   memberInfo: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    flex: 1,
-  },
+    flex: 1 },
   memberDetails: {
-    flex: 1,
-  },
+    flex: 1 },
   avatar: {
     width: 40,
     height: 40,
@@ -393,58 +366,46 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing['3'],
-  },
+    marginRight: theme.spacing['3'] },
   avatarText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   memberName: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   memberEmail: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
+    marginTop: 2 },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: theme.spacing.sm,
     flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   statusBadge: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.pill,
-    borderWidth: 1,
-  },
+    borderWidth: 1 },
   statusText: {
     fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   invitedText: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
-    fontStyle: 'italic',
-  },
+    fontStyle: 'italic' },
   leaveSection: {
     padding: theme.spacing.md,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     marginTop: 'auto',
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   leaveDescription: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    lineHeight: theme.typography.fontSize.sm * 1.5,
-  },
+    lineHeight: theme.typography.fontSize.sm * 1.5 },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

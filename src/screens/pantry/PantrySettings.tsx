@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -62,10 +62,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
   });
 
   // Memoize normalized pantry to prevent re-creating on every render
-  const pantry = useMemo(
-    () => normalizePantry(pantryData?.pantry),
-    [pantryData?.pantry],
-  );
+  const pantry = normalizePantry(pantryData?.pantry);
 
   const [updatePantry] = useUpdatePantryMutation({
     // Update cache directly - Apollo automatically merges the Pantry entity

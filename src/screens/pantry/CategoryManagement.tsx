@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo} from 'react';
+import React from 'react';
 import {View, Text, Pressable} from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import {Icon} from '#utils/iconUtils';
@@ -19,7 +19,7 @@ export const CategoryManagement: React.FC = () => {
 
   const {items} = usePantryManagement(pantry?.id);
 
-  const categorizedItems = useMemo(() => {
+  const categorizedItems = (() => {
     if (!items) return {};
 
     const grouped: Record<string, any[]> = {};
@@ -32,12 +32,11 @@ export const CategoryManagement: React.FC = () => {
     });
 
     return grouped;
-  }, [items]);
+  })();
 
   const categories = Object.keys(categorizedItems).sort();
 
-  const renderCategoryItem = useCallback(
-    ({ item: category }: { item: string }) => (
+  const renderCategoryItem = ({ item: category }: { item: string }) => (
       <Pressable
         style={({pressed}) => [commonStyles.card, styles.categoryCard, pressed && styles.pressed]}
         onPress={() => {}}>
@@ -53,9 +52,7 @@ export const CategoryManagement: React.FC = () => {
           color={theme.colors.textSecondary}
         />
       </Pressable>
-    ),
-    [categorizedItems, theme.colors.textSecondary],
-  );
+    );
 
   return (
     <View style={commonStyles.container}>
@@ -74,28 +71,20 @@ export const CategoryManagement: React.FC = () => {
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   scrollContent: {
-    padding: theme.spacing.md,
-  },
+    padding: theme.spacing.md },
   categoryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   categoryInfo: {
-    flex: 1,
-  },
+    flex: 1 },
   categoryName: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   categoryDetails: {
-    marginTop: theme.spacing.xs,
-  },
+    marginTop: theme.spacing.xs },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

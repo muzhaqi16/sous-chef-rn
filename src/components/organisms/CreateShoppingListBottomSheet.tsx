@@ -1,10 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
-  BottomSheetTextInput,
-} from '@gorhom/bottom-sheet';
+  BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
@@ -23,23 +22,24 @@ export const CreateShoppingListBottomSheet: React.FC<
     visible,
     onDismiss: onClose,
     snapPoints: ['35%'],
-    keyboardBehavior: 'interactive',
-  });
+    keyboardBehavior: 'interactive' });
 
   const [listName, setListName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const [createShoppingList, { loading }] = useCreateShoppingListMutation();
 
-  // Reset form when modal opens
-  useEffect(() => {
+  // Reset form when modal opens (render-time state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
     if (visible) {
       setListName('');
       setError(null);
     }
-  }, [visible]);
+  }
 
-  const handleCreateList = useCallback(async () => {
+  const handleCreateList = async () => {
     if (!listName.trim()) {
       setError('Please enter a list name');
       return;
@@ -51,23 +51,20 @@ export const CreateShoppingListBottomSheet: React.FC<
           input: {
             name: listName.trim(),
             isDefault: false,
-            tags: [],
-          },
-        },
-      });
+            tags: [] } } });
       onSuccess?.();
       onClose();
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : 'Failed to create list';
       setError(errorMessage);
     }
-  }, [listName, createShoppingList, onSuccess, onClose]);
+  };
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     setListName('');
     setError(null);
     onClose();
-  }, [onClose]);
+  };
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -92,8 +89,7 @@ export const CreateShoppingListBottomSheet: React.FC<
               {
                 color: theme.colors.textPrimary,
                 backgroundColor: theme.colors.surfaceVariant,
-                borderColor: error ? theme.colors.error : theme.colors.border,
-              },
+                borderColor: error ? theme.colors.error : theme.colors.border },
             ]}
             defaultValue={listName}
             onChangeText={text => {
@@ -114,29 +110,23 @@ export const CreateShoppingListBottomSheet: React.FC<
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.md,
-  },
+    paddingHorizontal: theme.spacing.md },
   inputContainer: {
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   label: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   input: {
     fontSize: theme.typography.fontSize.md,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
-    borderWidth: 1,
-  },
+    borderWidth: 1 },
   errorText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.error,
-    marginTop: theme.spacing.xs,
-  },
-}));
+    marginTop: theme.spacing.xs } }));
 
 export default CreateShoppingListBottomSheet;

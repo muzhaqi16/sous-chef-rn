@@ -1,12 +1,11 @@
-import React, { useMemo, useCallback, RefObject } from 'react';
+import React, { RefObject } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import type {
   SelectorConfig,
-  ItemSelectorRef,
-} from '#components/organisms/AnimatedItemSelector/types';
+  ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import type { MealPlanDisplayFragment } from '#generated';
 
 interface UseMealPlanSelectorConfigOptions {
@@ -39,15 +38,12 @@ export function useMealPlanSelectorConfig(
     setSelectedMealPlanId,
     selectorRef,
     navigate,
-    onCreateFromTemplate,
-  } = options;
+    onCreateFromTemplate } = options;
 
   const {
-    theme: { colors },
-  } = useUnistyles();
+    theme: { colors } } = useUnistyles();
 
-  const renderMealPlanItem = useCallback(
-    (item: MealPlanDisplayFragment, isSelected: boolean, onPress: () => void) => {
+  const renderMealPlanItem = (item: MealPlanDisplayFragment, isSelected: boolean, onPress: () => void) => {
       return (
         <Pressable
           style={({ pressed }) => [
@@ -67,12 +63,9 @@ export function useMealPlanSelectorConfig(
           {!!isSelected && <Icon name="checkmark" size={20} color={colors.primary} />}
         </Pressable>
       );
-    },
-    [colors],
-  );
+    };
 
-  return useMemo(
-    () => ({
+  return ({
       title: 'Select Meal Plan',
       data: mealPlans,
       selectedId: selectedMealPlanId ?? undefined,
@@ -91,29 +84,15 @@ export function useMealPlanSelectorConfig(
           onPress: () => {
             selectorRef.current?.close();
             navigate('CreateMealPlan');
-          },
-        },
+          } },
         {
           icon: 'copy-outline',
           label: 'Create from Template',
           onPress: () => {
             selectorRef.current?.close();
             onCreateFromTemplate();
-          },
-        },
-      ],
-    }),
-    [
-      mealPlans,
-      selectedMealPlanId,
-      loading,
-      setSelectedMealPlanId,
-      selectorRef,
-      navigate,
-      onCreateFromTemplate,
-      renderMealPlanItem,
-    ],
-  );
+          } },
+      ] });
 }
 
 const styles = StyleSheet.create(theme => ({
@@ -127,26 +106,19 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
+    borderColor: theme.colors.border },
   itemSelected: {
     backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
+    borderColor: theme.colors.primary },
   itemContent: {
-    flex: 1,
-  },
+    flex: 1 },
   itemName: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   itemSubtext: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
+    marginTop: 2 },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

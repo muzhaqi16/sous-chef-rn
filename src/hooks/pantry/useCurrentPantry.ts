@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useAppStore, selectPantryState, selectSelectedHomeId, selectIsHomeSelectionReady } from '#store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useGetHomesQuery } from '#generated';
@@ -25,22 +25,18 @@ export function useCurrentPantry() {
 
   const { data: homesData } = useGetHomesQuery({
     fetchPolicy: 'cache-only',
-    errorPolicy: 'ignore',
-  });
+    errorPolicy: 'ignore' });
 
   // Preserve homes data and normalize
   // Extract nodes from connection type (homes returns HomeConnection)
   const homes = normalizeHomes(usePreservedArrayData(extractNodes(homesData?.homes)));
 
   // Get current home from cached homes
-  const currentHome = useMemo(
-    () => (isHomeSelectionReady ? homes.find((h: any) => h.id === selectedHomeId) : undefined),
-    [homes, selectedHomeId, isHomeSelectionReady],
-  );
+  const currentHome = (isHomeSelectionReady ? homes.find((h: any) => h.id === selectedHomeId) : undefined);
 
   // Helper to get default pantry from a home
   // Handle both normalized homes (with pantries array) and raw homes (with pantriesConnection)
-  const getDefaultPantry = useCallback((homeData: any) => {
+  const getDefaultPantry = (homeData: any) => {
     const home = homeData?.home ?? homeData;
     const pantries = home?.pantries ?? normalizeHome(home)?.pantries ?? [];
 
@@ -52,16 +48,13 @@ export function useCurrentPantry() {
       pantries[0] ||
       null
     );
-  }, []);
+  };
 
   // Get home's default pantry (isDefault=true or first)
-  const defaultPantry = useMemo(
-    () => (isHomeSelectionReady ? getDefaultPantry({ home: currentHome }) : null),
-    [currentHome, getDefaultPantry, isHomeSelectionReady],
-  );
+  const defaultPantry = (isHomeSelectionReady ? getDefaultPantry({ home: currentHome }) : null);
 
   // Resolve pantry with fallback chain
-  const pantry = useMemo(() => {
+  const pantry = (() => {
     // Return null if home selection not ready
     if (!isHomeSelectionReady) return null;
 
@@ -82,7 +75,7 @@ export function useCurrentPantry() {
     }
 
     return null;
-  }, [selectedPantryId, currentHome, defaultPantry, isHomeSelectionReady]);
+  })();
 
   // Auto-select default if none selected (only when ready)
   useEffect(() => {
@@ -100,8 +93,7 @@ export function useCurrentPantry() {
       setSelectedPantryId,
       currentHome: null,
       selectedHomeId: null,
-      isReady: false,
-    };
+      isReady: false };
   }
 
   return {
@@ -111,6 +103,5 @@ export function useCurrentPantry() {
     setSelectedPantryId,
     currentHome,
     selectedHomeId,
-    isReady: true,
-  };
+    isReady: true };
 }

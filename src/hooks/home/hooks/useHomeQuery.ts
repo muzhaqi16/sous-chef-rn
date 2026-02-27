@@ -7,7 +7,7 @@
  * - Compute statistics
  */
 
-import { useMemo, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { useGetHomesQuery } from '#generated';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
@@ -35,55 +35,52 @@ export function useHomeQuery() {
   // Preserve homes even when query fails to prevent cascade failures
   // Extract nodes from connection type (homes returns HomeConnection)
   const preservedHomes = usePreservedArrayData(extractNodes(data?.homes));
-  const homes = useMemo(() => normalizeHomes(preservedHomes), [preservedHomes]);
+  const homes = normalizeHomes(preservedHomes);
 
   // Derive default home from isDefault field (no separate query needed)
-  const remoteDefaultHomeId = useMemo(
-    () => preservedHomes?.find((h: any) => h.isDefault)?.id ?? null,
-    [preservedHomes],
-  );
+  const remoteDefaultHomeId = preservedHomes?.find((h: any) => h.isDefault)?.id ?? null;
 
   // Track the last known pantries count to avoid flickering to 0 during refetch
-  const lastKnownPantriesCount = useRef<number>(0);
+  const [lastKnownPantriesCount, setLastKnownPantriesCount] = useState<number>(0);
 
   // Statistics and computed values
-  const stats = useMemo(() => {
-    const validHomes = Array.isArray(homes) ? homes.filter(Boolean) : [];
+  const validHomes = Array.isArray(homes) ? homes.filter(Boolean) : [];
 
-    // Check if all homes have loaded their pantries data
-    const allHomesLoaded = validHomes.every(
-      (home: any) => home.pantries !== null,
-    );
+  // Check if all homes have loaded their pantries data
+  const allHomesLoaded = validHomes.every(
+    (home: any) => home.pantries !== null,
+  );
 
-    let totalPantries: number;
+  let totalPantries: number;
 
-    if (allHomesLoaded) {
-      // All data is loaded, calculate the actual count
-      totalPantries = validHomes.reduce((acc, home: any) => {
-        const count = Array.isArray(home?.pantries) ? home.pantries.length : 0;
-        return acc + count;
-      }, 0);
-      // Update our last known count
-      lastKnownPantriesCount.current = totalPantries;
-    } else {
-      // Some data is still loading, use the last known count to prevent flickering
-      totalPantries = lastKnownPantriesCount.current;
+  if (allHomesLoaded) {
+    // All data is loaded, calculate the actual count
+    totalPantries = validHomes.reduce((acc, home: any) => {
+      const count = Array.isArray(home?.pantries) ? home.pantries.length : 0;
+      return acc + count;
+    }, 0);
+    // Update our last known count (only if changed to avoid extra re-renders)
+    if (totalPantries !== lastKnownPantriesCount) {
+      setLastKnownPantriesCount(totalPantries);
     }
+  } else {
+    // Some data is still loading, use the last known count to prevent flickering
+    totalPantries = lastKnownPantriesCount;
+  }
 
-    return {
-      totalHomes: validHomes.length,
-      totalMembers: validHomes.reduce((acc, home: any) => {
-        const count = Array.isArray(home?.members) ? home.members.length : 0;
-        return acc + count;
-      }, 0),
-      totalPantries,
-    };
-  }, [homes]);
+  const stats = {
+    totalHomes: validHomes.length,
+    totalMembers: validHomes.reduce((acc, home: any) => {
+      const count = Array.isArray(home?.members) ? home.members.length : 0;
+      return acc + count;
+    }, 0),
+    totalPantries,
+  };
 
   // Memoize the refetch function to prevent unnecessary re-renders
-  const memoizedRefetch = useCallback(async () => {
+  const memoizedRefetch = async () => {
     await refetch();
-  }, [refetch]);
+  };
 
   return {
     homes,

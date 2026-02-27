@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React from 'react';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#hooks/profile/useProfileData';
@@ -16,13 +16,11 @@ export const PersonalInformationScreen: React.FC = () => {
   const client = useApolloClient();
   const [updateProfileMutation] = useUpdateUserProfileMutation();
 
-  const updateProfile = useCallback(
-    async (input: Partial<Record<any, any>>) => {
+  const updateProfile = async (input: Partial<Record<any, any>>) => {
       try {
         // Read current cache
         const cache = client.readQuery<GetUserProfileQuery>({
-          query: GetUserProfileDocument,
-        });
+          query: GetUserProfileDocument });
 
         // Optimistically update the cache immediately
         if (cache?.me?.profile) {
@@ -34,37 +32,26 @@ export const PersonalInformationScreen: React.FC = () => {
                 ...cache.me,
                 profile: {
                   ...cache.me.profile,
-                  ...input,
-                },
-              },
-            },
-          });
+                  ...input } } } });
         }
 
         // Then perform the actual mutation
         await updateProfileMutation({
           variables: {
-            input,
-          },
-        });
+            input } });
       } catch (error) {
         errorService.reportError(error, { operation: 'PersonalInformation.updateProfile' });
         // On error, refetch to restore correct state
         client.refetchQueries({
-          include: [GetUserProfileDocument],
-        });
+          include: [GetUserProfileDocument] });
       }
-    },
-    [updateProfileMutation, client],
-  );
+    };
 
-  const createSettingItem = useCallback(
-    (config: any) => {
+  const createSettingItem = (config: any) => {
       const baseItem: any = {
         key: config.key,
         label: config.label,
-        type: config.type,
-      };
+        type: config.type };
 
       switch (config.key) {
         case 'email':
@@ -128,16 +115,13 @@ export const PersonalInformationScreen: React.FC = () => {
       }
 
       return baseItem;
-    },
-    [profile, user, updateProfile],
-  );
+    };
 
-  const sections = useMemo(() => {
+  const sections = (() => {
     return PERSONAL_INFO_CONFIG.map(configSection => ({
       title: configSection.title,
-      items: configSection.items.map(createSettingItem),
-    }));
-  }, [createSettingItem]);
+      items: configSection.items.map(createSettingItem) }));
+  })();
 
   return (
     <ProfileScreenWrapper title="Personal Information">

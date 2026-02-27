@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import {Pressable, StyleProp, ViewStyle} from 'react-native';
 import {StyleSheet, withUnistyles} from 'react-native-unistyles';
 import {IconLibrary, Icon} from '#/utils/iconUtils';
@@ -43,12 +43,11 @@ export const IconButton: React.FC<IconButtonProps> = ({
   style,
   library,
   disabled = false,
-  testID,
-}) => {
-  const handlePress = useCallback(() => {
+  testID }) => {
+  const handlePress = () => {
     HapticService.selection();
     onPress();
-  }, [onPress]);
+  };
 
   return (
     <Pressable
@@ -72,8 +71,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
           size: theme.sizes.icon[size],
           color: disabled
             ? theme.colors.iconDisabled
-            : color ?? theme.colors.iconPrimary,
-        })}
+            : color ?? theme.colors.iconPrimary })}
       />
     </Pressable>
   );
@@ -84,11 +82,8 @@ const styles = StyleSheet.create(theme => ({
     minWidth: theme.sizes.touchTarget.min,
     minHeight: theme.sizes.touchTarget.min,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));
 
 export default IconButton;

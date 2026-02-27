@@ -1,9 +1,7 @@
-import { useCallback, useMemo } from 'react';
 import { useAppStore } from '#/store/useAppStore';
 import {
   defaultUserPreferences,
-  type UserPreferences,
-} from '#/store/slices/preferencesSlice';
+  type UserPreferences } from '#/store/slices/preferencesSlice';
 
 /**
  * Hook for accessing and updating the current user's per-user preferences.
@@ -17,28 +15,21 @@ export const useUserPreferences = () => {
   const setUserPreference = useAppStore(state => state.setUserPreference);
   const resetUserPreferences = useAppStore(state => state.resetUserPreferences);
 
-  const preferences = useMemo<UserPreferences>(
-    () =>
-      userId
-        ? userPreferencesMap[userId] ?? defaultUserPreferences
-        : defaultUserPreferences,
-    [userId, userPreferencesMap],
-  );
+  const preferences: UserPreferences = userId
+    ? userPreferencesMap[userId] ?? defaultUserPreferences
+    : defaultUserPreferences;
 
-  const updatePreference = useCallback(
-    (prefs: Partial<UserPreferences>) => {
+  const updatePreference = (prefs: Partial<UserPreferences>) => {
       if (userId) {
         setUserPreference(userId, prefs);
       }
-    },
-    [userId, setUserPreference],
-  );
+    };
 
-  const resetPreferences = useCallback(() => {
+  const resetPreferences = () => {
     if (userId) {
       resetUserPreferences(userId);
     }
-  }, [userId, resetUserPreferences]);
+  };
 
   return { preferences, updatePreference, resetPreferences };
 };
