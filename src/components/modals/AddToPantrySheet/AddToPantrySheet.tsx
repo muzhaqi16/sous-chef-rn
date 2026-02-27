@@ -17,6 +17,7 @@ import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters
 import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo } from '#/utils/errors/pantryItemDuplicate';
+import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type { BaseSuggestionItem, SuggestionsHookResult } from '../AddItemSheet/types';
@@ -129,7 +130,17 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
   // Restock pantry item mutation
   const [restockPantryItem] = useRestockPantryItemMutation({
-    errorPolicy: 'all' });
+    errorPolicy: 'all',
+    update: (cache, { data }) => {
+      const pantryItem = data?.restockPantryItem?.pantryItemUsage?.pantryItem;
+      if (!pantryItem || !pantryId) return;
+      // Force connection cache broadcast — the item already exists,
+      // so addToPantryItemsCache will detect the duplicate and return
+      // the existing connection unchanged, but cache.modify still
+      // triggers query watchers to re-emit.
+      addToPantryItemsCache(cache, pantryId, pantryItem);
+    },
+  });
 
   // Track items currently being added to prevent duplicate rapid-fire mutations
   const pendingItemIds = useRef(new Set<string>());

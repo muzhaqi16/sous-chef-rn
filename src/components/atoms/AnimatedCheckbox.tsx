@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming } from 'react-native-reanimated';
+import { useRecyclingState } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import { standardEasing } from '#/constants/animations';
@@ -31,19 +32,13 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   const isPressed = useSharedValue(false);
 
   // Local state for pending visual state (shows immediately on press)
-  const [pendingChecked, setPendingChecked] = useState<boolean | null>(null);
+  // useRecyclingState auto-resets when itemId changes (FlashList view recycling)
+  const [pendingChecked, setPendingChecked] = useRecyclingState<boolean | null>(null, [itemId]);
 
-  // Render-time reset: track itemId to detect FlashList view recycling
-  // This is required for FlashList compatibility per:
-  // https://shopify.github.io/flash-list/docs/guides/reanimated
-  const [prevItemId, setPrevItemId] = useState(itemId);
-  if (itemId !== prevItemId) {
-    setPrevItemId(itemId);
-    if (itemId) {
-      isPressed.set(false);
-      setPendingChecked(null);
-    }
-  }
+  // Reset shared value on recycling — useRecyclingState handles React state only
+  useEffect(() => {
+    isPressed.set(false);
+  }, [itemId, isPressed]);
 
   // Determine visual checked state: pending takes priority, otherwise actual
   const visuallyChecked = pendingChecked !== null ? pendingChecked : checked;

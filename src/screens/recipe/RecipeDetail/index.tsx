@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  ScrollView,
   Pressable,
   ActivityIndicator,
   Linking } from 'react-native';
@@ -167,14 +168,6 @@ const RecipeDetailScreen: React.FC = () => {
   };
 
   // Render callbacks for list components
-  const renderIngredientItem = ({ item: ingredient }: { item: NonNullable<typeof displayData>['ingredients'][number] }) => (
-      <IngredientCard
-        ingredient={ingredient}
-        isAdded={addedIngredients.has(ingredient.id)}
-        onPress={() => handleAddSingleIngredient(ingredient)}
-      />
-    );
-
   const renderSelectableIngredientItem = ({ item }: { item: NonNullable<typeof backendRecipe>['ingredients'][number] }) => {
       const isSelected = selectedIngredients.has(item.id);
       return (
@@ -552,15 +545,22 @@ const RecipeDetailScreen: React.FC = () => {
                   </Text>
                 </Pressable>
               </View>
-              <FlashList
+              <ScrollView
                 horizontal
-                data={displayData.ingredients}
-                keyExtractor={(item, index) => `${item.id}-${index}`}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.ingredientsList}
-                ItemSeparatorComponent={IngredientSeparator}
-                renderItem={renderIngredientItem}
-              />
+              >
+                {displayData.ingredients.map((ingredient, index) => (
+                  <React.Fragment key={ingredient.id}>
+                    {index > 0 && <IngredientSeparator />}
+                    <IngredientCard
+                      ingredient={ingredient}
+                      isAdded={addedIngredients.has(ingredient.id)}
+                      onPress={() => handleAddSingleIngredient(ingredient)}
+                    />
+                  </React.Fragment>
+                ))}
+              </ScrollView>
             </View>
           )}
 
@@ -700,7 +700,7 @@ const RecipeDetailScreen: React.FC = () => {
       >
         <FlashList
           data={backendRecipe?.ingredients || []}
-          keyExtractor={(item, index) => `${item.id}-${index}`}
+          keyExtractor={(item) => item.id}
           renderItem={renderSelectableIngredientItem}
           ListEmptyComponent={
             <Text style={styles.emptyText}>No ingredients available</Text>

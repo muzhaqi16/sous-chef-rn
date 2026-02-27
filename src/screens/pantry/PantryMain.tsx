@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
@@ -91,8 +92,20 @@ const PantryMainScreen: React.FC = () => {
   const selectorRef = useRef<ItemSelectorRef>(null);
   const pantryContentRef = useRef<PantryContentRef>(null);
   const pendingPantryScrollToTopRef = useRef(pendingPantryScrollToTop);
+  const client = useApolloClient();
+  const itemsAddedRef = useRef(false);
   const handleItemAdded = () => {
-    pantryContentRef.current?.scrollToTop();
+    itemsAddedRef.current = true;
+    // Background sync: silently refetch pantry to ensure cache consistency
+    client.refetchQueries({ include: ['GetPantry'] });
+  };
+  const handleAddSheetClose = () => {
+    const shouldScroll = itemsAddedRef.current;
+    itemsAddedRef.current = false;
+    setAddSheetVisible(false);
+    if (shouldScroll) {
+      pantryContentRef.current?.scrollToTop();
+    }
   };
   useEffect(() => {
     pendingPantryScrollToTopRef.current = pendingPantryScrollToTop;
@@ -407,7 +420,7 @@ const PantryMainScreen: React.FC = () => {
         <AddToPantrySheet
           visible={addSheetVisible}
           pantryId={pantry?.id}
-          onClose={() => setAddSheetVisible(false)}
+          onClose={handleAddSheetClose}
           onItemAdded={handleItemAdded}
         />
       )}

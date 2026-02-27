@@ -3,7 +3,7 @@ import { View, Pressable } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
-import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
+import { SwipeableItem } from '#/components/molecules/SwipeableItem/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
 import { QuantityBadge } from '#/components/atoms/QuantityBadge';
@@ -188,8 +188,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       <Animated.View
         style={[styles.container, commonStyles.shadow, animatedSlideStyle]}
       >
-        <LazySwipeableItem
-        isPreActivated={false}
+        <SwipeableItem
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onLongPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onEdit={
@@ -218,7 +217,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           isPurchased={item.isPurchased}
           themeColors={themeColors}
         />
-        </LazySwipeableItem>
+        </SwipeableItem>
       </Animated.View>
     </Animated.View>
   );

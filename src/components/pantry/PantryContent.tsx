@@ -337,8 +337,11 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
     }
   }, [hasShownContent]);
 
-  // Show skeletons only on the very first data load
-  const showSkeletons = !hasShownContent && (!isReady || loading);
+  // Show skeletons only on the very first data load.
+  // awaitingDeferredItems bridges the gap where Apollo finished (loading=false)
+  // but useDeferredValue hasn't propagated items yet (items=[] while totalCount>0).
+  const awaitingDeferredItems = items.length === 0 && (totalCount ?? 0) > 0 && !loading;
+  const showSkeletons = !hasShownContent && (!isReady || loading || awaitingDeferredItems);
 
   // Crossfade animation - opacity-based transition to avoid gap
   const skeletonOpacity = useSharedValue(1);
@@ -409,8 +412,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
     itemDisplayMapRef.current = itemDisplayMap;
   });
 
-  // Scroll to top when filter or sort changes — FlashList v2's
-  // maintainVisibleContentPosition causes layout corruption on data reorder
+  // Scroll to top when filter or sort changes to reset position after reorder
   const prevLocationFilter = useRef(locationFilter);
   const prevSortOption = useRef(sortOption);
   const prevSortDirection = useRef(sortDirection);
