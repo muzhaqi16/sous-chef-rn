@@ -11,6 +11,9 @@ import {
   type GetShoppingListSuggestionsQuery,
   ItemSuggestion } from '#generated';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
+import { createOptimisticShoppingListItem } from '#/hooks/shoppingList/mutations/utils';
+import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type { BaseSuggestionItem, SuggestionsHookResult } from '../AddItemSheet/types';
@@ -90,18 +93,48 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       );
     };
 
-  // Add shopping list item mutation (fire-and-forget pattern)
+  // Track temp ID for optimistic response cleanup
+  const lastTempIdRef = useRef<string | null>(null);
+
+  // Add shopping list item mutation with optimistic response for instant UI
   const [addItemMutation, { loading: adding }] = useAddItemToShoppingListMutation({
-    update: (cache, { data }) => {
+    errorPolicy: 'all',
+    optimisticResponse: (variables: any) => {
+      const { tempId, entity } = createOptimisticShoppingListItem({
+        itemName: variables.input.itemName,
+        itemId: variables.input.itemId,
+        unitId: variables.input.unit?.unitId,
+      });
+      lastTempIdRef.current = tempId;
+      return buildOptimisticMutationResponse(
+        'addItemToShoppingList',
+        'ShoppingListItemPayload',
+        'shoppingListItem',
+        entity,
+      );
+    },
+    update(cache, { data }) {
       const newItem = data?.addItemToShoppingList?.shoppingListItem;
       if (!newItem || !shoppingListId) return;
 
-      try {
-        addNewItemToShoppingListCache(cache, shoppingListId, newItem);
-      } catch (error) {
-        console.error('Cache update failed:', error);
+      // Evict temp-ID entity when the real server response arrives
+      if (lastTempIdRef.current && !newItem.id.startsWith('temp-')) {
+        cache.evict({
+          id: cache.identify({ __typename: 'ShoppingListItem', id: lastTempIdRef.current }),
+        });
+        cache.gc();
+        lastTempIdRef.current = null;
       }
-    } });
+
+      executeCacheUpdate(
+        () => addNewItemToShoppingListCache(cache, shoppingListId, newItem),
+        'Cache update failed for addItem:',
+      );
+    },
+    onError: () => {
+      lastTempIdRef.current = null;
+    },
+  });
 
   // Handle scan barcode press
   const handleScanPress = () => {

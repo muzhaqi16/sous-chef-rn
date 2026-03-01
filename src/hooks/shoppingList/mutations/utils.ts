@@ -3,6 +3,47 @@
  */
 
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
+import { generateId } from '#/utils/generateId';
+
+interface OptimisticShoppingListItemFields {
+  itemName: string;
+  quantity?: number | null;
+  quantityInput?: string | null;
+  unitName?: string | null;
+  category?: string | null;
+  itemId?: string | null;
+  unitId?: string | null;
+}
+
+/**
+ * Creates an optimistic ShoppingListItem entity with sensible defaults.
+ * Returns the temp ID so callers can track it for eviction on server response.
+ */
+export function createOptimisticShoppingListItem(fields: OptimisticShoppingListItemFields) {
+  const tempId = `temp-${generateId()}`;
+  const entity = createOptimisticEntity('ShoppingListItem', tempId, {
+    itemName: fields.itemName,
+    quantity: fields.quantity ?? 1,
+    quantityInput: fields.quantityInput ?? null,
+    displayFormat: null,
+    unitName: fields.unitName ?? null,
+    category: fields.category ?? null,
+    notes: null,
+    sortOrder: '',
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo' as const,
+      isPurchased: false,
+    },
+    item: fields.itemId
+      ? { __typename: 'Item' as const, id: fields.itemId, imageUrl: null, images: [] }
+      : null,
+    unit: fields.unitId
+      ? { __typename: 'Unit' as const, id: fields.unitId, name: '', symbol: '' }
+      : null,
+  });
+  return { tempId, entity };
+}
 
 // Cache updater for removing items from ShoppingList.itemsConnection
 // Uses parent connection pattern for ShoppingList.itemsConnection

@@ -20,6 +20,14 @@ import {
   type SortableListThemeColors } from './SortableListThemeContext';
 import { getTabBarBottomPadding } from '#constants/layout';
 
+// Module-scope functions — zero runtime overhead (no compiler tracking/comparison)
+const keyExtractor = (item: SortableShoppingListItem) => item.id;
+const getItemType = (item: SortableShoppingListItem) =>
+  item.isPurchased ? 'purchased' : 'unpurchased';
+const renderItem = (info: ListRenderItemInfo<SortableShoppingListItem>) => (
+  <SwipeableListItem {...info} />
+);
+
 /**
  * Ref handle for SortableShoppingList
  * Exposes methods for parent components to control list behavior
@@ -86,12 +94,6 @@ const SortableShoppingListComponent = forwardRef<
     const handleSwipeableWillOpen = externalOnSwipeableWillOpen ?? internalCoordinator.handleSwipeableWillOpen;
     const handleSwipeableClose = internalCoordinator.handleSwipeableClose;
 
-    // Key extractor - validItems already guarantees every item has an id
-    const keyExtractor = (item: SortableShoppingListItem) => item.id;
-
-    // Item type for better FlashList cell recycling — purchased/unpurchased have different styling
-    const getItemType = (item: SortableShoppingListItem) => (item.isPurchased ? 'purchased' : 'unpurchased');
-
     // Actions for context
     const actions: SortableListActions = {
       onItemPress,
@@ -122,12 +124,6 @@ const SortableShoppingListComponent = forwardRef<
     const contentContainerStyle = ({
         paddingTop: 8,
         paddingBottom: getTabBarBottomPadding(insets.bottom) });
-
-    // Render item function - passes FlashList info to SwipeableListItem
-    // Note: Invalid items are already filtered in validItems, no null check needed
-    const renderItem = (info: ListRenderItemInfo<SortableShoppingListItem>) => (
-        <SwipeableListItem {...info} />
-      );
 
     // Early validation
     if (!items || !Array.isArray(items)) {

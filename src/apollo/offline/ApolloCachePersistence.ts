@@ -33,7 +33,10 @@ const CURRENT_CACHE_VERSION = '1.1.3'; // Bumped to clear stale itemsConnection 
 class ApolloCachePersistence {
   private saveTimeout: NodeJS.Timeout | null = null;
   private idleCallbackId: number | null = null;
-  private readonly debounceMs = 1000; // Wait 1s before saving to reduce writes
+  private readonly debounceMs = 3000; // Wait 3s before saving to reduce writes during burst operations
+  private paused = false;
+  private pendingWhilePaused = false;
+  private pausedExtractor: (() => NormalizedCacheObject) | null = null;
 
   /**
    * Load persisted cache from MMKV storage
@@ -87,6 +90,38 @@ class ApolloCachePersistence {
   }
 
   /**
+   * Pause cache persistence.
+   * While paused, scheduleExtractAndSave calls are suppressed.
+   * Call resume() to re-enable and flush any pending save.
+   */
+  pause(): void {
+    this.paused = true;
+    // Cancel any pending save so it doesn't fire during the pause
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
+  }
+
+  /**
+   * Resume cache persistence after a pause.
+   * If any saves were requested while paused, schedules a single deferred save.
+   */
+  resume(): void {
+    if (!this.paused) return;
+    this.paused = false;
+    if (this.pendingWhilePaused && this.pausedExtractor) {
+      this.pendingWhilePaused = false;
+      const extractor = this.pausedExtractor;
+      this.pausedExtractor = null;
+      this.scheduleExtractAndSave(extractor);
+    } else {
+      this.pendingWhilePaused = false;
+      this.pausedExtractor = null;
+    }
+  }
+
+  /**
    * Schedule a lazy cache extraction and save (debounced)
    *
    * Unlike save(), this defers cache.extract() until after the debounce period,
@@ -96,6 +131,11 @@ class ApolloCachePersistence {
    * @param extractor - Lazy function that returns the cache data when called
    */
   scheduleExtractAndSave(extractor: () => NormalizedCacheObject): void {
+    if (this.paused) {
+      this.pendingWhilePaused = true;
+      this.pausedExtractor = extractor;
+      return;
+    }
     // Clear existing timeout
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);

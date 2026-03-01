@@ -11,6 +11,8 @@ export type SwipeMode = 'shopping' | 'pantry';
 
 export interface SwipeableItemProps {
   children: React.ReactNode;
+  /** Item ID for FlashList recycling reset — closes swipeable when cell is reused */
+  itemId?: string;
   onPress?: () => void;
   onLongPress?: () => void;
   onDelete?: () => void;

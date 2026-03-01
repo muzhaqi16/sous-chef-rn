@@ -17,7 +17,7 @@ import { serializeError } from '#/utils/errorSerialization';
 /**
  * Apollo cache field helpers provided to merge/read functions
  */
-interface CacheFieldHelpers {
+export interface CacheFieldHelpers {
   toReference: (object: any, mergeIntoStore?: boolean) => Reference | undefined;
   readField: (fieldName: string, ref: any) => any;
   storeFieldName: string;

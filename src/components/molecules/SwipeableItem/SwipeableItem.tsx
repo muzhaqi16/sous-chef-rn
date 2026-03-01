@@ -11,6 +11,7 @@ import { SwipeableItemProps } from './types';
 
 const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   children,
+  itemId,
   onPress,
   onLongPress,
   onDelete,
@@ -45,6 +46,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     handleActionPress,
     handleSwipeableWillOpen,
     handleSwipeableClose } = useSwipeableActions({
+    itemId,
     onEdit,
     onDelete,
     enableSwipeToDelete,

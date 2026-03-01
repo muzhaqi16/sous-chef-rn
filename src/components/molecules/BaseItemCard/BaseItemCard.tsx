@@ -55,6 +55,7 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
   isPurchased,
   leftThreshold = 80,
   rightThreshold = 80,
+  itemId,
   testID,
 }) => {
   // Select variant for styling
@@ -92,6 +93,7 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
     return (
       <View style={styles.swipeableWrapper}>
         <SwipeableItem
+          itemId={itemId}
           onPress={onPress}
           onEdit={onEdit}
           onDelete={onDelete}

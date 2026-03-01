@@ -5,6 +5,8 @@
 
 ### React Compiler Conventions
 
+- **Do not use `useMemo` or `useCallback`.**  The `babel-plugin-react-compiler` plugin automatically
+  memoizes values and callbacks. Manual `useMemo`/`useCallback` is redundant and should not be added.
 - **Never write try-catch inside hook/component bodies.** The React Compiler bails out entirely
   on hooks containing try-catch, preventing auto-memoization of all derived values.
   Use the shared helpers from `src/utils/compilerSafeWrappers.ts` instead.

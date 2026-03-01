@@ -181,14 +181,14 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   }
 
   // Render the item
-  // PERF: Nested Animated.Views separate entry animation from slide animation
-  // This prevents Reanimated warning about conflicting opacity/transform properties
+  // PERF: Single Animated.View for both entry animation and slide style
   return (
-    <Animated.View entering={entering}>
-      <Animated.View
-        style={[styles.container, commonStyles.shadow, animatedSlideStyle]}
-      >
-        <SwipeableItem
+    <Animated.View
+      entering={entering}
+      style={[styles.container, commonStyles.shadow, animatedSlideStyle]}
+    >
+      <SwipeableItem
+        itemId={item.id}
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onLongPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onEdit={
@@ -217,8 +217,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           isPurchased={item.isPurchased}
           themeColors={themeColors}
         />
-        </SwipeableItem>
-      </Animated.View>
+      </SwipeableItem>
     </Animated.View>
   );
 };

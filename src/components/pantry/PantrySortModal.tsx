@@ -38,7 +38,7 @@ const SORT_OPTIONS: Array<{
   {
     key: 'expiry',
     label: 'Expiry Date',
-    icon: 'calendar-month',
+    icon: 'calendar-outline',
   },
   {
     key: 'quantity',
@@ -48,7 +48,7 @@ const SORT_OPTIONS: Array<{
   {
     key: 'recent',
     label: 'Recently Added',
-    icon: 'clock',
+    icon: 'time-outline',
   },
 ];
 
@@ -104,8 +104,8 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({ visible, sortO
                       <Icon
                         name={
                           sortDirection === 'asc'
-                            ? 'arrow-upward'
-                            : 'arrow-downward'
+                            ? 'arrow-up'
+                            : 'arrow-down'
                         }
                         size={18}
                         color={theme.colors.primary}

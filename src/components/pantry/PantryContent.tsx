@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useImperativeHandle, useDeferredValue } from 'react';
+import React, { useState, useEffect, useRef, useImperativeHandle, useDeferredValue } from 'react';
 import { View, Pressable, RefreshControl } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -269,6 +269,9 @@ function computeDisplayCache(
   return { map, nextCache };
 }
 
+// Module-scope keyExtractor — zero runtime overhead (no compiler tracking/comparison)
+const keyExtractor = (item: PantryItem) => item.id;
+
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'all', label: 'All' },
@@ -410,9 +413,29 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
     warning: theme.colors.expiration.warningText,
     normal: theme.colors.textSecondary });
 
-  // PERFORMANCE: Compute display data for all items. The React Compiler auto-memoizes
-  // this expression — recomputation only happens when deferredSortedItems changes.
-  const itemDisplayMap = computeDisplayCache(deferredSortedItems, new Map(), expirationColors).map;
+  // PERFORMANCE: Display cache persists across renders via "adjust state during render" pattern.
+  // When deferredSortedItems changes, we recompute — reusing cached entries for unchanged items.
+  // Only items whose reference changed (Apollo update) recompute expiration math.
+  const [displayCacheState, setDisplayCacheState] = useState<{
+    items: PantryItem[];
+    cache: Map<string, { item: PantryItem; data: ItemDisplayData }>;
+    map: Map<string, ItemDisplayData>;
+  }>({ items: [], cache: new Map(), map: new Map() });
+
+  if (displayCacheState.items !== deferredSortedItems) {
+    const result = computeDisplayCache(
+      deferredSortedItems,
+      displayCacheState.cache,
+      expirationColors,
+    );
+    setDisplayCacheState({
+      items: deferredSortedItems,
+      cache: result.nextCache,
+      map: result.map,
+    });
+  }
+
+  const itemDisplayMap = displayCacheState.map;
 
   // Stable ref for callbacks — avoids FlashList re-rendering all visible items on data changes
   const itemDisplayMapRef = useRef(itemDisplayMap);
@@ -482,9 +505,6 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
     const label = activeTab?.label ?? 'All';
     return `${label.toUpperCase()} ITEMS`;
   })();
-
-  // Stable keyExtractor - sortedItems already guarantees every item has an id
-  const keyExtractor = (item: PantryItem) => item.id;
 
   // Item type function for better FlashList cell recycling
   // Items with different variants have different visual layouts
