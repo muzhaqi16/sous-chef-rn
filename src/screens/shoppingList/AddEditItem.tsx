@@ -24,6 +24,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { errorService } from '#/services/errorService';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 type RouteParams = {
   listId: string;
@@ -125,7 +126,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
   };
 
   // Handle form submission
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!itemName.trim()) {
       Alert.alert('Error', 'Please enter an item name');
       return;
@@ -136,122 +137,123 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       return;
     }
 
-    setSaving(true);
-    try {
-      const unitData = buildUnitInput();
+    // Skip mutation if no fields changed (edit mode only)
+    if (isEdit && !hasDirtyFields) {
+      navigation.goBack();
+      return;
+    }
 
-      let result;
-      if (isEdit) {
-        // Skip mutation if no fields changed
-        if (!hasDirtyFields) {
-          navigation.goBack();
-          return;
-        }
+    executeWithLoadingState(
+      async () => {
+        const unitData = buildUnitInput();
 
-        // Only send changed fields - sends raw quantityInput string
-        const input = buildDirtyInput();
-        result = await updateItem({
-          variables: {
-            id: itemId,
-            input: {
-              ...input,
-              // Include version for strict version checking (optimistic concurrency control)
-              version: itemVersionRef.current,
-            },
-          },
-        });
-      } else {
-        result = await addItem({
-          variables: {
-            input: {
-              shoppingListId: listId,
-              itemName,
-              // Send raw string - server accepts FlexibleQuantity ("1/3", "1 1/4", "0.5", etc.)
-              quantity: quantityInput,
-              ...unitData,
-              notes,
-              category,
-              ...(estimatedPrice && { estimatedPrice: parseFloat(estimatedPrice) }),
-            },
-          },
-        });
-      }
-
-      // Only navigate back if mutation succeeded
-      if (result.data) {
-        const mutationData = isEdit
-          ? 'updateShoppingListItem' in result.data
-            ? result.data.updateShoppingListItem?.shoppingListItem
-            : null
-          : 'addItemToShoppingList' in result.data
-          ? result.data.addItemToShoppingList?.shoppingListItem
-          : null;
-
-        if (mutationData) {
-          navigation.goBack();
-        } else {
-          // PERFORMANCE: Specific error message - server returned success but no data
-          Alert.alert(
-            'Error',
-            `Server error: Item was not ${
-              isEdit ? 'updated' : 'added'
-            }. The server may be experiencing issues. Please try again.`,
-          );
-        }
-      } else {
-        // PERFORMANCE: Specific error message - mutation failed without data
-        Alert.alert(
-          'Error',
-          `Failed to ${
-            isEdit ? 'update' : 'add'
-          } item. Check your internet connection and try again.`,
-        );
-      }
-    } catch (error: any) {
-      errorService.reportError(error, { operation: 'ShoppingListItem.save' });
-
-      // Handle version conflict errors with user-friendly message
-      if (handleVersionConflict(error)) {
-        Alert.alert(
-          'Item Updated',
-          getVersionConflictMessage(error),
-          [
-            {
-              text: 'Refresh',
-              onPress: () => {
-                // Navigate back - the query will automatically refetch
-                // when returning to the list view
-                navigation.goBack();
+        let result;
+        if (isEdit) {
+          // Only send changed fields - sends raw quantityInput string
+          const input = buildDirtyInput();
+          result = await updateItem({
+            variables: {
+              id: itemId,
+              input: {
+                ...input,
+                // Include version for strict version checking (optimistic concurrency control)
+                version: itemVersionRef.current,
               },
             },
-            { text: 'Cancel', style: 'cancel' },
-          ],
-        );
-        return; // Don't show generic error alert
-      }
-
-      // PERFORMANCE: Specific error messages based on error type
-      let errorMessage = `Failed to ${isEdit ? 'update' : 'add'} item. `;
-
-      if (error.networkError) {
-        errorMessage += 'Network error - check your internet connection.';
-      } else if (error.graphQLErrors?.length) {
-        const graphQLError = error.graphQLErrors[0];
-        if (graphQLError.extensions?.code === 'VALIDATION_ERROR') {
-          errorMessage += 'Invalid input - please check your item details.';
-        } else if (graphQLError.extensions?.code === 'UNAUTHENTICATED') {
-          errorMessage += 'Session expired - please log in again.';
+          });
         } else {
-          errorMessage += graphQLError.message || 'Please try again.';
+          result = await addItem({
+            variables: {
+              input: {
+                shoppingListId: listId,
+                itemName,
+                // Send raw string - server accepts FlexibleQuantity ("1/3", "1 1/4", "0.5", etc.)
+                quantity: quantityInput,
+                ...unitData,
+                notes,
+                category,
+                ...(estimatedPrice && { estimatedPrice: parseFloat(estimatedPrice) }),
+              },
+            },
+          });
         }
-      } else {
-        errorMessage += 'Please try again.';
-      }
 
-      Alert.alert('Error', errorMessage);
-    } finally {
-      setSaving(false);
-    }
+        // Only navigate back if mutation succeeded
+        if (result.data) {
+          const mutationData = isEdit
+            ? 'updateShoppingListItem' in result.data
+              ? result.data.updateShoppingListItem?.shoppingListItem
+              : null
+            : 'addItemToShoppingList' in result.data
+            ? result.data.addItemToShoppingList?.shoppingListItem
+            : null;
+
+          if (mutationData) {
+            navigation.goBack();
+          } else {
+            // PERFORMANCE: Specific error message - server returned success but no data
+            Alert.alert(
+              'Error',
+              `Server error: Item was not ${
+                isEdit ? 'updated' : 'added'
+              }. The server may be experiencing issues. Please try again.`,
+            );
+          }
+        } else {
+          // PERFORMANCE: Specific error message - mutation failed without data
+          Alert.alert(
+            'Error',
+            `Failed to ${
+              isEdit ? 'update' : 'add'
+            } item. Check your internet connection and try again.`,
+          );
+        }
+      },
+      setSaving,
+      (error: unknown) => {
+        errorService.reportError(error, { operation: 'ShoppingListItem.save' });
+
+        // Handle version conflict errors with user-friendly message
+        if (handleVersionConflict(error)) {
+          Alert.alert(
+            'Item Updated',
+            getVersionConflictMessage(error),
+            [
+              {
+                text: 'Refresh',
+                onPress: () => {
+                  // Navigate back - the query will automatically refetch
+                  // when returning to the list view
+                  navigation.goBack();
+                },
+              },
+              { text: 'Cancel', style: 'cancel' },
+            ],
+          );
+          return; // Don't show generic error alert
+        }
+
+        // PERFORMANCE: Specific error messages based on error type
+        let errorMessage = `Failed to ${isEdit ? 'update' : 'add'} item. `;
+
+        if ((error as any).networkError) {
+          errorMessage += 'Network error - check your internet connection.';
+        } else if ((error as any).graphQLErrors?.length) {
+          const graphQLError = (error as any).graphQLErrors[0];
+          if (graphQLError.extensions?.code === 'VALIDATION_ERROR') {
+            errorMessage += 'Invalid input - please check your item details.';
+          } else if (graphQLError.extensions?.code === 'UNAUTHENTICATED') {
+            errorMessage += 'Session expired - please log in again.';
+          } else {
+            errorMessage += graphQLError.message || 'Please try again.';
+          }
+        } else {
+          errorMessage += 'Please try again.';
+        }
+
+        Alert.alert('Error', errorMessage);
+      },
+    );
   };
 
   const modalTestID = isEdit

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, Modal } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
+import { TIMING } from '#constants/animations';
 import { Icon } from '#utils/iconUtils';
 
 export interface FeatureHintConfig {
@@ -59,7 +60,7 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
         >
           <Animated.View
             style={styles.hintContainer}
-            exiting={FadeOut.duration(200)}
+            exiting={FadeOut.duration(TIMING.STANDARD)}
           >
             <View style={styles.hintContent}>
               {/* Custom animated element or default icon */}

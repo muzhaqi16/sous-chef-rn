@@ -15,6 +15,40 @@ import { type LoginInput } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { Telemetry } from '#/services/telemetry';
+import { executeWithLoadingState, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+
+/** Module-level function to load auth info.
+ *  Extracted from useEffect to avoid try-catch bailout. */
+async function loadAuthInfoAsync(
+  checkStoredCredentials: () => Promise<boolean>,
+  getBiometricInfo: () => Promise<{ isAvailable: boolean; biometryType: string | null }>,
+  setBiometricInfo: (info: { isAvailable: boolean; biometryType: string | null }) => void,
+  setShouldShowBiometricButton: (v: boolean) => void,
+): Promise<void> {
+  try {
+    const [hasCredentials, biometric] = await Promise.all([
+      checkStoredCredentials(),
+      getBiometricInfo(),
+    ]);
+
+    setBiometricInfo(biometric);
+    Telemetry.trackScreen('LoginScreen', {
+      has_stored_credentials: hasCredentials,
+      biometric_available: biometric.isAvailable,
+      biometric_type: biometric.biometryType,
+    });
+
+    const shouldShow = biometric.isAvailable && hasCredentials;
+    setShouldShowBiometricButton(shouldShow);
+  } catch (error) {
+    console.error('Error loading auth info:', error);
+    Telemetry.trackError(
+      error instanceof Error ? error : 'Failed to load auth info',
+      { component: 'LoginScreen', operation: 'loadAuthInfo' },
+    );
+    setShouldShowBiometricButton(false);
+  }
+}
 
 export function LoginScreen(): React.JSX.Element {
   const { theme } = useUnistyles();
@@ -47,57 +81,35 @@ export function LoginScreen(): React.JSX.Element {
 
   // Track screen view and load stored credentials and biometric info on mount
   useEffect(() => {
-    const loadAuthInfo = async () => {
-      try {
-        const [hasCredentials, biometric] = await Promise.all([
-          checkStoredCredentials(),
-          getBiometricInfo(),
-        ]);
-
-        setBiometricInfo(biometric);
-        // Track screen view after loading auth info
-        Telemetry.trackScreen('LoginScreen', {
-          has_stored_credentials: hasCredentials,
-          biometric_available: biometric.isAvailable,
-          biometric_type: biometric.biometryType,
-        });
-
-        // Only show biometric button if:
-        // 1. Biometric is available on device
-        // 2. User has stored credentials (meaning they've previously enabled biometric)
-        const shouldShow = biometric.isAvailable && hasCredentials;
-        setShouldShowBiometricButton(shouldShow);
-      } catch (error) {
-        console.error('Error loading auth info:', error);
-        Telemetry.trackError(
-          error instanceof Error ? error : 'Failed to load auth info',
-          { component: 'LoginScreen', operation: 'loadAuthInfo' },
-        );
-        setShouldShowBiometricButton(false);
-      }
-    };
-
-    loadAuthInfo();
+    loadAuthInfoAsync(
+      checkStoredCredentials,
+      getBiometricInfo,
+      setBiometricInfo,
+      setShouldShowBiometricButton,
+    );
   }, [checkStoredCredentials, getBiometricInfo]);
 
   // Simple form submission - directly use login with default rememberMe=true
-  const onSubmit = async (input: LoginInput) => {
+  const onSubmit = (input: LoginInput) => {
     Telemetry.trackEvent('login_attempt', { method: 'email_password' });
 
-    try {
-      await login(input); // Uses default rememberMe=true
-      Telemetry.trackEvent('login_success', { method: 'email_password' });
-    } catch (err: any) {
-      Telemetry.trackError(err instanceof Error ? err : 'Login failed', {
-        component: 'LoginScreen',
-        operation: 'email_password_login',
-      });
-      handleAuthError(err, 'Login');
-    }
+    executeMutationWithErrorHandler(
+      async () => {
+        await login(input);
+        Telemetry.trackEvent('login_success', { method: 'email_password' });
+      },
+      (err: unknown) => {
+        Telemetry.trackError(err instanceof Error ? err : 'Login failed', {
+          component: 'LoginScreen',
+          operation: 'email_password_login',
+        });
+        handleAuthError(err, 'Login');
+      },
+    );
   };
 
   // Biometric authentication handler
-  const handleBiometricLogin = async () => {
+  const handleBiometricLogin = () => {
     if (isBiometricLoading) return;
 
     Telemetry.trackEvent('login_attempt', {
@@ -105,37 +117,37 @@ export function LoginScreen(): React.JSX.Element {
       biometric_type: biometricInfo.biometryType,
     });
 
-    try {
-      setIsBiometricLoading(true);
-      const credentials = await loadStoredCredentials();
+    executeWithLoadingState(
+      async () => {
+        const credentials = await loadStoredCredentials();
 
-      if (credentials) {
-        // Use showRememberPrompt = false for biometric login since credentials are already saved
-        await login(
+        if (credentials) {
+          await login(
+            {
+              email: credentials.email,
+              password: credentials.password,
+            },
+            false,
+          );
+          Telemetry.trackEvent('login_success', {
+            method: 'biometric',
+            biometric_type: biometricInfo.biometryType,
+          });
+        }
+      },
+      setIsBiometricLoading,
+      (error: unknown) => {
+        Telemetry.trackError(
+          error instanceof Error ? error : 'Biometric authentication failed',
           {
-            email: credentials.email,
-            password: credentials.password,
+            component: 'LoginScreen',
+            operation: 'biometric_login',
+            biometric_type: biometricInfo.biometryType,
           },
-          false,
         );
-        Telemetry.trackEvent('login_success', {
-          method: 'biometric',
-          biometric_type: biometricInfo.biometryType,
-        });
-      }
-    } catch (error: any) {
-      Telemetry.trackError(
-        error instanceof Error ? error : 'Biometric authentication failed',
-        {
-          component: 'LoginScreen',
-          operation: 'biometric_login',
-          biometric_type: biometricInfo.biometryType,
-        },
-      );
-      handleAuthError(error, 'Biometric login');
-    } finally {
-      setIsBiometricLoading(false);
-    }
+        handleAuthError(error, 'Biometric login');
+      },
+    );
   };
 
   // Get appropriate biometric icon

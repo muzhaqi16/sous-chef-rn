@@ -12,6 +12,17 @@ import {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { TextInputModalProps } from './types';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+
+/** Module-level helper to initialize text input modal state */
+function initTextInputModal(
+  initialValue: string,
+  setText: (v: string) => void,
+  setError: (v: string) => void,
+) {
+  setText(initialValue);
+  setError('');
+}
 
 export const TextInputModal: React.FC<TextInputModalProps> = ({
   visible,
@@ -38,8 +49,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
 
   useEffect(() => {
     if (visible) {
-      setText(initialValue);
-      setError('');
+      initTextInputModal(initialValue, setText, setError);
     }
   }, [visible, initialValue]);
 
@@ -61,7 +71,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
     return null;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const trimmedText = text.trim();
     const validationError = validateText(text);
 
@@ -71,16 +81,17 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
     }
 
     setError('');
-    setIsSubmitting(true);
 
-    try {
-      await onSubmit(trimmedText);
-      handleClose();
-    } catch {
-      setError('Operation failed. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    executeWithLoadingState(
+      async () => {
+        await onSubmit(trimmedText);
+        handleClose();
+      },
+      setIsSubmitting,
+      () => {
+        setError('Operation failed. Please try again.');
+      },
+    );
   };
 
   const handleClose = () => {

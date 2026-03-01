@@ -52,10 +52,10 @@ export const AddStorageLocationSheet: React.FC<
     }
   }
 
-  // Focus input after animation when opening
+  // Focus input after sheet open animation completes
   useEffect(() => {
     if (visible) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      requestIdleCallback(() => inputRef.current?.focus());
     }
   }, [visible]);
 

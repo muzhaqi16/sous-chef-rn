@@ -11,6 +11,7 @@ import {ImagePicker, ImageFile} from './ImagePicker';
 import {useImageUpload} from '#hooks/useImageUpload';
 import {commonStyles} from '#/styles/commonStyles';
 import {ImageUploadPurpose} from '#generated';
+import {executeAsyncWithCleanup} from '#/utils/compilerSafeWrappers';
 
 interface ImageUploadFieldProps {
   label?: string;
@@ -46,8 +47,8 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
       setSelectedImage(image);
 
       // Start upload immediately after selection
-      const startUpload = async () => {
-        try {
+      executeAsyncWithCleanup(
+        async () => {
           let imageUrl: string | null = null;
 
           if (isProfile && profilePurpose) {
@@ -71,16 +72,14 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
           if (imageUrl) {
             onImageUploaded?.(imageUrl);
           }
-        } catch (error) {
+        },
+        () => setUploadProgress(0),
+        (error) => {
           const uploadError =
             error instanceof Error ? error : new Error('Upload failed');
           onError?.(uploadError);
-        } finally {
-          setUploadProgress(0);
-        }
-      };
-
-      startUpload();
+        },
+      );
     };
 
   const handleRemoveImage = () => {

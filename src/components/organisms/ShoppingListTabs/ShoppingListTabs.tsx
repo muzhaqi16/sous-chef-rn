@@ -327,7 +327,11 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   if (items.length === 0) {
     // Initial load (loading but not refreshing): show skeletons without tabs
     if (loading && !refreshing) {
-      return <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />;
+      return (
+        <View style={{ flex: 1 }}>
+          <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} count={10} />
+        </View>
+      );
     }
 
     // After load or during refresh: show empty state (with optional RefreshControl)

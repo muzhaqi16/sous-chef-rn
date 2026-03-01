@@ -33,6 +33,17 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { executeWithLoadingState, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+
+/** Module-level helper to seed existing avatar URL from profile */
+function syncExistingAvatar(
+  avatar: string | null | undefined,
+  setExistingAvatarUrl: (v: string | null) => void,
+) {
+  if (avatar) {
+    setExistingAvatarUrl(avatar);
+  }
+}
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   mediaType: 'photo' as MediaType,
@@ -93,8 +104,8 @@ export const ProfilePictureUploadScreen = () => {
 
   // Seed existing avatar from profile on initial load
   useEffect(() => {
-    if (profile?.avatar && !hasLocalImage) {
-      setExistingAvatarUrl(profile.avatar);
+    if (!hasLocalImage) {
+      syncExistingAvatar(profile?.avatar, setExistingAvatarUrl);
     }
   }, [profile?.avatar, hasLocalImage]);
 
@@ -120,22 +131,26 @@ export const ProfilePictureUploadScreen = () => {
     }
   };
 
-  const handleTakePhoto = async () => {
-    try {
-      const result = await request(
-        PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA,
-      );
-      if (result === RESULTS.GRANTED) {
+  const handleTakePhoto = () => {
+    // Pre-compute permission outside try-catch to avoid value block bailout
+    const cameraPermission = PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA;
+
+    executeMutationWithErrorHandler(
+      async () => {
+        const result = await request(cameraPermission);
+        if (result === RESULTS.GRANTED) {
+          launchCamera(DEFAULT_OPTIONS, handleImageResponse);
+        } else {
+          Alert.alert(
+            'Camera Permission',
+            'Camera permission is required to take photos. Please enable it in your device settings.',
+          );
+        }
+      },
+      () => {
         launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-      } else {
-        Alert.alert(
-          'Camera Permission',
-          'Camera permission is required to take photos. Please enable it in your device settings.',
-        );
-      }
-    } catch {
-      launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-    }
+      },
+    );
   };
 
   const handleSelectPhoto = () => {
@@ -151,33 +166,32 @@ export const ProfilePictureUploadScreen = () => {
       imageFile: selectedImage });
   };
 
-  const handleUpload = async () => {
+  const handleUpload = () => {
     const imageToUpload = croppedImage || selectedImage;
     if (!imageToUpload) return;
 
-    setIsUploading(true);
+    executeWithLoadingState(
+      async () => {
+        const imageUrl = await uploadProfileImage(
+          imageToUpload,
+          ImageUploadPurpose.ProfileAvatar,
+          {
+            onError: (error: Error) => {
+              Alert.alert('Upload Failed', error.message);
+            } },
+        );
 
-    try {
-      const imageUrl = await uploadProfileImage(
-        imageToUpload,
-        ImageUploadPurpose.ProfileAvatar,
-        {
-          onError: (error: Error) => {
-            Alert.alert('Upload Failed', error.message);
-          } },
-      );
-
-      if (imageUrl) {
-        // Update the profile avatar URL in the database
-        await updateProfileAvatarUrl(imageUrl);
-        navigateToNextStep('ProfilePictureUpload');
-      }
-    } catch (error) {
-      console.error('Avatar upload error:', error);
-      Alert.alert('Upload Failed', 'Failed to update profile photo');
-    } finally {
-      setIsUploading(false);
-    }
+        if (imageUrl) {
+          await updateProfileAvatarUrl(imageUrl);
+          navigateToNextStep('ProfilePictureUpload');
+        }
+      },
+      setIsUploading,
+      (error) => {
+        console.error('Avatar upload error:', error);
+        Alert.alert('Upload Failed', 'Failed to update profile photo');
+      },
+    );
   };
 
   const handleRemoveImage = () => {

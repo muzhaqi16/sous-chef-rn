@@ -283,10 +283,11 @@ export const useImageUpload = () => {
       options: ImageUploadOptions = {},
     ): Promise<Array<{ imageUrl: string; perspective: string }>> => {
       const results: Array<{ imageUrl: string; perspective: string }> = [];
-      for (let i = 0; i < files.length; i++) {
+      for (let i = 0; i < files.length; i += 1) {
         const file = files[i];
+        const index = i;
         const imageUrl = await uploadItemImage(file, itemId, {
-          onProgress: (p) => options?.onProgress?.(((i + p) / files.length)) });
+          onProgress: (p) => options?.onProgress?.(((index + p) / files.length)) });
         if (imageUrl) {
           results.push({ imageUrl, perspective: file.perspective || 'front' });
         }

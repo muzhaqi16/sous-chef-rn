@@ -1,11 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeOut } from 'react-native-reanimated';
+import { TIMING } from '#constants/animations';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
 import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
@@ -59,48 +56,20 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   // This ensures smooth screen transitions by showing skeletons during navigation animation
   const isReady = useDeferredRender();
 
-  // Track the module-level flag in state so we can read it during render.
-  // Uses React's "adjusting state during render" pattern to stay in sync.
-  const [hasShownContent, setHasShownContent] = useState(hasShoppingTabShownContent);
+  // Derive whether content has been shown — no state needed.
+  // Module-level flag covers remount; items.length > 0 covers cached data on first mount.
+  const hasShownContent = hasShoppingTabShownContent || items.length > 0;
 
-  // Once content has been shown, latch state so skeletons never reappear.
-  if (!hasShownContent && isReady && !isTransitioning && items.length > 0) {
-    setHasShownContent(true);
-  }
-
-  // Sync the module-level flag so it persists across unmount/remount (side effect).
+  // Sync the module-level flag so it persists across unmount/remount.
   useEffect(() => {
     if (hasShownContent) {
       hasShoppingTabShownContent = true;
     }
   }, [hasShownContent]);
 
-  // Show skeletons only on the very first data load
-  const showSkeletons = !hasShownContent && (!isReady || isTransitioning || !!loading);
-
-  // Skeleton overlay: fade-out with delayed unmount so it stays in the tree
-  // during the opacity animation. Content is always at full opacity underneath.
-  const [skeletonMounted, setSkeletonMounted] = useState(!hasShoppingTabShownContent);
-  const skeletonOpacity = useSharedValue(hasShoppingTabShownContent ? 0 : 1);
-
-  // Adjusting state during render: mount skeleton immediately when showSkeletons becomes true
-  if (showSkeletons && !skeletonMounted) {
-    setSkeletonMounted(true);
-  }
-
-  useEffect(() => {
-    if (showSkeletons) {
-      skeletonOpacity.set(withTiming(1, { duration: 200 }));
-    } else if (skeletonMounted) {
-      skeletonOpacity.set(withTiming(0, { duration: 200 }));
-      const timer = setTimeout(() => setSkeletonMounted(false), 250);
-      return () => clearTimeout(timer);
-    }
-  }, [showSkeletons, skeletonMounted, skeletonOpacity]);
-
-  const skeletonAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: skeletonOpacity.value,
-  }));
+  // Show skeletons only on the very first data load, before content is ready.
+  const showSkeletons =
+    !hasShownContent && (!isReady || isTransitioning || !!loading);
 
   // Content to render (empty state or list) — always mounted so FlashList pre-initializes
   const content = items.length === 0 && !showSkeletons ? (
@@ -136,19 +105,20 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   return (
     <View style={tabStyles.container}>
       {/* Content layer — always at full opacity, renders behind skeleton */}
-      <View style={tabStyles.contentFill} pointerEvents={skeletonMounted ? 'none' : 'auto'}>
+      <View style={tabStyles.contentFill} pointerEvents={showSkeletons ? 'none' : 'auto'}>
         {content}
       </View>
 
-      {/* Skeleton overlay — fades out, then unmounts */}
-      {!!skeletonMounted && (
+      {/* Skeleton overlay — Reanimated exiting prop handles fade-out + unmount */}
+      {showSkeletons ? (
         <Animated.View
-          style={[tabStyles.absoluteFill, skeletonAnimatedStyle]}
+          exiting={FadeOut.duration(TIMING.STANDARD)}
+          style={tabStyles.absoluteFill}
           pointerEvents="none"
         >
-          <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />
+          <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} count={10} />
         </Animated.View>
-      )}
+      ) : null}
     </View>
   );
 };

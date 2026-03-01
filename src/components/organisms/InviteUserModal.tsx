@@ -11,6 +11,7 @@ import {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { MembershipRole } from '#generated';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 interface InviteUserModalProps {
   visible: boolean;
@@ -88,7 +89,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
     return emailRegex.test(email);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (isOffline) {
       setError('Cannot send invite while offline');
       return;
@@ -107,30 +108,32 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
     }
 
     setError('');
-    setIsSubmitting(true);
 
-    try {
-      await onSubmit(trimmedEmail, selectedRole);
-      // Only close on success
-      handleClose();
-    } catch (err: any) {
-      // Extract the actual error message from the API
-      let errorMessage = 'Failed to send invite. Please try again.';
+    executeWithLoadingState(
+      async () => {
+        await onSubmit(trimmedEmail, selectedRole);
+        // Only close on success
+        handleClose();
+      },
+      setIsSubmitting,
+      (err: unknown) => {
+        // Extract the actual error message from the API
+        let errorMessage = 'Failed to send invite. Please try again.';
+        const error = err as any;
 
-      if (err?.message) {
-        errorMessage = err.message.replace('ApolloError: ', '');
-      } else if (err?.graphQLErrors?.length > 0) {
-        errorMessage = err.graphQLErrors[0].message;
-      } else if (err?.networkError?.message) {
-        errorMessage = err.networkError.message;
-      } else if (typeof err === 'string') {
-        errorMessage = err;
-      }
+        if (error?.message) {
+          errorMessage = error.message.replace('ApolloError: ', '');
+        } else if (error?.graphQLErrors?.length > 0) {
+          errorMessage = error.graphQLErrors[0].message;
+        } else if (error?.networkError?.message) {
+          errorMessage = error.networkError.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        }
 
-      setError(errorMessage);
-    } finally {
-      setIsSubmitting(false);
-    }
+        setError(errorMessage);
+      },
+    );
   };
 
   const handleClose = () => {

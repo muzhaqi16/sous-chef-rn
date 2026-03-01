@@ -143,10 +143,10 @@ export function usePantryQuery(pantryId: string | undefined) {
     if (totalCount > 0 && pantryItems.length === 0) {
       isAutoRefetchingRef.current = true;
 
-      const timeoutId = setTimeout(() => executeAutoRefetch(refetch, isAutoRefetchingRef), 100);
+      const idleId = requestIdleCallback(() => executeAutoRefetch(refetch, isAutoRefetchingRef));
 
       return () => {
-        clearTimeout(timeoutId);
+        cancelIdleCallback(idleId);
         isAutoRefetchingRef.current = false;
       };
     }

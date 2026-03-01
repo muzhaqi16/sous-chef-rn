@@ -129,6 +129,15 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       update(cache) {
         if (items.length > 0) {
           batchAddToPantryItemsCache(cache, pantryId, items);
+          cache.modify({
+            id: cache.identify({ __typename: 'Pantry', id: pantryId }),
+            fields: {
+              stats(existingStats: any) {
+                if (!existingStats) return existingStats;
+                return { ...existingStats, totalItems: (existingStats.totalItems || 0) + items.length };
+              },
+            },
+          });
         }
         if (suggestionIds.length > 0) {
           cache.updateQuery<GetPantryItemSuggestionsQuery>(
@@ -211,6 +220,15 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           update(cache) {
             if (items.length > 0) {
               batchAddToPantryItemsCache(cache, pantryId, items);
+              cache.modify({
+                id: cache.identify({ __typename: 'Pantry', id: pantryId }),
+                fields: {
+                  stats(existingStats: any) {
+                    if (!existingStats) return existingStats;
+                    return { ...existingStats, totalItems: (existingStats.totalItems || 0) + items.length };
+                  },
+                },
+              });
             }
             if (suggestionIds.length > 0) {
               cache.updateQuery<GetPantryItemSuggestionsQuery>(
@@ -352,17 +370,22 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           onItemAdded?.();
         }
       }).catch(() => {
-        // On error: remove from exiting, show error toast
+        // On error: cancel pending suggestion removal and show item again for retry
         pendingItemIds.current.delete(pantryItem.itemId);
+        pendingSuggestionRemovals.current = pendingSuggestionRemovals.current.filter(
+          id => id !== pantryItem.itemId,
+        );
         state.completeExitAnimation(pantryItem.itemId);
         toastService.error('Failed to add item');
       });
     };
 
-  // Handle exit animation complete — batch the suggestion removal
+  // Handle exit animation complete — batch the suggestion removal.
+  // Item stays in exitingItems (hidden at opacity:0) until the batched
+  // cache update removes it from the data array. exitingItems is cleared
+  // automatically when the sheet reopens (useAddItemSheetState).
   const handleExitComplete = (itemId: string) => {
       queueSuggestionRemoval(itemId);
-      state.completeExitAnimation(itemId);
     };
 
   // Handle successful add from details sheet

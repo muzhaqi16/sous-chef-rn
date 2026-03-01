@@ -19,6 +19,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
 import { formatPackageBreakdownFull, formatNetWeightDisplay, formatQuantityBreakdown, formatStorageState } from '#hooks/pantry/usePantryItemTransformation';
+import { getUnitDisplayText } from '#utils/formatQuantity';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
@@ -35,6 +36,8 @@ import { useCorrectPantryItemWeight } from '#hooks/pantry/mutations/useCorrectPa
 import { AdjustQuantityModal } from '#components/modals/AdjustQuantityModal';
 import { CorrectWeightModal } from '#components/modals/CorrectWeightModal';
 import { errorService } from '#/services/errorService';
+import { executeWithLoadingState, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 // Helper function to calculate expiry info
 const getExpiryInfo = (expiresAt: string | null | undefined) => {
@@ -104,6 +107,14 @@ const formatCurrency = (amount?: number | null): string | null => {
   if (amount == null || amount <= 0) return null;
   return `$${amount.toFixed(2)}`;
 };
+
+/** Module-level helper to sync suggested recipes from cache */
+function syncSuggestedRecipesFromCache(
+  cachedRecipes: RecipeInformation[],
+  setSuggestedRecipes: (v: RecipeInformation[]) => void,
+) {
+  setSuggestedRecipes(cachedRecipes);
+}
 
 // Reusable info row component for icon + label + value pattern
 const PantryInfoRow: React.FC<{
@@ -204,34 +215,29 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
     // Check cache first
     const cachedRecipes = getCachedSuggestions(itemName);
     if (cachedRecipes) {
-      setSuggestedRecipes(cachedRecipes);
+      syncSuggestedRecipesFromCache(cachedRecipes, setSuggestedRecipes);
       return;
     }
 
     const controller = new AbortController();
 
     // Cache miss - fetch from API
-    const fetchRecipes = async () => {
-      setLoadingRecipes(true);
-      try {
+    executeWithLoadingState(
+      async () => {
         const recipes = await spoonacularService.searchRecipes({
           query: itemName,
           number: 5,
           addRecipeInformation: true }, controller.signal);
         const results = recipes.results as unknown as RecipeInformation[];
         setSuggestedRecipes(results);
-
-        // Cache the results
         setCachedSuggestions(itemName, results);
-      } catch (error: any) {
-        if (error.name === 'AbortError') return;
+      },
+      setLoadingRecipes,
+      (error: unknown) => {
+        if ((error as any)?.name === 'AbortError') return;
         errorService.reportError(error, { operation: 'PantryItemDetail.fetchSuggestedRecipes' });
-      } finally {
-        setLoadingRecipes(false);
-      }
-    };
-
-    fetchRecipes();
+      },
+    );
 
     return () => controller.abort();
   }, [item?.itemName, getCachedSuggestions, setCachedSuggestions]);
@@ -255,7 +261,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
     ]);
   };
 
-  const handleAddToShoppingList = async () => {
+  const handleAddToShoppingList = () => {
     if (!selectedShoppingListId) {
       Alert.alert(
         'No Shopping List Selected',
@@ -276,24 +282,33 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
 
     setAddToListStatus('loading');
 
-    try {
-      await addToShoppingList({
-        variables: {
-          input: {
-            shoppingListId: selectedShoppingListId,
-            itemId: data?.pantryItem?.item?.id || '',
-            quantity: data?.pantryItem?.quantity || 1,
-            unit: data?.pantryItem?.unit?.id
-              ? { unitId: data.pantryItem.unit.id }
-              : undefined,
-            itemName: data?.pantryItem?.itemName || '' } } });
-      setAddToListStatus('success');
-      statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
-    } catch (error) {
-      errorService.reportError(error, { operation: 'PantryItemDetail.addToShoppingList' });
-      setAddToListStatus('error');
-      statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
-    }
+    // Pre-compute values outside the try-catch to avoid value block bailouts
+    const catalogItemId = data?.pantryItem?.item?.id || '';
+    const quantity = data?.pantryItem?.quantity || 1;
+    const unitInput = data?.pantryItem?.unit?.id
+      ? { unitId: data.pantryItem.unit.id }
+      : undefined;
+    const itemName = data?.pantryItem?.itemName || '';
+
+    executeMutationWithErrorHandler(
+      async () => {
+        await addToShoppingList({
+          variables: {
+            input: {
+              shoppingListId: selectedShoppingListId,
+              itemId: catalogItemId,
+              quantity,
+              unit: unitInput,
+              itemName } } });
+        setAddToListStatus('success');
+        statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
+      },
+      (error) => {
+        errorService.reportError(error, { operation: 'PantryItemDetail.addToShoppingList' });
+        setAddToListStatus('error');
+        statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
+      },
+    );
   };
 
   const handleEdit = () => {
@@ -356,7 +371,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
       <View style={styles.container}>
         <Header variant="detail" onBack={goBack} borderless />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <SousChefLoader size="small" showBrand={false} message="Loading" />
         </View>
       </View>
     );
@@ -461,7 +476,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
           <View style={styles.infoColumn}>
             <Text style={styles.infoColumnLabel}>Amount</Text>
             <Text style={styles.infoColumnValue}>
-              {item.quantity} {item.unit?.name}
+              {item.quantity} {getUnitDisplayText(item.unit)}
             </Text>
           </View>
         </View>
@@ -486,7 +501,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         {/* Quantity Row */}
         <PantryInfoRow
           label="Quantity"
-          value={`${item.quantity} ${item.unit?.name ?? ''}`}
+          value={`${item.quantity} ${getUnitDisplayText(item.unit)}`}
           icon="apps-outline"
         />
 

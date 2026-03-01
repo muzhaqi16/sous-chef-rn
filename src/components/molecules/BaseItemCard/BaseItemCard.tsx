@@ -77,10 +77,7 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
     );
 
   const cardContent = (
-    <View
-      style={[styles.container, containerStyle]}
-      testID={testID}
-    >
+    <View style={[styles.container, containerStyle]} testID={testID}>
       {slotChildren}
     </View>
   );
@@ -136,11 +133,6 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.sm,
     borderRadius: theme.radii.lg,
     borderWidth: 1,
-    shadowColor: theme.colors.backgroundSecondary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 2,
     // Default styles (applied when no variant matches)
     backgroundColor: theme.colors.surface,
     borderColor: theme.colors.borderLight,

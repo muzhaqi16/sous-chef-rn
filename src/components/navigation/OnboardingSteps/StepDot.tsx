@@ -6,6 +6,7 @@ import Animated, {
   interpolateColor,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { TIMING } from '#constants/animations';
 import { Icon } from '#/utils/iconUtils';
 import type { StepDotProps } from './types';
 
@@ -42,10 +43,10 @@ export const StepDot: React.FC<StepDotProps> = ({
     );
 
     // Scale animation for active step
-    const scale = withTiming(isActive ? 1.1 : 1, { duration: 200 });
+    const scale = withTiming(isActive ? 1.1 : 1, { duration: TIMING.STANDARD });
 
     // Opacity for completed steps
-    const opacity = withTiming(isCompleted ? 1 : isPending ? 0.6 : 1, { duration: 200 });
+    const opacity = withTiming(isCompleted ? 1 : isPending ? 0.6 : 1, { duration: TIMING.STANDARD });
 
     return {
       // Size-dependent properties (from prop)
@@ -55,11 +56,11 @@ export const StepDot: React.FC<StepDotProps> = ({
       // Animated properties
       backgroundColor: withTiming(
         isCompleted ? theme.colors.success : backgroundColor,
-        { duration: 300 }
+        { duration: TIMING.SLOW }
       ),
       borderColor: withTiming(
         isCompleted ? theme.colors.success : borderColor,
-        { duration: 300 }
+        { duration: TIMING.SLOW }
       ),
       transform: [{ scale }],
       opacity,
@@ -68,8 +69,8 @@ export const StepDot: React.FC<StepDotProps> = ({
 
   const iconAnimatedStyle = useAnimatedStyle(() => {
     const isCompleted = activeIndex.value > index;
-    const opacity = withTiming(isCompleted ? 1 : 0, { duration: 200 });
-    const scale = withTiming(isCompleted ? 1 : 0, { duration: 200 });
+    const opacity = withTiming(isCompleted ? 1 : 0, { duration: TIMING.STANDARD });
+    const scale = withTiming(isCompleted ? 1 : 0, { duration: TIMING.STANDARD });
 
     return {
       opacity,

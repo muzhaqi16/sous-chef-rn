@@ -37,6 +37,18 @@ export function formatQuantityDisplay(quantity: number, unit?: string): string {
  *
  * Examples: 0.5 → "1/2", 1.25 → "1 1/4", 2.7 → "2.7"
  */
+/**
+ * Get display text for a unit, preferring symbol over name.
+ */
+export function getUnitDisplayText(unit?: { symbol?: string; name?: string } | null): string {
+  return unit?.symbol || unit?.name || '';
+}
+
+/**
+ * Format a quantity as a fraction or mixed number when possible.
+ *
+ * Examples: 0.5 → "1/2", 1.25 → "1 1/4", 2.7 → "2.7"
+ */
 export function formatQuantityAsFraction(qty: number): string {
   if (qty == null) return '0';
   if (qty === 0) return '0';

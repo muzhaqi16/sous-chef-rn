@@ -29,11 +29,14 @@ import { useAuth } from '#/hooks/auth/useAuth';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
+import { useDeferredRender } from '#hooks/performance/useDeferredRender';
+import { ShoppingListSkeleton } from '#components/base/Skeleton/ShoppingListSkeleton';
 
 // Utils
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { Telemetry } from '#/services/telemetry';
 import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
+import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 
 /**
  * Inner content component that uses modal context.
@@ -162,14 +165,9 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     }, [items, swipeHint.hasBeenShown, swipeHint.actions]);
 
     // Handle refresh
-    const handleRefresh = async () => {
-      setRefreshing(true);
-      try {
-        optimisticDataPersistence.clearType('ShoppingListItem');
-        await refetchItems();
-      } finally {
-        setRefreshing(false);
-      }
+    const handleRefresh = () => {
+      optimisticDataPersistence.clearType('ShoppingListItem');
+      return executeRefreshWithFinally(() => refetchItems(), setRefreshing);
     };
 
     // Calculate permissions for the current list
@@ -406,6 +404,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
  * 3. Wraps content with ShoppingListModalsProvider
  */
 const ShoppingListMainScreen: React.FC = () => {
+  const isReady = useDeferredRender();
+
   // Restore optimistic data on mount (offline changes that haven't synced)
   // Hook handles array stability internally - inline array is fine
   useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
@@ -414,6 +414,16 @@ const ShoppingListMainScreen: React.FC = () => {
 
   // --- Screen Data Hook ---
   const screenData = useShoppingListScreen();
+
+  // Show lightweight skeleton on first render, defer heavy subtree
+  if (!isReady) {
+    return (
+      <View style={styles.container} testID="shopping-list-screen">
+        <TabScreenHeader label="Shopping list" title="Shopping List" />
+        <ShoppingListSkeleton />
+      </View>
+    );
+  }
 
   return (
     <ShoppingListModalsProvider

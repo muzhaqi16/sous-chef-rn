@@ -10,6 +10,7 @@ import { useNotificationPermissions } from '#hooks/notifications/useNotification
 import { ExpirationFrequency } from '#generated';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AlertBanner } from '#components/molecules/AlertBanner';
+import { executeWithLoadingState, executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 
 const FREQUENCY_OPTIONS = [
   { label: 'Real-time (as items expire)', value: ExpirationFrequency.RealTime },
@@ -71,66 +72,64 @@ export const NotificationSettingsScreen: React.FC = () => {
     };
   }, [checkPermissions]);
 
-  const handleSettingChange = async (
+  const handleSettingChange = (
     key: string,
     value: boolean | string | number | ExpirationFrequency
   ) => {
     // Special handling for push notification toggle
     if (key === 'pushEnabled' && value === true) {
-      setUpdating(key);
-      try {
-        const granted = await requestPermissions();
+      executeWithLoadingState(
+        async () => {
+          const granted = await requestPermissions();
 
-        if (!granted) {
-          // Permission denied or blocked
-          Alert.alert(
-            'Notification Permission Required',
-            'To receive push notifications, you need to enable notification permissions in your device settings.\n\nWould you like to open settings now?',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Open Settings',
-                onPress: () => {
-                  if (Platform.OS === 'ios') {
-                    Linking.openURL('app-settings:');
-                  } else {
-                    Linking.openSettings();
-                  }
+          if (!granted) {
+            Alert.alert(
+              'Notification Permission Required',
+              'To receive push notifications, you need to enable notification permissions in your device settings.\n\nWould you like to open settings now?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Open Settings',
+                  onPress: () => {
+                    if (Platform.OS === 'ios') {
+                      Linking.openURL('app-settings:');
+                    } else {
+                      Linking.openSettings();
+                    }
+                  },
                 },
-              },
-            ],
-          );
-          setUpdating(null);
-          return; // Don't update setting if permission denied
-        }
+              ],
+            );
+            return;
+          }
 
-        // Permission granted, proceed with update
-        const success = await updateNotificationSetting(key as any, value);
-        if (!success) {
-          Alert.alert('Error', 'Failed to update settings. Please try again.');
-        }
-      } catch (error) {
-        console.error('Error requesting notification permission:', error);
-        Alert.alert(
-          'Permission Error',
-          'Failed to request notification permission. Please try again or check your device settings.',
-        );
-      } finally {
-        setUpdating(null);
-      }
+          const success = await updateNotificationSetting(key as any, value);
+          if (!success) {
+            Alert.alert('Error', 'Failed to update settings. Please try again.');
+          }
+        },
+        (isLoading) => setUpdating(isLoading ? key : null),
+        (error) => {
+          console.error('Error requesting notification permission:', error);
+          Alert.alert(
+            'Permission Error',
+            'Failed to request notification permission. Please try again or check your device settings.',
+          );
+        },
+      );
       return;
     }
 
     // Default handling for all other settings
-    setUpdating(key);
-    try {
-      const success = await updateNotificationSetting(key as any, value);
-      if (!success) {
-        Alert.alert('Error', 'Failed to update settings. Please try again.');
-      }
-    } finally {
-      setUpdating(null);
-    }
+    executeRefreshWithFinally(
+      async () => {
+        const success = await updateNotificationSetting(key as any, value);
+        if (!success) {
+          Alert.alert('Error', 'Failed to update settings. Please try again.');
+        }
+      },
+      (isLoading) => setUpdating(isLoading ? key : null),
+    );
   };
 
   const handleResetToDefaults = () => {
@@ -142,21 +141,21 @@ export const NotificationSettingsScreen: React.FC = () => {
         {
           text: 'Reset',
           style: 'destructive',
-          onPress: async () => {
-            setUpdating('reset');
-            try {
-              const success = await resetToDefaults();
-              if (success) {
-                Alert.alert('Success', 'Settings have been reset to defaults.');
-              } else {
-                Alert.alert(
-                  'Error',
-                  'Failed to reset settings. Please try again.',
-                );
-              }
-            } finally {
-              setUpdating(null);
-            }
+          onPress: () => {
+            executeRefreshWithFinally(
+              async () => {
+                const success = await resetToDefaults();
+                if (success) {
+                  Alert.alert('Success', 'Settings have been reset to defaults.');
+                } else {
+                  Alert.alert(
+                    'Error',
+                    'Failed to reset settings. Please try again.',
+                  );
+                }
+              },
+              (isLoading) => setUpdating(isLoading ? 'reset' : null),
+            );
           },
         },
       ],

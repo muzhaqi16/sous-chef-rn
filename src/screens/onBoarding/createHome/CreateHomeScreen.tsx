@@ -42,6 +42,97 @@ import { createPantryForHome, showPantryCreationError } from './helpers';
 import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
 import { OnboardingErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { executeWithLoadingState, executeMutation } from '#/utils/compilerSafeWrappers';
+
+/** Module-level async function for home/pantry creation.
+ *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
+async function performCreateHome(
+  data: FormValues,
+  deps: {
+    needsHome: boolean;
+    needsPantry: boolean;
+    selectedHomeId: string | null;
+    createHome: (opts: { variables: any }) => Promise<any>;
+    createPantry: any;
+    refetchHomes: () => Promise<any>;
+    setSelectedHomeId: (id: string) => void;
+    setSelectedPantryId: (id: string) => void;
+    skipToStep: (step: string) => void;
+    navigateToNextStep: (step: string) => void;
+  },
+): Promise<void> {
+  if (deps.needsHome) {
+    const response = await deps.createHome({
+      variables: {
+        input: {
+          name: data.homeName.trim(),
+          description: 'Created during onboarding',
+          type: HomeType.Household,
+          isPublic: false,
+          allowJoinCode: true,
+          createDefaultPantry: true,
+          defaultPantryName: data.pantryName.trim(),
+          tags: ['onboarding'] } } });
+
+    const payload = response.data?.createHome;
+
+    if (payload?.success) {
+      if (payload.home) {
+        deps.setSelectedHomeId(payload.home.id);
+
+        const pantries = extractNodes(payload.home.pantriesConnection) as any[];
+        const defaultPantry = pantries.find(
+          (p: { isDefault: boolean }) => p.isDefault,
+        ) || pantries[0];
+        if (defaultPantry) {
+          deps.setSelectedPantryId(defaultPantry.id);
+        }
+      } else {
+        const refetchResult = await deps.refetchHomes();
+        const refetchedHomes = normalizeHomes(extractNodes(refetchResult.data?.homes));
+        const newHome = refetchedHomes.find((h: any) => h.name === data.homeName.trim());
+        if (newHome?.id) {
+          deps.setSelectedHomeId(newHome.id);
+        } else {
+          throw new Error('Home was created but could not be found. Please try again.');
+        }
+      }
+    } else {
+      throw new Error(payload?.message || 'Failed to create home');
+    }
+  } else if (deps.needsPantry && deps.selectedHomeId) {
+    const success = await createPantryForHome(
+      deps.selectedHomeId,
+      data.pantryName,
+      deps.createPantry,
+      deps.setSelectedPantryId,
+    );
+
+    if (!success) {
+      showPantryCreationError(() => deps.skipToStep('CreateShoppingList'));
+      return;
+    }
+  }
+
+  deps.navigateToNextStep('CreateHome');
+}
+
+/** Module-level helper to sync existing home/pantry state */
+function syncExistingResources(
+  existingHome: { id: string } | undefined,
+  existingPantry: { id: string } | undefined,
+  setSelectedHomeId: (id: string) => void,
+  setSelectedPantryId: (id: string) => void,
+  setCheckingExisting: (v: boolean) => void,
+) {
+  if (existingHome) {
+    setSelectedHomeId(existingHome.id);
+    if (existingPantry) {
+      setSelectedPantryId(existingPantry.id);
+    }
+  }
+  setCheckingExisting(false);
+}
 
 const CreateHomeScreenComponent = () => {
   useScreenTransition('CreateHomeScreen');
@@ -211,36 +302,9 @@ const CreateHomeScreenComponent = () => {
 
   // Check existing resources without auto-navigating
   useEffect(() => {
-    let isMounted = true;
+    if (homesLoading) return;
 
-    const checkExisting = async () => {
-      if (homesLoading) return;
-
-      try {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        if (!isMounted) return;
-
-        // Set selected IDs if they exist, but don't auto-navigate
-        if (existingHome) {
-          setSelectedHomeId(existingHome.id);
-          if (existingPantry) {
-            setSelectedPantryId(existingPantry.id);
-          }
-        }
-
-        setCheckingExisting(false);
-      } catch {
-        if (isMounted) {
-          setCheckingExisting(false);
-        }
-      }
-    };
-
-    checkExisting();
-
-    return () => {
-      isMounted = false;
-    };
+    syncExistingResources(existingHome, existingPantry, setSelectedHomeId, setSelectedPantryId, setCheckingExisting);
   }, [
     homesLoading,
     existingHome,
@@ -250,86 +314,35 @@ const CreateHomeScreenComponent = () => {
   ]);
 
   // Form submission handler
-  const onSubmit = async (data: FormValues) => {
-      setIsCreating(true);
+  const onSubmit = (data: FormValues) => {
       setGraphqlError(null);
 
-      try {
-        let homeId = selectedHomeId;
-
-        if (needsHome) {
-          // Single mutation: create home + default pantry together
-          const response = await createHome({
-            variables: {
-              input: {
-                name: data.homeName.trim(),
-                description: 'Created during onboarding',
-                type: HomeType.Household,
-                isPublic: false,
-                allowJoinCode: true,
-                createDefaultPantry: true,
-                defaultPantryName: data.pantryName.trim(),
-                tags: ['onboarding'] } } });
-
-          const payload = response.data?.createHome;
-
-          if (payload?.success) {
-            if (payload.home) {
-              homeId = payload.home.id;
-              setSelectedHomeId(homeId);
-
-              // Set pantry ID from the home response (created via createDefaultPantry)
-              const pantries = extractNodes(payload.home.pantriesConnection);
-              const defaultPantry = pantries.find(
-                (p: { isDefault: boolean }) => p.isDefault,
-              ) || pantries[0];
-              if (defaultPantry) {
-                setSelectedPantryId(defaultPantry.id);
-              }
-            } else {
-              // Success but home object null — refetch to get the ID
-              const refetchResult = await refetchHomes();
-              const refetchedHomes = normalizeHomes(extractNodes(refetchResult.data?.homes));
-              const newHome = refetchedHomes.find((h: any) => h.name === data.homeName.trim());
-              if (newHome) {
-                homeId = newHome.id;
-                setSelectedHomeId(homeId);
-              } else {
-                throw new Error('Home was created but could not be found. Please try again.');
-              }
-            }
-          } else {
-            throw new Error(payload?.message || 'Failed to create home');
-          }
-        } else if (needsPantry && selectedHomeId) {
-          // Only create pantry separately if home already exists but pantry doesn't
-          const success = await createPantryForHome(
-            selectedHomeId,
-            data.pantryName,
-            createPantry,
-            setSelectedPantryId,
-          );
-
-          if (!success) {
-            showPantryCreationError(() => skipToStep('CreateShoppingList'));
-            return;
-          }
-        }
-
-        navigateToNextStep('CreateHome');
-      } catch (error: any) {
-        setGraphqlError(error.message || 'An error occurred during setup');
-      } finally {
-        setIsCreating(false);
-      }
+      executeWithLoadingState(
+        () => performCreateHome(data, {
+          needsHome,
+          needsPantry,
+          selectedHomeId,
+          createHome,
+          createPantry,
+          refetchHomes,
+          setSelectedHomeId,
+          setSelectedPantryId,
+          skipToStep,
+          navigateToNextStep,
+        }),
+        setIsCreating,
+        (error: unknown) => {
+          setGraphqlError((error as any)?.message || 'An error occurred during setup');
+        },
+      );
     };
 
-  const handleAcceptInvite = async (token: string) => {
-    try {
-      await acceptHomeInvite({ variables: { token } });
-    } catch {
-      // Error handled by onError in mutation
-    }
+  const handleAcceptInvite = (token: string) => {
+    // Error handled by onError in mutation config
+    executeMutation(
+      () => acceptHomeInvite({ variables: { token } }),
+      'Failed to accept home invite',
+    );
   };
 
   const handleDeclineInvite = (token: string, homeNameParam: string) => {
@@ -341,12 +354,12 @@ const CreateHomeScreenComponent = () => {
         {
           text: 'Decline',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await declineHomeInvite({ variables: { token } });
-            } catch {
-              // Error handled by onError in mutation
-            }
+          onPress: () => {
+            // Error handled by onError in mutation config
+            executeMutation(
+              () => declineHomeInvite({ variables: { token } }),
+              'Failed to decline home invite',
+            );
           } },
       ],
     );

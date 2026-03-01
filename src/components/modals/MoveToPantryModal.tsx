@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, Alert, Switch } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -45,7 +44,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   onConfirm }) => {
   const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
     onDismiss: onClose,
-    snapPoints: ['75%', '95%'] });
+    snapPoints: ['75%', '95%'],
+    keyboardAware: true });
 
   // Form state
   const [quantityInput, setQuantityInput] = useState('');
@@ -147,7 +147,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetScrollView
+      <BottomSheetFormScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
@@ -385,7 +385,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
               />
             </View>
           </>}
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

@@ -8,7 +8,7 @@ import Animated, {
 import { useRecyclingState } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
-import { standardEasing } from '#/constants/animations';
+import { standardEasing, TIMING } from '#/constants/animations';
 
 type AnimatedCheckboxProps = {
   checked: boolean;
@@ -56,11 +56,11 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   const animatedColorStyle = useAnimatedStyle(() => ({
     backgroundColor: withTiming(
       visuallyChecked ? theme.colors.primary : 'transparent',
-      { duration: 120, easing: standardEasing },
+      { duration: TIMING.INSTANT, easing: standardEasing },
     ),
     borderColor: withTiming(
       visuallyChecked ? theme.colors.primary : theme.colors.border,
-      { duration: 120, easing: standardEasing },
+      { duration: TIMING.INSTANT, easing: standardEasing },
     ) }), [visuallyChecked, theme]);
 
   // Scale animation — separated so press changes don't re-evaluate color withTiming
@@ -69,7 +69,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
     const pressScale = isPressed.value ? 0.9 : 1;
     return {
       transform: [
-        { scale: withTiming(baseScale * pressScale, { duration: 100, easing: standardEasing }) },
+        { scale: withTiming(baseScale * pressScale, { duration: TIMING.INSTANT, easing: standardEasing }) },
       ] };
   }, [visuallyChecked]);
 

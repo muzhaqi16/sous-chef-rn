@@ -7,6 +7,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { TIMING } from '#constants/animations';
 import { Icon } from '#utils/iconUtils';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
@@ -78,7 +79,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   // Trigger highlight animation when isHighlighted changes
   useEffect(() => {
     highlightOpacity.set(withTiming(isHighlighted ? 1 : 0, {
-      duration: 150, // Fast - matches slide animation
+      duration: TIMING.FAST,
       easing: Easing.out(Easing.ease),
     }));
   }, [isHighlighted, highlightOpacity]);

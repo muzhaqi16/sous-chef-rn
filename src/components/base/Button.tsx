@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
+import { SPRING } from '#constants/animations';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 
@@ -53,11 +54,11 @@ export const Button: React.FC<ButtonProps> = ({
     transform: [{ scale: scale.value }] }));
 
   const handlePressIn = () => {
-    scale.set(withSpring(0.97, { damping: 15, stiffness: 300 }));
+    scale.set(withSpring(0.97, SPRING.PRESS));
   };
 
   const handlePressOut = () => {
-    scale.set(withSpring(1, { damping: 15, stiffness: 300 }));
+    scale.set(withSpring(1, SPRING.PRESS));
   };
 
   const handlePress = () => {

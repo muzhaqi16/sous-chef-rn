@@ -10,6 +10,9 @@ import {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
+import { executeWithLoadingState, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+
+const defaultTransform = (item: string) => item.trim();
 
 export interface StringArrayManagerProps {
   /**
@@ -130,7 +133,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   emptyMessage = 'No items added yet',
   maxItems,
   validate,
-  transform = item => item.trim(),
+  transform = defaultTransform,
   showAddButton = true,
   containerStyle,
 }) => {
@@ -148,7 +151,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
     setIsAddingModal(true);
   };
 
-  const handleAdd = async () => {
+  const handleAdd = () => {
     setError('');
 
     const transformedItem = transform(newItem);
@@ -174,30 +177,32 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
       }
     }
 
-    setLoading(true);
-    try {
-      const success = await onAdd(transformedItem);
+    executeWithLoadingState(
+      async () => {
+        const success = await onAdd(transformedItem);
 
-      if (success) {
-        setNewItem('');
-        setError('');
-        setIsAddingModal(false);
-      } else {
-        setError('Failed to add item');
-      }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
+        if (success) {
+          setNewItem('');
+          setError('');
+          setIsAddingModal(false);
+        } else {
+          setError('Failed to add item');
+        }
+      },
+      setLoading,
+      (err: unknown) => {
+        setError((err as any).message || 'An error occurred');
+      },
+    );
   };
 
-  const handleRemove = async (item: string) => {
-    try {
-      await onRemove(item);
-    } catch (err: any) {
-      console.error('Failed to remove item:', err);
-    }
+  const handleRemove = (item: string) => {
+    executeMutationWithErrorHandler(
+      () => onRemove(item),
+      (err) => {
+        console.error('Failed to remove item:', err);
+      },
+    );
   };
 
   const handleCancel = () => {

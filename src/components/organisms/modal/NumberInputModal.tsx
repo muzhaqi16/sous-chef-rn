@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 export interface NumberInputModalProps {
   /**
@@ -150,6 +151,16 @@ export interface NumberInputModalProps {
  * />
  * ```
  */
+/** Module-level helper to initialize modal input when it opens */
+function initNumberInputModal(
+  value: number | null | undefined,
+  setInputValue: (v: string) => void,
+  setError: (v: string) => void,
+) {
+  setInputValue(value !== null && value !== undefined ? String(value) : '');
+  setError('');
+}
+
 export const NumberInputModal: React.FC<NumberInputModalProps> = ({
   visible,
   title,
@@ -176,8 +187,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
   // Initialize input value when modal opens
   useEffect(() => {
     if (visible) {
-      setInputValue(value !== null && value !== undefined ? String(value) : '');
-      setError('');
+      initNumberInputModal(value, setInputValue, setError);
     }
   }, [visible, value]);
 
@@ -205,7 +215,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
     return null;
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     setError('');
 
     // Parse input
@@ -220,20 +230,21 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
       return;
     }
 
-    setLoading(true);
-    try {
-      const success = await onSave(numValue);
+    executeWithLoadingState(
+      async () => {
+        const success = await onSave(numValue);
 
-      if (success) {
-        onCancel(); // Close modal on success
-      } else {
-        setError('Failed to save');
-      }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
+        if (success) {
+          onCancel(); // Close modal on success
+        } else {
+          setError('Failed to save');
+        }
+      },
+      setLoading,
+      (err: unknown) => {
+        setError((err as any).message || 'An error occurred');
+      },
+    );
   };
 
   const handleCancel = () => {

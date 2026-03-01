@@ -48,9 +48,19 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   onRenameFolder,
   onDeleteFolder,
   folderActionLoading = false }) => {
+  // Track what should happen after the folder picker dismisses
+  const nextSheetActionRef = useRef<'manage' | null>(null);
+
   const { ref: folderPickerRef, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
     visible,
-    onDismiss: onCancel,
+    onDismiss: () => {
+      if (nextSheetActionRef.current === 'manage') {
+        nextSheetActionRef.current = null;
+        manageSheetRef.current?.present();
+      } else {
+        onCancel();
+      }
+    },
     snapPoints: ['55%', '70%'],
     keyboardBehavior: 'interactive' });
   const manageSheetRef = useRef<BottomSheetModal>(null);
@@ -117,11 +127,9 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
       setManagingFolder(folder);
       setRenameValue(folder);
       setShowDeleteConfirm(false);
-      // Dismiss folder picker first, then present manage sheet after a brief delay
+      // Dismiss folder picker; onDismiss will present manage sheet
+      nextSheetActionRef.current = 'manage';
       folderPickerRef.current?.dismiss();
-      setTimeout(() => {
-        manageSheetRef.current?.present();
-      }, 150);
     };
 
   // Handle rename confirmation
@@ -130,11 +138,8 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 
     const newName = renameValue.trim();
     if (newName === managingFolder) {
-      // No change, just close bottom sheet and re-open folder picker
+      // No change, just close manage sheet — onDismiss will re-open folder picker
       manageSheetRef.current?.dismiss();
-      setTimeout(() => {
-        folderPickerRef.current?.present();
-      }, 150);
       setManagingFolder(null);
       setRenameValue('');
       return;
@@ -152,10 +157,8 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
       if (selectedFolder === managingFolder) {
         onSelect(newName);
       }
+      // Close manage sheet — onDismiss will re-open folder picker
       manageSheetRef.current?.dismiss();
-      setTimeout(() => {
-        folderPickerRef.current?.present();
-      }, 150);
       setManagingFolder(null);
       setRenameValue('');
     }
@@ -171,22 +174,17 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
       if (selectedFolder === managingFolder) {
         onSelect(null);
       }
+      // Close manage sheet — onDismiss will re-open folder picker
       manageSheetRef.current?.dismiss();
-      setTimeout(() => {
-        folderPickerRef.current?.present();
-      }, 150);
       setManagingFolder(null);
       setRenameValue('');
       setShowDeleteConfirm(false);
     }
   };
 
-  // Handle manage folder bottom sheet close
+  // Handle manage folder bottom sheet close — onDismiss will re-open folder picker
   const handleManageFolderClose = () => {
     manageSheetRef.current?.dismiss();
-    setTimeout(() => {
-      folderPickerRef.current?.present();
-    }, 150);
     setManagingFolder(null);
     setRenameValue('');
     setShowDeleteConfirm(false);
@@ -399,10 +397,8 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           setManagingFolder(null);
           setRenameValue('');
           setShowDeleteConfirm(false);
-          // Re-open folder picker after manage sheet closes
-          setTimeout(() => {
-            folderPickerRef.current?.present();
-          }, 150);
+          // Re-open folder picker — manage sheet is already fully dismissed
+          folderPickerRef.current?.present();
         }}
       >
         <BottomSheetView

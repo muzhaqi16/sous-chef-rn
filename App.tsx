@@ -41,6 +41,33 @@ setupGlobalErrorHandler();
 // Enable native screens for better performance
 enableScreens();
 
+/** Module-level helper: Detox launch argument injection (DEV-only) */
+function injectDetoxLaunchArgs(
+  detoxBackgroundServicesDisabledRef: React.RefObject<boolean>,
+): void {
+  try {
+    const args = LaunchArguments.value<{
+      detoxUserToken?: string;
+      detoxRefreshToken?: string;
+      detoxUser?: string;
+      detoxDisableBackgroundServices?: string;
+    }>();
+    if (args.detoxUserToken && args.detoxRefreshToken && args.detoxUser) {
+      const user = JSON.parse(args.detoxUser);
+      useStore
+        .getState()
+        .setAuth(user, args.detoxUserToken, args.detoxRefreshToken);
+      console.log('[Detox] Auth injected via launchArgs');
+    }
+    if (args.detoxDisableBackgroundServices) {
+      detoxBackgroundServicesDisabledRef.current = true;
+      console.log('[Detox] Background services disabled for E2E tests');
+    }
+  } catch {
+    // No launch args or parse error — normal app startup
+  }
+}
+
 const App = () => {
   const isHydrated = useAppStore(selectHydrated);
   const isOnline = useAppStore(state => state.isOnline);
@@ -70,32 +97,15 @@ const App = () => {
   // PERFORMANCE: One-time hydration init - run only once after hydration completes
   // This prevents restarting heavy services (telemetry, keychain, memory monitor) on theme changes
   useEffect(() => {
+    // Capture ref value for use in effect body and cleanup
+    const detoxDisabled = detoxBackgroundServicesDisabledRef.current;
+
     if (isHydrated && !hydrationInitializedRef.current) {
       hydrationInitializedRef.current = true;
 
       // DEV-ONLY: Inject auth tokens from Detox launchArgs to bypass login UI
       if (__DEV__) {
-        try {
-          const args = LaunchArguments.value<{
-            detoxUserToken?: string;
-            detoxRefreshToken?: string;
-            detoxUser?: string;
-            detoxDisableBackgroundServices?: string;
-          }>();
-          if (args.detoxUserToken && args.detoxRefreshToken && args.detoxUser) {
-            const user = JSON.parse(args.detoxUser);
-            useStore
-              .getState()
-              .setAuth(user, args.detoxUserToken, args.detoxRefreshToken);
-            console.log('[Detox] Auth injected via launchArgs');
-          }
-          if (args.detoxDisableBackgroundServices) {
-            detoxBackgroundServicesDisabledRef.current = true;
-            console.log('[Detox] Background services disabled for E2E tests');
-          }
-        } catch {
-          // No launch args or parse error — normal app startup
-        }
+        injectDetoxLaunchArgs(detoxBackgroundServicesDisabledRef);
       }
 
       // Initialize device ID early - needed for WebSocket subscription self-echo filtering
@@ -108,7 +118,7 @@ const App = () => {
 
       // Initialize telemetry service
       const telemetryConfig = getTelemetryConfig();
-      if (detoxBackgroundServicesDisabledRef.current) {
+      if (detoxDisabled) {
         // Disable flush timers that create setInterval background tasks
         telemetryConfig.enableLogs = false;
         telemetryConfig.enableMetrics = false;
@@ -117,7 +127,7 @@ const App = () => {
       Telemetry.initialize();
 
       // Initialize native performance metrics (startup marks, bundle load, HTTP timing)
-      if (!detoxBackgroundServicesDisabledRef.current) {
+      if (!detoxDisabled) {
         NativePerformanceService.initialize();
       }
 
@@ -147,7 +157,7 @@ const App = () => {
       });
 
       // Start memory monitoring (only in dev, skip when Detox disables background services)
-      if (__DEV__ && !detoxBackgroundServicesDisabledRef.current) {
+      if (__DEV__ && !detoxDisabled) {
         MemoryMonitor.start(10000); // Sample every 10 seconds
       }
 
@@ -158,11 +168,11 @@ const App = () => {
 
     return () => {
       // Cleanup memory monitor on unmount
-      if (__DEV__ && !detoxBackgroundServicesDisabledRef.current) {
+      if (__DEV__ && !detoxDisabled) {
         MemoryMonitor.stop();
       }
       // Cleanup native performance observers
-      if (!detoxBackgroundServicesDisabledRef.current) {
+      if (!detoxDisabled) {
         NativePerformanceService.cleanup();
       }
       // Cleanup AppState token refresh listener

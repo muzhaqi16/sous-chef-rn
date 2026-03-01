@@ -29,6 +29,7 @@ import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
 import { ImageUploadPurpose } from '#generated';
 import { errorService } from '#/services/errorService';
+import { executeWithLoadingState, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
@@ -40,6 +41,33 @@ const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
 
 const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.6, 250);
+
+/** Module-level function for camera permission request.
+ *  Extracted to avoid try-catch with conditional inside component body (React Compiler bailout). */
+async function requestCameraAndLaunch(
+  handleImageResponse: (response: ImagePickerResponse) => void,
+): Promise<void> {
+  const permission = Platform.OS === 'ios' ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.ANDROID.CAMERA;
+  const result = await request(permission);
+  if (result === RESULTS.GRANTED) {
+    launchCamera(DEFAULT_OPTIONS, handleImageResponse);
+  } else if (result === RESULTS.DENIED) {
+    Alert.alert(
+      'Camera Permission Denied',
+      'Camera permission is required to take photos. Please enable it in your device settings.',
+    );
+  } else if (result === RESULTS.BLOCKED) {
+    Alert.alert(
+      'Camera Permission Blocked',
+      'Camera access is blocked. Please go to Settings > Apps > Sous Chef > Permissions to enable camera access.',
+    );
+  } else {
+    Alert.alert(
+      'Camera Permission',
+      'Camera permission is required to take photos. Please enable it in your device settings.',
+    );
+  }
+}
 
 export const ProfilePhotoUploadScreen: React.FC = () => {
   const { navigation, goBack } = useSafeNavigation();
@@ -100,40 +128,17 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
     }
   };
 
-  const handleTakePhoto = async () => {
-    try {
-      const result = await request(
-        Platform.OS === 'ios' ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.ANDROID.CAMERA,
-      );
-      if (result === RESULTS.GRANTED) {
-        launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-      } else if (result === RESULTS.DENIED) {
-        // PERFORMANCE: Specific error message - permission denied
+  const handleTakePhoto = () => {
+    executeMutationWithErrorHandler(
+      () => requestCameraAndLaunch(handleImageResponse),
+      (error) => {
+        errorService.reportError(error, { operation: 'ProfilePhotoUpload.cameraPermission' });
         Alert.alert(
-          'Camera Permission Denied',
-          'Camera permission is required to take photos. Please enable it in your device settings.',
+          'Permission Error',
+          'Failed to request camera permission. Please try again or check your device settings.',
         );
-      } else if (result === RESULTS.BLOCKED) {
-        // PERFORMANCE: Specific error message - permission permanently blocked
-        Alert.alert(
-          'Camera Permission Blocked',
-          'Camera access is blocked. Please go to Settings > Apps > Sous Chef > Permissions to enable camera access.',
-        );
-      } else {
-        // PERFORMANCE: Specific error message - other permission states
-        Alert.alert(
-          'Camera Permission',
-          'Camera permission is required to take photos. Please enable it in your device settings.',
-        );
-      }
-    } catch (error) {
-      errorService.reportError(error, { operation: 'ProfilePhotoUpload.cameraPermission' });
-      // PERFORMANCE: Specific error message - permission request failed
-      Alert.alert(
-        'Permission Error',
-        'Failed to request camera permission. Please try again or check your device settings.',
-      );
-    }
+      },
+    );
   };
 
   const handleSelectPhoto = () => {
@@ -150,32 +155,32 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
     );
   };
 
-  const handleUpload = async () => {
+  const handleUpload = () => {
     const imageToUpload = croppedImage || selectedImage;
     if (!imageToUpload) return;
 
-    setIsUploading(true);
+    executeWithLoadingState(
+      async () => {
+        const imageUrl = await uploadProfileImage(
+          imageToUpload,
+          ImageUploadPurpose.ProfileAvatar,
+          {
+            onError: (error: Error) => {
+              Alert.alert('Upload Failed', error.message);
+            } },
+        );
 
-    try {
-      const imageUrl = await uploadProfileImage(
-        imageToUpload,
-        ImageUploadPurpose.ProfileAvatar,
-        {
-          onError: (error: Error) => {
-            Alert.alert('Upload Failed', error.message);
-          } },
-      );
-
-      if (imageUrl) {
-        // Update the profile avatar URL in the database
-        await updateProfileAvatarUrl(imageUrl);
-        goBack();
-      }
-    } catch {
-      Alert.alert('Upload Failed', 'Failed to update profile photo');
-    } finally {
-      setIsUploading(false);
-    }
+        if (imageUrl) {
+          // Update the profile avatar URL in the database
+          await updateProfileAvatarUrl(imageUrl);
+          goBack();
+        }
+      },
+      setIsUploading,
+      () => {
+        Alert.alert('Upload Failed', 'Failed to update profile photo');
+      },
+    );
   };
 
   const handleRetake = () => {

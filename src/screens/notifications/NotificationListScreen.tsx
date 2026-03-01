@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, SectionList, RefreshControl } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
@@ -35,21 +35,11 @@ export const NotificationListScreen: React.FC = () => {
 
   // Initialize real-time notifications (already handled by consolidated useNotifications)
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     setIsRefreshing(true);
-    // Add server sync logic here if needed
-    refreshTimeoutRef.current = setTimeout(() => setIsRefreshing(false), 1000);
+    // Notifications are Zustand-based with no network refetch needed
+    requestAnimationFrame(() => setIsRefreshing(false));
   };
 
   // Filter notifications based on selected category

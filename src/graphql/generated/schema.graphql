@@ -2645,10 +2645,14 @@ type ImageDeletionResult implements MutationPayload {
 }
 
 input ImageInput {
+  featured: Boolean
   format: String
+  hash: String
   height: Int
   isPrimary: Boolean
   kind: ImageKind
+  perspective: String
+  source: String
   url: String!
   width: Int
 }
@@ -4242,7 +4246,7 @@ type Mutation {
   in the background. Use adminGetImageDeletionJobStatus to check progress.
   
   This endpoint is designed for admin panel use after duplicate detection.
-  It removes the specified images from storage and cleans up Item.images arrays.
+  It removes the specified images from storage and deletes the corresponding ItemImage records.
   """
   adminDeleteImages(input: AdminDeleteImagesInput!): ImageDeletionResult!
   """Delete a user's account as an administrator."""

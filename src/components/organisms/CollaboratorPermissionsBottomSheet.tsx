@@ -18,6 +18,7 @@ import {
   CollaboratorRole,
   useUpdateCollaboratorRoleMutation,
 } from '#generated';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 // Define permissions for each role
 const ROLE_PERMISSIONS: Record<
@@ -163,7 +164,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     },
   }));
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!collaborator || !selectedRole || !collaborator.collaboratorId) {
       Alert.alert('Error', 'Missing required information');
       return;
@@ -175,28 +176,29 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      await updateRole({
-        variables: {
-          input: {
-            shoppingListId,
-            collaboratorId: collaborator.collaboratorId,
-            role: selectedRole,
+    executeWithLoadingState(
+      async () => {
+        await updateRole({
+          variables: {
+            input: {
+              shoppingListId,
+              collaboratorId: collaborator.collaboratorId,
+              role: selectedRole,
+            },
           },
-        },
-      });
+        });
 
-      bottomSheetRef.current?.close();
-      onSuccess?.();
-    } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error?.message || 'Failed to update collaborator role',
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+        bottomSheetRef.current?.close();
+        onSuccess?.();
+      },
+      setIsSubmitting,
+      (error: unknown) => {
+        Alert.alert(
+          'Error',
+          (error as any)?.message || 'Failed to update collaborator role',
+        );
+      },
+    );
   };
 
   const handleClose = () => {

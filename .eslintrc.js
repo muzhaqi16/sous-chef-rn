@@ -2,7 +2,7 @@ module.exports = {
   root: true,
   extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
   plugins: ['no-barrel-files', 'react-compiler'],
-  ignorePatterns: ['e2e/**/*'],
+  ignorePatterns: ['e2e/**/*', 'src/graphql/generated/**/*'],
   env: {
     jest: true,
   },
@@ -30,6 +30,14 @@ module.exports = {
     // Detect React Compiler bail-outs at lint time
     // Warn level — existing eslint-disable comments cause bail-outs in a few files
     'react-compiler/react-compiler': 'warn',
+
+    // Surface silent compiler bailouts (try/finally, unsupported syntax).
+    // The react-compiler rule has a known bug where it silently stops reporting
+    // ALL diagnostics when it encounters unsupported syntax, producing zero
+    // warnings instead of flagging the bailout. This rule catches those cases.
+    // See: https://github.com/facebook/react/issues/35644
+    // Fix bailouts using helpers from src/utils/compilerSafeWrappers.ts
+    'react-hooks/todo': 'warn',
 
     // Enforce StyleSheet from react-native-unistyles instead of react-native
     // Prevent useMemo/useCallback — React Compiler handles memoization automatically

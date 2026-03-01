@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useRoute } from '@react-navigation/native';
+
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useDefaultHome } from '#hooks/home/useDefaultHome';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
@@ -258,11 +259,9 @@ export function useRecipeSearch() {
     await executeIngredientSearch(ingredientString, activeFilters, excludedIngredients, setLoading, setSearchPerformed, setSearchResults);
   };
 
+  const hasPantryItems = (pantryItems?.length ?? 0) > 0;
+
   const openIngredientSelector = () => {
-    if (!pantryItems || pantryItems.length === 0) {
-      Alert.alert('No Pantry Items', 'Add items to your pantry first to search by ingredients.');
-      return;
-    }
     ingredientSheetRef.current?.present();
   };
 
@@ -344,6 +343,7 @@ export function useRecipeSearch() {
     clearFilters,
     applyFilters,
     activeFilterCount,
+    hasPantryItems,
     items,
     handleItemPress };
 }

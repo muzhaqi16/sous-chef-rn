@@ -20,6 +20,7 @@ import {
   MyShoppingListInvitesQuery,
 } from '#generated';
 import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
+import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 
 export interface InvitationData {
   type: 'HOME_INVITE' | 'SHOPPING_LIST_INVITE';
@@ -71,97 +72,100 @@ export const InvitationAcceptanceModal: React.FC<
   });
   const [declineShoppingListInvite] = useDeclineShoppingListInviteMutation();
 
-  const handleAccept = async () => {
+  const handleAccept = () => {
     if (!invitation) return;
 
     setAccepting(true);
-    try {
-      let token = invitation.token;
+    executeAsyncWithCleanup(
+      async () => {
+        let token = invitation.token;
 
-      // Fallback: Fetch token if missing (real-time notifications may not include it)
-      if (!token && invitation.type === 'SHOPPING_LIST_INVITE') {
-        const result = await client.query<MyShoppingListInvitesQuery>({
-          query: MyShoppingListInvitesDocument,
-          fetchPolicy: 'network-only',
-        });
-        const invites = result.data?.me?.pendingCollaborationInvites;
-        const invite = invites?.find(
-          inv => inv.id === invitation.payload?.inviteId,
-        );
-        token = invite?.token ?? undefined;
-      }
+        // Fallback: Fetch token if missing (real-time notifications may not include it)
+        if (!token && invitation.type === 'SHOPPING_LIST_INVITE') {
+          const result = await client.query<MyShoppingListInvitesQuery>({
+            query: MyShoppingListInvitesDocument,
+            fetchPolicy: 'network-only',
+          });
+          const invites = result.data?.me?.pendingCollaborationInvites;
+          const invite = invites?.find(
+            inv => inv.id === invitation.payload?.inviteId,
+          );
+          token = invite?.token ?? undefined;
+        }
 
-      if (!token) {
+        if (!token) {
+          onClose();
+          toastService.error('Unable to find invitation. It may have expired or been cancelled.');
+          setAccepting(false);
+          return;
+        }
+
+        if (invitation.type === 'HOME_INVITE') {
+          const result = await acceptHomeInvite({
+            variables: {
+              token: token!,
+            },
+          });
+
+          // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
+          if (result.error) {
+            const errorMessage = result.error.message;
+            onClose();
+            const message = errorMessage?.includes('expired') || errorMessage?.includes('Invalid')
+              ? 'This invitation is no longer valid. It may have expired or already been used.'
+              : errorMessage || 'Failed to accept invitation. Please try again.';
+            toastService.error(message);
+            return;
+          }
+
+          if (result.data?.acceptHomeInvite?.membership) {
+            const newHomeId = result.data.acceptHomeInvite.membership.homeId;
+
+            // Pass the homeId to the handler so it can update the store
+            const invitationWithHomeId = {
+              ...invitation,
+              acceptedHomeId: newHomeId,
+            };
+
+            onAccept?.(invitationWithHomeId);
+            onClose();
+          }
+        } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
+          const result = await acceptShoppingListInvite({
+            variables: {
+              token: token!,
+            },
+          });
+
+          // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
+          if (result.error) {
+            const errorMessage = result.error.message;
+            onClose();
+            const message = errorMessage?.includes('expired') || errorMessage?.includes('Invalid')
+              ? 'This invitation is no longer valid. It may have expired or already been used.'
+              : errorMessage || 'Failed to accept invitation. Please try again.';
+            toastService.error(message);
+            return;
+          }
+
+          if (result.data?.acceptShoppingListInvite?.success) {
+            onAccept?.(invitation);
+            onClose();
+          }
+        }
+      },
+      () => setAccepting(false),
+      (error: unknown) => {
+        // Close modal immediately to prevent stale UI
         onClose();
-        toastService.error('Unable to find invitation. It may have expired or been cancelled.');
-        setAccepting(false);
-        return;
-      }
-
-      if (invitation.type === 'HOME_INVITE') {
-        const result = await acceptHomeInvite({
-          variables: {
-            token: token!,
-          },
-        });
-
-        // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
-        if (result.error) {
-          const errorMessage = result.error.message;
-          onClose();
-          const message = errorMessage?.includes('expired') || errorMessage?.includes('Invalid')
-            ? 'This invitation is no longer valid. It may have expired or already been used.'
-            : errorMessage || 'Failed to accept invitation. Please try again.';
-          toastService.error(message);
-          return;
-        }
-
-        if (result.data?.acceptHomeInvite?.membership) {
-          const newHomeId = result.data.acceptHomeInvite.membership.homeId;
-
-          // Pass the homeId to the handler so it can update the store
-          const invitationWithHomeId = {
-            ...invitation,
-            acceptedHomeId: newHomeId,
-          };
-
-          onAccept?.(invitationWithHomeId);
-          onClose();
-        }
-      } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
-        const result = await acceptShoppingListInvite({
-          variables: {
-            token: token!,
-          },
-        });
-
-        // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
-        if (result.error) {
-          const errorMessage = result.error.message;
-          onClose();
-          const message = errorMessage?.includes('expired') || errorMessage?.includes('Invalid')
-            ? 'This invitation is no longer valid. It may have expired or already been used.'
-            : errorMessage || 'Failed to accept invitation. Please try again.';
-          toastService.error(message);
-          return;
-        }
-
-        if (result.data?.acceptShoppingListInvite?.success) {
-          onAccept?.(invitation);
-          onClose();
-        }
-      }
-    } catch (error: any) {
-      // Close modal immediately to prevent stale UI
-      onClose();
-      // Show non-blocking toast with contextual message
-      const message = error.message?.includes('expired') || error.message?.includes('Invalid')
-        ? 'This invitation is no longer valid. It may have expired or already been used.'
-        : error.message || 'Failed to accept invitation. Please try again.';
-      toastService.error(message);
-    } finally {
-      setAccepting(false);
-    }
+        // Show non-blocking toast with contextual message
+        const err = error as any;
+        const message = err.message?.includes('expired') || err.message?.includes('Invalid')
+          ? 'This invitation is no longer valid. It may have expired or already been used.'
+          : err.message || 'Failed to accept invitation. Please try again.';
+        toastService.error(message);
+      },
+    );
   };
 
   const handleReject = async () => {
@@ -176,101 +180,104 @@ export const InvitationAcceptanceModal: React.FC<
         {
           text: 'Decline',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
             setRejecting(true);
-            try {
-              let token = invitation.token;
+            executeAsyncWithCleanup(
+              async () => {
+                let token = invitation.token;
 
-              // Fallback: Fetch token if missing (real-time notifications may not include it)
-              if (!token && invitation.type === 'SHOPPING_LIST_INVITE') {
-                const result = await client.query<MyShoppingListInvitesQuery>({
-                  query: MyShoppingListInvitesDocument,
-                  fetchPolicy: 'network-only',
-                });
-                const invites = result.data?.me?.pendingCollaborationInvites;
-                const invite = invites?.find(
-                  inv => inv.id === invitation.payload?.inviteId,
-                );
-                token = invite?.token ?? undefined;
-              }
+                // Fallback: Fetch token if missing (real-time notifications may not include it)
+                if (!token && invitation.type === 'SHOPPING_LIST_INVITE') {
+                  const result = await client.query<MyShoppingListInvitesQuery>({
+                    query: MyShoppingListInvitesDocument,
+                    fetchPolicy: 'network-only',
+                  });
+                  const invites = result.data?.me?.pendingCollaborationInvites;
+                  const invite = invites?.find(
+                    inv => inv.id === invitation.payload?.inviteId,
+                  );
+                  token = invite?.token ?? undefined;
+                }
 
-              if (!token) {
+                if (!token) {
+                  onClose();
+                  toastService.error('Unable to find invitation. It may have expired or been cancelled.');
+                  setRejecting(false);
+                  return;
+                }
+
+                if (invitation.type === 'HOME_INVITE') {
+                  const result = await declineHomeInvite({
+                    variables: {token: token!},
+                  });
+
+                  // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
+                  if (result.error) {
+                    const errorMessage = result.error.message;
+                    onClose();
+                    const message = errorMessage?.includes('expired') || errorMessage?.includes('Invalid')
+                      ? 'This invitation is no longer valid. It may have expired or already been used.'
+                      : errorMessage || 'Failed to decline invitation. Please try again.';
+                    toastService.error(message);
+                    return;
+                  }
+
+                  Alert.alert(
+                    'Invitation Declined',
+                    `You have declined the invitation to ${invitation.entityName}`,
+                    [
+                      {
+                        text: 'OK',
+                        onPress: () => {
+                          onReject?.(invitation);
+                          onClose();
+                        },
+                      },
+                    ],
+                  );
+                } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
+                  const result = await declineShoppingListInvite({
+                    variables: {token: token!},
+                  });
+
+                  // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
+                  if (result.error) {
+                    const errorMessage = result.error.message;
+                    onClose();
+                    const message = errorMessage?.includes('expired') || errorMessage?.includes('Invalid')
+                      ? 'This invitation is no longer valid. It may have expired or already been used.'
+                      : errorMessage || 'Failed to decline invitation. Please try again.';
+                    toastService.error(message);
+                    return;
+                  }
+
+                  Alert.alert(
+                    'Invitation Declined',
+                    `You have declined the invitation to ${invitation.entityName}`,
+                    [
+                      {
+                        text: 'OK',
+                        onPress: () => {
+                          onReject?.(invitation);
+                          onClose();
+                        },
+                      },
+                    ],
+                  );
+                }
+              },
+              () => setRejecting(false),
+              (error: unknown) => {
+                // Close modal immediately to prevent stale UI
                 onClose();
-                toastService.error('Unable to find invitation. It may have expired or been cancelled.');
-                setRejecting(false);
-                return;
-              }
-
-              if (invitation.type === 'HOME_INVITE') {
-                const result = await declineHomeInvite({
-                  variables: {token: token!},
-                });
-
-                // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
-                if (result.error) {
-                  const errorMessage = result.error.message;
-                  onClose();
-                  const message = errorMessage?.includes('expired') || errorMessage?.includes('Invalid')
-                    ? 'This invitation is no longer valid. It may have expired or already been used.'
-                    : errorMessage || 'Failed to decline invitation. Please try again.';
-                  toastService.error(message);
-                  return;
-                }
-
-                Alert.alert(
-                  'Invitation Declined',
-                  `You have declined the invitation to ${invitation.entityName}`,
-                  [
-                    {
-                      text: 'OK',
-                      onPress: () => {
-                        onReject?.(invitation);
-                        onClose();
-                      },
-                    },
-                  ],
-                );
-              } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
-                const result = await declineShoppingListInvite({
-                  variables: {token: token!},
-                });
-
-                // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
-                if (result.error) {
-                  const errorMessage = result.error.message;
-                  onClose();
-                  const message = errorMessage?.includes('expired') || errorMessage?.includes('Invalid')
-                    ? 'This invitation is no longer valid. It may have expired or already been used.'
-                    : errorMessage || 'Failed to decline invitation. Please try again.';
-                  toastService.error(message);
-                  return;
-                }
-
-                Alert.alert(
-                  'Invitation Declined',
-                  `You have declined the invitation to ${invitation.entityName}`,
-                  [
-                    {
-                      text: 'OK',
-                      onPress: () => {
-                        onReject?.(invitation);
-                        onClose();
-                      },
-                    },
-                  ],
-                );
-              }
-            } catch (error: any) {
-              // Close modal immediately to prevent stale UI
-              onClose();
-              // Show non-blocking toast with contextual message
-              const message = error.message?.includes('expired') || error.message?.includes('Invalid')
-                ? 'This invitation is no longer valid. It may have expired or already been used.'
-                : error.message || 'Failed to decline invitation. Please try again.';
-              toastService.error(message);
-            } finally {
-              setRejecting(false);
-            }
+                // Show non-blocking toast with contextual message
+                const err = error as any;
+                const message = err.message?.includes('expired') || err.message?.includes('Invalid')
+                  ? 'This invitation is no longer valid. It may have expired or already been used.'
+                  : err.message || 'Failed to decline invitation. Please try again.';
+                toastService.error(message);
+              },
+            );
           },
         },
       ],

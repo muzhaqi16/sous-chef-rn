@@ -86,6 +86,7 @@ export const RecipeSearch: React.FC = () => {
     ingredientSheetRef,
     filterSheetRef,
     pantryItems,
+    hasPantryItems,
     handleTextSearch,
     handleIngredientSearch,
     openIngredientSelector,
@@ -125,12 +126,12 @@ export const RecipeSearch: React.FC = () => {
 
   // Search bar right actions
   const searchBarRightActions = [
-        {
-          icon: 'restaurant',
+        ...(hasPantryItems ? [{
+          icon: 'restaurant' as const,
           onPress: openIngredientSelector,
           color: selectedIngredients.size > 0 ? theme.colors.white : theme.colors.primary,
           backgroundColor: selectedIngredients.size > 0 ? theme.colors.primary : theme.colors.surface,
-          badge: selectedIngredients.size > 0 ? String(selectedIngredients.size) : undefined },
+          badge: selectedIngredients.size > 0 ? String(selectedIngredients.size) : undefined }] : []),
         {
           icon: 'options',
           onPress: openFilterSheet,
@@ -150,12 +151,14 @@ export const RecipeSearch: React.FC = () => {
         icon: 'search-off',
         title: 'No recipes found',
         description: 'Try a different search term or different ingredients',
-        action: { label: 'Search by Ingredients', onPress: openIngredientSelector } }
+        ...(hasPantryItems && { action: { label: 'Search by Ingredients', onPress: openIngredientSelector } }) }
     : {
         icon: 'search',
         title: 'Search for Recipes',
-        description: 'Enter a search term or select pantry ingredients',
-        action: { label: 'Search by Ingredients', onPress: openIngredientSelector } };
+        description: hasPantryItems
+          ? 'Enter a search term or select pantry ingredients'
+          : 'Enter a search term to find recipes',
+        ...(hasPantryItems && { action: { label: 'Search by Ingredients', onPress: openIngredientSelector } }) };
 
   return (
     <View style={styles.container} testID="recipe-search-screen">

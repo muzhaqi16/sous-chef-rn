@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, ActivityIndicator } from 'react-native';
+import { Text, View } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
@@ -22,6 +22,60 @@ import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigati
 import { createShoppingListSchema } from '#utils/validation/onboarding';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { SousChefLoader } from '#/components/base/SousChefLoader';
+
+/** Module-level async function for shopping list creation.
+ *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
+async function performCreateShoppingList(
+  data: { shoppingListName: string },
+  createShoppingList: (opts: { variables: any }) => Promise<any>,
+  selectedHomeId: string | null,
+  setSelectedShoppingListId: (id: string) => void,
+  navigateToNextStep: (step: string) => void,
+): Promise<void> {
+  const response = await createShoppingList({
+    variables: {
+      input: {
+        name: data.shoppingListName.trim(),
+        description: 'Created during onboarding',
+        isDefault: true,
+        tags: ['onboarding', 'groceries'],
+        homeId: selectedHomeId || undefined,
+      },
+    },
+  });
+
+  console.log('CreateShoppingList response:', response);
+
+  if (response.error) {
+    errorService.reportError(response.error, { operation: 'CreateShoppingList.graphqlError' });
+    throw new Error(response.error.message);
+  }
+
+  const payload = response.data?.createShoppingList;
+
+  if (payload?.success) {
+    if (payload.shoppingList) {
+      setSelectedShoppingListId(payload.shoppingList.id);
+    }
+    navigateToNextStep('CreateShoppingList');
+  } else {
+    throw new Error(payload?.message || 'Failed to create shopping list');
+  }
+}
+
+/** Module-level helper to sync existing list state */
+function syncExistingListState(
+  existingList: { id: string } | undefined,
+  setSelectedShoppingListId: (id: string) => void,
+  setCheckingExisting: (v: boolean) => void,
+) {
+  if (existingList) {
+    setSelectedShoppingListId(existingList.id);
+  }
+  setCheckingExisting(false);
+}
 
 type FormValues = {
   shoppingListName: string;
@@ -66,81 +120,31 @@ export const CreateShoppingListScreen = () => {
 
   // Check existing lists
   useEffect(() => {
-    let isMounted = true;
+    if (listsLoading || !user?.id) return;
 
-    const checkExistingLists = async () => {
-      if (listsLoading || !user?.id) return;
-
-      try {
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        if (!isMounted) return;
-
-        // If list exists, set it as selected
-        if (existingList) {
-          setSelectedShoppingListId(existingList.id);
-        }
-
-        if (isMounted) {
-          setCheckingExisting(false);
-        }
-      } catch {
-        if (isMounted) {
-          setCheckingExisting(false);
-        }
-      }
-    };
-
-    checkExistingLists();
-
-    return () => {
-      isMounted = false;
-    };
+    syncExistingListState(existingList, setSelectedShoppingListId, setCheckingExisting);
   }, [listsLoading, user?.id, existingList, setSelectedShoppingListId]);
 
   // Submit handler - creates new list
-  const onSubmit = async (data: FormValues) => {
-    setIsCreating(true);
+  const onSubmit = (data: FormValues) => {
     setGraphqlError(null);
 
-    try {
-      const response = await createShoppingList({
-        variables: {
-          input: {
-            name: data.shoppingListName.trim(),
-            description: 'Created during onboarding',
-            isDefault: true,
-            tags: ['onboarding', 'groceries'],
-            homeId: selectedHomeId || undefined,
-          },
-        },
-      });
-
-      console.log('CreateShoppingList response:', response);
-
-      if (response.error) {
-        errorService.reportError(response.error, { operation: 'CreateShoppingList.graphqlError' });
-        throw new Error(response.error.message);
-      }
-
-      const payload = response.data?.createShoppingList;
-
-      if (payload?.success) {
-        if (payload.shoppingList) {
-          setSelectedShoppingListId(payload.shoppingList.id);
-        }
-        navigateToNextStep('CreateShoppingList');
-      } else {
-        throw new Error(payload?.message || 'Failed to create shopping list');
-      }
-    } catch (error: any) {
-      errorService.reportError(error, { operation: 'CreateShoppingList.submit' });
-      setGraphqlError(
-        error.message || 'An error occurred while creating the list.',
-      );
-    } finally {
-      setIsCreating(false);
-    }
+    executeWithLoadingState(
+      () => performCreateShoppingList(
+        data,
+        createShoppingList,
+        selectedHomeId,
+        setSelectedShoppingListId,
+        navigateToNextStep,
+      ),
+      setIsCreating,
+      (error: unknown) => {
+        errorService.reportError(error, { operation: 'CreateShoppingList.submit' });
+        setGraphqlError(
+          (error as any)?.message || 'An error occurred while creating the list.',
+        );
+      },
+    );
   };
 
   // Loading state
@@ -154,13 +158,7 @@ export const CreateShoppingListScreen = () => {
         onSkip={() => skipToStep('SelectPantryItems')}
       >
         <View style={styles.loadingContainer}>
-          <ActivityIndicator
-            size="large"
-            color={styles.loadingIndicator.color}
-          />
-          <Text style={styles.loadingText}>
-            Checking your shopping lists...
-          </Text>
+          <SousChefLoader size="small" showBrand={false} message="Checking your shopping lists..." />
         </View>
       </OnBoardingWrapper>
     );
@@ -248,14 +246,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: theme.spacing['2xl'],
-  },
-  loadingIndicator: {
-    color: theme.colors.primary,
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary,
   },
   existingResourcesContainer: {
     marginVertical: theme.spacing.lg,

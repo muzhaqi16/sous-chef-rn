@@ -8,7 +8,7 @@ import Animated, {
   FadeOut } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { SPRING } from '#/constants/animations';
+import { SPRING, TIMING } from '#/constants/animations';
 import type { SortableShoppingListItem } from '../organisms/SortableShoppingList/types';
 import { SortableShoppingList } from '../organisms/SortableShoppingList/SortableList';
 
@@ -173,8 +173,8 @@ export const CollapsiblePurchasedSection: React.FC<
       {/* Expanded List */}
       {!!expanded && (
         <Animated.View
-          entering={FadeIn.duration(200)}
-          exiting={FadeOut.duration(150)}
+          entering={FadeIn.duration(TIMING.STANDARD)}
+          exiting={FadeOut.duration(TIMING.FAST)}
         >
           <SortableShoppingList
             items={purchasedItems}

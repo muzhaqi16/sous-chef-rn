@@ -3,6 +3,7 @@ import { View, Text, Pressable, Modal } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { useAuth } from '#hooks/auth/useAuth';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 interface PostLoginBiometricPromptProps {
   visible: boolean;
@@ -38,26 +39,26 @@ export const PostLoginBiometricPrompt = ({
     }
   }, [visible, getBiometricInfo]);
 
-  const handleEnableNow = async () => {
+  const handleEnableNow = () => {
     if (isEnabling) return;
 
-    try {
-      setIsEnabling(true);
+    executeWithLoadingState(
+      async () => {
+        if (!userEmail || !userPassword) {
+          console.error('Missing credentials for biometric setup');
+          onComplete(false);
+          return;
+        }
 
-      if (!userEmail || !userPassword) {
-        console.error('Missing credentials for biometric setup');
+        const success = await storeCredentials(userEmail, userPassword);
+        onComplete(success);
+      },
+      setIsEnabling,
+      (error) => {
+        console.error('Error enabling biometric authentication:', error);
         onComplete(false);
-        return;
-      }
-
-      const success = await storeCredentials(userEmail, userPassword);
-      onComplete(success);
-    } catch (error) {
-      console.error('Error enabling biometric authentication:', error);
-      onComplete(false);
-    } finally {
-      setIsEnabling(false);
-    }
+      },
+    );
   };
 
   const handleDecline = () => {

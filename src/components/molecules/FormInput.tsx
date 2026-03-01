@@ -3,6 +3,7 @@ import { TextInput, TextInputProps, ViewStyle } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
+import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 
 interface FormInputProps extends Omit<TextInputProps, 'style'> {
   label: string;
@@ -27,7 +28,8 @@ export const FormInput: React.FC<FormInputProps> = ({
   useBottomSheetInput = false,
   ...textInputProps
 }) => {
-  const InputComponent = useBottomSheetInput ? BottomSheetTextInput : TextInput;
+  const contextValue = useIsBottomSheetInput();
+  const InputComponent = (useBottomSheetInput || contextValue) ? BottomSheetTextInput : TextInput;
   const { theme } = useUnistyles();
 
   // Generate accessibility label with required indicator if needed

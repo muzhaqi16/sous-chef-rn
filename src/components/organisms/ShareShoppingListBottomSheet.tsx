@@ -10,6 +10,7 @@ import {
   CollaboratorRole,
 } from '../../graphql/generated';
 import { useOfflineDisabled } from '#hooks/useOfflineDisabled';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 const ShareShoppingListBottomSheet: React.FC = () => {
   const bottomSheetRef = useRef<BottomSheetRef>(null);
@@ -29,26 +30,29 @@ const ShareShoppingListBottomSheet: React.FC = () => {
     bottomSheetRef.current?.expand();
   };
 
-  const handleShare = async () => {
+  const handleShare = () => {
     if (!shoppingListId || !email.trim()) {
       return;
     }
-    try {
-      await shareShoppingList({
-        variables: {
-          input: {
-            shoppingListId,
-            email: email.trim(),
-            role: CollaboratorRole.Viewer, // Assuming you want to set this as collaborator
+    executeMutationWithErrorHandler(
+      async () => {
+        await shareShoppingList({
+          variables: {
+            input: {
+              shoppingListId,
+              email: email.trim(),
+              role: CollaboratorRole.Viewer, // Assuming you want to set this as collaborator
+            },
           },
-        },
-      });
-      bottomSheetRef.current?.close();
-      setEmail('');
-      setError(null);
-    } catch (e: any) {
-      setError(e.message);
-    }
+        });
+        bottomSheetRef.current?.close();
+        setEmail('');
+        setError(null);
+      },
+      (e: unknown) => {
+        setError((e as any).message);
+      },
+    );
   };
 
   return (
