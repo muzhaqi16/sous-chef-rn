@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { object, string, ref } from 'yup';
@@ -18,6 +18,41 @@ import { useResetPasswordMutation } from '#generated';
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import type { ToastFn } from '#/components/atoms/Toast';
+
+/** Module-level async function for password reset submission.
+ *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
+async function performPasswordReset(
+  token: string,
+  newPassword: string,
+  resetPassword: (opts: { variables: { token: string; newPassword: string } }) => Promise<any>,
+  toast: ToastFn,
+  navigateToLogin: () => void,
+): Promise<void> {
+  logger.info('Attempting password reset', {
+    tokenPrefix: token.substring(0, 8) + '...',
+  });
+
+  const result = await resetPassword({
+    variables: { token, newPassword },
+  });
+
+  if (result.data?.resetPassword?.success) {
+    logger.info('Password reset successful');
+
+    toast({
+      message: 'Password reset successfully! Please sign in with your new password.',
+      type: 'success',
+    });
+
+    setTimeout(() => {
+      navigateToLogin();
+    }, 1500);
+  } else {
+    throw new Error(result.data?.resetPassword?.message || 'Password reset failed');
+  }
+}
 
 interface ResetPasswordRouteParams {
   token: string;
@@ -53,7 +88,8 @@ export const ResetPasswordScreen: React.FC = () => {
 
   const [resetPassword] = useResetPasswordMutation();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isTokenValid, setIsTokenValid] = useState(true);
+  const hasValidTokenFormat = !!token && token.length >= 10;
+  const [isTokenRejected, setIsTokenRejected] = useState(false);
 
   const form = useForm<ResetPasswordForm>({
     resolver: yupResolver(resetPasswordSchema),
@@ -63,17 +99,14 @@ export const ResetPasswordScreen: React.FC = () => {
     },
   });
 
+  const watchedValues = useWatch({ control: form.control });
+
   useEffect(() => {
     // Clear any existing auth state when entering password reset
     clearAuth();
-
-    // Validate token format (basic check)
-    if (!token || token.length < 10) {
-      setIsTokenValid(false);
-    }
   }, [token, clearAuth]);
 
-  const onSubmit = async (data: ResetPasswordForm) => {
+  const onSubmit = (data: ResetPasswordForm) => {
     if (!token) {
       toast({
         message: 'Invalid reset token',
@@ -82,53 +115,30 @@ export const ResetPasswordScreen: React.FC = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    executeWithLoadingState(
+      () => performPasswordReset(
+        token,
+        data.newPassword,
+        resetPassword,
+        toast,
+        navigateToLogin,
+      ),
+      setIsSubmitting,
+      (error: unknown) => {
+        logger.error('Password reset failed', { error });
 
-    try {
-      logger.info('Attempting password reset', {
-        tokenPrefix: token.substring(0, 8) + '...'
-      });
-
-      const result = await resetPassword({
-        variables: {
-          token,
-          newPassword: data.newPassword,
-        },
-      });
-
-      if (result.data?.resetPassword?.success) {
-        logger.info('Password reset successful');
+        const errorMessage = (error as any)?.message || 'Failed to reset password. The link may be expired or invalid.';
 
         toast({
-          message: 'Password reset successfully! Please sign in with your new password.',
-          type: 'success',
+          message: errorMessage,
+          type: 'error',
         });
 
-        // Navigate to login screen after a short delay
-        setTimeout(() => {
-          navigateToLogin();
-        }, 1500);
-
-      } else {
-        throw new Error(result.data?.resetPassword?.message || 'Password reset failed');
-      }
-    } catch (error: any) {
-      logger.error('Password reset failed', { error });
-
-      const errorMessage = error.message || 'Failed to reset password. The link may be expired or invalid.';
-
-      toast({
-        message: errorMessage,
-        type: 'error',
-      });
-
-      // If token is invalid/expired, show token error state
-      if (errorMessage.toLowerCase().includes('expired') || errorMessage.toLowerCase().includes('invalid')) {
-        setIsTokenValid(false);
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+        if (errorMessage.toLowerCase().includes('expired') || errorMessage.toLowerCase().includes('invalid')) {
+          setIsTokenRejected(true);
+        }
+      },
+    );
   };
 
   const handleGoBack = () => {
@@ -139,7 +149,7 @@ export const ResetPasswordScreen: React.FC = () => {
     navigateToLogin();
   };
 
-  if (!isTokenValid) {
+  if (!hasValidTokenFormat || isTokenRejected) {
     return (
       <View style={styles.container}>
         <Header onClose={handleGoBack} />
@@ -182,7 +192,7 @@ export const ResetPasswordScreen: React.FC = () => {
           <View style={styles.field}>
             <Text style={styles.label}>New Password</Text>
             <PasswordInput
-              value={form.watch('newPassword')}
+              value={watchedValues.newPassword}
               onChangeText={(text) => form.setValue('newPassword', text)}
               placeholder="Enter your new password"
               errorMessage={form.formState.errors.newPassword?.message}
@@ -192,7 +202,7 @@ export const ResetPasswordScreen: React.FC = () => {
           <View style={styles.field}>
             <Text style={styles.label}>Confirm Password</Text>
             <PasswordInput
-              value={form.watch('confirmPassword')}
+              value={watchedValues.confirmPassword}
               onChangeText={(text) => form.setValue('confirmPassword', text)}
               placeholder="Confirm your new password"
               errorMessage={form.formState.errors.confirmPassword?.message}

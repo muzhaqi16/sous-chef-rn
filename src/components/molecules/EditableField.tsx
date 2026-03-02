@@ -3,6 +3,7 @@ import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from './FormInput';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 interface EditableFieldProps {
   label: string;
@@ -40,7 +41,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
     setEditing(false);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     // Validate if validation function provided
     if (validation) {
       const validationError = validation(editValue);
@@ -50,17 +51,18 @@ export const EditableField: React.FC<EditableFieldProps> = ({
       }
     }
 
-    setSaving(true);
     setError(null);
 
-    try {
-      await onSave(editValue);
-      setEditing(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
-    } finally {
-      setSaving(false);
-    }
+    executeWithLoadingState(
+      async () => {
+        await onSave(editValue);
+        setEditing(false);
+      },
+      setSaving,
+      (err) => {
+        setError(err instanceof Error ? err.message : 'Failed to save');
+      },
+    );
   };
 
   if (editing) {

@@ -1,8 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonLine } from './SkeletonLine';
 import { SkeletonRectangle } from './SkeletonRectangle';
+import { ListItem } from '#/components/molecules/ListItem';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface RecipeCardSkeletonProps {
   /**
@@ -15,68 +17,32 @@ interface RecipeCardSkeletonProps {
 /**
  * Recipe Card Skeleton Component
  *
- * Matches the layout of recipe search result items:
- * - Left image (recipe photo)
- * - Title
- * - Subtitle with details (ingredients, time, servings)
- * - Optional likes badge area
+ * Matches the layout of recipe search result items rendered via ItemCard → ListItem.
+ * Wraps in ListItem for automatic style sync (height, padding, gap).
  */
 export const RecipeCardSkeleton: React.FC<RecipeCardSkeletonProps> = ({
   animated = true,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
-    <View style={styles.container}>
-      {/* Left: Recipe Image */}
-      <View style={styles.imageContainer}>
-        <SkeletonRectangle
-          width={theme.sizes.listImage.width}
-          height={theme.sizes.listImage.height}
-          borderRadius={theme.radii.md}
-          animated={animated}
-        />
-      </View>
-
-      {/* Right: Recipe Details */}
-      <View style={styles.content}>
-        {/* Recipe Title */}
-        <SkeletonLine width="85%" height={18} animated={animated} />
-
-        {/* Recipe Details (ingredients, time, servings) */}
-        <View style={styles.detailsRow}>
-          <SkeletonLine width="95%" height={14} animated={animated} />
+    <View style={[styles.wrapper, commonStyles.shadow]}>
+      <ListItem>
+        <SkeletonRectangle width={48} height={48} borderRadius={8} animated={animated} />
+        <View style={styles.content}>
+          <SkeletonLine width="85%" height={16} animated={animated} />
+          <SkeletonLine width="60%" height={14} animated={animated} />
         </View>
-
-        {/* Likes Badge Area */}
-        <View style={styles.badgeArea}>
-          <SkeletonLine width="30%" height={12} animated={animated} />
-        </View>
-      </View>
+      </ListItem>
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flexDirection: 'row',
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+  wrapper: {
     borderRadius: theme.radii.md,
-    alignItems: 'center',
-    gap: theme.spacing.md,
-  },
-  imageContainer: {
-    // Image dimensions from recipe search layout
   },
   content: {
     flex: 1,
-    gap: theme.spacing.sm,
-  },
-  detailsRow: {
-    marginTop: theme.spacing.xs,
-  },
-  badgeArea: {
-    marginTop: theme.spacing.xs,
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
   },
 }));

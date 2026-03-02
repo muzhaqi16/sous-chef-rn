@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { Text, Linking, ActivityIndicator, View } from 'react-native';
+import { Text, Linking, View } from 'react-native';
 import { GraphQLError } from 'graphql';
-import { useUnistyles } from 'react-native-unistyles';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
 import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
 import { CodeInputAdapter } from '#components/molecules/CodeInputAdapter';
@@ -10,9 +9,13 @@ import { useAppStore } from '#store/useAppStore';
 import { useToast } from '#/hooks/useToast';
 import {
   useVerifyEmailMutation,
-  useResendVerificationEmailMutation } from '#generated';
+  useResendVerificationEmailMutation,
+} from '#generated';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import type { ToastFn } from '#/components/atoms/Toast';
+import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 function extractVerificationToken(url: string): string | null {
   try {
@@ -23,6 +26,42 @@ function extractVerificationToken(url: string): string | null {
     return token;
   } catch {
     return null;
+  }
+}
+
+/** Module-level async function to handle deep link auto-verification.
+ *  Extracted from component body to avoid try-catch bailout. */
+async function performAutoVerify(
+  token: string,
+  verifyEmail: (opts: { variables: { code: string } }) => Promise<any>,
+  updateUser: (patch: { emailVerified: boolean }) => void,
+  toast: ToastFn,
+  setIsAutoVerifying: (v: boolean) => void,
+  autoVerifyProcessedRef: React.RefObject<boolean>,
+): Promise<void> {
+  try {
+    logger.info('Auto-verifying email from deep link', {
+      tokenPrefix: token.substring(0, 8) + '...',
+    });
+
+    const result = await verifyEmail({ variables: { code: token } });
+
+    if (result.data?.verifyEmail?.success) {
+      updateUser({ emailVerified: true });
+      toast({ message: 'Email verified successfully!', type: 'success' });
+    } else {
+      throw new Error(
+        result.data?.verifyEmail?.message || 'Verification failed',
+      );
+    }
+  } catch (error: any) {
+    logger.error('Auto-verify failed', { error });
+    const errorMsg =
+      error.message ||
+      'Verification failed. The link may be expired or invalid.';
+    toast({ message: errorMsg, type: 'error' });
+    setIsAutoVerifying(false);
+    autoVerifyProcessedRef.current = false;
   }
 }
 
@@ -42,7 +81,6 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
   const user = useAppStore(state => state.user);
   const updateUser = useAppStore(state => state.updateUser);
   const toast = useToast();
-  const { theme } = useUnistyles();
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
 
@@ -58,8 +96,10 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
   const {
     control,
     handleSubmit,
-    formState: { errors } } = useForm({
-    defaultValues: { code: '' } });
+    formState: { errors },
+  } = useForm({
+    defaultValues: { code: '' },
+  });
 
   // Cleanup countdown interval on unmount
   useEffect(() => {
@@ -80,27 +120,14 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
         autoVerifyProcessedRef.current = true;
         setIsAutoVerifying(true);
 
-        (async () => {
-          try {
-            logger.info('Auto-verifying email from deep link', {
-              tokenPrefix: token.substring(0, 8) + '...' });
-
-            const result = await verifyEmail({ variables: { code: token } });
-
-            if (result.data?.verifyEmail?.success) {
-              updateUser({ emailVerified: true });
-              toast({ message: 'Email verified successfully!', type: 'success' });
-            } else {
-              throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
-            }
-          } catch (error: any) {
-            logger.error('Auto-verify failed', { error });
-            const errorMsg = error.message || 'Verification failed. The link may be expired or invalid.';
-            toast({ message: errorMsg, type: 'error' });
-            setIsAutoVerifying(false);
-            autoVerifyProcessedRef.current = false;
-          }
-        })();
+        performAutoVerify(
+          token,
+          verifyEmail,
+          updateUser,
+          toast,
+          setIsAutoVerifying,
+          autoVerifyProcessedRef,
+        );
       }
     };
 
@@ -148,65 +175,84 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     }, 1000);
   };
 
-  const onVerifyCode = async (data: CodeVerificationValues) => {
-    try {
-      const response = await verifyEmail({
-        variables: { code: data.code } });
+  const onVerifyCode = (data: CodeVerificationValues) => {
+    executeMutationWithErrorHandler(
+      async () => {
+        const response = await verifyEmail({
+          variables: { code: data.code },
+        });
 
-      if (response.data?.verifyEmail.success) {
-        // Just update the user state
-        // Navigation happens automatically
-        updateUser({ emailVerified: true });
-      } else if (response.data?.verifyEmail) {
-        toast({ message: response.data.verifyEmail.message, type: 'error' });
-      }
-    } catch (error) {
-      errorService.reportError(error, { operation: 'CodeVerification.verifyEmail' });
-      toast({ message: 'Something went wrong. Please try again.', type: 'error' });
-    }
+        if (response.data?.verifyEmail.success) {
+          updateUser({ emailVerified: true });
+        } else if (response.data?.verifyEmail) {
+          toast({ message: response.data.verifyEmail.message, type: 'error' });
+        }
+      },
+      error => {
+        errorService.reportError(error, {
+          operation: 'CodeVerification.verifyEmail',
+        });
+        toast({
+          message: 'Something went wrong. Please try again.',
+          type: 'error',
+        });
+      },
+    );
   };
 
-  const onResend = async () => {
+  const onResend = () => {
     // Prevent resend during countdown
     if (countdown > 0 || !user?.email) return;
 
-    try {
-      const response = await resendVerificationEmail({
-        variables: { email: user.email } });
+    executeMutationWithErrorHandler(
+      async () => {
+        const response = await resendVerificationEmail({
+          variables: { email: user.email },
+        });
 
-      // Increment attempts and start countdown for next request
-      const newAttempts = resendAttempts + 1;
-      setResendAttempts(newAttempts);
-      const nextDelay = getBackoffDelay(newAttempts);
-      if (nextDelay > 0) {
-        startCountdown(nextDelay);
-      }
+        // Increment attempts and start countdown for next request
+        const newAttempts = resendAttempts + 1;
+        setResendAttempts(newAttempts);
+        const nextDelay = getBackoffDelay(newAttempts);
+        if (nextDelay > 0) {
+          startCountdown(nextDelay);
+        }
 
-      // Check for errors in response (errorPolicy: 'all' returns errors in error.errors)
-      if (response.error && 'errors' in response.error) {
-        const graphQLErrors = response.error.errors as ReadonlyArray<GraphQLError>;
-        const alreadyVerified = graphQLErrors.some(
-          (err) => err.extensions?.code === 'EMAIL_ALREADY_VERIFIED',
-        );
+        // Check for errors in response (errorPolicy: 'all' returns errors in error.errors)
+        if (response.error && 'errors' in response.error) {
+          const graphQLErrors = response.error
+            .errors as ReadonlyArray<GraphQLError>;
+          const alreadyVerified = graphQLErrors.some(
+            err => err.extensions?.code === 'EMAIL_ALREADY_VERIFIED',
+          );
 
-        if (alreadyVerified) {
-          // Update state to mark email as verified
-          // Navigation will automatically move to next screen
-          updateUser({ emailVerified: true });
+          if (alreadyVerified) {
+            updateUser({ emailVerified: true });
+            return;
+          }
+
+          errorService.reportError(response.error, {
+            operation: 'CodeVerification.resendEmail.graphqlError',
+          });
+          toast({
+            message: 'Failed to resend verification email.',
+            type: 'error',
+          });
           return;
         }
 
-        errorService.reportError(response.error, { operation: 'CodeVerification.resendEmail.graphqlError' });
-        toast({ message: 'Failed to resend verification email.', type: 'error' });
-        return;
-      }
-
-      // Show success message only if no errors
-      console.log('Verification email resent');
-    } catch (error) {
-      errorService.reportError(error, { operation: 'CodeVerification.resendEmail' });
-      toast({ message: 'Something went wrong. Please try again.', type: 'error' });
-    }
+        console.log('Verification email resent');
+      },
+      error => {
+        errorService.reportError(error, {
+          operation: 'CodeVerification.resendEmail',
+        });
+        toast({
+          message: 'Something went wrong. Please try again.',
+          type: 'error',
+        });
+      },
+    );
   };
 
   // Don't render if no user or already verified
@@ -217,11 +263,14 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
   if (isAutoVerifying) {
     return (
       <AuthWrapper>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={{ color: theme.colors.textPrimary, fontSize: 18, marginTop: 16 }}>
-            Verifying your email...
-          </Text>
+        <View
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <SousChefLoader
+            size="small"
+            showBrand={false}
+            message="Verifying your email..."
+          />
         </View>
       </AuthWrapper>
     );

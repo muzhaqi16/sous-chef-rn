@@ -6,8 +6,10 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { SLIDE_PRESETS } from '#constants/animations';
 
 export interface SuggestionListItemProps {
   imageUrl?: string | null;
@@ -30,12 +32,15 @@ export interface SuggestionListItemProps {
   };
 }
 
-const EXIT_ANIMATION_DURATION = 250;
+const EXIT_CONFIG = SLIDE_PRESETS.exitWithFade;
 
 /**
- * Static item content — no animation hooks, no shared values.
+ * SuggestionListItem - Item row with image, title, subtitle, and quick-add button.
+ *
+ * Always wraps content in Animated.View so the component tree stays stable when
+ * isExiting transitions. This prevents the flicker caused by unmounting/remounting.
  */
-const SuggestionListItemContent = ({
+export const SuggestionListItem = ({
   imageUrl,
   title,
   subtitle,
@@ -45,8 +50,48 @@ const SuggestionListItemContent = ({
   onQuickAdd,
   quickAddDisabled = false,
   testID,
+  isExiting = false,
+  onExitComplete,
   themeColors,
-}: Omit<SuggestionListItemProps, 'isExiting' | 'onExitComplete'>) => {
+}: SuggestionListItemProps) => {
+  const translateX = useSharedValue(0);
+  const opacity = useSharedValue(1);
+
+  const onExitCompleteRef = useRef(onExitComplete);
+  useEffect(() => {
+    onExitCompleteRef.current = onExitComplete;
+  }, [onExitComplete]);
+
+  // Pre-defined in RN runtime scope — scheduleOnRN requires this pattern
+  const notifyExitComplete = () => {
+    onExitCompleteRef.current?.();
+  };
+
+  useEffect(() => {
+    if (isExiting) {
+      translateX.set(withTiming(EXIT_CONFIG.slideDistance, { duration: EXIT_CONFIG.duration }));
+      opacity.set(
+        withTiming(EXIT_CONFIG.opacityTarget, { duration: EXIT_CONFIG.duration }, (finished) => {
+          'worklet';
+          if (finished) {
+            scheduleOnRN(notifyExitComplete);
+          }
+        })
+      );
+    } else {
+      // Reset for error rollback — item reappears without animation
+      translateX.set(0);
+      opacity.set(1);
+    }
+  }, [isExiting, translateX, opacity]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    opacity: opacity.value,
+  }));
+
+  const disabled = quickAddDisabled || isExiting;
+
   const handlePress = () => {
     if (onPress) {
       onPress();
@@ -56,108 +101,54 @@ const SuggestionListItemContent = ({
   };
 
   return (
-    <Pressable
-      style={({pressed}) => [styles.container, pressed && styles.pressed]}
-      onPress={handlePress}
-      disabled={!onPress && !onQuickAdd}
-      testID={testID}
-    >
-      <View style={styles.imageContainer}>
-        {imageUrl ? (
-          <CachedImage uri={imageUrl} style={styles.image} displaySize={40} />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Icon
-              name={placeholderIcon}
-              size={20}
-              color={themeColors?.primary ?? styles.quickAddButton.backgroundColor}
-              library={placeholderIconLibrary}
-            />
-          </View>
-        )}
-      </View>
-      <View style={styles.info}>
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
-        {!!subtitle && (
-          <Text style={styles.subtitle} numberOfLines={1}>
-            {subtitle}
+    <Animated.View style={animatedStyle}>
+      <Pressable
+        style={({pressed}) => [styles.container, pressed && styles.pressed]}
+        onPress={handlePress}
+        disabled={!onPress && !onQuickAdd}
+        testID={testID}
+      >
+        <View style={styles.imageContainer}>
+          {imageUrl ? (
+            <CachedImage uri={imageUrl} style={styles.image} displaySize={40} />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Icon
+                name={placeholderIcon}
+                size={20}
+                color={themeColors?.primary ?? styles.quickAddButton.backgroundColor}
+                library={placeholderIconLibrary}
+              />
+            </View>
+          )}
+        </View>
+        <View style={styles.info}>
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
           </Text>
+          {!!subtitle && (
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          )}
+        </View>
+        {!!onQuickAdd && (
+          <Pressable
+            style={({pressed}) => [styles.quickAddButton, pressed && styles.pressed]}
+            onPress={onQuickAdd}
+            disabled={disabled}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon
+              name="add"
+              size={20}
+              color={disabled ? (themeColors?.textTertiary ?? '#999') : (themeColors?.primary ?? '#007AFF')}
+            />
+          </Pressable>
         )}
-      </View>
-      {!!onQuickAdd && (
-        <Pressable
-          style={({pressed}) => [styles.quickAddButton, pressed && styles.pressed]}
-          onPress={onQuickAdd}
-          disabled={quickAddDisabled}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Icon
-            name="add"
-            size={20}
-            color={quickAddDisabled ? (themeColors?.textTertiary ?? '#999') : (themeColors?.primary ?? '#007AFF')}
-          />
-        </Pressable>
-      )}
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
-};
-
-/**
- * Animated wrapper — only mounted when isExiting=true.
- * Creates shared values only when exit animation is needed.
- */
-const ExitAnimationWrapper: React.FC<{
-  onExitComplete?: () => void;
-  children: React.ReactNode;
-}> = ({ onExitComplete, children }) => {
-  const translateX = useSharedValue(0);
-  const opacity = useSharedValue(1);
-
-  const onExitCompleteRef = useRef(onExitComplete);
-  useEffect(() => {
-    onExitCompleteRef.current = onExitComplete;
-  }, [onExitComplete]);
-
-  useEffect(() => {
-    translateX.set(withTiming(100, { duration: EXIT_ANIMATION_DURATION }));
-    opacity.set(withTiming(0, { duration: EXIT_ANIMATION_DURATION }));
-
-    const timer = setTimeout(() => {
-      onExitCompleteRef.current?.();
-    }, EXIT_ANIMATION_DURATION);
-
-    return () => clearTimeout(timer);
-  }, [translateX, opacity]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-    opacity: opacity.value,
-  }));
-
-  return <Animated.View style={animatedStyle}>{children}</Animated.View>;
-};
-
-/**
- * SuggestionListItem - Item row with image, title, subtitle, and quick-add button.
- *
- * Conditionally wraps with exit animation only when isExiting is true,
- * avoiding unnecessary Reanimated shared value creation for non-exiting items.
- */
-export const SuggestionListItem = ({
-  isExiting = false,
-  onExitComplete,
-  ...contentProps
-}: SuggestionListItemProps) => {
-  if (isExiting) {
-    return (
-      <ExitAnimationWrapper onExitComplete={onExitComplete}>
-        <SuggestionListItemContent {...contentProps} quickAddDisabled />
-      </ExitAnimationWrapper>
-    );
-  }
-  return <SuggestionListItemContent {...contentProps} />;
 };
 
 const styles = StyleSheet.create(theme => ({

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  ActivityIndicator,
   Pressable } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -13,6 +12,7 @@ import { useVerifyEmailMutation } from '#generated';
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
 import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 interface EmailVerificationRouteParams {
   token: string;
@@ -115,8 +115,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
 
       <View style={styles.content}>
         {!!isVerifying && <>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.title}>Verifying your email...</Text>
+            <SousChefLoader size="small" showBrand={false} message="Verifying your email..." />
             <Text style={styles.subtitle}>Please wait while we verify your email address.</Text>
           </>}
 

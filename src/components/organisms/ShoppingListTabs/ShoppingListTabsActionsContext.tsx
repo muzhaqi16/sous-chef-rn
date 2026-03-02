@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useRef, useEffect, useState } from 'react';
 import type React from 'react';
 
 /**
@@ -34,8 +34,35 @@ export const ShoppingListTabsActionsProvider: React.FC<ProviderProps> = ({
   children,
   actions,
 }) => {
+  // Store latest actions in ref — updated via effect, doesn't trigger re-renders
+  const actionsRef = useRef(actions);
+  useEffect(() => {
+    actionsRef.current = actions;
+  });
+
+  // One-time stable callbacks that delegate to ref
+  // Uses useState initializer (not useMemo, which is banned by ESLint)
+  const [stableActions] = useState<ShoppingListTabsActions>(() => ({
+    onItemPress: (id: string) => actionsRef.current.onItemPress(id),
+    onItemEdit: (id: string) => actionsRef.current.onItemEdit?.(id),
+    onItemDelete: (id: string) => actionsRef.current.onItemDelete?.(id),
+    onTogglePurchase: (id: string) =>
+      actionsRef.current.onTogglePurchase?.(id),
+    onMoveToPantry: (id: string) => actionsRef.current.onMoveToPantry?.(id),
+    onQuantityPress: (id: string) =>
+      actionsRef.current.onQuantityPress?.(id),
+    onSortOrderUpdate: (
+      itemId: string,
+      afterItemId: string | null,
+      beforeItemId: string | null,
+    ) => actionsRef.current.onSortOrderUpdate?.(itemId, afterItemId, beforeItemId),
+    onSwipeableWillOpen: (ref: any) =>
+      actionsRef.current.onSwipeableWillOpen?.(ref),
+    onSwipeableClose: () => actionsRef.current.onSwipeableClose?.(),
+  }));
+
   return (
-    <ShoppingListTabsActionsContext.Provider value={actions}>
+    <ShoppingListTabsActionsContext.Provider value={stableActions}>
       {children}
     </ShoppingListTabsActionsContext.Provider>
   );

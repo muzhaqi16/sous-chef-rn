@@ -140,12 +140,20 @@ export interface ArrayManagerResult<T> {
  * });
  * ```
  */
+function defaultEquals<T>(a: T, b: T): boolean {
+  return a === b;
+}
+
+function defaultTransform<T>(item: T): T {
+  return item;
+}
+
 export function useArrayManager<T>({
   initialValues,
   onUpdate,
   validate,
-  equals = (a, b) => a === b,
-  transform = (item) => item,
+  equals = defaultEquals,
+  transform = defaultTransform,
   showAlerts = true }: ArrayManagerOptions<T>): ArrayManagerResult<T> {
   const [items, setItems] = useState<T[]>(initialValues);
   const [loading, setLoading] = useState(false);

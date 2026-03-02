@@ -15,24 +15,30 @@ export const ImagePickerSheet = forwardRef<BottomSheetModal, ImagePickerSheetPro
     const localRef = useRef<BottomSheetModal>(null);
     useImperativeHandle(ref, () => localRef.current!, []);
 
+    // Pending action to execute after sheet dismisses
+    const pendingActionRef = useRef<(() => void) | null>(null);
+
     const handleDismiss = () => {
       localRef.current?.dismiss();
     };
 
     const { modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
-      onDismiss: handleDismiss,
+      onDismiss: () => {
+        const action = pendingActionRef.current;
+        pendingActionRef.current = null;
+        action?.();
+      },
       snapPoints: [],
       enableDynamicSizing: true });
 
     const handleCamera = () => {
+      pendingActionRef.current = onCamera;
       handleDismiss();
-      // Small delay to allow sheet to close before launching camera
-      setTimeout(onCamera, 100);
     };
 
     const handleLibrary = () => {
+      pendingActionRef.current = onLibrary;
       handleDismiss();
-      setTimeout(onLibrary, 100);
     };
 
     return (

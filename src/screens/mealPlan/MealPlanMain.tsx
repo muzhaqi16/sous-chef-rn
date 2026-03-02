@@ -35,6 +35,8 @@ import { useMealPlanSelectorConfig } from '#hooks/mealPlan/useMealPlanSelectorCo
 import { useGenerateShoppingList } from '#hooks/mealPlan/useGenerateShoppingList';
 import { useDuplicateMealPlan } from '#hooks/mealPlan/useDuplicateMealPlan';
 import { useMealPlanPermissions } from '#hooks/mealPlan/useMealPlanPermissions';
+import { DeferredScreen } from '#components/performance/DeferredScreen';
+import { MealPlanSkeleton } from '#components/base/Skeleton/MealPlanSkeleton';
 import { useAppStore } from '#store/useAppStore';
 import {
   useDeleteMealPlanMutation,
@@ -59,7 +61,27 @@ async function executeMealPlanRefresh(
   }
 }
 
-export const MealPlanMain: React.FC = () => {
+/**
+ * Outer component that gates heavy work behind DeferredScreen.
+ * Skeleton paints instantly; MealPlanMainInner mounts on the deferred re-render.
+ */
+export const MealPlanMain: React.FC = () => (
+  <DeferredScreen
+    fallback={
+      <View style={styles.container} testID="meal-plan-screen">
+        <TabScreenHeader label="Plan your meals" title="Meal Plan" />
+        <MealPlanSkeleton />
+      </View>
+    }
+    component={MealPlanMainInner}
+  />
+);
+
+/**
+ * Inner component that runs all heavy hooks.
+ * Only mounts after isReady is true, so the skeleton paints instantly.
+ */
+const MealPlanMainInner: React.FC = () => {
   const { theme } = useUnistyles();
   const { navigate } = useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();

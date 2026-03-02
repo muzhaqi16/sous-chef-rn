@@ -12,6 +12,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
   loadTempRegistrationPassword,
   clearTempRegistrationPassword } from '#/storage/keychain';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 export const BiometricSetupScreen = () => {
   useScreenTransition('BiometricSetupScreen');
@@ -94,29 +95,30 @@ export const BiometricSetupScreen = () => {
     }
   }, [hasCheckedBiometric, biometricInfo.isAvailable, clearRegistrationPassword, markBiometricDeclined, user?.id, setUserNavigationState, navigateToNextStep]);
 
-  const enableBiometricWithPassword = async (email: string, password: string) => {
-    try {
-      setIsEnabling(true);
-      const success = await storeCredentials(email, password);
-      if (success) {
-        handleComplete(true);
-      } else {
+  const enableBiometricWithPassword = (email: string, password: string) => {
+    executeWithLoadingState(
+      async () => {
+        const success = await storeCredentials(email, password);
+        if (success) {
+          handleComplete(true);
+        } else {
+          Alert.alert(
+            'Setup Failed',
+            'Biometric setup failed. You can enable it later in Settings.',
+            [{ text: 'OK', onPress: () => handleComplete(false) }],
+          );
+        }
+      },
+      setIsEnabling,
+      (error) => {
+        console.error('Error enabling biometric authentication:', error);
         Alert.alert(
           'Setup Failed',
           'Biometric setup failed. You can enable it later in Settings.',
           [{ text: 'OK', onPress: () => handleComplete(false) }],
         );
-      }
-    } catch (error) {
-      console.error('Error enabling biometric authentication:', error);
-      Alert.alert(
-        'Setup Failed',
-        'Biometric setup failed. You can enable it later in Settings.',
-        [{ text: 'OK', onPress: () => handleComplete(false) }],
-      );
-    } finally {
-      setIsEnabling(false);
-    }
+      },
+    );
   };
 
   const handleEnableBiometric = async () => {

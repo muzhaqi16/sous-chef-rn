@@ -47,11 +47,11 @@ export function useScreenTelemetry(
     if (!isReady || firedRef.current) return;
     firedRef.current = true;
 
-    const timer = setTimeout(() => {
+    const idleId = requestIdleCallback(() => {
       Telemetry.trackScreen(screenName, getPropertiesRef.current());
-    }, 500);
+    });
 
-    return () => clearTimeout(timer);
+    return () => cancelIdleCallback(idleId);
     // Fire once — getProperties is read from ref at fire time
   }, [isReady, screenName]);
 }

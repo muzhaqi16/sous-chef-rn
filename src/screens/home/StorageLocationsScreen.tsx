@@ -3,7 +3,6 @@ import {
   View,
   Alert,
   Text,
-  ActivityIndicator,
   Pressable,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -15,6 +14,8 @@ import { StorageLocationSheet } from '#components/modals/StorageLocationSheet/St
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#utils/iconUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 type RouteParams = {
   homeId: string;
@@ -111,13 +112,8 @@ export const StorageLocationsScreen: React.FC<{
     await setDefaultLocation(id);
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setRefreshing(false);
-    }
+  const handleRefresh = () => {
+    executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
   if (initialLoading) {
@@ -130,10 +126,7 @@ export const StorageLocationsScreen: React.FC<{
           {
             content: (
               <View style={commonStyles.loadingContainer}>
-                <ActivityIndicator size="large" />
-                <Text style={commonStyles.loadingText}>
-                  Loading storage locations...
-                </Text>
+                <SousChefLoader size="small" showBrand={false} message="Loading storage locations..." />
               </View>
             ),
           },

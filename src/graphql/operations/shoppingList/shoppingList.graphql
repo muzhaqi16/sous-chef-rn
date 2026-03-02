@@ -59,6 +59,50 @@ query GetShoppingList($id: ID!) {
 
 # Lightweight query for list selector - metadata only, no items/collaborators
 # Use this for dashboard/list views. Use GetShoppingList for full details.
+# Lightweight query for shopping list details WITHOUT items
+# Use this for ShoppingListMain where items come from GetShoppingListItemsPaginated
+# Use GetShoppingList when you need the full itemsConnection (ListSettings, ShareList, resortEdges)
+query GetShoppingListDetails($id: ID!) {
+  shoppingList(id: $id) {
+    id
+    name
+    isDefault
+    totalItems
+    completedItems
+    homeId
+    home {
+      id
+      name
+      myMembership {
+        id
+        role
+        canAddItems
+        canRemoveItems
+        canEditPantry
+      }
+    }
+    ownerships {
+      ...ShoppingListOwnershipFragment
+    }
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+          invitedAt
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
+    }
+  }
+}
+
+# Lightweight query for list selector - metadata only, no items/collaborators
+# Use this for dashboard/list views. Use GetShoppingList for full details.
 query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
   shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
     edges {

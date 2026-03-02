@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -11,11 +11,45 @@ import { useChangePasswordMutation } from '#generated';
 import { useToast } from '#hooks/useToast';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { changePasswordSchema } from '#utils/validation/auth';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 interface ChangePasswordForm {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
+}
+
+/** Module-level async function to handle password change mutation.
+ *  Extracted to avoid try-catch/throw inside component body (React Compiler bailout). */
+async function performChangePassword(
+  changePassword: ReturnType<typeof useChangePasswordMutation>[0],
+  data: ChangePasswordForm,
+  toast: ReturnType<typeof useToast>,
+  goBack: () => void,
+): Promise<void> {
+  const result = await changePassword({
+    variables: {
+      input: {
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      },
+    },
+  });
+
+  if (result.data?.changePassword?.success) {
+    toast({
+      message: 'Password changed successfully!',
+      type: 'success',
+    });
+
+    setTimeout(() => {
+      goBack();
+    }, 1500);
+  } else {
+    throw new Error(
+      result.data?.changePassword?.message || 'Failed to change password',
+    );
+  }
 }
 
 export const ChangePasswordScreen: React.FC = () => {
@@ -37,43 +71,21 @@ export const ChangePasswordScreen: React.FC = () => {
     mode: 'onChange',
   });
 
-  const onSubmit = async (data: ChangePasswordForm) => {
-    setIsSubmitting(true);
+  const watchedValues = useWatch({ control: form.control });
 
-    try {
-      const result = await changePassword({
-        variables: {
-          input: {
-            currentPassword: data.currentPassword,
-            newPassword: data.newPassword,
-          },
-        },
-      });
-
-      if (result.data?.changePassword?.success) {
+  const onSubmit = (data: ChangePasswordForm) => {
+    executeWithLoadingState(
+      () => performChangePassword(changePassword, data, toast, goBack),
+      setIsSubmitting,
+      (error: unknown) => {
+        const errorMessage =
+          (error as any)?.message || 'Failed to change password. Please try again.';
         toast({
-          message: 'Password changed successfully!',
-          type: 'success',
+          message: errorMessage,
+          type: 'error',
         });
-
-        setTimeout(() => {
-          goBack();
-        }, 1500);
-      } else {
-        throw new Error(
-          result.data?.changePassword?.message || 'Failed to change password',
-        );
-      }
-    } catch (error: any) {
-      const errorMessage =
-        error.message || 'Failed to change password. Please try again.';
-      toast({
-        message: errorMessage,
-        type: 'error',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+      },
+    );
   };
 
   const isFormValid = form.formState.isValid;
@@ -102,7 +114,7 @@ export const ChangePasswordScreen: React.FC = () => {
             <View style={styles.field}>
               <Text style={styles.label}>Current Password</Text>
               <PasswordInput
-                value={form.watch('currentPassword')}
+                value={watchedValues.currentPassword}
                 onChangeText={text =>
                   form.setValue('currentPassword', text, { shouldValidate: true })
                 }
@@ -115,7 +127,7 @@ export const ChangePasswordScreen: React.FC = () => {
             <View style={styles.field}>
               <Text style={styles.label}>New Password</Text>
               <PasswordInput
-                value={form.watch('newPassword')}
+                value={watchedValues.newPassword}
                 onChangeText={text =>
                   form.setValue('newPassword', text, { shouldValidate: true })
                 }
@@ -128,7 +140,7 @@ export const ChangePasswordScreen: React.FC = () => {
             <View style={styles.field}>
               <Text style={styles.label}>Confirm New Password</Text>
               <PasswordInput
-                value={form.watch('confirmPassword')}
+                value={watchedValues.confirmPassword}
                 onChangeText={text =>
                   form.setValue('confirmPassword', text, { shouldValidate: true })
                 }

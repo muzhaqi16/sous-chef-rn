@@ -1,7 +1,8 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native-unistyles';
-import BottomSheet, { BottomSheetBackdropProps, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import BottomSheet, { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { FormTextArea } from '#components/molecules/FormTextArea';
 import { Header } from '#components/molecules/Header';
 import { generateId } from '#/utils/generateId';
@@ -52,7 +53,8 @@ export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditor
       <BottomSheet
         ref={bottomSheetRef}
         index={-1}
-        snapPoints={['50%']}
+        snapPoints={['50%', '95%']}
+        keyboardBehavior="interactive"
         enablePanDownToClose
         backdropComponent={renderBackdrop}
         handleIndicatorStyle={styles.handleIndicator}
@@ -69,7 +71,7 @@ export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditor
             onPress: handleSave }]}
         />
 
-        <BottomSheetScrollView contentContainerStyle={styles.content}>
+        <BottomSheetFormScrollView contentContainerStyle={styles.content}>
           <FormTextArea
             label="Instruction"
             value={instruction}
@@ -77,7 +79,7 @@ export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditor
             placeholder="Describe what to do in this step..."
             required
           />
-        </BottomSheetScrollView>
+        </BottomSheetFormScrollView>
       </BottomSheet>
     );
   },

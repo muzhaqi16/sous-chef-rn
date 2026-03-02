@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
+import { TIMING } from '#constants/animations';
 import { NavigationButton } from './NavigationButton';
 import type { OnboardingNavigationProps } from './types';
 
@@ -44,15 +45,15 @@ export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
 
   const backButtonStyle = useAnimatedStyle(() => {
     return {
-      width: withTiming(showBackButton ? backWidth : 0, { duration: 250 }),
-      opacity: withTiming(showBackButton ? 1 : 0, { duration: 200 }),
+      width: withTiming(showBackButton ? backWidth : 0, { duration: TIMING.MODERATE }),
+      opacity: withTiming(showBackButton ? 1 : 0, { duration: TIMING.STANDARD }),
     };
   }, [showBackButton, backWidth]);
 
   const continueButtonStyle = useAnimatedStyle(() => {
     return {
-      width: withTiming(continueWidth, { duration: 250 }),
-      marginLeft: withTiming(showBackButton ? gap : 0, { duration: 250 }),
+      width: withTiming(continueWidth, { duration: TIMING.MODERATE }),
+      marginLeft: withTiming(showBackButton ? gap : 0, { duration: TIMING.MODERATE }),
     };
   }, [showBackButton, continueWidth, gap]);
 

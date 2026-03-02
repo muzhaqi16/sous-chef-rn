@@ -94,10 +94,10 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     if (!shouldSkip && homeId && data?.storageLocations?.edges && !hasTreeFetchedRef.current) {
       hasTreeFetchedRef.current = true;
       // Defer tree fetch to avoid competing with screen-critical queries
-      const timeoutId = setTimeout(() => {
+      const idleId = requestIdleCallback(() => {
         fetchTree({ variables: { homeId } });
-      }, 500);
-      return () => clearTimeout(timeoutId);
+      });
+      return () => cancelIdleCallback(idleId);
     }
   }, [shouldSkip, homeId, data?.storageLocations?.edges, fetchTree]);
 

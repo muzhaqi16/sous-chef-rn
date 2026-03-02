@@ -180,6 +180,7 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
   // Shared card content — used with or without slide animation wrapper
   const renderCard = (onDelete?: () => void) => (
     <BaseItemCard
+      itemId={id}
       variant={cardVariant}
       onPress={itemActions.onPress}
       onEdit={itemActions.onEdit}

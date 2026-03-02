@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, Pressable, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useHomeDetailManagement } from '#hooks/home/useHomeDetailManagement';
 
-import { commonStyles } from '#/styles/commonStyles';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { EditableField } from '#components/molecules/EditableField';
 import { NavigationRow } from '#components/molecules/NavigationRow';
@@ -15,6 +14,8 @@ import { useAppStore, selectUser } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
 import { Button } from '#components/base/Button';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 type RouteParams = {
   homeId: string;
@@ -60,13 +61,11 @@ export const HomeDetailScreen: React.FC<{
     }
   };
 
-  const handleToggleJoinCode = async (enabled: boolean) => {
-    setJoinCodeLoading(true);
-    try {
-      await toggleJoinCode(enabled);
-    } finally {
-      setJoinCodeLoading(false);
-    }
+  const handleToggleJoinCode = (enabled: boolean) => {
+    executeRefreshWithFinally(
+      () => toggleJoinCode(enabled),
+      setJoinCodeLoading,
+    );
   };
 
   // Find current user's membership to check permissions
@@ -105,10 +104,11 @@ export const HomeDetailScreen: React.FC<{
           {
             content: (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" />
-                <Text style={commonStyles.body}>
-                  {loading ? 'Loading...' : 'Home not found'}
-                </Text>
+                <SousChefLoader
+                  size="small"
+                  showBrand={false}
+                  message={loading ? 'Loading' : 'Home not found'}
+                />
               </View>
             ),
           },
@@ -150,7 +150,10 @@ export const HomeDetailScreen: React.FC<{
                 <Text style={styles.joinCodeValue}>{home.joinCode}</Text>
               </View>
               <Pressable
-                style={({pressed}) => [styles.copyButton, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.copyButton,
+                  pressed && styles.pressed,
+                ]}
                 onPress={handleCopyJoinCode}
               >
                 <Icon
@@ -159,7 +162,6 @@ export const HomeDetailScreen: React.FC<{
                   color={
                     copied ? theme.colors.success : theme.colors.textPrimary
                   }
-
                 />
               </Pressable>
             </View>

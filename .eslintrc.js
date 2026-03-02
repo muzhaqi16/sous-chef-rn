@@ -2,7 +2,7 @@ module.exports = {
   root: true,
   extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
   plugins: ['no-barrel-files', 'react-compiler'],
-  ignorePatterns: ['e2e/**/*'],
+  ignorePatterns: ['e2e/**/*', 'src/graphql/generated/**/*'],
   env: {
     jest: true,
   },
@@ -30,6 +30,14 @@ module.exports = {
     // Detect React Compiler bail-outs at lint time
     // Warn level — existing eslint-disable comments cause bail-outs in a few files
     'react-compiler/react-compiler': 'warn',
+
+    // Surface silent compiler bailouts (try/finally, unsupported syntax).
+    // The react-compiler rule has a known bug where it silently stops reporting
+    // ALL diagnostics when it encounters unsupported syntax, producing zero
+    // warnings instead of flagging the bailout. This rule catches those cases.
+    // See: https://github.com/facebook/react/issues/35644
+    // Fix bailouts using helpers from src/utils/compilerSafeWrappers.ts
+    'react-hooks/todo': 'warn',
 
     // Enforce StyleSheet from react-native-unistyles instead of react-native
     // Prevent useMemo/useCallback — React Compiler handles memoization automatically
@@ -101,11 +109,16 @@ module.exports = {
     'react/jsx-no-leaked-render': ['error', { validStrategies: ['ternary', 'coerce'] }],
 
     // Prevent inline import() types — use top-level imports instead
+    // Prevent inline functions passed to scheduleOnRN — causes native crashes on Android
     'no-restricted-syntax': [
       'error',
       {
         selector: 'TSImportType',
         message: 'Avoid inline import() types. Import the type at the top of the file instead.',
+      },
+      {
+        selector: 'CallExpression[callee.name="scheduleOnRN"] > :matches(ArrowFunctionExpression, FunctionExpression)',
+        message: 'Do not pass inline functions to scheduleOnRN — define the callback in RN runtime scope first. Inline functions inside worklets cause native crashes on Android.',
       },
     ],
   },

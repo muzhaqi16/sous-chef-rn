@@ -8,12 +8,9 @@ interface UseAddItemSheetStateOptions {
   contextId: string | undefined;
   /** Whether to defer fetch (for animation performance) */
   deferFetch?: boolean;
-  /** Delay in ms before enabling fetch (default: 50) */
-  deferDelayMs?: number;
 }
 
-/** Delay before rendering suggestions (ms). Gives the sheet animation time to finish. */
-const RENDER_SUGGESTIONS_DELAY_MS = 300;
+// RENDER_SUGGESTIONS_DELAY_MS removed — now uses requestIdleCallback to wait for sheet animation
 
 /**
  * Shared state management hook for AddItemSheet.
@@ -28,8 +25,7 @@ const RENDER_SUGGESTIONS_DELAY_MS = 300;
 export function useAddItemSheetState({
   visible,
   contextId,
-  deferFetch = true,
-  deferDelayMs = 50 }: UseAddItemSheetStateOptions): AddItemSheetState {
+  deferFetch = true }: UseAddItemSheetStateOptions): AddItemSheetState {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -66,19 +62,19 @@ export function useAddItemSheetState({
     }
   }
 
-  // Control deferred fetch based on visibility (timers still need useEffect)
+  // Control deferred fetch based on visibility
   useEffect(() => {
     if (visible && contextId && deferFetch) {
-      // Defer fetch until after sheet animation
-      const fetchTimer = setTimeout(() => setShouldFetch(true), deferDelayMs);
-      // Defer suggestion rendering until sheet animation settles
-      const renderTimer = setTimeout(() => setShouldRenderSuggestions(true), RENDER_SUGGESTIONS_DELAY_MS);
+      // Defer fetch until after current frame (don't block sheet animation)
+      const rafId = requestAnimationFrame(() => setShouldFetch(true));
+      // Defer suggestion rendering until idle (sheet animation settled)
+      const idleId = requestIdleCallback(() => setShouldRenderSuggestions(true));
       return () => {
-        clearTimeout(fetchTimer);
-        clearTimeout(renderTimer);
+        cancelAnimationFrame(rafId);
+        cancelIdleCallback(idleId);
       };
     }
-  }, [visible, contextId, deferFetch, deferDelayMs]);
+  }, [visible, contextId, deferFetch]);
 
   // Start exit animation for an item
   const startExitAnimation = (itemId: string) => {

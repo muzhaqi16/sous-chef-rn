@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { RestrictionSection } from '#/components/molecules/RestrictionSection/RestrictionSection';
 import { MultiSelectChipSheet } from '#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
 import { Diet, Intolerance, HealthGoal, RestrictionSeverity } from '#generated';
+import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 
 // Lifestyle dietary choices
 const DIETS: { label: string; value: Diet }[] = [
@@ -160,89 +161,89 @@ export const DietaryRestrictionSelector: React.FC<
   };
 
   // Save handlers
-  const handleSaveDiets = async () => {
+  const handleSaveDiets = () => {
     if (selectedDietIds.length === 0) {
       setDietSheetVisible(false);
       return;
     }
 
-    setIsSavingDiets(true);
-    try {
-      const restrictions: RestrictionType[] = selectedDietIds.map(diet => ({
-        diet,
-      }));
+    executeRefreshWithFinally(
+      async () => {
+        const restrictions: RestrictionType[] = selectedDietIds.map(diet => ({
+          diet,
+        }));
 
-      const success = await onAdd(
-        restrictions,
-        RestrictionSeverity.Preference,
-      );
+        const success = await onAdd(
+          restrictions,
+          RestrictionSeverity.Preference,
+        );
 
-      if (success) {
-        setSelectedDietIds([]);
-        setDietSheetVisible(false);
-      } else {
-        Alert.alert('Error', 'Failed to add diets');
-      }
-    } finally {
-      setIsSavingDiets(false);
-    }
+        if (success) {
+          setSelectedDietIds([]);
+          setDietSheetVisible(false);
+        } else {
+          Alert.alert('Error', 'Failed to add diets');
+        }
+      },
+      setIsSavingDiets,
+    );
   };
 
-  const handleSaveIntolerances = async () => {
+  const handleSaveIntolerances = () => {
     if (selectedIntoleranceIds.length === 0) {
       setIntoleranceSheetVisible(false);
       return;
     }
 
-    setIsSavingIntolerances(true);
-    try {
-      const restrictions: RestrictionType[] = selectedIntoleranceIds.map(
-        intolerance => ({
-          intolerance,
-        }),
-      );
+    executeRefreshWithFinally(
+      async () => {
+        const restrictions: RestrictionType[] = selectedIntoleranceIds.map(
+          intolerance => ({
+            intolerance,
+          }),
+        );
 
-      const success = await onAdd(
-        restrictions,
-        RestrictionSeverity.Intolerance,
-      );
+        const success = await onAdd(
+          restrictions,
+          RestrictionSeverity.Intolerance,
+        );
 
-      if (success) {
-        setSelectedIntoleranceIds([]);
-        setIntoleranceSheetVisible(false);
-      } else {
-        Alert.alert('Error', 'Failed to add intolerances');
-      }
-    } finally {
-      setIsSavingIntolerances(false);
-    }
+        if (success) {
+          setSelectedIntoleranceIds([]);
+          setIntoleranceSheetVisible(false);
+        } else {
+          Alert.alert('Error', 'Failed to add intolerances');
+        }
+      },
+      setIsSavingIntolerances,
+    );
   };
 
-  const handleSaveGoals = async () => {
+  const handleSaveGoals = () => {
     if (selectedGoalIds.length === 0) {
       setGoalSheetVisible(false);
       return;
     }
 
-    setIsSavingGoals(true);
-    try {
-      const restrictions: RestrictionType[] = selectedGoalIds.map(
-        healthGoal => ({
-          healthGoal,
-        }),
-      );
+    executeRefreshWithFinally(
+      async () => {
+        const restrictions: RestrictionType[] = selectedGoalIds.map(
+          healthGoal => ({
+            healthGoal,
+          }),
+        );
 
-      const success = await onAdd(restrictions, RestrictionSeverity.Goal);
+        const success = await onAdd(restrictions, RestrictionSeverity.Goal);
 
-      if (success) {
-        setSelectedGoalIds([]);
-        setGoalSheetVisible(false);
-      } else {
-        Alert.alert('Error', 'Failed to add health goals');
-      }
-    } finally {
-      setIsSavingGoals(false);
-    }
+        if (success) {
+          setSelectedGoalIds([]);
+          setGoalSheetVisible(false);
+        } else {
+          Alert.alert('Error', 'Failed to add health goals');
+        }
+      },
+      setIsSavingGoals,
+    );
   };
 
   return (

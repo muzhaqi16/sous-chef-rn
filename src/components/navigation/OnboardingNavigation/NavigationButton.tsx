@@ -4,12 +4,13 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   LinearTransition,
 } from 'react-native-reanimated';
+import { TIMING } from '#constants/animations';
 import type { NavigationButtonProps } from './types';
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const LayoutTransitionDefault = LinearTransition.duration(250);
+const LayoutTransitionDefault = LinearTransition.duration(TIMING.MODERATE);
 
 export const NavigationButton: React.FC<NavigationButtonProps> = ({
   action,

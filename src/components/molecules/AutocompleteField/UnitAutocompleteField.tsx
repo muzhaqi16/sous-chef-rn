@@ -12,7 +12,7 @@ interface UnitAutocompleteFieldProps {
   required?: boolean;
   error?: string;
   testID?: string;
-  onUnitSelected?: (unitId: string | null, unitName: string | null, unitType?: string | null) => void;
+  onUnitSelected?: (unitId: string | null, unitName: string | null, unitType?: string | null, unitSymbol?: string | null) => void;
 }
 
 export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
@@ -38,7 +38,7 @@ export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
 
   const handleSelect = (item: UnitItem) => {
       onChangeText(item.symbol);
-      onUnitSelected?.(item.id, item.name, item.type);
+      onUnitSelected?.(item.id, item.name, item.type, item.symbol);
       unit.setSearchTerm('');
     };
 

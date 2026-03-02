@@ -94,7 +94,7 @@ This document describes the performance monitoring infrastructure added to the S
 ### 10. After Interaction
 - **Hook**: `useAfterInteraction(callback, options?)`
 - **Features**:
-  - Runs callback after `InteractionManager.runAfterInteractions()` completes
+  - Runs callback via `requestIdleCallback()` after navigation animations settle
   - Ensures heavy work doesn't interfere with navigation transitions
   - `enabled` gate option
 
@@ -143,7 +143,7 @@ src/
 │       ├── useDeferredSearch.ts  # Responsive search with deferred value
 │       ├── useDeferredCallback.ts # Deferred background work execution
 │       ├── useDeferredRender.ts  # Deferred render until idle
-│       └── useAfterInteraction.ts # Run callback after InteractionManager
+│       └── useAfterInteraction.ts # Run callback via requestIdleCallback
 ├── store/
 │   ├── performanceStore.ts       # Isolated performance Zustand store
 │   └── slices/

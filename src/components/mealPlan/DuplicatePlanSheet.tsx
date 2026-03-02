@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -34,7 +33,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
     visible,
     onDismiss: onClose,
     snapPoints: ['55%'],
-    keyboardBehavior: 'interactive' });
+    keyboardAware: true });
 
   const [name, setName] = useState('');
   const [startDateOffset, setStartDateOffset] = useState(0);
@@ -76,7 +75,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetScrollView
+      <BottomSheetFormScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
@@ -142,7 +141,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
             All meals will be copied to the new date range with the same structure.
           </Text>
         </View>
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

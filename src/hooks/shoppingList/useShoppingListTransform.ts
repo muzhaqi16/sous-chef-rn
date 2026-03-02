@@ -71,7 +71,7 @@ function transformItem(
 
   return {
     id: item.id,
-    title: item.itemName || '',
+    title: item.itemName,
     subtitle: item.category || undefined,
     sortOrder: item.sortOrder ?? 'zzz',
     isPurchased: isPurchasedValue,

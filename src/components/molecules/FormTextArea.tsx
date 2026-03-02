@@ -1,7 +1,9 @@
 import React from 'react';
 import {TextInput, TextInputProps, ViewStyle} from 'react-native';
+import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {FormFieldWrapper} from '../atoms/FormFieldWrapper';
+import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 
 interface FormTextAreaProps extends Omit<TextInputProps, 'style' | 'multiline'> {
   label: string;
@@ -10,6 +12,8 @@ interface FormTextAreaProps extends Omit<TextInputProps, 'style' | 'multiline'> 
   containerStyle?: ViewStyle;
   inputStyle?: ViewStyle;
   numberOfLines?: number;
+  /** Use BottomSheetTextInput for proper keyboard handling inside bottom sheets */
+  useBottomSheetInput?: boolean;
 }
 
 export const FormTextArea: React.FC<FormTextAreaProps> = ({
@@ -19,8 +23,11 @@ export const FormTextArea: React.FC<FormTextAreaProps> = ({
   containerStyle,
   inputStyle,
   numberOfLines = 4,
+  useBottomSheetInput = false,
   ...textInputProps
 }) => {
+  const contextValue = useIsBottomSheetInput();
+  const InputComponent = (useBottomSheetInput || contextValue) ? BottomSheetTextInput : TextInput;
   const {theme} = useUnistyles();
 
   // Calculate height based on number of lines
@@ -33,7 +40,7 @@ export const FormTextArea: React.FC<FormTextAreaProps> = ({
       required={required}
       containerStyle={containerStyle}
     >
-      <TextInput
+      <InputComponent
         style={[
           styles.input,
           {height: inputHeight},

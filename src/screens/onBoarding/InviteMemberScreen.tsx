@@ -13,6 +13,7 @@ import { useAppStore } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 type InviteEntry = {
   id: string;
@@ -117,71 +118,70 @@ export const InviteMemberScreen = () => {
     );
   };
 
-  const sendInvites = async () => {
+  const sendInvites = () => {
     if (invites.length > 0) {
-      setIsInviting(true);
+      executeWithLoadingState(
+        async () => {
+          const invitePromises = [];
 
-      try {
-        const invitePromises = [];
-
-        for (const invite of invites) {
-          // Invite to home
-          if (
-            (invite.type === 'home' || invite.type === 'both') &&
-            selectedHomeId
-          ) {
-            invitePromises.push(
-              inviteToHome({
-                variables: {
-                  input: {
-                    homeId: selectedHomeId,
-                    email: invite.email,
-                    role: MembershipRole.Member,
-                    message: `${
-                      user?.email || 'A user'
-                    } has invited you to join their home for managing pantry and shopping lists together!`,
+          for (const invite of invites) {
+            if (
+              (invite.type === 'home' || invite.type === 'both') &&
+              selectedHomeId
+            ) {
+              invitePromises.push(
+                inviteToHome({
+                  variables: {
+                    input: {
+                      homeId: selectedHomeId,
+                      email: invite.email,
+                      role: MembershipRole.Member,
+                      message: `${
+                        user?.email || 'A user'
+                      } has invited you to join their home for managing pantry and shopping lists together!`,
+                    },
                   },
-                },
-              }),
-            );
+                }),
+              );
+            }
+
+            if (
+              (invite.type === 'shopping' || invite.type === 'both') &&
+              selectedShoppingListId
+            ) {
+              invitePromises.push(
+                addCollaborator({
+                  variables: {
+                    input: {
+                      shoppingListId: selectedShoppingListId,
+                      email: invite.email,
+                      role: CollaboratorRole.Contributor,
+                    },
+                  },
+                }),
+              );
+            }
           }
 
-          // Add as shopping list collaborator
-          if (
-            (invite.type === 'shopping' || invite.type === 'both') &&
-            selectedShoppingListId
-          ) {
-            invitePromises.push(
-              addCollaborator({
-                variables: {
-                  input: {
-                    shoppingListId: selectedShoppingListId,
-                    email: invite.email,
-                    role: CollaboratorRole.Contributor,
-                  },
-                },
-              }),
-            );
-          }
-        }
-
-        await Promise.all(invitePromises);
-        // Add this line after successful completion
-      } catch (error) {
-        console.error('Error sending invites:', error);
-        Alert.alert(
-          'Partial Success',
-          'Some invitations may have failed. You can invite more members later from settings.',
-          [
-            {
-              text: 'Continue',
-              onPress: () => navigateToNextStep('InviteMembers'),
-            },
-          ],
-        );
-      } finally {
-        setIsInviting(false);
-      }
+          await Promise.all(invitePromises);
+          navigateToNextStep('InviteMembers');
+        },
+        setIsInviting,
+        (error) => {
+          console.error('Error sending invites:', error);
+          Alert.alert(
+            'Partial Success',
+            'Some invitations may have failed. You can invite more members later from settings.',
+            [
+              {
+                text: 'Continue',
+                onPress: () => navigateToNextStep('InviteMembers'),
+              },
+            ],
+          );
+        },
+      );
+      return;
     }
     navigateToNextStep('InviteMembers');
   };

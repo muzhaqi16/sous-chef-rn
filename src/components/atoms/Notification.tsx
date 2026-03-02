@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react';
 import {View, Text, Animated, Pressable} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
+import {TIMING} from '#constants/animations';
 
 interface NotificationBannerProps {
   title?: string;
@@ -22,14 +23,14 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
     // slide down
     Animated.timing(slide, {
       toValue: 0,
-      duration: 300,
+      duration: TIMING.SLOW,
       useNativeDriver: true,
     }).start();
 
     const timer = setTimeout(() => {
       Animated.timing(slide, {
         toValue: -100,
-        duration: 300,
+        duration: TIMING.SLOW,
         useNativeDriver: true,
       }).start(() => {
         setShow(false);
@@ -52,7 +53,7 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
           onPress={() => {
             Animated.timing(slide, {
               toValue: -100,
-              duration: 200,
+              duration: TIMING.STANDARD,
               useNativeDriver: true,
             }).start(() => {
               setShow(false);

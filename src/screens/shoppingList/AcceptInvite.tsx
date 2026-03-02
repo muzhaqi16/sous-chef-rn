@@ -19,6 +19,8 @@ import {
   useDeclineHomeInviteMutation,
 } from '#generated';
 import { errorService, getErrorMessage } from '#/services/errorService';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 type InvitationType = 'shopping_list' | 'home' | 'unknown';
 
@@ -86,7 +88,7 @@ export const AcceptInvite: React.FC = () => {
     return undefined;
   };
 
-  const handleAccept = async () => {
+  const handleAccept = () => {
     const inviteToken = resolveInviteToken();
 
     if (!inviteToken) {
@@ -94,27 +96,28 @@ export const AcceptInvite: React.FC = () => {
       return;
     }
 
-    setProcessing(true);
-    try {
-      if (invitationType === 'shopping_list') {
-        await acceptShoppingListInvite({ variables: { token: inviteToken } });
-        Alert.alert('Success', 'Shopping list invitation accepted!', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
-      } else if (invitationType === 'home') {
-        await acceptHomeInvite({ variables: { token: inviteToken } });
-        Alert.alert('Success', 'Home invitation accepted!', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
-      } else {
-        Alert.alert('Error', 'Unknown invitation type');
-      }
-    } catch (error: any) {
-      errorService.reportError(error, { operation: 'AcceptInvite.acceptInvitation' });
-      Alert.alert('Error', getErrorMessage(error));
-    } finally {
-      setProcessing(false);
-    }
+    executeWithLoadingState(
+      async () => {
+        if (invitationType === 'shopping_list') {
+          await acceptShoppingListInvite({ variables: { token: inviteToken } });
+          Alert.alert('Success', 'Shopping list invitation accepted!', [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
+        } else if (invitationType === 'home') {
+          await acceptHomeInvite({ variables: { token: inviteToken } });
+          Alert.alert('Success', 'Home invitation accepted!', [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
+        } else {
+          Alert.alert('Error', 'Unknown invitation type');
+        }
+      },
+      setProcessing,
+      (error: unknown) => {
+        errorService.reportError(error, { operation: 'AcceptInvite.acceptInvitation' });
+        Alert.alert('Error', getErrorMessage(error));
+      },
+    );
   };
 
   const handleDecline = async () => {
@@ -133,23 +136,24 @@ export const AcceptInvite: React.FC = () => {
         {
           text: 'Decline',
           style: 'destructive',
-          onPress: async () => {
-            setProcessing(true);
-            try {
-              if (invitationType === 'shopping_list') {
-                await declineShoppingListInvite({
-                  variables: { token: inviteToken! },
-                });
-              } else if (invitationType === 'home') {
-                await declineHomeInvite({ variables: { token: inviteToken! } });
-              }
+          onPress: () => {
+            executeWithLoadingState(
+              async () => {
+                if (invitationType === 'shopping_list') {
+                  await declineShoppingListInvite({
+                    variables: { token: inviteToken! },
+                  });
+                } else if (invitationType === 'home') {
+                  await declineHomeInvite({ variables: { token: inviteToken! } });
+                }
 
-              navigation.goBack();
-            } catch {
-              Alert.alert('Error', 'Failed to decline invitation');
-            } finally {
-              setProcessing(false);
-            }
+                navigation.goBack();
+              },
+              setProcessing,
+              () => {
+                Alert.alert('Error', 'Failed to decline invitation');
+              },
+            );
           },
         },
       ],
@@ -159,7 +163,7 @@ export const AcceptInvite: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <SousChefLoader size="small" showBrand={false} message="Loading" />
       </View>
     );
   }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   ScrollView,
@@ -7,7 +7,7 @@ import {
   Platform,
   ActivityIndicator,
   Text } from 'react-native';
-import { useForm, Controller, type Resolver } from 'react-hook-form';
+import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string } from 'yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -39,6 +39,7 @@ import { Header } from '#components/molecules/Header';
 import { ItemInformationSection } from './ItemInformationSection';
 import { QuantitySection } from './QuantitySection';
 import { StorageDetailsSection } from './StorageDetailsSection';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 interface PantryItemFormData {
   // Item information (add mode)
@@ -111,7 +112,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   onSuccess }) => {
   const { theme } = useUnistyles();
   const navigation = useNavigation();
-  const [_saving, setSaving] = useState(false);
+
 
   // Consolidated unit state using UnitSelection type
   const [trackingUnit, setTrackingUnit] =
@@ -127,7 +128,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     { id: string; name: string }[]
   >([]);
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
-  const [_selectedNetWeightUnitId, setSelectedNetWeightUnitId] = useState<string | null>(null);
   const [netWeightUnitDisplay, setNetWeightUnitDisplay] = useState('');
 
   const selectedPantryId = useAppStore(selectSelectedPantryId);
@@ -230,7 +230,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     handleSubmit,
     formState: { errors, dirtyFields },
     setValue,
-    watch,
     reset } = useForm<PantryItemFormData>({
     resolver: (mode === 'add'
         ? yupResolver(addItemSchema)
@@ -238,53 +237,49 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     defaultValues: getInitialValues(),
     mode: 'onChange' });
 
-  const watchedValues = watch();
+  const watchedValues = useWatch({ control });
 
-  // Reset form when switching modes or loading existing data
-  useEffect(() => {
-    if (mode === 'edit' && existingItemData?.pantryItem) {
-      const getValues = (): PantryItemFormData => {
-        const item = existingItemData.pantryItem!;
-        const trackingUnitSymbol = item.unit?.symbol || '';
-        return {
-          itemName: item.itemName || '',
-          quantityInput: item.quantity?.toString() || '1',
-          unit: trackingUnitSymbol,
-          minQuantity: item.minQuantity?.toString() || '',
-          restockQuantity: item.restockQuantity?.toString() || '',
-          brand: item.brand?.name || '',
-          netWeight: item.netWeight?.toString() || '',
-          netWeightUnitId: item.netWeightUnit?.id || '',
-          storageState: item.storageState || StorageState.Ambient,
-          location:
-            typeof item.storageLocation === 'string'
-              ? item.storageLocation
-              : item.storageLocation?.name || '',
-          expirationDate: item.expiresAt ? new Date(item.expiresAt) : undefined,
-          notes: item.storageNotes || '',
-          category: item.item?.categories?.[0]?.category?.name || '',
-          tags: item.tags || [] };
-      };
-      reset(getValues());
-      // Initialize unit state from existing item
-      const item = existingItemData.pantryItem;
-      // Tracking unit state
-      if (item.unit) {
-        setTrackingUnit({
-          id: item.unit.id,
-          name: item.unit.name,
-          symbol: item.unit.symbol,
-          type: item.unit.type ?? null });
-      }
-      // Initialize net weight unit from existing item
-      if (item.netWeightUnit?.id) {
-        setSelectedNetWeightUnitId(item.netWeightUnit.id);
-        setNetWeightUnitDisplay(
-          item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
-        );
-      }
+  // "Adjusting state during render" pattern — avoids setState-in-useEffect lint error
+  const [prevExistingItemData, setPrevExistingItemData] = useState(existingItemData);
+  if (mode === 'edit' && existingItemData?.pantryItem && existingItemData !== prevExistingItemData) {
+    setPrevExistingItemData(existingItemData);
+    const item = existingItemData.pantryItem;
+    const trackingUnitSymbol = item.unit?.symbol || '';
+    reset({
+      itemName: item.itemName || '',
+      quantityInput: item.quantity?.toString() || '1',
+      unit: trackingUnitSymbol,
+      minQuantity: item.minQuantity?.toString() || '',
+      restockQuantity: item.restockQuantity?.toString() || '',
+      brand: item.brand?.name || '',
+      netWeight: item.netWeight?.toString() || '',
+      netWeightUnitId: item.netWeightUnit?.id || '',
+      storageState: item.storageState || StorageState.Ambient,
+      location:
+        typeof item.storageLocation === 'string'
+          ? item.storageLocation
+          : item.storageLocation?.name || '',
+      expirationDate: item.expiresAt ? new Date(item.expiresAt) : undefined,
+      notes: item.storageNotes || '',
+      category: item.item?.categories?.[0]?.category?.name || '',
+      tags: item.tags || [],
+    });
+    // Initialize tracking unit state from existing item
+    if (item.unit) {
+      setTrackingUnit({
+        id: item.unit.id,
+        name: item.unit.name,
+        symbol: item.unit.symbol,
+        type: item.unit.type ?? null,
+      });
     }
-  }, [mode, existingItemData, reset]);
+    // Initialize net weight unit display from existing item
+    if (item.netWeightUnit?.id) {
+      setNetWeightUnitDisplay(
+        item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
+      );
+    }
+  }
 
   // Handlers for item selection (add mode only)
   const handleItemSelect = (item: ItemSuggestion) => {
@@ -343,23 +338,24 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       unitId: string | null,
       unitName: string | null,
       unitType?: string | null,
+      unitSymbol?: string | null,
     ) => {
       setTrackingUnit(prev => ({
         ...prev,
         id: unitId,
         name: unitName,
-        type: unitType ?? null }));
+        type: unitType ?? null,
+        symbol: unitSymbol ?? null }));
     };
 
   const handleNetWeightUnitSelected = (unitId: string | null, unitName: string | null) => {
-      setSelectedNetWeightUnitId(unitId);
       if (unitName) setNetWeightUnitDisplay(unitName);
       if (unitId) {
         setValue('netWeightUnitId', unitId, { shouldDirty: true });
       }
     };
 
-  const handleSave = async (data: PantryItemFormData) => {
+  const handleSave = (data: PantryItemFormData) => {
     // Validate quantity input
     const quantityValue = parseQuantityInput(data.quantityInput || '');
     if (!quantityValue || quantityValue <= 0) {
@@ -372,72 +368,82 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       return;
     }
 
-    setSaving(true);
-    try {
-      // Resolve unit ID from symbol if needed
-      const unitId = await resolveUnitId(trackingUnit.id, data.unit);
+    executeMutationWithErrorHandler(
+      async () => {
+        // Resolve unit ID from symbol if needed
+        const unitId = trackingUnit.id ?? await resolveUnitId(null, data.unit);
 
-      if (mode === 'add') {
-        await createPantryItem({
-          input: data,
-          pantryId: currentPantryId,
-          quantityValue,
-          unitId,
-          selectedLocationId,
-          selectedCategoryId });
-      } else {
-        const currentItem = existingItemData?.pantryItem;
-        if (!currentItem || !itemId) {
-          Alert.alert('Error', 'Item not found');
-          return;
-        }
-
-        const dirtyFieldsRecord = { ...dirtyFields } as Record<string, boolean>;
-
-        // Strip weight fields when locked — weight changes must go through correctPantryItemWeight
-        if (isWeightLocked) {
-          delete dirtyFieldsRecord.netWeight;
-          delete dirtyFieldsRecord.netWeightUnitId;
-        }
-
-        const quantityOrUnitChanged =
-          dirtyFieldsRecord.quantityInput || dirtyFieldsRecord.unit;
-
-        // Handle quantity/unit changes with dedicated mutation
-        if (quantityOrUnitChanged) {
-          updateQuantity({
-            itemId,
-            quantityInput: data.quantityInput || quantityValue.toString(),
+        if (mode === 'add') {
+          await createPantryItem({
+            input: data,
+            pantryId: currentPantryId,
             quantityValue,
             unitId,
-            unitSymbol: data.unit,
-            trackingUnit,
-            currentItem });
-        }
+            selectedLocationId,
+            selectedCategoryId });
+        } else {
+          const currentItem = existingItemData?.pantryItem;
+          if (!currentItem || !itemId) {
+            Alert.alert('Error', 'Item not found');
+            return;
+          }
 
-        // Handle non-quantity field updates
-        updatePantryItemFields({
-          itemId,
-          input: data,
-          currentItem,
-          dirtyFields: dirtyFieldsRecord,
-          selectedLocationId,
-          selectedBrandId });
-      }
-    } catch (error) {
-      console.error(
-        `${mode === 'add' ? 'Add' : 'Update'} pantry item error:`,
-        error,
-      );
-      Alert.alert(
-        'Error',
-        `Failed to ${
-          mode === 'add' ? 'add' : 'update'
-        } pantry item. Please try again.`,
-      );
-    } finally {
-      setSaving(false);
-    }
+          const dirtyFieldsRecord = { ...dirtyFields } as Record<string, boolean>;
+
+          // Strip weight fields when locked — weight changes must go through correctPantryItemWeight
+          if (isWeightLocked) {
+            delete dirtyFieldsRecord.netWeight;
+            delete dirtyFieldsRecord.netWeightUnitId;
+          }
+
+          const quantityOrUnitChanged =
+            dirtyFieldsRecord.quantityInput || dirtyFieldsRecord.unit;
+
+          const hasNonQuantityChanges = Object.keys(dirtyFieldsRecord).some(
+            k => k !== 'quantityInput' && k !== 'unit' && dirtyFieldsRecord[k],
+          );
+
+          // Handle quantity/unit changes with dedicated mutation
+          if (quantityOrUnitChanged) {
+            updateQuantity({
+              itemId,
+              quantityInput: data.quantityInput || quantityValue.toString(),
+              quantityValue,
+              unitId,
+              unitSymbol: data.unit,
+              trackingUnit,
+              currentItem });
+          }
+
+          // Handle non-quantity field updates
+          if (hasNonQuantityChanges) {
+            updatePantryItemFields({
+              itemId,
+              input: data,
+              currentItem,
+              dirtyFields: dirtyFieldsRecord,
+              selectedLocationId,
+              selectedBrandId,
+              trackingUnit: quantityOrUnitChanged ? trackingUnit : undefined });
+          } else if (!quantityOrUnitChanged) {
+            // Nothing changed — still dismiss the form
+            onSuccess?.();
+          }
+        }
+      },
+      (error) => {
+        console.error(
+          `${mode === 'add' ? 'Add' : 'Update'} pantry item error:`,
+          error,
+        );
+        Alert.alert(
+          'Error',
+          `Failed to ${
+            mode === 'add' ? 'add' : 'update'
+          } pantry item. Please try again.`,
+        );
+      },
+    );
   };
 
   // Show loading for edit mode
@@ -600,7 +606,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               control={control}
               errors={errors}
               mode={mode}
-              storageState={watchedValues.storageState}
+              storageState={watchedValues.storageState ?? StorageState.Ambient}
               expirationDate={watchedValues.expirationDate}
               onStorageStateChange={state =>
                 setValue('storageState', state, { shouldDirty: true })

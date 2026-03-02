@@ -116,8 +116,8 @@ export const ListAnimationProvider: React.FC<ListAnimationProviderProps> = ({
       pendingAnimationsRef.current.delete(itemId);
 
       // Trigger the animation now that item is registered
-      // Use setTimeout to ensure component is fully mounted
-      setTimeout(() => {
+      // Use requestAnimationFrame to ensure component is fully mounted and painted
+      requestAnimationFrame(() => {
         const currentTrigger = animationTriggersRef.current.get(itemId);
         if (currentTrigger) {
           // Default to left direction for delayed triggers
@@ -126,7 +126,7 @@ export const ListAnimationProvider: React.FC<ListAnimationProviderProps> = ({
           // Trigger was unregistered, just run callback
           pending.onComplete();
         }
-      }, 0);
+      });
     }
   };
 
