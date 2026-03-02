@@ -2,20 +2,20 @@ import React, { useState } from 'react';
 import {
   View,
   Alert,
-  Text,
-  Pressable,
 } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
 import { StorageLocationCard } from '#components/organisms/storageLocation/StorageLocationCard';
 import { StorageLocationSheet } from '#components/modals/StorageLocationSheet/StorageLocationSheet';
 import { commonStyles } from '#/styles/commonStyles';
-import { Icon } from '#utils/iconUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { SegmentedControl } from '#components/molecules/SegmentedControl';
+import { EmptyState } from '#components/base/EmptyState';
+
+const VIEW_MODES = ['flat', 'tree'] as const;
 
 type RouteParams = {
   homeId: string;
@@ -27,7 +27,6 @@ export const StorageLocationsScreen: React.FC<{
   useScreenTransition('StorageLocationsScreen');
   const { homeId } = route.params;
   const { goBack } = useAppNavigation();
-  const { theme } = useUnistyles();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'flat' | 'tree'>('flat');
@@ -38,6 +37,7 @@ export const StorageLocationsScreen: React.FC<{
     tree,
     initialLoading,
     creating,
+    updating,
     updateLocation,
     deleteLocation,
     setDefaultLocation,
@@ -46,9 +46,12 @@ export const StorageLocationsScreen: React.FC<{
     refetch,
   } = useStorageLocationManagement(homeId);
 
-  // Open sheet for editing
+  // Open sheet for editing — map nested parentLocation to flat parentLocationId
   const handleOpenEdit = (location: any) => {
-    setEditingLocation(location);
+    setEditingLocation({
+      ...location,
+      parentLocationId: location.parentLocation?.id ?? null,
+    });
     setSheetVisible(true);
   };
 
@@ -137,74 +140,39 @@ export const StorageLocationsScreen: React.FC<{
 
   const sections = [
     {
+      transparent: true,
       content: (
         <>
           {/* Error Message */}
           {!!error && (
-            <View style={styles.errorCard}>
-              <Text style={styles.errorText}>
-                Error loading storage locations: {error.message}
-              </Text>
-            </View>
+            <EmptyState
+              icon="alert-circle-outline"
+              title="Something went wrong"
+              description={error.message}
+              action={{ label: 'Retry', onPress: handleRefresh }}
+            />
           )}
 
           {/* View Mode Toggle */}
           {locations.length > 0 && (
-            <View style={styles.viewModeToggle}>
-              <Pressable
-                style={({pressed}) => [
-                  styles.toggleButton,
-                  viewMode === 'flat' && styles.toggleButtonActive,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => setViewMode('flat')}
-              >
-                <Icon name="list" size={20} />
-                <Text
-                  style={[
-                    styles.toggleText,
-                    viewMode === 'flat' && styles.toggleTextActive,
-                  ]}
-                >
-                  List View
-                </Text>
-              </Pressable>
-              <Pressable
-                style={({pressed}) => [
-                  styles.toggleButton,
-                  viewMode === 'tree' && styles.toggleButtonActive,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => setViewMode('tree')}
-              >
-                <Icon name="git-network" size={20} />
-                <Text
-                  style={[
-                    styles.toggleText,
-                    viewMode === 'tree' && styles.toggleTextActive,
-                  ]}
-                >
-                  Tree View
-                </Text>
-              </Pressable>
-            </View>
+            <SegmentedControl
+              options={VIEW_MODES}
+              value={viewMode}
+              onChange={setViewMode}
+              formatLabel={(v) => v === 'flat' ? 'List View' : 'Tree View'}
+            />
           )}
 
           {locations.length === 0 ? (
-            <View style={commonStyles.emptyState}>
-              <Icon
-                name="server-outline"
-                size={64}
-                color={theme.colors.textSecondary}
-              />
-              <Text style={commonStyles.emptyStateTitle}>
-                No Storage Locations
-              </Text>
-              <Text style={commonStyles.emptyStateText}>
-                Create storage locations to organize your pantry items by where
-                they're stored.
-              </Text>
-            </View>
+            <EmptyState
+              icon="server-outline"
+              title="No Storage Locations"
+              description="Create storage locations to organize your pantry items by where they're stored."
+              action={{
+                label: 'Add Location',
+                onPress: () => { setEditingLocation(null); setSheetVisible(true); },
+              }}
+            />
           ) : viewMode === 'tree' ? (
             // Tree view: render hierarchical structure
             tree.map(node => renderTreeNode(node, 0))
@@ -251,63 +219,9 @@ export const StorageLocationsScreen: React.FC<{
         onSubmit={handleSubmit}
         initialData={editingLocation}
         availableLocations={locations}
-        isSubmitting={creating}
+        isSubmitting={creating || updating}
       />
     </>
   );
 };
 
-const styles = StyleSheet.create(theme => ({
-  sectionTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-  },
-  errorCard: {
-    backgroundColor: theme.colors.errorLight,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.md,
-  },
-  errorText: {
-    color: theme.colors.error,
-    fontSize: theme.fonts.size.sm,
-  },
-  viewModeToggle: {
-    flexDirection: 'row',
-    marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  toggleButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    gap: theme.spacing.xs,
-  },
-  toggleButtonActive: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
-  toggleText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  toggleTextActive: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));

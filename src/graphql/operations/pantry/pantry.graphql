@@ -23,6 +23,7 @@ query GetPantry(
   $id: ID!
   $itemsCursor: String
   $itemsFirst: Int = 25
+  $itemsFilter: PantryItemFilters
   $storageLocationsCursor: String
   $storageLocationsFirst: Int = 20
 ) {
@@ -39,8 +40,19 @@ query GetPantry(
       totalItems
       expiringCount
       lowStockCount
+      storageStateCounts {
+        refrigerated
+        frozen
+        ambient
+      }
+      storageLocationCounts {
+        storageLocationId
+        name
+        type
+        itemCount
+      }
     }
-    itemsConnection(first: $itemsFirst, after: $itemsCursor) {
+    itemsConnection(first: $itemsFirst, after: $itemsCursor, filters: $itemsFilter) {
       edges {
         node {
           ...PantryItemDisplay
@@ -64,6 +76,7 @@ query GetPantry(
           type
           icon
           isDefault
+          currentItemCount
           parentLocation {
             id
             name

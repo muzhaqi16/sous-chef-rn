@@ -1,0 +1,1133 @@
+import { QueueManager } from '../queueManager';
+import { queueStore } from '../queueStore';
+import { useStore } from '#store';
+import { QueuedMutation, QueueStatus } from '../types';
+
+// Mock the store module
+jest.mock('#store', () => ({
+  useStore: {
+    getState: jest.fn(),
+    setState: jest.fn(),
+    subscribe: jest.fn(),
+    getInitialState: jest.fn(),
+    destroy: jest.fn(),
+  },
+}));
+
+// Mock the Apollo client
+jest.mock('../../client', () => ({
+  client: {
+    mutate: jest.fn(),
+    cache: {
+      readFragment: jest.fn(),
+      identify: jest.fn((obj: any) => `${obj.__typename}:${obj.id}`),
+    },
+  },
+}));
+
+// Mock queueStore
+jest.mock('../queueStore', () => ({
+  queueStore: {
+    getPendingMutationsForUser: jest.fn(() => []),
+    updateMutation: jest.fn(() => true),
+    removeMutation: jest.fn(() => true),
+    incrementRetry: jest.fn(() => true),
+    markMutationFailed: jest.fn(() => true),
+    cleanupSuccessful: jest.fn(() => 0),
+    clearQueueForUser: jest.fn(() => 0),
+    setCurrentUserId: jest.fn(),
+    clearCurrentUserId: jest.fn(),
+    getQueueStats: jest.fn(() => ({
+      total: 0,
+      pending: 0,
+      processing: 0,
+      failed: 0,
+      authErrors: 0,
+    })),
+    getMutationsForUser: jest.fn(() => []),
+  },
+}));
+
+// Mock generated document nodes
+jest.mock('#generated', () => ({
+  SyncPantryItemDocument: { kind: 'Document', definitions: [] },
+  SyncDeletePantryItemDocument: { kind: 'Document', definitions: [] },
+  SyncShoppingListItemDocument: { kind: 'Document', definitions: [] },
+  SyncDeleteShoppingListItemDocument: { kind: 'Document', definitions: [] },
+  SyncMoveShoppingListItemDocument: { kind: 'Document', definitions: [] },
+}));
+
+// Mock generateId
+jest.mock('#/utils/generateId', () => ({
+  generateId: jest.fn(() => 'gen-id'),
+}));
+
+// Mock the logger
+jest.mock('#/utils/environment', () => ({
+  logger: {
+    info: jest.fn(),
+    debug: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+  },
+}));
+
+const mockedGetState = useStore.getState as jest.Mock;
+
+/** Build a test QueuedMutation */
+function makeMutation(overrides: Partial<QueuedMutation> = {}): QueuedMutation {
+  return {
+    id: `mut-${Math.random().toString(36).slice(2, 8)}`,
+    userId: 'user-1',
+    operationName: 'TestMutation',
+    mutation: { kind: 'Document', definitions: [] } as any,
+    variables: {},
+    status: QueueStatus.PENDING,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    retryCount: 0,
+    maxRetries: 3,
+    requiresAuth: true,
+    ...overrides,
+  };
+}
+
+describe('QueueManager', () => {
+  let manager: QueueManager;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    manager = new QueueManager({
+      retryDelayMs: 10, // Fast retries for tests
+      processingTimeoutMs: 5000,
+      batchSize: 5,
+    });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  // -------------------------------------------------------------------------
+  // processQueue
+  // -------------------------------------------------------------------------
+  describe('processQueue', () => {
+    it('skips processing when no user is authenticated', async () => {
+      mockedGetState.mockReturnValue({
+        user: null,
+        accessToken: null,
+        isOnline: true,
+      });
+
+      await manager.processQueue();
+
+      expect(queueStore.getPendingMutationsForUser).not.toHaveBeenCalled();
+    });
+
+    it('skips processing when offline', async () => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: false,
+      });
+
+      await manager.processQueue();
+
+      expect(queueStore.getPendingMutationsForUser).not.toHaveBeenCalled();
+    });
+
+    it('skips processing when no access token', async () => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: null,
+        isOnline: true,
+      });
+
+      await manager.processQueue();
+
+      expect(queueStore.getPendingMutationsForUser).not.toHaveBeenCalled();
+    });
+
+    it('completes when queue is empty', async () => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([]);
+
+      await manager.processQueue();
+
+      expect(queueStore.getPendingMutationsForUser).toHaveBeenCalledWith(
+        'user-1',
+      );
+      expect(queueStore.cleanupSuccessful).not.toHaveBeenCalled();
+    });
+
+    it('prevents concurrent processing', async () => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([]);
+
+      // Start two concurrent processQueue calls
+      const p1 = manager.processQueue();
+      const p2 = manager.processQueue();
+
+      await Promise.all([p1, p2]);
+
+      // getPendingMutationsForUser should only be called once (second call returns early)
+      expect(queueStore.getPendingMutationsForUser).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // classifyError (tested through handleMutationError behavior)
+  // -------------------------------------------------------------------------
+  describe('classifyError', () => {
+    // Access private method via any cast for unit testing
+    let classifyError: (error: any) => any;
+
+    beforeEach(() => {
+      classifyError = (manager as any).classifyError.bind(manager);
+    });
+
+    it('classifies UNAUTHENTICATED as auth error', () => {
+      const result = classifyError({
+        message: 'Not authenticated',
+        extensions: { code: 'UNAUTHENTICATED' },
+      });
+      expect(result.type).toBe('auth');
+      expect(result.retryable).toBe(true);
+    });
+
+    it('classifies FORBIDDEN as auth error', () => {
+      const result = classifyError({
+        message: 'Forbidden',
+        extensions: { code: 'FORBIDDEN' },
+      });
+      expect(result.type).toBe('auth');
+      expect(result.retryable).toBe(true);
+    });
+
+    it('classifies "expired" message as auth error', () => {
+      const result = classifyError({ message: 'Token expired' });
+      expect(result.type).toBe('auth');
+    });
+
+    it('classifies "unauthorized" message as auth error', () => {
+      const result = classifyError({ message: 'Unauthorized access' });
+      expect(result.type).toBe('auth');
+    });
+
+    it('classifies network errors', () => {
+      const result = classifyError({ message: 'Network error occurred' });
+      expect(result.type).toBe('network');
+      expect(result.retryable).toBe(true);
+    });
+
+    it('classifies timeout errors', () => {
+      const result = classifyError({ message: 'Request timeout' });
+      expect(result.type).toBe('network');
+      expect(result.retryable).toBe(true);
+    });
+
+    it('classifies ECONNREFUSED as network error', () => {
+      const result = classifyError({ message: 'connect ECONNREFUSED' });
+      expect(result.type).toBe('network');
+      expect(result.retryable).toBe(true);
+    });
+
+    it('classifies 5xx as server error', () => {
+      const result = classifyError({
+        message: 'Internal server error',
+        networkError: { statusCode: 500 },
+      });
+      expect(result.type).toBe('server');
+      expect(result.retryable).toBe(true);
+    });
+
+    it('classifies 503 as server error', () => {
+      const result = classifyError({
+        message: 'Service unavailable',
+        networkError: { statusCode: 503 },
+      });
+      expect(result.type).toBe('server');
+      expect(result.retryable).toBe(true);
+    });
+
+    it('classifies unknown/client errors as non-retryable', () => {
+      const result = classifyError({
+        message: 'Validation error: field X is required',
+      });
+      expect(result.type).toBe('unknown');
+      expect(result.retryable).toBe(false);
+    });
+
+    it('includes timestamp in classified error', () => {
+      const before = Date.now();
+      const result = classifyError({ message: 'test' });
+      expect(result.timestamp).toBeGreaterThanOrEqual(before);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // mergeMoveItemMutations
+  // -------------------------------------------------------------------------
+  describe('mergeMoveItemMutations', () => {
+    let mergeMoveItemMutations: (mutations: QueuedMutation[]) => {
+      merged: QueuedMutation[];
+      removed: string[];
+    };
+
+    beforeEach(() => {
+      mergeMoveItemMutations = (manager as any).mergeMoveItemMutations.bind(
+        manager,
+      );
+    });
+
+    it('merges multiple move mutations for the same item', () => {
+      const move1 = makeMutation({
+        id: 'move-1',
+        operationName: 'MoveShoppingListItem',
+        variables: { input: { itemId: 'item-A', afterId: 'x' } },
+      });
+      const move2 = makeMutation({
+        id: 'move-2',
+        operationName: 'MoveShoppingListItem',
+        variables: { input: { itemId: 'item-A', afterId: 'y' } },
+      });
+
+      const { merged, removed } = mergeMoveItemMutations([move1, move2]);
+
+      expect(removed).toEqual(['move-1']);
+      expect(merged).toHaveLength(1);
+      expect(merged[0].id).toBe('move-2');
+    });
+
+    it('keeps move mutations for different items', () => {
+      const moveA = makeMutation({
+        id: 'move-a',
+        operationName: 'MoveShoppingListItem',
+        variables: { input: { itemId: 'item-A' } },
+      });
+      const moveB = makeMutation({
+        id: 'move-b',
+        operationName: 'MoveShoppingListItem',
+        variables: { input: { itemId: 'item-B' } },
+      });
+
+      const { merged, removed } = mergeMoveItemMutations([moveA, moveB]);
+
+      expect(removed).toEqual([]);
+      expect(merged).toHaveLength(2);
+    });
+
+    it('preserves non-move mutations in order', () => {
+      const create = makeMutation({
+        id: 'create-1',
+        operationName: 'AddItemToShoppingList',
+      });
+      const move = makeMutation({
+        id: 'move-1',
+        operationName: 'MoveShoppingListItem',
+        variables: { input: { itemId: 'item-A' } },
+      });
+
+      const { merged, removed } = mergeMoveItemMutations([create, move]);
+
+      expect(removed).toEqual([]);
+      expect(merged).toHaveLength(2);
+      // Non-move mutations come first, then move mutations
+      expect(merged[0].id).toBe('create-1');
+      expect(merged[1].id).toBe('move-1');
+    });
+
+    it('handles empty input', () => {
+      const { merged, removed } = mergeMoveItemMutations([]);
+      expect(merged).toEqual([]);
+      expect(removed).toEqual([]);
+    });
+
+    it('handles move mutations without itemId', () => {
+      const move = makeMutation({
+        id: 'move-no-id',
+        operationName: 'MoveShoppingListItem',
+        variables: { input: {} },
+      });
+
+      const { merged, removed } = mergeMoveItemMutations([move]);
+
+      expect(removed).toEqual([]);
+      expect(merged).toHaveLength(1);
+    });
+
+    it('keeps three moves for same item, only latest survives', () => {
+      const move1 = makeMutation({
+        id: 'move-1',
+        operationName: 'MoveShoppingListItem',
+        variables: { input: { itemId: 'item-A', afterId: 'a' } },
+      });
+      const move2 = makeMutation({
+        id: 'move-2',
+        operationName: 'MoveShoppingListItem',
+        variables: { input: { itemId: 'item-A', afterId: 'b' } },
+      });
+      const move3 = makeMutation({
+        id: 'move-3',
+        operationName: 'MoveShoppingListItem',
+        variables: { input: { itemId: 'item-A', afterId: 'c' } },
+      });
+
+      const { merged, removed } = mergeMoveItemMutations([
+        move1,
+        move2,
+        move3,
+      ]);
+
+      expect(removed).toContain('move-1');
+      expect(removed).toContain('move-2');
+      expect(merged).toHaveLength(1);
+      expect(merged[0].id).toBe('move-3');
+      expect(merged[0].variables.input.afterId).toBe('c');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // handleMutationError (via processMutation)
+  // -------------------------------------------------------------------------
+  describe('handleMutationError', () => {
+    let handleMutationError: (
+      mutation: QueuedMutation,
+      error: any,
+    ) => Promise<any>;
+
+    beforeEach(() => {
+      handleMutationError = (manager as any).handleMutationError.bind(manager);
+      // Default: online
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+      });
+    });
+
+    it('marks non-retryable errors as failed immediately', async () => {
+      const mutation = makeMutation({ id: 'fail-1', retryCount: 0 });
+      const error = { message: 'Validation error: field X is required' };
+
+      const result = await handleMutationError(mutation, error);
+
+      expect(result.success).toBe(false);
+      expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+        'fail-1',
+        expect.objectContaining({ type: 'unknown', retryable: false }),
+      );
+    });
+
+    it('marks as failed when max retries exceeded', async () => {
+      const mutation = makeMutation({
+        id: 'maxed-out',
+        retryCount: 3,
+        maxRetries: 3,
+      });
+      const error = { message: 'Network error' };
+
+      const result = await handleMutationError(mutation, error);
+
+      expect(result.success).toBe(false);
+      expect(queueStore.markMutationFailed).toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Event handlers
+  // -------------------------------------------------------------------------
+  describe('event handlers', () => {
+    it('onLogout clears queue for user', () => {
+      manager.onLogout('user-1');
+
+      expect(queueStore.clearQueueForUser).toHaveBeenCalledWith('user-1');
+      expect(queueStore.clearCurrentUserId).toHaveBeenCalled();
+    });
+
+    it('onUserChange clears old user queue and sets new user', () => {
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+        user: { id: 'user-2' },
+      });
+      manager.onUserChange('user-2', 'user-1');
+
+      expect(queueStore.clearQueueForUser).toHaveBeenCalledWith('user-1');
+      expect(queueStore.setCurrentUserId).toHaveBeenCalledWith('user-2');
+    });
+
+    it('onUserChange does not clear queue when same user', () => {
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+        user: { id: 'user-1' },
+      });
+      manager.onUserChange('user-1', 'user-1');
+
+      expect(queueStore.clearQueueForUser).not.toHaveBeenCalled();
+    });
+
+    it('onUserChange does not clear queue when no previous user', () => {
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+        user: { id: 'user-1' },
+      });
+      manager.onUserChange('user-1', null);
+
+      expect(queueStore.clearQueueForUser).not.toHaveBeenCalled();
+      expect(queueStore.setCurrentUserId).toHaveBeenCalledWith('user-1');
+    });
+
+    it('getStats delegates to queueStore.getQueueStats', () => {
+      manager.getStats('user-1');
+      expect(queueStore.getQueueStats).toHaveBeenCalledWith('user-1');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // processMutation
+  // -------------------------------------------------------------------------
+  describe('processMutation', () => {
+    let processMutation: (mutation: QueuedMutation) => Promise<any>;
+    const { client } = require('../../client');
+
+    beforeEach(() => {
+      processMutation = (manager as any).processMutation.bind(manager);
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+      });
+    });
+
+    it('marks mutation as processing, then success on completion', async () => {
+      const mutation = makeMutation({ id: 'proc-1' });
+      client.mutate.mockResolvedValue({
+        data: { syncPantryItem: { item: {}, wasCreated: false } },
+      });
+
+      jest.useRealTimers();
+      const result = await processMutation(mutation);
+      jest.useFakeTimers();
+
+      expect(result.success).toBe(true);
+      expect(queueStore.updateMutation).toHaveBeenCalledWith('proc-1', {
+        status: QueueStatus.PROCESSING,
+      });
+      expect(queueStore.updateMutation).toHaveBeenCalledWith('proc-1', {
+        status: QueueStatus.SUCCESS,
+        processedAt: expect.any(Number),
+      });
+    });
+
+    it('handles mutation failure', async () => {
+      const mutation = makeMutation({
+        id: 'proc-fail',
+        retryCount: 3,
+        maxRetries: 3,
+      });
+      client.mutate.mockRejectedValue(new Error('Server error'));
+
+      jest.useRealTimers();
+      const result = await processMutation(mutation);
+      jest.useFakeTimers();
+
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Private helpers
+  // -------------------------------------------------------------------------
+  describe('createBatches', () => {
+    let createBatches: <T>(items: T[], size: number) => T[][];
+
+    beforeEach(() => {
+      createBatches = (manager as any).createBatches.bind(manager);
+    });
+
+    it('splits items into batches of given size', () => {
+      const items = [1, 2, 3, 4, 5, 6, 7];
+      const batches = createBatches(items, 3);
+      expect(batches).toEqual([[1, 2, 3], [4, 5, 6], [7]]);
+    });
+
+    it('handles empty array', () => {
+      expect(createBatches([], 5)).toEqual([]);
+    });
+
+    it('handles single batch', () => {
+      expect(createBatches([1, 2], 5)).toEqual([[1, 2]]);
+    });
+  });
+
+  describe('groupByEntity', () => {
+    let groupByEntity: (mutations: QueuedMutation[]) => {
+      independent: QueuedMutation[];
+      entityGroups: QueuedMutation[][];
+    };
+
+    beforeEach(() => {
+      groupByEntity = (manager as any).groupByEntity.bind(manager);
+    });
+
+    it('groups mutations by entity id', () => {
+      const m1 = makeMutation({
+        id: 'a',
+        variables: { input: { id: 'entity-1' } },
+      });
+      const m2 = makeMutation({
+        id: 'b',
+        variables: { input: { id: 'entity-1' } },
+      });
+      const m3 = makeMutation({
+        id: 'c',
+        variables: { input: { id: 'entity-2' } },
+      });
+
+      const { independent, entityGroups } = groupByEntity([m1, m2, m3]);
+
+      // entity-2 is independent (single mutation)
+      expect(independent).toHaveLength(1);
+      expect(independent[0].id).toBe('c');
+
+      // entity-1 has 2 mutations, should be a group
+      expect(entityGroups).toHaveLength(1);
+      expect(entityGroups[0]).toHaveLength(2);
+    });
+
+    it('treats mutations without identifiable entity as independent', () => {
+      const m1 = makeMutation({ id: 'x', variables: {} });
+      const m2 = makeMutation({ id: 'y', variables: {} });
+
+      const { independent, entityGroups } = groupByEntity([m1, m2]);
+
+      expect(independent).toHaveLength(2);
+      expect(entityGroups).toHaveLength(0);
+    });
+  });
+
+  describe('calculateRetryDelay', () => {
+    let calculateRetryDelay: (retryCount: number) => number;
+
+    beforeEach(() => {
+      calculateRetryDelay = (manager as any).calculateRetryDelay.bind(manager);
+    });
+
+    it('uses exponential backoff', () => {
+      // With retryDelayMs = 10
+      // retryCount 0 -> 10 * 2^0 = 10 + jitter
+      // retryCount 1 -> 10 * 2^1 = 20 + jitter
+      // retryCount 2 -> 10 * 2^2 = 40 + jitter
+      const delay0 = calculateRetryDelay(0);
+      const delay1 = calculateRetryDelay(1);
+      const delay2 = calculateRetryDelay(2);
+
+      expect(delay0).toBeGreaterThanOrEqual(10);
+      expect(delay0).toBeLessThanOrEqual(510); // 10 + 500 jitter max
+      expect(delay1).toBeGreaterThanOrEqual(20);
+      expect(delay2).toBeGreaterThanOrEqual(40);
+    });
+
+    it('caps at 30 seconds', () => {
+      const delay = calculateRetryDelay(20); // 10 * 2^20 would be huge
+      expect(delay).toBeLessThanOrEqual(30000);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // resolveIds
+  // -------------------------------------------------------------------------
+  describe('resolveIds', () => {
+    let resolveIds: (variables: any) => any;
+
+    beforeEach(() => {
+      resolveIds = (manager as any).resolveIds.bind(manager);
+    });
+
+    it('returns null/undefined variables as-is', () => {
+      expect(resolveIds(null)).toBeNull();
+      expect(resolveIds(undefined)).toBeUndefined();
+    });
+
+    it('resolves temp-IDs from idMapping', () => {
+      // Set up a mapping
+      const idMapping = (manager as any).idMapping as Map<string, string>;
+      idMapping.set('temp-abc123', 'real-server-id');
+
+      const result = resolveIds({ id: 'temp-abc123', name: 'test' });
+      expect(result.id).toBe('real-server-id');
+    });
+
+    it('does not resolve non-temp IDs', () => {
+      const result = resolveIds({ id: 'regular-id', name: 'test' });
+      expect(result.id).toBe('regular-id');
+    });
+
+    it('resolves IDs nested in objects', () => {
+      const idMapping = (manager as any).idMapping as Map<string, string>;
+      idMapping.set('temp-nested', 'real-nested');
+
+      const result = resolveIds({ input: { id: 'temp-nested' } });
+      expect(result.input.id).toBe('real-nested');
+    });
+
+    it('resolves keys ending in Id', () => {
+      const idMapping = (manager as any).idMapping as Map<string, string>;
+      idMapping.set('temp-item', 'real-item');
+
+      const result = resolveIds({ input: { itemId: 'temp-item' } });
+      expect(result.input.itemId).toBe('real-item');
+    });
+
+    it('handles arrays inside variables', () => {
+      const idMapping = (manager as any).idMapping as Map<string, string>;
+      idMapping.set('temp-arr', 'real-arr');
+
+      const result = resolveIds({ ids: [{ id: 'temp-arr' }] });
+      expect(result.ids[0].id).toBe('real-arr');
+    });
+
+    it('leaves unmapped temp-IDs unchanged', () => {
+      const result = resolveIds({ id: 'temp-unmapped' });
+      expect(result.id).toBe('temp-unmapped');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // convertToSyncMutation
+  // -------------------------------------------------------------------------
+  describe('convertToSyncMutation', () => {
+    let convertToSyncMutation: (mutation: QueuedMutation) => { syncMutation: any; syncVariables: any };
+    const { client: mockClient } = require('../../client');
+
+    beforeEach(() => {
+      convertToSyncMutation = (manager as any).convertToSyncMutation.bind(manager);
+    });
+
+    it('converts CreatePantryItem to SyncPantryItemDocument', () => {
+      const mutation = makeMutation({
+        operationName: 'CreatePantryItem',
+        variables: { input: { id: 'item-1', name: 'Milk' } },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      expect(syncVariables.clientId).toBe('item-1');
+      expect(syncVariables.input).toEqual({ id: 'item-1', name: 'Milk' });
+    });
+
+    it('converts UpdatePantryItem to SyncPantryItemDocument', () => {
+      const mutation = makeMutation({
+        operationName: 'UpdatePantryItem',
+        variables: { input: { id: 'item-2', name: 'Eggs' } },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      expect(syncVariables.clientId).toBe('item-2');
+    });
+
+    it('converts DeletePantryItem to SyncDeletePantryItemDocument', () => {
+      const mutation = makeMutation({
+        operationName: 'DeletePantryItem',
+        variables: { id: 'item-3', version: 2 },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      expect(syncVariables.clientId).toBe('item-3');
+      expect(syncVariables.version).toBe(2);
+    });
+
+    it('converts AddItemToShoppingList to SyncShoppingListItemDocument', () => {
+      const mutation = makeMutation({
+        operationName: 'AddItemToShoppingList',
+        variables: { input: { id: 'sl-1', shoppingListId: 'list-1' } },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      expect(syncVariables.clientId).toBe('sl-1');
+      expect(syncVariables.input).toEqual({ id: 'sl-1', shoppingListId: 'list-1' });
+    });
+
+    it('converts UpdateShoppingListItemQuantity with cache read', () => {
+      mockClient.cache.readFragment.mockReturnValue({
+        id: 'sl-item-1',
+        shoppingList: { id: 'list-99' },
+      });
+      const mutation = makeMutation({
+        operationName: 'UpdateShoppingListItemQuantity',
+        variables: { id: 'sl-item-1', quantity: '5', version: 3 },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      expect(syncVariables.input.shoppingListId).toBe('list-99');
+      expect(syncVariables.input.quantity).toBe('5');
+      expect(syncVariables.input.version).toBe(3);
+    });
+
+    it('converts ToggleShoppingListItemPurchased with cache read', () => {
+      mockClient.cache.readFragment.mockReturnValue({
+        id: 'sl-item-2',
+        shoppingList: { id: 'list-88' },
+      });
+      const mutation = makeMutation({
+        operationName: 'ToggleShoppingListItemPurchased',
+        variables: { id: 'sl-item-2', purchased: true, version: 1 },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      expect(syncVariables.input.shoppingListId).toBe('list-88');
+      expect(syncVariables.input.isPurchased).toBe(true);
+    });
+
+    it('throws when cache has no shoppingList data for quantity update', () => {
+      mockClient.cache.readFragment.mockReturnValue(null);
+      const mutation = makeMutation({
+        operationName: 'UpdateShoppingListItemQuantity',
+        variables: { id: 'missing-item', quantity: '2' },
+      });
+      expect(() => convertToSyncMutation(mutation)).toThrow(
+        'Cannot sync UpdateShoppingListItemQuantity'
+      );
+    });
+
+    it('converts RemoveItemFromShoppingList to SyncDeleteShoppingListItemDocument', () => {
+      const mutation = makeMutation({
+        operationName: 'RemoveItemFromShoppingList',
+        variables: { id: 'del-item', version: 5 },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      expect(syncVariables.clientId).toBe('del-item');
+      expect(syncVariables.version).toBe(5);
+    });
+
+    it('converts MoveShoppingListItem to SyncMoveShoppingListItemDocument', () => {
+      const mutation = makeMutation({
+        operationName: 'MoveShoppingListItem',
+        variables: { input: { itemId: 'mv-1', afterId: 'a', beforeId: 'b', version: 2 } },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      expect(syncVariables.clientId).toBe('mv-1');
+      expect(syncVariables.afterId).toBe('a');
+      expect(syncVariables.beforeId).toBe('b');
+      expect(syncVariables.version).toBe(2);
+    });
+
+    it('falls back to original mutation for unknown operation', () => {
+      const originalMutation = { kind: 'Document', definitions: [] } as any;
+      const mutation = makeMutation({
+        operationName: 'UnknownOperation',
+        mutation: originalMutation,
+        variables: { foo: 'bar' },
+      });
+      const { syncMutation, syncVariables } = convertToSyncMutation(mutation);
+      expect(syncMutation).toBe(originalMutation);
+      expect(syncVariables.foo).toBe('bar');
+    });
+
+    it('generates temp clientId when no id is available', () => {
+      const mutation = makeMutation({
+        operationName: 'CreatePantryItem',
+        variables: { input: { name: 'No ID item' } },
+      });
+      const { syncVariables } = convertToSyncMutation(mutation);
+      expect(syncVariables.clientId).toMatch(/^temp-/);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // executeSyncMutation - ID mapping and conflict handling
+  // -------------------------------------------------------------------------
+  describe('executeSyncMutation', () => {
+    let executeSyncMutation: (mutation: QueuedMutation) => Promise<any>;
+    const { client: mockClient } = require('../../client');
+
+    beforeEach(() => {
+      executeSyncMutation = (manager as any).executeSyncMutation.bind(manager);
+    });
+
+    it('stores ID mapping when wasCreated is true', async () => {
+      mockClient.mutate.mockResolvedValue({
+        data: {
+          syncPantryItem: {
+            item: { id: 'server-1' },
+            wasCreated: true,
+            serverId: 'server-1',
+            clientId: 'temp-client-1',
+          },
+        },
+      });
+
+      jest.useRealTimers();
+      const mutation = makeMutation({
+        operationName: 'CreatePantryItem',
+        variables: { input: { id: 'temp-client-1', name: 'Milk' } },
+      });
+      await executeSyncMutation(mutation);
+      jest.useFakeTimers();
+
+      const idMapping = (manager as any).idMapping as Map<string, string>;
+      expect(idMapping.get('temp-client-1')).toBe('server-1');
+    });
+
+    it('handles conflict in sync response', async () => {
+      mockClient.mutate.mockResolvedValue({
+        data: {
+          syncPantryItem: {
+            item: { id: 'server-1' },
+            wasCreated: false,
+            conflict: { message: 'Version mismatch' },
+          },
+        },
+      });
+
+      jest.useRealTimers();
+      const mutation = makeMutation({
+        operationName: 'UpdatePantryItem',
+        variables: { input: { id: 'item-1' } },
+      });
+      const result = await executeSyncMutation(mutation);
+      jest.useFakeTimers();
+
+      expect(result).toBeDefined();
+    });
+
+    it('throws when mutate returns an error', async () => {
+      mockClient.mutate.mockResolvedValue({
+        error: new Error('Server error'),
+      });
+
+      jest.useRealTimers();
+      const mutation = makeMutation({
+        operationName: 'CreatePantryItem',
+        variables: { input: { id: 'item-1' } },
+      });
+      await expect(executeSyncMutation(mutation)).rejects.toThrow('Server error');
+      jest.useFakeTimers();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // onOnline
+  // -------------------------------------------------------------------------
+  describe('onOnline', () => {
+    it('triggers queue processing', () => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([]);
+
+      // Should not throw
+      manager.onOnline();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // onOffline
+  // -------------------------------------------------------------------------
+  describe('onOffline', () => {
+    it('logs offline message without error', () => {
+      expect(() => manager.onOffline()).not.toThrow();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // onUserChange - online triggers processQueue
+  // -------------------------------------------------------------------------
+  describe('onUserChange triggers processQueue when online', () => {
+    it('starts processing when online', () => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-new' },
+        accessToken: 'token',
+        isOnline: true,
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([]);
+
+      manager.onUserChange('user-new', null);
+
+      expect(queueStore.setCurrentUserId).toHaveBeenCalledWith('user-new');
+    });
+
+    it('does not process queue when null newUserId', () => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+      });
+
+      manager.onUserChange(null, 'old-user');
+
+      // Should not try to set current user id
+      expect(queueStore.setCurrentUserId).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getStats without userId
+  // -------------------------------------------------------------------------
+  describe('getStats without userId', () => {
+    it('calls getQueueStats with undefined', () => {
+      manager.getStats();
+      expect(queueStore.getQueueStats).toHaveBeenCalledWith(undefined);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // processQueue - full integration with mutations
+  // -------------------------------------------------------------------------
+  describe('processQueue full flow', () => {
+    const { client: mockClient } = require('../../client');
+
+    it('processes mutations in batches and cleans up', async () => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+      });
+
+      const mutations = [
+        makeMutation({ id: 'mut-1', userId: 'user-1', operationName: 'CreatePantryItem', variables: { input: { id: 'item-1' } } }),
+      ];
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(mutations);
+
+      mockClient.mutate.mockResolvedValue({
+        data: {
+          syncPantryItem: { item: { id: 'item-1' }, wasCreated: true, serverId: 'srv-1', clientId: 'item-1' },
+        },
+      });
+
+      jest.useRealTimers();
+      await manager.processQueue();
+      jest.useFakeTimers();
+
+      expect(queueStore.cleanupSuccessful).toHaveBeenCalled();
+    });
+
+    it('breaks processing when going offline mid-batch', async () => {
+      let callCount = 0;
+      mockedGetState.mockImplementation(() => {
+        callCount++;
+        // First call = processQueue check, second = validateToken, third = batch online check
+        if (callCount <= 2) {
+          return { user: { id: 'user-1' }, accessToken: 'token', isOnline: true };
+        }
+        return { user: { id: 'user-1' }, accessToken: 'token', isOnline: false };
+      });
+
+      const mutations = [
+        makeMutation({ id: 'mut-1', userId: 'user-1' }),
+      ];
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(mutations);
+
+      jest.useRealTimers();
+      await manager.processQueue();
+      jest.useFakeTimers();
+
+      // Should not process mutation since went offline
+      expect(queueStore.updateMutation).not.toHaveBeenCalledWith('mut-1', expect.objectContaining({ status: QueueStatus.PROCESSING }));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // validateTokenBeforeReplay
+  // -------------------------------------------------------------------------
+  describe('validateTokenBeforeReplay', () => {
+    let validateTokenBeforeReplay: () => Promise<boolean>;
+
+    beforeEach(() => {
+      validateTokenBeforeReplay = (manager as any).validateTokenBeforeReplay.bind(manager);
+    });
+
+    it('returns true when accessToken exists', async () => {
+      mockedGetState.mockReturnValue({ accessToken: 'valid-token' });
+      const result = await validateTokenBeforeReplay();
+      expect(result).toBe(true);
+    });
+
+    it('returns false when no accessToken', async () => {
+      mockedGetState.mockReturnValue({ accessToken: null });
+      const result = await validateTokenBeforeReplay();
+      expect(result).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // handleAuthError
+  // -------------------------------------------------------------------------
+  describe('handleAuthError', () => {
+    let handleAuthError: (mutation: QueuedMutation, error: any) => Promise<any>;
+
+    beforeEach(() => {
+      handleAuthError = (manager as any).handleAuthError.bind(manager);
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+      });
+    });
+
+    it('retries mutation after successful token refresh', async () => {
+      const { client: mockClient } = require('../../client');
+      mockClient.mutate.mockResolvedValue({
+        data: { syncPantryItem: { item: {}, wasCreated: false } },
+      });
+
+      jest.useRealTimers();
+      const mutation = makeMutation({ id: 'auth-retry-1' });
+      const error = { type: 'auth', message: 'Unauthorized', timestamp: Date.now(), retryable: true };
+      const result = await handleAuthError(mutation, error);
+      jest.useFakeTimers();
+
+      // Token exists so validateTokenBeforeReplay returns true
+      expect(result.success).toBe(true);
+    });
+
+    it('marks as failed when token refresh fails', async () => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: null, // No token = validate fails
+        isOnline: true,
+      });
+
+      jest.useRealTimers();
+      const mutation = makeMutation({ id: 'auth-fail-1' });
+      const error = { type: 'auth', message: 'Unauthorized', timestamp: Date.now(), retryable: true };
+      const result = await handleAuthError(mutation, error);
+      jest.useFakeTimers();
+
+      expect(result.success).toBe(false);
+      expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+        'auth-fail-1',
+        expect.objectContaining({ type: 'auth' }),
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // mergeMoveItemMutations - ReorderShoppingListItems legacy
+  // -------------------------------------------------------------------------
+  describe('mergeMoveItemMutations - legacy operations', () => {
+    let mergeMoveItemMutations: (mutations: QueuedMutation[]) => {
+      merged: QueuedMutation[];
+      removed: string[];
+    };
+
+    beforeEach(() => {
+      mergeMoveItemMutations = (manager as any).mergeMoveItemMutations.bind(manager);
+    });
+
+    it('keeps legacy ReorderShoppingListItems mutations as-is', () => {
+      const reorder = makeMutation({
+        id: 'reorder-1',
+        operationName: 'ReorderShoppingListItems',
+        variables: { input: { shoppingListId: 'list-1' } },
+      });
+
+      const { merged, removed } = mergeMoveItemMutations([reorder]);
+      expect(removed).toEqual([]);
+      expect(merged).toHaveLength(1);
+      expect(merged[0].id).toBe('reorder-1');
+    });
+  });
+});

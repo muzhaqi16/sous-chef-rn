@@ -1,0 +1,152 @@
+'use no memo';
+
+import React from 'react';
+import { render, screen } from '@testing-library/react-native';
+import { CreateHomeScreen } from '../createHome/CreateHomeScreen';
+
+jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
+jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+
+const mockNavigateToNextStep = jest.fn();
+const mockSkipToStep = jest.fn();
+jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
+  useOnboardingNavigation: () => ({
+    navigateToNextStep: mockNavigateToNextStep,
+    setUserNavigationState: jest.fn(),
+    skipToStep: mockSkipToStep,
+  }),
+}));
+
+jest.mock('#store/useAppStore', () => {
+  const selectUser = (s: any) => s.user;
+  const selectSelectedHomeId = (s: any) => s.selectedHomeId;
+  const fn = (selector: any) => selector({
+    user: { id: 'u1', email: 'test@test.com' },
+    selectedHomeId: null,
+    setSelectedHomeId: jest.fn(),
+    setSelectedPantryId: jest.fn(),
+  });
+  fn.getState = () => ({});
+  fn.setState = jest.fn();
+  fn.subscribe = jest.fn();
+  return { useAppStore: fn, selectUser, selectSelectedHomeId };
+});
+
+jest.mock('#generated', () => ({
+  HomeType: { Household: 'HOUSEHOLD' },
+  useCreateHomeMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+  useCreatePantryMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+  useGetHomesQuery: jest.fn(() => ({
+    data: { homes: { edges: [] } },
+    loading: false,
+    refetch: jest.fn(),
+  })),
+  useGetMyPendingInvitesQuery: jest.fn(() => ({
+    data: { me: { pendingHomeInvites: [] } },
+    loading: false,
+  })),
+  useAcceptHomeInviteMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+  useDeclineHomeInviteMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+}));
+
+jest.mock('#hooks/performance/useScreenTransition', () => ({
+  useScreenTransition: jest.fn(),
+}));
+jest.mock('#/utils/validation/onboarding', () => ({
+  getCreateHomeSchema: jest.fn(() => ({
+    fields: {},
+    validate: jest.fn(),
+    isValid: jest.fn(() => Promise.resolve(true)),
+  })),
+}));
+jest.mock('#/utils/connectionUtils', () => ({
+  normalizeHomes: jest.fn((h) => h || []),
+  extractNodes: jest.fn((c) => c?.edges?.map((e: any) => e.node) || []),
+}));
+jest.mock('#/utils/compilerSafeWrappers', () => ({
+  executeWithLoadingState: jest.fn(),
+  executeMutation: jest.fn(),
+}));
+jest.mock('#utils/formatters/roleFormatters', () => ({
+  formatRole: jest.fn((r) => r),
+}));
+jest.mock('../createHome/helpers', () => ({
+  createPantryForHome: jest.fn(),
+  showPantryCreationError: jest.fn(),
+}));
+
+jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
+  OnboardingErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+jest.mock('#components/templates/OnBoardingWrapper', () => ({
+  OnBoardingWrapper: ({ title, subtitle, children, testID }: any) => {
+    const { View, Text } = require('react-native');
+    return (
+      <View testID={testID || 'onboarding-wrapper'}>
+        <Text>{title}</Text>
+        <Text>{subtitle}</Text>
+        {children}
+      </View>
+    );
+  },
+}));
+jest.mock('../createHome/FormContent', () => ({
+  FormContent: () => {
+    const { View, Text } = require('react-native');
+    return <View testID="form-content"><Text>Form Content</Text></View>;
+  },
+}));
+jest.mock('../createHome/LoadingView', () => ({
+  LoadingView: () => {
+    const { View, Text } = require('react-native');
+    return <View testID="loading-view"><Text>Loading...</Text></View>;
+  },
+}));
+jest.mock('../createHome/SubmitButton', () => ({
+  SubmitButton: ({ isCreating }: any) => {
+    const { Text } = require('react-native');
+    return <Text>{isCreating ? 'Creating...' : 'Create'}</Text>;
+  },
+}));
+jest.mock('../createHome/ErrorMessage', () => ({
+  ErrorMessage: ({ message }: any) => {
+    const { Text } = require('react-native');
+    return <Text>{message}</Text>;
+  },
+}));
+jest.mock('#components/base/Button', () => ({
+  Button: ({ title, onPress }: any) => {
+    const { Pressable, Text } = require('react-native');
+    return <Pressable onPress={onPress}><Text>{title}</Text></Pressable>;
+  },
+}));
+
+describe('CreateHomeScreen', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('renders the create home form', () => {
+    render(<CreateHomeScreen />);
+    expect(screen.getByText(/set up your home/i)).toBeTruthy();
+  });
+
+  it('shows form content for creating home', () => {
+    render(<CreateHomeScreen />);
+    expect(screen.getByTestId('form-content')).toBeTruthy();
+  });
+
+  it('shows the submit button', () => {
+    render(<CreateHomeScreen />);
+    expect(screen.getByText('Create')).toBeTruthy();
+  });
+
+  it('shows subtitle text', () => {
+    render(<CreateHomeScreen />);
+    expect(screen.getByText('Create your home and pantry to get started')).toBeTruthy();
+  });
+
+  it('wraps in error boundary', () => {
+    // This test verifies it renders without crashing (boundary is mocked)
+    render(<CreateHomeScreen />);
+    expect(screen.getByTestId('onboarding-create-home-screen')).toBeTruthy();
+  });
+});

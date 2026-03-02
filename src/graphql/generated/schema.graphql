@@ -5164,7 +5164,7 @@ type Pantry {
   id: ID!
   isDefault: Boolean!
   """Paginated list of items in this pantry"""
-  itemsConnection(after: String, before: String, first: Int, last: Int, orderBy: PantryItemOrderBy): PantryItemConnection!
+  itemsConnection(after: String, before: String, filters: PantryItemFilters, first: Int, last: Int, orderBy: PantryItemOrderBy): PantryItemConnection!
   ledgerAnalytics(filter: AnalyticsFilters, granularity: PeriodGranularity, itemId: String): LedgerAnalytics!
   location: String
   metadata: JSON
@@ -5412,6 +5412,7 @@ input PantryItemFilters {
   expiringSoon: Boolean
   itemId: ID
   search: String
+  storageLocationId: ID
   storageState: StorageState
   tags: [String!]
 }
@@ -5581,6 +5582,8 @@ type PantryStats {
   activeItems: Int!
   expiringCount: Int!
   lowStockCount: Int!
+  storageLocationCounts: [StorageLocationCount!]!
+  storageStateCounts: StorageStateCounts
   totalItems: Int!
   totalValue: Float!
 }
@@ -7400,6 +7403,14 @@ type StorageLocationConnection implements Connection {
   totalCount: Int
 }
 
+"""Count of pantry items in a specific storage location."""
+type StorageLocationCount {
+  itemCount: Int!
+  name: String!
+  storageLocationId: ID!
+  type: StorageType!
+}
+
 """Storage location connection for pagination"""
 type StorageLocationEdge implements Edge {
   cursor: String!
@@ -7429,6 +7440,19 @@ enum StorageState {
   NONE
   """Refrigerated temperature (typically 1-4°C / 34-39°F)"""
   REFRIGERATED
+}
+
+"""
+Counts of pantry items grouped by storage state.
+Always reflects the full pantry (not affected by itemsConnection filters).
+"""
+type StorageStateCounts {
+  """Count of items with storageState = AMBIENT, NONE, or null"""
+  ambient: Int!
+  """Count of items with storageState = FROZEN"""
+  frozen: Int!
+  """Count of items with storageState = REFRIGERATED"""
+  refrigerated: Int!
 }
 
 """Type of storage location"""

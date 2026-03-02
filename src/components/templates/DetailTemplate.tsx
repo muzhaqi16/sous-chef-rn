@@ -10,6 +10,7 @@ import { commonStyles } from '#/styles/commonStyles';
 interface DetailSection {
   title?: string;
   content: React.ReactNode;
+  transparent?: boolean;
 }
 
 interface DetailTemplateProps {
@@ -62,7 +63,13 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
         }
       >
         {sections.map((section, index) => (
-          <View key={index} style={[commonStyles.shadow, styles.section]}>
+          <View
+            key={index}
+            style={[
+              !section.transparent && commonStyles.shadow,
+              section.transparent ? styles.transparentSection : styles.section,
+            ]}
+          >
             {!!section.title && <Text style={styles.sectionTitle}>{section.title}</Text>}
             {section.content}
           </View>
@@ -92,6 +99,9 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
     padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  transparentSection: {
     marginBottom: theme.spacing.md,
   },
   sectionTitle: {

@@ -1,0 +1,41 @@
+'use no memo';
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react-native';
+import { ActionButtons } from '../ActionButtons';
+
+jest.mock('#/apollo/links/tokenScheduler', () => ({ scheduleTokenRefresh: jest.fn(), cancelScheduledRefresh: jest.fn() }));
+jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#utils/iconUtils', () => ({
+  Icon: ({ name }: any) => {
+    const { Text } = require('react-native');
+    return <Text>{name}</Text>;
+  },
+}));
+jest.mock('#constants/animations', () => ({
+  TIMING: { FAST: 150, INSTANT: 50 },
+}));
+
+describe('ActionButtons', () => {
+  it('returns null for empty actions', () => {
+    const { toJSON } = render(<ActionButtons actions={[]} />);
+    expect(toJSON()).toBeNull();
+  });
+
+  it('renders action buttons with labels', () => {
+    const actions = [
+      { icon: 'add', label: 'Create', onPress: jest.fn() },
+      { icon: 'edit', label: 'Edit', onPress: jest.fn() },
+    ];
+    render(<ActionButtons actions={actions} />);
+    expect(screen.getByText('Create')).toBeTruthy();
+    expect(screen.getByText('Edit')).toBeTruthy();
+  });
+
+  it('calls onPress when button is pressed', () => {
+    const onPress = jest.fn();
+    const actions = [{ icon: 'add', label: 'Create', onPress }];
+    render(<ActionButtons actions={actions} />);
+    fireEvent.press(screen.getByText('Create'));
+    expect(onPress).toHaveBeenCalled();
+  });
+});

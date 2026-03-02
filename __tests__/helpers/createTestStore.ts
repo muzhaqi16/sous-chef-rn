@@ -15,6 +15,9 @@ import { createNavigationSlice, NavigationState } from '#store/slices/navigation
 import { createNotificationSlice, NotificationState } from '#store/slices/notificationSlice';
 import { createUISlice, UIState } from '#store/slices/uiSlice';
 import { createBarcodeScannerSlice, BarcodeScannerState } from '#store/slices/barcodeScannerSlice';
+import { createAppSlice, AppState } from '#store/slices/appSlice';
+import { createNetworkSlice, NetworkState } from '#store/slices/networkSlice';
+import { createTelemetrySlice, TelemetryState } from '#store/slices/telemetrySlice';
 import { RootState } from '#store/index';
 
 type TestRootState = AuthState &
@@ -22,7 +25,10 @@ type TestRootState = AuthState &
   NavigationState &
   NotificationState &
   UIState &
-  BarcodeScannerState;
+  BarcodeScannerState &
+  AppState &
+  NetworkState &
+  TelemetryState;
 
 /**
  * Create a fully isolated store for testing.
@@ -40,15 +46,9 @@ export function createTestStore(initialOverrides?: Partial<TestRootState>) {
           ...createNotificationSlice(set, get, api),
           ...createUISlice(set, get, api),
           ...createBarcodeScannerSlice(set, get, api),
-          // Stubs for RootState fields that live outside the slices under test
-          isHydrated: true,
-          isLoggingOut: false,
-          setHydrated: jest.fn(),
-          registrationPassword: null,
-          setRegistrationPassword: jest.fn(),
-          postLoginCredentials: null,
-          setPostLoginCredentials: jest.fn(),
-          clearPostLoginCredentials: jest.fn(),
+          ...createAppSlice(set, get, api),
+          ...createNetworkSlice(set, get, api),
+          ...createTelemetrySlice(set, get, api),
           // Reset manager stubs
           resetStore: jest.fn(),
           logout: jest.fn(),
@@ -59,16 +59,6 @@ export function createTestStore(initialOverrides?: Partial<TestRootState>) {
           // Navigation state manager stubs
           initiateLogout: jest.fn(() => true),
           completeLogout: jest.fn(() => true),
-          // Telemetry stubs
-          telemetryEnabled: true,
-          setTelemetryEnabled: jest.fn(),
-          // Network stubs
-          isOnline: true,
-          isInternetReachable: true,
-          networkType: 'wifi',
-          lastOnlineTime: null,
-          lastOfflineTime: null,
-          setNetworkState: jest.fn(),
         } as unknown as RootState;
 
         return base;

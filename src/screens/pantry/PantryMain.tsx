@@ -20,14 +20,14 @@ import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useAppStore } from '#store/useAppStore';
 import { useShallow } from 'zustand/shallow';
-import { GetStorageLocationsQuery, StorageState } from '#generated';
+import { GetStorageLocationsQuery } from '#generated';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useFeatureHint, getLoginCount } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 import { Telemetry } from '#services/telemetry';
 import { useAuth } from '#hooks/auth/useAuth';
-import type { LocationFilter } from '#/utils/pantryFilters';
+import { type LocationFilter, locationFilterToQueryFilter } from '#/utils/pantryFilters';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import { PantryContent, type PantryContentRef } from '#components/pantry/PantryContent';
 import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
@@ -159,6 +159,8 @@ const PantryMainInner: React.FC = () => {
     Telemetry.trackEvent('add_pantry_item_clicked');
     setAddSheetVisible(true);
   });
+  // Convert location filter to server-side query filter
+  const queryFilter = locationFilterToQueryFilter(locationFilter);
   const {
     items: rawPantryItems,
     allItems,
@@ -175,10 +177,10 @@ const PantryMainInner: React.FC = () => {
     hasMore,
     isLoadingMore,
     locationCounts,
-  } = usePantryManagement(pantry?.id);
+  } = usePantryManagement(pantry?.id, queryFilter);
   // PERF: Defer pantry items so Apollo cache updates (from subscriptions or
   // fetchMore) don't block user interactions like scrolling and tapping.
-  // Downstream memos (locationFilteredItems → sortedItems → itemDisplayMap)
+  // Downstream memos (sortedItems → itemDisplayMap → FlashList)
   // will only recompute when React has idle time.
   const pantryItems = useDeferredValue(rawPantryItems);
   // PERF: Defer storage locations until pantry data has loaded (data-driven)
@@ -230,25 +232,6 @@ const PantryMainInner: React.FC = () => {
     selectorRef,
     navigate,
   });
-  // PERFORMANCE: Synchronous filter to ensure FlashList always receives stable data.
-  // Short-circuit for 'all' returns the original pantryItems reference — prevents
-  // unnecessary downstream recomputation (sortedItems → itemDisplayMap → FlashList).
-  const locationFilteredItems = (() => {
-      if (locationFilter === 'all') return pantryItems;
-      return pantryItems.filter(item => {
-        switch (locationFilter) {
-          case 'fridge':
-            return item.storageState === StorageState.Refrigerated;
-          case 'freezer':
-            return item.storageState === StorageState.Frozen;
-          case 'pantry':
-            return item.storageState === StorageState.Ambient || !item.storageState;
-          default:
-            // Custom storage location filter
-            return item.storageLocation?.id === locationFilter;
-        }
-      });
-    })();
   // Handle location filter change
   const handleLocationFilterChange = (filter: LocationFilter) => {
     startTransition(() => {
@@ -272,6 +255,15 @@ const PantryMainInner: React.FC = () => {
     }),
   );
   const combinedTabs: FilterTabConfig<LocationFilter>[] = [...defaultTabs, ...customTabs];
+
+  // Ensure every custom location has a count entry (default 0) so badges always render
+  const completeCounts = { ...locationCounts } as typeof locationCounts;
+  for (const loc of storageLocations) {
+    if (completeCounts[loc.id] === undefined) {
+      completeCounts[loc.id] = 0;
+    }
+  }
+
   // Handle add storage location
   const handleAddLocationPress = () => {
     setAddLocationSheetVisible(true);
@@ -284,7 +276,7 @@ const PantryMainInner: React.FC = () => {
   useScreenTelemetry('PantryMain', () => ({
     home_id: selectedHomeId,
     pantry_id: pantry?.id,
-    item_count: locationFilteredItems.length,
+    item_count: pantryItems.length,
     has_pantries: pantries.length > 0,
   }));
   // Show home switch hint when user has items and home is selected
@@ -296,7 +288,7 @@ const PantryMainInner: React.FC = () => {
     if (
       loginCount >= 2 &&
       selectedHomeId &&
-      locationFilteredItems.length > 0 &&
+      pantryItems.length > 0 &&
       !homeSwitchHint.hasBeenShown &&
       !showBiometricSetup
     ) {
@@ -308,7 +300,7 @@ const PantryMainInner: React.FC = () => {
     }
   }, [
     loginCount,
-    locationFilteredItems.length,
+    pantryItems.length,
     selectedHomeId,
     homeSwitchHint.hasBeenShown,
     homeSwitchHint.actions,
@@ -333,7 +325,7 @@ const PantryMainInner: React.FC = () => {
   const isLoadingInitial =
     (!isReady || loading) &&
     !pantryError &&
-    locationFilteredItems.length === 0 &&
+    pantryItems.length === 0 &&
     !allItems?.length;
   // isRefreshing comes from usePantryManagement (manual tracking in usePantryQuery)
   // Get user display name and avatar from auth store (populated at login)
@@ -349,10 +341,10 @@ const PantryMainInner: React.FC = () => {
         avatarUrl={authUser?.profilePicture}
         notificationCount={unreadCount}
         stats={stats}
-        items={locationFilteredItems}
+        items={pantryItems}
         locationFilter={locationFilter}
         onLocationFilterChange={handleLocationFilterChange}
-        locationCounts={locationCounts}
+        locationCounts={completeCounts}
         tabs={combinedTabs}
         onAddLocation={handleAddLocationPress}
         searchQuery={searchQuery}

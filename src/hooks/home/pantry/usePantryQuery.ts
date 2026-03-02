@@ -9,7 +9,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { useGetPantryQuery } from '#generated';
+import { useGetPantryQuery, type PantryItemFilters } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { usePagination } from '#/hooks/utils/usePagination';
@@ -61,7 +61,10 @@ async function executeAutoRefetch(
  *   usePantryQuery(pantryId);
  * ```
  */
-export function usePantryQuery(pantryId: string | undefined) {
+export function usePantryQuery(
+  pantryId: string | undefined,
+  itemsFilter?: PantryItemFilters | null,
+) {
   const { isLoggedOut } = useAuth();
   const isHomeSelectionReady = useAppStore(selectIsHomeSelectionReady);
 
@@ -72,8 +75,9 @@ export function usePantryQuery(pantryId: string | undefined) {
   const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
     variables: {
       id: pantryId || '',
-      itemsFirst: 50, // Initial page size
-      storageLocationsFirst: 50 },
+      itemsFirst: 25, // Initial page size
+      itemsFilter: itemsFilter ?? undefined,
+      storageLocationsFirst: 25 },
     skip: !hasValidPantryId,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',

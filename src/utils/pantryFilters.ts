@@ -1,4 +1,4 @@
-import { StorageState } from '#generated';
+import { StorageState, type PantryItemFilters } from '#generated';
 
 /** Built-in temperature-based filters */
 export type BuiltInLocationFilter = 'all' | 'fridge' | 'freezer' | 'pantry';
@@ -9,6 +9,28 @@ export type LocationFilter = BuiltInLocationFilter | string;
 /** Check if a filter is a built-in filter */
 export function isBuiltInFilter(filter: LocationFilter): filter is BuiltInLocationFilter {
   return ['all', 'fridge', 'freezer', 'pantry'].includes(filter);
+}
+
+/**
+ * Converts a LocationFilter to a PantryItemFilters object for server-side filtering.
+ *
+ * @param filter - The location filter ('all', 'fridge', 'freezer', 'pantry', or a custom location ID)
+ * @returns PantryItemFilters for the query, or null for 'all' (no filter)
+ */
+export function locationFilterToQueryFilter(filter: LocationFilter): PantryItemFilters | null {
+  switch (filter) {
+    case 'all':
+      return null;
+    case 'fridge':
+      return { storageState: StorageState.Refrigerated };
+    case 'freezer':
+      return { storageState: StorageState.Frozen };
+    case 'pantry':
+      return { storageState: StorageState.Ambient };
+    default:
+      // Custom storage location ID
+      return { storageLocationId: filter };
+  }
 }
 
 /**
