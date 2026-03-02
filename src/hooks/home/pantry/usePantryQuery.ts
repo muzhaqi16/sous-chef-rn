@@ -72,7 +72,7 @@ export function usePantryQuery(pantryId: string | undefined) {
   const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
     variables: {
       id: pantryId || '',
-      itemsFirst: 25, // Initial page size
+      itemsFirst: 50, // Initial page size
       storageLocationsFirst: 50 },
     skip: !hasValidPantryId,
     fetchPolicy: 'cache-and-network',

@@ -57,7 +57,15 @@ export function useShoppingListSelection(lists: ShoppingListFromQuery[]) {
     }
   }, [relevantLists, selectedShoppingListId, setSelectedShoppingListId]);
 
+  // PERF: Trust persisted Zustand ID for queries before lists finish loading.
+  // This breaks the query waterfall: detail/items queries fire immediately
+  // instead of waiting for GetShoppingListsLite to resolve first.
+  // If the ID is stale (list was deleted), the detail query returns null
+  // and we fall back to the default list reactively via the useEffect above.
+  const optimisticListId = selectedShoppingListId ?? currentListId;
+
   return {
+    optimisticListId,
     currentListId,
     currentList,
     defaultList,

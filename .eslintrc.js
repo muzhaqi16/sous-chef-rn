@@ -109,11 +109,16 @@ module.exports = {
     'react/jsx-no-leaked-render': ['error', { validStrategies: ['ternary', 'coerce'] }],
 
     // Prevent inline import() types — use top-level imports instead
+    // Prevent inline functions passed to scheduleOnRN — causes native crashes on Android
     'no-restricted-syntax': [
       'error',
       {
         selector: 'TSImportType',
         message: 'Avoid inline import() types. Import the type at the top of the file instead.',
+      },
+      {
+        selector: 'CallExpression[callee.name="scheduleOnRN"] > :matches(ArrowFunctionExpression, FunctionExpression)',
+        message: 'Do not pass inline functions to scheduleOnRN — define the callback in RN runtime scope first. Inline functions inside worklets cause native crashes on Android.',
       },
     ],
   },

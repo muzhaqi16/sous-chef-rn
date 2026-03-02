@@ -62,6 +62,11 @@ export const SuggestionListItem = ({
     onExitCompleteRef.current = onExitComplete;
   }, [onExitComplete]);
 
+  // Pre-defined in RN runtime scope — scheduleOnRN requires this pattern
+  const notifyExitComplete = () => {
+    onExitCompleteRef.current?.();
+  };
+
   useEffect(() => {
     if (isExiting) {
       translateX.set(withTiming(EXIT_CONFIG.slideDistance, { duration: EXIT_CONFIG.duration }));
@@ -69,9 +74,7 @@ export const SuggestionListItem = ({
         withTiming(EXIT_CONFIG.opacityTarget, { duration: EXIT_CONFIG.duration }, (finished) => {
           'worklet';
           if (finished) {
-            scheduleOnRN(() => {
-              onExitCompleteRef.current?.();
-            });
+            scheduleOnRN(notifyExitComplete);
           }
         })
       );

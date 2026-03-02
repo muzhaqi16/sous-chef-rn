@@ -41,6 +41,8 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   loading,
   disabled,
   onEndReached,
+  hasMore,
+  isLoadingMore,
   canRemoveItems = true,
   canEditItems = true,
   canMarkPurchased = true,
@@ -91,6 +93,8 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
         onSwipeableWillOpen={actions.onSwipeableWillOpen}
         onSwipeableClose={actions.onSwipeableClose}
         onEndReached={onEndReached}
+        hasMore={hasMore}
+        isLoadingMore={isLoadingMore}
         canRemoveItems={canRemoveItems}
         canEditItems={canEditItems}
         canMarkPurchased={canMarkPurchased}

@@ -2903,7 +2903,7 @@ type Item {
   id: ID!
   imageCount: Int!
   imageUrl: String
-  images: [ItemImage!]!
+  images(kind: ImageKind): [ItemImage!]!
   ingredients: JSON
   """Whether this item has been soft-deleted (admin visibility)"""
   isDeleted: Boolean!
@@ -3212,7 +3212,6 @@ type ItemSuggestion {
   displayUnit: String
   id: ID!
   imageUrl: String
-  images: JSON
   name: String!
   netWeight: Float
   type: ItemType!

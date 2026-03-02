@@ -24,6 +24,8 @@ import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils/iconUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { DeferredScreen } from '#components/performance/DeferredScreen';
+import { RecipeSkeleton } from '#components/base/Skeleton/RecipeSkeleton';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
@@ -40,7 +42,11 @@ function clearRandomRecipesIfNeeded(
   }
 }
 
-export const RecipeMain: React.FC = () => {
+/**
+ * Inner component that runs all heavy hooks.
+ * Only mounts after isReady is true, so the skeleton paints instantly.
+ */
+const RecipeMainInner: React.FC = () => {
   useScreenTransition('RecipeMain');
   useRenderTime('RecipeMain');
   const { navigate } = useAppNavigation();
@@ -429,12 +435,12 @@ export const RecipeMain: React.FC = () => {
           showSearchIcon
         />
       </View>
+      {FilterHeader}
       <ItemList
         items={items}
         onItemPress={handleItemPress}
         onItemDelete={showRandomRecipes ? undefined : handleRemoveRecipe}
         onRefresh={handleRefresh}
-        ListHeaderComponent={FilterHeader}
         emptyState={emptyStateConfig}
       />
 
@@ -477,6 +483,33 @@ export const RecipeMain: React.FC = () => {
     </View>
   );
 };
+
+const noop = () => {};
+
+/**
+ * Outer component that gates heavy work behind DeferredScreen.
+ * Skeleton paints instantly; RecipeMainInner mounts on the deferred re-render.
+ */
+export const RecipeMain: React.FC = () => (
+  <DeferredScreen
+    fallback={
+      <View style={styles.container} testID="recipes-screen">
+        <TabScreenHeader label="What to cook?" title="Recipes" />
+        <View style={styles.searchBarContainer}>
+          <SearchBar
+            value=""
+            onChangeText={noop}
+            placeholder="Search recipes..."
+            showSearchIcon
+            editable={false}
+          />
+        </View>
+        <RecipeSkeleton />
+      </View>
+    }
+    component={RecipeMainInner}
+  />
+);
 
 const styles = StyleSheet.create(theme => ({
   container: {

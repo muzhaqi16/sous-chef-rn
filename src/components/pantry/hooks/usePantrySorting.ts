@@ -109,37 +109,41 @@ export function usePantrySorting<T extends SortableItem>(
       setSortModalVisible(false);
     };
 
-  // Sort function - optimized with pre-computed timestamps
+  // Sort function - optimized: single shallow copy sorted in-place with a Map lookup
   const sortItems = (items: T[]): T[] => {
-      // Pre-compute timestamps once (O(n)) instead of inside comparator (O(n log n))
-      const itemsWithTs = items.map(item => ({
-        item,
-        expiryTs: item.expiresAt ? new Date(item.expiresAt).getTime() : Infinity,
-        createdTs: item.createdAt ? new Date(item.createdAt).getTime() : 0 }));
+      // Pre-compute timestamps into a Map (O(n)) instead of wrapping each item
+      const expiryMap = new Map<string, number>();
+      const createdMap = new Map<string, number>();
+      for (const item of items) {
+        if (sortOption === 'expiry') {
+          expiryMap.set(item.id, item.expiresAt ? new Date(item.expiresAt).getTime() : Infinity);
+        } else if (sortOption === 'recent') {
+          createdMap.set(item.id, item.createdAt ? new Date(item.createdAt).getTime() : 0);
+        }
+      }
 
-      // Sort using pre-computed values (no Date creation in comparator)
-      itemsWithTs.sort((a, b) => {
+      // Single shallow copy, sorted in-place — no wrapper objects, no final .map()
+      const sorted = items.slice();
+      sorted.sort((a, b) => {
         let comparison = 0;
         switch (sortOption) {
           case 'name':
-            comparison = (a.item.itemName || '').localeCompare(
-              b.item.itemName || '',
-            );
+            comparison = (a.itemName || '').localeCompare(b.itemName || '');
             break;
           case 'expiry':
-            comparison = a.expiryTs - b.expiryTs;
+            comparison = expiryMap.get(a.id)! - expiryMap.get(b.id)!;
             break;
           case 'quantity':
-            comparison = a.item.quantity - b.item.quantity;
+            comparison = a.quantity - b.quantity;
             break;
           case 'recent':
-            comparison = b.createdTs - a.createdTs;
+            comparison = createdMap.get(b.id)! - createdMap.get(a.id)!;
             break;
         }
         return sortDirection === 'asc' ? comparison : -comparison;
       });
 
-      return itemsWithTs.map(({ item }) => item);
+      return sorted;
     };
 
   return {

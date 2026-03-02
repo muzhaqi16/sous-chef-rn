@@ -9,11 +9,7 @@
  */
 
 import { Alert } from 'react-native';
-import {
-  useUpdatePantryItemMutation,
-  PantryItemFragmentDoc,
-  PantryItemFragment,
-} from '#generated';
+import { useUpdatePantryItemMutation, PantryItemFragment } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
@@ -63,18 +59,6 @@ export function useUpdatePantryItem({
 
   const [updateMutation] = useUpdatePantryItemMutation({
     errorPolicy: 'all',
-    // Ensure full fragment including nested item.nutritions is written to cache
-    update: (cache, { data }) => {
-      const pantryItem = data?.updatePantryItem?.pantryItem;
-      if (!pantryItem) return;
-
-      cache.writeFragment({
-        id: cache.identify({ __typename: 'PantryItem', id: pantryItem.id }),
-        fragment: PantryItemFragmentDoc,
-        fragmentName: 'PantryItemFragment',
-        data: pantryItem,
-      });
-    },
     onError: error => {
       if (handleVersionConflict(error)) {
         Alert.alert('Item Updated', getVersionConflictMessage(error), [

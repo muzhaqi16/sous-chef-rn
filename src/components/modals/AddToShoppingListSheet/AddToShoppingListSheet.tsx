@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -56,24 +56,6 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     loading: suggestionsResult.loading,
     hasSuggestions: suggestionsResult.hasSuggestions,
     refetch: suggestionsResult.refetch });
-
-  // Auto-refetch when suggestions are nearly depleted
-  const REFETCH_THRESHOLD = 3;
-  const hasAddedItemRef = useRef(false);
-
-  const totalFilteredCount = Object.values(suggestions.grouped).reduce((sum, items) => sum + items.length, 0);
-
-  const isRefetchingRef = useRef(false);
-
-  useEffect(() => {
-    if (totalFilteredCount <= REFETCH_THRESHOLD && hasAddedItemRef.current && !isRefetchingRef.current) {
-      isRefetchingRef.current = true;
-      suggestionsResult.refetch().then(() => {
-        isRefetchingRef.current = false;
-        hasAddedItemRef.current = false;
-      });
-    }
-  });
 
   const removeFromSuggestionsCache = (itemId: string) => {
       client.cache.updateQuery<GetShoppingListSuggestionsQuery>(
@@ -189,9 +171,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       // Use lastUnitId if available (for recently deleted), otherwise defaultUnitId
       const unitId = shoppingItem.lastUnitId ?? shoppingItem.defaultUnitId ?? undefined;
 
-      // 1. Start exit animation and mark as having added an item
+      // 1. Start exit animation
       state.startExitAnimation(shoppingItem.itemId);
-      hasAddedItemRef.current = true;
 
       // 2. Show toast immediately (don't wait for mutation)
       toastService.success(shoppingListSheetConfig.quickAdd.toastMessage(shoppingItem.name));

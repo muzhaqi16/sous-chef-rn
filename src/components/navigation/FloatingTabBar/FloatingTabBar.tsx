@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { startTransition, useEffect } from 'react';
 import { Platform, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -127,19 +127,23 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
 
           const mainScreen = mainScreenMap[route.name];
 
-          if (mainScreen) {
-            // Navigate to tab AND reset stack to main screen
-            navigation.navigate(route.name, {
-              screen: mainScreen,
-              initial: false, // Forces stack reset
-            });
-          } else {
-            // Profile or other tabs without nested stacks
-            if (!isFocused) {
-              navigation.navigate(route.name, route.params);
+          // Wrap in startTransition so React treats the navigation as a non-urgent
+          // update — the current screen stays visible while the target mounts,
+          // allowing skeleton fallbacks to paint instead of freezing the UI.
+          startTransition(() => {
+            if (mainScreen) {
+              // Navigate to tab AND reset stack to main screen
+              navigation.navigate(route.name, {
+                screen: mainScreen,
+                initial: false, // Forces stack reset
+              });
+            } else {
+              // Profile or other tabs without nested stacks
+              if (!isFocused) {
+                navigation.navigate(route.name, route.params);
+              }
             }
-          }
-
+          });
         }
       };
 

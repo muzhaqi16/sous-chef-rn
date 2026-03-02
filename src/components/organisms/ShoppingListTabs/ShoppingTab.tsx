@@ -43,6 +43,8 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   loading,
   disabled,
   onEndReached,
+  hasMore,
+  isLoadingMore,
   canRemoveItems = true,
   canEditItems = true,
   canMarkPurchased = true,
@@ -94,6 +96,8 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
         onSwipeableWillOpen={actions.onSwipeableWillOpen}
         onSwipeableClose={actions.onSwipeableClose}
         onEndReached={onEndReached}
+        hasMore={hasMore}
+        isLoadingMore={isLoadingMore}
         canRemoveItems={canRemoveItems}
         canEditItems={canEditItems}
         canMarkPurchased={canMarkPurchased}

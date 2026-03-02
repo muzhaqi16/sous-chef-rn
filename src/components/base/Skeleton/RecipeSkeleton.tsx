@@ -1,21 +1,21 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { ShoppingListItemSkeleton } from './ShoppingListItemSkeleton';
+import { RecipeItemSkeleton } from './RecipeItemSkeleton';
 
-const ITEM_COUNT = 10;
+const ITEM_COUNT = 6;
 
 /**
- * Skeleton for the ShoppingList item list only.
+ * Skeleton for the RecipeMain item list only.
  *
- * The SearchBar and FilterTabBar are sticky elements rendered outside the
- * scrollable list, so the skeleton only covers the item rows.
+ * The SearchBar is rendered as a real component in the DeferredScreen fallback,
+ * so this skeleton only covers the item rows.
  */
-export const ShoppingListSkeleton: React.FC = () => (
+export const RecipeSkeleton: React.FC = () => (
   <ScrollView contentContainerStyle={styles.container}>
     <View style={styles.itemList}>
       {Array.from({ length: ITEM_COUNT }, (_, index) => (
-        <ShoppingListItemSkeleton key={index} />
+        <RecipeItemSkeleton key={index} />
       ))}
     </View>
   </ScrollView>

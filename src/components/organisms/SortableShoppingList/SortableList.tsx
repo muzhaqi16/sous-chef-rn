@@ -124,7 +124,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             keyExtractor={keyExtractor}
             renderItem={renderItem}
             getItemType={getItemType}
-            drawDistance={250}
+            drawDistance={500}
             showsVerticalScrollIndicator={
               flatListProps.showsVerticalScrollIndicator ?? true
             }

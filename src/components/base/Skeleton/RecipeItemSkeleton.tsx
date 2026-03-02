@@ -6,21 +6,18 @@ import { SkeletonRectangle } from './SkeletonRectangle';
 import { ListItem } from '#/components/molecules/ListItem';
 import { commonStyles } from '#/styles/commonStyles';
 
-interface RecipeCardSkeletonProps {
-  /**
-   * Enable/disable shimmer animation
-   * @default true
-   */
+interface RecipeItemSkeletonProps {
+  /** Whether to show shimmer animation */
   animated?: boolean;
 }
 
 /**
- * Recipe Card Skeleton Component
+ * Recipe Item Skeleton
  *
- * Matches the layout of recipe search result items rendered via ItemCard → ListItem.
- * Wraps in ListItem for automatic style sync (height, padding, gap).
+ * Skeleton for a single recipe list item. Reuses ListItem as wrapper
+ * to stay in sync with actual item styles (height, padding, gap).
  */
-export const RecipeCardSkeleton: React.FC<RecipeCardSkeletonProps> = ({
+export const RecipeItemSkeleton: React.FC<RecipeItemSkeletonProps> = ({
   animated = true,
 }) => {
   return (
@@ -28,8 +25,8 @@ export const RecipeCardSkeleton: React.FC<RecipeCardSkeletonProps> = ({
       <ListItem>
         <SkeletonRectangle width={48} height={48} borderRadius={8} animated={animated} />
         <View style={styles.content}>
-          <SkeletonLine width="85%" height={16} animated={animated} />
-          <SkeletonLine width="60%" height={14} animated={animated} />
+          <SkeletonLine width="70%" height={16} animated={animated} />
+          <SkeletonLine width="50%" height={14} animated={animated} />
         </View>
       </ListItem>
     </View>

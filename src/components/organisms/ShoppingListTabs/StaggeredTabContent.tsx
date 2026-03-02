@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList/SortableList';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
+import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { useStaggeredEntry } from '#context/StaggeredEntryContext';
 import { staggeredEntryAnimation } from '#constants/animations';
 
@@ -19,6 +20,8 @@ interface StaggeredTabContentProps {
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
   onEndReached?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
   canRemoveItems: boolean;
   canEditItems: boolean;
   canMarkPurchased: boolean;
@@ -45,6 +48,8 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   onSwipeableWillOpen,
   onSwipeableClose,
   onEndReached,
+  hasMore,
+  isLoadingMore,
   canRemoveItems,
   canEditItems,
   canMarkPurchased,
@@ -68,6 +73,15 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
     return () => clearTimeout(timer);
   }, [staggerCtx]);
 
+  const footerComponent = (
+    <PaginationFooter
+      isLoadingMore={!!isLoadingMore}
+      hasMore={!!hasMore}
+      loading={false}
+      itemCount={items.length}
+    />
+  );
+
   return (
     <View style={styles.container}>
       <SortableShoppingList
@@ -86,6 +100,7 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
         onRefresh={onRefresh}
         refreshing={refreshing}
         onEndReached={onEndReached}
+        ListFooterComponent={footerComponent}
         canRemoveItems={canRemoveItems}
         canEditItems={canEditItems}
         canMarkPurchased={canMarkPurchased}

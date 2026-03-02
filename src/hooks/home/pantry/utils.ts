@@ -31,6 +31,7 @@ export function batchAddToPantryItemsCache(
   cache: ApolloCache,
   pantryId: string,
   newItems: Array<{ id: string }>,
+  options?: { updateStats?: boolean },
 ): void {
   const parentCacheId = cache.identify({ __typename: 'Pantry', id: pantryId });
   if (!parentCacheId || newItems.length === 0) return;
@@ -66,6 +67,12 @@ export function batchAddToPantryItemsCache(
           totalCount: (existingConnection?.totalCount ?? 0) + newEdges.length,
         };
       },
+      ...(options?.updateStats && {
+        stats(existingStats: Reference | { totalItems: number } | null) {
+          if (!existingStats || '__ref' in existingStats) return existingStats;
+          return { ...existingStats, totalItems: (existingStats.totalItems || 0) + newItems.length };
+        },
+      }),
     },
   });
 }

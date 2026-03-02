@@ -21,6 +21,27 @@
 - **Hook return objects are auto-memoized by the compiler** — but only if the compiler doesn't
   bail out. Once try-catch is extracted, return objects like `{ actions }` become stable automatically.
 
+### `scheduleOnRN` Worklet Convention
+
+Functions passed to `scheduleOnRN` (Reanimated's `runOnJS` replacement) **must be pre-defined
+in RN runtime scope**. Inline arrow/function expressions inside worklets cause native crashes
+on Android because the worklet serializer cannot capture closures created at call-site.
+
+```ts
+// CORRECT — callback defined in RN scope
+const handlePress = (id: string) => { /* ... */ };
+const gesture = Gesture.Tap().onEnd(() => {
+  scheduleOnRN(handlePress)(id);
+});
+
+// WRONG — inline function crashes on Android
+const gesture = Gesture.Tap().onEnd(() => {
+  scheduleOnRN(() => handlePress(id))();  // native crash
+});
+```
+
+An ESLint `no-restricted-syntax` rule enforces this at lint time.
+
 ### Autocomplete Local-First Search
 
 All autocomplete hooks use `useAutocompleteSearch` from `src/hooks/ui/useAutocompleteSearch.ts`.
