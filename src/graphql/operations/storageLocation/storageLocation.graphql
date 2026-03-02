@@ -12,6 +12,10 @@ query GetStorageLocations($homeId: ID!) {
         icon
         color
         temperature
+        description
+        isClimateControlled
+        capacity
+        capacityUnit
         sortOrder
         isDefault
         currentItemCount
@@ -66,7 +70,10 @@ query GetStorageLocation($id: ID!) {
     icon
     color
     temperature
+    description
     isClimateControlled
+    capacity
+    capacityUnit
     sortOrder
     isDefault
     currentItemCount
@@ -98,6 +105,10 @@ mutation CreateStorageLocation($input: CreateStorageLocationInput!) {
       icon
       color
       temperature
+      description
+      isClimateControlled
+      capacity
+      capacityUnit
       sortOrder
       isDefault
       currentItemCount
@@ -121,7 +132,14 @@ mutation UpdateStorageLocation($id: ID!, $input: UpdateStorageLocationInput!) {
       type
       icon
       color
+      temperature
+      description
+      isClimateControlled
+      capacity
+      capacityUnit
       sortOrder
+      isDefault
+      currentItemCount
       parentLocationId
     }
   }

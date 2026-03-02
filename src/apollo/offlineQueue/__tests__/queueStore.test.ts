@@ -1,0 +1,591 @@
+import { QueueStore } from '../queueStore';
+import { QueuedMutation, QueueStatus } from '../types';
+import { storage } from '#storage/mmkv';
+
+// The global jest.setup.js already mocks react-native-mmkv with an in-memory Map,
+// which means `storage` from '#storage/mmkv' is backed by that Map mock.
+
+/** Helper to build a QueuedMutation with sensible defaults */
+function makeMutation(overrides: Partial<QueuedMutation> = {}): QueuedMutation {
+  return {
+    id: `mut-${Math.random().toString(36).slice(2, 8)}`,
+    userId: 'user-1',
+    operationName: 'TestMutation',
+    mutation: {
+      kind: 'Document',
+      definitions: [],
+    } as any,
+    variables: {},
+    status: QueueStatus.PENDING,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    retryCount: 0,
+    maxRetries: 3,
+    requiresAuth: true,
+    ...overrides,
+  };
+}
+
+describe('QueueStore', () => {
+  let store: QueueStore;
+
+  beforeEach(() => {
+    // Fresh store for every test so cache / storage don't leak
+    store = new QueueStore();
+    // Clear underlying MMKV mock
+    storage.clearAll();
+  });
+
+  // -------------------------------------------------------------------------
+  // addMutation
+  // -------------------------------------------------------------------------
+  describe('addMutation', () => {
+    it('adds a mutation and persists it', () => {
+      const m = makeMutation({ id: 'add-1' });
+      store.addMutation(m);
+
+      const result = store.getMutationsForUser('user-1');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('add-1');
+    });
+
+    it('enforces queue size limit of 100 by removing oldest', () => {
+      // Fill the queue to 100
+      for (let i = 0; i < 100; i++) {
+        store.addMutation(
+          makeMutation({ id: `fill-${i}`, operationName: 'FillMutation' }),
+        );
+      }
+
+      // Adding the 101st should remove fill-0
+      store.addMutation(makeMutation({ id: 'overflow' }));
+      const all = store.getMutationsForUser('user-1');
+      expect(all).toHaveLength(100);
+      expect(all.find(m => m.id === 'fill-0')).toBeUndefined();
+      expect(all.find(m => m.id === 'overflow')).toBeDefined();
+    });
+
+    describe('MoveShoppingListItem coalescing', () => {
+      it('coalesces pending move mutations for the same item', () => {
+        const move1 = makeMutation({
+          id: 'move-1',
+          operationName: 'MoveShoppingListItem',
+          variables: { input: { itemId: 'item-A', afterId: 'x' } },
+        });
+        const move2 = makeMutation({
+          id: 'move-2',
+          operationName: 'MoveShoppingListItem',
+          variables: { input: { itemId: 'item-A', afterId: 'y' } },
+        });
+
+        store.addMutation(move1);
+        store.addMutation(move2);
+
+        const result = store.getMutationsForUser('user-1');
+        expect(result).toHaveLength(1);
+        // The second (latest) mutation should win
+        expect(result[0].id).toBe('move-2');
+        expect(result[0].variables.input.afterId).toBe('y');
+      });
+
+      it('does not coalesce move mutations for different items', () => {
+        store.addMutation(
+          makeMutation({
+            id: 'move-a',
+            operationName: 'MoveShoppingListItem',
+            variables: { input: { itemId: 'item-A' } },
+          }),
+        );
+        store.addMutation(
+          makeMutation({
+            id: 'move-b',
+            operationName: 'MoveShoppingListItem',
+            variables: { input: { itemId: 'item-B' } },
+          }),
+        );
+
+        expect(store.getMutationsForUser('user-1')).toHaveLength(2);
+      });
+
+      it('does not coalesce move mutations from different users', () => {
+        store.addMutation(
+          makeMutation({
+            id: 'move-u1',
+            userId: 'user-1',
+            operationName: 'MoveShoppingListItem',
+            variables: { input: { itemId: 'item-A' } },
+          }),
+        );
+        store.addMutation(
+          makeMutation({
+            id: 'move-u2',
+            userId: 'user-2',
+            operationName: 'MoveShoppingListItem',
+            variables: { input: { itemId: 'item-A' } },
+          }),
+        );
+
+        const u1 = store.getMutationsForUser('user-1');
+        const u2 = store.getMutationsForUser('user-2');
+        expect(u1).toHaveLength(1);
+        expect(u2).toHaveLength(1);
+      });
+
+      it('does not coalesce non-pending move mutations', () => {
+        store.addMutation(
+          makeMutation({
+            id: 'move-processing',
+            operationName: 'MoveShoppingListItem',
+            variables: { input: { itemId: 'item-A' } },
+            status: QueueStatus.PROCESSING,
+          }),
+        );
+        store.addMutation(
+          makeMutation({
+            id: 'move-new',
+            operationName: 'MoveShoppingListItem',
+            variables: { input: { itemId: 'item-A' } },
+          }),
+        );
+
+        expect(store.getMutationsForUser('user-1')).toHaveLength(2);
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // removeMutation
+  // -------------------------------------------------------------------------
+  describe('removeMutation', () => {
+    it('removes a mutation by ID and returns true', () => {
+      store.addMutation(makeMutation({ id: 'rm-1' }));
+      const removed = store.removeMutation('rm-1');
+      expect(removed).toBe(true);
+      expect(store.getMutationsForUser('user-1')).toHaveLength(0);
+    });
+
+    it('returns false when mutation does not exist', () => {
+      expect(store.removeMutation('nonexistent')).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // updateMutation
+  // -------------------------------------------------------------------------
+  describe('updateMutation', () => {
+    it('updates the fields of an existing mutation', () => {
+      store.addMutation(makeMutation({ id: 'upd-1' }));
+      const updated = store.updateMutation('upd-1', {
+        status: QueueStatus.PROCESSING,
+      });
+      expect(updated).toBe(true);
+
+      const m = store.getMutation('upd-1');
+      expect(m?.status).toBe(QueueStatus.PROCESSING);
+      expect(m?.updatedAt).toBeGreaterThan(0);
+    });
+
+    it('returns false when mutation does not exist', () => {
+      expect(
+        store.updateMutation('nope', { status: QueueStatus.FAILED }),
+      ).toBe(false);
+    });
+
+    it('does not overwrite id, userId, or mutation fields', () => {
+      const original = makeMutation({ id: 'upd-2', userId: 'user-1' });
+      store.addMutation(original);
+
+      // Attempt to update with forbidden fields (type system prevents, but test runtime)
+      store.updateMutation('upd-2', { status: QueueStatus.SUCCESS } as any);
+
+      const m = store.getMutation('upd-2');
+      expect(m?.id).toBe('upd-2');
+      expect(m?.userId).toBe('user-1');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getMutationsForUser
+  // -------------------------------------------------------------------------
+  describe('getMutationsForUser', () => {
+    it('returns only mutations for the given user', () => {
+      store.addMutation(makeMutation({ id: 'm1', userId: 'user-1' }));
+      store.addMutation(makeMutation({ id: 'm2', userId: 'user-2' }));
+      store.addMutation(makeMutation({ id: 'm3', userId: 'user-1' }));
+
+      const u1 = store.getMutationsForUser('user-1');
+      expect(u1).toHaveLength(2);
+      expect(u1.map(m => m.id).sort()).toEqual(['m1', 'm3']);
+    });
+
+    it('filters by status when provided', () => {
+      store.addMutation(
+        makeMutation({ id: 's1', status: QueueStatus.PENDING }),
+      );
+      store.addMutation(
+        makeMutation({ id: 's2', status: QueueStatus.FAILED }),
+      );
+      store.addMutation(
+        makeMutation({ id: 's3', status: QueueStatus.PENDING }),
+      );
+
+      const pending = store.getMutationsForUser(
+        'user-1',
+        QueueStatus.PENDING,
+      );
+      expect(pending).toHaveLength(2);
+    });
+
+    it('returns empty array for unknown user', () => {
+      expect(store.getMutationsForUser('nobody')).toEqual([]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getPendingMutationsForUser
+  // -------------------------------------------------------------------------
+  describe('getPendingMutationsForUser', () => {
+    it('returns pending mutations sorted by createdAt ascending', () => {
+      store.addMutation(
+        makeMutation({
+          id: 'p1',
+          status: QueueStatus.PENDING,
+          createdAt: 3000,
+        }),
+      );
+      store.addMutation(
+        makeMutation({
+          id: 'p2',
+          status: QueueStatus.PENDING,
+          createdAt: 1000,
+        }),
+      );
+      store.addMutation(
+        makeMutation({
+          id: 'p3',
+          status: QueueStatus.PENDING,
+          createdAt: 2000,
+        }),
+      );
+      // Non-pending should be excluded
+      store.addMutation(
+        makeMutation({
+          id: 'f1',
+          status: QueueStatus.FAILED,
+          createdAt: 500,
+        }),
+      );
+
+      const pending = store.getPendingMutationsForUser('user-1');
+      expect(pending).toHaveLength(3);
+      expect(pending[0].id).toBe('p2');
+      expect(pending[1].id).toBe('p3');
+      expect(pending[2].id).toBe('p1');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // clearQueueForUser
+  // -------------------------------------------------------------------------
+  describe('clearQueueForUser', () => {
+    it('removes all mutations for the specified user', () => {
+      store.addMutation(makeMutation({ id: 'c1', userId: 'user-1' }));
+      store.addMutation(makeMutation({ id: 'c2', userId: 'user-1' }));
+      store.addMutation(makeMutation({ id: 'c3', userId: 'user-2' }));
+
+      const count = store.clearQueueForUser('user-1');
+      expect(count).toBe(2);
+      expect(store.getMutationsForUser('user-1')).toHaveLength(0);
+      expect(store.getMutationsForUser('user-2')).toHaveLength(1);
+    });
+
+    it('returns 0 when user has no mutations', () => {
+      expect(store.clearQueueForUser('nobody')).toBe(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getQueueStats
+  // -------------------------------------------------------------------------
+  describe('getQueueStats', () => {
+    it('returns correct counts by status', () => {
+      store.addMutation(makeMutation({ status: QueueStatus.PENDING }));
+      store.addMutation(makeMutation({ status: QueueStatus.PENDING }));
+      store.addMutation(makeMutation({ status: QueueStatus.PROCESSING }));
+      store.addMutation(makeMutation({ status: QueueStatus.FAILED }));
+      store.addMutation(makeMutation({ status: QueueStatus.AUTH_ERROR }));
+      store.addMutation(makeMutation({ status: QueueStatus.SUCCESS }));
+
+      const stats = store.getQueueStats('user-1');
+      expect(stats.total).toBe(6);
+      expect(stats.pending).toBe(2);
+      expect(stats.processing).toBe(1);
+      expect(stats.failed).toBe(1);
+      expect(stats.authErrors).toBe(1);
+    });
+
+    it('includes oldestMutationAge when pending mutations exist', () => {
+      const oldTime = Date.now() - 60000; // 1 minute ago
+      store.addMutation(
+        makeMutation({ status: QueueStatus.PENDING, createdAt: oldTime }),
+      );
+
+      const stats = store.getQueueStats('user-1');
+      expect(stats.oldestMutationAge).toBeDefined();
+      expect(stats.oldestMutationAge!).toBeGreaterThanOrEqual(59000);
+    });
+
+    it('does not include oldestMutationAge when no pending mutations', () => {
+      store.addMutation(makeMutation({ status: QueueStatus.FAILED }));
+      const stats = store.getQueueStats('user-1');
+      expect(stats.oldestMutationAge).toBeUndefined();
+    });
+
+    it('returns global stats when no userId provided', () => {
+      store.addMutation(
+        makeMutation({
+          userId: 'user-1',
+          status: QueueStatus.PENDING,
+        }),
+      );
+      store.addMutation(
+        makeMutation({
+          userId: 'user-2',
+          status: QueueStatus.PENDING,
+        }),
+      );
+
+      const stats = store.getQueueStats();
+      expect(stats.total).toBe(2);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // markMutationFailed
+  // -------------------------------------------------------------------------
+  describe('markMutationFailed', () => {
+    it('marks mutation as FAILED for non-auth errors', () => {
+      store.addMutation(makeMutation({ id: 'fail-1' }));
+      const result = store.markMutationFailed('fail-1', {
+        type: 'network',
+        message: 'timeout',
+        timestamp: Date.now(),
+        retryable: true,
+      });
+      expect(result).toBe(true);
+
+      const m = store.getMutation('fail-1');
+      expect(m?.status).toBe(QueueStatus.FAILED);
+      expect(m?.lastError?.type).toBe('network');
+    });
+
+    it('marks mutation as AUTH_ERROR for auth errors', () => {
+      store.addMutation(makeMutation({ id: 'auth-1' }));
+      const result = store.markMutationFailed('auth-1', {
+        type: 'auth',
+        message: 'unauthorized',
+        timestamp: Date.now(),
+        retryable: true,
+      });
+      expect(result).toBe(true);
+
+      const m = store.getMutation('auth-1');
+      expect(m?.status).toBe(QueueStatus.AUTH_ERROR);
+    });
+
+    it('returns false for non-existent mutation', () => {
+      expect(
+        store.markMutationFailed('nope', {
+          type: 'unknown',
+          message: 'test',
+          timestamp: Date.now(),
+          retryable: false,
+        }),
+      ).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // incrementRetry
+  // -------------------------------------------------------------------------
+  describe('incrementRetry', () => {
+    it('increments retryCount and resets status to PENDING', () => {
+      store.addMutation(
+        makeMutation({
+          id: 'retry-1',
+          retryCount: 1,
+          status: QueueStatus.FAILED,
+        }),
+      );
+
+      const result = store.incrementRetry('retry-1');
+      expect(result).toBe(true);
+
+      const m = store.getMutation('retry-1');
+      expect(m?.retryCount).toBe(2);
+      expect(m?.status).toBe(QueueStatus.PENDING);
+    });
+
+    it('returns false for non-existent mutation', () => {
+      expect(store.incrementRetry('nope')).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // cleanupSuccessful
+  // -------------------------------------------------------------------------
+  describe('cleanupSuccessful', () => {
+    it('removes successful mutations older than 24 hours', () => {
+      const twoDaysAgo = Date.now() - 48 * 60 * 60 * 1000;
+      store.addMutation(
+        makeMutation({
+          id: 'old-success',
+          status: QueueStatus.SUCCESS,
+          processedAt: twoDaysAgo,
+        }),
+      );
+      // Recent success should be kept
+      store.addMutation(
+        makeMutation({
+          id: 'recent-success',
+          status: QueueStatus.SUCCESS,
+          processedAt: Date.now() - 3600000, // 1 hour ago
+        }),
+      );
+      // Non-success should be kept
+      store.addMutation(
+        makeMutation({
+          id: 'pending-1',
+          status: QueueStatus.PENDING,
+        }),
+      );
+
+      const removed = store.cleanupSuccessful();
+      expect(removed).toBe(1);
+
+      const remaining = store.getMutationsForUser('user-1');
+      expect(remaining).toHaveLength(2);
+      expect(remaining.find(m => m.id === 'old-success')).toBeUndefined();
+      expect(remaining.find(m => m.id === 'recent-success')).toBeDefined();
+      expect(remaining.find(m => m.id === 'pending-1')).toBeDefined();
+    });
+
+    it('keeps successful mutations without processedAt', () => {
+      store.addMutation(
+        makeMutation({
+          id: 'no-processed-at',
+          status: QueueStatus.SUCCESS,
+          // processedAt intentionally omitted
+        }),
+      );
+
+      const removed = store.cleanupSuccessful();
+      expect(removed).toBe(0);
+      expect(store.getMutation('no-processed-at')).toBeDefined();
+    });
+
+    it('returns 0 when nothing to clean', () => {
+      store.addMutation(makeMutation({ status: QueueStatus.PENDING }));
+      expect(store.cleanupSuccessful()).toBe(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // MMKV persistence round-trip
+  // -------------------------------------------------------------------------
+  describe('persistence', () => {
+    it('survives cache invalidation (reloads from MMKV)', () => {
+      store.addMutation(makeMutation({ id: 'persist-1' }));
+
+      // Invalidate cache, forcing reload from storage
+      store.invalidateCache();
+
+      const m = store.getMutation('persist-1');
+      expect(m).not.toBeNull();
+      expect(m?.id).toBe('persist-1');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // User ID management
+  // -------------------------------------------------------------------------
+  describe('user ID management', () => {
+    it('set / get / clear current user ID', () => {
+      expect(store.getCurrentUserId()).toBeNull();
+
+      store.setCurrentUserId('user-42');
+      expect(store.getCurrentUserId()).toBe('user-42');
+
+      store.clearCurrentUserId();
+      expect(store.getCurrentUserId()).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Cache statistics
+  // -------------------------------------------------------------------------
+  describe('getCacheStats', () => {
+    it('tracks hits and misses', () => {
+      // First load is a miss
+      store.getMutationsForUser('user-1');
+      // Second load hits cache
+      store.getMutationsForUser('user-1');
+
+      const stats = store.getCacheStats();
+      expect(stats.misses).toBeGreaterThanOrEqual(1);
+      expect(stats.hits).toBeGreaterThanOrEqual(1);
+      expect(stats.hitRate).toBeGreaterThan(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // clearAllQueues
+  // -------------------------------------------------------------------------
+  describe('clearAllQueues', () => {
+    it('removes everything and invalidates cache', () => {
+      store.addMutation(makeMutation({ userId: 'user-1' }));
+      store.addMutation(makeMutation({ userId: 'user-2' }));
+
+      store.clearAllQueues();
+
+      expect(store.getMutationsForUser('user-1')).toHaveLength(0);
+      expect(store.getMutationsForUser('user-2')).toHaveLength(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getExceededRetryMutations
+  // -------------------------------------------------------------------------
+  describe('getExceededRetryMutations', () => {
+    it('returns failed mutations that exceeded max retries', () => {
+      store.addMutation(
+        makeMutation({
+          id: 'exceeded',
+          retryCount: 3,
+          maxRetries: 3,
+          status: QueueStatus.FAILED,
+        }),
+      );
+      store.addMutation(
+        makeMutation({
+          id: 'not-exceeded',
+          retryCount: 1,
+          maxRetries: 3,
+          status: QueueStatus.FAILED,
+        }),
+      );
+      store.addMutation(
+        makeMutation({
+          id: 'pending-high-retries',
+          retryCount: 5,
+          maxRetries: 3,
+          status: QueueStatus.PENDING,
+        }),
+      );
+
+      const result = store.getExceededRetryMutations('user-1');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('exceeded');
+    });
+  });
+});

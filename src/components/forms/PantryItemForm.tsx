@@ -124,6 +124,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     null,
   );
+  const [selectedStorageLocation, setSelectedStorageLocation] = useState<
+    { id: string; name: string; type: string } | null
+  >(null);
   const [suggestedBrands, setSuggestedBrands] = useState<
     { id: string; name: string }[]
   >([]);
@@ -314,6 +317,11 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   const handleStorageLocationSelect = (locationId: string | null, location: any) => {
       setSelectedLocationId(locationId);
+      setSelectedStorageLocation(
+        locationId && location
+          ? { id: locationId, name: location.name, type: location.type }
+          : null,
+      );
 
       if (location?.temperature) {
         const tempLower = location.temperature.toLowerCase();
@@ -424,7 +432,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               dirtyFields: dirtyFieldsRecord,
               selectedLocationId,
               selectedBrandId,
-              trackingUnit: quantityOrUnitChanged ? trackingUnit : undefined });
+              trackingUnit: quantityOrUnitChanged ? trackingUnit : undefined,
+              selectedStorageLocation });
           } else if (!quantityOrUnitChanged) {
             // Nothing changed — still dismiss the form
             onSuccess?.();

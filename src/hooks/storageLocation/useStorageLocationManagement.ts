@@ -12,8 +12,8 @@ import {
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
-  createAddToQueryFieldUpdater,
-  createRemoveFromQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
+  createAddToQueryConnectionUpdater,
+  createRemoveFromQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeMutation, executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 
 /**
@@ -121,7 +121,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
 
         executeCacheUpdate(
           () => {
-            const addToStorageLocationsCache = createAddToQueryFieldUpdater('storageLocations');
+            const addToStorageLocationsCache = createAddToQueryConnectionUpdater('storageLocations', 'StorageLocation');
             addToStorageLocationsCache(cache, newLocation, { position: 'end' });
           },
           'Cache update failed for createStorageLocation:',
@@ -145,7 +145,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
 
       executeCacheUpdate(
         () => {
-          const removeFromStorageLocationsCache = createRemoveFromQueryFieldUpdater(
+          const removeFromStorageLocationsCache = createRemoveFromQueryConnectionUpdater(
             'storageLocations',
             'StorageLocation',
           );

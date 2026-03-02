@@ -1,0 +1,1189 @@
+'use no memo';
+
+// Mock the fragment matcher JSON before importing the module under test
+jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
+  possibleTypes: {},
+}));
+
+import { gql, InMemoryCache } from '@apollo/client';
+import { makeCache, stopCacheMonitoring } from '../cache';
+
+describe('cache', () => {
+  afterEach(() => {
+    stopCacheMonitoring();
+  });
+
+  describe('makeCache', () => {
+    it('returns an InMemoryCache instance', () => {
+      const cache = makeCache();
+      expect(cache).toBeInstanceOf(InMemoryCache);
+    });
+  });
+
+  describe('stopCacheMonitoring', () => {
+    it('clears the monitoring interval', () => {
+      const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
+      makeCache(); // creates interval
+      stopCacheMonitoring();
+      expect(clearIntervalSpy).toHaveBeenCalled();
+      clearIntervalSpy.mockRestore();
+    });
+
+    it('is safe to call multiple times', () => {
+      // Should not throw
+      stopCacheMonitoring();
+      stopCacheMonitoring();
+    });
+  });
+
+  describe('mergeArrayByIdIntelligent (via Query.shoppingListItems)', () => {
+    const SHOPPING_LIST_ITEMS_QUERY = gql`
+      query GetItems($shoppingListId: ID!) {
+        shoppingListItems(shoppingListId: $shoppingListId) {
+          id
+          version
+          updatedAt
+          name
+        }
+      }
+    `;
+
+    const vars = { shoppingListId: 'list-1' };
+
+    it('returns incoming when no existing data', () => {
+      const cache = makeCache();
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Apples' },
+          ],
+        },
+      });
+
+      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
+      expect(result?.shoppingListItems).toHaveLength(1);
+      expect(result?.shoppingListItems[0].name).toBe('Apples');
+    });
+
+    it('incoming null preserves existing', () => {
+      const cache = makeCache();
+
+      // Write initial data
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Apples' },
+          ],
+        },
+      });
+
+      // Write null (simulating network error)
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: null,
+        },
+      });
+
+      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
+      expect(result?.shoppingListItems).toHaveLength(1);
+      expect(result?.shoppingListItems[0].name).toBe('Apples');
+    });
+
+    it('incoming empty array replaces existing', () => {
+      const cache = makeCache();
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Apples' },
+          ],
+        },
+      });
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [],
+        },
+      });
+
+      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
+      expect(result?.shoppingListItems).toEqual([]);
+    });
+
+    it('prefers incoming item with higher version', () => {
+      const cache = makeCache();
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Old' },
+          ],
+        },
+      });
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 2, updatedAt: '2024-01-02', name: 'New' },
+          ],
+        },
+      });
+
+      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
+      expect(result?.shoppingListItems).toHaveLength(1);
+      expect(result?.shoppingListItems[0].name).toBe('New');
+    });
+
+    it('keeps list position for item with higher existing version (entity is normalized)', () => {
+      const cache = makeCache();
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 3, updatedAt: '2024-01-03', name: 'Optimistic' },
+          ],
+        },
+      });
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 2, updatedAt: '2024-01-02', name: 'Stale' },
+          ],
+        },
+      });
+
+      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
+      // The item is still in the list (merge kept the existing reference)
+      expect(result?.shoppingListItems).toHaveLength(1);
+      // Note: Apollo normalizes entities by id, so the underlying entity is always
+      // updated to the latest write. The merge function controls which references
+      // appear in the array, not the entity data itself.
+      expect(result?.shoppingListItems[0].id).toBe('1');
+    });
+
+    it('uses updatedAt as tiebreaker when versions are equal', () => {
+      const cache = makeCache();
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Older' },
+          ],
+        },
+      });
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-05', name: 'Newer' },
+          ],
+        },
+      });
+
+      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
+      expect(result?.shoppingListItems).toHaveLength(1);
+      // Incoming has newer updatedAt
+      expect(result?.shoppingListItems[0].name).toBe('Newer');
+    });
+
+    it('preserves optimistic items with temp- IDs', () => {
+      const cache = makeCache();
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: 'temp-1', version: 0, updatedAt: '', name: 'Pending' },
+            { __typename: 'ShoppingListItem', id: '2', version: 1, updatedAt: '2024-01-01', name: 'Existing' },
+          ],
+        },
+      });
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '2', version: 1, updatedAt: '2024-01-01', name: 'Existing' },
+            { __typename: 'ShoppingListItem', id: '3', version: 1, updatedAt: '2024-01-01', name: 'New' },
+          ],
+        },
+      });
+
+      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
+      const ids = result?.shoppingListItems.map((i: any) => i.id);
+      // temp-1 should be preserved, plus id 2 and 3
+      expect(ids).toContain('temp-1');
+      expect(ids).toContain('2');
+      expect(ids).toContain('3');
+    });
+
+    it('drops existing non-temp items that server removed', () => {
+      const cache = makeCache();
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Removed' },
+            { __typename: 'ShoppingListItem', id: '2', version: 1, updatedAt: '2024-01-01', name: 'Kept' },
+          ],
+        },
+      });
+
+      // Server returns only item 2 (item 1 was deleted)
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '2', version: 1, updatedAt: '2024-01-01', name: 'Kept' },
+          ],
+        },
+      });
+
+      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
+      expect(result?.shoppingListItems).toHaveLength(1);
+      expect(result?.shoppingListItems[0].id).toBe('2');
+    });
+
+    it('adds new incoming items', () => {
+      const cache = makeCache();
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'A' },
+          ],
+        },
+      });
+
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: vars,
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'A' },
+            { __typename: 'ShoppingListItem', id: '2', version: 1, updatedAt: '2024-01-01', name: 'B' },
+          ],
+        },
+      });
+
+      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
+      expect(result?.shoppingListItems).toHaveLength(2);
+    });
+  });
+
+  describe('mergeConnectionByNodeId (via Home.shoppingListsConnection)', () => {
+    const HOME_QUERY_INITIAL = gql`
+      query GetHome($id: ID!) {
+        home(id: $id) {
+          id
+          shoppingListsConnection {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `;
+
+    const HOME_QUERY_PAGINATED = gql`
+      query GetHome($id: ID!, $after: String) {
+        home(id: $id) {
+          id
+          shoppingListsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `;
+
+    it('stores initial connection data', () => {
+      const cache = makeCache();
+
+      cache.writeQuery({
+        query: HOME_QUERY_INITIAL,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: {
+              __typename: 'ShoppingListsConnection',
+              edges: [
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: { __typename: 'ShoppingList', id: 'sl-1', name: 'Groceries' },
+                },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+            },
+          },
+        },
+      });
+
+      const result: any = cache.readQuery({ query: HOME_QUERY_INITIAL, variables: { id: 'home-1' } });
+      expect(result?.home.shoppingListsConnection.edges).toHaveLength(1);
+    });
+
+    it('deduplicates edges by node ID on pagination', () => {
+      const cache = makeCache();
+
+      // Initial load
+      cache.writeQuery({
+        query: HOME_QUERY_PAGINATED,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: {
+              __typename: 'ShoppingListsConnection',
+              edges: [
+                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' } },
+                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c2' },
+            },
+          },
+        },
+      });
+
+      // Paginated load (with cursor)
+      cache.writeQuery({
+        query: HOME_QUERY_PAGINATED,
+        variables: { id: 'home-1', after: 'c2' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: {
+              __typename: 'ShoppingListsConnection',
+              edges: [
+                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B-updated' } },
+                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-3', name: 'C' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c3' },
+            },
+          },
+        },
+      });
+
+      const result: any = cache.readQuery({
+        query: HOME_QUERY_PAGINATED,
+        variables: { id: 'home-1' },
+      });
+
+      // sl-1, sl-2 (deduplicated with incoming), sl-3
+      const edges = result?.home.shoppingListsConnection.edges;
+      expect(edges).toHaveLength(3);
+      const ids = edges.map((e: any) => e.node.id);
+      expect(ids).toContain('sl-1');
+      expect(ids).toContain('sl-2');
+      expect(ids).toContain('sl-3');
+    });
+  });
+
+  describe('itemsConnectionFieldPolicy (via ShoppingList.itemsConnection)', () => {
+    // Need to add ShoppingList to the cache first - write via cache directly
+    it('stores initial connection data', () => {
+      const cache = makeCache();
+
+      cache.writeQuery({
+        query: gql`
+          query GetList($id: ID!) {
+            shoppingList(id: $id) {
+              id
+              itemsConnection {
+                edges {
+                  node { id name }
+                }
+                pageInfo { hasNextPage endCursor }
+              }
+            }
+          }
+        `,
+        variables: { id: 'list-1' },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: {
+              __typename: 'ShoppingListItemsConnection',
+              edges: [
+                {
+                  __typename: 'ShoppingListItemEdge',
+                  node: { __typename: 'ShoppingListItem', id: 'item-1', name: 'Milk' },
+                },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+            },
+          },
+        },
+      });
+
+      const result: any = cache.readQuery({
+        query: gql`
+          query GetList($id: ID!) {
+            shoppingList(id: $id) {
+              id
+              itemsConnection {
+                edges {
+                  node { id name }
+                }
+                pageInfo { hasNextPage endCursor }
+              }
+            }
+          }
+        `,
+        variables: { id: 'list-1' },
+      });
+
+      expect(result?.shoppingList.itemsConnection.edges).toHaveLength(1);
+    });
+  });
+
+  describe('Query-level simple merge policies', () => {
+    it('Query.shoppingLists preserves existing on null incoming', () => {
+      const cache = makeCache();
+
+      const QUERY = gql`
+        query GetLists($filters: ShoppingListFilters) {
+          shoppingLists(filters: $filters) {
+            id
+            name
+          }
+        }
+      `;
+
+      cache.writeQuery({
+        query: QUERY,
+        variables: { filters: { homeId: 'h1' } },
+        data: {
+          shoppingLists: [
+            { __typename: 'ShoppingList', id: 'sl-1', name: 'Groceries' },
+          ],
+        },
+      });
+
+      // Writing null should preserve existing
+      cache.writeQuery({
+        query: QUERY,
+        variables: { filters: { homeId: 'h1' } },
+        data: {
+          shoppingLists: null,
+        },
+      });
+
+      const result: any = cache.readQuery({
+        query: QUERY,
+        variables: { filters: { homeId: 'h1' } },
+      });
+      expect(result?.shoppingLists).toHaveLength(1);
+    });
+
+    it('Query.shoppingLists replaces on empty array', () => {
+      const cache = makeCache();
+
+      const QUERY = gql`
+        query GetLists($filters: ShoppingListFilters) {
+          shoppingLists(filters: $filters) {
+            id
+            name
+          }
+        }
+      `;
+
+      cache.writeQuery({
+        query: QUERY,
+        variables: { filters: { homeId: 'h1' } },
+        data: {
+          shoppingLists: [
+            { __typename: 'ShoppingList', id: 'sl-1', name: 'Groceries' },
+          ],
+        },
+      });
+
+      cache.writeQuery({
+        query: QUERY,
+        variables: { filters: { homeId: 'h1' } },
+        data: {
+          shoppingLists: [],
+        },
+      });
+
+      const result: any = cache.readQuery({
+        query: QUERY,
+        variables: { filters: { homeId: 'h1' } },
+      });
+      expect(result?.shoppingLists).toEqual([]);
+    });
+  });
+
+  describe('Query-level pantries merge policy', () => {
+    const PANTRIES_QUERY = gql`
+      query GetPantries($homeId: ID!) {
+        pantries(homeId: $homeId) {
+          id
+          name
+        }
+      }
+    `;
+
+    it('preserves existing pantries on null incoming', () => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: PANTRIES_QUERY,
+        variables: { homeId: 'h1' },
+        data: {
+          pantries: [{ __typename: 'Pantry', id: 'p1', name: 'Kitchen' }],
+        },
+      });
+      cache.writeQuery({
+        query: PANTRIES_QUERY,
+        variables: { homeId: 'h1' },
+        data: { pantries: null },
+      });
+      const result: any = cache.readQuery({ query: PANTRIES_QUERY, variables: { homeId: 'h1' } });
+      expect(result?.pantries).toHaveLength(1);
+    });
+
+    it('replaces pantries on incoming data', () => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: PANTRIES_QUERY,
+        variables: { homeId: 'h1' },
+        data: {
+          pantries: [{ __typename: 'Pantry', id: 'p1', name: 'Kitchen' }],
+        },
+      });
+      cache.writeQuery({
+        query: PANTRIES_QUERY,
+        variables: { homeId: 'h1' },
+        data: {
+          pantries: [{ __typename: 'Pantry', id: 'p2', name: 'Garage' }],
+        },
+      });
+      const result: any = cache.readQuery({ query: PANTRIES_QUERY, variables: { homeId: 'h1' } });
+      expect(result?.pantries).toHaveLength(1);
+      expect(result?.pantries[0].name).toBe('Garage');
+    });
+  });
+
+  describe('Query-level storageLocations merge policy', () => {
+    const STORAGE_QUERY = gql`
+      query GetStorageLocations($homeId: ID!) {
+        storageLocations(homeId: $homeId) {
+          id
+          name
+        }
+      }
+    `;
+
+    it('preserves existing on null incoming', () => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: STORAGE_QUERY,
+        variables: { homeId: 'h1' },
+        data: {
+          storageLocations: [{ __typename: 'StorageLocation', id: 's1', name: 'Fridge' }],
+        },
+      });
+      cache.writeQuery({
+        query: STORAGE_QUERY,
+        variables: { homeId: 'h1' },
+        data: { storageLocations: null },
+      });
+      const result: any = cache.readQuery({ query: STORAGE_QUERY, variables: { homeId: 'h1' } });
+      expect(result?.storageLocations).toHaveLength(1);
+    });
+  });
+
+  describe('Query-level suggestions merge policies', () => {
+    const PANTRY_SUGGESTIONS_QUERY = gql`
+      query GetSuggestions($pantryId: ID!) {
+        pantryItemSuggestions(pantryId: $pantryId) {
+          id
+          name
+        }
+      }
+    `;
+
+    it('preserves pantry suggestions on null', () => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: PANTRY_SUGGESTIONS_QUERY,
+        variables: { pantryId: 'p1' },
+        data: {
+          pantryItemSuggestions: [{ __typename: 'PantryItem', id: 'ps1', name: 'Milk' }],
+        },
+      });
+      cache.writeQuery({
+        query: PANTRY_SUGGESTIONS_QUERY,
+        variables: { pantryId: 'p1' },
+        data: { pantryItemSuggestions: null },
+      });
+      const result: any = cache.readQuery({ query: PANTRY_SUGGESTIONS_QUERY, variables: { pantryId: 'p1' } });
+      expect(result?.pantryItemSuggestions).toHaveLength(1);
+    });
+
+    it('replaces pantry suggestions with incoming', () => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: PANTRY_SUGGESTIONS_QUERY,
+        variables: { pantryId: 'p1' },
+        data: {
+          pantryItemSuggestions: [{ __typename: 'PantryItem', id: 'ps1', name: 'Milk' }],
+        },
+      });
+      cache.writeQuery({
+        query: PANTRY_SUGGESTIONS_QUERY,
+        variables: { pantryId: 'p1' },
+        data: {
+          pantryItemSuggestions: [{ __typename: 'PantryItem', id: 'ps2', name: 'Eggs' }],
+        },
+      });
+      const result: any = cache.readQuery({ query: PANTRY_SUGGESTIONS_QUERY, variables: { pantryId: 'p1' } });
+      expect(result?.pantryItemSuggestions).toHaveLength(1);
+      expect(result?.pantryItemSuggestions[0].name).toBe('Eggs');
+    });
+  });
+
+  describe('ShoppingList.suggestions merge', () => {
+    const LIST_SUGGESTIONS_QUERY = gql`
+      query GetListSuggestions($id: ID!) {
+        shoppingList(id: $id) {
+          id
+          suggestions {
+            id
+            name
+          }
+        }
+      }
+    `;
+
+    it('preserves existing suggestions on null incoming', () => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: LIST_SUGGESTIONS_QUERY,
+        variables: { id: 'list-1' },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            suggestions: [{ __typename: 'ShoppingListItem', id: 'sug-1', name: 'Butter' }],
+          },
+        },
+      });
+      cache.writeQuery({
+        query: LIST_SUGGESTIONS_QUERY,
+        variables: { id: 'list-1' },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            suggestions: null,
+          },
+        },
+      });
+      const result: any = cache.readQuery({ query: LIST_SUGGESTIONS_QUERY, variables: { id: 'list-1' } });
+      expect(result?.shoppingList.suggestions).toHaveLength(1);
+    });
+  });
+
+  describe('Pantry.items merge', () => {
+    const PANTRY_ITEMS_QUERY = gql`
+      query GetPantryItems($pantryId: ID!) {
+        pantryItems(pantryId: $pantryId) {
+          id
+          version
+          updatedAt
+          name
+        }
+      }
+    `;
+
+    it('uses intelligent merge for pantry items', () => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: PANTRY_ITEMS_QUERY,
+        variables: { pantryId: 'p1' },
+        data: {
+          pantryItems: [
+            { __typename: 'PantryItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Flour' },
+          ],
+        },
+      });
+      cache.writeQuery({
+        query: PANTRY_ITEMS_QUERY,
+        variables: { pantryId: 'p1' },
+        data: {
+          pantryItems: [
+            { __typename: 'PantryItem', id: '1', version: 2, updatedAt: '2024-01-02', name: 'Flour Updated' },
+          ],
+        },
+      });
+      const result: any = cache.readQuery({ query: PANTRY_ITEMS_QUERY, variables: { pantryId: 'p1' } });
+      expect(result?.pantryItems).toHaveLength(1);
+      expect(result?.pantryItems[0].name).toBe('Flour Updated');
+    });
+  });
+
+  describe('MealPlan.mealPlanItems merge', () => {
+    const MEAL_PLAN_QUERY = gql`
+      query GetMealPlan($id: ID!) {
+        mealPlan(id: $id) {
+          id
+          mealPlanItems {
+            id
+            version
+            updatedAt
+            name
+          }
+        }
+      }
+    `;
+
+    it('uses intelligent merge for meal plan items', () => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: MEAL_PLAN_QUERY,
+        variables: { id: 'mp1' },
+        data: {
+          mealPlan: {
+            __typename: 'MealPlan',
+            id: 'mp1',
+            mealPlanItems: [
+              { __typename: 'MealPlanItem', id: 'mpi-1', version: 1, updatedAt: '2024-01-01', name: 'Monday Dinner' },
+            ],
+          },
+        },
+      });
+      cache.writeQuery({
+        query: MEAL_PLAN_QUERY,
+        variables: { id: 'mp1' },
+        data: {
+          mealPlan: {
+            __typename: 'MealPlan',
+            id: 'mp1',
+            mealPlanItems: [
+              { __typename: 'MealPlanItem', id: 'mpi-1', version: 2, updatedAt: '2024-01-02', name: 'Monday Dinner Updated' },
+              { __typename: 'MealPlanItem', id: 'mpi-2', version: 1, updatedAt: '2024-01-02', name: 'Tuesday Lunch' },
+            ],
+          },
+        },
+      });
+      const result: any = cache.readQuery({ query: MEAL_PLAN_QUERY, variables: { id: 'mp1' } });
+      expect(result?.mealPlan.mealPlanItems).toHaveLength(2);
+    });
+  });
+
+  describe('User.profile merge', () => {
+    it('merges partial profile updates', () => {
+      const cache = makeCache();
+      cache.writeFragment({
+        id: 'User:user-1',
+        fragment: gql`
+          fragment UserProfile on User {
+            id
+            profile {
+              displayName
+              avatar
+            }
+          }
+        `,
+        data: {
+          __typename: 'User',
+          id: 'user-1',
+          profile: {
+            __typename: 'UserProfile',
+            id: 'profile-1',
+            displayName: 'John',
+            avatar: 'avatar.jpg',
+          },
+        },
+      });
+      // Write another partial profile update
+      cache.writeFragment({
+        id: 'User:user-1',
+        fragment: gql`
+          fragment UserProfileUpdate on User {
+            id
+            profile {
+              displayName
+            }
+          }
+        `,
+        data: {
+          __typename: 'User',
+          id: 'user-1',
+          profile: {
+            __typename: 'UserProfile',
+            id: 'profile-1',
+            displayName: 'John Updated',
+          },
+        },
+      });
+      const result: any = cache.readFragment({
+        id: 'User:user-1',
+        fragment: gql`
+          fragment UserProfileFull on User {
+            id
+            profile {
+              displayName
+              avatar
+            }
+          }
+        `,
+      });
+      expect(result?.profile.displayName).toBe('John Updated');
+      expect(result?.profile.avatar).toBe('avatar.jpg');
+    });
+  });
+
+  describe('Item field merge policies', () => {
+    it('Item.nutritions preserves existing when incoming is undefined', () => {
+      const cache = makeCache();
+      cache.writeFragment({
+        id: 'Item:item-1',
+        fragment: gql`
+          fragment ItemNutritions on Item {
+            id
+            nutritions
+          }
+        `,
+        data: {
+          __typename: 'Item',
+          id: 'item-1',
+          nutritions: { calories: 100 },
+        },
+      });
+      cache.writeFragment({
+        id: 'Item:item-1',
+        fragment: gql`
+          fragment ItemNameOnly on Item {
+            id
+            name
+          }
+        `,
+        data: {
+          __typename: 'Item',
+          id: 'item-1',
+          name: 'Updated Name',
+        },
+      });
+      const result: any = cache.readFragment({
+        id: 'Item:item-1',
+        fragment: gql`
+          fragment ItemFull on Item {
+            id
+            name
+            nutritions
+          }
+        `,
+      });
+      expect(result?.name).toBe('Updated Name');
+      expect(result?.nutritions).toEqual({ calories: 100 });
+    });
+
+    it('Item.images preserves existing when incoming is undefined', () => {
+      const cache = makeCache();
+      cache.writeFragment({
+        id: 'Item:item-1',
+        fragment: gql`
+          fragment ItemImages on Item {
+            id
+            images
+          }
+        `,
+        data: {
+          __typename: 'Item',
+          id: 'item-1',
+          images: [{ url: 'test.jpg', kind: 'MAIN' }],
+        },
+      });
+      cache.writeFragment({
+        id: 'Item:item-1',
+        fragment: gql`
+          fragment ItemNameOnly on Item {
+            id
+            name
+          }
+        `,
+        data: {
+          __typename: 'Item',
+          id: 'item-1',
+          name: 'Updated',
+        },
+      });
+      const result: any = cache.readFragment({
+        id: 'Item:item-1',
+        fragment: gql`
+          fragment ItemAllFields on Item {
+            id
+            name
+            images
+          }
+        `,
+      });
+      expect(result?.name).toBe('Updated');
+      expect(result?.images).toEqual([{ url: 'test.jpg', kind: 'MAIN' }]);
+    });
+
+    it('Item.imageUrl allows explicit null to remove image', () => {
+      const cache = makeCache();
+      cache.writeFragment({
+        id: 'Item:item-1',
+        fragment: gql`
+          fragment ItemWithImage on Item {
+            id
+            imageUrl
+          }
+        `,
+        data: {
+          __typename: 'Item',
+          id: 'item-1',
+          imageUrl: 'https://example.com/img.jpg',
+        },
+      });
+      cache.writeFragment({
+        id: 'Item:item-1',
+        fragment: gql`
+          fragment ItemRemoveImage on Item {
+            id
+            imageUrl
+          }
+        `,
+        data: {
+          __typename: 'Item',
+          id: 'item-1',
+          imageUrl: null,
+        },
+      });
+      const result: any = cache.readFragment({
+        id: 'Item:item-1',
+        fragment: gql`
+          fragment ItemCheck on Item {
+            id
+            imageUrl
+          }
+        `,
+      });
+      expect(result?.imageUrl).toBeNull();
+    });
+  });
+
+  describe('mergeArrayByIdIntelligent - timestamp tiebreaker existing wins', () => {
+    const SHOPPING_LIST_ITEMS_QUERY = gql`
+      query GetItems($shoppingListId: ID!) {
+        shoppingListItems(shoppingListId: $shoppingListId) {
+          id
+          version
+          updatedAt
+          name
+        }
+      }
+    `;
+
+    it('keeps existing when same version and existing has newer timestamp', () => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: { shoppingListId: 'list-1' },
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-06-01', name: 'Newer Local' },
+          ],
+        },
+      });
+      cache.writeQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: { shoppingListId: 'list-1' },
+        data: {
+          shoppingListItems: [
+            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Older Server' },
+          ],
+        },
+      });
+      const result: any = cache.readQuery({
+        query: SHOPPING_LIST_ITEMS_QUERY,
+        variables: { shoppingListId: 'list-1' },
+      });
+      // The merge keeps existing ref when existing updatedAt is newer
+      expect(result?.shoppingListItems).toHaveLength(1);
+      // With Apollo normalization, the entity data is always latest write,
+      // but the array reference preserves existing
+      expect(result?.shoppingListItems[0].id).toBe('1');
+    });
+  });
+
+  describe('cache GC and monitoring', () => {
+    it('sets up an interval for cache monitoring', () => {
+      const setIntervalSpy = jest.spyOn(global, 'setInterval');
+      makeCache();
+      expect(setIntervalSpy).toHaveBeenCalled();
+      setIntervalSpy.mockRestore();
+      stopCacheMonitoring();
+    });
+
+    it('clears previous interval on makeCache to prevent leaks', () => {
+      const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
+      makeCache();
+      makeCache(); // Second call should clear previous interval first
+      expect(clearIntervalSpy).toHaveBeenCalled();
+      clearIntervalSpy.mockRestore();
+      stopCacheMonitoring();
+    });
+  });
+
+  describe('entity type policies', () => {
+    it('ShoppingListItem uses id as key field and merge:true for field-level merge', () => {
+      const cache = makeCache();
+
+      // Write partial data
+      cache.writeFragment({
+        id: 'ShoppingListItem:item-1',
+        fragment: gql`
+          fragment ItemPartial on ShoppingListItem {
+            id
+            name
+          }
+        `,
+        data: {
+          __typename: 'ShoppingListItem',
+          id: 'item-1',
+          name: 'Milk',
+        },
+      });
+
+      // Write more fields for the same entity (merge:true allows field-level merge)
+      cache.writeFragment({
+        id: 'ShoppingListItem:item-1',
+        fragment: gql`
+          fragment ItemVersion on ShoppingListItem {
+            id
+            version
+          }
+        `,
+        data: {
+          __typename: 'ShoppingListItem',
+          id: 'item-1',
+          version: 2,
+        },
+      });
+
+      // Both fields should be present (merge:true enables field-level merging)
+      const result: any = cache.readFragment({
+        id: 'ShoppingListItem:item-1',
+        fragment: gql`
+          fragment ItemMerged on ShoppingListItem {
+            id
+            name
+            version
+          }
+        `,
+      });
+
+      expect(result?.name).toBe('Milk');
+      expect(result?.version).toBe(2);
+    });
+
+    it('Item.imageUrl preserves existing when incoming is undefined', () => {
+      const cache = makeCache();
+
+      // Write item with imageUrl
+      cache.writeFragment({
+        id: 'Item:item-1',
+        fragment: gql`
+          fragment ItemWithImage on Item {
+            id
+            name
+            imageUrl
+          }
+        `,
+        data: {
+          __typename: 'Item',
+          id: 'item-1',
+          name: 'Banana',
+          imageUrl: 'https://example.com/banana.jpg',
+        },
+      });
+
+      // Write item without imageUrl (imageUrl not in fragment, so not touched)
+      cache.writeFragment({
+        id: 'Item:item-1',
+        fragment: gql`
+          fragment ItemNameOnly on Item {
+            id
+            name
+          }
+        `,
+        data: {
+          __typename: 'Item',
+          id: 'item-1',
+          name: 'Banana Updated',
+        },
+      });
+
+      // imageUrl should still be preserved
+      const result: any = cache.readFragment({
+        id: 'Item:item-1',
+        fragment: gql`
+          fragment ItemWithAllFields on Item {
+            id
+            name
+            imageUrl
+          }
+        `,
+      });
+
+      expect(result?.name).toBe('Banana Updated');
+      expect(result?.imageUrl).toBe('https://example.com/banana.jpg');
+    });
+  });
+});

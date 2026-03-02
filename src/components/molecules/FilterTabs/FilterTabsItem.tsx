@@ -3,6 +3,11 @@ import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { FilterTabConfig } from './types';
 
+/** Icon names are ASCII-only (e.g. "snow-outline"); emojis contain non-ASCII. */
+function isEmoji(value: string): boolean {
+  return /[^\u0020-\u007E]/.test(value);
+}
+
 interface FilterTabsItemProps<T extends string> {
   tab: FilterTabConfig<T>;
   isActive: boolean;
@@ -49,12 +54,18 @@ function FilterTabsItemComponent<T extends string>({
       ]}
     >
       {!!tab.icon && (
-        <Icon
-          name={tab.icon}
-          size={tab.isAction ? (isCompact ? 18 : 20) : (isCompact ? 14 : 16)}
-          color={iconColor}
-          library={tab.iconLibrary}
-        />
+        isEmoji(tab.icon) ? (
+          <Text style={isCompact ? styles.tabIconCompact : styles.tabIcon}>
+            {tab.icon}
+          </Text>
+        ) : (
+          <Icon
+            name={tab.icon}
+            size={tab.isAction ? (isCompact ? 18 : 20) : (isCompact ? 14 : 16)}
+            color={iconColor}
+            library={tab.iconLibrary}
+          />
+        )
       )}
       {!(tab.isAction && !tab.label) && (
         <Text

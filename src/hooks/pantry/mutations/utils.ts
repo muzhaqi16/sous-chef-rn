@@ -2,7 +2,7 @@
  * Shared utilities for pantry item mutations
  */
 
-import { PantryItemFragment, UnitType } from '#generated';
+import { PantryItemFragment, StorageState, UnitType } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import type { UnitSelection, FormDataInput } from './types';
 
@@ -58,54 +58,85 @@ export function buildDirtyUpdateInput(
     input.itemName = data.itemName;
   }
 
+  // Group storage-related fields into storage: StorageDetailsInput
+  const storage: Record<string, any> = {};
   if (dirtyFields.storageState) {
-    input.storageState = data.storageState;
+    storage.storageState = data.storageState;
   }
-
   if (dirtyFields.location && locationId) {
-    input.storageLocationId = locationId;
+    storage.storageLocationId = locationId;
+  }
+  if (dirtyFields.notes) {
+    storage.storageNotes = data.notes;
+  }
+  if (Object.keys(storage).length > 0) {
+    input.storage = storage;
   }
 
   if (dirtyFields.expirationDate) {
     input.expiresAt = data.expirationDate?.toISOString() ?? null;
   }
 
-  if (dirtyFields.notes) {
-    input.storageNotes = data.notes;
-  }
-
   if (dirtyFields.tags) {
     input.tags = data.tags || [];
   }
 
+  // Group threshold fields into thresholds: InventoryThresholdsInput
+  const thresholds: Record<string, any> = {};
   if (dirtyFields.minQuantity) {
-    input.minQuantity = data.minQuantity ? parseFloat(data.minQuantity) : null;
+    thresholds.minQuantity = data.minQuantity
+      ? parseFloat(data.minQuantity)
+      : null;
   }
-
   if (dirtyFields.restockQuantity) {
-    input.restockQuantity = data.restockQuantity
+    thresholds.restockQuantity = data.restockQuantity
       ? parseFloat(data.restockQuantity)
       : null;
   }
+  if (Object.keys(thresholds).length > 0) {
+    input.thresholds = thresholds;
+  }
 
+  // Group net weight fields into netWeight: NetWeightInput
+  const netWeightInput: Record<string, any> = {};
   if (dirtyFields.netWeight) {
-    input.netWeight = data.netWeight ? parseFloat(data.netWeight) : null;
+    netWeightInput.netWeight = data.netWeight
+      ? parseFloat(data.netWeight)
+      : null;
   }
-
   if (dirtyFields.netWeightUnitId) {
-    input.netWeightUnitId = data.netWeightUnitId || null;
+    netWeightInput.netWeightUnitId = data.netWeightUnitId || null;
+  }
+  if (Object.keys(netWeightInput).length > 0) {
+    input.netWeight = netWeightInput;
   }
 
-  // Handle brand updates
+  // Group brand fields into brand: BrandReferenceInput
   if (dirtyFields.brand) {
     if (brandId) {
-      input.brandId = brandId;           // Selected existing brand
+      input.brand = { brandId };
     } else if (data.brand?.trim()) {
-      input.brandName = data.brand.trim(); // Create new brand by name
+      input.brand = { brandName: data.brand.trim() };
     } else {
-      input.brandId = null;              // Remove brand
+      input.brand = { brandId: null };
     }
   }
 
   return input;
+}
+
+/**
+ * Map StorageState enum to the corresponding key in storageStateCounts.
+ */
+export function stateToCountKey(
+  state: StorageState | string | undefined | null,
+): 'refrigerated' | 'frozen' | 'ambient' {
+  switch (state) {
+    case StorageState.Refrigerated:
+      return 'refrigerated';
+    case StorageState.Frozen:
+      return 'frozen';
+    default:
+      return 'ambient';
+  }
 }

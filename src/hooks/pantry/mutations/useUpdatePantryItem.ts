@@ -17,7 +17,8 @@ import {
 } from '#/utils/errors/versionConflict';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
-import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
+import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { buildDirtyUpdateInput, buildOptimisticUnit, stateToCountKey } from './utils';
 import type { FormDataInput, UnitSelection } from './types';
 
 interface UseUpdatePantryItemOptions {
@@ -33,6 +34,7 @@ interface UpdatePantryItemFieldsParams {
   selectedLocationId: string | null;
   selectedBrandId: string | null;
   trackingUnit?: UnitSelection;
+  selectedStorageLocation?: { id: string; name: string; type: string } | null;
 }
 
 /**
@@ -86,6 +88,7 @@ export function useUpdatePantryItem({
     selectedLocationId,
     selectedBrandId,
     trackingUnit,
+    selectedStorageLocation,
   }: UpdatePantryItemFieldsParams): void => {
     // Build input for dirty fields only
     const updateInput = buildDirtyUpdateInput(
@@ -101,10 +104,43 @@ export function useUpdatePantryItem({
       return;
     }
 
-    // Build optimistic update with brand handling
-    const optimisticUpdate: Record<string, any> = { ...updateInput };
-    if ('brandId' in updateInput && updateInput.brandId === null) {
-      optimisticUpdate.brand = null;
+    // Build optimistic update from form data (PantryItem-shaped, not mutation-input-shaped)
+    const optimisticUpdate: Record<string, any> = {};
+    if (dirtyFields.itemName) optimisticUpdate.itemName = input.itemName;
+    if (dirtyFields.storageState)
+      optimisticUpdate.storageState = input.storageState;
+    if (dirtyFields.expirationDate) {
+      optimisticUpdate.expiresAt = input.expirationDate?.toISOString() ?? null;
+    }
+    if (dirtyFields.tags) optimisticUpdate.tags = input.tags || [];
+    if (dirtyFields.minQuantity) {
+      optimisticUpdate.minQuantity = input.minQuantity
+        ? parseFloat(input.minQuantity)
+        : null;
+    }
+    if (dirtyFields.restockQuantity) {
+      optimisticUpdate.restockQuantity = input.restockQuantity
+        ? parseFloat(input.restockQuantity)
+        : null;
+    }
+    if (dirtyFields.netWeight) {
+      optimisticUpdate.netWeight = input.netWeight
+        ? parseFloat(input.netWeight)
+        : null;
+    }
+    if (dirtyFields.location && selectedStorageLocation) {
+      optimisticUpdate.storageLocation = {
+        __typename: 'StorageLocation',
+        id: selectedStorageLocation.id,
+        name: selectedStorageLocation.name,
+        type: selectedStorageLocation.type,
+      };
+    }
+    if (dirtyFields.notes) optimisticUpdate.storageNotes = input.notes;
+    if (dirtyFields.brand) {
+      if (!selectedBrandId && !input.brand?.trim()) {
+        optimisticUpdate.brand = null;
+      }
     }
 
     // Include new unit in optimistic response to prevent race condition
@@ -112,6 +148,9 @@ export function useUpdatePantryItem({
     if (trackingUnit?.id && trackingUnit.id !== currentItem.unit?.id) {
       optimisticUpdate.unit = buildOptimisticUnit(trackingUnit, currentItem.unit);
     }
+
+    const pantryId = currentItem.pantryId;
+    const oldLocationId = currentItem.storageLocation?.id ?? null;
 
     // Fire mutation asynchronously - don't await to allow immediate navigation
     updateMutation({
@@ -122,6 +161,79 @@ export function useUpdatePantryItem({
         'pantryItem',
         enhanceWithVersion(currentItem, optimisticUpdate),
       ),
+      update(cache) {
+        executeCacheUpdate(
+          () => {
+            // Update storageLocationCounts when location changed
+            if (dirtyFields.location && oldLocationId !== selectedLocationId) {
+              cache.modify({
+                id: cache.identify({ __typename: 'Pantry', id: pantryId }),
+                fields: {
+                  stats(existingStats: any) {
+                    if (!existingStats?.storageLocationCounts) return existingStats;
+                    const counts = [...existingStats.storageLocationCounts];
+                    // Decrement old location
+                    if (oldLocationId) {
+                      const oldIdx = counts.findIndex(
+                        (c: any) => c.storageLocationId === oldLocationId,
+                      );
+                      if (oldIdx >= 0) {
+                        counts[oldIdx] = {
+                          ...counts[oldIdx],
+                          itemCount: Math.max(0, counts[oldIdx].itemCount - 1),
+                        };
+                      }
+                    }
+                    // Increment new location
+                    if (selectedLocationId) {
+                      const newIdx = counts.findIndex(
+                        (c: any) => c.storageLocationId === selectedLocationId,
+                      );
+                      if (newIdx >= 0) {
+                        counts[newIdx] = {
+                          ...counts[newIdx],
+                          itemCount: counts[newIdx].itemCount + 1,
+                        };
+                      }
+                    }
+                    return { ...existingStats, storageLocationCounts: counts };
+                  },
+                },
+              });
+            }
+
+            // Update storageStateCounts when storage state changed
+            if (dirtyFields.storageState) {
+              const oldKey = stateToCountKey(currentItem.storageState);
+              const newKey = stateToCountKey(input.storageState);
+              if (oldKey !== newKey) {
+                cache.modify({
+                  id: cache.identify({ __typename: 'Pantry', id: pantryId }),
+                  fields: {
+                    stats(existingStats: any) {
+                      if (!existingStats?.storageStateCounts) return existingStats;
+                      return {
+                        ...existingStats,
+                        storageStateCounts: {
+                          ...existingStats.storageStateCounts,
+                          [oldKey]: Math.max(
+                            0,
+                            (existingStats.storageStateCounts[oldKey] || 0) - 1,
+                          ),
+                          [newKey]:
+                            (existingStats.storageStateCounts[newKey] || 0) + 1,
+                        },
+                      };
+                    },
+                  },
+                });
+              }
+            }
+          },
+          'Cache update failed for updatePantryItemFields:',
+          refetch,
+        );
+      },
     }).catch(error => {
       console.error('Pantry item update failed:', error);
       // Error already handled by mutation's onError

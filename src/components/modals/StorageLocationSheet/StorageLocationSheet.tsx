@@ -14,6 +14,13 @@ interface StorageLocationData {
   type: string;
   icon?: string | null;
   parentLocationId?: string;
+  description?: string | null;
+  temperature?: string | null;
+  color?: string | null;
+  isClimateControlled?: boolean | null;
+  capacity?: number | null;
+  capacityUnit?: string | null;
+  isDefault?: boolean | null;
 }
 
 interface StorageLocation {
@@ -22,6 +29,13 @@ interface StorageLocation {
   type: string;
   icon?: string | null;
   parentLocationId?: string | null;
+  description?: string | null;
+  temperature?: string | null;
+  color?: string | null;
+  isClimateControlled?: boolean;
+  capacity?: number | null;
+  capacityUnit?: string | null;
+  isDefault?: boolean;
 }
 
 interface StorageLocationSheetProps {
@@ -43,7 +57,7 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
   const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
-    snapPoints: ['70%', '90%'] });
+    snapPoints: ['80%', '95%'] });
   const formRef = useRef<StorageLocationFormRef>(null);
 
   const handleSubmit = async (data: StorageLocationData) => {

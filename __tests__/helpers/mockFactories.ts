@@ -1,6 +1,6 @@
-import { DocumentNode } from 'graphql';
+import { DocumentNode, GraphQLError } from 'graphql';
 import { MockedResponse } from '@apollo/client/testing/react';
-import { MembershipRole, StorageState } from '#generated';
+import { MembershipRole, StorageState, CollaboratorStatus } from '#generated';
 
 let idCounter = 0;
 const nextId = () => `test-id-${++idCounter}`;
@@ -217,5 +217,80 @@ export function createMutationMock<TData = Record<string, unknown>>(
       ...(variables ? { variables } : {}),
     },
     result: { data },
+  };
+}
+
+export function createMockHomeMembership(overrides?: Record<string, unknown>) {
+  return {
+    role: MembershipRole.Member,
+    canAddItems: true,
+    canRemoveItems: true,
+    canEditPantry: true,
+    ...overrides,
+  };
+}
+
+export function createMockCollaborator(overrides?: Record<string, unknown>) {
+  const userId = nextId();
+  return {
+    collaboratorId: userId,
+    collaborator: { id: userId },
+    status: CollaboratorStatus.Active,
+    canAddItems: true,
+    canRemoveItems: true,
+    canEditItems: true,
+    canMarkPurchased: true,
+    ...overrides,
+  };
+}
+
+export function createMockGraphQLError(
+  message: string,
+  overrides?: { code?: string; extensions?: Record<string, unknown> },
+) {
+  return new GraphQLError(message, {
+    extensions: {
+      code: overrides?.code ?? 'INTERNAL_SERVER_ERROR',
+      ...overrides?.extensions,
+    },
+  });
+}
+
+export function createMockProfile(overrides?: Record<string, unknown>) {
+  return {
+    firstName: 'Test',
+    lastName: 'User',
+    displayName: 'testuser',
+    bio: null,
+    phone: null,
+    website: null,
+    dateOfBirth: null,
+    avatar: null,
+    coverImage: null,
+    gender: null,
+    profileVisibility: 'PUBLIC',
+    ...overrides,
+  };
+}
+
+export function createMockMealPlanItem(overrides?: Record<string, unknown>) {
+  return {
+    id: nextId(),
+    recipeId: nextId(),
+    recipeName: 'Test Recipe',
+    servings: 2,
+    mealType: 'DINNER',
+    ...overrides,
+  };
+}
+
+export function createMockQueuedMutation(overrides?: Record<string, unknown>) {
+  return {
+    id: nextId(),
+    operationName: 'TestMutation',
+    variables: {},
+    timestamp: Date.now(),
+    retryCount: 0,
+    ...overrides,
   };
 }
