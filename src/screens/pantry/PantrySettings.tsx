@@ -27,6 +27,26 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { useErrorService, errorService } from '#/services/errorService';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { executeWithLoadingState, executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
+
+/** Module-level helper to sync pantry form state from loaded data */
+function syncPantryFormState(
+  pantry: { name?: string | null; description?: string | null; isDefault?: boolean | null } | null | undefined,
+  pantryId: string | undefined,
+  setName: (v: string) => void,
+  setDescription: (v: string) => void,
+  setIsDefault: (v: boolean) => void,
+) {
+  if (pantry && pantryId) {
+    setName(pantry.name || '');
+    setDescription(pantry.description || '');
+    setIsDefault(pantry.isDefault || false);
+  } else if (!pantryId) {
+    setName('');
+    setDescription('');
+    setIsDefault(false);
+  }
+}
 
 export const PantrySettings: React.FC<StaticScreenProps<{
   pantryId?: string;
@@ -236,16 +256,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
       return;
     }
 
-    if (pantry && pantryId) {
-      setName(pantry.name || '');
-      setDescription(pantry.description || '');
-      setIsDefault(pantry.isDefault || false);
-    } else if (!pantryId) {
-      // Set default values for new pantry
-      setName('');
-      setDescription('');
-      setIsDefault(false);
-    }
+    syncPantryFormState(pantry, pantryId, setName, setDescription, setIsDefault);
   }, [pantry, pantryId, pantryError]);
 
   const handleToggleDefault = async (newValue: boolean) => {
@@ -269,7 +280,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Pantry name cannot be empty');
       return;
@@ -280,41 +291,40 @@ export const PantrySettings: React.FC<StaticScreenProps<{
       return;
     }
 
-    setSaving(true);
-    try {
-      if (!pantryId) {
-        // Create new pantry
-        await createPantry({
-          variables: {
-            input: {
-              homeId: selectedHomeId,
-              name: name.trim(),
-              description: description.trim() || 'User created pantry',
-              isDefault,
-              tags: ['user-created'],
+    executeWithLoadingState(
+      async () => {
+        if (!pantryId) {
+          await createPantry({
+            variables: {
+              input: {
+                homeId: selectedHomeId,
+                name: name.trim(),
+                description: description.trim() || 'User created pantry',
+                isDefault,
+                tags: ['user-created'],
+              },
             },
-          },
-        });
-      } else {
-        // Update existing pantry (isDefault is handled separately via handleToggleDefault)
-        await updatePantry({
-          variables: {
-            id: pantryId,
-            input: {
-              name: name.trim(),
-              description: description.trim(),
+          });
+        } else {
+          await updatePantry({
+            variables: {
+              id: pantryId,
+              input: {
+                name: name.trim(),
+                description: description.trim(),
+              },
             },
-          },
-        });
-      }
-    } catch {
-      Alert.alert(
-        'Error',
-        pantryId ? 'Failed to save settings' : 'Failed to create pantry',
-      );
-    } finally {
-      setSaving(false);
-    }
+          });
+        }
+      },
+      setSaving,
+      () => {
+        Alert.alert(
+          'Error',
+          pantryId ? 'Failed to save settings' : 'Failed to create pantry',
+        );
+      },
+    );
   };
 
   const handleDelete = () => {
@@ -328,20 +338,19 @@ export const PantrySettings: React.FC<StaticScreenProps<{
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
             // Register parent deletion to prevent subscription race conditions
             subscriptionService.registerParentDeletion(pantryId);
 
-            try {
-              await deletePantry({ variables: { id: pantryId } });
-              // Clear selected pantry ID to prevent stale queries on next app start
-              // useDefaultHome will auto-select a new pantry from remaining ones
-              setSelectedPantryId(null);
-              goBack();
-            } finally {
+            executeAsyncWithCleanup(
+              async () => {
+                await deletePantry({ variables: { id: pantryId } });
+                setSelectedPantryId(null);
+                goBack();
+              },
               // Cleanup (timeout in service provides fallback)
-              subscriptionService.unregisterParentDeletion(pantryId);
-            }
+              () => { subscriptionService.unregisterParentDeletion(pantryId); },
+            );
           },
         },
       ],

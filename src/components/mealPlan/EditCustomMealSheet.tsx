@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
@@ -25,7 +24,7 @@ export const EditCustomMealSheet: React.FC<EditCustomMealSheetProps> = ({
     visible,
     onDismiss: onClose,
     snapPoints: ['45%'],
-    keyboardBehavior: 'interactive' });
+    keyboardAware: true });
 
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
@@ -54,7 +53,7 @@ export const EditCustomMealSheet: React.FC<EditCustomMealSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetScrollView
+      <BottomSheetFormScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
@@ -91,7 +90,7 @@ export const EditCustomMealSheet: React.FC<EditCustomMealSheetProps> = ({
             numberOfLines={3}
           />
         </View>
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

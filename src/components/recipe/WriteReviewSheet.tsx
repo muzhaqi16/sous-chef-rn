@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
   BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
 import { StarRatingInput } from './StarRatingInput';
 import type { RecipeReviewFragment } from '#generated';
@@ -26,7 +26,7 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
   const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
     onDismiss: onClose,
     snapPoints: ['55%'],
-    keyboardBehavior: 'fillParent' });
+    keyboardAware: true });
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -62,7 +62,7 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps} index={0}>
-      <BottomSheetScrollView
+      <BottomSheetFormScrollView
         contentContainerStyle={[styles.content, contentContainerStyle]}
       >
         <Text style={styles.title}>
@@ -113,7 +113,7 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
             </Text>
           )}
         </Pressable>
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

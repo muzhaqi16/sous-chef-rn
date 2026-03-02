@@ -141,12 +141,10 @@ export const NotificationActionHandler: React.FC<
       if (acceptedHomeId) {
         setSelectedHomeId(acceptedHomeId);
 
-        // Wait briefly for GetHomes refetch to complete
-        // (refetch is already configured in the acceptHomeInvite mutation)
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Navigate to pantry - it will auto-select the default pantry for this home
-        navigateTo.pantryMain();
+        // Defer navigation until idle to allow Zustand store update to propagate
+        requestIdleCallback(() => {
+          navigateTo.pantryMain();
+        });
       } else {
         // Fallback if homeId not provided
         Alert.alert('Success', `Welcome to ${invitation.entityName}!`, [

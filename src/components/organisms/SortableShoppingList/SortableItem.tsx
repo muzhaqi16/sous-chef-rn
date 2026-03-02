@@ -16,6 +16,7 @@ import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import {
   standardEasing,
   staggeredEntryAnimation,
+  TIMING,
 } from '#constants/animations';
 import { useStaggeredEntry } from '#context/StaggeredEntryContext';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
@@ -67,7 +68,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
     itemId: item.id,
     slideDistance: screenWidth,
-    duration: 250,
+    duration: TIMING.MODERATE,
   });
 
   // Get actions and permissions from context (stable references)
@@ -172,23 +173,15 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     );
   })();
 
-  // Safety guard: skip rendering if item is invalid
-  if (!item?.id || !item?.title) {
-    if (__DEV__) {
-      console.warn('⚠️ SortableItem: Invalid item data, skipping render');
-    }
-    return null;
-  }
-
   // Render the item
-  // PERF: Nested Animated.Views separate entry animation from slide animation
-  // This prevents Reanimated warning about conflicting opacity/transform properties
+  // PERF: Single Animated.View for both entry animation and slide style
   return (
-    <Animated.View entering={entering}>
-      <Animated.View
-        style={[styles.container, commonStyles.shadow, animatedSlideStyle]}
-      >
-        <SwipeableItem
+    <Animated.View
+      entering={entering}
+      style={[styles.container, commonStyles.shadow, animatedSlideStyle]}
+    >
+      <SwipeableItem
+        itemId={item.id}
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onLongPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onEdit={
@@ -217,15 +210,13 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           isPurchased={item.isPurchased}
           themeColors={themeColors}
         />
-        </SwipeableItem>
-      </Animated.View>
+      </SwipeableItem>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    opacity: 1,
     marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,

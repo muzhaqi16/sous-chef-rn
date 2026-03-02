@@ -2,16 +2,45 @@
 - always run npm run typecheck and npm run lint after making code changes to ensure no typescript and linting errors were introduced
 - typecasting \_\_typename: 'Mutation' as any, is never needed
 - estimatedItemSize has been deprecated in version 2 of flashlist and to never use it which is the version that is app is uisng
+- **Never use `InteractionManager` from `react-native`.** It has been deprecated. Avoid long-running work on the JS thread and use `requestIdleCallback` instead for deferring non-urgent tasks.
 
 ### React Compiler Conventions
 
-- **Never write try-catch inside hook/component bodies.** The React Compiler bails out entirely
-  on hooks containing try-catch, preventing auto-memoization of all derived values.
-  Use the shared helpers from `src/utils/compilerSafeWrappers.ts` instead.
+- **Do not use `useMemo` or `useCallback`.**  The `babel-plugin-react-compiler` plugin automatically
+  memoizes values and callbacks. Manual `useMemo`/`useCallback` is redundant and should not be added.
+- **Never write try-catch or try-finally inside hook/component bodies.** The React Compiler
+  bails out entirely on hooks containing try-catch **or try-finally**, preventing
+  auto-memoization of all derived values. The `react-compiler/react-compiler` ESLint rule
+  has a [known bug](https://github.com/facebook/react/issues/35644) where it **silently
+  stops reporting all diagnostics** when encountering unsupported syntax like `finally` —
+  producing zero warnings instead of flagging the bailout. The `react-hooks/todo` rule
+  catches these silent bailouts. Use the shared helpers from `src/utils/compilerSafeWrappers.ts`
+  instead.
 - **Never read/write `ref.current` during render.** Use the "adjusting state during render"
   pattern (`useState` + conditional `setState`) for comparing previous/current values.
 - **Hook return objects are auto-memoized by the compiler** — but only if the compiler doesn't
   bail out. Once try-catch is extracted, return objects like `{ actions }` become stable automatically.
+
+### `scheduleOnRN` Worklet Convention
+
+Functions passed to `scheduleOnRN` (Reanimated's `runOnJS` replacement) **must be pre-defined
+in RN runtime scope**. Inline arrow/function expressions inside worklets cause native crashes
+on Android because the worklet serializer cannot capture closures created at call-site.
+
+```ts
+// CORRECT — callback defined in RN scope
+const handlePress = (id: string) => { /* ... */ };
+const gesture = Gesture.Tap().onEnd(() => {
+  scheduleOnRN(handlePress)(id);
+});
+
+// WRONG — inline function crashes on Android
+const gesture = Gesture.Tap().onEnd(() => {
+  scheduleOnRN(() => handlePress(id))();  // native crash
+});
+```
+
+An ESLint `no-restricted-syntax` rule enforces this at lint time.
 
 ### Autocomplete Local-First Search
 

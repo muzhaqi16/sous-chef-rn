@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -33,16 +33,20 @@ export const LowStockItems: React.FC = () => {
   const { addLowStockToShoppingList, loading: addAllLoading } =
     useAddLowStockToShoppingList({ homeId: selectedHomeId ?? undefined });
 
-  const { items, loading, refetch } = usePantryManagement(pantry?.id);
+  const { allItems, loading, refetch, loadMore, hasMore, isLoadingMore } = usePantryManagement(pantry?.id);
   const [addToShoppingList] = useAddItemToShoppingListMutation();
 
-  const lowStockItems = (() => {
-    if (!items) return [];
+  // Progressively load all pages so the isLowStock filter sees every item
+  useEffect(() => {
+    if (hasMore && !isLoadingMore && !loading) {
+      loadMore();
+    }
+  }, [hasMore, isLoadingMore, loading, loadMore]);
 
-    // Match the low stock logic used in usePantryManagement stats
-    return items.filter(item => {
-      return item.quantity <= 1 || item.lowStockAlert;
-    });
+  const lowStockItems = (() => {
+    if (!allItems) return [];
+
+    return allItems.filter(item => item.isLowStock);
   })();
 
   const handleRefresh = async () => {
@@ -115,7 +119,7 @@ export const LowStockItems: React.FC = () => {
           />
         }
         ListEmptyComponent={
-          loading || !items ? (
+          loading || !allItems ? (
             <View style={styles.skeletonContainer}>
               {[1, 2, 3, 4, 5].map(key => (
                 <PantryItemSkeleton key={key} />

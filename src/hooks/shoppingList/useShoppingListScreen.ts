@@ -30,6 +30,7 @@ export function useShoppingListScreen() {
 
   // 2. Selection: Determine current list with auto-select
   const {
+    optimisticListId,
     currentListId,
     currentList,
     defaultList,
@@ -39,7 +40,8 @@ export function useShoppingListScreen() {
 
   // 3. Items: Fetch and manage items for current list (with pagination)
   // Returns paginated unpurchasedItems and purchasedItems
-  // PERF: Destructure all fields individually to enable useMemo on final return
+  // PERF: Use optimisticListId so queries fire immediately with the persisted
+  // Zustand ID, breaking the waterfall that previously waited for lists to load.
   const {
     items,
     allItems,
@@ -68,7 +70,7 @@ export function useShoppingListScreen() {
     getCompletedItems,
     getPendingItems,
     getItemsByCategory,
-  } = useShoppingListManagement(currentListId);
+  } = useShoppingListManagement(optimisticListId);
 
   // 4. Transform: Convert raw items to UI format (single consolidated call)
   // Only transform unpurchased + purchased (skip redundant combined transform)
@@ -88,13 +90,17 @@ export function useShoppingListScreen() {
   }));
 
   // Preload shopping list item images into disk cache for instant display
+  // PERF: Defer to idle to avoid competing with in-flight queries during critical load
   useEffect(() => {
     if (items.length > 0) {
       const urls = items
         .map(item => resolveImageUrl(item))
         .filter((url): url is string => !!url);
       if (urls.length > 0) {
-        preloadImages(urls);
+        const handle = requestIdleCallback(() => {
+          preloadImages(urls);
+        });
+        return () => cancelIdleCallback(handle);
       }
     }
   }, [items]);

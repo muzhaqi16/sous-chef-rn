@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, type ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 /**
@@ -52,23 +52,35 @@ export const PantryActionsProvider: React.FC<PantryActionsProviderProps> = ({
   children,
   actions,
 }) => {
-  // Track currently open swipeable
   const openSwipeableRef = useRef<SwipeableMethods | null>(null);
 
-  // Swipeable coordination
+  // Store latest actions in ref (effect updates — no re-renders)
+  const actionsRef = useRef(actions);
+  useEffect(() => { actionsRef.current = actions; });
+
+  // Stable delegating callbacks — compiler sees only ref captures (not reactive),
+  // so it auto-memoizes these with empty reactive deps. Context value stays stable.
+  const stableActions: PantryItemActions = {
+    onItemPress: (id: string) => actionsRef.current.onItemPress(id),
+    onItemEdit: (id: string) => actionsRef.current.onItemEdit?.(id),
+    onItemDelete: (id: string) => actionsRef.current.onItemDelete?.(id),
+    onItemConsume: (id: string) => actionsRef.current.onItemConsume?.(id),
+    onItemWaste: (id: string) => actionsRef.current.onItemWaste?.(id),
+    onItemRestock: (id: string) => actionsRef.current.onItemRestock?.(id),
+  };
+
+  // swipeable only captures openSwipeableRef (a ref) — compiler auto-memoizes
   const swipeable: SwipeableCoordination = {
     onSwipeableWillOpen: (ref: React.RefObject<SwipeableMethods>) => {
-      if (
-        openSwipeableRef.current &&
-        openSwipeableRef.current !== ref.current
-      ) {
+      if (openSwipeableRef.current && openSwipeableRef.current !== ref.current) {
         openSwipeableRef.current?.close();
       }
       openSwipeableRef.current = ref.current;
     },
   };
 
-  const value: PantryActionsContextValue = { actions, swipeable };
+  // value only captures stableActions + swipeable (both auto-memoized) — stable
+  const value: PantryActionsContextValue = { actions: stableActions, swipeable };
 
   return (
     <PantryActionsContext.Provider value={value}>

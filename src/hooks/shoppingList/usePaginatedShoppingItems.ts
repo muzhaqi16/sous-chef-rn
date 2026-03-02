@@ -211,14 +211,14 @@ export function usePaginatedShoppingItems({
     if (purchasedNeedsRefetch || unpurchasedNeedsRefetch) {
       isAutoRefetchingRef.current = true;
 
-      // Use setTimeout to avoid state update during render
-      const timeoutId = setTimeout(() => {
+      // Defer refetch to avoid state update during render
+      const idleId = requestIdleCallback(() => {
         executeRefetch(refetch, '[usePaginatedShoppingItems] Auto-refetch failed:')
           .finally(() => { isAutoRefetchingRef.current = false; });
-      }, 100);
+      });
 
       return () => {
-        clearTimeout(timeoutId);
+        cancelIdleCallback(idleId);
         isAutoRefetchingRef.current = false;
       };
     }

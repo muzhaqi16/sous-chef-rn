@@ -1,9 +1,18 @@
 /**
- * Module-level try-catch wrappers for React Compiler compatibility.
+ * Module-level try-catch/try-finally wrappers for React Compiler compatibility.
  *
- * The React Compiler bails out on hooks/components that contain try-catch,
- * preventing auto-memoization of all derived values. These helpers move the
- * try-catch outside the hook body so the compiler can optimize normally.
+ * The React Compiler bails out on hooks/components that contain try-catch OR
+ * try-finally, preventing auto-memoization of ALL derived values in that
+ * component. Critically, the `react-compiler/react-compiler` ESLint rule has a
+ * known bug (https://github.com/facebook/react/issues/35644) where it silently
+ * stops reporting diagnostics when encountering unsupported syntax like
+ * `finally` — producing zero warnings instead of flagging the bailout.
+ *
+ * Use the `react-hooks/todo` ESLint rule to detect these silent bailouts:
+ *   npx eslint --rule '{"react-hooks/todo": "warn"}' <file>
+ *
+ * These helpers move the try-catch/try-finally outside the hook body so the
+ * compiler can optimize normally.
  */
 
 /** Wraps an async mutation — returns T on success, false on failure */
@@ -68,5 +77,51 @@ export async function executeRefetch(
     await refetchFn();
   } catch (error) {
     console.warn(errorMsg, error);
+  }
+}
+
+/** Wraps an async refresh with try/finally to keep setRefreshing(false) guaranteed */
+export async function executeRefreshWithFinally(
+  refreshFn: () => Promise<unknown>,
+  setRefreshing: (value: boolean) => void,
+): Promise<void> {
+  setRefreshing(true);
+  try {
+    await refreshFn();
+  } finally {
+    setRefreshing(false);
+  }
+}
+
+/** Wraps an async operation with loading state management (try-catch-finally).
+ *  Sets loading true before, false after, and swallows errors (optionally calling onError). */
+export async function executeWithLoadingState(
+  fn: () => Promise<void>,
+  setLoading: (value: boolean) => void,
+  onError?: (error: unknown) => void,
+): Promise<void> {
+  setLoading(true);
+  try {
+    await fn();
+  } catch (error) {
+    onError?.(error);
+  } finally {
+    setLoading(false);
+  }
+}
+
+/** Wraps an async operation with try-catch-finally where loading state is set externally
+ *  before the call. Only provides catch + finally cleanup. */
+export async function executeAsyncWithCleanup(
+  fn: () => Promise<void>,
+  cleanup: () => void,
+  onError?: (error: unknown) => void,
+): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    onError?.(error);
+  } finally {
+    cleanup();
   }
 }

@@ -3,6 +3,7 @@ import {TextInput, Text} from 'react-native';
 import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
+import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 
 interface FractionInputProps {
   value: string;
@@ -41,7 +42,8 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   useBottomSheetInput = false,
   required = false,
 }) => {
-  const InputComponent = useBottomSheetInput ? BottomSheetTextInput : TextInput;
+  const contextValue = useIsBottomSheetInput();
+  const InputComponent = (useBottomSheetInput || contextValue) ? BottomSheetTextInput : TextInput;
   const { theme } = useUnistyles();
   const [isFocused, setIsFocused] = useState(false);
 

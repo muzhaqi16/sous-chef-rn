@@ -58,6 +58,10 @@ export interface BaseItemCardProps {
   /** Right swipe threshold in pixels */
   rightThreshold?: number;
 
+  // Recycling
+  /** Item ID for FlashList recycling reset */
+  itemId?: string;
+
   // Accessibility
   /** Test ID prefix */
   testID?: string;

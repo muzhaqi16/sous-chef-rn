@@ -138,7 +138,6 @@ query AutocompleteItems($input: AutocompleteInput!) {
       name
       type
       imageUrl
-      images
       netWeight
       displayUnit
       defaultUnit {

@@ -9,16 +9,13 @@
 
 import { useRef } from 'react';
 import { Alert } from 'react-native';
-import {
-  useAddItemToShoppingListMutation,
-  type AddItemToShoppingListMutation,
-} from '#generated';
+import { useAddItemToShoppingListMutation } from '#generated';
 import { useErrorService } from '#/services/errorService';
-import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
-import { generateId } from '#/utils/generateId';
+import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { createOptimisticShoppingListItem } from './utils';
 import type { ShoppingListItemInput } from './types';
 
 interface UseAddShoppingItemOptions {
@@ -45,55 +42,23 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
 
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
-    // Type assertion justified: createOptimisticEntity returns a VersionedEntity shape,
-    // but the spread properties include all fields required by ShoppingListItemDisplayFragment
     optimisticResponse: (variables: any) => {
-      const tempId = `temp-${generateId()}`;
+      const { tempId, entity } = createOptimisticShoppingListItem({
+        itemName: variables.input.itemName,
+        quantity: variables.input.quantity ?? 1,
+        quantityInput: variables.input.quantityInput || null,
+        unitName: variables.input.unitName || null,
+        category: variables.input.category || null,
+        itemId: variables.input.itemId,
+        unitId: variables.input.unitId,
+      });
       lastTempIdRef.current = tempId;
-      return {
-        __typename: 'Mutation',
-        addItemToShoppingList: {
-          __typename: 'ShoppingListItemPayload',
-          success: true,
-          message: '',
-          code: 'SUCCESS',
-          shoppingListItem: createOptimisticEntity('ShoppingListItem', tempId, {
-            itemName: variables.input.itemName,
-            quantity: variables.input.quantity ?? 1,
-            quantityInput: variables.input.quantityInput || null,
-            unitName: variables.input.unitName || null,
-            category: variables.input.category || null,
-            sortOrder: '',
-            priority: null,
-            brandId: null,
-            netWeight: null,
-            netWeightUnitId: null,
-            item: variables.input.itemId
-              ? {
-                  __typename: 'Item' as const,
-                  id: variables.input.itemId,
-                  imageUrl: null,
-                  categories: [],
-                  units: [],
-                }
-              : null,
-            unit: variables.input.unitId
-              ? {
-                  __typename: 'Unit' as const,
-                  id: variables.input.unitId,
-                  name: '',
-                  symbol: '',
-                }
-              : null,
-            brand: null,
-            netWeightUnit: null,
-            purchaseInfo: {
-              __typename: 'ShoppingListItemPurchaseInfo',
-              isPurchased: false,
-            },
-          }),
-        },
-      } as unknown as AddItemToShoppingListMutation;
+      return buildOptimisticMutationResponse(
+        'addItemToShoppingList',
+        'ShoppingListItemPayload',
+        'shoppingListItem',
+        entity,
+      );
     },
     update(cache, { data }) {
       if (!data?.addItemToShoppingList?.shoppingListItem || !listId) return;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, ActivityIndicator, ScrollView, View } from 'react-native';
+import { Text, ScrollView, View } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { StyleSheet } from 'react-native-unistyles';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
@@ -24,6 +24,8 @@ import { AnimatedChip } from '#components/atoms/AnimatedChip';
 import { AnimatedButton } from '#components/atoms/AnimatedButton';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 export const SelectPantryItems = () => {
   useScreenTransition('SelectPantryItems');
@@ -100,7 +102,7 @@ export const SelectPantryItems = () => {
         onBack={() => navigateToPreviousStep('CreateShoppingList')}
         onSkip={() => navigateToNextStep('SelectPantryItems')}
       >
-        <ActivityIndicator style={styles.loader} />
+        <SousChefLoader size="small" showBrand={false} message="Loading" />
       </OnBoardingWrapper>
     );
   }
@@ -133,50 +135,51 @@ export const SelectPantryItems = () => {
   const hasChanges = itemsToAdd.length > 0 || itemsToRemove.length > 0;
   const isFirstVisit = existingCatalogIds.size === 0;
 
-  const onNext = async () => {
+  const onNext = () => {
     if (hasChanges && selectedPantryId) {
-      setIsSaving(true);
-
-      try {
-        await Promise.all([
-          // Add newly selected items
-          ...itemsToAdd.map(item =>
-            addItemToPantry({
-              variables: {
-                input: {
-                  pantryId: selectedPantryId,
-                  itemId: item.id,
-                  ...(item.displayUnit?.id && {
-                    unit: { unitId: item.displayUnit.id },
-                  }),
-                  quantity: null,
-                  storage: {
-                    storageState: StorageState.Ambient,
-                    condition: ItemCondition.Good,
-                  },
-                  purchase: {
-                    acquisitionMethod: AcquisitionMethod.Purchased,
+      executeWithLoadingState(
+        async () => {
+          await Promise.all([
+            ...itemsToAdd.map(item =>
+              addItemToPantry({
+                variables: {
+                  input: {
+                    pantryId: selectedPantryId,
+                    itemId: item.id,
+                    ...(item.displayUnit?.id && {
+                      unit: { unitId: item.displayUnit.id },
+                    }),
+                    quantity: null,
+                    storage: {
+                      storageState: StorageState.Ambient,
+                      condition: ItemCondition.Good,
+                    },
+                    purchase: {
+                      acquisitionMethod: AcquisitionMethod.Purchased,
+                    },
                   },
                 },
-              },
+              }),
+            ),
+            ...itemsToRemove.map(catalogId => {
+              const pantryItemId = existingItemMap.get(catalogId)!;
+              return deletePantryItem({
+                variables: { id: pantryItemId },
+                update: cache => {
+                  removeFromPantryItemsCache(cache, selectedPantryId, pantryItemId);
+                },
+              });
             }),
-          ),
-          // Remove deselected items
-          ...itemsToRemove.map(catalogId => {
-            const pantryItemId = existingItemMap.get(catalogId)!;
-            return deletePantryItem({
-              variables: { id: pantryItemId },
-              update: cache => {
-                removeFromPantryItemsCache(cache, selectedPantryId, pantryItemId);
-              },
-            });
-          }),
-        ]);
-      } catch (error) {
-        errorService.reportError(error, { operation: 'SelectPantryItems.updatePantryItems' });
-      } finally {
-        setIsSaving(false);
-      }
+          ]);
+          navigateToNextStep('SelectPantryItems');
+        },
+        setIsSaving,
+        (error) => {
+          errorService.reportError(error, { operation: 'SelectPantryItems.updatePantryItems' });
+          navigateToNextStep('SelectPantryItems');
+        },
+      );
+      return;
     }
     navigateToNextStep('SelectPantryItems');
   };

@@ -11,6 +11,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { useAppStore } from '#/store/useAppStore';
 import { resetAllFeatureHints } from '#hooks/useFeatureHint';
 import { useUserPreferences } from '#hooks/settings/useUserPreferences';
+import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 
 export const AppSettingsScreen: React.FC = () => {
   const theme = UnistylesRuntime.getTheme();
@@ -36,16 +37,17 @@ export const AppSettingsScreen: React.FC = () => {
   const userConsent = useAppStore(state => state.userConsent);
   const setUserConsent = useAppStore(state => state.setUserConsent);
 
-  const handleSettingChange = async (key: string, value: any) => {
+  const handleSettingChange = (key: string, value: any) => {
     setUpdating(key);
-    try {
-      const success = await updateAppSetting(key as any, value);
-      if (!success) {
-        Alert.alert('Error', 'Failed to update setting. Please try again.');
-      }
-    } finally {
-      setUpdating(null);
-    }
+    executeAsyncWithCleanup(
+      async () => {
+        const success = await updateAppSetting(key as any, value);
+        if (!success) {
+          Alert.alert('Error', 'Failed to update setting. Please try again.');
+        }
+      },
+      () => setUpdating(null),
+    );
   };
 
   const handleResetToDefaults = () => {
@@ -57,24 +59,25 @@ export const AppSettingsScreen: React.FC = () => {
         {
           text: 'Reset',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
             setUpdating('reset');
-            try {
-              const success = await resetToDefaults();
-              // Also reset feature hints/tutorials and per-user preferences
-              resetAllFeatureHints();
-              resetUserPreferences();
-              if (success) {
-                Alert.alert('Success', 'Settings and tutorials have been reset to defaults.');
-              } else {
-                Alert.alert(
-                  'Error',
-                  'Failed to reset settings. Please try again.',
-                );
-              }
-            } finally {
-              setUpdating(null);
-            }
+            executeAsyncWithCleanup(
+              async () => {
+                const success = await resetToDefaults();
+                // Also reset feature hints/tutorials and per-user preferences
+                resetAllFeatureHints();
+                resetUserPreferences();
+                if (success) {
+                  Alert.alert('Success', 'Settings and tutorials have been reset to defaults.');
+                } else {
+                  Alert.alert(
+                    'Error',
+                    'Failed to reset settings. Please try again.',
+                  );
+                }
+              },
+              () => setUpdating(null),
+            );
           },
         },
       ],

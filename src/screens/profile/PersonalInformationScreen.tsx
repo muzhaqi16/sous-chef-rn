@@ -9,6 +9,37 @@ import { useApolloClient } from '@apollo/client/react';
 import { GetUserProfileQuery, GetUserProfileDocument } from '#generated';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { errorService } from '#/services/errorService';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+
+/** Module-level function for profile updates with optimistic cache.
+ *  Extracted to avoid try-catch inside component body (React Compiler bailout). */
+async function performProfileUpdate(
+  client: ReturnType<typeof useApolloClient>,
+  updateProfileMutation: ReturnType<typeof useUpdateUserProfileMutation>[0],
+  input: Partial<Record<any, any>>,
+): Promise<void> {
+  // Read current cache
+  const cache = client.readQuery<GetUserProfileQuery>({
+    query: GetUserProfileDocument });
+
+  // Optimistically update the cache immediately
+  if (cache?.me?.profile) {
+    client.writeQuery<GetUserProfileQuery>({
+      query: GetUserProfileDocument,
+      data: {
+        __typename: 'Query' as const,
+        me: {
+          ...cache.me,
+          profile: {
+            ...cache.me.profile,
+            ...input } } } });
+  }
+
+  // Then perform the actual mutation
+  await updateProfileMutation({
+    variables: {
+      input } });
+}
 
 export const PersonalInformationScreen: React.FC = () => {
   const { profile } = useProfileData();
@@ -16,36 +47,17 @@ export const PersonalInformationScreen: React.FC = () => {
   const client = useApolloClient();
   const [updateProfileMutation] = useUpdateUserProfileMutation();
 
-  const updateProfile = async (input: Partial<Record<any, any>>) => {
-      try {
-        // Read current cache
-        const cache = client.readQuery<GetUserProfileQuery>({
-          query: GetUserProfileDocument });
-
-        // Optimistically update the cache immediately
-        if (cache?.me?.profile) {
-          client.writeQuery<GetUserProfileQuery>({
-            query: GetUserProfileDocument,
-            data: {
-              __typename: 'Query' as const,
-              me: {
-                ...cache.me,
-                profile: {
-                  ...cache.me.profile,
-                  ...input } } } });
-        }
-
-        // Then perform the actual mutation
-        await updateProfileMutation({
-          variables: {
-            input } });
-      } catch (error) {
+  const updateProfile = (input: Partial<Record<any, any>>) => {
+    executeMutationWithErrorHandler(
+      () => performProfileUpdate(client, updateProfileMutation, input),
+      (error) => {
         errorService.reportError(error, { operation: 'PersonalInformation.updateProfile' });
         // On error, refetch to restore correct state
         client.refetchQueries({
           include: [GetUserProfileDocument] });
-      }
-    };
+      },
+    );
+  };
 
   const createSettingItem = (config: any) => {
       const baseItem: any = {

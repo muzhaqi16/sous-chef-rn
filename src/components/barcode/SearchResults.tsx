@@ -15,6 +15,7 @@ import {
   getPantryItemDuplicateInfo,
 } from '#/utils/errors/pantryItemDuplicate';
 import { useAppStore } from '#store/useAppStore';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 // Cache updater for Pantry.itemsConnection
 const addToPantryItemsConnection = createAddToParentConnectionUpdater<any>(
@@ -66,132 +67,134 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     },
   });
 
-  const handleAddItem = async () => {
+  const handleAddItem = () => {
     if (!source || isAdded) {
       return;
     }
 
-    setIsLoading(true);
+    executeWithLoadingState(
+      async () => {
+        if (source === 'pantry' && pantryId) {
+          const mutationInput = {
+            pantryId,
+            itemId: item.id,
+            quantity: item.netWeight ?? 1,
+            itemName: item.name,
+            itemUpc: item.upc || item.primaryUpc,
+            itemDisplayUnitId: item.displayUnit?.id,
+            itemNetWeight: item.netWeight,
+            itemBrand: item.brandName,
+            netWeight: item.netWeight,
+            netWeightUnitId: item.displayUnit?.id,
+          };
 
-    try {
-      if (source === 'pantry' && pantryId) {
-        const mutationInput = {
-          pantryId,
-          itemId: item.id,
-          quantity: item.netWeight ?? 1,
-          itemName: item.name,
-          itemUpc: item.upc || item.primaryUpc,
-          itemDisplayUnitId: item.displayUnit?.id,
-          itemNetWeight: item.netWeight,
-          itemBrand: item.brandName,
-          netWeight: item.netWeight,
-          netWeightUnitId: item.displayUnit?.id,
-        };
+          const result = await addToPantry({
+            variables: { input: mutationInput },
+          });
 
-        const result = await addToPantry({
-          variables: { input: mutationInput },
-        });
-
-        // Handle duplicate pantry item
-        if (result.error && isPantryItemDuplicateError(result.error)) {
-          const duplicateInfo = getPantryItemDuplicateInfo(result.error);
-          if (duplicateInfo) {
-            setIsLoading(false);
-            Alert.alert(
-              'Item Already in Pantry',
-              'This item is already in your pantry. Would you like to restock it or add a separate entry?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Restock',
-                  onPress: async () => {
-                    setIsLoading(true);
-                    try {
-                      await restockPantryItem({
-                        variables: {
-                          id: duplicateInfo.existingPantryItemId,
-                          input: { quantity: mutationInput.quantity },
+          // Handle duplicate pantry item
+          if (result.error && isPantryItemDuplicateError(result.error)) {
+            const duplicateInfo = getPantryItemDuplicateInfo(result.error);
+            if (duplicateInfo) {
+              setIsLoading(false);
+              Alert.alert(
+                'Item Already in Pantry',
+                'This item is already in your pantry. Would you like to restock it or add a separate entry?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Restock',
+                    onPress: () => {
+                      executeWithLoadingState(
+                        async () => {
+                          await restockPantryItem({
+                            variables: {
+                              id: duplicateInfo.existingPantryItemId,
+                              input: { quantity: mutationInput.quantity },
+                            },
+                          });
+                          setIsAdded(true);
+                          setPendingPantryScrollToTop(true);
+                          onScanAnother();
                         },
-                      });
-                      setIsAdded(true);
-                      setPendingPantryScrollToTop(true);
-                      onScanAnother();
-                    } catch {
-                      Alert.alert('Error', 'Failed to restock item. Please try again.');
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  },
-                },
-                {
-                  text: 'Add Anyway',
-                  onPress: async () => {
-                    setIsLoading(true);
-                    try {
-                      const retryResult = await addToPantry({
-                        variables: {
-                          input: { ...mutationInput, forceAdd: true } as any,
+                        setIsLoading,
+                        () => {
+                          Alert.alert('Error', 'Failed to restock item. Please try again.');
                         },
-                      });
-                      if (retryResult.data?.createPantryItem?.success) {
-                        setIsAdded(true);
-                        setPendingPantryScrollToTop(true);
-                        onScanAnother();
-                      } else {
-                        Alert.alert('Error', 'Failed to add item. Please try again.');
-                      }
-                    } catch {
-                      Alert.alert('Error', 'Failed to add item. Please try again.');
-                    } finally {
-                      setIsLoading(false);
-                    }
+                      );
+                    },
                   },
-                },
-              ],
-            );
-            return;
+                  {
+                    text: 'Add Anyway',
+                    onPress: () => {
+                      executeWithLoadingState(
+                        async () => {
+                          const retryResult = await addToPantry({
+                            variables: {
+                              input: { ...mutationInput, forceAdd: true } as any,
+                            },
+                          });
+                          if (retryResult.data?.createPantryItem?.success) {
+                            setIsAdded(true);
+                            setPendingPantryScrollToTop(true);
+                            onScanAnother();
+                          } else {
+                            Alert.alert('Error', 'Failed to add item. Please try again.');
+                          }
+                        },
+                        setIsLoading,
+                        () => {
+                          Alert.alert('Error', 'Failed to add item. Please try again.');
+                        },
+                      );
+                    },
+                  },
+                ],
+              );
+              return;
+            }
           }
-        }
 
-        if (result.data?.createPantryItem?.success) {
-          setIsAdded(true);
-          setPendingPantryScrollToTop(true);
-          onScanAnother();
-        } else if (result.error) {
-          Alert.alert('Error', 'Failed to add item. Please try again.');
-        }
-      } else if (source === 'shoppingList' && shoppingListId) {
-        await addToShoppingList({
-          variables: {
-            input: {
-              shoppingListId,
-              itemId: item.id,
-              quantity: item.netWeight ?? 1,
-              itemName: item.name,
-              unit: {
-                unitId: item.displayUnit?.id ?? item.unitId,
-                unitName: item.displayUnit?.name,
+          if (result.data?.createPantryItem?.success) {
+            setIsAdded(true);
+            setPendingPantryScrollToTop(true);
+            onScanAnother();
+          } else if (result.error) {
+            Alert.alert('Error', 'Failed to add item. Please try again.');
+          }
+        } else if (source === 'shoppingList' && shoppingListId) {
+          await addToShoppingList({
+            variables: {
+              input: {
+                shoppingListId,
+                itemId: item.id,
+                quantity: item.netWeight ?? 1,
+                itemName: item.name,
+                unit: {
+                  unitId: item.displayUnit?.id ?? item.unitId,
+                  unitName: item.displayUnit?.name,
+                },
+                brand: item.brandId || item.brandName
+                  ? { brandId: item.brandId, brandName: item.brandName }
+                  : undefined,
+                netWeight: item.netWeight
+                  ? { netWeight: item.netWeight, netWeightUnitId: item.displayUnit?.id }
+                  : undefined,
               },
-              brand: item.brandId || item.brandName
-                ? { brandId: item.brandId, brandName: item.brandName }
-                : undefined,
-              netWeight: item.netWeight
-                ? { netWeight: item.netWeight, netWeightUnitId: item.displayUnit?.id }
-                : undefined,
             },
-          },
-        });
-        setIsAdded(true);
-        onScanAnother();
-      } else {
-        Alert.alert('Error', 'Missing required information');
-      }
-    } catch (error) {
-      console.error('Error adding item:', error);
-      Alert.alert('Error', 'Failed to add item. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+          });
+          setIsAdded(true);
+          onScanAnother();
+        } else {
+          Alert.alert('Error', 'Missing required information');
+        }
+      },
+      setIsLoading,
+      (error) => {
+        console.error('Error adding item:', error);
+        Alert.alert('Error', 'Failed to add item. Please try again.');
+      },
+    );
   };
 
   // Determine button label based on source and state

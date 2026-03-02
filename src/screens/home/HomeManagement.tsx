@@ -10,6 +10,7 @@ import Animated, {
   LinearTransition,
   FadeInDown,
   FadeOutUp } from 'react-native-reanimated';
+import { TIMING } from '#constants/animations';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -31,6 +32,8 @@ import {
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
@@ -164,15 +167,12 @@ export const HomeManagement: React.FC = () => {
       navigate('HomeDetail', { homeId });
     };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await refetchHomes();
-    } catch (error) {
-      errorService.reportError(error, { operation: 'HomeManagement.refreshData' });
-    } finally {
-      setRefreshing(false);
-    }
+  const handleRefresh = () => {
+    executeWithLoadingState(
+      async () => { await refetchHomes(); },
+      setRefreshing,
+      (error) => { errorService.reportError(error, { operation: 'HomeManagement.refreshData' }); },
+    );
   };
 
   // Sort homes with default home first
@@ -190,7 +190,7 @@ export const HomeManagement: React.FC = () => {
   if (initialLoading) {
     return (
       <View style={commonStyles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <SousChefLoader size="small" showBrand={false} message="Loading" />
       </View>
     );
   }
@@ -221,9 +221,9 @@ export const HomeManagement: React.FC = () => {
         {/* Create/Join Home Form - slides down inline */}
         {!!showCreateForm && (
           <Animated.View
-            entering={FadeInDown.duration(300).springify()}
-            exiting={FadeOutUp.duration(200)}
-            layout={LinearTransition.duration(300)}
+            entering={FadeInDown.duration(TIMING.SLOW).springify()}
+            exiting={FadeOutUp.duration(TIMING.STANDARD)}
+            layout={LinearTransition.duration(TIMING.SLOW)}
             style={[commonStyles.cardWithShadow, styles.formContainer]}
           >
             {/* Mode Switcher */}
@@ -334,7 +334,7 @@ export const HomeManagement: React.FC = () => {
 
         {/* Homes List */}
         <Animated.View
-          layout={LinearTransition.duration(300)}
+          layout={LinearTransition.duration(TIMING.SLOW)}
           style={[styles.scrollView, { paddingBottom: insets.bottom }]}
         >
           <ScrollView

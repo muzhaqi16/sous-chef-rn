@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
@@ -50,7 +49,7 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
     visible,
     onDismiss: onClose,
     snapPoints: ['70%'],
-    keyboardBehavior: 'interactive' });
+    keyboardAware: true });
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -87,13 +86,14 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetScrollView
+      <BottomSheetFormScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
           contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
+        bottomOffset={16}
       >
         <BottomSheetHeader
           title="Save as Template"
@@ -143,7 +143,7 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
           onChangeText={setTagsInput}
           placeholder="e.g., healthy, quick, budget"
         />
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

@@ -3,6 +3,8 @@ import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Label } from '#components/atoms/Label';
 
+const identity = <T extends string>(v: T): string => v;
+
 interface SegmentedControlProps<T extends string> {
   label?: string;
   options: readonly T[];
@@ -23,7 +25,7 @@ export const SegmentedControl = <T extends string>({
   options,
   value,
   onChange,
-  formatLabel = v => v,
+  formatLabel = identity,
   required,
   testID,
   size = 'default',

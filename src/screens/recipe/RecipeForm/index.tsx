@@ -16,6 +16,7 @@ import { RecipeStepList } from './components/RecipeStepList';
 import { RecipeStepEditor, type RecipeStepEditorRef } from './components/RecipeStepEditor';
 import { RecipeTagsSection } from './components/RecipeTagsSection';
 import type { IngredientFormState, StepFormState } from './useRecipeForm';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } | undefined>> = ({ route }) => {
   const recipeId = route.params?.recipeId;
@@ -43,37 +44,40 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
   const [updateRecipeMutation, { loading: updating }] = useUpdateRecipeMutation();
   const loading = creating || updating;
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const error = form.validate();
     if (error) {
       Alert.alert('Validation Error', error);
       return;
     }
 
-    try {
-      if (isEditMode && recipeId) {
-        const input = form.buildUpdateInput();
-        const result = await updateRecipeMutation({
-          variables: { id: recipeId, input } });
-        if (result.data?.updateRecipe?.success) {
-          goBack();
+    executeMutationWithErrorHandler(
+      async () => {
+        if (isEditMode && recipeId) {
+          const input = form.buildUpdateInput();
+          const result = await updateRecipeMutation({
+            variables: { id: recipeId, input } });
+          if (result.data?.updateRecipe?.success) {
+            goBack();
+          } else {
+            Alert.alert('Error', result.data?.updateRecipe?.message ?? 'Failed to update recipe.');
+          }
         } else {
-          Alert.alert('Error', result.data?.updateRecipe?.message ?? 'Failed to update recipe.');
+          const input = form.buildCreateInput();
+          const result = await createRecipeMutation({
+            variables: { input } });
+          if (result.data?.createRecipe?.success) {
+            goBack();
+          } else {
+            Alert.alert('Error', result.data?.createRecipe?.message ?? 'Failed to create recipe.');
+          }
         }
-      } else {
-        const input = form.buildCreateInput();
-        const result = await createRecipeMutation({
-          variables: { input } });
-        if (result.data?.createRecipe?.success) {
-          goBack();
-        } else {
-          Alert.alert('Error', result.data?.createRecipe?.message ?? 'Failed to create recipe.');
-        }
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
-      Alert.alert('Error', message);
-    }
+      },
+      (err: unknown) => {
+        const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
+        Alert.alert('Error', message);
+      },
+    );
   };
 
   // Ingredient handlers

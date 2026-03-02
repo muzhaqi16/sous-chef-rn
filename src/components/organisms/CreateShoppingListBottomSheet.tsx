@@ -8,6 +8,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { useCreateShoppingListMutation } from '#generated';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 interface CreateShoppingListBottomSheetProps {
   visible: boolean;
@@ -39,25 +40,28 @@ export const CreateShoppingListBottomSheet: React.FC<
     }
   }
 
-  const handleCreateList = async () => {
+  const handleCreateList = () => {
     if (!listName.trim()) {
       setError('Please enter a list name');
       return;
     }
 
-    try {
-      await createShoppingList({
-        variables: {
-          input: {
-            name: listName.trim(),
-            isDefault: false,
-            tags: [] } } });
-      onSuccess?.();
-      onClose();
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to create list';
-      setError(errorMessage);
-    }
+    executeMutationWithErrorHandler(
+      async () => {
+        await createShoppingList({
+          variables: {
+            input: {
+              name: listName.trim(),
+              isDefault: false,
+              tags: [] } } });
+        onSuccess?.();
+        onClose();
+      },
+      (e: unknown) => {
+        const errorMessage = e instanceof Error ? e.message : 'Failed to create list';
+        setError(errorMessage);
+      },
+    );
   };
 
   const handleCancel = () => {

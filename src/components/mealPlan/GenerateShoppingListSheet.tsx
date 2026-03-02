@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BaseSwitch } from '#components/base/BaseSwitch';
@@ -34,7 +33,7 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
     visible,
     onDismiss: onClose,
     snapPoints: ['65%'],
-    keyboardBehavior: 'interactive' });
+    keyboardAware: true });
 
   const [checkPantry, setCheckPantry] = useState(true);
   const [mode, setMode] = useState<'new' | 'existing'>('new');
@@ -70,7 +69,7 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetScrollView
+      <BottomSheetFormScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
@@ -190,7 +189,7 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
             <Text style={styles.loadingText}>Generating shopping list...</Text>
           </View>
         )}
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

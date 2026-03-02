@@ -706,6 +706,18 @@ jest.mock('react-native-launch-arguments', () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// graphql-ws (WebSocket not available in Jest/Node)
+// ---------------------------------------------------------------------------
+jest.mock('graphql-ws', () => ({
+  createClient: jest.fn(() => ({
+    on: jest.fn(),
+    subscribe: jest.fn(),
+    dispose: jest.fn(),
+    terminate: jest.fn(),
+  })),
+}));
+
+// ---------------------------------------------------------------------------
 // react-native-performance
 // ---------------------------------------------------------------------------
 jest.mock('react-native-performance', () => {

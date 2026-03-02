@@ -72,7 +72,7 @@ export function usePantryQuery(pantryId: string | undefined) {
   const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
     variables: {
       id: pantryId || '',
-      itemsFirst: 25, // Initial page size
+      itemsFirst: 50, // Initial page size
       storageLocationsFirst: 50 },
     skip: !hasValidPantryId,
     fetchPolicy: 'cache-and-network',
@@ -143,10 +143,10 @@ export function usePantryQuery(pantryId: string | undefined) {
     if (totalCount > 0 && pantryItems.length === 0) {
       isAutoRefetchingRef.current = true;
 
-      const timeoutId = setTimeout(() => executeAutoRefetch(refetch, isAutoRefetchingRef), 100);
+      const idleId = requestIdleCallback(() => executeAutoRefetch(refetch, isAutoRefetchingRef));
 
       return () => {
-        clearTimeout(timeoutId);
+        cancelIdleCallback(idleId);
         isAutoRefetchingRef.current = false;
       };
     }

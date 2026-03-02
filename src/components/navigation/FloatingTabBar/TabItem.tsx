@@ -10,6 +10,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { TIMING } from '#constants/animations';
 import { Icon } from '#/utils/iconUtils';
 import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 
@@ -52,7 +53,7 @@ export const TabItem: React.FC<TabItemProps> = ({
     (isActive, prevIsActive) => {
       if (isActive !== prevIsActive) {
         iconScale.value = withTiming(isActive ? 1.2 : 1, {
-          duration: 150,
+          duration: TIMING.FAST,
           easing: Easing.inOut(Easing.ease),
         });
       }

@@ -18,6 +18,8 @@ interface BottomSheetActionProps {
   scrollable?: boolean;
   /** Optional element to render on the right side of the header */
   headerRight?: ReactNode;
+  /** Called when the sheet is dismissed (after close animation completes) */
+  onDismiss?: () => void;
 }
 
 export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
@@ -27,9 +29,13 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   sheetRef,
   scrollable = true,
   headerRight,
+  onDismiss: onDismissProp,
 }) => {
   const { ref: bottomSheetModalRef, modalProps, insets } = useStandardBottomSheet({
-    onDismiss: () => Keyboard.dismiss(),
+    onDismiss: () => {
+      Keyboard.dismiss();
+      onDismissProp?.();
+    },
     snapPoints,
     keyboardBehavior: 'fillParent',
   });

@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useRef } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
 import {
   createStaticNavigation,
   DefaultTheme,
@@ -76,6 +76,7 @@ import {
   useIsMainApp,
 } from '#hooks/navigation/useNavigationGuards';
 import { navigationRef } from '#services/NavigationService';
+import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 function RootLayout({ children }: { children: React.ReactNode }) {
   useDeepLinkRouter();
@@ -324,7 +325,7 @@ export function Navigation() {
     <NavigationErrorBoundary>
       <Suspense fallback={
         <View style={suspenseFallbackStyle}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <SousChefLoader size="small" showBrand={false} message="Loading" />
         </View>
       }>
         <StaticNavigation

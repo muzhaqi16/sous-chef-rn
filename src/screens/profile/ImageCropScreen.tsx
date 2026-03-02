@@ -23,6 +23,7 @@ import ImageEditor from '@react-native-community/image-editor';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
 import { errorService } from '#/services/errorService';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CROP_SIZE = Math.min(screenWidth * 0.8, 300);
@@ -118,127 +119,128 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
       ] };
   });
 
-  const handleCrop = async () => {
+  const handleCrop = () => {
     if (!imageSize.width || !imageSize.height) {
       Alert.alert('Error', 'Image not loaded properly');
       return;
     }
 
-    setIsCropping(true);
-    try {
-      // Get the original image dimensions
-      const originalImageSize = await new Promise<{
-        width: number;
-        height: number;
-      }>((resolve, reject) => {
-        Image.getSize(
-          imageFile.uri,
-          (width, height) => resolve({ width, height }),
-          error => reject(error),
+    executeWithLoadingState(
+      async () => {
+        // Get the original image dimensions
+        const originalImageSize = await new Promise<{
+          width: number;
+          height: number;
+        }>((resolve, reject) => {
+          Image.getSize(
+            imageFile.uri,
+            (width, height) => resolve({ width, height }),
+            error => reject(error),
+          );
+        });
+
+        // Calculate the center position of the crop area relative to the image
+        const cropCenterX = CROP_SIZE / 2;
+        const cropCenterY = CROP_SIZE / 2;
+
+        // Calculate where the image center is positioned on screen after transforms
+        const currentOffset = offset.get();
+        const imageCenterX = CROP_SIZE / 2 + currentOffset.x;
+        const imageCenterY = CROP_SIZE / 2 + currentOffset.y;
+
+        // Calculate the offset from image center to crop center
+        const offsetFromImageCenter = {
+          x: cropCenterX - imageCenterX,
+          y: cropCenterY - imageCenterY };
+
+        // Convert display coordinates to original image coordinates
+        const scaleRatio = originalImageSize.width / imageSize.width;
+
+        // Calculate crop position in original image coordinates
+        const cropX = Math.max(
+          0,
+          originalImageSize.width / 2 +
+            (offsetFromImageCenter.x * scaleRatio) / scale.get(),
         );
-      });
+        const cropY = Math.max(
+          0,
+          originalImageSize.height / 2 +
+            (offsetFromImageCenter.y * scaleRatio) / scale.get(),
+        );
 
-      // Calculate the center position of the crop area relative to the image
-      const cropCenterX = CROP_SIZE / 2;
-      const cropCenterY = CROP_SIZE / 2;
+        // Calculate crop size in original image coordinates
+        const cropSizeInOriginal = (CROP_SIZE * scaleRatio) / scale.get();
 
-      // Calculate where the image center is positioned on screen after transforms
-      const currentOffset = offset.get();
-      const imageCenterX = CROP_SIZE / 2 + currentOffset.x;
-      const imageCenterY = CROP_SIZE / 2 + currentOffset.y;
+        // Ensure crop doesn't go outside image boundaries
+        const finalCropX = Math.max(
+          0,
+          Math.min(
+            cropX - cropSizeInOriginal / 2,
+            originalImageSize.width - cropSizeInOriginal,
+          ),
+        );
+        const finalCropY = Math.max(
+          0,
+          Math.min(
+            cropY - cropSizeInOriginal / 2,
+            originalImageSize.height - cropSizeInOriginal,
+          ),
+        );
+        const finalCropSize = Math.min(
+          cropSizeInOriginal,
+          originalImageSize.width - finalCropX,
+          originalImageSize.height - finalCropY,
+        );
 
-      // Calculate the offset from image center to crop center
-      const offsetFromImageCenter = {
-        x: cropCenterX - imageCenterX,
-        y: cropCenterY - imageCenterY };
+        const cropData = {
+          offset: {
+            x: finalCropX,
+            y: finalCropY },
+          size: {
+            width: finalCropSize,
+            height: finalCropSize },
+          displaySize: {
+            width: CROP_SIZE,
+            height: CROP_SIZE },
+          resizeMode: 'contain' as const };
 
-      // Convert display coordinates to original image coordinates
-      const scaleRatio = originalImageSize.width / imageSize.width;
+        const { uri: croppedUri } = await ImageEditor.cropImage(
+          imageFile.uri,
+          cropData,
+        );
 
-      // Calculate crop position in original image coordinates
-      const cropX = Math.max(
-        0,
-        originalImageSize.width / 2 +
-          (offsetFromImageCenter.x * scaleRatio) / scale.get(),
-      );
-      const cropY = Math.max(
-        0,
-        originalImageSize.height / 2 +
-          (offsetFromImageCenter.y * scaleRatio) / scale.get(),
-      );
+        // Estimate file size for logging purposes only
+        // Note: Cropping always reduces size, so no validation needed here.
+        // Original image was already validated before cropping.
+        const cropRatio =
+          (finalCropSize * finalCropSize) /
+          (originalImageSize.width * originalImageSize.height);
+        const estimatedFileSize = imageFile.fileSize
+          ? Math.floor(imageFile.fileSize * cropRatio * 0.8)
+          : MAX_PROFILE_SIZE / 2; // Conservative estimate if original size unknown
 
-      // Calculate crop size in original image coordinates
-      const cropSizeInOriginal = (CROP_SIZE * scaleRatio) / scale.get();
+        const croppedImage: ImageFile = {
+          uri: croppedUri,
+          fileName: `cropped_${imageFile.fileName || 'profile.jpg'}`,
+          fileSize: estimatedFileSize,
+          type: imageFile.type || 'image/jpeg' };
 
-      // Ensure crop doesn't go outside image boundaries
-      const finalCropX = Math.max(
-        0,
-        Math.min(
-          cropX - cropSizeInOriginal / 2,
-          originalImageSize.width - cropSizeInOriginal,
-        ),
-      );
-      const finalCropY = Math.max(
-        0,
-        Math.min(
-          cropY - cropSizeInOriginal / 2,
-          originalImageSize.height - cropSizeInOriginal,
-        ),
-      );
-      const finalCropSize = Math.min(
-        cropSizeInOriginal,
-        originalImageSize.width - finalCropX,
-        originalImageSize.height - finalCropY,
-      );
+        // Store to MMKV
+        storage.set('temp_cropped_image', JSON.stringify(croppedImage));
+        console.log('Stored cropped image in MMKV:', {
+          uri: croppedUri,
+          fileName: croppedImage.fileName,
+          fileSize: estimatedFileSize,
+          type: croppedImage.type });
 
-      const cropData = {
-        offset: {
-          x: finalCropX,
-          y: finalCropY },
-        size: {
-          width: finalCropSize,
-          height: finalCropSize },
-        displaySize: {
-          width: CROP_SIZE,
-          height: CROP_SIZE },
-        resizeMode: 'contain' as const };
-
-      const { uri: croppedUri } = await ImageEditor.cropImage(
-        imageFile.uri,
-        cropData,
-      );
-
-      // Estimate file size for logging purposes only
-      // Note: Cropping always reduces size, so no validation needed here.
-      // Original image was already validated before cropping.
-      const cropRatio =
-        (finalCropSize * finalCropSize) /
-        (originalImageSize.width * originalImageSize.height);
-      const estimatedFileSize = imageFile.fileSize
-        ? Math.floor(imageFile.fileSize * cropRatio * 0.8)
-        : MAX_PROFILE_SIZE / 2; // Conservative estimate if original size unknown
-
-      const croppedImage: ImageFile = {
-        uri: croppedUri,
-        fileName: `cropped_${imageFile.fileName || 'profile.jpg'}`,
-        fileSize: estimatedFileSize,
-        type: imageFile.type || 'image/jpeg' };
-
-      // Store to MMKV
-      storage.set('temp_cropped_image', JSON.stringify(croppedImage));
-      console.log('Stored cropped image in MMKV:', {
-        uri: croppedUri,
-        fileName: croppedImage.fileName,
-        fileSize: estimatedFileSize,
-        type: croppedImage.type });
-
-      goBack();
-    } catch (error) {
-      errorService.reportError(error, { operation: 'ImageCrop.cropImage' });
-      Alert.alert('Error', 'Failed to crop image. Please try again.');
-    } finally {
-      setIsCropping(false);
-    }
+        goBack();
+      },
+      setIsCropping,
+      (error) => {
+        errorService.reportError(error, { operation: 'ImageCrop.cropImage' });
+        Alert.alert('Error', 'Failed to crop image. Please try again.');
+      },
+    );
   };
 
   const resetTransforms = () => {

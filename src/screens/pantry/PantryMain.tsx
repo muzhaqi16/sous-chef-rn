@@ -7,7 +7,6 @@ import React, {
 } from 'react';
 import { View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
@@ -40,20 +39,25 @@ import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
-const PantryMainScreen: React.FC = () => {
+import { DeferredScreen } from '#components/performance/DeferredScreen';
+import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
+import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import { SearchBar } from '#components/molecules/SearchBar';
+import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
+/**
+ * Inner component that runs all heavy hooks.
+ * Only mounts after DeferredScreen gates rendering, so the skeleton paints instantly.
+ */
+const PantryMainInner: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
   useUnistyles();
   const { setOverlayOpen } = useTabBarSetters();
-  // PERF: Defer non-critical features until after React paints the initial render.
-  // React 19's useDeferredValue returns `false` on first render (initial value),
-  // then schedules a background re-render returning `true` to activate deferred features.
-  const isInteractive = useDeferredValue(true, false);
   // User name/avatar come from the auth store (populated during login)
   // so the greeting renders immediately without a separate GetUserProfile query
   const { user: authUser } = useAuth();
   const loginCount = getLoginCount(authUser?.id ?? '');
-  // Track screen performance (deferred — telemetry not needed during initial render)
-  useScreenTransition('PantryMain', { enabled: isInteractive });
+  // Track screen performance
+  useScreenTransition('PantryMain');
   // Feature hint for home switch button
   const homeSwitchHint = useFeatureHint({
     featureId: 'pantry_home_switch',
@@ -93,12 +97,9 @@ const PantryMainScreen: React.FC = () => {
   const selectorRef = useRef<ItemSelectorRef>(null);
   const pantryContentRef = useRef<PantryContentRef>(null);
   const pendingPantryScrollToTopRef = useRef(pendingPantryScrollToTop);
-  const client = useApolloClient();
   const itemsAddedRef = useRef(false);
   const handleItemAdded = () => {
     itemsAddedRef.current = true;
-    // Background sync: silently refetch pantry to ensure cache consistency
-    client.refetchQueries({ include: ['GetPantry'] });
   };
   const handleAddSheetClose = () => {
     const shouldScroll = itemsAddedRef.current;
@@ -144,9 +145,9 @@ const PantryMainScreen: React.FC = () => {
     setSelectedPantryId,
     isReady,
   } = useCurrentPantry();
-  // Set up scanner button (deferred — scanner not needed during initial render)
+  // Set up scanner button
   useScannerSetup({
-    enabled: isInteractive,
+    enabled: true,
     homeId: selectedHomeId,
     context: {
       source: 'pantry',
@@ -171,6 +172,8 @@ const PantryMainScreen: React.FC = () => {
     isRefreshing,
     error: pantryError,
     loadMore,
+    hasMore,
+    isLoadingMore,
     locationCounts,
   } = usePantryManagement(pantry?.id);
   // PERF: Defer pantry items so Apollo cache updates (from subscriptions or
@@ -277,17 +280,16 @@ const PantryMainScreen: React.FC = () => {
   const handleAddItem = () => {
     setAddSheetVisible(true);
   };
-  // Track screen view once on mount (deferred — telemetry not needed during initial render)
+  // Track screen view once on mount
   useScreenTelemetry('PantryMain', () => ({
     home_id: selectedHomeId,
     pantry_id: pantry?.id,
     item_count: locationFilteredItems.length,
     has_pantries: pantries.length > 0,
-  }), isInteractive);
+  }));
   // Show home switch hint when user has items and home is selected
   // BUT only if biometric setup modal is not showing (prevent modal overlap)
   useEffect(() => {
-    if (!isInteractive) return;
     // loginCount is incremented in handleLogin before PantryMain mounts,
     // so count=1 on 1st login (skip hint) and count=2+ on subsequent logins (show hint).
     // This prevents FeatureHint from competing with biometric/RememberMe modals on 1st login.
@@ -305,7 +307,6 @@ const PantryMainScreen: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [
-    isInteractive,
     loginCount,
     locationFilteredItems.length,
     selectedHomeId,
@@ -375,6 +376,8 @@ const PantryMainScreen: React.FC = () => {
         onAddItem={handleAddItem}
         onRefresh={handleRefresh}
         onEndReached={loadMore}
+        isLoadingMore={isLoadingMore}
+        hasMore={hasMore}
         refreshing={isRefreshing}
         loading={isLoadingInitial}
         onSwipeableWillOpen={handleSwipeableWillOpen}
@@ -446,10 +449,43 @@ const PantryMainScreen: React.FC = () => {
     </View>
   );
 };
-// PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures
+const SKELETON_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
+  { id: 'all', label: 'All' },
+  { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline' },
+  { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
+  { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
+];
+
+const noop = () => {};
+
+// PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures.
+// DeferredScreen gates heavy work — skeleton paints instantly; PantryMainInner mounts
+// on the deferred re-render.
 export const PantryMain: React.FC = () => (
   <PantryErrorBoundary>
-    <PantryMainScreen />
+    <DeferredScreen
+      fallback={
+        <View style={styles.container} testID="pantry-screen">
+          <TabScreenHeader label="Good morning" title="Pantry" />
+          <View style={styles.searchContainer}>
+            <SearchBar
+              value=""
+              onChangeText={noop}
+              placeholder="Search your pantry..."
+              showSearchIcon
+              editable={false}
+            />
+          </View>
+          <FilterTabs<LocationFilter>
+            tabs={SKELETON_PANTRY_TABS}
+            activeTabId="all"
+            onTabChange={noop}
+          />
+          <PantryScreenSkeleton />
+        </View>
+      }
+      component={PantryMainInner}
+    />
   </PantryErrorBoundary>
 );
 const styles = StyleSheet.create(theme => ({
@@ -457,5 +493,8 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     paddingTop: theme.spacing.sm,
     backgroundColor: theme.colors.background,
+  },
+  searchContainer: {
+    paddingHorizontal: theme.spacing.md,
   },
 }));

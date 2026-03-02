@@ -297,7 +297,7 @@ export function useSimpleFPS(): number {
 
     const countFrame = () => {
       if (cancelled) return;
-      frames++;
+      frames += 1;
       const now = Date.now();
       if (now - lastTime >= 1000) {
         setFps(Math.round((frames * 1000) / (now - lastTime)));

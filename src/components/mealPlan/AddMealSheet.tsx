@@ -12,6 +12,7 @@ import { spoonacularService } from '#services/recipeApi/SpoonacularService';
 import { transformRecipeForDisplay, type TransformedRecipeItem } from '#utils/recipeTransform';
 import { useRecipePreload } from '#hooks/recipe/useRecipePreload';
 import { toastService } from '#/services/toastService';
+import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 
 interface AddMealSheetProps {
   visible: boolean;
@@ -31,6 +32,36 @@ const MEAL_TYPES: { type: MealType; label: string }[] = [
 ];
 
 const DEBOUNCE_MS = 500;
+
+/** Module-level helper to reset sheet state when it opens */
+function resetSheetState(
+  initialMealType: MealType | undefined,
+  setSearchQuery: (v: string) => void,
+  setSelectedMealType: (v: MealType) => void,
+  setSpoonacularResults: (v: TransformedRecipeItem[]) => void,
+  setSearchingApi: (v: boolean) => void,
+  setLoadingItemId: (v: number | null) => void,
+) {
+  setSearchQuery('');
+  setSelectedMealType(initialMealType ?? MealType.Dinner);
+  setSpoonacularResults([]);
+  setSearchingApi(false);
+  setLoadingItemId(null);
+}
+
+/** Module-level helper to clear search results when query is too short */
+function clearSearchResults(
+  setSpoonacularResults: (v: TransformedRecipeItem[]) => void,
+  setSearchingApi: (v: boolean) => void,
+) {
+  setSpoonacularResults([]);
+  setSearchingApi(false);
+}
+
+/** Module-level helper to mark search as in-progress */
+function markSearching(setSearchingApi: (v: boolean) => void) {
+  setSearchingApi(true);
+}
 
 export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   visible,
@@ -60,11 +91,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   // Reset state when sheet opens
   useEffect(() => {
     if (visible) {
-      setSearchQuery('');
-      setSelectedMealType(initialMealType ?? MealType.Dinner);
-      setSpoonacularResults([]);
-      setSearchingApi(false);
-      setLoadingItemId(null);
+      resetSheetState(initialMealType, setSearchQuery, setSelectedMealType, setSpoonacularResults, setSearchingApi, setLoadingItemId);
     }
   }, [visible, initialMealType]);
 
@@ -81,12 +108,11 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
     const trimmed = searchQuery.trim();
     if (trimmed.length < 2) {
-      setSpoonacularResults([]);
-      setSearchingApi(false);
+      clearSearchResults(setSpoonacularResults, setSearchingApi);
       return;
     }
 
-    setSearchingApi(true);
+    markSearching(setSearchingApi);
 
     debounceRef.current = setTimeout(async () => {
       const controller = new AbortController();
@@ -135,25 +161,27 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     ref.current?.dismiss();
   };
 
-  const handleSelectSpoonacularRecipe = async (item: TransformedRecipeItem) => {
+  const handleSelectSpoonacularRecipe = (item: TransformedRecipeItem) => {
       setLoadingItemId(item.spoonacularId);
 
-      try {
-        const fullRecipe = await spoonacularService.getRecipeInformation({
-          id: item.spoonacularId });
+      executeAsyncWithCleanup(
+        async () => {
+          const fullRecipe = await spoonacularService.getRecipeInformation({
+            id: item.spoonacularId });
 
-        const preloaded = await preloadRecipe(fullRecipe);
-        if (preloaded) {
-          onAddRecipe(preloaded.id, selectedMealType);
-          ref.current?.dismiss();
-        } else {
+          const preloaded = await preloadRecipe(fullRecipe);
+          if (preloaded) {
+            onAddRecipe(preloaded.id, selectedMealType);
+            ref.current?.dismiss();
+          } else {
+            toastService.error('Failed to add recipe. Please try again.');
+          }
+        },
+        () => setLoadingItemId(null),
+        () => {
           toastService.error('Failed to add recipe. Please try again.');
-        }
-      } catch {
-        toastService.error('Failed to add recipe. Please try again.');
-      } finally {
-        setLoadingItemId(null);
-      }
+        },
+      );
     };
 
   const handleScrollEndReached = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -320,6 +348,7 @@ const styles = StyleSheet.create(theme => ({
   mealTypeRow: {
     flexDirection: 'row',
     paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.xs,
     gap: theme.spacing.sm },
   mealTypeChip: {
     paddingHorizontal: theme.spacing.md,

@@ -35,6 +35,7 @@ import { IngredientCard } from './components/IngredientCard';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAuth } from '#hooks/auth/useAuth';
+import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
 
@@ -72,6 +73,7 @@ const RecipeDetailScreen: React.FC = () => {
     shoppingListOptionsRef,
     ingredientSelectorRef,
     listPickerRef,
+    handleSheetDismiss,
     cookedModalVisible,
     setCookedModalVisible,
     markingAsCooked,
@@ -250,8 +252,7 @@ const RecipeDetailScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Loading recipe...</Text>
+        <SousChefLoader size="small" showBrand={false} message="Loading recipe..." />
       </View>
     );
   }
@@ -655,6 +656,7 @@ const RecipeDetailScreen: React.FC = () => {
         sheetRef={shoppingListOptionsRef}
         sheetTitle="Add to Shopping List"
         snapPoints={['30%']}
+        onDismiss={handleSheetDismiss}
       >
         <View style={styles.shoppingListOptions}>
           <Pressable
@@ -697,6 +699,7 @@ const RecipeDetailScreen: React.FC = () => {
         sheetRef={ingredientSelectorRef}
         sheetTitle="Select Ingredients"
         snapPoints={['50%', '75%', '90%']}
+        onDismiss={handleSheetDismiss}
       >
         <FlashList
           data={backendRecipe?.ingredients || []}
@@ -842,10 +845,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1 },
   scrollContent: {
     paddingBottom: theme.spacing.xl },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary },
   errorText: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.error,

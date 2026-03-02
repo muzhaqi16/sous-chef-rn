@@ -29,6 +29,7 @@ import { useAppStore } from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { toastService } from '#/services/toastService';
+import { executeWithLoadingState, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   isShoppingListOwner,
@@ -37,6 +38,22 @@ import {
   getShoppingListOwnerInfo } from '#utils/ownershipHelpers';
 
 import type { StaticScreenProps } from '@react-navigation/native';
+
+/** Module-level helper to sync shopping list form state from loaded data */
+function syncListFormState(
+  shoppingList: { name: string; isDefault: boolean } | null | undefined,
+  listId: string | undefined,
+  setName: (v: string) => void,
+  setIsDefault: (v: boolean) => void,
+) {
+  if (shoppingList && listId) {
+    setName(shoppingList.name);
+    setIsDefault(shoppingList.isDefault);
+  } else if (listId) {
+    setName('');
+    setIsDefault(false);
+  }
+}
 
 export const ListSettings: React.FC<StaticScreenProps<{
   listId?: string;
@@ -130,48 +147,42 @@ export const ListSettings: React.FC<StaticScreenProps<{
     } });
 
   useEffect(() => {
-    if (shoppingList && listId) {
-      setName(shoppingList.name);
-      setIsDefault(shoppingList.isDefault);
-    } else if (listId) {
-      // Set default values for new list
-      setName('');
-      setIsDefault(false);
-    }
+    syncListFormState(shoppingList, listId, setName, setIsDefault);
   }, [shoppingList, listId]);
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!name.trim()) {
       toastService.error('List name cannot be empty');
       return;
     }
 
-    setSaving(true);
-    try {
-      if (!listId) {
-        // Create new list
-        await createList({
-          variables: {
-            input: {
-              name: name.trim(),
-              description: 'Created from list settings',
-              isDefault,
-              tags: ['user-created'],
-              homeId: selectedHomeId || undefined } } });
-      } else {
-        // Update existing list
-        await updateList({
-          variables: {
-            id: listId!,
-            input: { name: name.trim(), isDefault } } });
-      }
-    } catch {
-      toastService.error(
-        listId ? 'Failed to save settings' : 'Failed to create list',
-      );
-    } finally {
-      setSaving(false);
-    }
+    executeWithLoadingState(
+      async () => {
+        if (!listId) {
+          // Create new list
+          await createList({
+            variables: {
+              input: {
+                name: name.trim(),
+                description: 'Created from list settings',
+                isDefault,
+                tags: ['user-created'],
+                homeId: selectedHomeId || undefined } } });
+        } else {
+          // Update existing list
+          await updateList({
+            variables: {
+              id: listId!,
+              input: { name: name.trim(), isDefault } } });
+        }
+      },
+      setSaving,
+      () => {
+        toastService.error(
+          listId ? 'Failed to save settings' : 'Failed to create list',
+        );
+      },
+    );
   };
 
   const handleDelete = () => {
@@ -184,27 +195,31 @@ export const ListSettings: React.FC<StaticScreenProps<{
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
             // Register parent deletion to prevent subscription race conditions
             // 10s auto-cleanup timeout in service handles unregistration
             subscriptionService.registerParentDeletion(listId);
 
-            try {
-              await deleteList({ variables: { id: listId! } });
+            executeMutationWithErrorHandler(
+              async () => {
+                await deleteList({ variables: { id: listId! } });
 
-              // Find next list to select (default list from remaining lists)
-              const remainingLists = lists.filter(l => l.id !== listId);
-              const defaultList = remainingLists.find(l => l.isDefault);
+                // Find next list to select (default list from remaining lists)
+                const remainingLists = lists.filter(l => l.id !== listId);
+                const defaultList = remainingLists.find(l => l.isDefault);
 
-              // Set default list if found, otherwise null to trigger auto-select
-              setSelectedShoppingListId(defaultList?.id || null);
-              // Use goBack() to pop ListSettings off the stack, unmounting its
-              // query watcher so late subscription updates can't trigger a refetch
-              goBack();
-            } catch {
-              // Deletion failed — list wasn't actually deleted, so unregister immediately
-              subscriptionService.unregisterParentDeletion(listId);
-            }
+                // Set default list if found, otherwise null to trigger auto-select
+                const nextListId = defaultList?.id || null;
+                setSelectedShoppingListId(nextListId);
+                // Use goBack() to pop ListSettings off the stack, unmounting its
+                // query watcher so late subscription updates can't trigger a refetch
+                goBack();
+              },
+              () => {
+                // Deletion failed — list wasn't actually deleted, so unregister immediately
+                subscriptionService.unregisterParentDeletion(listId);
+              },
+            );
           } },
       ],
     );
@@ -227,23 +242,24 @@ export const ListSettings: React.FC<StaticScreenProps<{
         {
           text: 'Leave',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
             if (!currentUserCollaborator?.id) {
               toastService.error('Could not determine your membership');
               return;
             }
 
-            setLeaving(true);
-            try {
-              await removeMember({
-                variables: { id: currentUserCollaborator.id } });
-              setSelectedShoppingListId(null);
-              goBack();
-            } catch {
-              toastService.error('Failed to leave list');
-            } finally {
-              setLeaving(false);
-            }
+            executeWithLoadingState(
+              async () => {
+                await removeMember({
+                  variables: { id: currentUserCollaborator.id } });
+                setSelectedShoppingListId(null);
+                goBack();
+              },
+              setLeaving,
+              () => {
+                toastService.error('Failed to leave list');
+              },
+            );
           } },
       ],
     );

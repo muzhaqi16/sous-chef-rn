@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
+import { TIMING } from '#constants/animations';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useDietaryProfile } from '#hooks/profile/useDietaryProfile';
 import {
@@ -198,7 +199,7 @@ export const DietaryProfileScreen: React.FC = () => {
     <ProfileScreenWrapper title="Dietary Profile">
       {/* Dietary Restrictions Section */}
       <Animated.View
-        entering={FadeIn.duration(300)}
+        entering={FadeIn.duration(TIMING.SLOW)}
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
@@ -214,7 +215,7 @@ export const DietaryProfileScreen: React.FC = () => {
 
       {/* Food Preferences Section */}
       <Animated.View
-        entering={FadeIn.duration(300).delay(100)}
+        entering={FadeIn.duration(TIMING.SLOW).delay(100)}
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
@@ -252,7 +253,7 @@ export const DietaryProfileScreen: React.FC = () => {
 
       {/* Nutrition Goals Section */}
       <Animated.View
-        entering={FadeIn.duration(300).delay(200)}
+        entering={FadeIn.duration(TIMING.SLOW).delay(200)}
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
@@ -273,7 +274,7 @@ export const DietaryProfileScreen: React.FC = () => {
 
       {/* Cooking Preferences Section */}
       <Animated.View
-        entering={FadeIn.duration(300).delay(300)}
+        entering={FadeIn.duration(TIMING.SLOW).delay(300)}
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
@@ -323,7 +324,7 @@ export const DietaryProfileScreen: React.FC = () => {
         profile.carbsTarget ||
         profile.fatTarget) && (
         <Animated.View
-          entering={FadeIn.duration(300).delay(400)}
+          entering={FadeIn.duration(TIMING.SLOW).delay(400)}
           layout={LinearTransition}
           style={styles.sectionContainer}
         >

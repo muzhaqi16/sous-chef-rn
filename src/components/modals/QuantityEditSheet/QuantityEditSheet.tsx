@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, Keyboard } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, Pressable } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
   BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Header } from '#/components/molecules/Header';
 import { StyleSheet } from 'react-native-unistyles';
@@ -99,18 +99,8 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   const { ref, modalProps, theme } = useStandardBottomSheet({
     visible: visible && !!item,
     onDismiss: onClose,
-    snapPoints: ['55%', '95%'] });
-
-  // Snap back to initial position when keyboard dismisses
-  // keyboardBlurBehavior="restore" is unreliable with "extend", so handle manually
-  useEffect(() => {
-    const sub = Keyboard.addListener('keyboardDidHide', () => {
-      if (visible) {
-        ref.current?.snapToIndex(0);
-      }
-    });
-    return () => sub.remove();
-  }, [visible, ref]);
+    snapPoints: ['55%'],
+    keyboardAware: true });
 
   // Local state for editing
   const [quantityInput, setQuantityInput] = useState('');
@@ -200,10 +190,10 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   const handleQuantityPress = () => {
     setInputValue(quantityInput);
     setIsEditing(true);
-    // Focus after state update
-    setTimeout(() => {
+    // Focus after render paint when input is focusable
+    requestAnimationFrame(() => {
       inputRef.current?.focus();
-    }, 50);
+    });
   };
 
   // Handle input text change - no sanitization to avoid cursor jumping
@@ -253,7 +243,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
       <View style={styles.headerSpacer} />
 
-      <BottomSheetKeyboardAwareScrollView
+      <BottomSheetFormScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         bottomOffset={16}
@@ -392,7 +382,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           />
         </View>
 
-      </BottomSheetKeyboardAwareScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

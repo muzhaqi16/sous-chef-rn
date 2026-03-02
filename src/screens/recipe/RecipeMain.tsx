@@ -24,9 +24,29 @@ import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils/iconUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { DeferredScreen } from '#components/performance/DeferredScreen';
+import { RecipeSkeleton } from '#components/base/Skeleton/RecipeSkeleton';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
-export const RecipeMain: React.FC = () => {
+/** Module-level helper to clear random recipes when user has saved recipes */
+function clearRandomRecipesIfNeeded(
+  savedCount: number,
+  randomCount: number,
+  setRandomRecipes: (v: RecipeInformation[]) => void,
+  hasFetchedRandom: React.RefObject<boolean>,
+) {
+  if (savedCount > 0 && randomCount > 0) {
+    setRandomRecipes([]);
+    hasFetchedRandom.current = false;
+  }
+}
+
+/**
+ * Inner component that runs all heavy hooks.
+ * Only mounts after isReady is true, so the skeleton paints instantly.
+ */
+const RecipeMainInner: React.FC = () => {
   useScreenTransition('RecipeMain');
   useRenderTime('RecipeMain');
   const { navigate } = useAppNavigation();
@@ -63,70 +83,65 @@ export const RecipeMain: React.FC = () => {
   useEffect(() => {
     const controller = new AbortController();
 
-    const fetchRandomRecipes = async () => {
-      // Only fetch if:
-      // 1. User has no saved recipes
-      // 2. Initial loading is complete
-      // 3. We haven't already fetched random recipes
-      // 4. We're not currently loading random recipes
-      if (
-        recipes.length > 0 ||
-        loading ||
-        hasFetchedRandom.current ||
-        loadingRandom
-      ) {
-        return;
-      }
+    // Only fetch if:
+    // 1. User has no saved recipes
+    // 2. Initial loading is complete
+    // 3. We haven't already fetched random recipes
+    // 4. We're not currently loading random recipes
+    if (
+      recipes.length > 0 ||
+      loading ||
+      hasFetchedRandom.current ||
+      loadingRandom
+    ) {
+      return () => controller.abort();
+    }
 
-      hasFetchedRandom.current = true;
-      setLoadingRandom(true);
-      try {
+    hasFetchedRandom.current = true;
+    executeWithLoadingState(
+      async () => {
         const random = await spoonacularService.getRandomRecipes({
           number: 10 }, controller.signal);
         setRandomRecipes(random);
-      } catch (error: any) {
-        if (error.name === 'AbortError') return;
+      },
+      setLoadingRandom,
+      (error: unknown) => {
+        if ((error as any).name === 'AbortError') return;
         console.error('Failed to fetch random recipes:', error);
         // Reset flag so user can retry
         hasFetchedRandom.current = false;
-      } finally {
-        setLoadingRandom(false);
-      }
-    };
-
-    fetchRandomRecipes();
+      },
+    );
 
     return () => controller.abort();
   }, [recipes.length, loading, loadingRandom]);
 
   // Clear random recipes when user saves their first recipe
   useEffect(() => {
-    if (recipes.length > 0 && randomRecipes.length > 0) {
-      setRandomRecipes([]);
-      hasFetchedRandom.current = false; // Reset so it can fetch again if recipes are deleted
-    }
+    clearRandomRecipesIfNeeded(recipes.length, randomRecipes.length, setRandomRecipes, hasFetchedRandom);
   }, [recipes.length, randomRecipes.length]);
 
   // Register add button action - navigate to recipe creation
   useTabBarAddButton(() => navigate('RecipeCreate'));
 
   // Manual refresh to get new random recipes
-  const handleRefreshRandom = async () => {
+  const handleRefreshRandom = () => {
     if (loadingRandom) return;
 
-    setLoadingRandom(true);
-    try {
-      const random = await spoonacularService.getRandomRecipes({ number: 10 });
-      setRandomRecipes(random);
-    } catch (error) {
-      console.error('Failed to fetch random recipes:', error);
-      Alert.alert(
-        'Error',
-        'Failed to load recipe suggestions. Please try again.',
-      );
-    } finally {
-      setLoadingRandom(false);
-    }
+    executeWithLoadingState(
+      async () => {
+        const random = await spoonacularService.getRandomRecipes({ number: 10 });
+        setRandomRecipes(random);
+      },
+      setLoadingRandom,
+      (error) => {
+        console.error('Failed to fetch random recipes:', error);
+        Alert.alert(
+          'Error',
+          'Failed to load recipe suggestions. Please try again.',
+        );
+      },
+    );
   };
 
   // Determine if we should show random recipes
@@ -420,12 +435,12 @@ export const RecipeMain: React.FC = () => {
           showSearchIcon
         />
       </View>
+      {FilterHeader}
       <ItemList
         items={items}
         onItemPress={handleItemPress}
         onItemDelete={showRandomRecipes ? undefined : handleRemoveRecipe}
         onRefresh={handleRefresh}
-        ListHeaderComponent={FilterHeader}
         emptyState={emptyStateConfig}
       />
 
@@ -468,6 +483,33 @@ export const RecipeMain: React.FC = () => {
     </View>
   );
 };
+
+const noop = () => {};
+
+/**
+ * Outer component that gates heavy work behind DeferredScreen.
+ * Skeleton paints instantly; RecipeMainInner mounts on the deferred re-render.
+ */
+export const RecipeMain: React.FC = () => (
+  <DeferredScreen
+    fallback={
+      <View style={styles.container} testID="recipes-screen">
+        <TabScreenHeader label="What to cook?" title="Recipes" />
+        <View style={styles.searchBarContainer}>
+          <SearchBar
+            value=""
+            onChangeText={noop}
+            placeholder="Search recipes..."
+            showSearchIcon
+            editable={false}
+          />
+        </View>
+        <RecipeSkeleton />
+      </View>
+    }
+    component={RecipeMainInner}
+  />
+);
 
 const styles = StyleSheet.create(theme => ({
   container: {

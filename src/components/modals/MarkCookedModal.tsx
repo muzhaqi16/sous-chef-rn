@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Switch } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
@@ -35,7 +34,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     visible,
     onDismiss: onClose,
     snapPoints: ['55%'],
-    keyboardBehavior: 'interactive' });
+    keyboardAware: true });
 
   // Form state
   const [servingsInput, setServingsInput] = useState('');
@@ -73,13 +72,14 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetScrollView
+      <BottomSheetFormScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
           contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
+        bottomOffset={16}
       >
         {/* Header */}
         <BottomSheetHeader
@@ -151,7 +151,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
             numberOfLines={2}
           />
         </View>
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

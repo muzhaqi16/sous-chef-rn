@@ -29,6 +29,7 @@ import { Button } from '#components/base/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingList',
@@ -113,34 +114,35 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
     ['ACCEPTED', 'ACTIVE', 'PENDING'].includes(c.status?.toUpperCase()),
   );
 
-  const handleShare = async () => {
+  const handleShare = () => {
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter an email address');
       return;
     }
 
-    setSharing(true);
-    try {
-      await shareList({
-        variables: {
-          input: {
-            shoppingListId: listId,
-            email: email.trim(),
-            role: CollaboratorRole.Contributor, // Assuming a role is required
-          } },
-        update(cache, { data }) {
-          const collaborator = data?.inviteToShoppingList?.collaborator;
-          if (collaborator) {
-            addCollaboratorToCache(cache, listId, collaborator, { position: 'end' });
-          }
-        } });
-      setEmail('');
-      refetch();
-    } catch {
-      Alert.alert('Error', 'Failed to send invitation');
-    } finally {
-      setSharing(false);
-    }
+    executeWithLoadingState(
+      async () => {
+        await shareList({
+          variables: {
+            input: {
+              shoppingListId: listId,
+              email: email.trim(),
+              role: CollaboratorRole.Contributor, // Assuming a role is required
+            } },
+          update(cache, { data }) {
+            const collaborator = data?.inviteToShoppingList?.collaborator;
+            if (collaborator) {
+              addCollaboratorToCache(cache, listId, collaborator, { position: 'end' });
+            }
+          } });
+        setEmail('');
+        refetch();
+      },
+      setSharing,
+      () => {
+        Alert.alert('Error', 'Failed to send invitation');
+      },
+    );
   };
 
   const handleRemoveMember = (memberId: string) => {
@@ -189,25 +191,26 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
         {
           text: 'Leave',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
             if (!currentUserCollaborator?.id) {
               Alert.alert('Error', 'Could not determine your membership');
               return;
             }
 
-            setLeaving(true);
-            try {
-              await removeMember({
-                variables: { id: currentUserCollaborator.id },
-                update(cache) {
-                  removeCollaboratorFromCache(cache, listId, currentUserCollaborator.id, { evictItem: true });
-                } });
-              navigation.goBack();
-            } catch {
-              Alert.alert('Error', 'Failed to leave list');
-            } finally {
-              setLeaving(false);
-            }
+            executeWithLoadingState(
+              async () => {
+                await removeMember({
+                  variables: { id: currentUserCollaborator.id },
+                  update(cache) {
+                    removeCollaboratorFromCache(cache, listId, currentUserCollaborator.id, { evictItem: true });
+                  } });
+                navigation.goBack();
+              },
+              setLeaving,
+              () => {
+                Alert.alert('Error', 'Failed to leave list');
+              },
+            );
           } },
       ],
     );

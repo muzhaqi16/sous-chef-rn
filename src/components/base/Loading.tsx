@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ActivityIndicator, Modal, StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { SousChefLoader } from './SousChefLoader';
 
 export interface LoadingProps {
   /** Primary loading message */
@@ -72,11 +73,16 @@ export const Loading: React.FC<LoadingProps> = ({
     return renderContent();
   }
 
-  // Fullscreen variant - fills the entire screen without modal
+  // Fullscreen variant - fills the entire screen with branded loader
   if (variant === 'fullscreen') {
     return (
       <View style={styles.fullscreenContainer}>
-        {renderContent()}
+        <SousChefLoader size="small" showBrand={false} message={message || 'Loading'} />
+        {!!submessage && (
+          <Text style={[styles.submessage, { color: theme.colors.textSecondary }]}>
+            {submessage}
+          </Text>
+        )}
       </View>
     );
   }

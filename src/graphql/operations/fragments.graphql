@@ -50,11 +50,6 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     imageUrl
     netWeight
     nutritions
-    images {
-      id
-      url
-      kind
-    }
     displayUnit {
       id
       name
@@ -337,11 +332,6 @@ fragment ItemFragment on Item {
     severity
   }
   nutritions
-  images {
-    id
-    url
-    kind
-  }
   metadata
   ingredients
   createdAt
@@ -392,6 +382,7 @@ fragment PantryItemCore on PantryItem {
   storageState
   expiresAt
   lowStockAlert
+  isLowStock
   minQuantity
   lastUsedAt
   netWeight
@@ -462,16 +453,11 @@ fragment PantryItemDisplay on PantryItem {
 # Used in: GetPantryItem query (detail screen), analytics queries
 fragment PantryItemFragment on PantryItem {
   ...PantryItemDisplay
-  # Extended item fields for detail view (images, nutrition, categories)
-  # NOTE: id, imageUrl already provided by PantryItemDisplay
+  # Extended item fields for detail view (nutrition, categories)
+  # NOTE: id, imageUrl, images already provided by PantryItemDisplay
   # Intentionally avoids ...ItemFragment to stay under 175-field complexity limit
   item {
     name
-    images {
-      id
-      url
-      kind
-    }
     nutritions
     defaultConsumeIncrement
     defaultConsumeUnitId

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useUnistyles } from 'react-native-unistyles';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 interface EmailInputModalProps {
   visible: boolean;
@@ -42,7 +43,7 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
     return emailRegex.test(email);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
@@ -56,32 +57,34 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
     }
 
     setError('');
-    setIsSubmitting(true);
 
-    try {
-      await onSubmit(trimmedEmail);
-      // Only close on success
-      handleClose();
-    } catch (err: any) {
-      // Extract the actual error message from the API
-      let errorMessage = 'Failed to send invite. Please try again.';
+    executeWithLoadingState(
+      async () => {
+        await onSubmit(trimmedEmail);
+        // Only close on success
+        handleClose();
+      },
+      setIsSubmitting,
+      (err: unknown) => {
+        // Extract the actual error message from the API
+        let errorMessage = 'Failed to send invite. Please try again.';
+        const error = err as any;
 
-      // Try different ways to extract the error message
-      if (err?.message) {
-        errorMessage = err.message.replace('ApolloError: ', '');
-      } else if (err?.graphQLErrors?.length > 0) {
-        errorMessage = err.graphQLErrors[0].message;
-      } else if (err?.networkError?.message) {
-        errorMessage = err.networkError.message;
-      } else if (typeof err === 'string') {
-        errorMessage = err;
-      }
+        // Try different ways to extract the error message
+        if (error?.message) {
+          errorMessage = error.message.replace('ApolloError: ', '');
+        } else if (error?.graphQLErrors?.length > 0) {
+          errorMessage = error.graphQLErrors[0].message;
+        } else if (error?.networkError?.message) {
+          errorMessage = error.networkError.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        }
 
-      setError(errorMessage);
-      // Don't close the modal on error - keep it open for retry
-    } finally {
-      setIsSubmitting(false);
-    }
+        setError(errorMessage);
+        // Don't close the modal on error - keep it open for retry
+      },
+    );
   };
 
   const handleClose = () => {

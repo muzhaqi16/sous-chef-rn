@@ -9,11 +9,7 @@
  */
 
 import { Alert } from 'react-native';
-import {
-  useUpdatePantryItemMutation,
-  PantryItemFragmentDoc,
-  PantryItemFragment,
-} from '#generated';
+import { useUpdatePantryItemMutation, PantryItemFragment } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
@@ -21,8 +17,8 @@ import {
 } from '#/utils/errors/versionConflict';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
-import { buildDirtyUpdateInput } from './utils';
-import type { FormDataInput } from './types';
+import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
+import type { FormDataInput, UnitSelection } from './types';
 
 interface UseUpdatePantryItemOptions {
   onSuccess?: () => void;
@@ -36,6 +32,7 @@ interface UpdatePantryItemFieldsParams {
   dirtyFields: Record<string, boolean>;
   selectedLocationId: string | null;
   selectedBrandId: string | null;
+  trackingUnit?: UnitSelection;
 }
 
 /**
@@ -62,18 +59,6 @@ export function useUpdatePantryItem({
 
   const [updateMutation] = useUpdatePantryItemMutation({
     errorPolicy: 'all',
-    // Ensure full fragment including nested item.nutritions is written to cache
-    update: (cache, { data }) => {
-      const pantryItem = data?.updatePantryItem?.pantryItem;
-      if (!pantryItem) return;
-
-      cache.writeFragment({
-        id: cache.identify({ __typename: 'PantryItem', id: pantryItem.id }),
-        fragment: PantryItemFragmentDoc,
-        fragmentName: 'PantryItemFragment',
-        data: pantryItem,
-      });
-    },
     onError: error => {
       if (handleVersionConflict(error)) {
         Alert.alert('Item Updated', getVersionConflictMessage(error), [
@@ -100,6 +85,7 @@ export function useUpdatePantryItem({
     dirtyFields,
     selectedLocationId,
     selectedBrandId,
+    trackingUnit,
   }: UpdatePantryItemFieldsParams): void => {
     // Build input for dirty fields only
     const updateInput = buildDirtyUpdateInput(
@@ -119,6 +105,12 @@ export function useUpdatePantryItem({
     const optimisticUpdate: Record<string, any> = { ...updateInput };
     if ('brandId' in updateInput && updateInput.brandId === null) {
       optimisticUpdate.brand = null;
+    }
+
+    // Include new unit in optimistic response to prevent race condition
+    // with updateQuantity mutation overwriting the unit
+    if (trackingUnit?.id && trackingUnit.id !== currentItem.unit?.id) {
+      optimisticUpdate.unit = buildOptimisticUnit(trackingUnit, currentItem.unit);
     }
 
     // Fire mutation asynchronously - don't await to allow immediate navigation
