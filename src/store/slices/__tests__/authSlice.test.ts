@@ -1,13 +1,8 @@
 import { createTestStore } from '#/test-utils/createTestStore';
 
 // Mock external dependencies that authSlice imports
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelTokenRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  proactiveTokenRefresh: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const { scheduleTokenRefresh, cancelTokenRefresh } = require('../../../apollo/links/tokenScheduler');
 

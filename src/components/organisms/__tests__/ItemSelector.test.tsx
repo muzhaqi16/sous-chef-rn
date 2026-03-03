@@ -3,8 +3,8 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { ItemSelector } from '../ItemSelector';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ scheduleTokenRefresh: jest.fn(), cancelScheduledRefresh: jest.fn() }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 describe('ItemSelector', () => {
   const items = [

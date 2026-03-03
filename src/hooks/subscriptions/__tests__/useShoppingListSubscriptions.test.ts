@@ -3,13 +3,8 @@
 import { renderHook } from '@testing-library/react-native';
 import { useShoppingListSubscriptions } from '../useShoppingListSubscriptions';
 
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const mockRegister = jest.fn().mockReturnValue({});
 const mockIsParentDeleting = jest.fn().mockReturnValue(false);
@@ -54,9 +49,7 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   addNewItemToShoppingListCache: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 const mockUseAppStore = require('#store/useAppStore').useAppStore;
 

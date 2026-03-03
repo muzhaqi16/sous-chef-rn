@@ -35,25 +35,7 @@ jest.mock('#hooks/auth/useAuth', () => ({
   }),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(async (asyncFn: () => Promise<void>, setLoading: (v: boolean) => void, onError: (e: unknown) => void) => {
-    setLoading(true);
-    try {
-      await asyncFn();
-    } catch (e) {
-      onError(e);
-    } finally {
-      setLoading(false);
-    }
-  }),
-  executeMutationWithErrorHandler: jest.fn(async (asyncFn: () => Promise<void>, onError: (e: unknown) => void) => {
-    try {
-      await asyncFn();
-    } catch (e) {
-      onError(e);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 const defaultProps = {
   visible: true,

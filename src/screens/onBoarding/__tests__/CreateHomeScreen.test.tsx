@@ -4,8 +4,8 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { CreateHomeScreen } from '../createHome/CreateHomeScreen';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 const mockNavigateToNextStep = jest.fn();
 const mockSkipToStep = jest.fn();
@@ -49,9 +49,7 @@ jest.mock('#generated', () => ({
   useDeclineHomeInviteMutation: jest.fn(() => [jest.fn(), { loading: false }]),
 }));
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/utils/validation/onboarding', () => ({
   getCreateHomeSchema: jest.fn(() => ({
     fields: {},
@@ -63,10 +61,7 @@ jest.mock('#/utils/connectionUtils', () => ({
   normalizeHomes: jest.fn((h) => h || []),
   extractNodes: jest.fn((c) => c?.edges?.map((e: any) => e.node) || []),
 }));
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(),
-  executeMutation: jest.fn(),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#utils/formatters/roleFormatters', () => ({
   formatRole: jest.fn((r) => r),
 }));

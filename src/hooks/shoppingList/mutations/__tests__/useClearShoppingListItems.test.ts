@@ -20,13 +20,7 @@ jest.mock('@apollo/client/react', () => ({
   }),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(
-    async (fn: () => Promise<any>, _onError: any) => {
-      return await fn();
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   clearAllPurchasedItemsFromCache: jest.fn(),

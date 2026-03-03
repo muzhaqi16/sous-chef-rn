@@ -6,13 +6,8 @@ import { Alert } from 'react-native';
 import NotificationSettingsScreen from '../NotificationSettingsScreen';
 
 // Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: jest.fn(() => ({
@@ -93,26 +88,7 @@ jest.mock('#components/molecules/AlertBanner', () => ({
   AlertBanner: () => null,
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(async (fn: any, setLoading: any, onError?: any) => {
-    setLoading(true);
-    try {
-      return await fn();
-    } catch (e) {
-      onError?.(e);
-    } finally {
-      setLoading(false);
-    }
-  }),
-  executeRefreshWithFinally: jest.fn(async (fn: any, setLoading: any) => {
-    setLoading(true);
-    try {
-      return await fn();
-    } finally {
-      setLoading(false);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
 

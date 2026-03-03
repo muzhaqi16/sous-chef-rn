@@ -3,16 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { DietaryRestrictionSelector } from '../DietaryRestrictionSelector';
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeRefreshWithFinally: jest.fn(async (fn: () => Promise<void>, setLoading: (v: boolean) => void) => {
-    setLoading(true);
-    try {
-      await fn();
-    } finally {
-      setLoading(false);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#/components/molecules/RestrictionSection/RestrictionSection', () => {
   const { View, Text, Pressable } = require('react-native');

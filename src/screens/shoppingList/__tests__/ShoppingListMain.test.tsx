@@ -4,12 +4,10 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { ShoppingListMain } from '../ShoppingListMain';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn(), navigateTo: {} }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/shoppingList/useShoppingListScreen', () => ({
   useShoppingListScreen: () => ({

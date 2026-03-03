@@ -5,13 +5,8 @@ import { Text } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
 import { BaseItemCard } from '../../../../src/components/molecules/BaseItemCard/BaseItemCard';
 
-jest.mock('../../../../src/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../../src/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../../src/apollo/links/tokenScheduler');
+jest.mock('../../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../../src/components/molecules/SwipeableItem/SwipeableItem', () => ({
   SwipeableItem: ({ children }: any) => children,

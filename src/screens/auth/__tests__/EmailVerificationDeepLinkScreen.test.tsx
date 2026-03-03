@@ -51,17 +51,7 @@ jest.mock('#/utils/environment', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(
-    async (fn: () => Promise<any>, onError: any) => {
-      try {
-        await fn();
-      } catch (error) {
-        onError(error);
-      }
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',

@@ -4,8 +4,8 @@ import { screen } from '@testing-library/react-native';
 import { SearchResults } from '../SearchResults';
 import { renderWithProviders } from '../../../../__tests__/helpers/renderWithProviders';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ scheduleTokenRefresh: jest.fn(), cancelScheduledRefresh: jest.fn() }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#generated', () => ({
   useCreatePantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
@@ -33,12 +33,7 @@ jest.mock('#store/useAppStore', () => ({
   }),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn((fn: () => Promise<void>, setLoading: (v: boolean) => void, onError: (e: unknown) => void) => {
-    setLoading(true);
-    fn().then(() => setLoading(false)).catch((e: unknown) => { setLoading(false); onError(e); });
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('../ItemCard', () => ({
   ItemCard: ({ item }: any) => {

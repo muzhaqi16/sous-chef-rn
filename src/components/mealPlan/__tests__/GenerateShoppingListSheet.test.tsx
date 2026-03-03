@@ -80,14 +80,9 @@ jest.mock('#generated', () => ({
   })),
 }));
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
 
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/refreshToken');
 
 const defaultProps = {
   visible: true,

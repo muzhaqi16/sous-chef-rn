@@ -6,23 +6,12 @@ import { Alert } from 'react-native';
 import { StorageLocationsScreen } from '../StorageLocationsScreen';
 
 // Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: jest.fn(() => ({
-    goBack: jest.fn(),
-  })),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
 const mockCreateLocation = jest.fn().mockResolvedValue({ id: 'loc-new' });
 const mockUpdateLocation = jest.fn().mockResolvedValue({ id: 'loc-1' });
@@ -45,16 +34,7 @@ jest.mock('#hooks/storageLocation/useStorageLocationManagement', () => ({
   })),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeRefreshWithFinally: jest.fn(async (fn: any, setLoading: any) => {
-    setLoading(true);
-    try {
-      return await fn();
-    } finally {
-      setLoading(false);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/templates/DetailTemplate', () => ({
   DetailTemplate: ({ title, sections }: any) => {

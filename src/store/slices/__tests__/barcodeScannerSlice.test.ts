@@ -2,13 +2,8 @@ import { createTestStore } from '#/test-utils/createTestStore';
 import type { ScannedItem } from '../barcodeScannerSlice';
 
 // Mock authSlice dependencies
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelTokenRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  proactiveTokenRefresh: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const mockItem: ScannedItem = {
   id: 'item-1',

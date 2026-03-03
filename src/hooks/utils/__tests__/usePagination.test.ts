@@ -7,16 +7,7 @@ jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(async (fn, onError) => {
-    try {
-      return await fn();
-    } catch (e) {
-      onError(e);
-      return false;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 describe('usePagination', () => {
   const mockFetchMore = jest.fn().mockResolvedValue({});

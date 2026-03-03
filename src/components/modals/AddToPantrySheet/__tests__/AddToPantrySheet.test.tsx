@@ -3,12 +3,10 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { AddToPantrySheet } from '../AddToPantrySheet';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ scheduleTokenRefresh: jest.fn(), cancelScheduledRefresh: jest.fn() }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ navigateTo: { barcode: jest.fn() } }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/pantry/usePantryItemSuggestions', () => ({
   usePantryItemSuggestions: jest.fn(() => ({
@@ -39,9 +37,7 @@ jest.mock('#hooks/home/pantry/utils', () => ({
   addToPantryItemsCache: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#/services/toastService', () => ({
   toastService: { success: jest.fn(), error: jest.fn() },

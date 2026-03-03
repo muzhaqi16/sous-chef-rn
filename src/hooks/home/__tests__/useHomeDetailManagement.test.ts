@@ -68,10 +68,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-  executeMutation: jest.fn(async (fn: () => Promise<any>) => fn()),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#/utils/errors/versionConflict', () => ({
   handleVersionConflict: jest.fn(() => false),

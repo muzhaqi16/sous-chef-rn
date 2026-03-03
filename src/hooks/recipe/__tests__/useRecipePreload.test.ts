@@ -23,14 +23,10 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(
-    async (fn: () => Promise<any>) => fn(),
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 // Break circular dependency
-jest.mock('../../../apollo/links/tokenScheduler', () => ({}));
+jest.mock('../../../apollo/links/tokenScheduler');
 
 const makeSpoonacularRecipe = (id = 123) =>
   ({

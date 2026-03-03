@@ -40,13 +40,10 @@ jest.mock('#/services/telemetry', () => ({
   Telemetry: { trackEvent: jest.fn() },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn(async (fn: () => Promise<any>) => fn()),
-  executeMutationWithErrorHandler: jest.fn(async (fn: () => Promise<any>) => fn()),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 // Break circular dependency
-jest.mock('../../../apollo/links/tokenScheduler', () => ({}));
+jest.mock('../../../apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();

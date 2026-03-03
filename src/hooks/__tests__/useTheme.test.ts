@@ -46,7 +46,7 @@ jest.mock('#/store/slices/preferencesSlice', () => ({
 }));
 
 // Break circular dependency
-jest.mock('../../apollo/links/tokenScheduler', () => ({}));
+jest.mock('../../apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();

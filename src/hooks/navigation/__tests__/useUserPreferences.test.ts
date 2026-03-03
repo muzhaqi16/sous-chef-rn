@@ -2,13 +2,8 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useUserPreferences } from '../useUserPreferences';
 
 // Break circular dependency chain
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const mockSetUserNavigationState = jest.fn();
 const mockGetUserNavigationState = jest.fn();

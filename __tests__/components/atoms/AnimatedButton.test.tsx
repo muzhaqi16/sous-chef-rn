@@ -4,13 +4,8 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { AnimatedButton } from '../../../src/components/atoms/AnimatedButton';
 
-jest.mock('../../../src/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../src/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../src/apollo/links/tokenScheduler');
+jest.mock('../../../src/apollo/links/refreshToken');
 
 describe('AnimatedButton', () => {
   it('renders children text', () => {

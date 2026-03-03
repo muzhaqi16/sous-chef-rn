@@ -5,24 +5,11 @@ import { render, screen } from '@testing-library/react-native';
 import { PantryMain } from '../PantryMain';
 
 // --- Break circular deps ---
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 // --- Navigation ---
-const mockNavigate = jest.fn();
-const mockNavigateTo = {
-  pantryItem: jest.fn(),
-  pantryItemDetail: jest.fn(),
-  shoppingListMain: jest.fn(),
-  nutritionScreen: jest.fn(),
-};
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    navigate: mockNavigate,
-    navigateTo: mockNavigateTo,
-    goBack: jest.fn(),
-  }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 // --- Tab bar ---
 jest.mock('#/context/TabBarActionsContext', () => ({
@@ -106,9 +93,7 @@ jest.mock('#hooks/pantry/useCurrentPantry', () => ({
 }));
 
 // --- Performance / scanner / UI hooks ---
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#hooks/performance/useScreenTelemetry', () => ({
   useScreenTelemetry: jest.fn(),
 }));

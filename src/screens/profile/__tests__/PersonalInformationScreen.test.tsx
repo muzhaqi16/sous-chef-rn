@@ -51,13 +51,7 @@ jest.mock('#/services/errorService', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(
-    async (fn: () => Promise<any>, _onError: any) => {
-      await fn();
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#utils/dateUtils', () => ({
   dateStringToISO: jest.fn((val: string) => val),
@@ -85,11 +79,7 @@ jest.mock('#/config/settingsConfig', () => ({
   ],
 }));
 
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    goBack: jest.fn(),
-  }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#components/templates/ProfileScreenWrapper', () => {
   const { View, Text } = require('react-native');

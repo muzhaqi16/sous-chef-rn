@@ -4,8 +4,8 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { InviteMemberScreen } from '../InviteMemberScreen';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 const mockNavigateToNextStep = jest.fn();
 jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
@@ -39,15 +39,8 @@ jest.mock('#generated', () => ({
   MembershipRole: { Member: 'MEMBER' },
 }));
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn((fn, setLoading, onError) => {
-    setLoading(true);
-    fn().then(() => setLoading(false)).catch((e: any) => { setLoading(false); if (onError) onError(e); });
-  }),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
   OnBoardingWrapper: ({ title, subtitle, children }: any) => {

@@ -4,8 +4,8 @@ import { screen, act } from '@testing-library/react-native';
 import CollaboratorPermissionsBottomSheet from '../CollaboratorPermissionsBottomSheet';
 import { renderWithProviders } from '../../../../__tests__/helpers/renderWithProviders';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ scheduleTokenRefresh: jest.fn(), cancelScheduledRefresh: jest.fn() }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
@@ -37,12 +37,7 @@ jest.mock('#generated', () => ({
   useUpdateCollaboratorRoleMutation: jest.fn(() => [jest.fn(), { loading: false }]),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn((fn: () => Promise<void>, setLoading: (v: boolean) => void) => {
-    setLoading(true);
-    fn().then(() => setLoading(false)).catch(() => setLoading(false));
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 describe('CollaboratorPermissionsBottomSheet', () => {
   const defaultProps = {

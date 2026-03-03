@@ -8,13 +8,8 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useStorageLocationManagement } from '../useStorageLocationManagement';
 
 // Mock token scheduler / refreshToken (transitively imported via store)
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 const mockRefetch = jest.fn().mockResolvedValue({});
 const mockCreateMutation = jest.fn().mockResolvedValue({
@@ -72,12 +67,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromQueryFieldUpdater: jest.fn(() => jest.fn()),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn(async (fn: any) => {
-    return await fn();
-  }),
-  executeCacheUpdate: jest.fn((fn: any) => fn()),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 describe('useStorageLocationManagement', () => {
   beforeEach(() => {

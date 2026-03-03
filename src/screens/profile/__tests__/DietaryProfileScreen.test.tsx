@@ -67,11 +67,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    goBack: jest.fn(),
-  }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#components/templates/ProfileScreenWrapper', () => {
   const { View, Text } = require('react-native');

@@ -4,13 +4,8 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { TemplateCard } from '../../../src/components/mealPlan/TemplateCard';
 
-jest.mock('../../../src/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../src/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../src/apollo/links/tokenScheduler');
+jest.mock('../../../src/apollo/links/refreshToken');
 
 const makeTemplate = (overrides = {}) => ({
   id: 't1',

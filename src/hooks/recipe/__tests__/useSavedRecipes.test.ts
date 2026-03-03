@@ -84,7 +84,7 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
 }));
 
 // Break circular dependency
-jest.mock('../../../apollo/links/tokenScheduler', () => ({}));
+jest.mock('../../../apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();

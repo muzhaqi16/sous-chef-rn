@@ -6,25 +6,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(async (fn, setLoading, onError) => {
-    setLoading(true);
-    try {
-      await fn();
-    } catch (err) {
-      onError?.(err);
-    } finally {
-      setLoading(false);
-    }
-  }),
-  executeMutationWithErrorHandler: jest.fn(async (fn, onError) => {
-    try {
-      await fn();
-    } catch (err) {
-      onError?.(err);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 describe('StringArrayManager', () => {
   const defaultProps = {

@@ -45,13 +45,7 @@ jest.mock('#/utils/environment', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(
-    async (fn: () => Promise<any>, _onError: any) => {
-      await fn();
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/templates/AuthWrapper', () => {
   const { View } = require('react-native');

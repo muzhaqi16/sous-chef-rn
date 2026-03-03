@@ -48,20 +48,7 @@ jest.mock('#/hooks/useToast', () => ({
   useToast: () => mockToast,
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(
-    async (fn: () => Promise<any>, setLoading: any, onError: any) => {
-      setLoading(true);
-      try {
-        await fn();
-      } catch (error) {
-        onError(error);
-      } finally {
-        setLoading(false);
-      }
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#/utils/environment', () => ({
   logger: {

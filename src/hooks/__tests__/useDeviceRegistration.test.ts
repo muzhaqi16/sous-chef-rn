@@ -29,28 +29,10 @@ jest.mock('#/utils/environment', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(
-    async (fn: () => Promise<any>, onError: (err: any) => void) => {
-      try {
-        return await fn();
-      } catch (err) {
-        onError(err);
-        return false;
-      }
-    },
-  ),
-  executeQuery: jest.fn(async (fn: () => Promise<any>) => {
-    try {
-      return await fn();
-    } catch {
-      return null;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 // Break circular dependency
-jest.mock('../../apollo/links/tokenScheduler', () => ({}));
+jest.mock('../../apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();

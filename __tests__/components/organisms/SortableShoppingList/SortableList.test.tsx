@@ -5,13 +5,8 @@ import { Text } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { SortableShoppingList } from '../../../../src/components/organisms/SortableShoppingList/SortableList';
 
-jest.mock('../../../../src/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../../src/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../../src/apollo/links/tokenScheduler');
+jest.mock('../../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../../src/hooks/ui/useSwipeableCoordinator', () => ({
   useSwipeableCoordinator: () => ({

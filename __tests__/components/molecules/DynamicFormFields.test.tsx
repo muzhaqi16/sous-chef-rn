@@ -5,13 +5,8 @@ import { render } from '@testing-library/react-native';
 import { useForm } from 'react-hook-form';
 import { DynamicFormFields, FieldDef } from '../../../src/components/molecules/DynamicFormFields';
 
-jest.mock('../../../src/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../src/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../src/apollo/links/tokenScheduler');
+jest.mock('../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../src/components/molecules/AutocompleteField/ItemAutocompleteField', () => ({
   ItemAutocompleteField: () => null,

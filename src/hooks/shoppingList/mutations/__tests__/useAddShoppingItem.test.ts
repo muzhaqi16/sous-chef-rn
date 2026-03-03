@@ -41,9 +41,7 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
 }));
 
 // Mock compilerSafeWrappers
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 // Mock cache updaters
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({

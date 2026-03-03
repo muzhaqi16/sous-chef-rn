@@ -5,13 +5,8 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { Alert, Image } from 'react-native';
 import { ImageCropScreen } from '../ImageCropScreen';
 
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const mockGoBack = jest.fn();
 jest.mock('#hooks/navigation/useSafeNavigation', () => ({
@@ -105,18 +100,7 @@ jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(async (fn: () => Promise<any>, setLoading: (v: boolean) => void, onError?: (e: any) => void) => {
-    setLoading(true);
-    try {
-      await fn();
-    } catch (e) {
-      if (onError) onError(e);
-    } finally {
-      setLoading(false);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
 jest.spyOn(Image, 'getSize').mockImplementation((uri: string, success: any) => {

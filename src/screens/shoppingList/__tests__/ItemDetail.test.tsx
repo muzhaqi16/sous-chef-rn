@@ -4,14 +4,10 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { ShoppingListItemDetail } from '../ItemDetail';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-const mockGoBack = jest.fn();
-const mockNavigate = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate, navigateTo: {} }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockUseGetShoppingListItemQuery = jest.fn();
 
@@ -28,9 +24,7 @@ jest.mock('#utils/nutritionUtils', () => ({
   parseNutritions: jest.fn(() => []),
   hasNutritionData: jest.fn(() => false),
 }));
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: { title: {}, body: {}, caption: {} },
 }));

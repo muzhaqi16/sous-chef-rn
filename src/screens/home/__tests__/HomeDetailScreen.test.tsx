@@ -5,19 +5,10 @@ import { render } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { HomeDetailScreen } from '../HomeDetailScreen';
 
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
-const mockGoBack = jest.fn();
-const mockNavigate = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockSaveName = jest.fn();
 const mockChangeRole = jest.fn();
@@ -57,16 +48,9 @@ jest.mock('#store/useAppStore', () => ({
   selectUser: (s: any) => s.user,
 }));
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeRefreshWithFinally: jest.fn(async (fn: any, setLoading: any) => {
-    setLoading(true);
-    try { await fn(); } finally { setLoading(false); }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('@react-native-clipboard/clipboard', () => ({
   setString: jest.fn(),

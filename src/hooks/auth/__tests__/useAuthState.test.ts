@@ -2,13 +2,8 @@ import { renderHook } from '@testing-library/react-native';
 import { useAuthState } from '../useAuthState';
 
 // Break circular dependency chain
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 // Mock store values
 const mockSetAuth = jest.fn();

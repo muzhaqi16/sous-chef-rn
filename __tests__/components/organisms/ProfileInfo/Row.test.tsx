@@ -4,13 +4,8 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { Row } from '../../../../src/components/organisms/ProfileInfo/Row';
 
-jest.mock('../../../../src/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../../src/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../../src/apollo/links/tokenScheduler');
+jest.mock('../../../../src/apollo/links/refreshToken');
 
 describe('Row', () => {
   it('renders with label', () => {

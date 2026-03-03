@@ -1,15 +1,8 @@
 'use no memo';
 
 // Mock tokenScheduler and refreshToken (needed transitively by store)
-jest.mock('../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../apollo/links/refreshToken', () => ({
-  proactiveTokenRefresh: jest.fn(),
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../apollo/links/tokenScheduler');
+jest.mock('../../apollo/links/refreshToken');
 
 // Mock keychain
 jest.mock('#/storage/keychain', () => ({

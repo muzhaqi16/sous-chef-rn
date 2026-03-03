@@ -5,16 +5,12 @@ import { DeleteAccountScreen } from '../DeleteAccountScreen';
 
 // --- Mocks ---
 
-const mockGoBack = jest.fn();
 const mockLogout = jest.fn();
 const mockDeleteAccount = jest.fn().mockResolvedValue({});
 const mockRefetch = jest.fn();
 
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    goBack: mockGoBack,
-  }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
 
 jest.mock('#hooks/auth/useAuth', () => ({
   useAuth: () => ({
@@ -122,13 +118,13 @@ describe('DeleteAccountScreen - delete form', () => {
   it('calls goBack when header back is pressed', () => {
     render(<DeleteAccountScreen />);
     fireEvent.press(screen.getByTestId('header-back'));
-    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 
   it('calls goBack when Cancel button is pressed', () => {
     render(<DeleteAccountScreen />);
     fireEvent.press(screen.getByText('Cancel'));
-    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 });
 

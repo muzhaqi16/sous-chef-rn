@@ -4,15 +4,8 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 
 // Mock tokenScheduler and refreshToken
-jest.mock('../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../apollo/links/refreshToken', () => ({
-  proactiveTokenRefresh: jest.fn(),
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../apollo/links/tokenScheduler');
+jest.mock('../../apollo/links/refreshToken');
 
 // Mock useDeepLinkRouter
 jest.mock('#hooks/deepLink/useDeepLinkRouter', () => ({

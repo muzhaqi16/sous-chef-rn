@@ -4,25 +4,10 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { NotificationListScreen } from '../NotificationListScreen';
 
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
-const mockNavigate = jest.fn();
-const mockNavigateTo = { shoppingListMain: jest.fn(), pantryMain: jest.fn(), profile: jest.fn() };
-const mockGoBack = jest.fn();
-
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    navigate: mockNavigate,
-    navigateTo: mockNavigateTo,
-    goBack: mockGoBack,
-  }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/notifications/useNotifications', () => ({
   useNotifications: jest.fn(() => ({
@@ -35,9 +20,7 @@ jest.mock('#hooks/notifications/useNotifications', () => ({
   })),
 }));
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#components/notifications/NotificationItem', () => ({
   NotificationItem: () => null,

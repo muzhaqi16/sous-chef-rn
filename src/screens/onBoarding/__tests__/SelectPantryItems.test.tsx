@@ -4,8 +4,8 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { SelectPantryItems } from '../SelectPantryItems';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 const mockNavigateToNextStep = jest.fn();
 const mockNavigateToPreviousStep = jest.fn();
@@ -72,15 +72,11 @@ jest.mock('#hooks/useSelectableItems', () => ({
     isMaxReached: false,
   })),
 }));
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
   OnBoardingWrapper: ({ title, subtitle, children, testID }: any) => {

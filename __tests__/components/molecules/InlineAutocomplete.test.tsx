@@ -5,13 +5,8 @@ import { Text } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { InlineAutocomplete } from '../../../src/components/molecules/InlineAutocomplete';
 
-jest.mock('../../../src/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../src/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../src/apollo/links/tokenScheduler');
+jest.mock('../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../src/components/atoms/Label', () => ({
   Label: ({ children }: any) => {

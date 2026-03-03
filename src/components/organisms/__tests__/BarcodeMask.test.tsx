@@ -3,8 +3,8 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import BarcodeMask from '../BarcodeMask';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ scheduleTokenRefresh: jest.fn(), cancelScheduledRefresh: jest.fn() }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 jest.mock('react-native-svg', () => {
   const { View } = require('react-native');
   return {

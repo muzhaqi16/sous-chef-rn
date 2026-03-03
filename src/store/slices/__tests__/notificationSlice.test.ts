@@ -7,13 +7,8 @@ import {
 import { NotificationType } from '#/graphql/generated';
 
 // Mock authSlice dependencies
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelTokenRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  proactiveTokenRefresh: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const testUser = {
   id: 'user-1',

@@ -3,17 +3,15 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { PurchaseHistoryScreen } from '../PurchaseHistoryScreen';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ scheduleTokenRefresh: jest.fn(), cancelScheduledRefresh: jest.fn() }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
   Icon: ({ name }: any) => {
     const { Text } = require('react-native');
     return <Text>{name}</Text>;
   },
 }));
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ goBack: jest.fn() }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#components/atoms/BackButton', () => ({
   BackButton: ({ onPress }: any) => {
     const { Pressable, Text } = require('react-native');

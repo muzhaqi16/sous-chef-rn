@@ -15,13 +15,8 @@ jest.mock('#store/useAppStore', () => ({
     selector({ isOnline: mockIsOnline, cachedUnits: mockCachedUnits }),
 }));
 
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const mockSearchUnitsData = { searchUnits: [] as UnitItem[] };
 const mockUseSearchUnitsQuery = jest.fn<any, [any]>(() => ({

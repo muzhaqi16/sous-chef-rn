@@ -4,8 +4,8 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { OnBoardingWrapper } from '../OnBoardingWrapper';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ scheduleTokenRefresh: jest.fn(), cancelScheduledRefresh: jest.fn() }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 jest.mock('#components/atoms/BackButton', () => ({
   BackButton: ({ onPress, testID }: any) => {
     const { Pressable, Text: RNText } = require('react-native');

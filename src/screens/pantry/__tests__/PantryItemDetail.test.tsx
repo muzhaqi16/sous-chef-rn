@@ -5,24 +5,12 @@ import { render, screen } from '@testing-library/react-native';
 import { PantryItemDetail } from '../PantryItemDetail';
 
 // --- Break circular deps ---
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 // --- Navigation ---
-const mockGoBack = jest.fn();
-const mockNavigate = jest.fn();
-const mockNavigateTo = {
-  pantryItem: jest.fn(),
-  shoppingListMain: jest.fn(),
-  nutritionScreen: jest.fn(),
-};
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    navigate: mockNavigate,
-    navigateTo: mockNavigateTo,
-    goBack: mockGoBack,
-  }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
 
 // --- Store ---
 jest.mock('#store/useAppStore', () => {
@@ -131,12 +119,16 @@ jest.mock('#/services/errorService', () => ({
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeWithLoadingState: jest.fn(),
   executeMutationWithErrorHandler: jest.fn(),
+  executeMutation: jest.fn(),
+  executeCacheUpdate: jest.fn(),
+  executeQuery: jest.fn(),
+  executeRefetch: jest.fn(),
+  executeRefreshWithFinally: jest.fn(),
+  executeAsyncWithCleanup: jest.fn(),
 }));
 
 // --- Performance ---
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
 // --- Child component mocks ---
 jest.mock('#components/molecules/Header', () => ({
@@ -1829,7 +1821,7 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
     render(<PantryItemDetail route={route} />);
     const editAction = capturedRightActions!.find((a: any) => a.testID === 'pantry-item-edit-button');
     editAction.onPress();
-    expect(mockNavigateTo.pantryItem).toHaveBeenCalledWith({ itemId: 'pi1' });
+    expect(mockNav.navigateTo.pantryItem).toHaveBeenCalledWith({ itemId: 'pi1' });
 
     // Restore header mock
     mockHeader.Header = jest.fn(({ rightActions, ...props }: any) => {

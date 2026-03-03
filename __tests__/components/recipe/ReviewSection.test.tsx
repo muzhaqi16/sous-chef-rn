@@ -4,13 +4,8 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { ReviewSection } from '../../../src/components/recipe/ReviewSection';
 
-jest.mock('../../../src/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../src/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../src/apollo/links/tokenScheduler');
+jest.mock('../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../src/components/recipe/RatingBreakdown', () => ({
   RatingBreakdown: () => 'RatingBreakdown',

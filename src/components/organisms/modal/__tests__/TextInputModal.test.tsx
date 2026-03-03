@@ -3,12 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { TextInputModal } from '../TextInputModal';
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: (fn: () => Promise<void>, setLoading: (v: boolean) => void, onError: (e: unknown) => void) => {
-    setLoading(true);
-    fn().then(() => setLoading(false)).catch((e: unknown) => { setLoading(false); onError(e); });
-  },
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 describe('TextInputModal', () => {
   const defaultProps = {

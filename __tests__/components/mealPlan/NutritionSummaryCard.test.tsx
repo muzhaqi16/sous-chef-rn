@@ -4,13 +4,8 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { NutritionSummaryCard } from '../../../src/components/mealPlan/NutritionSummaryCard';
 
-jest.mock('../../../src/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../src/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../src/apollo/links/tokenScheduler');
+jest.mock('../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../src/components/mealPlan/NutritionGoalProgress', () => ({
   NutritionGoalProgress: () => null,

@@ -5,13 +5,8 @@ import { Alert } from 'react-native';
 import { useRecipeSearch } from '../useRecipeSearch';
 
 // Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: jest.fn(() => ({
@@ -24,14 +19,8 @@ jest.mock('@react-navigation/native', () => ({
   })),
 }));
 
-const mockNavigate = jest.fn();
-const mockGoBack = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: jest.fn(() => ({
-    navigate: mockNavigate,
-    goBack: mockGoBack,
-  })),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
 
 jest.mock('#hooks/home/useDefaultHome', () => ({
   useDefaultHome: jest.fn(() => ({
@@ -68,9 +57,7 @@ jest.mock('@gorhom/bottom-sheet', () => ({
   BottomSheetModal: 'BottomSheetModal',
 }));
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#generated', () => ({
   useGetHomeQuery: jest.fn(() => ({ data: null })),
@@ -86,16 +73,7 @@ jest.mock('#/utils/recipeTransform', () => ({
   })),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(async (fn: any, onError: any) => {
-    try {
-      return await fn();
-    } catch (e) {
-      onError(e);
-      return null;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
 
@@ -228,7 +206,7 @@ describe('useRecipeSearch', () => {
     });
 
     // No navigate since item wasn't found
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockNav.navigate).not.toHaveBeenCalled();
   });
 
   // --- Additional branch / function coverage tests ---
@@ -611,7 +589,7 @@ describe('useRecipeSearch', () => {
       result.current.handleItemPress('42');
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith('RecipeDetail', {
+    expect(mockNav.navigate).toHaveBeenCalledWith('RecipeDetail', {
       externalSource: 'SPOONACULAR',
       externalId: '42',
     });
@@ -876,7 +854,7 @@ describe('useRecipeSearch', () => {
 
   it('goBack returns the goBack function from navigation', () => {
     const { result } = renderHook(() => useRecipeSearch());
-    expect(result.current.goBack).toBe(mockGoBack);
+    expect(result.current.goBack).toBe(mockNav.goBack);
   });
 
   it('items transforms search results for display', async () => {

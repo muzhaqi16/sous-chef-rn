@@ -4,30 +4,10 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { SearchResultsScreen } from '../SearchResultsScreen';
 
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
-const mockGoBack = jest.fn();
-const mockNavigation = {
-  getParent: jest.fn().mockReturnValue({
-    getParent: jest.fn().mockReturnValue({
-      canGoBack: jest.fn().mockReturnValue(true),
-      goBack: jest.fn(),
-    }),
-  }),
-};
-
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    goBack: mockGoBack,
-    navigation: mockNavigation,
-  }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockHideBottomSheet = jest.fn();
 const mockShowBottomSheet = jest.fn();

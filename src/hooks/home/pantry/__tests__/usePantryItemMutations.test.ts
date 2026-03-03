@@ -4,13 +4,8 @@ import { renderHook, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { usePantryItemMutations } from '../usePantryItemMutations';
 
-jest.mock('../../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../../apollo/links/tokenScheduler');
+jest.mock('../../../../apollo/links/refreshToken');
 
 const mockCreatePantryItem = jest.fn();
 const mockUpdatePantryItem = jest.fn();
@@ -81,17 +76,7 @@ jest.mock('../utils', () => ({
   removeFromPantryItemsCache: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-  executeMutationWithErrorHandler: jest.fn(async (fn: () => Promise<any>, onError?: (e: any) => void) => {
-    try {
-      return await fn();
-    } catch (e) {
-      if (onError) onError(e);
-      return false;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
 

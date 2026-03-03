@@ -4,13 +4,8 @@ import { useOnboardingNavigation } from '../useOnboardingNavigation';
 import { OnBoardingSteps } from '#store/slices/navigationSlice';
 
 // Break circular dependency chain
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const mockDispatch = jest.fn();
 const mockGetState = jest.fn();

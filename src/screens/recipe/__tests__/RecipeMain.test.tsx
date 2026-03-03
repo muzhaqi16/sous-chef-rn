@@ -6,13 +6,8 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { RecipeMain } from '../RecipeMain';
 
 // Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: jest.fn(() => ({
@@ -22,20 +17,13 @@ jest.mock('@react-navigation/native', () => ({
   })),
 }));
 
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: jest.fn(() => ({
-    navigate: jest.fn(),
-    goBack: jest.fn(),
-  })),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
   useTabBarAddButton: jest.fn(),
 }));
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#hooks/performance/useRenderTime', () => ({
   useRenderTime: jest.fn(),
@@ -80,18 +68,7 @@ jest.mock('#generated', () => ({
   MySavedRecipesDocument: {},
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(async (fn: any, setLoading: any, onError?: any) => {
-    setLoading(true);
-    try {
-      return await fn();
-    } catch (e) {
-      onError?.(e);
-    } finally {
-      setLoading(false);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 // Top-level capturing mocks.
 // Using module-level handler variables avoids the jest.mock()-inside-test-body

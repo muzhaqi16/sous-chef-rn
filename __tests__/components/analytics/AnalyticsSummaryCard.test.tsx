@@ -4,13 +4,8 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { AnalyticsSummaryCard } from '../../../src/components/analytics/AnalyticsSummaryCard';
 
-jest.mock('../../../src/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../src/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../src/apollo/links/tokenScheduler');
+jest.mock('../../../src/apollo/links/refreshToken');
 
 describe('AnalyticsSummaryCard', () => {
   it('renders title and value', () => {

@@ -4,13 +4,9 @@ import { CombinedGraphQLErrors } from '@apollo/client/errors';
 
 // --- Mocks must be defined before imports ---
 
-const mockAttemptTokenRefresh = jest.fn();
-const mockGetRefreshState = jest.fn(() => ({ isRefreshing: false }));
-
-jest.mock('#/apollo/links/refreshToken', () => ({
-  attemptTokenRefresh: (...args: any[]) => mockAttemptTokenRefresh(...args),
-  getRefreshState: () => mockGetRefreshState(),
-}));
+jest.mock('#/apollo/links/refreshToken');
+const { attemptTokenRefresh: mockAttemptTokenRefresh, getRefreshState: mockGetRefreshState } =
+  jest.requireMock('#/apollo/links/refreshToken') as { attemptTokenRefresh: jest.Mock; getRefreshState: jest.Mock };
 
 jest.mock('#utils/subscriptionErrorHandler', () => ({
   isKnownServerError: jest.fn((error: any) => {

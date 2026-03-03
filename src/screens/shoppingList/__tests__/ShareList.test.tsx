@@ -4,12 +4,10 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { ShareList } from '../ShareList';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ navigateTo: { homeManagement: jest.fn() } }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
   const selectUser = (s: any) => s.user;
@@ -50,12 +48,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn((fn, setLoading, onError) => {
-    setLoading(true);
-    fn().then(() => setLoading(false)).catch((e: any) => { setLoading(false); if (onError) onError(e); });
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/molecules/Header', () => ({
   Header: ({ title }: any) => {

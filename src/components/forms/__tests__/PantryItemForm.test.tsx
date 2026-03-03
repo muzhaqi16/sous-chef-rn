@@ -79,15 +79,7 @@ jest.mock('#/utils/fractionUtils', () => ({
   parseFractionalInput: jest.fn((input: string) => parseFloat(input) || 0),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(async (asyncFn: () => Promise<void>, onError: (e: unknown) => void) => {
-    try {
-      await asyncFn();
-    } catch (e) {
-      onError(e);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/molecules/FormInput', () => ({
   FormInput: ({ label, placeholder }: any) => {
@@ -171,14 +163,9 @@ jest.mock('../StorageDetailsSection', () => ({
   },
 }));
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
 
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/refreshToken');
 
 describe('PantryItemForm', () => {
   beforeEach(() => {

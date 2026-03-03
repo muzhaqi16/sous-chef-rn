@@ -3,8 +3,8 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { ItemDetailBottomSheet } from '../ItemDetailBottomSheet';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ scheduleTokenRefresh: jest.fn(), cancelScheduledRefresh: jest.fn() }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 jest.mock('#components/organisms/QuantitySelector', () => {
   const { View, Text } = require('react-native');
   return {
@@ -22,9 +22,7 @@ jest.mock('#generated', () => ({
   useUpdateShoppingListItemMutation: () => [jest.fn(), { loading: false }],
   useGetCommonUnitsQuery: () => ({ data: { units: [] } }),
 }));
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn((fn) => fn()),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 describe('ItemDetailBottomSheet', () => {
   const defaultProps = {

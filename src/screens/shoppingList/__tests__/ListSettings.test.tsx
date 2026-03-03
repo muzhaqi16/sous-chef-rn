@@ -4,14 +4,10 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { ListSettings } from '../ListSettings';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-const mockGoBack = jest.fn();
-const mockNavigate = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate, navigateTo: {} }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
   const fn = (selector: any) => selector({
@@ -72,15 +68,7 @@ jest.mock('#/services/toastService', () => ({
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: { registerParentDeletion: jest.fn(), unregisterParentDeletion: jest.fn() },
 }));
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn((fn, setLoading, onError) => {
-    setLoading(true);
-    fn().then(() => setLoading(false)).catch((e: any) => { setLoading(false); if (onError) onError(e); });
-  }),
-  executeMutationWithErrorHandler: jest.fn((fn, onError) => {
-    fn().catch((e: any) => { if (onError) onError(e); });
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#utils/ownershipHelpers', () => ({
   isShoppingListOwner: jest.fn(() => true),
   getShoppingListRole: jest.fn(() => 'OWNER'),
