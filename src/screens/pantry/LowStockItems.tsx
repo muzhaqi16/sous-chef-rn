@@ -33,7 +33,7 @@ export const LowStockItems: React.FC = () => {
   const { addLowStockToShoppingList, loading: addAllLoading } =
     useAddLowStockToShoppingList({ homeId: selectedHomeId ?? undefined });
 
-  const { allItems, loading, refetch, loadMore, hasMore, isLoadingMore } = usePantryManagement(pantry?.id);
+  const { items: allItems, loading, refetch, loadMore, hasMore, isLoadingMore } = usePantryManagement(pantry?.id);
   const [addToShoppingList] = useAddItemToShoppingListMutation();
 
   // Progressively load all pages so the isLowStock filter sees every item

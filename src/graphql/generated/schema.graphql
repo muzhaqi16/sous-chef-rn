@@ -5423,6 +5423,7 @@ input PantryItemOrderBy {
   createdAt: SortOrder
   currentQuantity: SortOrder
   expiresAt: SortOrder
+  itemName: SortOrder
   priority: SortOrder
 }
 

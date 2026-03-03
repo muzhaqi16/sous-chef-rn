@@ -300,7 +300,7 @@ export const InvitationAcceptanceModal: React.FC<
             <View style={styles.iconContainer}>
               <Icon
                 name={
-                  invitation.type === 'HOME_INVITE' ? 'home' : 'shopping-cart'
+                  invitation.type === 'HOME_INVITE' ? 'home' : 'cart'
                 }
                 size={32}
                 color={theme.colors.primary}
@@ -328,7 +328,7 @@ export const InvitationAcceptanceModal: React.FC<
             <View style={styles.entityContainer}>
               <Icon
                 name={
-                  invitation.type === 'HOME_INVITE' ? 'home' : 'shopping-cart'
+                  invitation.type === 'HOME_INVITE' ? 'home' : 'cart'
                 }
                 size={16}
                 color={theme.colors.textSecondary}

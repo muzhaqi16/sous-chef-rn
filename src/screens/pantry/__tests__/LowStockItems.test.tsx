@@ -33,7 +33,7 @@ let mockLoading = false;
 
 jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
   usePantryManagement: () => ({
-    allItems: mockAllItems,
+    items: mockAllItems,
     loading: mockLoading,
     refetch: jest.fn(() => Promise.resolve()),
     loadMore: jest.fn(),

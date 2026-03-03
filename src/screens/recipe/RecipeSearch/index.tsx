@@ -148,7 +148,7 @@ export const RecipeSearch: React.FC = () => {
 
   const emptyStateConfig = searchPerformed
     ? {
-        icon: 'search-off',
+        icon: 'search-outline',
         title: 'No recipes found',
         description: 'Try a different search term or different ingredients',
         ...(hasPantryItems && { action: { label: 'Search by Ingredients', onPress: openIngredientSelector } }) }

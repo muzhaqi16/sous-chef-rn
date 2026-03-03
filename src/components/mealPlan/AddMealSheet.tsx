@@ -72,7 +72,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
-    snapPoints: ['80%'] });
+    snapPoints: ['65%', '85%'] });
 
   const [selectedMealType, setSelectedMealType] = useState<MealType>(MealType.Dinner);
   const [searchQuery, setSearchQuery] = useState('');
@@ -200,7 +200,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   const hasQuery = searchQuery.trim().length > 0;
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
+    <BottomSheetModal ref={ref} {...modalProps} android_keyboardInputMode="adjustResize">
       <View style={[styles.content, contentContainerStyle]}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Add a meal</Text>

@@ -31,11 +31,15 @@ jest.mock('#store/useAppStore', () => {
       setPantrySortDirection: jest.fn(),
       pendingPantryScrollToTop: false,
       setPendingPantryScrollToTop: jest.fn(),
+      isOnline: true,
     });
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn };
+  return {
+    useAppStore: fn,
+    selectIsOnline: (s: any) => s.isOnline,
+  };
 });
 
 // --- Auth ---
@@ -47,11 +51,8 @@ jest.mock('#hooks/auth/useAuth', () => ({
 jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
   usePantryManagement: () => ({
     items: [],
-    allItems: [],
     stats: { totalItems: 0, expiringItems: 0, lowStockItems: 0 },
     totalCount: 0,
-    searchQuery: '',
-    setSearchQuery: jest.fn(),
     removeItem: jest.fn(),
     refetch: jest.fn(),
     loading: false,

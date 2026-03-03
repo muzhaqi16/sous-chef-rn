@@ -31,7 +31,7 @@ jest.mock('#hooks/home/useDefaultHome', () => ({
 
 jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
   usePantryManagement: jest.fn(() => ({
-    allItems: [
+    items: [
       { id: '1', itemName: 'Chicken' },
       { id: '2', itemName: 'Rice' },
     ],

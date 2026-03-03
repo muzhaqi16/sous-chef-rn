@@ -277,7 +277,29 @@ export function makeCache(): InMemoryCache {
               });
             },
           },
-          itemsConnection: itemsConnectionFieldPolicy(),
+          itemsConnection: {
+            keyArgs: ['filters', 'orderBy'],
+            merge(existing: any, incoming: any, { args, readField }: any) {
+              if (!incoming) return existing;
+              if (!existing || !args?.after) return incoming;
+
+              // Pagination: merge edges with deduplication by node ID
+              const edgeMap = new Map();
+              (existing.edges || []).forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) edgeMap.set(id, edge);
+              });
+              (incoming.edges || []).forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) edgeMap.set(id, edge);
+              });
+
+              return {
+                ...incoming,
+                edges: Array.from(edgeMap.values()),
+              };
+            },
+          },
           storageLocationsConnection: mergeConnectionByNodeId('after'),
           suggestions: {
             merge(existing = [], incoming) {

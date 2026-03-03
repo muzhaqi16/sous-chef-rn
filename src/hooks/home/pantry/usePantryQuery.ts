@@ -9,14 +9,12 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { useGetPantryQuery, type PantryItemFilters } from '#generated';
+import { useGetPantryQuery, type PantryItemFilters, type PantryItemOrderBy } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { usePagination } from '#/hooks/utils/usePagination';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
-import { useSearchableList } from '../../useSearchableList';
-import { pantryItemSearch } from '#/utils/searchUtils';
 import { useAppStore, selectIsHomeSelectionReady, selectSetIsPantryQueryComplete } from '#store/useAppStore';
 
 // Module-level helpers — outside hook body so React Compiler doesn't bail out on try-catch
@@ -57,13 +55,14 @@ async function executeAutoRefetch(
  *
  * @example
  * ```tsx
- * const { pantryItems, loading, loadMore, hasMore, searchQuery, setSearchQuery } =
- *   usePantryQuery(pantryId);
+ * const { pantryItems, loading, loadMore, hasMore } =
+ *   usePantryQuery(pantryId, filter, orderBy);
  * ```
  */
 export function usePantryQuery(
   pantryId: string | undefined,
   itemsFilter?: PantryItemFilters | null,
+  itemsOrderBy?: PantryItemOrderBy | null,
 ) {
   const { isLoggedOut } = useAuth();
   const isHomeSelectionReady = useAppStore(selectIsHomeSelectionReady);
@@ -75,8 +74,9 @@ export function usePantryQuery(
   const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
     variables: {
       id: pantryId || '',
-      itemsFirst: 25, // Initial page size
+      itemsFirst: 50,
       itemsFilter: itemsFilter ?? undefined,
+      itemsOrderBy: itemsOrderBy ?? undefined,
       storageLocationsFirst: 25 },
     skip: !hasValidPantryId,
     fetchPolicy: 'cache-and-network',
@@ -98,19 +98,13 @@ export function usePantryQuery(
   // Filter out items that are pending deletion to prevent flicker
   const pantryItems = subscriptionService.filterPendingDeletes(preservedItems);
 
-  // Search functionality
-  const {
-    query: searchQuery,
-    setQuery: setSearchQuery,
-    filtered: filteredItems } = useSearchableList(pantryItems, pantryItemSearch);
-
   // Pagination using generic utility hook
   const { hasMore, loadMore, isLoadingMore } = usePagination({
     pageInfo: normalizedPantry?.itemsPageInfo,
     loading,
     itemCount: pantryItems.length,
     fetchMore,
-    fetchMoreVariables: { id: pantryId },
+    fetchMoreVariables: { id: pantryId, itemsOrderBy: itemsOrderBy ?? undefined },
     cursorVariableName: 'itemsCursor' });
 
   // Wrap refetch to track pull-to-refresh state
@@ -158,7 +152,6 @@ export function usePantryQuery(
 
   return {
     pantryItems,
-    filteredItems,
     normalizedPantry,
     stats,
     totalCount,
@@ -171,8 +164,5 @@ export function usePantryQuery(
     hasMore,
     loadMore,
     isLoadingMore,
-
-    // Search
-    searchQuery,
-    setSearchQuery };
+  };
 }

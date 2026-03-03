@@ -1,5 +1,5 @@
-import { filterByLocation, isBuiltInFilter } from '../pantryFilters';
-import { StorageState } from '#generated';
+import { filterByLocation, isBuiltInFilter, sortOptionToOrderBy } from '../pantryFilters';
+import { StorageState, SortOrder } from '#generated';
 
 describe('isBuiltInFilter', () => {
   it('returns true for "all"', () => {
@@ -62,5 +62,39 @@ describe('filterByLocation', () => {
 
   it('handles empty items array', () => {
     expect(filterByLocation([], 'fridge')).toEqual([]);
+  });
+});
+
+describe('sortOptionToOrderBy', () => {
+  it('maps "name" + "asc" to { itemName: SortOrder.Asc }', () => {
+    expect(sortOptionToOrderBy('name', 'asc')).toEqual({ itemName: SortOrder.Asc });
+  });
+
+  it('maps "name" + "desc" to { itemName: SortOrder.Desc }', () => {
+    expect(sortOptionToOrderBy('name', 'desc')).toEqual({ itemName: SortOrder.Desc });
+  });
+
+  it('maps "expiry" + "asc" to { expiresAt: SortOrder.Asc }', () => {
+    expect(sortOptionToOrderBy('expiry', 'asc')).toEqual({ expiresAt: SortOrder.Asc });
+  });
+
+  it('maps "expiry" + "desc" to { expiresAt: SortOrder.Desc }', () => {
+    expect(sortOptionToOrderBy('expiry', 'desc')).toEqual({ expiresAt: SortOrder.Desc });
+  });
+
+  it('maps "quantity" + "asc" to { currentQuantity: SortOrder.Asc }', () => {
+    expect(sortOptionToOrderBy('quantity', 'asc')).toEqual({ currentQuantity: SortOrder.Asc });
+  });
+
+  it('maps "quantity" + "desc" to { currentQuantity: SortOrder.Desc }', () => {
+    expect(sortOptionToOrderBy('quantity', 'desc')).toEqual({ currentQuantity: SortOrder.Desc });
+  });
+
+  it('maps "recent" + "asc" to { addedAt: SortOrder.Asc }', () => {
+    expect(sortOptionToOrderBy('recent', 'asc')).toEqual({ addedAt: SortOrder.Asc });
+  });
+
+  it('maps "recent" + "desc" to { addedAt: SortOrder.Desc }', () => {
+    expect(sortOptionToOrderBy('recent', 'desc')).toEqual({ addedAt: SortOrder.Desc });
   });
 });

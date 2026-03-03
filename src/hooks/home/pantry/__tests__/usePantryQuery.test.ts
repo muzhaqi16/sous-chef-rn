@@ -54,17 +54,6 @@ jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
   usePreservedArrayData: (data: any) => data || [],
 }));
 
-jest.mock('../../../useSearchableList', () => ({
-  useSearchableList: jest.fn((items: any[]) => ({
-    query: '',
-    setQuery: jest.fn(),
-    filtered: items,
-  })),
-}));
-
-jest.mock('#/utils/searchUtils', () => ({
-  pantryItemSearch: jest.fn(),
-}));
 
 const mockSetIsPantryQueryComplete = jest.fn();
 jest.mock('#store/useAppStore', () => ({
@@ -141,11 +130,29 @@ describe('usePantryQuery', () => {
     expect(result.current.totalCount).toBe(1);
   });
 
-  it('exposes search query and setter', () => {
-    const { result } = renderHook(() => usePantryQuery('pantry-1'));
+  it('passes itemsOrderBy to query variables', () => {
+    const { useGetPantryQuery, SortOrder } = require('#generated');
+    const orderBy = { itemName: SortOrder.Asc };
 
-    expect(result.current.searchQuery).toBe('');
-    expect(typeof result.current.setSearchQuery).toBe('function');
+    renderHook(() => usePantryQuery('pantry-1', null, orderBy));
+
+    expect(useGetPantryQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: expect.objectContaining({ itemsOrderBy: orderBy }),
+      }),
+    );
+  });
+
+  it('passes itemsFirst as 50', () => {
+    const { useGetPantryQuery } = require('#generated');
+
+    renderHook(() => usePantryQuery('pantry-1'));
+
+    expect(useGetPantryQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: expect.objectContaining({ itemsFirst: 50 }),
+      }),
+    );
   });
 
   it('provides refetch that tracks refreshing state', async () => {
