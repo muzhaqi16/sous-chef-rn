@@ -43,8 +43,6 @@ describe('localNotificationHelper', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'log').mockImplementation();
-    jest.spyOn(console, 'error').mockImplementation();
     // Reset module to clear cached channel state
     jest.resetModules();
     const mod = require('../localNotificationHelper');
@@ -54,10 +52,6 @@ describe('localNotificationHelper', () => {
     getBadgeCount = mod.getBadgeCount;
     setBadgeCount = mod.setBadgeCount;
     setupNotificationHandlers = mod.setupNotificationHandlers;
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
   });
 
   describe('showLocalNotification', () => {

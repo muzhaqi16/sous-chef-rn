@@ -75,6 +75,10 @@ describe('resetManager', () => {
       it('accepts a string scenario name', async () => {
         await resetManager.resetStore('LOGOUT');
         expect(mockSet).toHaveBeenCalled();
+        expect(console.error).toHaveBeenCalledWith(
+          expect.stringContaining('Error clearing Apollo cache:'),
+          expect.anything(),
+        );
       });
 
       it('accepts a custom ResetOptions object', async () => {
@@ -126,6 +130,10 @@ describe('resetManager', () => {
         await resetManager.resetStore({ auth: false, ui: false, preferences: false, clearApolloCache: true });
         // Verify set was still called (reset continues despite cache clear error)
         expect(mockSet).toHaveBeenCalled();
+        expect(console.error).toHaveBeenCalledWith(
+          expect.stringContaining('Error clearing Apollo cache:'),
+          expect.anything(),
+        );
       });
 
       it('skips Apollo cache clearing when clearApolloCache is false', async () => {
@@ -158,6 +166,10 @@ describe('resetManager', () => {
         await resetManager.resetStore({ auth: false, ui: false, preferences: false, clearApolloCache: true });
         // Should not throw, and set should still be called
         expect(mockSet).toHaveBeenCalled();
+        expect(console.error).toHaveBeenCalledWith(
+          expect.stringContaining('Error clearing Apollo cache:'),
+          expect.anything(),
+        );
       });
 
       it('does not reset auth state when auth option is false', async () => {
@@ -175,6 +187,10 @@ describe('resetManager', () => {
         // Should have called set with auth reset and then navigationState: 'auth'
         const lastCall = mockSet.mock.calls[mockSet.mock.calls.length - 1][0];
         expect(lastCall.navigationState).toBe('auth');
+        expect(console.error).toHaveBeenCalledWith(
+          expect.stringContaining('Error clearing Apollo cache:'),
+          expect.anything(),
+        );
       });
 
       it('sessionExpired resets with SESSION_EXPIRED scenario', async () => {
@@ -185,6 +201,10 @@ describe('resetManager', () => {
       it('fullReset resets with FULL_RESET scenario', async () => {
         await resetManager.fullReset();
         expect(mockSet).toHaveBeenCalled();
+        expect(console.error).toHaveBeenCalledWith(
+          expect.stringContaining('Error clearing Apollo cache:'),
+          expect.anything(),
+        );
       });
 
       it('resetOnboarding resets with ONBOARDING_RESET scenario', async () => {
@@ -199,6 +219,10 @@ describe('resetManager', () => {
           (call: any[]) => call[0]?.user === null && call[0]?.accessToken === null,
         );
         expect(authCall).toBeDefined();
+        expect(console.error).toHaveBeenCalledWith(
+          expect.stringContaining('Error clearing Apollo cache:'),
+          expect.anything(),
+        );
       });
 
       it('tokenRefreshFailed with clearCache=false uses SESSION_EXPIRED', async () => {

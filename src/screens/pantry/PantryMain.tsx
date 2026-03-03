@@ -179,12 +179,13 @@ const PantryMainInner: React.FC = () => {
   // Track totalCount from previous render using "adjusting state during render" pattern
   // (useState + conditional setState) to avoid reading ref.current during render.
   const [knownTotalCount, setKnownTotalCount] = useState(0);
+  const [allItemsLoaded, setAllItemsLoaded] = useState(false);
 
   // Debounce search for server-side path (300ms)
   const debouncedSearch = useDebouncedValue(searchQuery, 300);
 
   // Use server sort/search when data exceeds page size AND we're online
-  const useServerSort = shouldUseServerSort(knownTotalCount, DEFAULT_PAGE_SIZES.MEDIUM, isOnline);
+  const useServerSort = shouldUseServerSort(knownTotalCount, DEFAULT_PAGE_SIZES.MEDIUM, isOnline) && !allItemsLoaded;
 
   // Build query filter: merge location filter with server-side search when applicable
   const queryFilter = (() => {
@@ -213,8 +214,19 @@ const PantryMainInner: React.FC = () => {
 
   // Update knownTotalCount for next render's useServerSort decision
   // ("adjusting state during render" pattern — avoids reading ref.current during render)
-  if (totalCount > 0 && totalCount !== knownTotalCount) {
+  if (totalCount > 0 && totalCount !== knownTotalCount && !debouncedSearch) {
     setKnownTotalCount(totalCount);
+  }
+
+  // Track when all pages have been loaded — "adjusting state during render" pattern.
+  // Guard on !debouncedSearch: search results have their own hasMore that doesn't
+  // reflect the full dataset's pagination state.
+  if (!hasMore && !loading && totalCount > 0 && !allItemsLoaded && !debouncedSearch) {
+    setAllItemsLoaded(true);
+  }
+  // Reset when more data becomes available (items added, filter changed, refetch)
+  if (hasMore && allItemsLoaded) {
+    setAllItemsLoaded(false);
   }
 
   // PERF: Defer pantry items so Apollo cache updates (from subscriptions or

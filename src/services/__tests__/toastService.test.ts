@@ -51,16 +51,14 @@ describe('toastService', () => {
 
   describe('when not initialized', () => {
     it('logs a warning instead of crashing', () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
       // Create a fresh instance via the class
       const freshService = Object.create(toastService);
       freshService.showToastFn = null;
       freshService.success('test');
-      expect(warnSpy).toHaveBeenCalledWith(
+      expect(console.warn).toHaveBeenCalledWith(
         expect.stringContaining('Not initialized'),
         expect.any(String),
       );
-      warnSpy.mockRestore();
     });
   });
 

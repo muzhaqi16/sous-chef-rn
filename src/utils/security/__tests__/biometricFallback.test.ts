@@ -245,6 +245,10 @@ describe('BiometricManager', () => {
       );
       expect(result.success).toBe(true);
       expect(result.method).toBe('passcode');
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Biometric save failed, trying fallback:'),
+        expect.any(Error),
+      );
     });
 
     it('falls back to basic when passcode also fails', async () => {
@@ -259,6 +263,14 @@ describe('BiometricManager', () => {
       );
       expect(result.success).toBe(true);
       expect(result.method).toBe('basic');
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Biometric save failed'),
+        expect.any(Error),
+      );
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Passcode save failed'),
+        expect.any(Error),
+      );
     });
 
     it('returns error when all strategies fail', async () => {
@@ -271,6 +283,14 @@ describe('BiometricManager', () => {
       expect(result.success).toBe(false);
       expect(result.method).toBe('none');
       expect(result.error).toBeTruthy();
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Biometric save failed'),
+        expect.any(Error),
+      );
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Passcode save failed'),
+        expect.any(Error),
+      );
     });
 
     it('skips biometric when biometric not available', async () => {

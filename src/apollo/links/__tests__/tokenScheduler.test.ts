@@ -62,6 +62,9 @@ describe('tokenScheduler', () => {
 
       expect(getScheduleState().isScheduled).toBe(true);
       expect(callback).not.toHaveBeenCalled();
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('[TokenScheduler] Scheduling proactive refresh'),
+      );
     });
 
     it('does not schedule when token expires within the buffer window', () => {
@@ -74,6 +77,9 @@ describe('tokenScheduler', () => {
 
       expect(getScheduleState().isScheduled).toBe(false);
       expect(callback).not.toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('[TokenScheduler] Token expires too soon'),
+      );
     });
 
     it('calls the callback when the timer fires and device is online', () => {
@@ -88,6 +94,9 @@ describe('tokenScheduler', () => {
       jest.advanceTimersByTime(700 * 1000);
 
       expect(callback).toHaveBeenCalledTimes(1);
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('Proactive token refresh triggered'),
+      );
     });
 
     it('skips callback when device is offline', () => {
@@ -102,6 +111,9 @@ describe('tokenScheduler', () => {
       jest.advanceTimersByTime(700 * 1000);
 
       expect(callback).not.toHaveBeenCalled();
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('Skipping proactive refresh - device is offline'),
+      );
     });
 
     it('clears previous timer when scheduling a new one', () => {
@@ -123,6 +135,10 @@ describe('tokenScheduler', () => {
 
       // Only the second callback should be scheduled, not the first
       expect(callback1).not.toHaveBeenCalled();
+      // Both schedule calls should log
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('[TokenScheduler] Scheduling proactive refresh'),
+      );
     });
 
     it('handles jwt decode errors gracefully without throwing', () => {
@@ -135,6 +151,10 @@ describe('tokenScheduler', () => {
       }).not.toThrow();
 
       expect(getScheduleState().isScheduled).toBe(false);
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to decode token for scheduling:'),
+        expect.any(Error),
+      );
     });
 
     it('handles callback errors gracefully', async () => {
@@ -146,7 +166,12 @@ describe('tokenScheduler', () => {
 
       // Should not throw when callback fails
       jest.advanceTimersByTime(700 * 1000);
+      await Promise.resolve(); // flush the rejected promise
       expect(callback).toHaveBeenCalledTimes(1);
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('Proactive refresh failed:'),
+        expect.any(Error),
+      );
     });
   });
 
@@ -161,6 +186,9 @@ describe('tokenScheduler', () => {
 
       cancelTokenRefresh();
       expect(getScheduleState().isScheduled).toBe(false);
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('Scheduled refresh cancelled'),
+      );
     });
 
     it('is safe to call when no timer is active', () => {

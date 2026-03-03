@@ -227,7 +227,6 @@ describe('useOnboardingNavigation', () => {
 
     it('returns false when no user exists', () => {
       mockUser = null;
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       const { result } = renderHook(() => useOnboardingNavigation());
 
       let returnVal: boolean | undefined;
@@ -237,7 +236,6 @@ describe('useOnboardingNavigation', () => {
 
       expect(returnVal).toBe(false);
       expect(mockSetOnboarded).not.toHaveBeenCalled();
-      consoleSpy.mockRestore();
     });
   });
 

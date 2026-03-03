@@ -61,7 +61,6 @@ describe('useItemSelector', () => {
 
   describe('handleSelect', () => {
     it('updates selectedId and calls onSelect callback', () => {
-      const spy = jest.spyOn(console, 'log').mockImplementation();
       const onSelect = jest.fn();
       const { result } = renderHook(() =>
         useItemSelector({
@@ -77,7 +76,6 @@ describe('useItemSelector', () => {
 
       expect(result.current.selectedId).toBe('1');
       expect(onSelect).toHaveBeenCalledWith('1', { id: '1', name: 'Test' });
-      spy.mockRestore();
     });
   });
 

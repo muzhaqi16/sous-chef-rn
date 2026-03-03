@@ -180,15 +180,11 @@ describe('createAddToQueryFieldUpdater', () => {
     cache.modify.mockImplementation(() => {
       throw new Error('cache error');
     });
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
     expect(() => addToHomes(cache, { id: '1', __typename: 'Home' } as any)).not.toThrow();
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('Cache update failed for adding to homes'),
       expect.any(Error),
     );
-
-    warnSpy.mockRestore();
   });
 });
 
@@ -332,12 +328,8 @@ describe('createAddToKeyedQueryFieldUpdater', () => {
     cache.modify.mockImplementation(() => {
       throw new Error('fail');
     });
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
     expect(() => addToItems(cache, { id: '1' }, 'list-1')).not.toThrow();
-    expect(warnSpy).toHaveBeenCalled();
-
-    warnSpy.mockRestore();
+    expect(console.warn).toHaveBeenCalled();
   });
 });
 
@@ -408,12 +400,8 @@ describe('createRemoveFromQueryFieldUpdater', () => {
     cache.modify.mockImplementation(() => {
       throw new Error('fail');
     });
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
     expect(() => removeFromHomes(cache, 'home-1')).not.toThrow();
-    expect(warnSpy).toHaveBeenCalled();
-
-    warnSpy.mockRestore();
+    expect(console.warn).toHaveBeenCalled();
   });
 });
 
@@ -795,16 +783,13 @@ describe('createAddToParentConnectionUpdater', () => {
     );
     const cache = createMockCache();
     cache.identify.mockReturnValue(undefined);
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
     add(cache, 'p-missing', { id: 'pi-1', __typename: 'PantryItem' } as any);
 
     expect(cache.modify).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('Parent entity not found'),
     );
-
-    warnSpy.mockRestore();
   });
 
   it('does not update totalCount when updateTotalCount is false', () => {
@@ -924,16 +909,13 @@ describe('createAddToParentArrayUpdater', () => {
     const addToItems = createAddToParentArrayUpdater('Pantry', 'items');
     const cache = createMockCache();
     cache.identify.mockReturnValue(undefined);
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
     addToItems(cache, 'p-missing', { id: 'item-1', __typename: 'PantryItem' } as any);
 
     expect(cache.modify).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('Parent entity not found'),
     );
-
-    warnSpy.mockRestore();
   });
 
   it('returns existing items when toReference returns undefined', () => {
@@ -1087,16 +1069,13 @@ describe('createRemoveFromParentConnectionUpdater', () => {
     );
     const cache = createMockCache();
     cache.identify.mockReturnValue(undefined);
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
     remove(cache, 'p-missing', 'pi-1');
 
     expect(cache.modify).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('Parent entity not found'),
     );
-
-    warnSpy.mockRestore();
   });
 
   it('does not update totalCount when updateTotalCount is false', () => {
@@ -1228,16 +1207,13 @@ describe('createRemoveFromParentArrayUpdater', () => {
     );
     const cache = createMockCache();
     cache.identify.mockReturnValue(undefined);
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
     remove(cache, 'p-missing', 'pi-1');
 
     expect(cache.modify).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('Parent entity not found'),
     );
-
-    warnSpy.mockRestore();
   });
 });
 
@@ -1274,14 +1250,10 @@ describe('createItemEvictor', () => {
     cache.evict.mockImplementation(() => {
       throw new Error('evict error');
     });
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
     expect(() => evictItem(cache, 'i-1')).not.toThrow();
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('Cache eviction failed'),
       expect.any(Object),
     );
-
-    warnSpy.mockRestore();
   });
 });

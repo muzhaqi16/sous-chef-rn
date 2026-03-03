@@ -180,6 +180,10 @@ describe('keychain storage', () => {
       );
 
       await expect(clearCredentials()).rejects.toThrow('Clear failed');
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to clear credentials:'),
+        expect.any(Error),
+      );
     });
   });
 
@@ -212,6 +216,10 @@ describe('keychain storage', () => {
         isAvailable: false,
         biometryType: null,
       });
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to get biometric capability:'),
+        expect.any(Error),
+      );
     });
   });
 
@@ -233,6 +241,10 @@ describe('keychain storage', () => {
 
       // Should not throw
       await expect(saveEmailOnly('user@test.com')).resolves.toBeUndefined();
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to save email:'),
+        expect.any(Error),
+      );
     });
   });
 
@@ -259,6 +271,10 @@ describe('keychain storage', () => {
 
       const result = await getEmailOnly();
       expect(result).toBeNull();
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to get email:'),
+        expect.any(Error),
+      );
     });
   });
 

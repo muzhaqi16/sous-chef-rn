@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, act } from '@testing-library/react-native';
 import { PantryMain } from '../PantryMain';
 
 // --- Prop capture for PantryContent ---
@@ -359,6 +359,103 @@ describe('PantryMain', () => {
       expect(capturedPantryContentProps.noHomeSelected).toBe(false);
       expect(capturedPantryContentProps.noHomes).toBe(false);
       expect(capturedPantryContentProps.householdName).toBe('My Home');
+    });
+  });
+
+  describe('knownTotalCount oscillation guard', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('does not oscillate when searching with server sort active', () => {
+      // Dynamic mock: returns different totalCount based on whether search is active
+      // hasMore: true simulates partial data (only page 1 loaded) so server sort stays active
+      const { usePantryManagement } = jest.requireMock(
+        '#hooks/home/pantry/usePantryManagement',
+      );
+      usePantryManagement.mockImplementation(
+        (_pantryId: string | undefined, queryFilter: any) => ({
+          ...defaultPantryManagement,
+          hasMore: true,
+          totalCount: queryFilter?.search ? 3 : 55,
+        }),
+      );
+
+      render(<PantryMain />);
+
+      // knownTotalCount adjusts to 55 → useServerSort = true (55 > 50 page size)
+      expect(capturedPantryContentProps.useServerSort).toBe(true);
+
+      // Simulate user typing a search
+      act(() => {
+        capturedPantryContentProps.onSearchChange('abc');
+      });
+
+      // Advance past the 300ms debounce — debouncedSearch becomes 'abc'
+      // Without the !debouncedSearch guard this would throw "Too many re-renders":
+      // totalCount=3 → setKnownTotalCount(3) → useServerSort=false → drops search
+      // → totalCount=55 → setKnownTotalCount(55) → useServerSort=true → adds search → loop
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
+
+      // Component survived; server sort stayed active, filtered totalCount is 3
+      expect(capturedPantryContentProps.useServerSort).toBe(true);
+      expect(capturedPantryContentProps.totalCount).toBe(3);
+    });
+
+    it('updates knownTotalCount normally when search is cleared', () => {
+      // hasMore: true simulates partial data (only page 1 loaded) so server sort stays active
+      const { usePantryManagement } = jest.requireMock(
+        '#hooks/home/pantry/usePantryManagement',
+      );
+      usePantryManagement.mockImplementation(
+        (_pantryId: string | undefined, queryFilter: any) => ({
+          ...defaultPantryManagement,
+          hasMore: true,
+          totalCount: queryFilter?.search ? 3 : 55,
+        }),
+      );
+
+      render(<PantryMain />);
+      expect(capturedPantryContentProps.useServerSort).toBe(true);
+
+      // Search → debounce
+      act(() => {
+        capturedPantryContentProps.onSearchChange('abc');
+      });
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
+      expect(capturedPantryContentProps.totalCount).toBe(3);
+      expect(capturedPantryContentProps.useServerSort).toBe(true);
+
+      // Clear search → debounce
+      act(() => {
+        capturedPantryContentProps.onSearchChange('');
+      });
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
+
+      // totalCount returns to 55, useServerSort still true — system stable
+      expect(capturedPantryContentProps.totalCount).toBe(55);
+      expect(capturedPantryContentProps.useServerSort).toBe(true);
+    });
+
+    it('uses local search when all pages have been loaded', () => {
+      // hasMore: false with totalCount > pageSize → all pages loaded → local search
+      mockPantryManagement({ totalCount: 55, hasMore: false });
+
+      render(<PantryMain />);
+
+      // allItemsLoaded=true overrides useServerSort to false
+      expect(capturedPantryContentProps.useServerSort).toBe(false);
+      expect(capturedPantryContentProps.totalCount).toBe(55);
     });
   });
 });

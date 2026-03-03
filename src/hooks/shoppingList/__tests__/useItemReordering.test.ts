@@ -49,12 +49,8 @@ jest.mock('#generated', () => ({
   useMoveShoppingListItemMutation: () => [mockMoveItem],
 }));
 
-// Suppress console.log/warn/error in tests
 beforeEach(() => {
   jest.clearAllMocks();
-  jest.spyOn(console, 'log').mockImplementation();
-  jest.spyOn(console, 'warn').mockImplementation();
-  jest.spyOn(console, 'error').mockImplementation();
 
   mockMoveItem.mockResolvedValue({
     data: {
@@ -75,10 +71,6 @@ beforeEach(() => {
       identify: mockCacheIdentify,
     });
   });
-});
-
-afterEach(() => {
-  jest.restoreAllMocks();
 });
 
 const items = [

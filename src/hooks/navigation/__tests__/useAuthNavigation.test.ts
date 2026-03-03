@@ -223,17 +223,15 @@ describe('useAuthNavigation', () => {
     });
 
     it('navigateToVerification logs a message (handled by conditional groups)', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
       const { result } = renderHook(() => useAuthNavigation());
 
       act(() => {
         result.current.navigateToVerification();
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         'Verification navigation handled by conditional groups',
       );
-      consoleSpy.mockRestore();
     });
   });
 });

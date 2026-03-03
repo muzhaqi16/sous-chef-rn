@@ -1,26 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { StyleSheet } from 'react-native-unistyles';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { Icon } from '#/utils/iconUtils';
-import type { PantryItemFragment } from '#generated';
+import { UnitPicker } from '#components/molecules/UnitPicker';
+import { useCompatibleUnits, type SelectedUnitInfo } from '#hooks/pantry/useCompatibleUnits';
+import type { PantryItemFragment, UnitType } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
 
+
 export interface PantryActionSharedState {
-  selectedUnit: 'tracking' | 'content' | 'weight';
-  setSelectedUnit: (unit: 'tracking' | 'content' | 'weight') => void;
+  selectedUnitInfo: SelectedUnitInfo | null;
+  setSelectedUnitInfo: (unit: SelectedUnitInfo) => void;
   notes: string;
   setNotes: (notes: string) => void;
-  isDualTracked: boolean;
-  hasContentUnit: boolean;
-  contentUnitCount: number;
-  availableQuantity: number;
+  /** Available quantity in the tracking unit (always the base) */
+  trackingQuantity: number;
+  /** The tracking unit's symbol */
+  trackingUnitSymbol: string;
+  /** The tracking unit's ID */
+  trackingUnitId: string | undefined;
+  /** The active unit symbol (selected unit or tracking unit fallback) */
   activeUnitSymbol: string;
+  /** The active unit ID (selected unit or tracking unit fallback) */
   activeUnitId: string | undefined;
+  /** Whether a non-tracking unit is selected (needs conversion) */
+  isConvertedUnit: boolean;
+  /** The pantry item's itemId for conversion queries */
+  itemId: string | undefined;
+  /** Default unit resolved from compatible units */
+  defaultUnit: SelectedUnitInfo | null;
 }
 
 interface PantryActionModalProps {
@@ -35,15 +46,15 @@ interface PantryActionModalProps {
   currentQuantityLabel?: string;
   onConfirm: (shared: PantryActionSharedState) => void;
   /** Called when the modal opens with a valid pantryItem. Use to reset consumer-specific state. */
-  onReset?: (pantryItem: PantryItemFragment, setSelectedUnit: (u: 'tracking' | 'content' | 'weight') => void) => void;
+  onReset?: (pantryItem: PantryItemFragment, defaultUnit: SelectedUnitInfo | null) => void;
   renderActionFields: (shared: PantryActionSharedState) => React.ReactNode;
 }
 
 /**
  * Shared base component for pantry action modals (Consume, RecordWaste, Restock).
  *
- * Manages common state (selectedUnit, notes, dual-tracking computed values) and renders
- * the shared shell (header, item info, unit toggle). Action-specific form fields are
+ * Manages common state (selectedUnit, notes) and renders the shared shell
+ * (header, item info, unit picker). Action-specific form fields are
  * rendered via the `renderActionFields` prop.
  */
 export const PantryActionModal: React.FC<PantryActionModalProps> = ({
@@ -60,60 +71,63 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   onReset,
   renderActionFields,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     onDismiss: onClose,
     snapPoints,
   });
 
-  const [selectedUnit, setSelectedUnit] = useState<'tracking' | 'content' | 'weight'>('tracking');
+  const [selectedUnitInfo, setSelectedUnitInfo] = useState<SelectedUnitInfo | null>(null);
   const [notes, setNotes] = useState('');
 
-  // Dual-tracking computed values
-  const isDualTracked = pantryItem?.remainingNetWeight != null && pantryItem?.netWeightUnit != null;
+  // Fetch compatible units for the item
+  const { groups, defaultUnit, loading: unitsLoading } = useCompatibleUnits({
+    itemId: pantryItem?.itemId,
+    trackingUnitId: pantryItem?.unit?.id,
+    trackingUnitType: pantryItem?.unit?.type as UnitType | undefined,
+    netWeightUnitId: pantryItem?.netWeightUnit?.id,
+    contentUnitId: pantryItem?.packageBreakdown?.contentUnit?.id,
+    defaultConsumeUnitId: pantryItem?.item?.defaultConsumeUnitId,
+  });
 
+  // Dual-tracking info (kept for the item info display)
+  const isDualTracked = pantryItem?.remainingNetWeight != null && pantryItem?.netWeightUnit != null;
   const hasContentUnit = isDualTracked
     && pantryItem?.packageBreakdown != null
     && pantryItem.packageBreakdown.perUnitNetWeight != null
     && pantryItem.packageBreakdown.perUnitNetWeight > 0;
-
   const contentUnitCount = pantryItem?.quantityBreakdown?.totalContentUnits != null
     ? Math.floor(pantryItem.quantityBreakdown.totalContentUnits)
     : (hasContentUnit && pantryItem?.remainingNetWeight != null
       ? Math.floor(pantryItem.remainingNetWeight / pantryItem.packageBreakdown!.perUnitNetWeight!)
       : 0);
 
-  const availableQuantity = (() => {
-    if (selectedUnit === 'content' && hasContentUnit) return contentUnitCount;
-    if (selectedUnit === 'weight' && isDualTracked) return pantryItem!.remainingNetWeight!;
-    return pantryItem?.quantity ?? 0;
-  })();
+  const trackingQuantity = pantryItem?.quantity ?? 0;
+  const trackingUnitSymbol = pantryItem?.unit?.symbol || '';
+  const trackingUnitId = pantryItem?.unit?.id;
 
-  const activeUnitSymbol = (() => {
-    if (selectedUnit === 'content' && hasContentUnit) {
-      return pantryItem!.packageBreakdown!.contentUnit.symbol || pantryItem!.packageBreakdown!.contentUnit.name;
-    }
-    if (selectedUnit === 'weight' && isDualTracked) {
-      return pantryItem!.netWeightUnit!.symbol || '';
-    }
-    return pantryItem?.unit?.symbol || '';
-  })();
-
-  const activeUnitId = (() => {
-    if (selectedUnit === 'content' && hasContentUnit) return pantryItem!.packageBreakdown!.contentUnit.id;
-    if (selectedUnit === 'weight' && isDualTracked) return pantryItem!.netWeightUnit!.id;
-    return pantryItem?.unit?.id;
-  })();
+  const activeUnitSymbol = selectedUnitInfo?.unitSymbol || trackingUnitSymbol;
+  const activeUnitId = selectedUnitInfo?.unitId || trackingUnitId;
+  const isConvertedUnit = selectedUnitInfo != null && !selectedUnitInfo.isTrackingUnit;
 
   // Reset state when modal opens (render-time state update)
   const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevPantryItem, setPrevPantryItem] = useState(pantryItem);
-  if (visible !== prevVisible || pantryItem !== prevPantryItem) {
+  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItem?.id);
+  if (visible !== prevVisible || pantryItem?.id !== prevPantryItemId) {
     setPrevVisible(visible);
-    setPrevPantryItem(pantryItem);
+    setPrevPantryItemId(pantryItem?.id);
     if (visible && pantryItem) {
       setNotes('');
-      setSelectedUnit('tracking');
-      onReset?.(pantryItem, setSelectedUnit);
+      setSelectedUnitInfo(defaultUnit);
+      onReset?.(pantryItem, defaultUnit);
+    }
+  }
+
+  // Also set default unit once it loads if we haven't selected anything yet
+  const [prevDefaultUnitId, setPrevDefaultUnitId] = useState(defaultUnit?.unitId);
+  if (defaultUnit?.unitId !== prevDefaultUnitId) {
+    setPrevDefaultUnitId(defaultUnit?.unitId);
+    if (visible && pantryItem && selectedUnitInfo == null && defaultUnit != null) {
+      setSelectedUnitInfo(defaultUnit);
     }
   }
 
@@ -127,16 +141,18 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   }, [visible, pantryItem, ref]);
 
   const shared: PantryActionSharedState = {
-    selectedUnit,
-    setSelectedUnit,
+    selectedUnitInfo,
+    setSelectedUnitInfo,
     notes,
     setNotes,
-    isDualTracked,
-    hasContentUnit,
-    contentUnitCount,
-    availableQuantity,
+    trackingQuantity,
+    trackingUnitSymbol,
+    trackingUnitId,
     activeUnitSymbol,
     activeUnitId,
+    isConvertedUnit,
+    itemId: pantryItem?.itemId,
+    defaultUnit,
   };
 
   return (
@@ -183,36 +199,14 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
               </View>
             </View>
 
-            {/* Unit Toggle for dual-tracked items */}
-            {!!isDualTracked && (
-              <View style={commonStyles.bottomSheetSection}>
-                <Text style={commonStyles.bottomSheetSectionLabel}>
-                  {unitToggleLabel}
-                </Text>
-                <View style={commonStyles.bottomSheetOptionContainer}>
-                  <UnitOption
-                    label={pantryItem.unit?.symbol || pantryItem.unit?.name || 'Unit'}
-                    selected={selectedUnit === 'tracking'}
-                    onPress={() => setSelectedUnit('tracking')}
-                    primaryColor={theme.colors.primary}
-                  />
-                  {!!hasContentUnit && (
-                    <UnitOption
-                      label={pantryItem.packageBreakdown!.contentUnit.symbol || pantryItem.packageBreakdown!.contentUnit.name}
-                      selected={selectedUnit === 'content'}
-                      onPress={() => setSelectedUnit('content')}
-                      primaryColor={theme.colors.primary}
-                    />
-                  )}
-                  <UnitOption
-                    label={pantryItem.netWeightUnit?.symbol || pantryItem.netWeightUnit?.name || 'Weight'}
-                    selected={selectedUnit === 'weight'}
-                    onPress={() => setSelectedUnit('weight')}
-                    primaryColor={theme.colors.primary}
-                  />
-                </View>
-              </View>
-            )}
+            {/* Unit Picker */}
+            <UnitPicker
+              label={unitToggleLabel}
+              groups={groups}
+              selectedUnitId={selectedUnitInfo?.unitId}
+              onSelect={setSelectedUnitInfo}
+              loading={unitsLoading}
+            />
 
             {/* Action-specific fields */}
             {renderActionFields(shared)}
@@ -221,36 +215,3 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     </BottomSheetModal>
   );
 };
-
-/** Single unit option pill used in the unit toggle section. */
-const UnitOption: React.FC<{
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-  primaryColor: string;
-}> = ({ label, selected, onPress, primaryColor }) => (
-  <Pressable
-    style={({ pressed }) => [
-      commonStyles.bottomSheetOption,
-      selected && commonStyles.bottomSheetOptionSelected,
-      pressed && styles.pressed,
-    ]}
-    onPress={onPress}
-  >
-    <Text
-      style={[
-        commonStyles.bottomSheetOptionText,
-        selected && commonStyles.bottomSheetOptionTextSelected,
-      ]}
-    >
-      {label}
-    </Text>
-    {!!selected && <Icon name="checkmark" size={16} color={primaryColor} />}
-  </Pressable>
-);
-
-const styles = StyleSheet.create(theme => ({
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));

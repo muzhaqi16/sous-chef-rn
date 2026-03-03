@@ -25,12 +25,6 @@ describe('useRenderTime', () => {
     jest.clearAllMocks();
     // Ensure Math.random always returns a value below 1.0 (default sample rate in __DEV__)
     jest.spyOn(Math, 'random').mockReturnValue(0.5);
-    jest.spyOn(console, 'log').mockImplementation();
-    jest.spyOn(console, 'warn').mockImplementation();
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
   });
 
   it('records render metrics to Telemetry on first render', () => {
@@ -121,12 +115,6 @@ describe('useAutoRenderTime', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(Math, 'random').mockReturnValue(0.5);
-    jest.spyOn(console, 'log').mockImplementation();
-    jest.spyOn(console, 'warn').mockImplementation();
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
   });
 
   it('uses the provided displayName as the component name', () => {

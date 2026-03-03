@@ -34,6 +34,9 @@ describe('useFPSMonitor', () => {
     // autoStart triggers setIsMonitoring(true) via the effect
     // The effect runs but isMonitoring is set inside it
     expect(result.current.fps).toBe(60); // initial value
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('[PERF] FPS monitor: started'),
+    );
   });
 
   it('provides startMonitoring and stopMonitoring functions', () => {
@@ -63,6 +66,10 @@ describe('useFPSMonitor', () => {
     const cancelAnimationFrameSpy = jest.spyOn(global, 'cancelAnimationFrame');
     const { unmount } = renderHook(() => useFPSMonitor({ autoStart: true }));
 
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('[PERF] FPS monitor: started'),
+    );
+
     unmount();
 
     expect(cancelAnimationFrameSpy).toHaveBeenCalled();
@@ -81,6 +88,10 @@ describe('useFPSMonitor', () => {
   it('startMonitoring does nothing if already monitoring', () => {
     const { result } = renderHook(() => useFPSMonitor({ autoStart: true }));
 
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('[PERF] FPS monitor: started'),
+    );
+
     // Starting while already monitoring should not throw
     act(() => {
       result.current.startMonitoring();
@@ -93,10 +104,17 @@ describe('useFPSMonitor', () => {
     const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
     const { result } = renderHook(() => useFPSMonitor({ autoStart: true }));
 
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('[PERF] FPS monitor: started'),
+    );
+
     act(() => {
       result.current.stopMonitoring();
     });
 
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('[PERF] FPS monitor: stopped'),
+    );
     expect(clearIntervalSpy).toHaveBeenCalled();
     clearIntervalSpy.mockRestore();
   });

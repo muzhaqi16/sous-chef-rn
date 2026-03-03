@@ -36,12 +36,6 @@ jest.mock('#/utils/compilerSafeWrappers');
 
 beforeEach(() => {
   jest.clearAllMocks();
-  jest.spyOn(console, 'log').mockImplementation();
-  jest.spyOn(console, 'error').mockImplementation();
-});
-
-afterEach(() => {
-  jest.restoreAllMocks();
 });
 
 function createItem(overrides: Record<string, unknown> = {}) {

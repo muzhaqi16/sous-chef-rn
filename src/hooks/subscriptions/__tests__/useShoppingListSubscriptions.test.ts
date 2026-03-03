@@ -158,6 +158,10 @@ describe('useShoppingListSubscriptions', () => {
     );
 
     expect(addNewItemToShoppingListCache).not.toHaveBeenCalled();
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('⏭️'),
+      expect.anything(),
+    );
   });
 
   it('handles ITEMS_CHANGED Deleted mutation without animation', () => {

@@ -302,6 +302,11 @@ describe('SubscriptionService', () => {
       expect(customOnError).toHaveBeenCalledTimes(1);
       expect(customOnError).toHaveBeenCalledWith({ message: 'GraphQL validation error' });
       expect(service.getStats().totalErrors).toBe(1);
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('❌'),
+        expect.anything(),
+        expect.anything(),
+      );
     });
   });
 
@@ -578,7 +583,6 @@ describe('SubscriptionService', () => {
       const config = createConfig({ cacheFieldName: '', cacheUpdateStrategy: CacheStrategy.MANUAL });
       const handlers = service.register(config);
 
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
       handlers.onData({
         data: {
           data: {
@@ -592,15 +596,12 @@ describe('SubscriptionService', () => {
         },
         client: { cache: {} },
       });
-
-      warnSpy.mockRestore();
     });
 
     it('warns when no item ID in payload', () => {
       const config = createConfig({ cacheUpdateStrategy: CacheStrategy.MANUAL });
       const handlers = service.register(config);
 
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
       handlers.onData({
         data: {
           data: {
@@ -614,8 +615,6 @@ describe('SubscriptionService', () => {
         },
         client: { cache: {} },
       });
-
-      warnSpy.mockRestore();
     });
 
     it('skips cache update with CacheStrategy.NONE', () => {
@@ -679,7 +678,6 @@ describe('SubscriptionService', () => {
       const config = createConfig({ cacheUpdateStrategy: CacheStrategy.MANUAL });
       const handlers = service.register(config);
 
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
       handlers.onData({
         data: {
           data: {
@@ -693,8 +691,6 @@ describe('SubscriptionService', () => {
         },
         client: { cache: { modify: jest.fn(), identify: jest.fn(), evict: jest.fn(), gc: jest.fn(), data: { data: {} } } },
       });
-
-      warnSpy.mockRestore();
     });
 
     it('handles cache update error gracefully', () => {
@@ -704,7 +700,6 @@ describe('SubscriptionService', () => {
       const mockCache = {
         modify: jest.fn(() => { throw new Error('Cache boom'); }),
       };
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation();
       handlers.onData({
         data: {
           data: {
@@ -718,8 +713,6 @@ describe('SubscriptionService', () => {
         },
         client: { cache: mockCache },
       });
-
-      errorSpy.mockRestore();
     });
   });
 
@@ -882,9 +875,7 @@ describe('SubscriptionService', () => {
       const customOnError = jest.fn();
       const handlers = service.register(createConfig({ customOnError }));
 
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation();
       handlers.onError({ message: undefined });
-      errorSpy.mockRestore();
 
       expect(customOnError).toHaveBeenCalledTimes(1);
     });
@@ -951,7 +942,6 @@ describe('SubscriptionService', () => {
         customOnData: () => { throw new Error('Custom handler crash'); },
       });
 
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation();
       // Should not throw
       handlers.onData({
         data: {
@@ -966,7 +956,6 @@ describe('SubscriptionService', () => {
         },
         client: { cache: {} },
       });
-      errorSpy.mockRestore();
     });
   });
 

@@ -1,7 +1,7 @@
 import React, {
-  useDeferredValue,
   useEffect,
   useRef,
+  useState,
   useImperativeHandle,
 } from 'react';
 import { View, Pressable, RefreshControl } from 'react-native';
@@ -319,6 +319,7 @@ function computeDisplayCache(
     string,
     { item: PantryItem; data: ItemDisplayData }
   >();
+  let cacheChanged = items.length !== prevCache.size;
 
   for (const item of items) {
     const cached = prevCache.get(item.id);
@@ -328,6 +329,7 @@ function computeDisplayCache(
       map.set(item.id, cached.data);
       nextCache.set(item.id, cached);
     } else {
+      cacheChanged = true;
       const data = computeItemDisplay(
         item,
         now,
@@ -339,21 +341,8 @@ function computeDisplayCache(
     }
   }
 
-  return { map, nextCache };
+  return { map, nextCache, cacheChanged };
 }
-
-// Module-scope getItemType — always returns correct variant, no deferred-state dependency.
-// FlashList docs: "This method is called very frequently. Keep it fast."
-const getItemType = (item: PantryItem): string => {
-  if (!item.expiresAt) return 'normal';
-  const MS_PER_DAY = 1000 * 60 * 60 * 24;
-  const daysLeft = Math.ceil(
-    (new Date(item.expiresAt).getTime() - Date.now()) / MS_PER_DAY,
-  );
-  if (daysLeft < 0) return 'expired';
-  if (daysLeft <= 3) return 'warning';
-  return 'normal';
-};
 
 // Module-scope keyExtractor — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: PantryItem) => item.id;
@@ -591,13 +580,27 @@ export const PantryContent = React.forwardRef<
       normal: theme.colors.textSecondary,
     };
 
-    // Defer display cache recomputation during rapid data updates (e.g. batch add)
-    const deferredSortedItems = useDeferredValue(sortedItems);
-    const itemDisplayMap = computeDisplayCache(
+    // Use sortedItems directly — the outer useDeferredValue in PantryMain already
+    // defers Apollo cache updates. A second deferral here only desynchronizes
+    // FlashList data from itemDisplayMap, causing getItemType instability.
+    const deferredSortedItems = sortedItems;
+
+    // Persist display cache across renders — "adjusting state during render" pattern.
+    // Store both cache and map together so itemDisplayMap reference is stable when
+    // data hasn't changed (prevents defeating React Compiler auto-memoization of renderItem).
+    const [displayState, setDisplayState] = useState(() => ({
+      cache: new Map() as Map<string, { item: PantryItem; data: ItemDisplayData }>,
+      map: new Map() as Map<string, ItemDisplayData>,
+    }));
+    const { map, nextCache, cacheChanged } = computeDisplayCache(
       deferredSortedItems,
-      new Map(),
+      displayState.cache,
       expirationColors,
-    ).map;
+    );
+    if (cacheChanged) {
+      setDisplayState({ cache: nextCache, map });
+    }
+    const itemDisplayMap = displayState.map;
 
     // Preload images for visible + upcoming items to prevent blank shimmer during fast scroll
     useEffect(() => {
@@ -676,7 +679,7 @@ export const PantryContent = React.forwardRef<
     // Stable extraData — string avoids new array reference every render
     const extraData = `${sortOption}-${sortDirection}-${locationFilter}`;
 
-    const isEmpty = !showSkeletons && sortedItems.length === 0;
+    const isEmpty = !showSkeletons && deferredSortedItems.length === 0;
 
     // Use flexGrow when empty so ListEmptyComponent can center properly;
     // drop the large paddingBottom that creates excess space below the empty state
@@ -747,7 +750,7 @@ export const PantryContent = React.forwardRef<
               <FlashList<PantryItem>
                 ref={flashListRef}
                 testID="pantry-list"
-                data={showSkeletons ? EMPTY_ARRAY : sortedItems}
+                data={showSkeletons ? EMPTY_ARRAY : deferredSortedItems}
                 renderItem={renderItem}
                 keyExtractor={keyExtractor}
                 extraData={extraData}
@@ -790,13 +793,12 @@ export const PantryContent = React.forwardRef<
                     isLoadingMore={isLoadingMore}
                     hasMore={hasMore}
                     loading={loading}
-                    itemCount={sortedItems.length}
+                    itemCount={deferredSortedItems.length}
                   />
                 }
-                getItemType={getItemType}
                 onEndReached={onEndReached}
                 onEndReachedThreshold={0.5}
-                drawDistance={500}
+                drawDistance={350}
                 maintainVisibleContentPosition={{ disabled: true }}
               />
             </View>

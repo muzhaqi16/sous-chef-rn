@@ -270,12 +270,12 @@ describe('preloadImages', () => {
 
   it('handles empty array', () => {
     preloadImages([]);
-    expect((TurboImage as any).prefetch).toHaveBeenCalledWith([], 'dataCache');
+    expect((TurboImage as any).prefetch).not.toHaveBeenCalled();
   });
 
   it('filters out falsy URIs', () => {
     preloadImages(['', '', '']);
-    expect((TurboImage as any).prefetch).toHaveBeenCalledWith([], 'dataCache');
+    expect((TurboImage as any).prefetch).not.toHaveBeenCalled();
   });
 
   it('preloads single URI', () => {

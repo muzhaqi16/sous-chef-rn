@@ -35,11 +35,6 @@ const {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  jest.spyOn(console, 'warn').mockImplementation();
-});
-
-afterEach(() => {
-  jest.restoreAllMocks();
 });
 
 function createItem(overrides: Record<string, unknown> = {}) {

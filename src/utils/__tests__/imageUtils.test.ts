@@ -323,10 +323,8 @@ describe('imageUtils', () => {
     });
 
     it('returns null for invalid imageUrl (just filename)', () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const item = { imageUrl: 'image.jpg' };
       expect(getItemImageUrl(item)).toBeNull();
-      warnSpy.mockRestore();
     });
 
     it('prefers API-generated variants over imageUrl', () => {

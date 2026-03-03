@@ -229,6 +229,10 @@ describe('usePantryItemActions', () => {
       // Cache modify called for optimistic update AND revert
       expect(mockCacheModify).toHaveBeenCalled();
       expect(Alert.alert).toHaveBeenCalledWith('Error', expect.any(String));
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('Error consuming pantry item:'),
+        expect.any(Error),
+      );
     });
   });
 

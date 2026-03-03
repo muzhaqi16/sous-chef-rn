@@ -784,17 +784,13 @@ describe('addNewItemToShoppingListCache', () => {
     cache.modify.mockImplementation(() => {
       throw new Error('cache error');
     });
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
     expect(() =>
       addNewItemToShoppingListCache(cache, 'sl-1', { id: 'sli-1' }),
     ).not.toThrow();
 
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('Failed to update cache for new shopping list item'),
       expect.any(Error),
     );
-
-    warnSpy.mockRestore();
   });
 });

@@ -42,12 +42,10 @@ describe('subscriptionErrorHandler', () => {
     });
 
     it('returns false for non-resolver errors', () => {
-      const spy = jest.spyOn(console, 'error').mockImplementation();
       const result = handleSubscriptionError('TestSub', {
         message: 'Unknown server error',
       });
       expect(result).toBe(false);
-      spy.mockRestore();
     });
 
     it('retries server resolver errors', () => {

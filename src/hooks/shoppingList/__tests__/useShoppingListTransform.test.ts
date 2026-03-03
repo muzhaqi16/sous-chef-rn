@@ -124,7 +124,6 @@ describe('useShoppingListTransform', () => {
   });
 
   it('filters out items without id', () => {
-    const spy = jest.spyOn(console, 'warn').mockImplementation();
     const items = [
       createDisplayItem({ id: null }),
       createDisplayItem({ id: '2' }),
@@ -133,11 +132,9 @@ describe('useShoppingListTransform', () => {
 
     expect(result.current.sortableItems).toHaveLength(1);
     expect(result.current.sortableItems[0].id).toBe('2');
-    spy.mockRestore();
   });
 
   it('filters out items without itemName', () => {
-    const spy = jest.spyOn(console, 'warn').mockImplementation();
     const items = [
       createDisplayItem({ itemName: null }),
       createDisplayItem({ id: '2', itemName: 'Valid' }),
@@ -146,7 +143,6 @@ describe('useShoppingListTransform', () => {
 
     expect(result.current.sortableItems).toHaveLength(1);
     expect(result.current.sortableItems[0].title).toBe('Valid');
-    spy.mockRestore();
   });
 
   it('uses "zzz" as default sortOrder when missing', () => {

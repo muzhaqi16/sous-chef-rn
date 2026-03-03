@@ -173,5 +173,9 @@ describe('useMealTemplateActions', () => {
     });
 
     expect(response).toBeNull();
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Create meal plan from template error:'),
+      expect.any(Error),
+    );
   });
 });

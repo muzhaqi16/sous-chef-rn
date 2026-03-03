@@ -706,8 +706,6 @@ describe('useConfigurableSettings', () => {
 
   describe('default/unknown config key', () => {
     it('logs warning for unhandled setting key', () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
       const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
       const original = [...PROFILE_SETTINGS_CONFIG];
       PROFILE_SETTINGS_CONFIG.length = 0;
@@ -717,11 +715,10 @@ describe('useConfigurableSettings', () => {
       });
 
       renderHook(() => useConfigurableSettings(mockProfile));
-      expect(warnSpy).toHaveBeenCalledWith('Unhandled setting key: unknownKey');
+      expect(console.warn).toHaveBeenCalledWith('Unhandled setting key: unknownKey');
 
       PROFILE_SETTINGS_CONFIG.length = 0;
       original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
-      warnSpy.mockRestore();
     });
   });
 

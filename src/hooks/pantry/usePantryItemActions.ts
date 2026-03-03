@@ -100,10 +100,14 @@ export function usePantryItemActions({
     ) => {
       if (activeModal.type !== 'consume') return;
 
-      // Optimistically decrease quantity for instant UI feedback
       const item = activeModal.item;
       const originalQty = item.quantity;
-      optimisticUpdateQuantity(item.id, originalQty - quantityUsed);
+      // Only apply optimistic update when using the tracking unit (same unit = direct subtraction)
+      // When using a converted unit, the server response will update the cache
+      const canOptimistic = !usageUnitId || usageUnitId === item.unit?.id;
+      if (canOptimistic) {
+        optimisticUpdateQuantity(item.id, originalQty - quantityUsed);
+      }
 
       const consumeNotes = notes || undefined;
       const consumeResult = await executeMutationWithErrorHandler(
@@ -116,7 +120,9 @@ export function usePantryItemActions({
               notes: consumeNotes,
               usageUnitId } } }),
         (error: any) => {
-          revertQuantity(item.id, originalQty);
+          if (canOptimistic) {
+            revertQuantity(item.id, originalQty);
+          }
           if (!isNetworkError(error)) {
             const errorMessage = error.message || 'Failed to record item usage. Please try again.';
             console.error('Error consuming pantry item:', error);
@@ -140,10 +146,12 @@ export function usePantryItemActions({
     ) => {
       if (activeModal.type !== 'waste') return;
 
-      // Optimistically decrease quantity for instant UI feedback
       const item = activeModal.item;
       const originalQty = item.quantity;
-      optimisticUpdateQuantity(item.id, originalQty - wasteAmount);
+      const canOptimistic = !wasteUnitId || wasteUnitId === item.unit?.id;
+      if (canOptimistic) {
+        optimisticUpdateQuantity(item.id, originalQty - wasteAmount);
+      }
 
       const wasteNotes = notes || undefined;
       const wasteResult = await executeMutationWithErrorHandler(
@@ -159,7 +167,9 @@ export function usePantryItemActions({
               isComposted,
               isRecycled } } }),
         (error: any) => {
-          revertQuantity(item.id, originalQty);
+          if (canOptimistic) {
+            revertQuantity(item.id, originalQty);
+          }
           if (!isNetworkError(error)) {
             const errorMessage = error.message || 'Failed to record item waste. Please try again.';
             console.error('Error recording pantry item waste:', error);
@@ -184,10 +194,12 @@ export function usePantryItemActions({
     ) => {
       if (activeModal.type !== 'restock') return;
 
-      // Optimistically increase quantity for instant UI feedback
       const item = activeModal.item;
       const originalQty = item.quantity;
-      optimisticUpdateQuantity(item.id, originalQty + quantity);
+      const canOptimistic = !unitId || unitId === item.unit?.id;
+      if (canOptimistic) {
+        optimisticUpdateQuantity(item.id, originalQty + quantity);
+      }
 
       const restockNotes = notes || undefined;
       const expiresAtValue = expiresAt ? expiresAt.toISOString() : null;
@@ -203,7 +215,9 @@ export function usePantryItemActions({
               totalCost,
               expiresAt: expiresAtValue } } }),
         (error: any) => {
-          revertQuantity(item.id, originalQty);
+          if (canOptimistic) {
+            revertQuantity(item.id, originalQty);
+          }
           if (!isNetworkError(error)) {
             const errorMessage = error.message || 'Failed to restock item. Please try again.';
             console.error('Error restocking pantry item:', error);

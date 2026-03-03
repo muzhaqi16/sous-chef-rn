@@ -50,31 +50,14 @@ const createMockForward = (response: any = { data: {} }) => {
 };
 
 describe('createConsoleLink', () => {
-  let consoleSpy: {
-    log: jest.SpyInstance;
-    error: jest.SpyInstance;
-    warn: jest.SpyInstance;
-  };
-
   beforeEach(() => {
     jest.clearAllMocks();
-    consoleSpy = {
-      log: jest.spyOn(console, 'log').mockImplementation(),
-      error: jest.spyOn(console, 'error').mockImplementation(),
-      warn: jest.spyOn(console, 'warn').mockImplementation(),
-    };
 
     let time = 100;
     mockedPerformance.now.mockImplementation(() => {
       time += 50;
       return time;
     });
-  });
-
-  afterEach(() => {
-    consoleSpy.log.mockRestore();
-    consoleSpy.error.mockRestore();
-    consoleSpy.warn.mockRestore();
   });
 
   describe('enabled option', () => {
@@ -87,7 +70,7 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          expect(consoleSpy.log).not.toHaveBeenCalled();
+          expect(console.log).not.toHaveBeenCalled();
           done();
         },
       });
@@ -102,7 +85,7 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          expect(consoleSpy.log).toHaveBeenCalled();
+          expect(console.log).toHaveBeenCalled();
           done();
         },
       });
@@ -119,13 +102,13 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const logCalls = consoleSpy.log.mock.calls;
+          const logCalls = jest.mocked(console.log).mock.calls;
           const timingLog = logCalls.find(
             (call: any[]) =>
               typeof call[0] === 'string' && call[0].includes('GetUser'),
           );
           expect(timingLog).toBeDefined();
-          expect(timingLog[0]).toContain('QUERY');
+          expect(timingLog![0]).toContain('QUERY');
           done();
         },
       });
@@ -145,7 +128,7 @@ describe('createConsoleLink', () => {
         next: () => {},
         complete: () => {
           // No timing log at all
-          const logCalls = consoleSpy.log.mock.calls;
+          const logCalls = jest.mocked(console.log).mock.calls;
           const timingLog = logCalls.find(
             (call: any[]) =>
               typeof call[0] === 'string' && call[0].includes('QUERY'),
@@ -165,7 +148,7 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const logCalls = consoleSpy.log.mock.calls;
+          const logCalls = jest.mocked(console.log).mock.calls;
           const subLog = logCalls.find(
             (call: any[]) =>
               typeof call[0] === 'string' &&
@@ -173,7 +156,7 @@ describe('createConsoleLink', () => {
           );
           expect(subLog).toBeDefined();
           // Subscription logs should not include "ms" duration
-          expect(subLog[0]).not.toMatch(/\d+ms/);
+          expect(subLog![0]).not.toMatch(/\d+ms/);
           done();
         },
       });
@@ -196,7 +179,7 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const varLog = consoleSpy.log.mock.calls.find(
+          const varLog = jest.mocked(console.log).mock.calls.find(
             (call: any[]) =>
               typeof call[0] === 'string' && call[0].includes('Variables'),
           );
@@ -219,7 +202,7 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const varLog = consoleSpy.log.mock.calls.find(
+          const varLog = jest.mocked(console.log).mock.calls.find(
             (call: any[]) =>
               typeof call[0] === 'string' && call[0].includes('Variables'),
           );
@@ -245,7 +228,7 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const dataLog = consoleSpy.log.mock.calls.find(
+          const dataLog = jest.mocked(console.log).mock.calls.find(
             (call: any[]) =>
               typeof call[0] === 'string' && call[0].includes('Data'),
           );
@@ -269,7 +252,7 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const dataLog = consoleSpy.log.mock.calls.find(
+          const dataLog = jest.mocked(console.log).mock.calls.find(
             (call: any[]) =>
               typeof call[0] === 'string' && call[0].includes('Data'),
           );
@@ -295,7 +278,7 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const queryLog = consoleSpy.log.mock.calls.find(
+          const queryLog = jest.mocked(console.log).mock.calls.find(
             (call: any[]) =>
               typeof call[0] === 'string' && call[0].includes('Query'),
           );
@@ -323,7 +306,7 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          expect(consoleSpy.error).toHaveBeenCalledWith(
+          expect(console.error).toHaveBeenCalledWith(
             expect.stringContaining('Errors'),
             expect.any(String),
           );
@@ -375,13 +358,13 @@ describe('createConsoleLink', () => {
         next: () => {},
         complete: () => {
           // The slow query log should use the warning color style
-          const timingCall = consoleSpy.log.mock.calls.find(
+          const timingCall = jest.mocked(console.log).mock.calls.find(
             (call: any[]) =>
               typeof call[0] === 'string' && call[0].includes('SlowQuery'),
           );
           expect(timingCall).toBeDefined();
           // Second arg is the CSS style; for slow queries it should be amber
-          expect(timingCall[1]).toContain('#f59e0b');
+          expect(timingCall![1]).toContain('#f59e0b');
           done();
         },
       });
@@ -405,7 +388,7 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const extLog = consoleSpy.log.mock.calls.find(
+          const extLog = jest.mocked(console.log).mock.calls.find(
             (call: any[]) =>
               typeof call[0] === 'string' && call[0].includes('Extensions'),
           );

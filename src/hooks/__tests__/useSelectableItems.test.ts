@@ -84,7 +84,6 @@ describe('useSelectableItems', () => {
   describe('maxSelection', () => {
     it('prevents selecting beyond max', () => {
       const items = createItems(5, ['item-1', 'item-2']);
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
       const { result } = renderHook(() =>
         useSelectableItems({ initialItems: items, maxSelection: 2 }),
@@ -97,11 +96,9 @@ describe('useSelectableItems', () => {
       // item-3 should remain unselected
       expect(result.current.items[2].selected).toBe(false);
       expect(result.current.selectedItems).toHaveLength(2);
-      expect(warnSpy).toHaveBeenCalledWith(
+      expect(console.warn).toHaveBeenCalledWith(
         'Maximum selection of 2 items reached',
       );
-
-      warnSpy.mockRestore();
     });
 
     it('sets isMaxReached when at limit', () => {

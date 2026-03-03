@@ -556,9 +556,31 @@ jest.mock('react-native-keychain', () => ({
 // ---------------------------------------------------------------------------
 jest.mock('@shopify/flash-list', () => {
   const { FlatList } = require('react-native');
+  const React = require('react');
   return {
     FlashList: FlatList,
     MasonryFlashList: FlatList,
+    useRecyclingState: (initialState, deps) => {
+      // Minimal implementation: reset state when deps change via useMemo
+      const valueRef = React.useRef();
+      React.useMemo(() => {
+        valueRef.current =
+          typeof initialState === 'function' ? initialState() : initialState;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, deps);
+      const [, setCounter] = React.useState(0);
+      const setState = React.useCallback((newValue) => {
+        const next =
+          typeof newValue === 'function'
+            ? newValue(valueRef.current)
+            : newValue;
+        if (next !== valueRef.current) {
+          valueRef.current = next;
+          setCounter((c) => c + 1);
+        }
+      }, []);
+      return [valueRef.current, setState];
+    },
   };
 });
 
@@ -817,33 +839,12 @@ jest.mock('react-native-performance', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Suppress noisy warnings in test output
+// Suppress all console output in tests by default.
+// Tests can assert on calls via expect(console.error).toHaveBeenCalledWith(...)
+// To debug, temporarily comment out the relevant line below.
 // ---------------------------------------------------------------------------
-const originalConsoleWarn = console.warn;
-console.warn = (...args) => {
-  // Suppress known noisy warnings in tests
-  const message = typeof args[0] === 'string' ? args[0] : '';
-  if (
-    message.includes('Animated: `useNativeDriver`') ||
-    message.includes('componentWillReceiveProps') ||
-    message.includes('componentWillMount') ||
-    message.includes('Query complexity error') ||
-    message.includes('Invalid date format')
-  ) {
-    return;
-  }
-  originalConsoleWarn(...args);
-};
-
-const originalConsoleLog = console.log;
-console.log = (...args) => {
-  const message = typeof args[0] === 'string' ? args[0] : '';
-  if (
-    message.includes('Retrying with reduced pagination') ||
-    message.includes('Cache: Version mismatch') ||
-    message.includes('Cache: Cleared persisted cache')
-  ) {
-    return;
-  }
-  originalConsoleLog(...args);
-};
+beforeEach(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  jest.spyOn(console, 'log').mockImplementation(() => {});
+});
