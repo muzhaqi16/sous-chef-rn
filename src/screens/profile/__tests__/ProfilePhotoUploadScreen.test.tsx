@@ -5,13 +5,8 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { ProfilePhotoUploadScreen } from '../ProfilePhotoUploadScreen';
 
 // Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 const mockGoBack = jest.fn();
 const mockDispatch = jest.fn();
@@ -69,25 +64,7 @@ jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(async (fn: any, setLoading: any, onError?: any) => {
-    setLoading(true);
-    try {
-      return await fn();
-    } catch (e) {
-      onError?.(e);
-    } finally {
-      setLoading(false);
-    }
-  }),
-  executeMutationWithErrorHandler: jest.fn(async (fn: any, onError?: any) => {
-    try {
-      return await fn();
-    } catch (e) {
-      onError?.(e);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,

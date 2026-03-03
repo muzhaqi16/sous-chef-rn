@@ -4,13 +4,8 @@ import { renderHook, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { useDietaryProfile } from '../useDietaryProfile';
 
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn((selector: any) =>
@@ -68,15 +63,7 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
   enhanceWithVersion: jest.fn((obj: any, updates: any) => ({ ...obj, ...updates })),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn(async (fn: () => Promise<any>) => {
-    try {
-      return await fn();
-    } catch {
-      return false;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({

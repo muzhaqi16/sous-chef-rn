@@ -8,13 +8,13 @@ import {
 describe('notificationHelpers', () => {
   describe('getNotificationIcon', () => {
     it.each([
-      [NotificationType.ExpiryReminder, 'schedule'],
-      [NotificationType.LowStock, 'inventory-2'],
+      [NotificationType.ExpiryReminder, 'time'],
+      [NotificationType.LowStock, 'cube'],
       [NotificationType.NewItemAdded, 'add-circle'],
-      [NotificationType.ItemUpdated, 'edit'],
-      [NotificationType.ItemDeleted, 'delete'],
+      [NotificationType.ItemUpdated, 'create'],
+      [NotificationType.ItemDeleted, 'trash'],
       [NotificationType.MembershipInvite, 'home'],
-      [NotificationType.CollaborationInvite, 'group-add'],
+      [NotificationType.CollaborationInvite, 'person-add'],
       [NotificationType.ListUpdated, 'list'],
       [NotificationType.HomeJoined, 'people'],
     ])('returns "%s" icon for %s', (type, icon) => {

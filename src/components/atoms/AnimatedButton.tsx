@@ -11,12 +11,10 @@ import {
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
-  interpolate,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { SPRING, TIMING } from '#/constants/animations';
+import { TIMING } from '#/constants/animations';
 
 interface AnimatedButtonProps extends Omit<PressableProps, 'style'> {
   children: React.ReactNode;
@@ -27,8 +25,6 @@ interface AnimatedButtonProps extends Omit<PressableProps, 'style'> {
   accessibilityLabel?: string;
   accessibilityHint?: string;
 }
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   children,
@@ -42,27 +38,16 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   ...props
 }) => {
   const { theme } = useUnistyles();
-  const loadingProgress = useSharedValue(0);
   const textOpacity = useSharedValue(1);
   const isDisabled = disabled || loading;
 
   useEffect(() => {
     if (loading) {
-      // Shrink to circular loading indicator
-      loadingProgress.set(withSpring(1, SPRING.GENTLE));
       textOpacity.set(withTiming(0, { duration: TIMING.FAST }));
     } else {
-      // Expand back to full width
-      loadingProgress.set(withSpring(0, SPRING.GENTLE));
       textOpacity.set(withTiming(1, { duration: TIMING.STANDARD }));
     }
-  }, [loading, loadingProgress, textOpacity]);
-
-  const animatedButtonStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scaleX: interpolate(loadingProgress.value, [0, 1], [1, 48 / 120]) },
-    ],
-  }));
+  }, [loading, textOpacity]);
 
   const animatedTextStyle = useAnimatedStyle(() => {
     return {
@@ -118,10 +103,10 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
         style,
       ]}
     >
-      <AnimatedPressable
+      <Pressable
         {...props}
         disabled={disabled || loading}
-        style={[styles.pressableInner, animatedButtonStyle]}
+        style={styles.pressableInner}
         accessible={true}
         accessibilityRole="button"
         accessibilityLabel={loading ? `Loading ${defaultLabel}` : defaultLabel}
@@ -140,7 +125,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
             </Text>
           </Animated.View>
         )}
-      </AnimatedPressable>
+      </Pressable>
     </View>
   );
 };

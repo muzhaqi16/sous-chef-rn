@@ -1,22 +1,14 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 import { usePagination } from '../usePagination';
 
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(async (fn, onError) => {
-    try {
-      return await fn();
-    } catch (e) {
-      onError(e);
-      return false;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 describe('usePagination', () => {
   const mockFetchMore = jest.fn().mockResolvedValue({});
@@ -160,7 +152,7 @@ describe('usePagination', () => {
     expect(mockFetchMore).not.toHaveBeenCalled();
   });
 
-  it('isLoadingMore is true when loading and itemCount > 0', () => {
+  it('isLoadingMore is false during initial load even with cached items', () => {
     const { result } = renderHook(() =>
       usePagination({
         pageInfo: { hasNextPage: true, endCursor: 'abc' },
@@ -170,7 +162,7 @@ describe('usePagination', () => {
       }),
     );
 
-    expect(result.current.isLoadingMore).toBe(true);
+    expect(result.current.isLoadingMore).toBe(false);
   });
 
   it('isLoadingMore is false when loading and itemCount is 0 (initial load)', () => {
@@ -184,5 +176,70 @@ describe('usePagination', () => {
     );
 
     expect(result.current.isLoadingMore).toBe(false);
+  });
+
+  it('isLoadingMore is true during fetchMore and false after', async () => {
+    let resolveFetch!: () => void;
+    jest.mocked(executeMutationWithErrorHandler).mockImplementationOnce(
+      () => new Promise<void>((resolve) => { resolveFetch = resolve; }),
+    );
+
+    const { result } = renderHook(() =>
+      usePagination({
+        pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
+        loading: false,
+        itemCount: 10,
+        fetchMore: mockFetchMore,
+      }),
+    );
+
+    expect(result.current.isLoadingMore).toBe(false);
+
+    let loadMorePromise: Promise<void>;
+    act(() => {
+      loadMorePromise = result.current.loadMore();
+    });
+
+    expect(result.current.isLoadingMore).toBe(true);
+
+    await act(async () => {
+      resolveFetch();
+      await loadMorePromise!;
+    });
+
+    expect(result.current.isLoadingMore).toBe(false);
+  });
+
+  it('loadMore() does nothing when already fetching more', async () => {
+    let resolveFetch!: () => void;
+    jest.mocked(executeMutationWithErrorHandler).mockImplementationOnce(
+      () => new Promise<void>((resolve) => { resolveFetch = resolve; }),
+    );
+
+    const { result } = renderHook(() =>
+      usePagination({
+        pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
+        loading: false,
+        itemCount: 10,
+        fetchMore: mockFetchMore,
+      }),
+    );
+
+    let loadMorePromise: Promise<void>;
+    act(() => {
+      loadMorePromise = result.current.loadMore();
+    });
+
+    // Second call while first is in progress should be ignored
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(executeMutationWithErrorHandler).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveFetch();
+      await loadMorePromise!;
+    });
   });
 });

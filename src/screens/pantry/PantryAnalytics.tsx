@@ -22,11 +22,13 @@ type PantryAnalyticsProps = StaticScreenProps<{
 // Helper functions to format enum values
 function formatPurpose(purpose: string): string {
   const map: Record<string, string> = {
+    ADJUSTMENT: 'Adjustment',
     COOKING: 'Cooking',
-    MEAL_PREP: 'Meal Prep',
-    SNACK: 'Snack',
     GENERAL: 'General',
     GIFT: 'Gift',
+    MEAL_PREP: 'Meal Prep',
+    RESTOCK: 'Restock',
+    SNACK: 'Snack',
     TRANSFER: 'Transfer',
     WASTE: 'Waste' };
   return map[purpose] || purpose;
@@ -35,22 +37,27 @@ function formatPurpose(purpose: string): string {
 function formatSource(source: string): string {
   const map: Record<string, string> = {
     MANUAL: 'Manual',
-    COOKING_LOG: 'Cooking Log',
-    MEAL_PLAN: 'Meal Plan',
-    RECIPE: 'Recipe' };
+    RECIPE_AUTO: 'Recipe (Auto)',
+    RECIPE_MANUAL: 'Recipe (Manual)',
+    TRANSFER: 'Transfer',
+    WASTE: 'Waste' };
   return map[source] || source;
 }
 
 function formatReason(reason: string): string {
   const map: Record<string, string> = {
-    EXPIRED: 'Expired',
-    SPOILED: 'Spoiled',
-    MOLD: 'Mold',
-    PEST: 'Pest',
+    BURNT: 'Burnt',
     COOKING_FAIL: 'Cooking Fail',
+    EXPIRED: 'Expired',
+    GAVE_AWAY: 'Gave Away',
+    MOLD: 'Mold',
+    OTHER: 'Other',
     OVERSTOCK: 'Overstock',
+    PEST: 'Pest',
+    SPILLED: 'Spilled',
+    SPOILED: 'Spoiled',
     TASTE: 'Taste',
-    OTHER: 'Other' };
+    UNKNOWN_LOSS: 'Unknown Loss' };
   return map[reason] || reason;
 }
 
@@ -246,11 +253,21 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
             icon="cash-outline"
             color={theme.colors.error}
           />
+        </View>
+
+        <View style={styles.summaryRow}>
           <AnalyticsSummaryCard
             title="Composted"
             value={(wasteData?.composted ?? 0).toFixed(1)}
             icon="leaf-outline"
             color={theme.colors.success}
+            subtitle="units"
+          />
+          <AnalyticsSummaryCard
+            title="Recycled"
+            value={(wasteData?.recycled ?? 0).toFixed(1)}
+            icon="refresh-outline"
+            color={theme.colors.info}
             subtitle="units"
           />
         </View>

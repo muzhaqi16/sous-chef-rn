@@ -5,19 +5,10 @@ import { render } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { HomeDetailScreen } from '../HomeDetailScreen';
 
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
-const mockGoBack = jest.fn();
-const mockNavigate = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockSaveName = jest.fn();
 const mockChangeRole = jest.fn();
@@ -25,6 +16,10 @@ const mockRemoveMember = jest.fn();
 const mockRevokeInvite = jest.fn();
 const mockLeaveHome = jest.fn().mockResolvedValue(true);
 const mockToggleJoinCode = jest.fn().mockResolvedValue(undefined);
+const mockRefetch = jest.fn();
+const mockHandleRoleSelect = jest.fn();
+const mockCloseRolePicker = jest.fn();
+const mockRolePickerState = { visible: false, membershipId: '', currentRole: '', memberName: '' };
 
 jest.mock('#hooks/home/useHomeDetailManagement', () => ({
   useHomeDetailManagement: jest.fn(() => ({
@@ -41,6 +36,10 @@ jest.mock('#hooks/home/useHomeDetailManagement', () => ({
     },
     loading: false,
     leaving: false,
+    refetch: mockRefetch,
+    rolePickerState: mockRolePickerState,
+    handleRoleSelect: mockHandleRoleSelect,
+    closeRolePicker: mockCloseRolePicker,
     saveName: mockSaveName,
     changeRole: mockChangeRole,
     removeMember: mockRemoveMember,
@@ -48,6 +47,12 @@ jest.mock('#hooks/home/useHomeDetailManagement', () => ({
     leaveHome: mockLeaveHome,
     toggleJoinCode: mockToggleJoinCode,
   })),
+  ROLE_OPTIONS: [
+    { label: 'Owner', value: 'OWNER' },
+    { label: 'Admin', value: 'ADMIN' },
+    { label: 'Member', value: 'MEMBER' },
+    { label: 'Guest', value: 'GUEST' },
+  ],
 }));
 
 jest.mock('#store/useAppStore', () => ({
@@ -57,16 +62,9 @@ jest.mock('#store/useAppStore', () => ({
   selectUser: (s: any) => s.user,
 }));
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeRefreshWithFinally: jest.fn(async (fn: any, setLoading: any) => {
-    setLoading(true);
-    try { await fn(); } finally { setLoading(false); }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('@react-native-clipboard/clipboard', () => ({
   setString: jest.fn(),
@@ -132,6 +130,10 @@ jest.mock('#components/base/Button', () => ({
   },
 }));
 
+jest.mock('#components/molecules/ModalPicker', () => ({
+  ModalPicker: () => null,
+}));
+
 jest.mock('#/components/base/SousChefLoader', () => ({
   SousChefLoader: () => null,
 }));
@@ -160,6 +162,10 @@ beforeEach(() => {
     },
     loading: false,
     leaving: false,
+    refetch: mockRefetch,
+    rolePickerState: mockRolePickerState,
+    handleRoleSelect: mockHandleRoleSelect,
+    closeRolePicker: mockCloseRolePicker,
     saveName: mockSaveName,
     changeRole: mockChangeRole,
     removeMember: mockRemoveMember,
@@ -215,6 +221,10 @@ describe('HomeDetailScreen', () => {
       home: null,
       loading: true,
       leaving: false,
+      refetch: mockRefetch,
+      rolePickerState: mockRolePickerState,
+      handleRoleSelect: mockHandleRoleSelect,
+      closeRolePicker: mockCloseRolePicker,
       saveName: mockSaveName,
       changeRole: mockChangeRole,
       removeMember: mockRemoveMember,

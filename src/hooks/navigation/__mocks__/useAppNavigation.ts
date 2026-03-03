@@ -1,0 +1,50 @@
+const mockNavigateTo = {
+  login: jest.fn(),
+  signUp: jest.fn(),
+  forgotPassword: jest.fn(),
+  codeVerification: jest.fn(),
+  createHome: jest.fn(),
+  createShoppingList: jest.fn(),
+  selectPantryItems: jest.fn(),
+  profilePictureUpload: jest.fn(),
+  inviteMembers: jest.fn(),
+  onboardingComplete: jest.fn(),
+  pantryMain: jest.fn(),
+  pantryItem: jest.fn(),
+  pantryItemDetail: jest.fn(),
+  nutritionScreen: jest.fn(),
+  shoppingListMain: jest.fn(),
+  profile: jest.fn(),
+  mealPlanMain: jest.fn(),
+  createMealPlan: jest.fn(),
+  createRecipe: jest.fn(),
+  editRecipe: jest.fn(),
+  homeManagement: jest.fn(),
+  imageUpload: jest.fn(),
+  imageCrop: jest.fn(),
+  notificationList: jest.fn(),
+  notificationDetail: jest.fn(),
+  notificationSettings: jest.fn(),
+  barcodeScanner: jest.fn(),
+  searchResults: jest.fn(),
+  notifications: jest.fn(),
+  barcode: jest.fn(),
+};
+
+// Stable mock instances — same jest.fn() across every useAppNavigation() call
+// so tests can assert on them (e.g. expect(mockNav.goBack).toHaveBeenCalled()).
+const mockNavigation = {
+  currentRoute: 'MockScreen',
+  params: {},
+  canGoBack: true,
+  navigate: jest.fn(),
+  navigateToNested: jest.fn(),
+  goBack: jest.fn(),
+  replace: jest.fn(),
+  push: jest.fn(),
+  popToTop: jest.fn(),
+  navigation: { dispatch: jest.fn(), canGoBack: jest.fn(() => true) },
+  navigateTo: mockNavigateTo,
+};
+
+export const useAppNavigation = jest.fn(() => mockNavigation);

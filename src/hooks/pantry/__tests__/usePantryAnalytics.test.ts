@@ -6,8 +6,9 @@ const mockUsageResult = {
   data: {
     pantry: {
       usageAnalytics: {
-        totalItemsUsed: 42,
-        topItems: [],
+        totalUsageCount: 42,
+        averageUsagePerDay: 2.5,
+        topUsedItems: [],
       },
     },
   },
@@ -20,8 +21,9 @@ const mockWasteResult = {
   data: {
     pantry: {
       wasteAnalytics: {
-        totalItemsWasted: 5,
+        totalWasteCount: 5,
         wasteRate: 0.1,
+        recycled: 1.0,
       },
     },
   },
@@ -34,8 +36,8 @@ const mockLedgerResult = {
   data: {
     pantry: {
       ledgerAnalytics: {
-        entries: [],
-        summary: { totalAdded: 10, totalRemoved: 3 },
+        periodData: [],
+        summary: { totalAdded: 10, totalConsumed: 7, totalWasted: 3 },
       },
     },
   },
@@ -73,16 +75,18 @@ describe('usePantryAnalytics', () => {
     );
 
     expect(result.current.usageData).toEqual({
-      totalItemsUsed: 42,
-      topItems: [],
+      totalUsageCount: 42,
+      averageUsagePerDay: 2.5,
+      topUsedItems: [],
     });
     expect(result.current.wasteData).toEqual({
-      totalItemsWasted: 5,
+      totalWasteCount: 5,
       wasteRate: 0.1,
+      recycled: 1.0,
     });
     expect(result.current.ledgerData).toEqual({
-      entries: [],
-      summary: { totalAdded: 10, totalRemoved: 3 },
+      periodData: [],
+      summary: { totalAdded: 10, totalConsumed: 7, totalWasted: 3 },
     });
   });
 

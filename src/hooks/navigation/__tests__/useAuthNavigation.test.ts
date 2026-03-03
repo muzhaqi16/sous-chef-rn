@@ -3,13 +3,8 @@ import { CommonActions } from '@react-navigation/native';
 import { useAuthNavigation } from '../useAuthNavigation';
 
 // Break circular dependency chain
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const mockDispatch = jest.fn();
 jest.mock('@react-navigation/native', () => {

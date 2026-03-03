@@ -3,13 +3,8 @@
 import { renderHook } from '@testing-library/react-native';
 import { useShoppingListSubscriptions } from '../useShoppingListSubscriptions';
 
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const mockRegister = jest.fn().mockReturnValue({});
 const mockIsParentDeleting = jest.fn().mockReturnValue(false);
@@ -25,10 +20,21 @@ jest.mock('#/services/subscriptions/types', () => ({
 }));
 
 const mockUseShoppingListChangesSubscription = jest.fn();
+const mockUseMyShoppingListsChangesSubscription = jest.fn();
+const mockUseCollaborationChangesSubscription = jest.fn();
 jest.mock('#generated', () => ({
   useShoppingListChangesSubscription: (...args: any[]) => mockUseShoppingListChangesSubscription(...args),
+  useMyShoppingListsChangesSubscription: (...args: any[]) => mockUseMyShoppingListsChangesSubscription(...args),
+  useCollaborationChangesSubscription: (...args: any[]) => mockUseCollaborationChangesSubscription(...args),
+  CollaborationChangeType: {
+    MemberAdded: 'MEMBER_ADDED',
+    MemberRemoved: 'MEMBER_REMOVED',
+    InviteAccepted: 'INVITE_ACCEPTED',
+    InviteSent: 'INVITE_SENT',
+  },
   ShoppingListItemDisplayFragmentDoc: {},
   GetShoppingListDocument: {},
+  GetShoppingListQuery: {},
   MutationType: {
     Created: 'CREATED',
     Deleted: 'DELETED',
@@ -54,9 +60,14 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   addNewItemToShoppingListCache: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
+jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
+  createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
+
+jest.mock('#/utils/compilerSafeWrappers');
 
 const mockUseAppStore = require('#store/useAppStore').useAppStore;
 
@@ -112,7 +123,7 @@ describe('useShoppingListSubscriptions', () => {
 
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
       return {};
     });
 
@@ -134,7 +145,7 @@ describe('useShoppingListSubscriptions', () => {
 
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
       return {};
     });
 
@@ -154,7 +165,7 @@ describe('useShoppingListSubscriptions', () => {
 
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
       return {};
     });
 
@@ -176,7 +187,7 @@ describe('useShoppingListSubscriptions', () => {
 
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
       return {};
     });
 
@@ -198,7 +209,7 @@ describe('useShoppingListSubscriptions', () => {
   it('does nothing for null payload', () => {
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
       return {};
     });
 
@@ -216,7 +227,7 @@ describe('useShoppingListSubscriptions', () => {
 
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
       return {};
     });
 
@@ -243,7 +254,7 @@ describe('useShoppingListSubscriptions', () => {
 
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
       return {};
     });
 

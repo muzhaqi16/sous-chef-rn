@@ -5,13 +5,8 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { AcceptInvite } from '../AcceptInvite';
 
 // Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 const mockGoBack = jest.fn();
 jest.mock('@react-navigation/native', () => ({
@@ -43,18 +38,7 @@ jest.mock('#/services/errorService', () => ({
   getErrorMessage: jest.fn((e: any) => e?.message || 'Unknown error'),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(async (fn: any, setLoading: any, onError?: any) => {
-    setLoading(true);
-    try {
-      return await fn();
-    } catch (e) {
-      onError?.(e);
-    } finally {
-      setLoading(false);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/molecules/Header', () => ({
   Header: () => null,

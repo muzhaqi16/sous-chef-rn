@@ -22,8 +22,9 @@ query GetPantries($homeId: ID!, $first: Int, $after: String) {
 query GetPantry(
   $id: ID!
   $itemsCursor: String
-  $itemsFirst: Int = 25
+  $itemsFirst: Int = 50
   $itemsFilter: PantryItemFilters
+  $itemsOrderBy: PantryItemOrderBy
   $storageLocationsCursor: String
   $storageLocationsFirst: Int = 20
 ) {
@@ -52,7 +53,7 @@ query GetPantry(
         itemCount
       }
     }
-    itemsConnection(first: $itemsFirst, after: $itemsCursor, filters: $itemsFilter) {
+    itemsConnection(first: $itemsFirst, after: $itemsCursor, filters: $itemsFilter, orderBy: $itemsOrderBy) {
       edges {
         node {
           ...PantryItemDisplay
@@ -243,6 +244,7 @@ query GetPantryLedgerAnalytics(
         additionCount
         consumptionCount
         wasteCount
+        unitName
         additionsByUnit {
           unitId
           unitName
@@ -276,12 +278,15 @@ query GetPantryLedgerAnalytics(
           storeName
           totalSpent
           itemCount
+          averageCostPerUnit
         }
       }
       topRestockedItems {
         itemId
         itemName
+        imageUrl
         totalQuantity
+        unitName
         count
       }
     }

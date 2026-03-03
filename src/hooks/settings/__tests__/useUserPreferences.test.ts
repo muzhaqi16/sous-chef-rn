@@ -3,13 +3,8 @@ import { useUserPreferences, useShowShoppingListImages } from '../useUserPrefere
 import { defaultUserPreferences } from '#/store/slices/preferencesSlice';
 
 // Break circular dependency chain
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const mockSetUserPreference = jest.fn();
 const mockResetUserPreferences = jest.fn();

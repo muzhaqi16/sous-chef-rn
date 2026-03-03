@@ -21,8 +21,10 @@ export const NotificationActionHandler: React.FC<
   const [invitationModalVisible, setInvitationModalVisible] = useState(false);
   const [currentInvitation, setCurrentInvitation] =
     useState<InvitationData | null>(null);
+  const [currentNotificationId, setCurrentNotificationId] = useState<string | null>(null);
   const { navigateTo, navigate } = useAppNavigation();
-  const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
+  const setHomeAndPantry = useAppStore(state => state.setHomeAndPantry);
+  const removeNotification = useAppStore(state => state.removeNotification);
   const showInvitationModal = (notification: NotificationItem) => {
     if (
       notification.actionType === 'ACCEPT_HOME_INVITE' ||
@@ -46,6 +48,7 @@ export const NotificationActionHandler: React.FC<
       };
 
       setCurrentInvitation(invitation);
+      setCurrentNotificationId(notification.id);
       setInvitationModalVisible(true);
     }
   };
@@ -133,13 +136,18 @@ export const NotificationActionHandler: React.FC<
   };
 
   const handleInvitationAccept = async (invitation: InvitationData) => {
+    // Remove the notification so the user can't re-open the modal
+    if (currentNotificationId) {
+      removeNotification(currentNotificationId);
+    }
+
     // Handle successful acceptance
     if (invitation.type === 'HOME_INVITE') {
       // Set the newly accepted home as selected
       const acceptedHomeId = (invitation as any).acceptedHomeId;
 
       if (acceptedHomeId) {
-        setSelectedHomeId(acceptedHomeId);
+        setHomeAndPantry(acceptedHomeId, null);
 
         // Defer navigation until idle to allow Zustand store update to propagate
         requestIdleCallback(() => {
@@ -188,6 +196,7 @@ export const NotificationActionHandler: React.FC<
         onClose={() => {
           setInvitationModalVisible(false);
           setCurrentInvitation(null);
+          setCurrentNotificationId(null);
         }}
         onAccept={handleInvitationAccept}
         onReject={handleInvitationReject}

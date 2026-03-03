@@ -4,8 +4,8 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { OnboardingCompleteScreen } from '../OnboardingCompleteScreen';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#store/useAppStore', () => {
   const fn = (selector: any) => selector({
@@ -23,9 +23,7 @@ jest.mock('#generated', () => ({
   useCompleteOnboardingMutation: jest.fn(() => [mockCompleteOnboarding, { loading: false }]),
 }));
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
   OnBoardingWrapper: ({ title, subtitle, children, testID }: any) => {

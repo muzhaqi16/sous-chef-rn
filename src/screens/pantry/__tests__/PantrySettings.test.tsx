@@ -4,13 +4,10 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { PantrySettings } from '../PantrySettings';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-const mockGoBack = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ goBack: mockGoBack, navigate: jest.fn(), navigateTo: {} }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
   const selectSelectedHomeId = (s: any) => s.selectedHomeId;
@@ -56,15 +53,7 @@ jest.mock('#/utils/connectionUtils', () => ({
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: { registerParentDeletion: jest.fn(), unregisterParentDeletion: jest.fn() },
 }));
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn((fn, setLoading, onError) => {
-    setLoading(true);
-    fn().then(() => setLoading(false)).catch((e: any) => { setLoading(false); if (onError) onError(e); });
-  }),
-  executeAsyncWithCleanup: jest.fn((fn, cleanup) => {
-    fn().catch(() => { if (cleanup) cleanup(); });
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/molecules/ScreenHeader', () => ({
   ScreenHeader: ({ title, rightElement }: any) => {

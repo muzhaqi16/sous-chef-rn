@@ -1,7 +1,8 @@
-import React, {useEffect, useRef} from 'react';
-import {Text, Pressable, ScrollView} from 'react-native';
+import React, {useState, useEffect, useRef} from 'react';
+import {View, Text, Pressable, ScrollView} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#/utils/iconUtils';
+import {Button} from '#components/base/Button';
 import {ActionTray} from '#components/templates/ActionTray/ActionTray';
 import type {ActionTrayRef} from '#components/templates/ActionTray/types';
 
@@ -12,6 +13,8 @@ export interface ModalPickerProps {
   selected: string;
   onSelect: (value: string) => void;
   onCancel: () => void;
+  /** When set, tapping an option only highlights it; a button with this label confirms the selection. */
+  confirmLabel?: string;
 }
 
 export const ModalPicker: React.FC<ModalPickerProps> = ({
@@ -21,9 +24,20 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
   selected,
   onSelect,
   onCancel,
+  confirmLabel,
 }) => {
   const {theme} = useUnistyles();
   const trayRef = useRef<ActionTrayRef>(null);
+
+  // Local pending selection for confirm mode
+  const [pendingValue, setPendingValue] = useState(selected);
+
+  // Sync pending value when the external selected prop changes (state-during-render pattern)
+  const [prevSelected, setPrevSelected] = useState(selected);
+  if (selected !== prevSelected) {
+    setPrevSelected(selected);
+    setPendingValue(selected);
+  }
 
   // Bridge declarative `visible` prop → imperative ActionTray ref
   useEffect(() => {
@@ -34,6 +48,8 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
     }
   }, [visible]);
 
+  const activeValue = confirmLabel ? pendingValue : selected;
+
   return (
     <ActionTray ref={trayRef} title={label} onClose={onCancel}>
       <ScrollView>
@@ -41,9 +57,15 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
           <Pressable
             key={opt.value}
             style={({pressed}) => [styles.option, pressed && styles.pressed]}
-            onPress={() => onSelect(opt.value)}>
+            onPress={() => {
+              if (confirmLabel) {
+                setPendingValue(opt.value);
+              } else {
+                onSelect(opt.value);
+              }
+            }}>
             <Text style={styles.optionText}>{opt.label}</Text>
-            {selected === opt.value && (
+            {activeValue === opt.value && (
               <Icon
                 name="checkmark"
                 size={20}
@@ -53,6 +75,16 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
           </Pressable>
         ))}
       </ScrollView>
+      {confirmLabel ? (
+        <View style={styles.footer}>
+          <Button
+            title={confirmLabel}
+            onPress={() => onSelect(pendingValue)}
+            disabled={pendingValue === selected}
+            fullWidth
+          />
+        </View>
+      ) : null}
     </ActionTray>
   );
 };
@@ -72,5 +104,8 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
+  },
+  footer: {
+    paddingTop: theme.spacing['3'],
   },
 }));

@@ -5,13 +5,8 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { PerformanceDashboard } from '../PerformanceDashboard';
 
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const mockSetPerformanceEnabled = jest.fn();
 const mockSetTrackRenders = jest.fn();

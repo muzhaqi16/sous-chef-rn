@@ -3,8 +3,8 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { ImageUploadField } from '../ImageUploadField';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ scheduleTokenRefresh: jest.fn(), cancelScheduledRefresh: jest.fn() }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 jest.mock('#utils/iconUtils', () => ({
   Icon: ({ name }: any) => {
     const { Text } = require('react-native');
@@ -31,10 +31,9 @@ jest.mock('#hooks/useImageUpload', () => ({
   }),
 }));
 
-const mockExecuteAsyncWithCleanup = jest.fn();
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeAsyncWithCleanup: (...args: any[]) => mockExecuteAsyncWithCleanup(...args),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
+const { executeAsyncWithCleanup: mockExecuteAsyncWithCleanup } =
+  jest.requireMock('#/utils/compilerSafeWrappers') as { executeAsyncWithCleanup: jest.Mock };
 
 describe('ImageUploadField', () => {
   beforeEach(() => {

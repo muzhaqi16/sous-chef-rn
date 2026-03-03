@@ -28,12 +28,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-  executeMutation: jest.fn(async (fn: () => Promise<any>, _msg: string) => {
-    return await fn();
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 beforeEach(() => {
   jest.clearAllMocks();

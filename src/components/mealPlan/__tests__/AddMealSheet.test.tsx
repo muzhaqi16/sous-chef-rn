@@ -66,19 +66,7 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeAsyncWithCleanup: jest.fn(
-    async (asyncFn: () => Promise<void>, cleanup: () => void, onError: (e: unknown) => void) => {
-      try {
-        await asyncFn();
-      } catch (e) {
-        onError(e);
-      } finally {
-        cleanup();
-      }
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#generated', () => ({
   MealType: {

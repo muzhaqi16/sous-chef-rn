@@ -35,18 +35,7 @@ jest.mock('#/services/errorService', () => ({
   }),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(
-    async (fn: () => Promise<any>, onError: (err: unknown) => void) => {
-      try {
-        return await fn();
-      } catch (error) {
-        onError(error);
-        return false;
-      }
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.spyOn(Alert, 'alert');
 

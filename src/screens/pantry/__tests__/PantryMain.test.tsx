@@ -4,25 +4,15 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { PantryMain } from '../PantryMain';
 
+// --- Prop capture for PantryContent ---
+let capturedPantryContentProps: Record<string, any> = {};
+
 // --- Break circular deps ---
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 // --- Navigation ---
-const mockNavigate = jest.fn();
-const mockNavigateTo = {
-  pantryItem: jest.fn(),
-  pantryItemDetail: jest.fn(),
-  shoppingListMain: jest.fn(),
-  nutritionScreen: jest.fn(),
-};
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    navigate: mockNavigate,
-    navigateTo: mockNavigateTo,
-    goBack: jest.fn(),
-  }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 // --- Tab bar ---
 jest.mock('#/context/TabBarActionsContext', () => ({
@@ -44,11 +34,15 @@ jest.mock('#store/useAppStore', () => {
       setPantrySortDirection: jest.fn(),
       pendingPantryScrollToTop: false,
       setPendingPantryScrollToTop: jest.fn(),
+      isOnline: true,
     });
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn };
+  return {
+    useAppStore: fn,
+    selectIsOnline: (s: any) => s.isOnline,
+  };
 });
 
 // --- Auth ---
@@ -58,13 +52,10 @@ jest.mock('#hooks/auth/useAuth', () => ({
 
 // --- Pantry hooks ---
 jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
-  usePantryManagement: () => ({
+  usePantryManagement: jest.fn(() => ({
     items: [],
-    allItems: [],
-    stats: { totalItems: 0, expiringItems: 0, lowStockItems: 0 },
+    stats: { totalItems: 0, expiringCount: 0, lowStockCount: 0 },
     totalCount: 0,
-    searchQuery: '',
-    setSearchQuery: jest.fn(),
     removeItem: jest.fn(),
     refetch: jest.fn(),
     loading: false,
@@ -74,7 +65,7 @@ jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
     hasMore: false,
     isLoadingMore: false,
     locationCounts: {},
-  }),
+  })),
 }));
 jest.mock('#hooks/pantry/usePantrySelectorConfig', () => ({
   usePantrySelectorConfig: () => ({ items: [], selectedId: null }),
@@ -94,21 +85,21 @@ jest.mock('#hooks/pantry/usePantryItemActions', () => ({
     handleDeleteItem: jest.fn(),
   }),
 }));
+const mockUseCurrentPantry = jest.fn(() => ({
+  pantry: { id: 'p1', name: 'Kitchen' },
+  pantries: [{ id: 'p1', name: 'Kitchen' }],
+  currentHome: { name: 'My Home' },
+  selectedHomeId: 'h1',
+  setSelectedPantryId: jest.fn(),
+  homeCount: 1,
+  isReady: true,
+}));
 jest.mock('#hooks/pantry/useCurrentPantry', () => ({
-  useCurrentPantry: () => ({
-    pantry: { id: 'p1', name: 'Kitchen' },
-    pantries: [{ id: 'p1', name: 'Kitchen' }],
-    currentHome: { name: 'My Home' },
-    selectedHomeId: 'h1',
-    setSelectedPantryId: jest.fn(),
-    isReady: true,
-  }),
+  useCurrentPantry: () => mockUseCurrentPantry(),
 }));
 
 // --- Performance / scanner / UI hooks ---
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#hooks/performance/useScreenTelemetry', () => ({
   useScreenTelemetry: jest.fn(),
 }));
@@ -157,15 +148,24 @@ jest.mock('#components/performance/DeferredScreen', () => ({
 
 // --- Heavy child components (shallow render) ---
 jest.mock('#components/pantry/PantryContent', () => {
-  const { forwardRef, useImperativeHandle } = require('react');
+  const { forwardRef, useImperativeHandle, useEffect } = require('react');
   const { View, Text } = require('react-native');
   return {
     PantryContent: forwardRef((props: any, ref: any) => {
       useImperativeHandle(ref, () => ({ scrollToTop: jest.fn() }));
+      useEffect(() => {
+        capturedPantryContentProps = props;
+      });
       return (
         <View testID="pantry-content">
           <Text>{props.userName}</Text>
           <Text>{props.householdName}</Text>
+          <Text testID="prop-stats">{JSON.stringify(props.stats)}</Text>
+          <Text testID="prop-totalCount">{String(props.totalCount)}</Text>
+          <Text testID="prop-loading">{String(props.loading)}</Text>
+          <Text testID="prop-itemCount">{String(props.items?.length ?? 0)}</Text>
+          <Text testID="prop-hasMore">{String(props.hasMore)}</Text>
+          <Text testID="prop-isLoadingMore">{String(props.isLoadingMore)}</Text>
         </View>
       );
     }),
@@ -187,9 +187,35 @@ jest.mock('#components/molecules/TabScreenHeader', () => ({ TabScreenHeader: () 
 jest.mock('#components/molecules/SearchBar', () => ({ SearchBar: () => null }));
 jest.mock('#components/molecules/FilterTabs/FilterTabs', () => ({ FilterTabs: () => null }));
 
+// --- Per-test mock override helper ---
+const defaultPantryManagement = {
+  items: [] as Array<{ id: string; itemName: string; quantity: number }>,
+  stats: { totalItems: 0, expiringCount: 0, lowStockCount: 0 } as {
+    totalItems: number;
+    expiringCount: number;
+    lowStockCount: number;
+  } | null,
+  totalCount: 0,
+  removeItem: jest.fn(),
+  refetch: jest.fn(),
+  loading: false,
+  isRefreshing: false,
+  error: null,
+  loadMore: jest.fn(),
+  hasMore: false,
+  isLoadingMore: false,
+  locationCounts: {},
+};
+
+function mockPantryManagement(overrides: Partial<typeof defaultPantryManagement> = {}) {
+  const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
+  usePantryManagement.mockReturnValue({ ...defaultPantryManagement, ...overrides });
+}
+
 describe('PantryMain', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    capturedPantryContentProps = {};
   });
 
   it('renders the pantry screen container', () => {
@@ -221,5 +247,118 @@ describe('PantryMain', () => {
   it('renders without crashing when no items', () => {
     render(<PantryMain />);
     expect(screen.getByTestId('pantry-content')).toBeTruthy();
+  });
+
+  describe('passes hook data as props to PantryContent', () => {
+    it('passes stats to PantryContent when stats exist', () => {
+      const stats = { totalItems: 12, expiringCount: 3, lowStockCount: 2 };
+      mockPantryManagement({ stats });
+      render(<PantryMain />);
+      expect(capturedPantryContentProps.stats).toEqual(stats);
+    });
+
+    it('passes null stats when hook returns null', () => {
+      mockPantryManagement({ stats: null });
+      render(<PantryMain />);
+      expect(capturedPantryContentProps.stats).toBeNull();
+    });
+
+    it('passes totalCount to PantryContent', () => {
+      mockPantryManagement({ totalCount: 42 });
+      render(<PantryMain />);
+      expect(capturedPantryContentProps.totalCount).toBe(42);
+      expect(screen.getByTestId('prop-totalCount')).toHaveTextContent('42');
+    });
+
+    it('passes loading=true when loading with no items', () => {
+      mockPantryManagement({ loading: true, items: [] });
+      render(<PantryMain />);
+      expect(capturedPantryContentProps.loading).toBe(true);
+      expect(screen.getByTestId('prop-loading')).toHaveTextContent('true');
+    });
+
+    it('passes items array to PantryContent', () => {
+      const items = [
+        { id: 'i1', itemName: 'Milk', quantity: 1 },
+        { id: 'i2', itemName: 'Eggs', quantity: 12 },
+      ];
+      mockPantryManagement({ items, totalCount: 2 });
+      render(<PantryMain />);
+      expect(capturedPantryContentProps.items).toHaveLength(2);
+      expect(screen.getByTestId('prop-itemCount')).toHaveTextContent('2');
+    });
+
+    it('passes pagination props (hasMore, isLoadingMore, onEndReached)', () => {
+      const loadMore = jest.fn();
+      mockPantryManagement({ hasMore: true, isLoadingMore: true, loadMore });
+      render(<PantryMain />);
+      expect(capturedPantryContentProps.hasMore).toBe(true);
+      expect(capturedPantryContentProps.isLoadingMore).toBe(true);
+      expect(capturedPantryContentProps.onEndReached).toBe(loadMore);
+    });
+  });
+
+  describe('no-home states', () => {
+    it('passes noHomeSelected=true when ready, no home selected, but homes exist', () => {
+      mockUseCurrentPantry.mockReturnValue({
+        pantry: null as any,
+        pantries: [],
+        currentHome: null as any,
+        selectedHomeId: null as any,
+        setSelectedPantryId: jest.fn(),
+        homeCount: 3,
+        isReady: true,
+      });
+      render(<PantryMain />);
+      expect(capturedPantryContentProps.noHomeSelected).toBe(true);
+      expect(capturedPantryContentProps.noHomes).toBe(false);
+      expect(capturedPantryContentProps.householdName).toBe('Tap to select a home');
+    });
+
+    it('passes noHomes=true when ready, no home selected, and no homes exist', () => {
+      mockUseCurrentPantry.mockReturnValue({
+        pantry: null as any,
+        pantries: [],
+        currentHome: null as any,
+        selectedHomeId: null as any,
+        setSelectedPantryId: jest.fn(),
+        homeCount: 0,
+        isReady: true,
+      });
+      render(<PantryMain />);
+      expect(capturedPantryContentProps.noHomes).toBe(true);
+      expect(capturedPantryContentProps.noHomeSelected).toBe(false);
+      expect(capturedPantryContentProps.householdName).toBe('No homes yet');
+    });
+
+    it('passes onSelectHome callback that navigates to HomeManagement', () => {
+      mockUseCurrentPantry.mockReturnValue({
+        pantry: null as any,
+        pantries: [],
+        currentHome: null as any,
+        selectedHomeId: null as any,
+        setSelectedPantryId: jest.fn(),
+        homeCount: 3,
+        isReady: true,
+      });
+      render(<PantryMain />);
+      expect(typeof capturedPantryContentProps.onSelectHome).toBe('function');
+    });
+
+    it('passes noHomeSelected=false and noHomes=false when home is selected', () => {
+      mockUseCurrentPantry.mockReturnValue({
+        pantry: { id: 'p1', name: 'Kitchen' },
+        pantries: [{ id: 'p1', name: 'Kitchen' }],
+        currentHome: { name: 'My Home' },
+        selectedHomeId: 'h1',
+        setSelectedPantryId: jest.fn(),
+        homeCount: 1,
+        isReady: true,
+      });
+      render(<PantryMain />);
+      expect(capturedPantryContentProps.noHomeSelected).toBe(false);
+      expect(capturedPantryContentProps.noHomes).toBe(false);
+      expect(capturedPantryContentProps.householdName).toBe('My Home');
+    });
   });
 });

@@ -5,21 +5,10 @@ import { render } from '@testing-library/react-native';
 import { ShoppingListMainContent } from '../ShoppingListMainContent';
 
 // Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: jest.fn(() => ({
-    navigate: jest.fn(),
-    goBack: jest.fn(),
-    navigateTo: { barcode: jest.fn() },
-  })),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
   useTabBarAddButton: jest.fn(),
@@ -93,9 +82,7 @@ jest.mock('#/hooks/auth/useAuth', () => ({
   })),
 }));
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#hooks/performance/useScreenTelemetry', () => ({
   useScreenTelemetry: jest.fn(),
@@ -118,16 +105,7 @@ jest.mock('#/utils/permissions/shoppingListPermissions', () => ({
   })),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeRefreshWithFinally: jest.fn(async (fn: any, setLoading: any) => {
-    setLoading(true);
-    try {
-      return await fn();
-    } finally {
-      setLoading(false);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/organisms/AnimatedItemSelector/AnimatedItemSelector', () => {
   const { forwardRef } = require('react');

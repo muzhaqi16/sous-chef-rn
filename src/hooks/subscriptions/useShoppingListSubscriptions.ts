@@ -13,13 +13,16 @@ import type { ApolloCache } from '@apollo/client';
 import { useAppStore } from '#store/useAppStore';
 import {
   useShoppingListChangesSubscription,
+  useMyShoppingListsChangesSubscription,
+  useCollaborationChangesSubscription,
+  CollaborationChangeType,
   ShoppingListItemDisplayFragmentDoc,
   GetShoppingListDocument,
   GetShoppingListQuery,
+  MutationType,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { CacheStrategy } from '#/services/subscriptions/types';
-import { MutationType } from '#generated';
 import {
   removeFromShoppingListItemsConnection,
   moveShoppingListItemToPurchased,
@@ -28,6 +31,12 @@ import {
   addNewItemToShoppingListCache,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import {
+  createAddToQueryConnectionUpdater,
+  createRemoveFromQueryConnectionUpdater,
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
+} from '#/apollo/utils/cacheUpdaters';
 
 /** Re-sort shopping list edges by sortOrder after a subscription update */
 function resortEdges(cache: ApolloCache, shoppingListId: string): void {
@@ -291,7 +300,122 @@ export function useShoppingListSubscriptions(
     ...changesHandlers,
   });
 
-  // Additional shopping list subscriptions can be added here:
-  // - MyShoppingListsChanges (for dashboard updates)
-  // - etc.
+  //
+  // My Shopping Lists Changes Subscription
+  // Handles list-level metadata updates across all user's shopping lists:
+  // - LIST_UPDATED / STATUS_CHANGED / ITEMS_CHANGED / ITEMS_BATCH_CLEARED / COLLABORATORS_CHANGED
+  // Also handles CREATED / DELETED mutations for the shoppingLists connection
+  //
+  const addToShoppingLists = createAddToQueryConnectionUpdater<{ id: string }>('shoppingLists', 'ShoppingList');
+  const removeFromShoppingLists = createRemoveFromQueryConnectionUpdater('shoppingLists', 'ShoppingList');
+
+  const myListsHandlers = subscriptionService.register({
+    subscriptionName: 'MyShoppingListsChanges',
+    entityType: 'ShoppingList',
+    enableDeduplication: true,
+    userId,
+    cacheUpdateStrategy: CacheStrategy.NONE,
+    enableLogging: true,
+    customOnData: (payload: any, client: any) => {
+      if (!payload) return;
+
+      // Skip self-echo
+      if (payload.userId && userId && payload.userId === userId) {
+        if (__DEV__) {
+          console.log('⏭️ [MyShoppingListsChanges] Skipping self-echo');
+        }
+        return;
+      }
+
+      const mutation = payload.mutation;
+      const shoppingList = payload.shoppingList;
+
+      // Handle list creation/deletion via mutation field
+      if (mutation === MutationType.Created && shoppingList?.id) {
+        addToShoppingLists(client.cache, shoppingList);
+        return;
+      }
+
+      if (mutation === MutationType.Deleted && payload.listId) {
+        removeFromShoppingLists(client.cache, payload.listId, { evictItem: true });
+        return;
+      }
+
+      // For all other changeTypes (LIST_UPDATED, STATUS_CHANGED, ITEMS_CHANGED,
+      // ITEMS_BATCH_CLEARED, COLLABORATORS_CHANGED), Apollo auto-normalizes the
+      // shoppingList entity by id — the returned metadata fields (totalItems,
+      // completedItems, name, status, isCompleted, estimatedTotal) merge automatically.
+    },
+  });
+
+  useMyShoppingListsChangesSubscription({
+    skip: !userId,
+    ...myListsHandlers,
+  });
+
+  //
+  // Collaboration Changes Subscription
+  // Handles collaborator lifecycle for the currently selected shopping list:
+  // - MEMBER_ADDED / INVITE_ACCEPTED: add to collaboratorsConnection
+  // - MEMBER_REMOVED: remove from collaboratorsConnection
+  // - INVITE_SENT: no cache update (pending invites managed separately)
+  //
+  const addCollaborator = createAddToParentConnectionUpdater<{ id: string }>(
+    'ShoppingList',
+    'collaboratorsConnection',
+    'ShoppingListCollaborator',
+  );
+  const removeCollaborator = createRemoveFromParentConnectionUpdater(
+    'ShoppingList',
+    'collaboratorsConnection',
+    'ShoppingListCollaborator',
+  );
+
+  const collaborationHandlers = subscriptionService.register({
+    subscriptionName: 'CollaborationChanges',
+    entityType: 'ShoppingListCollaborator',
+    enableDeduplication: true,
+    userId,
+    cacheUpdateStrategy: CacheStrategy.NONE,
+    enableLogging: true,
+    entityId: selectedShoppingListId,
+    customOnData: (payload: any, client: any) => {
+      if (!payload) return;
+
+      // Skip self-echo
+      if (payload.userId && userId && payload.userId === userId) {
+        if (__DEV__) {
+          console.log('⏭️ [CollaborationChanges] Skipping self-echo');
+        }
+        return;
+      }
+
+      const changeType = payload.changeType;
+      const collaborator = payload.collaborator;
+      const listId = payload.shoppingListId;
+
+      if (!collaborator?.id || !listId) return;
+
+      switch (changeType) {
+        case CollaborationChangeType.MemberAdded:
+        case CollaborationChangeType.InviteAccepted:
+          addCollaborator(client.cache, listId, collaborator);
+          break;
+        case CollaborationChangeType.MemberRemoved:
+          removeCollaborator(client.cache, listId, collaborator.id, { evictItem: true });
+          break;
+        case CollaborationChangeType.InviteSent:
+          // Pending invites are managed separately
+          break;
+        default:
+          break;
+      }
+    },
+  });
+
+  useCollaborationChangesSubscription({
+    variables: { shoppingListId: selectedShoppingListId! },
+    skip: !selectedShoppingListId,
+    ...collaborationHandlers,
+  });
 }

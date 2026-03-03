@@ -18,7 +18,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useScannerSetup } from '#hooks/scanner/useScannerSetup';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, selectIsOnline } from '#store/useAppStore';
 import { useShallow } from 'zustand/shallow';
 import { GetStorageLocationsQuery } from '#generated';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
@@ -27,7 +27,10 @@ import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 import { Telemetry } from '#services/telemetry';
 import { useAuth } from '#hooks/auth/useAuth';
-import { type LocationFilter, locationFilterToQueryFilter } from '#/utils/pantryFilters';
+import { type LocationFilter, locationFilterToQueryFilter, sortOptionToOrderBy } from '#/utils/pantryFilters';
+import { shouldUseServerSort } from '#/utils/hybridSort';
+import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
+import { DEFAULT_PAGE_SIZES } from '#/constants/pagination';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import { PantryContent, type PantryContentRef } from '#components/pantry/PantryContent';
 import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
@@ -44,6 +47,7 @@ import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkel
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
+import { SectionHeader } from '#components/molecules/SectionHeader';
 /**
  * Inner component that runs all heavy hooks.
  * Only mounts after DeferredScreen gates rendering, so the skeleton paints instantly.
@@ -124,6 +128,10 @@ const PantryMainInner: React.FC = () => {
   useFocusEffect(onPantryFocus);
   // Location filter for redesigned tabs
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
+  // Search state managed locally (moved from usePantryQuery)
+  const [searchQuery, setSearchQuery] = useState('');
+  // Network status for offline fallback
+  const isOnline = useAppStore(selectIsOnline);
   // Add to pantry sheet state
   const [addSheetVisible, setAddSheetVisible] = useState(false);
   // Add storage location sheet state
@@ -143,6 +151,7 @@ const PantryMainInner: React.FC = () => {
     currentHome,
     selectedHomeId,
     setSelectedPantryId,
+    homeCount,
     isReady,
   } = useCurrentPantry();
   // Set up scanner button
@@ -154,20 +163,43 @@ const PantryMainInner: React.FC = () => {
       pantryId: pantry?.id,
     },
   });
-  // Register add button action - open add to pantry sheet
-  useTabBarAddButton(() => {
+  // Derive no-home states for differentiated empty states
+  const noHomeSelected = isReady && !selectedHomeId && homeCount > 0;
+  const noHomes = isReady && !selectedHomeId && homeCount === 0;
+  const handleSelectHome = () => navigate('HomeManagement', {});
+  // Register add button action - open add to pantry sheet (disabled when no home)
+  useTabBarAddButton(noHomeSelected || noHomes ? undefined : () => {
     Telemetry.trackEvent('add_pantry_item_clicked');
     setAddSheetVisible(true);
   });
   // Convert location filter to server-side query filter
-  const queryFilter = locationFilterToQueryFilter(locationFilter);
+  const locationQueryFilter = locationFilterToQueryFilter(locationFilter);
+
+  // Hybrid sort/search: use server when partial data, local when all loaded.
+  // Track totalCount from previous render using "adjusting state during render" pattern
+  // (useState + conditional setState) to avoid reading ref.current during render.
+  const [knownTotalCount, setKnownTotalCount] = useState(0);
+
+  // Debounce search for server-side path (300ms)
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
+
+  // Use server sort/search when data exceeds page size AND we're online
+  const useServerSort = shouldUseServerSort(knownTotalCount, DEFAULT_PAGE_SIZES.MEDIUM, isOnline);
+
+  // Build query filter: merge location filter with server-side search when applicable
+  const queryFilter = (() => {
+    if (!useServerSort || !debouncedSearch) return locationQueryFilter;
+    return { ...locationQueryFilter, search: debouncedSearch };
+  })();
+
+  // Always pass orderBy to server — harmless when all items fit in one page,
+  // and ensures data arrives pre-sorted when server sort is active.
+  const orderBy = sortOptionToOrderBy(pantrySortOption, pantrySortDirection);
+
   const {
     items: rawPantryItems,
-    allItems,
     stats,
     totalCount,
-    searchQuery,
-    setSearchQuery,
     removeItem,
     refetch,
     loading,
@@ -177,7 +209,14 @@ const PantryMainInner: React.FC = () => {
     hasMore,
     isLoadingMore,
     locationCounts,
-  } = usePantryManagement(pantry?.id, queryFilter);
+  } = usePantryManagement(pantry?.id, queryFilter, orderBy);
+
+  // Update knownTotalCount for next render's useServerSort decision
+  // ("adjusting state during render" pattern — avoids reading ref.current during render)
+  if (totalCount > 0 && totalCount !== knownTotalCount) {
+    setKnownTotalCount(totalCount);
+  }
+
   // PERF: Defer pantry items so Apollo cache updates (from subscriptions or
   // fetchMore) don't block user interactions like scrolling and tapping.
   // Downstream memos (sortedItems → itemDisplayMap → FlashList)
@@ -325,13 +364,16 @@ const PantryMainInner: React.FC = () => {
   const isLoadingInitial =
     (!isReady || loading) &&
     !pantryError &&
-    pantryItems.length === 0 &&
-    !allItems?.length;
+    pantryItems.length === 0;
   // isRefreshing comes from usePantryManagement (manual tracking in usePantryQuery)
   // Get user display name and avatar from auth store (populated at login)
   const userName =
     authUser?.name || authUser?.firstName || authUser?.lastName || 'there';
-  const householdName = currentHome?.name || 'Your Home';
+  const householdName = noHomeSelected
+    ? 'Tap to select a home'
+    : noHomes
+      ? 'No homes yet'
+      : currentHome?.name || 'Your Home';
   return (
     <View style={styles.container} testID="pantry-screen">
       <PantryContent
@@ -352,6 +394,7 @@ const PantryMainInner: React.FC = () => {
         initialSortOption={pantrySortOption}
         initialSortDirection={pantrySortDirection}
         onSortChange={handleSortChange}
+        useServerSort={useServerSort}
         onItemPress={handleItemPress}
         onItemEdit={handleEditItem}
         onItemDelete={handleDeleteItem}
@@ -365,6 +408,9 @@ const PantryMainInner: React.FC = () => {
         onAnalyticsPress={handleAnalyticsPress}
         onLowStockNavigate={handleLowStockNavigate}
         totalCount={totalCount}
+        noHomeSelected={noHomeSelected}
+        noHomes={noHomes}
+        onSelectHome={handleSelectHome}
         onAddItem={handleAddItem}
         onRefresh={handleRefresh}
         onEndReached={loadMore}
@@ -472,6 +518,13 @@ export const PantryMain: React.FC = () => (
             tabs={SKELETON_PANTRY_TABS}
             activeTabId="all"
             onTabChange={noop}
+          />
+          <SectionHeader
+            title="ALL ITEMS"
+            variant="default"
+            actionLabel="Sort ↓"
+            onActionPress={noop}
+            testID="pantry-sort-button"
           />
           <PantryScreenSkeleton />
         </View>

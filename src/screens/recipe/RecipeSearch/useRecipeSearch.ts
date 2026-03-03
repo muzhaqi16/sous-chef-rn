@@ -148,7 +148,7 @@ export function useRecipeSearch() {
 
   // Get pantry for ingredient selection
   const defaultPantry = getDefaultPantry(homeData);
-  const { allItems: pantryItems } = usePantryManagement(defaultPantry?.id);
+  const { items: pantryItems } = usePantryManagement(defaultPantry?.id);
 
   // Get dietary profile for filter defaults
   const { profile: dietaryProfile } = useDietaryProfile();

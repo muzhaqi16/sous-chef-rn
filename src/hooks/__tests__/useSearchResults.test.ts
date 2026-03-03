@@ -77,12 +77,10 @@ jest.mock('#/storage/mmkv', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn(async (fn: () => Promise<any>) => fn()),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 // Break circular dependency
-jest.mock('../../apollo/links/tokenScheduler', () => ({}));
+jest.mock('../../apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();

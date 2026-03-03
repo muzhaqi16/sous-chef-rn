@@ -5,24 +5,12 @@ import { render, screen } from '@testing-library/react-native';
 import { PantryItemDetail } from '../PantryItemDetail';
 
 // --- Break circular deps ---
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 // --- Navigation ---
-const mockGoBack = jest.fn();
-const mockNavigate = jest.fn();
-const mockNavigateTo = {
-  pantryItem: jest.fn(),
-  shoppingListMain: jest.fn(),
-  nutritionScreen: jest.fn(),
-};
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    navigate: mockNavigate,
-    navigateTo: mockNavigateTo,
-    goBack: mockGoBack,
-  }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
 
 // --- Store ---
 jest.mock('#store/useAppStore', () => {
@@ -131,12 +119,16 @@ jest.mock('#/services/errorService', () => ({
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeWithLoadingState: jest.fn(),
   executeMutationWithErrorHandler: jest.fn(),
+  executeMutation: jest.fn(),
+  executeCacheUpdate: jest.fn(),
+  executeQuery: jest.fn(),
+  executeRefetch: jest.fn(),
+  executeRefreshWithFinally: jest.fn(),
+  executeAsyncWithCleanup: jest.fn(),
 }));
 
 // --- Performance ---
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
 // --- Child component mocks ---
 jest.mock('#components/molecules/Header', () => ({
@@ -730,7 +722,16 @@ describe('PantryItemDetail – helper functions', () => {
     const { useGetPantryItemQuery } = require('#generated');
     const route = { params: { itemId: 'pi1' } };
 
+    // Pin current time to noon on a fixed date to avoid time-of-day flakiness
+    const FIXED_NOW = new Date('2025-06-15T12:00:00Z');
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(FIXED_NOW);
+    });
+
     afterEach(() => {
+      jest.useRealTimers();
       useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
     });
 
@@ -750,13 +751,11 @@ describe('PantryItemDetail – helper functions', () => {
     });
 
     it('shows "Expires today" when expiresAt is today', () => {
-      // Use current time so Math.ceil(diff / msPerDay) === 0
-      const now = new Date();
       useGetPantryItemQuery.mockReturnValue({
         data: {
           pantryItem: {
             ...mockItemData.pantryItem,
-            expiresAt: now.toISOString(),
+            expiresAt: FIXED_NOW.toISOString(),
           },
         },
         loading: false,
@@ -767,10 +766,8 @@ describe('PantryItemDetail – helper functions', () => {
     });
 
     it('shows "1 day to expire" when expiresAt is tomorrow', () => {
-      const tomorrow = new Date();
+      const tomorrow = new Date(FIXED_NOW);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      // Set to midday tomorrow to avoid edge cases
-      tomorrow.setHours(12, 0, 0, 0);
       useGetPantryItemQuery.mockReturnValue({
         data: {
           pantryItem: {
@@ -786,9 +783,8 @@ describe('PantryItemDetail – helper functions', () => {
     });
 
     it('shows "N days to expire" with isUrgent when <= 3 days', () => {
-      const threeDays = new Date();
+      const threeDays = new Date(FIXED_NOW);
       threeDays.setDate(threeDays.getDate() + 3);
-      threeDays.setHours(12, 0, 0, 0);
       useGetPantryItemQuery.mockReturnValue({
         data: {
           pantryItem: {
@@ -804,9 +800,8 @@ describe('PantryItemDetail – helper functions', () => {
     });
 
     it('shows "N days to expire" without urgency when > 3 days', () => {
-      const tenDays = new Date();
+      const tenDays = new Date(FIXED_NOW);
       tenDays.setDate(tenDays.getDate() + 10);
-      tenDays.setHours(12, 0, 0, 0);
       useGetPantryItemQuery.mockReturnValue({
         data: {
           pantryItem: {
@@ -1829,7 +1824,7 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
     render(<PantryItemDetail route={route} />);
     const editAction = capturedRightActions!.find((a: any) => a.testID === 'pantry-item-edit-button');
     editAction.onPress();
-    expect(mockNavigateTo.pantryItem).toHaveBeenCalledWith({ itemId: 'pi1' });
+    expect(mockNav.navigateTo.pantryItem).toHaveBeenCalledWith({ itemId: 'pi1' });
 
     // Restore header mock
     mockHeader.Header = jest.fn(({ rightActions, ...props }: any) => {

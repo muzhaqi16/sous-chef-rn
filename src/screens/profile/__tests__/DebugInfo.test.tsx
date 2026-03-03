@@ -3,8 +3,8 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ scheduleTokenRefresh: jest.fn(), cancelScheduledRefresh: jest.fn() }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 jest.mock('#components/templates/ProfileScreenWrapper', () => ({
   ProfileScreenWrapper: ({ title, children }: any) => {
     const { View, Text } = require('react-native');

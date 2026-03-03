@@ -32,11 +32,7 @@ jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn(async (fn: () => Promise<any>, _msg: string) => {
-    return await fn();
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 beforeEach(() => {
   jest.clearAllMocks();

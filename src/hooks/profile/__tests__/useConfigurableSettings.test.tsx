@@ -5,13 +5,8 @@ import { Alert } from 'react-native';
 import { useConfigurableSettings } from '../useConfigurableSettings';
 
 // Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 const mockLogout = jest.fn();
 const mockGetUserNavigationState = jest.fn(() => null);
@@ -120,14 +115,7 @@ jest.mock('#components/organisms/BiometricSetupModal', () => ({
   BiometricSetupModal: 'BiometricSetupModal',
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn(async (fn: any) => {
-    return await fn();
-  }),
-  executeQuery: jest.fn(async (fn: any) => {
-    return await fn();
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
 

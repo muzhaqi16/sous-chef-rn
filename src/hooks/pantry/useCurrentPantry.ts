@@ -93,6 +93,7 @@ export function useCurrentPantry() {
       setSelectedPantryId,
       currentHome: null,
       selectedHomeId: null,
+      homeCount: homes.length,
       isReady: false };
   }
 
@@ -103,5 +104,6 @@ export function useCurrentPantry() {
     setSelectedPantryId,
     currentHome,
     selectedHomeId,
+    homeCount: homes.length,
     isReady: true };
 }

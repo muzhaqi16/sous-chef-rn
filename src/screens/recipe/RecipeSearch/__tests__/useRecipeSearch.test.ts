@@ -5,13 +5,8 @@ import { Alert } from 'react-native';
 import { useRecipeSearch } from '../useRecipeSearch';
 
 // Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: jest.fn(() => ({
@@ -24,14 +19,8 @@ jest.mock('@react-navigation/native', () => ({
   })),
 }));
 
-const mockNavigate = jest.fn();
-const mockGoBack = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: jest.fn(() => ({
-    navigate: mockNavigate,
-    goBack: mockGoBack,
-  })),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
 
 jest.mock('#hooks/home/useDefaultHome', () => ({
   useDefaultHome: jest.fn(() => ({
@@ -42,7 +31,7 @@ jest.mock('#hooks/home/useDefaultHome', () => ({
 
 jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
   usePantryManagement: jest.fn(() => ({
-    allItems: [
+    items: [
       { id: '1', itemName: 'Chicken' },
       { id: '2', itemName: 'Rice' },
     ],
@@ -68,9 +57,7 @@ jest.mock('@gorhom/bottom-sheet', () => ({
   BottomSheetModal: 'BottomSheetModal',
 }));
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#generated', () => ({
   useGetHomeQuery: jest.fn(() => ({ data: null })),
@@ -86,16 +73,7 @@ jest.mock('#/utils/recipeTransform', () => ({
   })),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(async (fn: any, onError: any) => {
-    try {
-      return await fn();
-    } catch (e) {
-      onError(e);
-      return null;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
 
@@ -228,7 +206,7 @@ describe('useRecipeSearch', () => {
     });
 
     // No navigate since item wasn't found
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockNav.navigate).not.toHaveBeenCalled();
   });
 
   // --- Additional branch / function coverage tests ---
@@ -368,7 +346,7 @@ describe('useRecipeSearch', () => {
 
   it('handleTextSearch shows alert when no query and no pantry items', async () => {
     const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
-    usePantryManagement.mockReturnValue({ allItems: [] });
+    usePantryManagement.mockReturnValue({ items: [] });
 
     const { result } = renderHook(() => useRecipeSearch());
 
@@ -383,7 +361,7 @@ describe('useRecipeSearch', () => {
 
     // Restore
     usePantryManagement.mockReturnValue({
-      allItems: [
+      items: [
         { id: '1', itemName: 'Chicken' },
         { id: '2', itemName: 'Rice' },
       ],
@@ -393,7 +371,7 @@ describe('useRecipeSearch', () => {
   it('handleTextSearch with empty query and pantry items with empty names filters them', async () => {
     const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
     usePantryManagement.mockReturnValue({
-      allItems: [
+      items: [
         { id: '1', itemName: '' },
         { id: '2', itemName: null },
         { id: '3', itemName: 'Tomato' },
@@ -416,7 +394,7 @@ describe('useRecipeSearch', () => {
 
     // Restore
     usePantryManagement.mockReturnValue({
-      allItems: [
+      items: [
         { id: '1', itemName: 'Chicken' },
         { id: '2', itemName: 'Rice' },
       ],
@@ -532,7 +510,7 @@ describe('useRecipeSearch', () => {
 
   it('applyFilters with no query and no ingredients does nothing', async () => {
     const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
-    usePantryManagement.mockReturnValue({ allItems: [] });
+    usePantryManagement.mockReturnValue({ items: [] });
 
     mockSearchRecipes.mockClear();
     mockSearchByIngredients.mockClear();
@@ -548,7 +526,7 @@ describe('useRecipeSearch', () => {
 
     // Restore
     usePantryManagement.mockReturnValue({
-      allItems: [
+      items: [
         { id: '1', itemName: 'Chicken' },
         { id: '2', itemName: 'Rice' },
       ],
@@ -611,7 +589,7 @@ describe('useRecipeSearch', () => {
       result.current.handleItemPress('42');
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith('RecipeDetail', {
+    expect(mockNav.navigate).toHaveBeenCalledWith('RecipeDetail', {
       externalSource: 'SPOONACULAR',
       externalId: '42',
     });
@@ -619,30 +597,30 @@ describe('useRecipeSearch', () => {
 
   it('hasPantryItems is false when pantry is empty', () => {
     const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
-    usePantryManagement.mockReturnValue({ allItems: [] });
+    usePantryManagement.mockReturnValue({ items: [] });
 
     const { result } = renderHook(() => useRecipeSearch());
     expect(result.current.hasPantryItems).toBe(false);
 
     // Restore
     usePantryManagement.mockReturnValue({
-      allItems: [
+      items: [
         { id: '1', itemName: 'Chicken' },
         { id: '2', itemName: 'Rice' },
       ],
     });
   });
 
-  it('hasPantryItems is false when allItems is null', () => {
+  it('hasPantryItems is false when items is undefined', () => {
     const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
-    usePantryManagement.mockReturnValue({ allItems: null });
+    usePantryManagement.mockReturnValue({ items: null });
 
     const { result } = renderHook(() => useRecipeSearch());
     expect(result.current.hasPantryItems).toBe(false);
 
     // Restore
     usePantryManagement.mockReturnValue({
-      allItems: [
+      items: [
         { id: '1', itemName: 'Chicken' },
         { id: '2', itemName: 'Rice' },
       ],
@@ -876,7 +854,7 @@ describe('useRecipeSearch', () => {
 
   it('goBack returns the goBack function from navigation', () => {
     const { result } = renderHook(() => useRecipeSearch());
-    expect(result.current.goBack).toBe(mockGoBack);
+    expect(result.current.goBack).toBe(mockNav.goBack);
   });
 
   it('items transforms search results for display', async () => {
@@ -926,7 +904,7 @@ describe('useRecipeSearch', () => {
   it('pantry search with all empty item names shows alert', async () => {
     const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
     usePantryManagement.mockReturnValue({
-      allItems: [
+      items: [
         { id: '1', itemName: '' },
         { id: '2', itemName: null },
       ],
@@ -945,7 +923,7 @@ describe('useRecipeSearch', () => {
 
     // Restore
     usePantryManagement.mockReturnValue({
-      allItems: [
+      items: [
         { id: '1', itemName: 'Chicken' },
         { id: '2', itemName: 'Rice' },
       ],

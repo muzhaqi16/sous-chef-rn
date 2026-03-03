@@ -5,18 +5,10 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { RecipeFormScreen } from '../index';
 
-jest.mock('../../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../../apollo/links/tokenScheduler');
+jest.mock('../../../../apollo/links/refreshToken');
 
-const mockGoBack = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ goBack: mockGoBack }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockCreateRecipe = jest.fn().mockResolvedValue({ data: { createRecipe: { success: true } } });
 const mockUpdateRecipe = jest.fn().mockResolvedValue({ data: { updateRecipe: { success: true } } });
@@ -33,16 +25,7 @@ jest.mock('#generated', () => ({
   Intolerance: { GlutenFree: 'GLUTEN_FREE' },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(async (fn: () => Promise<any>, onError?: (e: any) => void) => {
-    try {
-      return await fn();
-    } catch (e) {
-      if (onError) onError(e);
-      return null;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('../components/RecipeBasicFields', () => ({
   RecipeBasicFields: () => null,

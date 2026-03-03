@@ -49,17 +49,7 @@ jest.mock('#hooks/useFeatureHint', () => ({
   resetAllFeatureHints: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeAsyncWithCleanup: jest.fn(
-    async (fn: () => Promise<any>, cleanup: () => void) => {
-      try {
-        await fn();
-      } finally {
-        cleanup();
-      }
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#generated', () => ({
   UnitSystem: { Metric: 'METRIC', Imperial: 'IMPERIAL', System: 'SYSTEM' },
@@ -87,11 +77,7 @@ jest.mock('#components/templates/ProfileScreenWrapper', () => {
   };
 });
 
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    goBack: jest.fn(),
-  }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#components/settings/SettingSwitch', () => {
   const { View, Text, Pressable } = require('react-native');

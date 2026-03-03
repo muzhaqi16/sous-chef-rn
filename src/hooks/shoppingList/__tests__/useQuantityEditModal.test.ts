@@ -15,13 +15,7 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(
-    async (fn: () => Promise<any>, _onError: any) => {
-      return await fn();
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: jest.fn(() => null),

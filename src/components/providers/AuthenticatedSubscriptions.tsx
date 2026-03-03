@@ -3,6 +3,7 @@ import { useShoppingListSubscriptions } from '#/hooks/subscriptions/useShoppingL
 import { usePantrySubscriptions } from '#/hooks/subscriptions/usePantrySubscriptions';
 import { useHomeSubscriptions } from '#/hooks/subscriptions/useHomeSubscriptions';
 import { useNotificationSubscriptions } from '#/hooks/subscriptions/useNotificationSubscriptions';
+import { useUserSubscriptions } from '#/hooks/subscriptions/useUserSubscriptions';
 import { useListAnimationOptional } from '#/context/ListAnimationContext';
 
 interface AuthenticatedSubscriptionsProps {
@@ -42,6 +43,7 @@ export const AuthenticatedSubscriptions: React.FC<AuthenticatedSubscriptionsProp
   usePantrySubscriptions(userId);
   useHomeSubscriptions(userId);
   useNotificationSubscriptions(userId);
+  useUserSubscriptions(userId);
 
   // This component doesn't render anything - it just runs subscription hooks
   return null;

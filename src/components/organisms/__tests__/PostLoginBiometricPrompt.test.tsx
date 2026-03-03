@@ -14,12 +14,7 @@ jest.mock('#hooks/auth/useAuth', () => ({
   })),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: (fn: () => Promise<void>, setLoading: (v: boolean) => void, onError: (e: unknown) => void) => {
-    setLoading(true);
-    fn().then(() => setLoading(false)).catch((e: unknown) => { setLoading(false); onError(e); });
-  },
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 describe('PostLoginBiometricPrompt', () => {
   const defaultProps = {

@@ -4,21 +4,11 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useShoppingListSelectorModal } from '../useShoppingListSelectorModal';
 
 // Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-const mockNavigate = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: jest.fn(() => ({
-    navigate: mockNavigate,
-    goBack: jest.fn(),
-  })),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
 
 const mockSetOverlayOpen = jest.fn();
 jest.mock('#/context/TabBarActionsContext', () => ({
@@ -124,17 +114,7 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: any) => fn()),
-  executeMutationWithErrorHandler: jest.fn(async (fn: any, onError: any) => {
-    try {
-      return await fn();
-    } catch (e) {
-      onError(e);
-      return null;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#store', () => ({
   useStore: {
@@ -476,7 +456,7 @@ describe('useShoppingListSelectorModal', () => {
     });
 
     expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
-    expect(mockNavigate).toHaveBeenCalledWith('ListSettings');
+    expect(mockNav.navigate).toHaveBeenCalledWith('ListSettings');
   });
 
   it('action navigates to ShareList when Share Current List pressed', () => {
@@ -492,7 +472,7 @@ describe('useShoppingListSelectorModal', () => {
       result.current.listConfig.actions![1].onPress();
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith('ShareList', { listId: 'list-1' });
+    expect(mockNav.navigate).toHaveBeenCalledWith('ShareList', { listId: 'list-1' });
   });
 
   it('action navigates to ListSettings with listId when List Settings pressed', () => {
@@ -508,7 +488,7 @@ describe('useShoppingListSelectorModal', () => {
       result.current.listConfig.actions![2].onPress();
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith('ListSettings', { listId: 'list-1' });
+    expect(mockNav.navigate).toHaveBeenCalledWith('ListSettings', { listId: 'list-1' });
   });
 
   it('renderCustomItem for non-owner shared list shows owner info fallback', () => {
@@ -960,7 +940,7 @@ describe('useShoppingListSelectorModal', () => {
       });
 
       expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
-      expect(mockNavigate).toHaveBeenCalledWith('ShareList', { listId: 'list-1' });
+      expect(mockNav.navigate).toHaveBeenCalledWith('ShareList', { listId: 'list-1' });
     });
 
     it('settings action closes overlay and selector', () => {
@@ -977,7 +957,7 @@ describe('useShoppingListSelectorModal', () => {
       });
 
       expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
-      expect(mockNavigate).toHaveBeenCalledWith('ListSettings', { listId: 'list-1' });
+      expect(mockNav.navigate).toHaveBeenCalledWith('ListSettings', { listId: 'list-1' });
     });
   });
 });

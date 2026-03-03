@@ -8,19 +8,19 @@ export const getNotificationIcon = (
 ): IconProps['name'] => {
   switch (type) {
     case NotificationType.ExpiryReminder:
-      return 'schedule';
+      return 'time';
     case NotificationType.LowStock:
-      return 'inventory-2';
+      return 'cube';
     case NotificationType.NewItemAdded:
       return 'add-circle';
     case NotificationType.ItemUpdated:
-      return 'edit';
+      return 'create';
     case NotificationType.ItemDeleted:
-      return 'delete';
+      return 'trash';
     case NotificationType.MembershipInvite:
       return 'home';
     case NotificationType.CollaborationInvite:
-      return 'group-add';
+      return 'person-add';
     case NotificationType.ListUpdated:
       return 'list';
     case NotificationType.HomeJoined:

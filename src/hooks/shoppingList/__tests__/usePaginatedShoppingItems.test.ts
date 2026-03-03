@@ -3,13 +3,8 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { usePaginatedShoppingItems } from '../usePaginatedShoppingItems';
 
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 const mockFetchMore = jest.fn();
 const mockRefetch = jest.fn();
@@ -37,17 +32,7 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeRefetch: jest.fn(async (fn: () => Promise<any>) => { await fn(); }),
-  executeMutationWithErrorHandler: jest.fn(async (fn: () => Promise<any>, onError?: (e: any) => void) => {
-    try {
-      return await fn();
-    } catch (e) {
-      if (onError) onError(e);
-      return false;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 // Mock requestIdleCallback/cancelIdleCallback
 (global as any).requestIdleCallback = jest.fn((cb: any) => { cb(); return 1; });

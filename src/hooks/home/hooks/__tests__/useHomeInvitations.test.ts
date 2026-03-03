@@ -41,20 +41,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-  executeMutation: jest.fn(async (fn: () => Promise<any>) => fn()),
-  executeMutationWithErrorHandler: jest.fn(
-    async (fn: () => Promise<any>, onError: (err: unknown) => void) => {
-      try {
-        return await fn();
-      } catch (error) {
-        onError(error);
-        return false;
-      }
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.spyOn(Alert, 'alert');
 

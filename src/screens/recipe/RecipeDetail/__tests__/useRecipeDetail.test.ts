@@ -4,21 +4,11 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useRecipeDetail } from '../useRecipeDetail';
 
 // Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-const mockGoBack = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: jest.fn(() => ({
-    navigate: jest.fn(),
-    goBack: mockGoBack,
-  })),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
 
 jest.mock('@react-navigation/native', () => ({
   useRoute: jest.fn(() => ({
@@ -126,31 +116,9 @@ jest.mock('#/hooks/recipe/useRecipeIngredientMatching', () => ({
   })),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: any) => fn()),
-  executeMutationWithErrorHandler: jest.fn(async (fn: any, onError: any) => {
-    try {
-      return await fn();
-    } catch (e) {
-      onError(e);
-      return null;
-    }
-  }),
-  executeWithLoadingState: jest.fn(async (fn: any, setLoading: any, onError?: any) => {
-    setLoading(true);
-    try {
-      return await fn();
-    } catch (e) {
-      onError?.(e);
-    } finally {
-      setLoading(false);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
 describe('useRecipeDetail', () => {
   beforeEach(() => {
@@ -183,7 +151,7 @@ describe('useRecipeDetail', () => {
       result.current.goBack();
     });
 
-    expect(mockGoBack).toHaveBeenCalled();
+    expect(mockNav.goBack).toHaveBeenCalled();
   });
 
   it('extracts shopping lists from query data', () => {

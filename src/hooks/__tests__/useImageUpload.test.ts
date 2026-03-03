@@ -4,13 +4,8 @@ import { renderHook, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { useImageUpload } from '../useImageUpload';
 
-jest.mock('../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../apollo/links/tokenScheduler');
+jest.mock('../../apollo/links/refreshToken');
 
 const mockCreateUploadUrl = jest.fn();
 const mockConfirmProfileUpload = jest.fn();
@@ -39,16 +34,7 @@ jest.mock('#store', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(async (fn: () => Promise<any>, onError?: (e: any) => void) => {
-    try {
-      return await fn();
-    } catch (e) {
-      if (onError) onError(e);
-      return null;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
 

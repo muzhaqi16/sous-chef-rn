@@ -68,10 +68,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-  executeMutation: jest.fn(async (fn: () => Promise<any>) => fn()),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#/utils/errors/versionConflict', () => ({
   handleVersionConflict: jest.fn(() => false),
@@ -201,18 +198,19 @@ describe('useHomeDetailManagement', () => {
   });
 
   describe('changeRole', () => {
-    it('shows role selection alert', () => {
+    it('sets rolePickerState with correct values', () => {
       const { result } = renderHook(() => useHomeDetailManagement('home-1'));
 
       act(() => {
         result.current.changeRole('m-1', 'MEMBER', 'Alice');
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Select Role',
-        'Current role: MEMBER',
-        expect.any(Array),
-      );
+      expect(result.current.rolePickerState).toEqual({
+        visible: true,
+        membershipId: 'm-1',
+        currentRole: 'MEMBER',
+        memberName: 'Alice',
+      });
     });
   });
 
@@ -302,18 +300,19 @@ describe('useHomeDetailManagement', () => {
   });
 
   describe('changeRole role selection', () => {
-    it('shows role selection alert with member name', () => {
+    it('sets rolePickerState with member name', () => {
       const { result } = renderHook(() => useHomeDetailManagement('home-1'));
 
       act(() => {
         result.current.changeRole('m-2', 'ADMIN', 'Bob');
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Select Role',
-        'Current role: ADMIN',
-        expect.any(Array),
-      );
+      expect(result.current.rolePickerState).toEqual({
+        visible: true,
+        membershipId: 'm-2',
+        currentRole: 'ADMIN',
+        memberName: 'Bob',
+      });
     });
   });
 

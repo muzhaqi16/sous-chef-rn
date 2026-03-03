@@ -36,13 +36,7 @@ jest.mock('#/utils/errors/versionConflict', () => ({
   getVersionConflictMessage: jest.fn(() => 'Item was updated by someone else'),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(
-    async (fn: () => Promise<any>, _onError: any) => {
-      return await fn();
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 beforeEach(() => {
   jest.clearAllMocks();

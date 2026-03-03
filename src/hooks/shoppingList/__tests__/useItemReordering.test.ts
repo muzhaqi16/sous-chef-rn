@@ -18,13 +18,7 @@ jest.mock('#/utils/errors/versionConflict', () => ({
 }));
 
 // Mock compilerSafeWrappers
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(
-    async (fn: () => Promise<any>, _onError: any) => {
-      return await fn();
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 // Mock SubscriptionService
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({

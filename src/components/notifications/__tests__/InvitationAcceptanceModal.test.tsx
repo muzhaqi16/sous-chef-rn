@@ -19,19 +19,7 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeAsyncWithCleanup: jest.fn(
-    async (asyncFn: () => Promise<void>, cleanup: () => void, onError: (e: unknown) => void) => {
-      try {
-        await asyncFn();
-      } catch (e) {
-        onError(e);
-      } finally {
-        cleanup();
-      }
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#generated', () => ({
   useAcceptHomeInviteMutation: jest.fn(() => [jest.fn(), { loading: false }]),
@@ -45,14 +33,9 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToQueryFieldUpdater: jest.fn(() => jest.fn()),
 }));
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
 
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/refreshToken');
 
 const homeInvitation: InvitationData = {
   type: 'HOME_INVITE',

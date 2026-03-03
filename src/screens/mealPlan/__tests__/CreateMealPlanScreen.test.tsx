@@ -6,20 +6,10 @@ import { Alert } from 'react-native';
 import { CreateMealPlanScreen } from '../CreateMealPlanScreen';
 
 // Mock token scheduler / refreshToken
-jest.mock('#/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('#/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-const mockGoBack = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: jest.fn(() => ({
-    goBack: mockGoBack,
-  })),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockCreateMealPlan = jest.fn().mockResolvedValue({ success: true });
 jest.mock('#hooks/mealPlan/useMealPlanActions', () => ({

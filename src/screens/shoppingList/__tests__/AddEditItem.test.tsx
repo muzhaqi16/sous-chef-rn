@@ -4,13 +4,11 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { AddEditItem } from '../AddEditItem';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-const mockGoBack = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ goBack: mockGoBack, navigate: jest.fn(), navigateTo: {} }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
 
 const mockUpdateField = jest.fn();
 jest.mock('#/hooks/shoppingList/useShoppingListItemForm', () => ({
@@ -49,18 +47,7 @@ jest.mock('#/utils/errors/versionConflict', () => ({
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(async (fn: any, setLoading: any, onError?: any) => {
-    setLoading(true);
-    try {
-      return await fn();
-    } catch (e) {
-      if (onError) onError(e);
-    } finally {
-      setLoading(false);
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/organisms/FormModal', () => ({
   FormModal: ({ title, children, onClose, onSave, testID, submitButtonTestID }: any) => {
@@ -186,7 +173,7 @@ describe('AddEditItem', () => {
   it('navigates back when close button pressed', () => {
     render(<AddEditItem route={addRoute} />);
     fireEvent.press(screen.getByTestId('close-button'));
-    expect(mockGoBack).toHaveBeenCalled();
+    expect(mockNav.goBack).toHaveBeenCalled();
   });
 
   it('shows add-item-quantity-input testID for adding', () => {
@@ -268,7 +255,7 @@ describe('AddEditItem', () => {
 
     render(<AddEditItem route={editRoute} />);
     fireEvent.press(screen.getByTestId('edit-item-submit-button'));
-    expect(mockGoBack).toHaveBeenCalled();
+    expect(mockNav.goBack).toHaveBeenCalled();
   });
 
   it('calls addItem mutation for new item', async () => {
@@ -776,7 +763,7 @@ describe('AddEditItem', () => {
     render(<AddEditItem route={addRoute} />);
     await fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
-    expect(mockGoBack).toHaveBeenCalled();
+    expect(mockNav.goBack).toHaveBeenCalled();
   });
 
   it('does not prepopulate item name when in edit mode even with initialItemName', () => {

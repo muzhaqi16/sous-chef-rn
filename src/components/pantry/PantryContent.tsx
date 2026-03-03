@@ -38,6 +38,7 @@ import {
 } from '#hooks/pantry/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { StorageState, type PantryStats } from '#generated';
+import { pantryItemSearch } from '#/utils/searchUtils';
 import { PantryAlertBar } from '#components/pantry/PantryAlertBar';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { EmptyState } from '#components/base/EmptyState';
@@ -138,6 +139,9 @@ interface PantryContentProps {
   initialSortDirection?: SortDirection;
   onSortChange?: (option: SortOption, direction: SortDirection) => void;
 
+  // Hybrid sort/search: when true, server handles sort+search; when false, local
+  useServerSort?: boolean;
+
   // Actions (passed to context provider)
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
@@ -161,6 +165,11 @@ interface PantryContentProps {
   // Empty state
   totalCount?: number;
   onAddItem?: () => void;
+
+  // No-home states
+  noHomeSelected?: boolean;
+  noHomes?: boolean;
+  onSelectHome?: () => void;
 
   // Pagination
   isLoadingMore?: boolean;
@@ -367,6 +376,9 @@ interface PantryEmptyStateProps {
   locationFilter: LocationFilter;
   tabs: FilterTabConfig<LocationFilter>[];
   onAddItem?: () => void;
+  noHomeSelected?: boolean;
+  noHomes?: boolean;
+  onSelectHome?: () => void;
 }
 
 function PantryEmptyState({
@@ -377,8 +389,39 @@ function PantryEmptyState({
   locationFilter,
   tabs,
   onAddItem,
+  noHomeSelected,
+  noHomes,
+  onSelectHome,
 }: PantryEmptyStateProps) {
-  if (showSkeletons) return null;
+  if (showSkeletons) return <PantryScreenSkeleton />;
+
+  if (noHomes) {
+    return (
+      <EmptyState
+        testID="pantry-empty-state"
+        icon="home-outline"
+        title="No home yet"
+        description="Create or join a home to start tracking food"
+        action={
+          onSelectHome ? { label: 'Get Started', onPress: onSelectHome } : undefined
+        }
+      />
+    );
+  }
+
+  if (noHomeSelected) {
+    return (
+      <EmptyState
+        testID="pantry-empty-state"
+        icon="home-outline"
+        title="No home selected"
+        description="Select a home to view your pantry"
+        action={
+          onSelectHome ? { label: 'Go to My Homes', onPress: onSelectHome } : undefined
+        }
+      />
+    );
+  }
 
   if (searchQuery) {
     return (
@@ -441,6 +484,7 @@ export const PantryContent = React.forwardRef<
       initialSortOption = 'recent',
       initialSortDirection = 'desc',
       onSortChange,
+      useServerSort = false,
       onItemPress,
       onItemEdit,
       onItemDelete,
@@ -461,6 +505,9 @@ export const PantryContent = React.forwardRef<
       onEndReached,
       refreshing = false,
       loading = false,
+      noHomeSelected,
+      noHomes,
+      onSelectHome,
       // onSwipeableWillOpen and onSwipeableClose are handled by PantryActionsContext
     },
     ref,
@@ -495,7 +542,7 @@ export const PantryContent = React.forwardRef<
     // but useDeferredValue hasn't propagated items yet (items=[] while totalCount>0).
     const awaitingDeferredItems =
       items.length === 0 && (totalCount ?? 0) > 0 && !loading;
-    const showSkeletons =
+    const showSkeletons = 
       !hasShownContent && (!isReady || loading || awaitingDeferredItems);
 
     // Use sorting hook for sort state and logic
@@ -523,8 +570,19 @@ export const PantryContent = React.forwardRef<
       onItemRestock,
     };
 
-    // Inline sort — React Compiler auto-memoizes based on input references
-    const sortedItems = sortItems(items);
+    // Hybrid sort/search: when server handles sorting, pass items through directly;
+    // when local, apply client-side sort and search filtering.
+    const localFilteredItems = (() => {
+      if (useServerSort) return items;
+      // Local search filtering
+      if (!searchQuery) return items;
+      const trimmed = searchQuery.trim();
+      if (!trimmed) return items;
+      return items.filter(item => pantryItemSearch(item, trimmed));
+    })();
+
+    // Apply local sort only when not using server sort
+    const sortedItems = useServerSort ? localFilteredItems : sortItems(localFilteredItems);
 
     // Precomputed expiration colors — avoids per-item useUnistyles in ExpirationText
     const expirationColors = {
@@ -683,13 +741,9 @@ export const PantryContent = React.forwardRef<
             />
           </View>
 
-          {/* Content List - Crossfade between skeleton and content */}
+          {/* Content List */}
           <View style={styles.listContainer}>
-            {/* Content layer - flex:1 normal flow so FlashList can measure properly */}
-            <View
-              style={styles.contentFill}
-              pointerEvents={showSkeletons ? 'none' : 'auto'}
-            >
+            <View style={styles.contentFill}>
               <FlashList<PantryItem>
                 ref={flashListRef}
                 testID="pantry-list"
@@ -726,6 +780,9 @@ export const PantryContent = React.forwardRef<
                     locationFilter={locationFilter}
                     tabs={tabs}
                     onAddItem={onAddItem}
+                    noHomeSelected={noHomeSelected}
+                    noHomes={noHomes}
+                    onSelectHome={onSelectHome}
                   />
                 }
                 ListFooterComponent={
@@ -744,16 +801,6 @@ export const PantryContent = React.forwardRef<
               />
             </View>
 
-            {/* Skeleton layer (absolute on top) */}
-            {!!showSkeletons && (
-              <View
-                testID="pantry-loading"
-                style={styles.absoluteFill}
-                pointerEvents="none"
-              >
-                <PantryScreenSkeleton />
-              </View>
-            )}
           </View>
 
           {/* Sort Modal */}
@@ -793,13 +840,6 @@ const styles = StyleSheet.create(theme => ({
   },
   contentFill: {
     flex: 1,
-  },
-  absoluteFill: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
   listContent: {
     paddingHorizontal: 0,

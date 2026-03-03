@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
@@ -68,7 +68,6 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
   const {
     pageInfo,
     loading,
-    itemCount,
     fetchMore,
     fetchMoreVariables = {},
     cursorVariableName = 'cursor' } = config;
@@ -89,15 +88,19 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     }
   });
 
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
   const loadMore = async () => {
     // Don't load if:
     // - No more items to load
     // - Already loading
     // - No cursor available
-    if (!hasMore || loading || !endCursor) {
+    // - Already fetching more
+    if (!hasMore || loading || !endCursor || isFetchingMore) {
       return;
     }
 
+    setIsFetchingMore(true);
     await executeMutationWithErrorHandler(
       () => fetchMore({
         variables: {
@@ -105,10 +108,10 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
           [cursorVariableName]: endCursor } }),
       (error) => errorService.reportError(error, { operation: 'Pagination.loadMore' }),
     );
+    setIsFetchingMore(false);
   };
 
-  // Loading more = loading but already have items (not initial load)
-  const isLoadingMore = loading && itemCount > 0;
+  const isLoadingMore = isFetchingMore;
 
   return {
     hasMore,

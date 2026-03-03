@@ -2,13 +2,8 @@ import { createTestStore } from '#/test-utils/createTestStore';
 import { ThemePreference, defaultUserPreferences } from '../preferencesSlice';
 
 // Mock authSlice dependencies
-jest.mock('../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelTokenRefresh: jest.fn(),
-}));
-jest.mock('../../../apollo/links/refreshToken', () => ({
-  proactiveTokenRefresh: jest.fn(),
-}));
+jest.mock('../../../apollo/links/tokenScheduler');
+jest.mock('../../../apollo/links/refreshToken');
 
 describe('preferencesSlice', () => {
   describe('initial state', () => {

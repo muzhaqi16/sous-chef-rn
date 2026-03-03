@@ -5,13 +5,8 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { CreateHomeScreen } from '../CreateHomeScreen';
 
-jest.mock('../../../../apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../../apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../../apollo/links/tokenScheduler');
+jest.mock('../../../../apollo/links/refreshToken');
 
 const mockNavigateToNextStep = jest.fn();
 const mockSetUserNavigationState = jest.fn();
@@ -85,19 +80,9 @@ jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
   OnboardingErrorBoundary: ({ children }: any) => children,
 }));
 
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
+jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(async (fn: any, setLoading: any, onError: any) => {
-    setLoading(true);
-    try { await fn(); } catch (e) { if (onError) onError(e); } finally { setLoading(false); }
-  }),
-  executeMutation: jest.fn(async (fn: any) => {
-    try { return await fn(); } catch { return false; }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 // Mock form components
 jest.mock('../FormContent', () => ({

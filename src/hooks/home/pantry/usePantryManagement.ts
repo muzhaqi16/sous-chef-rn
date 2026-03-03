@@ -13,7 +13,7 @@
  * ```
  */
 
-import { type PantryItemFilters } from '#generated';
+import { type PantryItemFilters, type PantryItemOrderBy } from '#generated';
 import { usePantryQuery } from './usePantryQuery';
 import { usePantryStats } from './usePantryStats';
 import { usePantryItemMutations } from './usePantryItemMutations';
@@ -21,11 +21,11 @@ import { usePantryItemMutations } from './usePantryItemMutations';
 export function usePantryManagement(
   pantryId: string | undefined,
   itemsFilter?: PantryItemFilters | null,
+  itemsOrderBy?: PantryItemOrderBy | null,
 ) {
   // Query hook - fetches pantry data
   const {
     pantryItems,
-    filteredItems,
     stats,
     totalCount,
     loading,
@@ -35,9 +35,7 @@ export function usePantryManagement(
     hasMore,
     loadMore,
     isLoadingMore,
-    searchQuery,
-    setSearchQuery,
-  } = usePantryQuery(pantryId, itemsFilter);
+  } = usePantryQuery(pantryId, itemsFilter, itemsOrderBy);
 
   // Stats hook - computes location counts
   // Use stats.totalItems for the "all" tab (always full count, not filtered)
@@ -59,8 +57,7 @@ export function usePantryManagement(
 
   return {
     // Data
-    items: filteredItems,
-    allItems: pantryItems,
+    items: pantryItems,
     stats,
     totalCount,
     loading,
@@ -74,10 +71,6 @@ export function usePantryManagement(
     loadMore,
     hasMore,
     isLoadingMore,
-
-    // Search
-    searchQuery,
-    setSearchQuery,
 
     // Actions
     addItem,

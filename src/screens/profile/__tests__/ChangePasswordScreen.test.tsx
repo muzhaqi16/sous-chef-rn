@@ -5,17 +5,13 @@ import { ChangePasswordScreen } from '../ChangePasswordScreen';
 
 // --- Mocks ---
 
-const mockGoBack = jest.fn();
 const mockChangePassword = jest.fn().mockResolvedValue({
   data: { changePassword: { success: true } },
 });
 const mockToast = jest.fn();
 
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    goBack: mockGoBack,
-  }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
 
 jest.mock('#generated', () => ({
   useChangePasswordMutation: () => [mockChangePassword],
@@ -25,20 +21,7 @@ jest.mock('#hooks/useToast', () => ({
   useToast: () => mockToast,
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn(
-    async (fn: () => Promise<any>, setLoading: any, onError: any) => {
-      setLoading(true);
-      try {
-        await fn();
-      } catch (error) {
-        onError(error);
-      } finally {
-        setLoading(false);
-      }
-    },
-  ),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#utils/validation/auth', () => ({
   changePasswordSchema: {
@@ -132,7 +115,7 @@ describe('ChangePasswordScreen', () => {
   it('calls goBack when header back button is pressed', () => {
     render(<ChangePasswordScreen />);
     fireEvent.press(screen.getByTestId('header-back'));
-    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 
   it('renders password input placeholders', () => {

@@ -21,16 +21,7 @@ jest.mock('#/services/errorService', () => ({
   getErrorMessage: jest.fn((e: any) => e?.message || 'An error occurred'),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(async (fn, onError) => {
-    try {
-      return await fn();
-    } catch (e) {
-      onError(e);
-      return false;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#/utils/errorHandlers', () => ({
   handleVersionConflictAlert: jest.fn(() => false),

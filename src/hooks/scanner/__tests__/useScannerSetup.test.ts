@@ -12,19 +12,12 @@ const mockSetScannerProps = jest.fn(
   },
 );
 
-const mockNavigate = jest.fn();
-const mockNavigateTo = { barcode: jest.fn() };
-
 jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarSetters: () => ({ setScannerProps: mockSetScannerProps }),
 }));
 
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    navigate: mockNavigate,
-    navigateTo: mockNavigateTo,
-  }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
 
 jest.spyOn(Alert, 'alert');
 
@@ -69,7 +62,7 @@ describe('useScannerSetup', () => {
 
     capturedHandler?.();
 
-    expect(mockNavigateTo.barcode).toHaveBeenCalledWith(defaultOptions.context);
+    expect(mockNav.navigateTo.barcode).toHaveBeenCalledWith(defaultOptions.context);
   });
 
   it('shows alert when homeId is null and no onNoHome provided', () => {
@@ -87,7 +80,7 @@ describe('useScannerSetup', () => {
       expect.any(String),
       expect.any(Array),
     );
-    expect(mockNavigateTo.barcode).not.toHaveBeenCalled();
+    expect(mockNav.navigateTo.barcode).not.toHaveBeenCalled();
   });
 
   it('calls onNoHome callback when homeId is null', () => {
@@ -123,7 +116,7 @@ describe('useScannerSetup', () => {
 
     capturedHandler?.();
     expect(Alert.alert).not.toHaveBeenCalled();
-    expect(mockNavigateTo.barcode).toHaveBeenCalledWith(defaultOptions.context);
+    expect(mockNav.navigateTo.barcode).toHaveBeenCalledWith(defaultOptions.context);
   });
 
   it('reads latest context from ref on scan', () => {
@@ -139,7 +132,7 @@ describe('useScannerSetup', () => {
 
     capturedHandler?.();
 
-    expect(mockNavigateTo.barcode).toHaveBeenCalledWith(context2);
+    expect(mockNav.navigateTo.barcode).toHaveBeenCalledWith(context2);
   });
 
   it('does not re-call setScannerProps when only homeId changes', () => {

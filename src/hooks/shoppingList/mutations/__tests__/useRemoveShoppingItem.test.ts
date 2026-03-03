@@ -33,9 +33,7 @@ jest.mock('#/apollo/utils/optimisticTypes', () => ({
   })),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('../utils', () => ({
   removeFromShoppingListItemsCache: jest.fn(),

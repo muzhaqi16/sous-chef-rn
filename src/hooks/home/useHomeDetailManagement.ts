@@ -1,4 +1,5 @@
-import { Alert, type AlertButton } from 'react-native';
+import { useState } from 'react';
+import { Alert } from 'react-native';
 import { useShallow } from 'zustand/shallow';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import {
@@ -12,7 +13,6 @@ import {
   GetHomesDocument,
   MembershipRole } from '#generated';
 import { MESSAGES } from '#/constants/messages';
-import { formatRole } from '#utils/formatters/roleFormatters';
 import { normalizeHome } from '#/utils/connectionUtils';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeCacheUpdate, executeMutation } from '#/utils/compilerSafeWrappers';
@@ -21,6 +21,27 @@ import {
   handleVersionConflict,
   getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { useAppStore, selectSelectedHomeId, selectHomeState } from '#store/useAppStore';
+
+export interface RolePickerState {
+  visible: boolean;
+  membershipId: string;
+  currentRole: string;
+  memberName: string;
+}
+
+export const ROLE_OPTIONS = [
+  { label: 'Owner', value: MembershipRole.Owner },
+  { label: 'Admin', value: MembershipRole.Admin },
+  { label: 'Member', value: MembershipRole.Member },
+  { label: 'Guest', value: MembershipRole.Guest },
+];
+
+const INITIAL_ROLE_PICKER_STATE: RolePickerState = {
+  visible: false,
+  membershipId: '',
+  currentRole: '',
+  memberName: '',
+};
 
 /**
  * Custom hook for HomeDetailScreen business logic
@@ -204,46 +225,28 @@ export function useHomeDetailManagement(homeId: string) {
           input: { name } } });
     };
 
-  const changeRole = (membershipId: string, currentRole: string, memberName: string) => {
-      const roles = [
-        { label: 'Owner', value: MembershipRole.Owner },
-        { label: 'Admin', value: MembershipRole.Admin },
-        { label: 'Member', value: MembershipRole.Member },
-        { label: 'Guest', value: MembershipRole.Guest },
-      ];
+  // Role picker state (drives ModalPicker in the screen)
+  const [rolePickerState, setRolePickerState] = useState<RolePickerState>(
+    INITIAL_ROLE_PICKER_STATE,
+  );
 
-      const buttons: AlertButton[] = roles.map(role => ({
-        text: role.label,
-        onPress: () => {
-          if (role.value === currentRole) return;
+  const openRolePicker = (membershipId: string, currentRole: string, memberName: string) => {
+      setRolePickerState({ visible: true, membershipId, currentRole, memberName });
+    };
 
-          Alert.alert(
-            'Change Role',
-            `Change ${memberName}'s role to ${role.label}?`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Change',
-                onPress: async () => {
-                  await updateMembershipMutation({
-                    variables: {
-                      id: membershipId,
-                      input: { role: role.value } } });
-                } },
-            ],
-          );
-        } }));
+  const closeRolePicker = () => {
+      setRolePickerState(INITIAL_ROLE_PICKER_STATE);
+    };
 
-      buttons.push({
-        text: 'Cancel',
-        onPress: () => {},
-        style: 'cancel' });
+  const handleRoleSelect = async (value: string) => {
+      const { membershipId, currentRole } = rolePickerState;
+      closeRolePicker();
+      if (value === currentRole) return;
 
-      Alert.alert(
-        'Select Role',
-        `Current role: ${formatRole(currentRole)}`,
-        buttons,
-      );
+      await updateMembershipMutation({
+        variables: {
+          id: membershipId,
+          input: { role: value as MembershipRole } } });
     };
 
   const removeMember = (membershipId: string, memberName: string) => {
@@ -301,10 +304,16 @@ export function useHomeDetailManagement(homeId: string) {
     loading,
     updating,
     leaving,
+    refetch,
+
+    // Role picker
+    rolePickerState,
+    handleRoleSelect,
+    closeRolePicker,
 
     // Actions
     saveName,
-    changeRole,
+    changeRole: openRolePicker,
     removeMember,
     revokeInvite,
     leaveHome,

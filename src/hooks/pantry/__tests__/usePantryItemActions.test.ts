@@ -45,25 +45,7 @@ jest.mock('#services/telemetry', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutationWithErrorHandler: jest.fn(
-    async (fn: () => Promise<any>, onError: (err: unknown) => void) => {
-      try {
-        return await fn();
-      } catch (error) {
-        onError(error);
-        return false;
-      }
-    },
-  ),
-  executeMutation: jest.fn(async (fn: () => Promise<any>) => {
-    try {
-      return await fn();
-    } catch {
-      return false;
-    }
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.spyOn(Alert, 'alert');
 

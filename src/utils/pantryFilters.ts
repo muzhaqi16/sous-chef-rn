@@ -1,4 +1,5 @@
-import { StorageState, type PantryItemFilters } from '#generated';
+import { StorageState, SortOrder, type PantryItemFilters, type PantryItemOrderBy } from '#generated';
+import type { PantrySortOption, PantrySortDirection } from '#store/slices/preferencesSlice';
 
 /** Built-in temperature-based filters */
 export type BuiltInLocationFilter = 'all' | 'fridge' | 'freezer' | 'pantry';
@@ -30,6 +31,31 @@ export function locationFilterToQueryFilter(filter: LocationFilter): PantryItemF
     default:
       // Custom storage location ID
       return { storageLocationId: filter };
+  }
+}
+
+/**
+ * Maps a UI sort option + direction to the GraphQL PantryItemOrderBy input.
+ *
+ * @param option - The sort option from the UI ('name', 'expiry', 'quantity', 'recent')
+ * @param direction - The sort direction ('asc' or 'desc')
+ * @returns PantryItemOrderBy for the query
+ */
+export function sortOptionToOrderBy(
+  option: PantrySortOption,
+  direction: PantrySortDirection,
+): PantryItemOrderBy {
+  const sortOrder = direction === 'asc' ? SortOrder.Asc : SortOrder.Desc;
+
+  switch (option) {
+    case 'name':
+      return { itemName: sortOrder };
+    case 'expiry':
+      return { expiresAt: sortOrder };
+    case 'quantity':
+      return { currentQuantity: sortOrder };
+    case 'recent':
+      return { addedAt: sortOrder };
   }
 }
 

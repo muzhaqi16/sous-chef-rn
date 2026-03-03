@@ -8,15 +8,7 @@ jest.mock('#hooks/settings/useOfflineMode', () => ({
   useIsEffectivelyOffline: jest.fn(() => false),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeWithLoadingState: jest.fn((fn, setLoading, onError) => {
-    setLoading(true);
-    fn().then(() => setLoading(false)).catch((err: unknown) => {
-      setLoading(false);
-      onError?.(err);
-    });
-  }),
-}));
+jest.mock('#/utils/compilerSafeWrappers');
 
 describe('InviteUserModal', () => {
   const defaultProps = {

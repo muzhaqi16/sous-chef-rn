@@ -4,14 +4,10 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { LowStockItems } from '../LowStockItems';
 
-jest.mock('#/apollo/links/tokenScheduler', () => ({ tokenScheduler: { schedule: jest.fn(), cancel: jest.fn() } }));
-jest.mock('#/apollo/links/refreshToken', () => ({ refreshAccessToken: jest.fn() }));
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-const mockGoBack = jest.fn();
-const mockNavigateTo = { pantryItemDetail: jest.fn() };
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({ goBack: mockGoBack, navigateTo: mockNavigateTo, navigate: jest.fn() }),
-}));
+jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/pantry/useCurrentPantry', () => ({
   useCurrentPantry: () => ({
@@ -37,7 +33,7 @@ let mockLoading = false;
 
 jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
   usePantryManagement: () => ({
-    allItems: mockAllItems,
+    items: mockAllItems,
     loading: mockLoading,
     refetch: jest.fn(() => Promise.resolve()),
     loadMore: jest.fn(),

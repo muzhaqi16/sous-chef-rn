@@ -5,28 +5,13 @@ import { render } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { NotificationActionHandler } from '../../../src/components/notifications/NotificationActionHandler';
 
-jest.mock('../../../src/apollo/links/tokenScheduler', () => ({
-  scheduleTokenRefresh: jest.fn(),
-  cancelScheduledRefresh: jest.fn(),
-}));
-jest.mock('../../../src/apollo/links/refreshToken', () => ({
-  refreshAccessToken: jest.fn(),
-}));
+jest.mock('../../../src/apollo/links/tokenScheduler');
+jest.mock('../../../src/apollo/links/refreshToken');
 
 jest.mock('../../../src/components/notifications/InvitationAcceptanceModal', () => ({
   InvitationAcceptanceModal: () => null,
 }));
-jest.mock('../../../src/hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    navigateTo: {
-      profile: jest.fn(),
-      notifications: jest.fn(),
-      pantryMain: jest.fn(),
-      shoppingListMain: jest.fn(),
-    },
-    navigate: jest.fn(),
-  }),
-}));
+jest.mock('../../../src/hooks/navigation/useAppNavigation');
 jest.mock('../../../src/store/useAppStore', () => ({
   useAppStore: (selector: any) =>
     selector({ setSelectedHomeId: jest.fn() }),
