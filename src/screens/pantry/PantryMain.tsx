@@ -47,6 +47,7 @@ import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkel
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
+import { SectionHeader } from '#components/molecules/SectionHeader';
 /**
  * Inner component that runs all heavy hooks.
  * Only mounts after DeferredScreen gates rendering, so the skeleton paints instantly.
@@ -150,6 +151,7 @@ const PantryMainInner: React.FC = () => {
     currentHome,
     selectedHomeId,
     setSelectedPantryId,
+    homeCount,
     isReady,
   } = useCurrentPantry();
   // Set up scanner button
@@ -161,8 +163,12 @@ const PantryMainInner: React.FC = () => {
       pantryId: pantry?.id,
     },
   });
-  // Register add button action - open add to pantry sheet
-  useTabBarAddButton(() => {
+  // Derive no-home states for differentiated empty states
+  const noHomeSelected = isReady && !selectedHomeId && homeCount > 0;
+  const noHomes = isReady && !selectedHomeId && homeCount === 0;
+  const handleSelectHome = () => navigate('HomeManagement', {});
+  // Register add button action - open add to pantry sheet (disabled when no home)
+  useTabBarAddButton(noHomeSelected || noHomes ? undefined : () => {
     Telemetry.trackEvent('add_pantry_item_clicked');
     setAddSheetVisible(true);
   });
@@ -363,7 +369,11 @@ const PantryMainInner: React.FC = () => {
   // Get user display name and avatar from auth store (populated at login)
   const userName =
     authUser?.name || authUser?.firstName || authUser?.lastName || 'there';
-  const householdName = currentHome?.name || 'Your Home';
+  const householdName = noHomeSelected
+    ? 'Tap to select a home'
+    : noHomes
+      ? 'No homes yet'
+      : currentHome?.name || 'Your Home';
   return (
     <View style={styles.container} testID="pantry-screen">
       <PantryContent
@@ -398,6 +408,9 @@ const PantryMainInner: React.FC = () => {
         onAnalyticsPress={handleAnalyticsPress}
         onLowStockNavigate={handleLowStockNavigate}
         totalCount={totalCount}
+        noHomeSelected={noHomeSelected}
+        noHomes={noHomes}
+        onSelectHome={handleSelectHome}
         onAddItem={handleAddItem}
         onRefresh={handleRefresh}
         onEndReached={loadMore}
@@ -505,6 +518,13 @@ export const PantryMain: React.FC = () => (
             tabs={SKELETON_PANTRY_TABS}
             activeTabId="all"
             onTabChange={noop}
+          />
+          <SectionHeader
+            title="ALL ITEMS"
+            variant="default"
+            actionLabel="Sort ↓"
+            onActionPress={noop}
+            testID="pantry-sort-button"
           />
           <PantryScreenSkeleton />
         </View>

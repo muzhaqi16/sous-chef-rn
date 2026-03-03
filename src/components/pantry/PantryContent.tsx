@@ -166,6 +166,11 @@ interface PantryContentProps {
   totalCount?: number;
   onAddItem?: () => void;
 
+  // No-home states
+  noHomeSelected?: boolean;
+  noHomes?: boolean;
+  onSelectHome?: () => void;
+
   // Pagination
   isLoadingMore?: boolean;
   hasMore?: boolean;
@@ -371,6 +376,9 @@ interface PantryEmptyStateProps {
   locationFilter: LocationFilter;
   tabs: FilterTabConfig<LocationFilter>[];
   onAddItem?: () => void;
+  noHomeSelected?: boolean;
+  noHomes?: boolean;
+  onSelectHome?: () => void;
 }
 
 function PantryEmptyState({
@@ -381,8 +389,39 @@ function PantryEmptyState({
   locationFilter,
   tabs,
   onAddItem,
+  noHomeSelected,
+  noHomes,
+  onSelectHome,
 }: PantryEmptyStateProps) {
   if (showSkeletons) return <PantryScreenSkeleton />;
+
+  if (noHomes) {
+    return (
+      <EmptyState
+        testID="pantry-empty-state"
+        icon="home-outline"
+        title="No home yet"
+        description="Create or join a home to start tracking food"
+        action={
+          onSelectHome ? { label: 'Get Started', onPress: onSelectHome } : undefined
+        }
+      />
+    );
+  }
+
+  if (noHomeSelected) {
+    return (
+      <EmptyState
+        testID="pantry-empty-state"
+        icon="home-outline"
+        title="No home selected"
+        description="Select a home to view your pantry"
+        action={
+          onSelectHome ? { label: 'Go to My Homes', onPress: onSelectHome } : undefined
+        }
+      />
+    );
+  }
 
   if (searchQuery) {
     return (
@@ -466,6 +505,9 @@ export const PantryContent = React.forwardRef<
       onEndReached,
       refreshing = false,
       loading = false,
+      noHomeSelected,
+      noHomes,
+      onSelectHome,
       // onSwipeableWillOpen and onSwipeableClose are handled by PantryActionsContext
     },
     ref,
@@ -738,6 +780,9 @@ export const PantryContent = React.forwardRef<
                     locationFilter={locationFilter}
                     tabs={tabs}
                     onAddItem={onAddItem}
+                    noHomeSelected={noHomeSelected}
+                    noHomes={noHomes}
+                    onSelectHome={onSelectHome}
                   />
                 }
                 ListFooterComponent={

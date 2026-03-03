@@ -3,9 +3,10 @@ import { View, Text, Pressable, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useHomeDetailManagement } from '#hooks/home/useHomeDetailManagement';
+import { useHomeDetailManagement, ROLE_OPTIONS } from '#hooks/home/useHomeDetailManagement';
 
 import { DetailTemplate } from '#components/templates/DetailTemplate';
+import { ModalPicker } from '#components/molecules/ModalPicker';
 import { EditableField } from '#components/molecules/EditableField';
 import { NavigationRow } from '#components/molecules/NavigationRow';
 import { HomeMembersSection } from '#components/organisms/home/HomeMembersSection';
@@ -34,10 +35,16 @@ export const HomeDetailScreen: React.FC<{
   const [copied, setCopied] = useState(false);
   const [joinCodeLoading, setJoinCodeLoading] = useState(false);
 
+  const [refreshing, setRefreshing] = useState(false);
+
   const {
     home,
     loading,
     leaving,
+    refetch,
+    rolePickerState,
+    handleRoleSelect,
+    closeRolePicker,
     saveName,
     changeRole,
     removeMember,
@@ -45,6 +52,10 @@ export const HomeDetailScreen: React.FC<{
     leaveHome,
     toggleJoinCode,
   } = useHomeDetailManagement(homeId);
+
+  const handleRefresh = () => {
+    executeRefreshWithFinally(() => refetch(), setRefreshing);
+  };
 
   // Reset copied state after 2 seconds
   useEffect(() => {
@@ -221,12 +232,25 @@ export const HomeDetailScreen: React.FC<{
   ];
 
   return (
-    <DetailTemplate
-      title="Home Details"
-      onBack={goBack}
-      headerActions={[]}
-      sections={sections}
-    />
+    <>
+      <DetailTemplate
+        title="Home Details"
+        onBack={goBack}
+        headerActions={[]}
+        sections={sections}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+      />
+      <ModalPicker
+        visible={rolePickerState.visible}
+        label="Select Role"
+        options={ROLE_OPTIONS}
+        selected={rolePickerState.currentRole}
+        onSelect={handleRoleSelect}
+        onCancel={closeRolePicker}
+        confirmLabel="Save"
+      />
+    </>
   );
 };
 

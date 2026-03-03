@@ -233,10 +233,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
     onCompleted: data => {
       const newPantryResult = data?.createPantry?.pantry;
       if (newPantryResult) {
-        // Set the newly created pantry as selected if it's marked as default
-        if (isDefault) {
-          setSelectedPantryId(newPantryResult.id);
-        }
+        setSelectedPantryId(newPantryResult.id);
       }
       goBack();
     },

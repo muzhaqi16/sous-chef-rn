@@ -32,12 +32,17 @@ jest.mock('#components/base/Skeleton/PantryScreenSkeleton', () => ({
 }));
 
 jest.mock('#components/base/EmptyState', () => ({
-  EmptyState: ({ title, description, testID }: any) => {
-    const { Text, View } = require('react-native');
+  EmptyState: ({ title, description, action, testID }: any) => {
+    const { Text, View, Pressable } = require('react-native');
     return (
       <View testID={testID}>
         <Text>{title}</Text>
         {description ? <Text>{description}</Text> : null}
+        {action ? (
+          <Pressable testID="empty-state-action" onPress={action.onPress}>
+            <Text>{action.label}</Text>
+          </Pressable>
+        ) : null}
       </View>
     );
   },
@@ -471,5 +476,51 @@ describe('PantryContent', () => {
   it('renders with notification count', () => {
     render(<PantryContent {...defaultProps} notificationCount={5} />);
     expect(screen.getByText('John')).toBeTruthy();
+  });
+
+  describe('no-home empty states', () => {
+    it('shows "No home yet" when noHomes is true', () => {
+      render(<PantryContent {...defaultProps} items={[]} noHomes={true} />);
+      expect(screen.getByText('No home yet')).toBeTruthy();
+      expect(screen.getByText('Create or join a home to start tracking food')).toBeTruthy();
+    });
+
+    it('shows "Get Started" action when noHomes and onSelectHome provided', () => {
+      const onSelectHome = jest.fn();
+      render(
+        <PantryContent {...defaultProps} items={[]} noHomes={true} onSelectHome={onSelectHome} />,
+      );
+      expect(screen.getByText('Get Started')).toBeTruthy();
+    });
+
+    it('shows "No home selected" when noHomeSelected is true', () => {
+      render(<PantryContent {...defaultProps} items={[]} noHomeSelected={true} />);
+      expect(screen.getByText('No home selected')).toBeTruthy();
+      expect(screen.getByText('Select a home to view your pantry')).toBeTruthy();
+    });
+
+    it('shows "Go to My Homes" action when noHomeSelected and onSelectHome provided', () => {
+      const onSelectHome = jest.fn();
+      render(
+        <PantryContent {...defaultProps} items={[]} noHomeSelected={true} onSelectHome={onSelectHome} />,
+      );
+      expect(screen.getByText('Go to My Homes')).toBeTruthy();
+    });
+
+    it('prioritizes noHomes over noHomeSelected', () => {
+      render(
+        <PantryContent {...defaultProps} items={[]} noHomes={true} noHomeSelected={true} />,
+      );
+      expect(screen.getByText('No home yet')).toBeTruthy();
+      expect(screen.queryByText('No home selected')).toBeNull();
+    });
+
+    it('prioritizes no-home states over search empty state', () => {
+      render(
+        <PantryContent {...defaultProps} items={[]} noHomeSelected={true} searchQuery="test" />,
+      );
+      expect(screen.getByText('No home selected')).toBeTruthy();
+      expect(screen.queryByText('No items found')).toBeNull();
+    });
   });
 });

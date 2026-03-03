@@ -197,7 +197,10 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
               >
                 <View style={styles.roleOptionContent}>
                   <View style={styles.roleHeader}>
-                    <Text style={styles.roleIcon}>{role.icon}</Text>
+                    <View style={styles.roleHeaderLeft}>
+                      <Text style={styles.roleIcon}>{role.icon}</Text>
+                      <Text style={styles.roleOptionLabel}>{role.label}</Text>
+                    </View>
                     <View style={styles.radioContainer}>
                       <View
                         style={[
@@ -219,7 +222,6 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                       </View>
                     </View>
                   </View>
-                  <Text style={styles.roleOptionLabel}>{role.label}</Text>
                   <Text style={styles.roleDescription}>{role.description}</Text>
                   {!!role.warning && selectedRole === role.value && (
                     <Text
@@ -341,11 +343,7 @@ const styles = StyleSheet.create(theme => ({
   roleIcon: {
     fontSize: theme.typography.fontSize.xl,
   },
-  radioContainer: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
+  radioContainer: {},
   radioOuter: {
     width: theme.sizes.icon.md,
     height: theme.sizes.icon.md,
@@ -359,11 +357,15 @@ const styles = StyleSheet.create(theme => ({
     height: theme.sizes.icon.sm,
     borderRadius: theme.radii.full,
   },
+  roleHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
   roleOptionLabel: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
   },
   roleDescription: {
     fontSize: theme.typography.fontSize.sm - 1,

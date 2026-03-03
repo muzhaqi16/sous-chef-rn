@@ -722,7 +722,16 @@ describe('PantryItemDetail – helper functions', () => {
     const { useGetPantryItemQuery } = require('#generated');
     const route = { params: { itemId: 'pi1' } };
 
+    // Pin current time to noon on a fixed date to avoid time-of-day flakiness
+    const FIXED_NOW = new Date('2025-06-15T12:00:00Z');
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(FIXED_NOW);
+    });
+
     afterEach(() => {
+      jest.useRealTimers();
       useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
     });
 
@@ -742,13 +751,11 @@ describe('PantryItemDetail – helper functions', () => {
     });
 
     it('shows "Expires today" when expiresAt is today', () => {
-      // Use current time so Math.ceil(diff / msPerDay) === 0
-      const now = new Date();
       useGetPantryItemQuery.mockReturnValue({
         data: {
           pantryItem: {
             ...mockItemData.pantryItem,
-            expiresAt: now.toISOString(),
+            expiresAt: FIXED_NOW.toISOString(),
           },
         },
         loading: false,
@@ -759,10 +766,8 @@ describe('PantryItemDetail – helper functions', () => {
     });
 
     it('shows "1 day to expire" when expiresAt is tomorrow', () => {
-      const tomorrow = new Date();
+      const tomorrow = new Date(FIXED_NOW);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      // Set to midday tomorrow to avoid edge cases
-      tomorrow.setHours(12, 0, 0, 0);
       useGetPantryItemQuery.mockReturnValue({
         data: {
           pantryItem: {
@@ -778,9 +783,8 @@ describe('PantryItemDetail – helper functions', () => {
     });
 
     it('shows "N days to expire" with isUrgent when <= 3 days', () => {
-      const threeDays = new Date();
+      const threeDays = new Date(FIXED_NOW);
       threeDays.setDate(threeDays.getDate() + 3);
-      threeDays.setHours(12, 0, 0, 0);
       useGetPantryItemQuery.mockReturnValue({
         data: {
           pantryItem: {
@@ -796,9 +800,8 @@ describe('PantryItemDetail – helper functions', () => {
     });
 
     it('shows "N days to expire" without urgency when > 3 days', () => {
-      const tenDays = new Date();
+      const tenDays = new Date(FIXED_NOW);
       tenDays.setDate(tenDays.getDate() + 10);
-      tenDays.setHours(12, 0, 0, 0);
       useGetPantryItemQuery.mockReturnValue({
         data: {
           pantryItem: {

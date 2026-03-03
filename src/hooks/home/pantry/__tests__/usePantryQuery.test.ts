@@ -17,6 +17,10 @@ jest.mock('#generated', () => ({
     refetch: mockRefetch,
     fetchMore: mockFetchMore,
   })),
+  SortOrder: {
+    Asc: 'ASC',
+    Desc: 'DESC',
+  },
 }));
 
 jest.mock('#hooks/auth/useAuth', () => ({

@@ -585,6 +585,7 @@ fragment MemberShipFragment on Membership {
   role
   status
   displayName
+  canManageHome
 }
 
 fragment BasicPantryFragment on Pantry {

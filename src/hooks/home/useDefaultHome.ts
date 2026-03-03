@@ -369,6 +369,20 @@ export const useDefaultHome = () => {
     setIsHomeSelectionReady,
   ]);
 
+  // Recovery: if ready but no home selected and homes exist, allow auto-select retry
+  useEffect(() => {
+    if (
+      isHomeSelectionReady &&
+      !selectedHomeId &&
+      homesList &&
+      homesList.length > 0 &&
+      !remoteDefaultHomeId &&
+      !isClearingStaleIds
+    ) {
+      hasAutoSelectedRef.current = false;
+    }
+  }, [isHomeSelectionReady, selectedHomeId, homesList, remoteDefaultHomeId, isClearingStaleIds]);
+
   // Helper function to get the default pantry from a home
   // Handle both normalized homes (with pantries array) and raw homes (with pantriesConnection)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- homeData shape varies between raw and normalized homes

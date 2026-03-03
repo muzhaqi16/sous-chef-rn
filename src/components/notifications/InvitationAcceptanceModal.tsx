@@ -18,6 +18,7 @@ import {
   useDeclineShoppingListInviteMutation,
   MyShoppingListInvitesDocument,
   MyShoppingListInvitesQuery,
+  GetHomesDocument,
 } from '#generated';
 import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
@@ -50,9 +51,8 @@ export const InvitationAcceptanceModal: React.FC<
   const [rejecting, setRejecting] = useState(false);
 
   const [acceptHomeInvite] = useAcceptHomeInviteMutation({
-    // Note: This mutation returns a Membership object with homeId.
-    // The Home is already in the cache from the invite, so no manual update needed.
-    // Apollo will automatically update the membership status via normalization.
+    refetchQueries: [{ query: GetHomesDocument }],
+    awaitRefetchQueries: true,
   });
   const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation({
     update: (cache, { data }) => {
@@ -128,6 +128,10 @@ export const InvitationAcceptanceModal: React.FC<
             };
 
             onAccept?.(invitationWithHomeId);
+            onClose();
+          } else if (result.data?.acceptHomeInvite?.success) {
+            // Already accepted — token was valid but no new membership created
+            onAccept?.(invitation);
             onClose();
           }
         } else if (invitation.type === 'SHOPPING_LIST_INVITE') {

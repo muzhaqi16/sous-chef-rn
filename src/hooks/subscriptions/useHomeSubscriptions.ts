@@ -14,9 +14,15 @@
 import { useAppStore } from '#store/useAppStore';
 import {
   useMembershipChangesSubscription,
+  useHomeInviteChangedSubscription,
+  HomeInviteMutationType,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { CacheStrategy } from '#/services/subscriptions/types';
+import {
+  createAddToParentArrayUpdater,
+  createRemoveFromParentArrayUpdater,
+} from '#/apollo/utils/cacheUpdaters';
 
 /**
  * Initialize home/membership subscriptions for the current user
@@ -73,7 +79,64 @@ export function useHomeSubscriptions(userId?: string) {
     ...membershipHandlers,
   });
 
-  // Additional home subscriptions can be added here:
-  // - HomeUpdated
-  // - etc.
+  //
+  // Home Invite Changed Subscription
+  // Handles invite lifecycle: CREATED, ACCEPTED, DECLINED, REVOKED
+  // Updates the me.pendingHomeInvites array in cache
+  //
+  const addInviteToCache = createAddToParentArrayUpdater<{ id: string }>('User', 'pendingHomeInvites');
+  const removeInviteFromCache = createRemoveFromParentArrayUpdater('User', 'pendingHomeInvites', 'HomeInvite');
+
+  const inviteHandlers = subscriptionService.register({
+    subscriptionName: 'HomeInviteChanged',
+    entityType: 'HomeInvite',
+    enableDeduplication: true,
+    userId,
+    cacheUpdateStrategy: CacheStrategy.NONE,
+    enableLogging: true,
+    entityId: selectedHomeId,
+    customOnData: (payload: any, client: any) => {
+      if (!payload) return;
+
+      // Skip self-echo
+      if (payload.userId && userId && payload.userId === userId) {
+        if (__DEV__) {
+          console.log('⏭️ [HomeInviteChanged] Skipping self-echo');
+        }
+        return;
+      }
+
+      const mutation = payload.mutation;
+      const invite = payload.homeInvite;
+
+      if (!invite?.id) return;
+
+      switch (mutation) {
+        case HomeInviteMutationType.Created: {
+          // Add new invite to me.pendingHomeInvites
+          if (userId) {
+            addInviteToCache(client.cache, userId, invite);
+          }
+          break;
+        }
+        case HomeInviteMutationType.Accepted:
+        case HomeInviteMutationType.Declined:
+        case HomeInviteMutationType.Revoked: {
+          // Remove from me.pendingHomeInvites and evict entity
+          if (userId) {
+            removeInviteFromCache(client.cache, userId, invite.id, { evictItem: true });
+          }
+          break;
+        }
+        default:
+          break;
+      }
+    },
+  });
+
+  useHomeInviteChangedSubscription({
+    variables: { homeId: selectedHomeId! },
+    skip: !selectedHomeId || !isHomeSelectionReady,
+    ...inviteHandlers,
+  });
 }
