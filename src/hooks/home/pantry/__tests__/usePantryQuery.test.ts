@@ -56,6 +56,7 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
   usePreservedArrayData: (data: any) => data || [],
+  usePreservedQueryData: (data: any, initial: any) => data !== undefined ? data : initial,
 }));
 
 

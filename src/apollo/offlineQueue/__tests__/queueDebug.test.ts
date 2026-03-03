@@ -80,15 +80,8 @@ import { useStore } from '#store';
 const mockedGetState = useStore.getState as jest.Mock;
 
 describe('queueDebug', () => {
-  let consoleSpy: jest.SpyInstance;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    consoleSpy.mockRestore();
   });
 
   // -------------------------------------------------------------------------
@@ -123,7 +116,7 @@ describe('queueDebug', () => {
 
       expect(queueStore.getMutationsForUser).toHaveBeenCalledWith('user-1');
       // Should log header info
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Offline Mutation Queue'),
       );
     });
@@ -133,7 +126,7 @@ describe('queueDebug', () => {
 
       queueDebug.viewQueue();
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('No authenticated user'),
       );
       expect(queueStore.getMutationsForUser).not.toHaveBeenCalled();
@@ -145,7 +138,7 @@ describe('queueDebug', () => {
 
       queueDebug.viewQueue();
 
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('empty'));
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('empty'));
     });
   });
 
@@ -159,7 +152,7 @@ describe('queueDebug', () => {
       queueDebug.getQueueStats();
 
       expect(queueManager.getStats).toHaveBeenCalledWith('user-1');
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Queue Statistics'),
       );
     });
@@ -177,7 +170,7 @@ describe('queueDebug', () => {
 
       queueDebug.getQueueStats();
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('No user specified'),
       );
     });
@@ -195,7 +188,7 @@ describe('queueDebug', () => {
 
       queueDebug.getQueueStats();
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Oldest'),
       );
     });
@@ -209,7 +202,7 @@ describe('queueDebug', () => {
       queueDebug.clearQueue();
 
       expect(queueStore.clearAllQueues).toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Queue cleared'),
       );
     });
@@ -223,7 +216,7 @@ describe('queueDebug', () => {
       queueDebug.clearQueueForUser('user-1');
 
       expect(queueStore.clearQueueForUser).toHaveBeenCalledWith('user-1');
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Cleared 2 mutations'),
       );
     });
@@ -237,10 +230,10 @@ describe('queueDebug', () => {
       await queueDebug.processQueue();
 
       expect(queueManager.processQueue).toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Manually processing queue'),
       );
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Queue processing complete'),
       );
     });
@@ -288,7 +281,7 @@ describe('queueDebug', () => {
 
       expect(queueStore.updateMutation).toHaveBeenCalled();
       expect(queueManager.processQueue).not.toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Still offline'),
       );
     });
@@ -300,7 +293,7 @@ describe('queueDebug', () => {
       queueDebug.retryFailedMutations('user-1');
 
       expect(queueStore.updateMutation).not.toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Retrying 0 failed mutations'),
       );
     });
@@ -321,7 +314,7 @@ describe('queueDebug', () => {
       queueDebug.viewQueueForUser('user-1');
 
       expect(queueStore.getMutationsForUser).toHaveBeenCalledWith('user-1');
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Queue for user user-1'),
       );
     });
@@ -347,7 +340,7 @@ describe('queueDebug', () => {
       const result = queueDebug.exportQueue();
 
       expect(result).toBe('');
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('No authenticated user'),
       );
     });

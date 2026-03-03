@@ -14,7 +14,7 @@ import { useAuth } from '#hooks/auth/useAuth';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { usePagination } from '#/hooks/utils/usePagination';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
+import { usePreservedArrayData, usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import { useAppStore, selectIsHomeSelectionReady, selectSetIsPantryQueryComplete } from '#store/useAppStore';
 
 // Module-level helpers — outside hook body so React Compiler doesn't bail out on try-catch
@@ -113,7 +113,7 @@ export function usePantryQuery(
   // Guard to prevent multiple auto-refetches when edges are depleted
   const isAutoRefetchingRef = useRef(false);
 
-  const stats = normalizedPantry?.stats ?? null;
+  const stats = usePreservedQueryData(normalizedPantry?.stats ?? undefined, null);
   const totalCount = normalizedPantry?.itemsTotalCount ?? 0;
 
   const setIsPantryQueryComplete = useAppStore(selectSetIsPantryQueryComplete);

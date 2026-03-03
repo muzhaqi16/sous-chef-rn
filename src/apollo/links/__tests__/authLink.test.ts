@@ -168,12 +168,6 @@ describe('authLink middleware', () => {
     jest.clearAllMocks();
     mockStoreState.accessToken = null;
     mockStoreState.refreshToken = null;
-    jest.spyOn(console, 'log').mockImplementation();
-    jest.spyOn(console, 'warn').mockImplementation();
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
   });
 
   it('exports authLink', () => {

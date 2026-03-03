@@ -51,5 +51,8 @@ describe('useAllPendingInvites', () => {
     renderHook(() => useAllPendingInvites('user-1'));
     expect(mockFetchShoppingList).toHaveBeenCalled();
     expect(mockFetchHome).toHaveBeenCalled();
+    expect(console.log).toHaveBeenCalledWith(
+      '📬 [useAllPendingInvites] Deferred invitation queries started',
+    );
   });
 });

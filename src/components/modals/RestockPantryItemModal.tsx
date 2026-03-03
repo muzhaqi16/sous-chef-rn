@@ -4,10 +4,13 @@ import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
+import { ConversionPreview } from '#components/atoms/ConversionPreview';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
+import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
 import type { PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
+import type { SelectedUnitInfo } from '#hooks/pantry/useCompatibleUnits';
 import { PantryActionModal, type PantryActionSharedState } from './PantryActionModal';
 
 interface RestockPantryItemModalProps {
@@ -35,7 +38,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const [totalCostInput, setTotalCostInput] = useState('');
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
 
-  const handleReset = () => {
+  const handleReset = (_item: PantryItemFragment, _defaultUnit: SelectedUnitInfo | null) => {
     setQuantityInput('1');
     setCostPerUnitInput('');
     setTotalCostInput('');
@@ -54,19 +57,12 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
     const costPerUnit = costPerUnitInput ? parseFloat(costPerUnitInput) : undefined;
     const totalCost = totalCostInput ? parseFloat(totalCostInput) : undefined;
 
-    // Convert content units to weight for the backend
-    let finalQuantity = quantityValue;
-    let finalUnitId = shared.activeUnitId;
-    if (shared.selectedUnit === 'content' && shared.hasContentUnit && pantryItem.packageBreakdown) {
-      finalQuantity = quantityValue * pantryItem.packageBreakdown.perUnitNetWeight!;
-      finalUnitId = pantryItem.netWeightUnit!.id;
-    }
-
+    // Pass the quantity and unit directly — the backend handles conversion
     onConfirm(
-      finalQuantity,
+      quantityValue,
       quantityInput,
       shared.notes,
-      finalUnitId,
+      shared.activeUnitId,
       isNaN(costPerUnit!) ? undefined : costPerUnit,
       isNaN(totalCost!) ? undefined : totalCost,
       expiresAt,
@@ -86,84 +82,132 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       currentQuantityLabel="Current:"
       onConfirm={handleConfirm}
       onReset={handleReset}
-      renderActionFields={(shared) => {
-        const addAmount = parseFractionalInput(quantityInput);
-        const newQuantity = addAmount !== null && !isNaN(addAmount)
-          ? shared.availableQuantity + addAmount
-          : null;
-        return (
-          <>
-            {/* Quantity Input */}
-            <View style={commonStyles.bottomSheetSection}>
-              <FractionInput
-                label="Quantity to Add"
-                value={quantityInput}
-                onChangeText={setQuantityInput}
-                placeholder="e.g., 1, 1 1/4, or 1.5"
-                keyboardType="numeric"
-                useBottomSheetInput
-                required
-              />
-              {newQuantity !== null && (
-                <Text style={styles.newQuantityText}>
-                  New quantity: {formatQuantity(newQuantity)} {shared.activeUnitSymbol}
-                </Text>
-              )}
-            </View>
-
-            {/* Cost Tracking */}
-            <View style={commonStyles.bottomSheetSection}>
-              <View style={styles.costRow}>
-                <View style={styles.costField}>
-                  <FormInput
-                    label="Cost per Unit"
-                    value={costPerUnitInput}
-                    onChangeText={setCostPerUnitInput}
-                    placeholder="0.00"
-                    keyboardType="decimal-pad"
-                    useBottomSheetInput
-                  />
-                </View>
-                <View style={styles.costField}>
-                  <FormInput
-                    label="Total Cost"
-                    value={totalCostInput}
-                    onChangeText={setTotalCostInput}
-                    placeholder="0.00"
-                    keyboardType="decimal-pad"
-                    useBottomSheetInput
-                  />
-                </View>
-              </View>
-            </View>
-
-            {/* Notes */}
-            <View style={commonStyles.bottomSheetSection}>
-              <FormInput
-                label="Notes"
-                value={shared.notes}
-                onChangeText={shared.setNotes}
-                placeholder="Add any notes about this restock..."
-                multiline
-                numberOfLines={3}
-                useBottomSheetInput
-              />
-            </View>
-
-            {/* Expiration Date */}
-            <View style={commonStyles.bottomSheetSection}>
-              <DatePickerField
-                label="Expiration Date"
-                value={expiresAt}
-                onChange={setExpiresAt}
-                placeholder="Set new expiration"
-                minimumDate={new Date()}
-              />
-            </View>
-          </>
-        );
-      }}
+      renderActionFields={(shared) => (
+        <RestockActionFields
+          quantityInput={quantityInput}
+          setQuantityInput={setQuantityInput}
+          costPerUnitInput={costPerUnitInput}
+          setCostPerUnitInput={setCostPerUnitInput}
+          totalCostInput={totalCostInput}
+          setTotalCostInput={setTotalCostInput}
+          expiresAt={expiresAt}
+          setExpiresAt={setExpiresAt}
+          shared={shared}
+        />
+      )}
     />
+  );
+};
+
+const RestockActionFields: React.FC<{
+  quantityInput: string;
+  setQuantityInput: (v: string) => void;
+  costPerUnitInput: string;
+  setCostPerUnitInput: (v: string) => void;
+  totalCostInput: string;
+  setTotalCostInput: (v: string) => void;
+  expiresAt: Date | null;
+  setExpiresAt: (v: Date | null) => void;
+  shared: PantryActionSharedState;
+}> = ({ quantityInput, setQuantityInput, costPerUnitInput, setCostPerUnitInput,
+  totalCostInput, setTotalCostInput, expiresAt, setExpiresAt, shared }) => {
+  const addAmount = parseFractionalInput(quantityInput);
+
+  const conversion = useConversionPreview({
+    itemId: shared.itemId,
+    inputQuantity: addAmount,
+    selectedUnitId: shared.activeUnitId,
+    selectedUnitSymbol: shared.activeUnitSymbol,
+    trackingUnitId: shared.trackingUnitId,
+    trackingUnitSymbol: shared.trackingUnitSymbol,
+    availableInTrackingUnit: shared.trackingQuantity,
+  });
+
+  const currentInUnit = shared.isConvertedUnit
+    ? conversion.availableInSelectedUnit
+    : shared.trackingQuantity;
+
+  const newQuantity = addAmount !== null && !isNaN(addAmount) && currentInUnit != null
+    ? currentInUnit + addAmount
+    : null;
+
+  return (
+    <>
+      {/* Quantity Input */}
+      <View style={commonStyles.bottomSheetSection}>
+        <FractionInput
+          label="Quantity to Add"
+          value={quantityInput}
+          onChangeText={setQuantityInput}
+          placeholder="e.g., 1, 1 1/4, or 1.5"
+          keyboardType="numeric"
+          useBottomSheetInput
+          required
+        />
+        {shared.isConvertedUnit ? (
+          <ConversionPreview
+            previewText={conversion.previewText}
+            loading={conversion.previewLoading}
+            confidence={shared.selectedUnitInfo?.conversionConfidence ?? null}
+          />
+        ) : null}
+        {newQuantity !== null ? (
+          <Text style={styles.newQuantityText}>
+            New quantity: {formatQuantity(newQuantity)} {shared.activeUnitSymbol}
+          </Text>
+        ) : null}
+      </View>
+
+      {/* Cost Tracking */}
+      <View style={commonStyles.bottomSheetSection}>
+        <View style={styles.costRow}>
+          <View style={styles.costField}>
+            <FormInput
+              label="Cost per Unit"
+              value={costPerUnitInput}
+              onChangeText={setCostPerUnitInput}
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+              useBottomSheetInput
+            />
+          </View>
+          <View style={styles.costField}>
+            <FormInput
+              label="Total Cost"
+              value={totalCostInput}
+              onChangeText={setTotalCostInput}
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+              useBottomSheetInput
+            />
+          </View>
+        </View>
+      </View>
+
+      {/* Notes */}
+      <View style={commonStyles.bottomSheetSection}>
+        <FormInput
+          label="Notes"
+          value={shared.notes}
+          onChangeText={shared.setNotes}
+          placeholder="Add any notes about this restock..."
+          multiline
+          numberOfLines={3}
+          useBottomSheetInput
+        />
+      </View>
+
+      {/* Expiration Date */}
+      <View style={commonStyles.bottomSheetSection}>
+        <DatePickerField
+          label="Expiration Date"
+          value={expiresAt}
+          onChange={setExpiresAt}
+          placeholder="Set new expiration"
+          minimumDate={new Date()}
+        />
+      </View>
+    </>
   );
 };
 

@@ -32,6 +32,7 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { Telemetry } from '#/services/telemetry';
 import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+import { preloadImages } from '#components/atoms/CachedImage';
 
 /**
  * Inner content component that uses modal context.
@@ -157,6 +158,15 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         }
       }
     }, [items, swipeHint.hasBeenShown, swipeHint.actions]);
+
+    // Preload item images so they're cached before scrolling into view
+    useEffect(() => {
+      const urls: string[] = [];
+      for (const item of sortableItems) {
+        if (item.leftElementConfig?.url) urls.push(item.leftElementConfig.url);
+      }
+      if (urls.length > 0) preloadImages(urls);
+    }, [sortableItems]);
 
     // Handle refresh
     const handleRefresh = () => {

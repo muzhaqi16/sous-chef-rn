@@ -186,16 +186,14 @@ describe('useNotifications', () => {
   });
 
   it('updateConfig logs config changes', () => {
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
     const { result } = renderHook(() => useNotifications());
 
     result.current.updateConfig({ showInAppNotifications: false });
 
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(console.log).toHaveBeenCalledWith(
       'Updating notification config:',
       expect.any(Object),
     );
-    consoleSpy.mockRestore();
   });
 
   it('clearAll is passed through from store', () => {

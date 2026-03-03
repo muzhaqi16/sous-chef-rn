@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "3.1.5",
+  "version": "3.1.6",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -93,7 +93,7 @@
     "@react-navigation/elements": "3.0.0-alpha.12",
     "@react-navigation/native": "8.0.0-alpha.11",
     "@react-navigation/native-stack": "8.0.0-alpha.13",
-    "@shopify/flash-list": "^2.2.2",
+    "@shopify/flash-list": "^2.2.3",
     "@shopify/react-native-skia": "^2.4.7",
     "date-fns": "^4.1.0",
     "fractional-indexing": "^3.2.0",

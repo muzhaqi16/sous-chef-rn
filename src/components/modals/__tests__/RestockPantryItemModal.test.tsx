@@ -33,13 +33,18 @@ jest.mock('../PantryActionModal', () => ({
   PantryActionModal: ({ title, renderActionFields }: any) => {
     const { View, Text } = require('react-native');
     const sharedState = {
-      availableQuantity: 5,
+      trackingQuantity: 5,
+      trackingUnitSymbol: 'oz',
+      trackingUnitId: 'unit-1',
       activeUnitSymbol: 'oz',
       activeUnitId: 'unit-1',
+      isConvertedUnit: false,
+      selectedUnitInfo: { unitId: 'unit-1', unitSymbol: 'oz', unitName: 'Ounces', unitType: 'WEIGHT', isTrackingUnit: true, conversionConfidence: null },
+      setSelectedUnitInfo: jest.fn(),
       notes: '',
       setNotes: jest.fn(),
-      selectedUnit: 'weight',
-      hasContentUnit: false,
+      itemId: 'item-1',
+      defaultUnit: null,
     };
     return (
       <View>
@@ -48,6 +53,14 @@ jest.mock('../PantryActionModal', () => ({
       </View>
     );
   },
+}));
+jest.mock('#hooks/pantry/useConversionPreview', () => ({
+  useConversionPreview: () => ({
+    previewText: null,
+    availableInSelectedUnit: null,
+    previewLoading: false,
+    availableLoading: false,
+  }),
 }));
 
 describe('RestockPantryItemModal', () => {

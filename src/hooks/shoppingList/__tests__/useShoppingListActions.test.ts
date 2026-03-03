@@ -75,12 +75,6 @@ jest.mock('../mutations/useClearShoppingListItems', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
-  jest.spyOn(console, 'error').mockImplementation();
-  jest.spyOn(console, 'warn').mockImplementation();
-});
-
-afterEach(() => {
-  jest.restoreAllMocks();
 });
 
 function createItem(overrides: Record<string, unknown> = {}) {

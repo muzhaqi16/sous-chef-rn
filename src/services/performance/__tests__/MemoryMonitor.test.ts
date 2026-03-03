@@ -140,6 +140,9 @@ describe('MemoryMonitor', () => {
         'app_memory_critical_total',
         1,
       );
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('[MemoryMonitor] Critical memory usage:'),
+      );
     });
 
     it('respects 30s cooldown between warnings', async () => {
@@ -152,6 +155,9 @@ describe('MemoryMonitor', () => {
 
       await MemoryMonitor.takeSnapshot('first_warning');
       expect(Telemetry.increment).toHaveBeenCalledTimes(1);
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('[MemoryMonitor] Critical memory usage:'),
+      );
 
       jest.clearAllMocks();
 
@@ -167,6 +173,9 @@ describe('MemoryMonitor', () => {
       expect(Telemetry.increment).toHaveBeenCalledWith(
         'app_memory_critical_total',
         1,
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('[MemoryMonitor] Critical memory usage:'),
       );
     });
   });

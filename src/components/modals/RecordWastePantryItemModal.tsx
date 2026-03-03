@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Alert } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { View, Text, Alert } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
-import { Icon } from '#/utils/iconUtils';
+import { CollapsibleChipPicker } from '#components/molecules/CollapsibleChipPicker';
+import { ConversionPreview } from '#components/atoms/ConversionPreview';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
+import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
 import { WasteReason, PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
+import type { SelectedUnitInfo } from '#hooks/pantry/useCompatibleUnits';
 import { PantryActionModal, type PantryActionSharedState } from './PantryActionModal';
 
 interface RecordWastePantryItemModalProps {
@@ -45,13 +48,12 @@ export const RecordWastePantryItemModal: React.FC<RecordWastePantryItemModalProp
   pantryItem,
   onClose,
   onConfirm }) => {
-  const { theme } = useUnistyles();
   const [wasteAmountInput, setWasteAmountInput] = useState('');
   const [wasteReason, setWasteReason] = useState<WasteReason>(WasteReason.Expired);
   const [isComposted, setIsComposted] = useState(false);
   const [isRecycled, setIsRecycled] = useState(false);
 
-  const handleReset = (item: PantryItemFragment) => {
+  const handleReset = (item: PantryItemFragment, _defaultUnit: SelectedUnitInfo | null) => {
     setWasteAmountInput(item.quantity.toString());
     setWasteReason(WasteReason.Expired);
     setIsComposted(false);
@@ -66,8 +68,8 @@ export const RecordWastePantryItemModal: React.FC<RecordWastePantryItemModalProp
       Alert.alert('Error', 'Please enter a valid waste amount');
       return;
     }
-    if (wasteValue > shared.availableQuantity) {
-      Alert.alert('Error', `Cannot waste more than available quantity (${shared.availableQuantity} ${shared.activeUnitSymbol})`);
+    if (!shared.isConvertedUnit && wasteValue > shared.trackingQuantity) {
+      Alert.alert('Error', `Cannot waste more than available quantity (${shared.trackingQuantity} ${shared.activeUnitSymbol})`);
       return;
     }
 
@@ -87,107 +89,133 @@ export const RecordWastePantryItemModal: React.FC<RecordWastePantryItemModalProp
       unitToggleLabel="Waste by"
       onConfirm={handleConfirm}
       onReset={handleReset}
-      renderActionFields={(shared) => {
-        const wasteAmount = parseFractionalInput(wasteAmountInput);
-        const remaining = wasteAmount !== null && !isNaN(wasteAmount)
-          ? shared.availableQuantity - wasteAmount
-          : null;
-        return (
-          <>
-            {/* Waste Amount Input */}
-            <View style={commonStyles.bottomSheetSection}>
-              <FractionInput
-                label="Waste Amount"
-                required
-                value={wasteAmountInput}
-                onChangeText={setWasteAmountInput}
-                placeholder="e.g., 1, 1 1/4, or 1.5"
-                keyboardType="numeric"
-                useBottomSheetInput
-              />
-              {remaining !== null && (
-                <Text
-                  style={[
-                    commonStyles.bottomSheetHelperText,
-                    remaining < 0 && commonStyles.bottomSheetHelperTextError,
-                  ]}
-                >
-                  Remaining: {remaining >= 0 ? formatQuantity(remaining) : 'Invalid'}{' '}
-                  {shared.activeUnitSymbol}
-                </Text>
-              )}
-            </View>
-
-            {/* Waste Reason Selection */}
-            <View style={commonStyles.bottomSheetSection}>
-              <Text style={commonStyles.bottomSheetSectionLabel}>Waste Reason *</Text>
-              <View style={commonStyles.bottomSheetOptionContainer}>
-                {WASTE_REASON_OPTIONS.map(option => (
-                  <Pressable
-                    key={option.value}
-                    style={({ pressed }) => [
-                      commonStyles.bottomSheetOption,
-                      wasteReason === option.value && commonStyles.bottomSheetOptionSelected,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => setWasteReason(option.value)}
-                  >
-                    <Text
-                      style={[
-                        commonStyles.bottomSheetOptionText,
-                        wasteReason === option.value && commonStyles.bottomSheetOptionTextSelected,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                    {wasteReason === option.value && (
-                      <Icon name="checkmark" size={16} color={theme.colors.primary} />
-                    )}
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* Sustainability Tracking */}
-            <View style={commonStyles.bottomSheetSection}>
-              <Text style={commonStyles.bottomSheetSectionLabel}>Sustainability</Text>
-              <View style={styles.checkboxContainer}>
-                <FormCheckbox
-                  label="Composted"
-                  checked={isComposted}
-                  onPress={() => setIsComposted(!isComposted)}
-                />
-              </View>
-              <View style={styles.checkboxContainer}>
-                <FormCheckbox
-                  label="Recycled (packaging)"
-                  checked={isRecycled}
-                  onPress={() => setIsRecycled(!isRecycled)}
-                />
-              </View>
-            </View>
-
-            {/* Notes */}
-            <View style={commonStyles.bottomSheetSection}>
-              <FormInput
-                label="Notes"
-                value={shared.notes}
-                onChangeText={shared.setNotes}
-                placeholder="Add any notes about this waste..."
-                multiline
-                numberOfLines={3}
-                useBottomSheetInput
-              />
-            </View>
-          </>
-        );
-      }}
+      renderActionFields={(shared) => (
+        <WasteActionFields
+          wasteAmountInput={wasteAmountInput}
+          setWasteAmountInput={setWasteAmountInput}
+          wasteReason={wasteReason}
+          setWasteReason={setWasteReason}
+          isComposted={isComposted}
+          setIsComposted={setIsComposted}
+          isRecycled={isRecycled}
+          setIsRecycled={setIsRecycled}
+          shared={shared}
+        />
+      )}
     />
+  );
+};
+
+const WasteActionFields: React.FC<{
+  wasteAmountInput: string;
+  setWasteAmountInput: (v: string) => void;
+  wasteReason: WasteReason;
+  setWasteReason: (v: WasteReason) => void;
+  isComposted: boolean;
+  setIsComposted: (v: boolean) => void;
+  isRecycled: boolean;
+  setIsRecycled: (v: boolean) => void;
+  shared: PantryActionSharedState;
+}> = ({ wasteAmountInput, setWasteAmountInput, wasteReason, setWasteReason,
+  isComposted, setIsComposted, isRecycled, setIsRecycled, shared }) => {
+  const wasteAmount = parseFractionalInput(wasteAmountInput);
+
+  const conversion = useConversionPreview({
+    itemId: shared.itemId,
+    inputQuantity: wasteAmount,
+    selectedUnitId: shared.activeUnitId,
+    selectedUnitSymbol: shared.activeUnitSymbol,
+    trackingUnitId: shared.trackingUnitId,
+    trackingUnitSymbol: shared.trackingUnitSymbol,
+    availableInTrackingUnit: shared.trackingQuantity,
+  });
+
+  const availableInUnit = shared.isConvertedUnit
+    ? conversion.availableInSelectedUnit
+    : shared.trackingQuantity;
+
+  const remaining = wasteAmount !== null && !isNaN(wasteAmount) && availableInUnit != null
+    ? availableInUnit - wasteAmount
+    : null;
+
+  return (
+    <>
+      {/* Waste Amount Input */}
+      <View style={commonStyles.bottomSheetSection}>
+        <FractionInput
+          label="Waste Amount"
+          required
+          value={wasteAmountInput}
+          onChangeText={setWasteAmountInput}
+          placeholder="e.g., 1, 1 1/4, or 1.5"
+          keyboardType="numeric"
+          useBottomSheetInput
+        />
+        {shared.isConvertedUnit ? (
+          <ConversionPreview
+            previewText={conversion.previewText}
+            loading={conversion.previewLoading}
+            confidence={shared.selectedUnitInfo?.conversionConfidence ?? null}
+          />
+        ) : null}
+        {remaining !== null ? (
+          <Text
+            style={[
+              commonStyles.bottomSheetHelperText,
+              remaining < 0 && commonStyles.bottomSheetHelperTextError,
+            ]}
+          >
+            Remaining: {remaining >= 0 ? formatQuantity(remaining) : 'Invalid'}{' '}
+            {shared.activeUnitSymbol}
+          </Text>
+        ) : null}
+      </View>
+
+      {/* Waste Reason Selection */}
+      <CollapsibleChipPicker
+        label="Waste Reason *"
+        options={WASTE_REASON_OPTIONS}
+        selectedValue={wasteReason}
+        onSelect={setWasteReason}
+      />
+
+      {/* Sustainability Tracking */}
+      <View style={commonStyles.bottomSheetSection}>
+        <Text style={commonStyles.bottomSheetSectionLabel}>Sustainability</Text>
+        <View style={styles.checkboxContainer}>
+          <FormCheckbox
+            label="Composted"
+            checked={isComposted}
+            onPress={() => setIsComposted(!isComposted)}
+          />
+        </View>
+        <View style={styles.checkboxContainer}>
+          <FormCheckbox
+            label="Recycled (packaging)"
+            checked={isRecycled}
+            onPress={() => setIsRecycled(!isRecycled)}
+          />
+        </View>
+      </View>
+
+      {/* Notes */}
+      <View style={commonStyles.bottomSheetSection}>
+        <FormInput
+          label="Notes"
+          value={shared.notes}
+          onChangeText={shared.setNotes}
+          placeholder="Add any notes about this waste..."
+          multiline
+          numberOfLines={3}
+          useBottomSheetInput
+        />
+      </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   checkboxContainer: {
-    marginBottom: theme.spacing.sm },
-  pressed: {
-    opacity: theme.opacity.pressed } }));
+    marginBottom: theme.spacing.sm,
+  },
+}));

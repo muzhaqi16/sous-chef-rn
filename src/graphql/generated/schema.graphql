@@ -276,6 +276,12 @@ input AdminDeleteUserInput {
   hard: Boolean
 }
 
+"""Paginated result for admin item unit conversion listing"""
+type AdminItemUnitConversionsResult {
+  conversions: [ItemUnitConversion!]!
+  totalCount: Int!
+}
+
 """Result of quantity aggregation (add/subtract)"""
 type AggregationResult {
   displayText: String!
@@ -980,6 +986,20 @@ enum ConversionSource {
   SPOONACULAR
   USDA
   USER_DEFINED
+}
+
+"""Count of conversions grouped by source"""
+type ConversionSourceCount {
+  count: Int!
+  source: ConversionSource!
+}
+
+"""Summary statistics for item unit conversions"""
+type ConversionStats {
+  bySource: [ConversionSourceCount!]!
+  totalConversions: Int!
+  unverifiedCount: Int!
+  verifiedCount: Int!
 }
 
 """Type of conversion being performed"""
@@ -4410,6 +4430,8 @@ type Mutation {
   deleteHome(id: ID!): HomePayload!
   """Delete an item (soft delete by default, permanent if specified)"""
   deleteItem(id: ID!, permanent: Boolean): ItemPayload!
+  """Delete an item unit conversion and its reverse conversion (admin only)"""
+  deleteItemUnitConversion(conversionId: ID!): ItemUnitConversionPayload!
   """Delete a meal plan."""
   deleteMealPlan(id: ID!): MealPlanPayload!
   """Remove an item from a meal plan."""
@@ -4744,12 +4766,20 @@ type Mutation {
   upsertExternalRecipe(input: CreateRecipeInput!): UpsertExternalRecipeResult!
   """Create or update an item based on its external source ID."""
   upsertItemByExternalSource(externalId: String!, externalType: String, itemData: CreateItemInput!, source: ExternalSource!, sourceData: JSON): UpsertItemResult!
-  """Add or update item-specific unit conversion"""
+  """
+  Add or update item-specific unit conversion
+  Admins can set source, confidence, and isVerified; non-admins get defaults
+  """
   upsertItemUnitConversion(input: UpsertItemUnitConversionInput!): ItemUnitConversionPayload!
   """Validate if a password reset token is still valid"""
   validatePasswordResetToken(token: String!): ValidateTokenResponse!
   """Verify a user's email address using a verification code."""
   verifyEmail(code: String!): UserPayload!
+  """
+  Verify an item unit conversion as accurate (admin only)
+  Sets isVerified to true and records the verifying admin
+  """
+  verifyItemUnitConversion(confidence: Float, conversionId: ID!, notes: String): ItemUnitConversionPayload!
   """Manually verify a user's email address (admin use)."""
   verifyUserEmail(id: ID!): UserPayload!
 }
@@ -5960,6 +5990,8 @@ type Query {
   Check whether a specific user's account can be safely deleted (admin only).
   """
   adminCanDeleteUser(userId: ID!): CanDeleteAccountResult!
+  """Get summary statistics for item unit conversions (admin)"""
+  adminConversionStats: ConversionStats!
   """
   Get the status of a background image deletion job.
   
@@ -5967,6 +5999,11 @@ type Query {
   instead of processed synchronously.
   """
   adminGetImageDeletionJobStatus(jobId: String!): ImageDeletionJobStatus
+  """
+  List item unit conversions with optional filters (admin)
+  Supports filtering by item, source, verification status, and units
+  """
+  adminItemUnitConversions(fromUnitId: ID, isVerified: Boolean, itemId: ID, limit: Int, offset: Int, source: ConversionSource, toUnitId: ID): AdminItemUnitConversionsResult!
   """
   Aggregate multiple quantities of the same item
   Useful for calculating total needed across multiple recipes
@@ -8590,12 +8627,21 @@ type UpsertItemResult {
   mapping: ExternalSourceMapping!
 }
 
-"""Input for adding or updating item-specific unit conversion"""
+"""
+Input for adding or updating item-specific unit conversion.
+Admin-only fields (source, confidence, isVerified) are ignored for non-admin users.
+"""
 input UpsertItemUnitConversionInput {
+  """Admin only: set the confidence score 0-1 (defaults to 0.9)"""
+  confidence: Float
   conversionRatio: Float!
   fromUnitId: ID!
+  """Admin only: mark the conversion as verified"""
+  isVerified: Boolean
   itemId: ID!
   notes: String
+  """Admin only: set the conversion source (defaults to USER_DEFINED)"""
+  source: ConversionSource
   toUnitId: ID!
 }
 

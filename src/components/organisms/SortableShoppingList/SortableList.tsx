@@ -21,8 +21,6 @@ import { getTabBarBottomPadding } from '#constants/layout';
 
 // Module-scope functions — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: SortableShoppingListItem) => item.id;
-const getItemType = (item: SortableShoppingListItem) =>
-  item.isPurchased ? 'purchased' : 'unpurchased';
 const renderItem = (info: ListRenderItemInfo<SortableShoppingListItem>) => (
   <SwipeableListItem {...info} />
 );
@@ -123,7 +121,6 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             extraData={items.length}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
-            getItemType={getItemType}
             drawDistance={500}
             showsVerticalScrollIndicator={
               flatListProps.showsVerticalScrollIndicator ?? true

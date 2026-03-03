@@ -461,6 +461,12 @@ fragment PantryItemFragment on PantryItem {
     nutritions
     defaultConsumeIncrement
     defaultConsumeUnitId
+    defaultConsumeUnit {
+      id
+      name
+      symbol
+      type
+    }
     displayUnit {
       id
       symbol

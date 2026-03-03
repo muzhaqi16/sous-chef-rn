@@ -111,15 +111,13 @@ describe('versionConflict', () => {
 
   describe('handleVersionConflict', () => {
     it('returns true for version conflict errors', () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const error = makeApolloError('VERSION_CONFLICT', {
         resourceType: 'PantryItem',
         currentVersion: 3,
         expectedVersion: 2,
       });
       expect(handleVersionConflict(error)).toBe(true);
-      expect(warnSpy).toHaveBeenCalled();
-      warnSpy.mockRestore();
+      expect(console.warn).toHaveBeenCalled();
     });
 
     it('returns false for non-version-conflict errors', () => {

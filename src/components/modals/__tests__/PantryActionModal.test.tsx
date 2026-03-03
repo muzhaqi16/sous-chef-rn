@@ -81,18 +81,34 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
+jest.mock('#hooks/pantry/useCompatibleUnits', () => ({
+  useCompatibleUnits: () => ({
+    groups: [],
+    allUnits: [],
+    defaultUnit: null,
+    loading: false,
+    error: undefined,
+  }),
+}));
+
+jest.mock('#components/molecules/UnitPicker', () => ({
+  UnitPicker: () => null,
+}));
+
 const makePantryItem = (overrides?: Partial<PantryItemFragment>) =>
   ({
     id: 'pantry-1',
+    itemId: 'item-1',
     itemName: 'Flour',
     quantity: 5,
-    unit: { id: 'u1', symbol: 'lbs', name: 'Pounds', displayAsFraction: false },
+    unit: { id: 'u1', symbol: 'lbs', name: 'Pounds', type: 'WEIGHT', displayAsFraction: false },
     remainingNetWeight: null,
     netWeight: null,
     netWeightUnit: null,
     packageBreakdown: null,
     quantityBreakdown: null,
     lastUsedAt: null,
+    item: { defaultConsumeUnitId: null, defaultConsumeIncrement: null },
     ...overrides,
   }) as unknown as PantryItemFragment;
 
@@ -158,110 +174,27 @@ describe('PantryActionModal', () => {
     expect(screen.getByText('Do it')).toBeTruthy();
   });
 
-  it('does not show unit toggle for non-dual-tracked items', () => {
-    render(<PantryActionModal {...defaultProps} />);
-    expect(screen.queryByText('Use by')).toBeNull();
-  });
-
-  it('passes correct availableQuantity to renderActionFields', () => {
+  it('passes correct trackingQuantity to renderActionFields', () => {
     render(<PantryActionModal {...defaultProps} />);
     const shared = mockRenderActionFields.mock.calls[0][0];
-    expect(shared.availableQuantity).toBe(5);
+    expect(shared.trackingQuantity).toBe(5);
     expect(shared.activeUnitSymbol).toBe('lbs');
   });
 
-  it('shows unit toggle for dual-tracked items', () => {
-    const dualTrackedItem = makePantryItem({
-      remainingNetWeight: 500,
-      netWeightUnit: { id: 'wu1', symbol: 'g', name: 'Grams' } as any,
-    });
-    render(<PantryActionModal {...defaultProps} pantryItem={dualTrackedItem} />);
-    expect(screen.getByText('Use by')).toBeTruthy();
-  });
-
-  it('passes isDualTracked=true for items with weight tracking', () => {
-    const dualTrackedItem = makePantryItem({
-      remainingNetWeight: 500,
-      netWeightUnit: { id: 'wu1', symbol: 'g', name: 'Grams' } as any,
-    });
-    render(<PantryActionModal {...defaultProps} pantryItem={dualTrackedItem} />);
+  it('passes trackingUnitId to renderActionFields', () => {
+    render(<PantryActionModal {...defaultProps} />);
     const shared = mockRenderActionFields.mock.calls[0][0];
-    expect(shared.isDualTracked).toBe(true);
+    expect(shared.trackingUnitId).toBe('u1');
   });
 
-  it('passes hasContentUnit=true when packageBreakdown has perUnitNetWeight', () => {
-    const item = makePantryItem({
-      remainingNetWeight: 500,
-      netWeightUnit: { id: 'wu1', symbol: 'g', name: 'Grams' } as any,
-      packageBreakdown: {
-        perUnitNetWeight: 100,
-        contentUnit: { id: 'cu1', symbol: 'oz', name: 'Ounces' },
-      } as any,
-    });
-    render(<PantryActionModal {...defaultProps} pantryItem={item} />);
-    const shared = mockRenderActionFields.mock.calls[0][0];
-    expect(shared.hasContentUnit).toBe(true);
-  });
-
-  it('passes hasContentUnit=false when perUnitNetWeight is 0', () => {
-    const item = makePantryItem({
-      remainingNetWeight: 500,
-      netWeightUnit: { id: 'wu1', symbol: 'g', name: 'Grams' } as any,
-      packageBreakdown: {
-        perUnitNetWeight: 0,
-        contentUnit: { id: 'cu1', symbol: 'oz', name: 'Ounces' },
-      } as any,
-    });
-    render(<PantryActionModal {...defaultProps} pantryItem={item} />);
-    const shared = mockRenderActionFields.mock.calls[0][0];
-    expect(shared.hasContentUnit).toBe(false);
-  });
-
-  it('computes contentUnitCount from totalContentUnits when available', () => {
-    const item = makePantryItem({
-      remainingNetWeight: 500,
-      netWeightUnit: { id: 'wu1', symbol: 'g', name: 'Grams' } as any,
-      packageBreakdown: {
-        perUnitNetWeight: 100,
-        contentUnit: { id: 'cu1', symbol: 'oz', name: 'Ounces' },
-      } as any,
-      quantityBreakdown: {
-        totalContentUnits: 7.5,
-        fullPackages: 1,
-        looseContentUnits: 1.5,
-        contentUnit: { symbol: 'oz' },
-      } as any,
-    });
-    render(<PantryActionModal {...defaultProps} pantryItem={item} />);
-    const shared = mockRenderActionFields.mock.calls[0][0];
-    expect(shared.contentUnitCount).toBe(7);
-  });
-
-  it('computes contentUnitCount by division when totalContentUnits is null', () => {
-    const item = makePantryItem({
-      remainingNetWeight: 500,
-      netWeightUnit: { id: 'wu1', symbol: 'g', name: 'Grams' } as any,
-      packageBreakdown: {
-        perUnitNetWeight: 100,
-        contentUnit: { id: 'cu1', symbol: 'oz', name: 'Ounces' },
-      } as any,
-      quantityBreakdown: null,
-    });
-    render(<PantryActionModal {...defaultProps} pantryItem={item} />);
-    const shared = mockRenderActionFields.mock.calls[0][0];
-    expect(shared.contentUnitCount).toBe(5); // 500 / 100
-  });
-
-  it('returns 0 for availableQuantity when pantryItem is null', () => {
+  it('returns 0 for trackingQuantity when pantryItem is null', () => {
     render(<PantryActionModal {...defaultProps} pantryItem={null} />);
-    // renderActionFields is not called when pantryItem is null
-    // but onConfirm can still be pressed
     fireEvent.press(screen.getByTestId('confirm-button'));
     const shared = defaultProps.onConfirm.mock.calls[0][0];
-    expect(shared.availableQuantity).toBe(0);
+    expect(shared.trackingQuantity).toBe(0);
   });
 
-  it('resets notes and selectedUnit when modal opens with new pantryItem', () => {
+  it('resets notes when modal opens with new pantryItem', () => {
     const { rerender } = render(
       <PantryActionModal {...defaultProps} visible={false} pantryItem={null} />,
     );
@@ -270,7 +203,6 @@ describe('PantryActionModal', () => {
     );
     const shared = mockRenderActionFields.mock.calls[mockRenderActionFields.mock.calls.length - 1][0];
     expect(shared.notes).toBe('');
-    expect(shared.selectedUnit).toBe('tracking');
   });
 
   it('calls onReset when modal opens', () => {
@@ -281,6 +213,6 @@ describe('PantryActionModal', () => {
     rerender(
       <PantryActionModal {...defaultProps} visible={true} pantryItem={makePantryItem()} onReset={onReset} />,
     );
-    expect(onReset).toHaveBeenCalledWith(expect.any(Object), expect.any(Function));
+    expect(onReset).toHaveBeenCalledWith(expect.any(Object), null);
   });
 });

@@ -39,14 +39,9 @@ describe('SortableListActionsContext', () => {
     );
 
   it('throws error when used outside provider', () => {
-    // Suppress expected error output
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-
     expect(() => {
       renderHook(() => useSortableListActions());
     }).toThrow('useSortableListActions must be used within SortableListActionsProvider');
-
-    consoleSpy.mockRestore();
   });
 
   it('provides actions through context', () => {

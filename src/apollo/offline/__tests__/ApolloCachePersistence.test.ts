@@ -55,7 +55,6 @@ describe('ApolloCachePersistence', () => {
     });
 
     it('returns null and clears on JSON parse error', () => {
-      const spy = jest.spyOn(console, 'error').mockImplementation();
       storage.set(VERSION_KEY, CURRENT_VERSION);
       storage.set(CACHE_KEY, 'invalid-json{{{');
 
@@ -63,7 +62,6 @@ describe('ApolloCachePersistence', () => {
       expect(result).toBeNull();
       // Should have cleared the corrupted cache
       expect(storage.getString(CACHE_KEY)).toBeUndefined();
-      spy.mockRestore();
     });
   });
 
@@ -125,14 +123,12 @@ describe('ApolloCachePersistence', () => {
     });
 
     it('handles serialization errors gracefully', () => {
-      const spy = jest.spyOn(console, 'error').mockImplementation();
       const circular: any = {};
       circular.self = circular;
 
       // Should not throw
       apolloCachePersistence.saveImmediate(circular);
-      expect(spy).toHaveBeenCalled();
-      spy.mockRestore();
+      expect(console.error).toHaveBeenCalled();
     });
   });
 
@@ -262,13 +258,11 @@ describe('ApolloCachePersistence', () => {
     });
 
     it('returns exists: false on corrupted JSON', () => {
-      const spy = jest.spyOn(console, 'error').mockImplementation();
       storage.set(CACHE_KEY, 'invalid-json');
       storage.set(VERSION_KEY, CURRENT_VERSION);
 
       const stats = apolloCachePersistence.getStats();
       expect(stats.exists).toBe(false);
-      spy.mockRestore();
     });
   });
 

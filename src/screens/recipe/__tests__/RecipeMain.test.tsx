@@ -676,8 +676,6 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
     const { spoonacularService } = jest.requireMock(
       '#/services/recipeApi/SpoonacularService',
     );
@@ -693,13 +691,11 @@ describe('RecipeMain', () => {
     render(<RecipeMain />);
 
     await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.error).toHaveBeenCalledWith(
         'Failed to fetch random recipes:',
         expect.any(Error),
       );
     });
-
-    consoleSpy.mockRestore();
   });
 
   it('does not fetch random recipes when AbortError occurs', async () => {
@@ -722,16 +718,12 @@ describe('RecipeMain', () => {
       refetch: jest.fn(),
     });
 
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
     render(<RecipeMain />);
 
     // AbortError should be silently ignored
     await waitFor(() => {
       expect(spoonacularService.getRandomRecipes).toHaveBeenCalled();
     });
-
-    consoleSpy.mockRestore();
   });
 
   it('handles error when refreshing random recipes shows alert', async () => {
@@ -740,7 +732,6 @@ describe('RecipeMain', () => {
     ));
 
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     const { spoonacularService } = jest.requireMock(
       '#/services/recipeApi/SpoonacularService',
@@ -775,7 +766,6 @@ describe('RecipeMain', () => {
       'Failed to load recipe suggestions. Please try again.',
     );
 
-    consoleSpy.mockRestore();
     alertSpy.mockRestore();
   });
 
@@ -908,7 +898,6 @@ describe('RecipeMain', () => {
     ));
 
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     const mockUnfavorite = jest.fn().mockRejectedValue(new Error('Mutation fail'));
     const { useUnfavoriteRecipeMutation } = jest.requireMock('#generated');
@@ -940,7 +929,6 @@ describe('RecipeMain', () => {
       'Failed to remove recipe. Please try again.',
     );
 
-    consoleSpy.mockRestore();
     alertSpy.mockRestore();
   });
 

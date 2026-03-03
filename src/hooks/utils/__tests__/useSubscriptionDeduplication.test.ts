@@ -34,6 +34,9 @@ describe('useSubscriptionDeduplication', () => {
     });
 
     expect(shouldProcess).toBe(false);
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('⏭️ Skipping self-echo subscription update from current user'),
+    );
   });
 
   it('allows updates from other users', () => {
@@ -88,6 +91,10 @@ describe('useSubscriptionDeduplication', () => {
 
     expect(first).toBe(true);
     expect(second).toBe(false);
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('⏭️ Skipping duplicate subscription update:'),
+      expect.anything(),
+    );
   });
 
   it('allows updates with different mutation+timestamp combinations', () => {

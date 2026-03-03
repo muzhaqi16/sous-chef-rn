@@ -8,12 +8,13 @@
  * Shows a shimmer skeleton while loading, a placeholder icon when no URI,
  * and a fallback icon on error.
  */
-import React, { useRef } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
 import type { TurboImageProps, CachePolicy, Source } from 'react-native-turbo-image';
 import type { StyleProp, ImageStyle, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { useRecyclingState } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import { SkeletonBase } from '#components/base/Skeleton/SkeletonBase';
 
@@ -35,25 +36,31 @@ export interface CachedImageProps
   displaySize?: number;
 }
 
-type ImageStatus = 'idle' | 'loading' | 'success' | 'error';
+type LoadState = 'idle' | 'loading' | 'success' | 'error';
+
+// Module-level cache — tracks URIs that have loaded successfully.
+// Survives component unmount/remount so scrolling back to a previously-loaded
+// image skips the shimmer entirely.
+const loadedUris = new Set<string>();
 
 export const CachedImage = ({ uri, style, cachePolicy = 'dataCache', resizeMode = 'cover', containerStyle, displaySize, ...rest }: CachedImageProps) => {
-    // Derive initial visibility from URI. Success/error transitions are handled
-    // imperatively via setNativeProps to avoid re-renders when many images load.
-    const initialStatus: ImageStatus = uri ? 'loading' : 'idle';
-    const loadingRef = useRef<View>(null);
-    const errorRef = useRef<View>(null);
-
-    // PERF: Memoize source object so TurboImage's internal memo isn't defeated
-    const source = ({ uri: uri! });
+    // useRecyclingState resets synchronously when `uri` changes (cell recycle).
+    // If the URI was previously loaded, start in 'success' to skip shimmer.
+    const [loadState, setLoadState] = useRecyclingState<LoadState>(
+      () => uri ? (loadedUris.has(uri) ? 'success' : 'loading') : 'idle',
+      [uri],
+    );
 
     const handleSuccess = () => {
-      loadingRef.current?.setNativeProps({ style: { display: 'none' } });
+      if (uri) {
+        loadedUris.add(uri);
+        if (loadedUris.size > 500) loadedUris.clear();
+      }
+      setLoadState('success', true);
     };
 
     const handleFailure = () => {
-      loadingRef.current?.setNativeProps({ style: { display: 'none' } });
-      errorRef.current?.setNativeProps({ style: { display: 'flex' } });
+      setLoadState('error', true);
     };
 
     // No URI: show placeholder
@@ -69,6 +76,8 @@ export const CachedImage = ({ uri, style, cachePolicy = 'dataCache', resizeMode 
       );
     }
 
+    const source = ({ uri });
+
     const flat = StyleSheet.flatten(style as StyleProp<ViewStyle>);
     const borderRadius = (flat?.borderRadius as number) ?? 0;
     const innerRadius = borderRadius > 0
@@ -81,6 +90,7 @@ export const CachedImage = ({ uri, style, cachePolicy = 'dataCache', resizeMode 
     return (
       <View style={[style as StyleProp<ViewStyle>, containerStyle]}>
         <TurboImage
+          fadeDuration={0}
           style={[styles.image, innerRadius > 0 && { borderRadius: innerRadius }]}
           source={source}
           cachePolicy={cachePolicy}
@@ -90,22 +100,22 @@ export const CachedImage = ({ uri, style, cachePolicy = 'dataCache', resizeMode 
           onFailure={handleFailure}
           {...rest}
         />
-        {/* Loading overlay — starts visible, hidden via ref on success/error */}
+        {/* Loading overlay — fully declarative, resets via useRecyclingState */}
         <View
-          ref={loadingRef}
-          style={[styles.overlay, radiusOverride, initialStatus !== 'loading' && styles.hidden]}
+          style={[styles.overlay, radiusOverride, loadState !== 'loading' && styles.hidden]}
         >
-          <SkeletonBase
-            width="100%"
-            height={9999}
-            borderRadius={0}
-            style={styles.skeleton}
-          />
+          {loadState === 'loading' && (
+            <SkeletonBase
+              width="100%"
+              height={9999}
+              borderRadius={0}
+              style={styles.skeleton}
+            />
+          )}
         </View>
-        {/* Error overlay — starts hidden, shown via ref on error */}
+        {/* Error overlay — fully declarative */}
         <View
-          ref={errorRef}
-          style={[styles.overlay, styles.errorOverlay, radiusOverride, styles.hidden]}
+          style={[styles.overlay, styles.errorOverlay, radiusOverride, loadState !== 'error' && styles.hidden]}
         >
           <Icon
             name="image-outline"
@@ -148,7 +158,9 @@ overlay: {
  */
 export function preloadImages(uris: string[]): void {
   const sources: Source[] = uris
-    .filter(Boolean)
+    .filter(u => u && !loadedUris.has(u))
     .map(uri => ({ uri }));
-  TurboImage.prefetch(sources, 'dataCache');
+  if (sources.length > 0) {
+    TurboImage.prefetch(sources, 'dataCache');
+  }
 }

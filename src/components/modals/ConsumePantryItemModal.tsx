@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Alert } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { View, Text, Alert } from 'react-native';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
-import { Icon } from '#/utils/iconUtils';
+import { CollapsibleChipPicker } from '#components/molecules/CollapsibleChipPicker';
+import { ConversionPreview } from '#components/atoms/ConversionPreview';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
+import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
 import { UsagePurpose, PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
+import type { SelectedUnitInfo } from '#hooks/pantry/useCompatibleUnits';
 import { PantryActionModal, type PantryActionSharedState } from './PantryActionModal';
 
 interface ConsumePantryItemModalProps {
@@ -37,36 +39,13 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   pantryItem,
   onClose,
   onConfirm }) => {
-  const { theme } = useUnistyles();
   const [quantityInput, setQuantityInput] = useState('1');
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
 
-  const handleReset = (item: PantryItemFragment, setSelectedUnit: (u: 'tracking' | 'content' | 'weight') => void) => {
+  const handleReset = (item: PantryItemFragment, _defaultUnit: SelectedUnitInfo | null) => {
     const defaultIncrement = item.item?.defaultConsumeIncrement;
     setQuantityInput(defaultIncrement ? defaultIncrement.toString() : '1');
     setPurpose(UsagePurpose.General);
-
-    // Check if defaultConsumeUnit matches one of the available unit options
-    const defaultConsumeUnitId = item.item?.defaultConsumeUnitId;
-    const isDualTracked = item.remainingNetWeight != null && item.netWeightUnit != null;
-    const hasContentUnit = isDualTracked
-      && item.packageBreakdown != null
-      && item.packageBreakdown.perUnitNetWeight != null
-      && item.packageBreakdown.perUnitNetWeight > 0;
-
-    if (defaultConsumeUnitId) {
-      if (item.unit?.id === defaultConsumeUnitId) {
-        setSelectedUnit('tracking');
-      } else if (isDualTracked && hasContentUnit && item.packageBreakdown?.contentUnit?.id === defaultConsumeUnitId) {
-        setSelectedUnit('content');
-      } else if (isDualTracked && item.netWeightUnit?.id === defaultConsumeUnitId) {
-        setSelectedUnit('weight');
-      } else {
-        setSelectedUnit('tracking');
-      }
-    } else {
-      setSelectedUnit('tracking');
-    }
   };
 
   const handleConfirm = (shared: PantryActionSharedState) => {
@@ -77,16 +56,17 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       Alert.alert('Error', 'Please enter a valid quantity');
       return;
     }
-    if (quantityValue > shared.availableQuantity) {
-      Alert.alert('Error', `Cannot consume more than available quantity (${shared.availableQuantity} ${shared.activeUnitSymbol})`);
+
+    // When using a converted unit, validate against converted available quantity
+    // When using tracking unit, validate against tracking quantity
+    if (!shared.isConvertedUnit && quantityValue > shared.trackingQuantity) {
+      Alert.alert('Error', `Cannot consume more than available quantity (${shared.trackingQuantity} ${shared.activeUnitSymbol})`);
       return;
     }
 
     onConfirm(quantityValue, quantityInput, purpose, shared.notes, shared.activeUnitId);
     onClose();
   };
-
-  // Note: remaining is computed in renderActionFields where shared.availableQuantity is available
 
   return (
     <PantryActionModal
@@ -99,86 +79,101 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       unitToggleLabel="Consume by"
       onConfirm={handleConfirm}
       onReset={handleReset}
-      renderActionFields={(shared) => {
-        const consumeAmount = parseFractionalInput(quantityInput);
-        const remaining = consumeAmount !== null && !isNaN(consumeAmount)
-          ? shared.availableQuantity - consumeAmount
-          : null;
-        return (
-        <>
-          {/* Quantity Input */}
-          <View style={commonStyles.bottomSheetSection}>
-            <FractionInput
-              label="Quantity to Consume"
-              required
-              value={quantityInput}
-              onChangeText={setQuantityInput}
-              placeholder="e.g., 1, 1 1/4, or 1.5"
-              keyboardType="numeric"
-              useBottomSheetInput
-            />
-            {remaining !== null && (
-              <Text
-                style={[
-                  commonStyles.bottomSheetHelperText,
-                  remaining < 0 && commonStyles.bottomSheetHelperTextError,
-                ]}
-              >
-                Remaining: {remaining >= 0 ? formatQuantity(remaining) : 'Invalid'}{' '}
-                {shared.activeUnitSymbol}
-              </Text>
-            )}
-          </View>
-
-          {/* Purpose Selection */}
-          <View style={commonStyles.bottomSheetSection}>
-            <Text style={commonStyles.bottomSheetSectionLabel}>Purpose *</Text>
-            <View style={commonStyles.bottomSheetOptionContainer}>
-              {PURPOSE_OPTIONS.map(option => (
-                <Pressable
-                  key={option.value}
-                  style={({ pressed }) => [
-                    commonStyles.bottomSheetOption,
-                    purpose === option.value && commonStyles.bottomSheetOptionSelected,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() => setPurpose(option.value)}
-                >
-                  <Text
-                    style={[
-                      commonStyles.bottomSheetOptionText,
-                      purpose === option.value && commonStyles.bottomSheetOptionTextSelected,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                  {purpose === option.value && (
-                    <Icon name="checkmark" size={16} color={theme.colors.primary} />
-                  )}
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {/* Notes */}
-          <View style={commonStyles.bottomSheetSection}>
-            <FormInput
-              label="Notes"
-              value={shared.notes}
-              onChangeText={shared.setNotes}
-              placeholder="Add any notes about this usage..."
-              multiline
-              numberOfLines={3}
-              useBottomSheetInput
-            />
-          </View>
-        </>
-        );
-      }}
+      renderActionFields={(shared) => (
+        <ConsumeActionFields
+          quantityInput={quantityInput}
+          setQuantityInput={setQuantityInput}
+          purpose={purpose}
+          setPurpose={setPurpose}
+          shared={shared}
+        />
+      )}
     />
   );
 };
 
-const styles = StyleSheet.create(theme => ({
-  pressed: {
-    opacity: theme.opacity.pressed } }));
+/** Extracted to keep the render prop body simple */
+const ConsumeActionFields: React.FC<{
+  quantityInput: string;
+  setQuantityInput: (v: string) => void;
+  purpose: UsagePurpose;
+  setPurpose: (v: UsagePurpose) => void;
+  shared: PantryActionSharedState;
+}> = ({ quantityInput, setQuantityInput, purpose, setPurpose, shared }) => {
+  const consumeAmount = parseFractionalInput(quantityInput);
+
+  const conversion = useConversionPreview({
+    itemId: shared.itemId,
+    inputQuantity: consumeAmount,
+    selectedUnitId: shared.activeUnitId,
+    selectedUnitSymbol: shared.activeUnitSymbol,
+    trackingUnitId: shared.trackingUnitId,
+    trackingUnitSymbol: shared.trackingUnitSymbol,
+    availableInTrackingUnit: shared.trackingQuantity,
+  });
+
+  // Use converted available quantity when using a non-tracking unit
+  const availableInUnit = shared.isConvertedUnit
+    ? conversion.availableInSelectedUnit
+    : shared.trackingQuantity;
+
+  const remaining = consumeAmount !== null && !isNaN(consumeAmount) && availableInUnit != null
+    ? availableInUnit - consumeAmount
+    : null;
+
+  return (
+    <>
+      {/* Quantity Input */}
+      <View style={commonStyles.bottomSheetSection}>
+        <FractionInput
+          label="Quantity to Consume"
+          required
+          value={quantityInput}
+          onChangeText={setQuantityInput}
+          placeholder="e.g., 1, 1 1/4, or 1.5"
+          keyboardType="numeric"
+          useBottomSheetInput
+        />
+        {shared.isConvertedUnit ? (
+          <ConversionPreview
+            previewText={conversion.previewText}
+            loading={conversion.previewLoading}
+            confidence={shared.selectedUnitInfo?.conversionConfidence ?? null}
+          />
+        ) : null}
+        {remaining !== null ? (
+          <Text
+            style={[
+              commonStyles.bottomSheetHelperText,
+              remaining < 0 && commonStyles.bottomSheetHelperTextError,
+            ]}
+          >
+            Remaining: {remaining >= 0 ? formatQuantity(remaining) : 'Invalid'}{' '}
+            {shared.activeUnitSymbol}
+          </Text>
+        ) : null}
+      </View>
+
+      {/* Purpose Selection */}
+      <CollapsibleChipPicker
+        label="Purpose *"
+        options={PURPOSE_OPTIONS}
+        selectedValue={purpose}
+        onSelect={setPurpose}
+      />
+
+      {/* Notes */}
+      <View style={commonStyles.bottomSheetSection}>
+        <FormInput
+          label="Notes"
+          value={shared.notes}
+          onChangeText={shared.setNotes}
+          placeholder="Add any notes about this usage..."
+          multiline
+          numberOfLines={3}
+          useBottomSheetInput
+        />
+      </View>
+    </>
+  );
+};

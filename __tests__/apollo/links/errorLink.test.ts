@@ -83,55 +83,45 @@ describe('errorLink.ts', () => {
     });
 
     it('handles API key error in GraphQL errors', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'API key required', extensions: { code: 'API_KEY_REQUIRED' } }],
       } as any);
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(consoleSpy).toHaveBeenCalledWith('API Key error:', expect.any(String));
-      consoleSpy.mockRestore();
+      expect(console.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
     });
 
     it('handles INVALID_API_KEY code', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Invalid key', extensions: { code: 'INVALID_API_KEY' } }],
       } as any);
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(consoleSpy).toHaveBeenCalledWith('API Key error:', expect.any(String));
-      consoleSpy.mockRestore();
+      expect(console.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
     });
 
     it('handles API_KEY_EXPIRED code', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Expired key', extensions: { code: 'API_KEY_EXPIRED' } }],
       } as any);
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(consoleSpy).toHaveBeenCalledWith('API Key error:', expect.any(String));
-      consoleSpy.mockRestore();
+      expect(console.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
     });
 
     it('detects api key error from message (lowercase check)', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Please provide an API key for authentication', extensions: { code: 'SOME_CODE' } }],
       } as any);
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(consoleSpy).toHaveBeenCalledWith('API Key error:', expect.any(String));
-      consoleSpy.mockRestore();
+      expect(console.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
     });
 
     it('handles FORBIDDEN as resource access error (not auth error)', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Access denied', extensions: { code: 'FORBIDDEN' } }],
       } as any);
       const result = errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Access denied'));
+      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Access denied'));
       expect(mockAttemptTokenRefresh).not.toHaveBeenCalled();
       expect(result).toBeUndefined();
-      consoleSpy.mockRestore();
     });
 
     it('initiates token refresh on UNAUTHENTICATED error', () => {
@@ -142,6 +132,9 @@ describe('errorLink.ts', () => {
       const result = errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalledWith(mockOperation, mockForward);
       expect(result).toBe('observable');
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Auth error detected for'),
+      );
     });
 
     it('initiates token refresh on message containing "expired"', () => {
@@ -151,6 +144,9 @@ describe('errorLink.ts', () => {
       } as any);
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Auth error detected for'),
+      );
     });
 
     it('initiates token refresh on "unauthorized" in message', () => {
@@ -160,6 +156,9 @@ describe('errorLink.ts', () => {
       } as any);
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Auth error detected for'),
+      );
     });
 
     it('initiates token refresh on "invalid token" in message', () => {
@@ -169,6 +168,9 @@ describe('errorLink.ts', () => {
       } as any);
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Auth error detected for'),
+      );
     });
 
     it('initiates token refresh on "jwt" in message', () => {
@@ -178,6 +180,9 @@ describe('errorLink.ts', () => {
       } as any);
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockAttemptTokenRefresh).toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Auth error detected for'),
+      );
     });
 
     it('skips token refresh for RefreshToken operation (avoids infinite loop)', () => {
@@ -192,73 +197,61 @@ describe('errorLink.ts', () => {
     it('suppresses auth error logging when refresh is already in progress', () => {
       mockGetRefreshState.mockReturnValue({ isRefreshing: true });
       mockAttemptTokenRefresh.mockReturnValue('observable');
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'expired', extensions: { code: 'UNAUTHENTICATED' } }],
       } as any);
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       // Should NOT have the "Auth error detected" warning
-      const authWarning = consoleSpy.mock.calls.find(
+      const authWarning = jest.mocked(console.warn).mock.calls.find(
         (call) => typeof call[0] === 'string' && call[0].includes('Auth error detected'),
       );
       expect(authWarning).toBeUndefined();
-      consoleSpy.mockRestore();
     });
 
     it('handles subscription known server error', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       mockOperation.query.definitions = [
         { kind: 'OperationDefinition', operation: 'subscription' },
       ];
       // Not a CombinedGraphQLErrors or CombinedProtocolErrors
       const error = { message: 'Known server error' };
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.warn).toHaveBeenCalledWith(
         expect.stringContaining('Known server error'),
         expect.any(String),
       );
-      consoleSpy.mockRestore();
     });
 
     it('forwards network errors to let errorPolicy handle them', () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       const error = { message: 'Network request failed' };
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       expect(mockForward).toHaveBeenCalledWith(mockOperation);
-      consoleSpy.mockRestore();
     });
 
     it('logs unexpected non-network, non-GraphQL errors', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       const error = { message: 'Something completely unexpected' };
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(console.error).toHaveBeenCalledWith(
         expect.stringContaining('Unexpected error'),
         expect.any(String),
       );
-      consoleSpy.mockRestore();
     });
 
     it('does not call forward for non-subscription known server errors', () => {
       // query + non-known-server-error + non-network = unexpected
       const error = { message: 'Random error' };
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       errorHandler({ error, operation: mockOperation, forward: mockForward });
       // Forward is NOT called for unexpected errors (only for network errors)
       expect(mockForward).not.toHaveBeenCalled();
-      consoleSpy.mockRestore();
     });
 
     it('does not process CombinedProtocolErrors (falls through)', () => {
       // CombinedProtocolErrors are protocol-level issues, not handled by this link
       // We can't easily construct one, but we can verify the branch by checking
       // that non-GraphQL, non-network errors that are protocol-like are skipped
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       // Create a mock that CombinedProtocolErrors.is returns true for
       const error = { message: 'Protocol error' };
       // This tests the else-if branch
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      consoleSpy.mockRestore();
     });
   });
 });

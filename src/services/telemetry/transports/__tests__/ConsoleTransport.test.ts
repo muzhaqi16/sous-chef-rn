@@ -41,12 +41,10 @@ describe('ConsoleTransport', () => {
 
     it('does nothing when not available', async () => {
       mockIsDevelopment.mockReturnValue(false);
-      const spy = jest.spyOn(console, 'log').mockImplementation();
 
       await transport.sendLogs(makeLogs('info'));
 
-      expect(spy).not.toHaveBeenCalled();
-      spy.mockRestore();
+      expect(console.log).not.toHaveBeenCalled();
     });
 
     it('does nothing when enabledInDev is false even in dev', async () => {
@@ -62,16 +60,14 @@ describe('ConsoleTransport', () => {
 
     it('routes debug to console.log', async () => {
       mockIsDevelopment.mockReturnValue(true);
-      const spy = jest.spyOn(console, 'log').mockImplementation();
 
       await transport.sendLogs(makeLogs('debug'));
 
-      expect(spy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('[TELEMETRY-DEBUG]'),
         'test message',
         '',
       );
-      spy.mockRestore();
     });
 
     it('routes info to console.info', async () => {
@@ -90,44 +86,38 @@ describe('ConsoleTransport', () => {
 
     it('routes warn to console.warn', async () => {
       mockIsDevelopment.mockReturnValue(true);
-      const spy = jest.spyOn(console, 'warn').mockImplementation();
 
       await transport.sendLogs(makeLogs('warn'));
 
-      expect(spy).toHaveBeenCalledWith(
+      expect(console.warn).toHaveBeenCalledWith(
         expect.stringContaining('[TELEMETRY-WARN]'),
         'test message',
         '',
       );
-      spy.mockRestore();
     });
 
     it('routes error to console.error', async () => {
       mockIsDevelopment.mockReturnValue(true);
-      const spy = jest.spyOn(console, 'error').mockImplementation();
 
       await transport.sendLogs(makeLogs('error'));
 
-      expect(spy).toHaveBeenCalledWith(
+      expect(console.error).toHaveBeenCalledWith(
         expect.stringContaining('[TELEMETRY-ERROR]'),
         'test message',
         '',
       );
-      spy.mockRestore();
     });
 
     it('handles undefined level gracefully with console.warn', async () => {
       mockIsDevelopment.mockReturnValue(true);
-      const spy = jest.spyOn(console, 'warn').mockImplementation();
 
       const badLog = { message: 'bad' } as unknown as LogEntry;
       await transport.sendLogs([badLog]);
 
-      expect(spy).toHaveBeenCalledWith(
+      expect(console.warn).toHaveBeenCalledWith(
         '[TELEMETRY] Received log with undefined level:',
         badLog,
       );
-      spy.mockRestore();
     });
   });
 
@@ -144,24 +134,20 @@ describe('ConsoleTransport', () => {
 
     it('logs each metric with proper format', async () => {
       mockIsDevelopment.mockReturnValue(true);
-      const spy = jest.spyOn(console, 'log').mockImplementation();
 
       await transport.sendMetrics(makeMetrics());
 
-      expect(spy).toHaveBeenCalledWith(
+      expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('[TELEMETRY-METRIC] http_requests_total{method="GET", path="/api"} = 42'),
       );
-      spy.mockRestore();
     });
 
     it('does nothing when not available', async () => {
       mockIsDevelopment.mockReturnValue(false);
-      const spy = jest.spyOn(console, 'log').mockImplementation();
 
       await transport.sendMetrics(makeMetrics());
 
-      expect(spy).not.toHaveBeenCalled();
-      spy.mockRestore();
+      expect(console.log).not.toHaveBeenCalled();
     });
   });
 });

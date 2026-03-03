@@ -78,8 +78,6 @@ describe('OverlayBackdropProvider', () => {
 
 describe('useOverlayBackdrop', () => {
   it('throws when used outside OverlayBackdropProvider', () => {
-    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
     const BadConsumer: React.FC = () => {
       useOverlayBackdrop();
       return null;
@@ -88,8 +86,6 @@ describe('useOverlayBackdrop', () => {
     expect(() => render(<BadConsumer />)).toThrow(
       'useOverlayBackdrop must be used within OverlayBackdropProvider',
     );
-
-    spy.mockRestore();
   });
 });
 

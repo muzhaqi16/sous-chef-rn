@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import { RecordWastePantryItemModal } from '../RecordWastePantryItemModal';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -33,13 +33,18 @@ jest.mock('../PantryActionModal', () => ({
   PantryActionModal: ({ title, renderActionFields }: any) => {
     const { View, Text } = require('react-native');
     const sharedState = {
-      availableQuantity: 10,
+      trackingQuantity: 10,
+      trackingUnitSymbol: 'oz',
+      trackingUnitId: 'unit-1',
       activeUnitSymbol: 'oz',
       activeUnitId: 'unit-1',
+      isConvertedUnit: false,
+      selectedUnitInfo: { unitId: 'unit-1', unitSymbol: 'oz', unitName: 'Ounces', unitType: 'WEIGHT', isTrackingUnit: true, conversionConfidence: null },
+      setSelectedUnitInfo: jest.fn(),
       notes: '',
       setNotes: jest.fn(),
-      selectedUnit: 'weight',
-      hasContentUnit: false,
+      itemId: 'item-1',
+      defaultUnit: null,
     };
     return (
       <View>
@@ -48,6 +53,14 @@ jest.mock('../PantryActionModal', () => ({
       </View>
     );
   },
+}));
+jest.mock('#hooks/pantry/useConversionPreview', () => ({
+  useConversionPreview: () => ({
+    previewText: null,
+    availableInSelectedUnit: null,
+    previewLoading: false,
+    availableLoading: false,
+  }),
 }));
 jest.mock('#/utils/fractionUtils', () => ({
   parseFractionalInput: (v: string) => parseFloat(v) || null,
@@ -69,9 +82,12 @@ describe('RecordWastePantryItemModal', () => {
     expect(screen.getByText('Record Waste')).toBeTruthy();
   });
 
-  it('shows waste reason options', () => {
+  it('shows waste reason options when expanded', () => {
     render(<RecordWastePantryItemModal {...defaultProps} />);
+    // Collapsed by default — only selected value visible in header
     expect(screen.getByText('Expired')).toBeTruthy();
+    // Expand the collapsible picker
+    fireEvent.press(screen.getByText('Waste Reason *'));
     expect(screen.getByText('Spoiled')).toBeTruthy();
   });
 
