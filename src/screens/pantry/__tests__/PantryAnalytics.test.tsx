@@ -24,6 +24,7 @@ jest.mock('#hooks/pantry/usePantryAnalytics', () => ({
       wasteRate: 10.5,
       totalWasteValue: 12.50,
       composted: 2.0,
+      recycled: 1.5,
       wasteTrend: [],
       wasteByReason: [{ reason: 'EXPIRED', count: 3, percentage: 60 }],
       topWastedItems: [{ itemName: 'Lettuce', count: 2, estimatedValue: 4.00 }],
@@ -180,6 +181,12 @@ describe('PantryAnalytics', () => {
     expect(screen.getByText('Composted')).toBeTruthy();
   });
 
+  it('shows recycled value in waste tab', () => {
+    render(<PantryAnalytics route={route} />);
+    expect(screen.getByText('Recycled')).toBeTruthy();
+    expect(screen.getByText('1.5')).toBeTruthy();
+  });
+
   it('shows average usage per day', () => {
     render(<PantryAnalytics route={route} />);
     expect(screen.getByText('Avg Per Day')).toBeTruthy();
@@ -203,7 +210,7 @@ describe('PantryAnalytics', () => {
   it('renders with cost analytics data', () => {
     jest.spyOn(require('#hooks/pantry/usePantryAnalytics'), 'usePantryAnalytics').mockReturnValue({
       usageData: { totalUsageCount: 10, averageUsagePerDay: 1, usageTrend: [], usageByPurpose: [], usageBySource: [], topUsedItems: [] },
-      wasteData: { totalWasteCount: 0, wasteRate: 0, totalWasteValue: 0, composted: 0, wasteTrend: [], wasteByReason: [], topWastedItems: [] },
+      wasteData: { totalWasteCount: 0, wasteRate: 0, totalWasteValue: 0, composted: 0, recycled: 0, wasteTrend: [], wasteByReason: [], topWastedItems: [] },
       ledgerData: {
         summary: { totalAdded: 10, totalConsumed: 5, totalWasted: 1, netQuantity: 4, additionCount: 5, consumptionCount: 3, additionsByUnit: null, consumptionByUnit: null },
         periodData: [],
@@ -227,7 +234,7 @@ describe('PantryAnalytics', () => {
   it('renders with period data in ledger', () => {
     jest.spyOn(require('#hooks/pantry/usePantryAnalytics'), 'usePantryAnalytics').mockReturnValue({
       usageData: { totalUsageCount: 0, averageUsagePerDay: 0, usageTrend: [], usageByPurpose: [], usageBySource: [], topUsedItems: [] },
-      wasteData: { totalWasteCount: 0, wasteRate: 0, totalWasteValue: 0, composted: 0, wasteTrend: [], wasteByReason: [], topWastedItems: [] },
+      wasteData: { totalWasteCount: 0, wasteRate: 0, totalWasteValue: 0, composted: 0, recycled: 0, wasteTrend: [], wasteByReason: [], topWastedItems: [] },
       ledgerData: {
         summary: { totalAdded: 10, totalConsumed: 5, totalWasted: 1, netQuantity: 4, additionCount: 5, consumptionCount: 3, additionsByUnit: null, consumptionByUnit: null },
         periodData: [
@@ -252,7 +259,7 @@ describe('PantryAnalytics', () => {
   it('renders with additionsByUnit data', () => {
     jest.spyOn(require('#hooks/pantry/usePantryAnalytics'), 'usePantryAnalytics').mockReturnValue({
       usageData: { totalUsageCount: 0, averageUsagePerDay: 0, usageTrend: [], usageByPurpose: [], usageBySource: [], topUsedItems: [] },
-      wasteData: { totalWasteCount: 0, wasteRate: 0, totalWasteValue: 0, composted: 0, wasteTrend: [], wasteByReason: [], topWastedItems: [] },
+      wasteData: { totalWasteCount: 0, wasteRate: 0, totalWasteValue: 0, composted: 0, recycled: 0, wasteTrend: [], wasteByReason: [], topWastedItems: [] },
       ledgerData: {
         summary: {
           totalAdded: 10, totalConsumed: 5, totalWasted: 1, netQuantity: 4,
@@ -282,7 +289,7 @@ describe('PantryAnalytics', () => {
   it('renders with negative net quantity', () => {
     jest.spyOn(require('#hooks/pantry/usePantryAnalytics'), 'usePantryAnalytics').mockReturnValue({
       usageData: { totalUsageCount: 0, averageUsagePerDay: 0, usageTrend: [], usageByPurpose: [], usageBySource: [], topUsedItems: [] },
-      wasteData: { totalWasteCount: 0, wasteRate: 0, totalWasteValue: 0, composted: 0, wasteTrend: [], wasteByReason: [], topWastedItems: [] },
+      wasteData: { totalWasteCount: 0, wasteRate: 0, totalWasteValue: 0, composted: 0, recycled: 0, wasteTrend: [], wasteByReason: [], topWastedItems: [] },
       ledgerData: {
         summary: { totalAdded: 5, totalConsumed: 10, totalWasted: 3, netQuantity: -8, additionCount: 2, consumptionCount: 5, additionsByUnit: null, consumptionByUnit: null },
         periodData: [],

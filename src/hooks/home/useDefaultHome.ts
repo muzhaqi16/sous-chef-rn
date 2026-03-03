@@ -208,15 +208,20 @@ export const useDefaultHome = () => {
 
     let didUpdate = false;
 
-    // Set home if not already selected
-    if (!selectedHomeId) {
+    // Restore home to remote default if not set or if it differs
+    // (e.g., invitation acceptance sets a non-default home that shouldn't persist across restarts)
+    if (!selectedHomeId || selectedHomeId !== remoteDefaultHomeId) {
       setSelectedHomeId(remoteDefaultHomeId);
       didUpdate = true;
       console.log('🏠 Auto-selected default home:', remoteDefaultHomeId);
     }
 
-    // Set pantry if not already selected AND we have the data
-    if (!selectedPantryId && defaultPantryId) {
+    // When home changed, always sync pantry (old pantry belongs to old home).
+    // When home already correct, fill in pantry only if missing.
+    if (didUpdate && defaultPantryId) {
+      setSelectedPantryId(defaultPantryId);
+      console.log('🏠 Auto-selected default pantry:', defaultPantryId);
+    } else if (!selectedPantryId && defaultPantryId) {
       setSelectedPantryId(defaultPantryId);
       didUpdate = true;
       console.log('🏠 Auto-selected default pantry:', defaultPantryId);
@@ -325,6 +330,46 @@ export const useDefaultHome = () => {
     setSelectedHomeId,
     setSelectedPantryId,
     setDefaultHomeMutation,
+  ]);
+
+  // FIRST HOME VIA INVITATION: When a user with no homes accepts their first invitation,
+  // selectedHomeId is set but no server default exists. Sync the accepted home as default.
+  useEffect(() => {
+    if (!homesList || homesList.length !== 1) return;
+    if (!selectedHomeId || selectedHomeId !== homesList[0].id) return;
+    if (remoteDefaultHomeId) return;
+    if (loading || !called) return;
+
+    console.log(
+      '🏠 First home via invitation, syncing as server default:',
+      selectedHomeId,
+    );
+
+    setDefaultHomeMutation({
+      variables: { homeId: selectedHomeId },
+    })
+      .then(result => {
+        const returnedPantry = result.data?.setDefaultHome?.defaultPantry;
+        if (returnedPantry?.id && !selectedPantryId) {
+          setSelectedPantryId(returnedPantry.id);
+          console.log(
+            '🏠 Set pantry from SetDefaultHome response:',
+            returnedPantry.id,
+          );
+        }
+      })
+      .catch(err => {
+        console.warn('Failed to set first invitation home as default:', err);
+      });
+  }, [
+    homesList,
+    selectedHomeId,
+    selectedPantryId,
+    remoteDefaultHomeId,
+    loading,
+    called,
+    setDefaultHomeMutation,
+    setSelectedPantryId,
   ]);
 
   // SET HOME SELECTION READY: Only when initialization is truly complete

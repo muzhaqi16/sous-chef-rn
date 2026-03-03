@@ -383,4 +383,169 @@ describe('useDefaultHome', () => {
     const { result } = renderHook(() => useDefaultHome());
     expect(result.current.hasDefaultHome).toBe(false);
   });
+
+  describe('sync remote defaults on mismatch (invitation acceptance restart)', () => {
+    it('restores selectedHomeId to remoteDefaultHomeId when they differ', () => {
+      // Simulate: user accepted invitation (selectedHomeId = accepted home),
+      // but server default is still the original home
+      mockStoreState.selectedHomeId = 'accepted-home';
+      mockStoreState.selectedPantryId = 'accepted-pantry';
+      mockHomesQueryResult.data = {
+        homes: {
+          edges: [
+            {
+              node: {
+                id: 'default-home',
+                isDefault: true,
+                pantries: [{ id: 'default-pantry', isDefault: true }],
+              },
+            },
+            {
+              node: {
+                id: 'accepted-home',
+                isDefault: false,
+                pantries: [{ id: 'accepted-pantry', isDefault: true }],
+              },
+            },
+          ],
+        },
+      };
+
+      renderHook(() => useDefaultHome());
+
+      // Should restore to the remote default
+      expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(
+        'default-home',
+      );
+      // Should also sync the pantry to the default home's pantry
+      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
+        'default-pantry',
+      );
+    });
+
+    it('does not restore when selectedHomeId matches remoteDefaultHomeId (explicit default)', () => {
+      // Simulate: user explicitly set this home as default (both local and server agree)
+      mockStoreState.selectedHomeId = 'home-1';
+      mockStoreState.selectedPantryId = 'pantry-1';
+      mockHomesQueryResult.data = {
+        homes: {
+          edges: [
+            {
+              node: {
+                id: 'home-1',
+                isDefault: true,
+                pantries: [{ id: 'pantry-1', isDefault: true }],
+              },
+            },
+          ],
+        },
+      };
+
+      renderHook(() => useDefaultHome());
+
+      // Should NOT change the home or pantry
+      expect(mockStoreState.setSelectedHomeId).not.toHaveBeenCalled();
+      expect(mockStoreState.setSelectedPantryId).not.toHaveBeenCalled();
+    });
+
+    it('skips restore when remoteDefaultHomeId is null', () => {
+      // No server default exists
+      mockStoreState.selectedHomeId = 'some-home';
+      mockHomesQueryResult.data = {
+        homes: {
+          edges: [
+            {
+              node: {
+                id: 'some-home',
+                isDefault: false,
+                pantries: [],
+              },
+            },
+          ],
+        },
+      };
+
+      renderHook(() => useDefaultHome());
+
+      // Should not try to restore (remoteDefaultHomeId is null)
+      expect(mockStoreState.setSelectedHomeId).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('first home via invitation', () => {
+    it('syncs server default when user has exactly one home with no server default', () => {
+      // Simulate: user had 0 homes, accepted invitation, now has 1 home
+      // selectedHomeId was set by NotificationActionHandler but server has no default
+      mockStoreState.selectedHomeId = 'invited-home';
+      mockHomesQueryResult.called = true;
+      mockHomesQueryResult.loading = false;
+      mockHomesQueryResult.data = {
+        homes: {
+          edges: [
+            {
+              node: {
+                id: 'invited-home',
+                isDefault: false,
+                pantries: [{ id: 'invited-pantry', isDefault: true }],
+              },
+            },
+          ],
+        },
+      };
+
+      renderHook(() => useDefaultHome());
+
+      // Should fire setDefaultHomeMutation to sync server
+      expect(mockSetDefaultHomeMutation).toHaveBeenCalledWith({
+        variables: { homeId: 'invited-home' },
+      });
+    });
+
+    it('does not sync when server already has a default', () => {
+      mockStoreState.selectedHomeId = 'home-1';
+      mockHomesQueryResult.called = true;
+      mockHomesQueryResult.loading = false;
+      mockHomesQueryResult.data = {
+        homes: {
+          edges: [
+            {
+              node: {
+                id: 'home-1',
+                isDefault: true,
+                pantries: [],
+              },
+            },
+          ],
+        },
+      };
+
+      renderHook(() => useDefaultHome());
+
+      // Should NOT fire mutation since server already has a default
+      expect(mockSetDefaultHomeMutation).not.toHaveBeenCalled();
+    });
+
+    it('does not sync when user has multiple homes', () => {
+      mockStoreState.selectedHomeId = 'home-1';
+      mockHomesQueryResult.called = true;
+      mockHomesQueryResult.loading = false;
+      mockHomesQueryResult.data = {
+        homes: {
+          edges: [
+            {
+              node: { id: 'home-1', isDefault: false, pantries: [] },
+            },
+            {
+              node: { id: 'home-2', isDefault: false, pantries: [] },
+            },
+          ],
+        },
+      };
+
+      renderHook(() => useDefaultHome());
+
+      // Should NOT fire mutation - multiple homes, not first-home scenario
+      expect(mockSetDefaultHomeMutation).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -244,6 +244,7 @@ query GetPantryLedgerAnalytics(
         additionCount
         consumptionCount
         wasteCount
+        unitName
         additionsByUnit {
           unitId
           unitName
@@ -277,12 +278,15 @@ query GetPantryLedgerAnalytics(
           storeName
           totalSpent
           itemCount
+          averageCostPerUnit
         }
       }
       topRestockedItems {
         itemId
         itemName
+        imageUrl
         totalQuantity
+        unitName
         count
       }
     }
