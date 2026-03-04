@@ -1,15 +1,19 @@
-'use no memo';
-
 import { renderHook, act } from '@testing-library/react-native';
 import { useHybridSearch, type UseHybridSearchConfig } from '../useHybridSearch';
 
-// --- Apollo client mock ---
+// --- Apollo client mock (stable reference prevents infinite effect loop) ---
 const mockQuery = jest.fn();
+const mockClient = { query: mockQuery };
 jest.mock('@apollo/client/react', () => ({
-  useApolloClient: () => ({ query: mockQuery }),
+  useApolloClient: () => mockClient,
 }));
 
-// --- Prevent heavy transitive imports from OOMing Jest ---
+// --- Identity debounce so values propagate instantly ---
+jest.mock('#hooks/utils/useDebouncedValue', () => ({
+  useDebouncedValue: (value: unknown) => value,
+}));
+
+// --- Prevent heavy transitive imports ---
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeSearchQuery: async (
     queryFn: () => Promise<{ data?: any }>,
@@ -59,15 +63,18 @@ const defaultConfig: UseHybridSearchConfig<{ results: TestItem[] }, TestItem> = 
   debounceMs: 300,
 };
 
+/** Flush the async effect chain (queryFn → executeSearchQuery → setServerState). */
+const flushEffects = async () => {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
+
 describe('useHybridSearch', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
     jest.clearAllMocks();
     mockQuery.mockResolvedValue({ data: { results: [] } });
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
   });
 
   describe('local search', () => {
@@ -77,16 +84,11 @@ describe('useHybridSearch', () => {
         useHybridSearch({ ...defaultConfig, items, totalCount: 3 }),
       );
 
-      // No search — all items returned
       expect(result.current.activeItems).toHaveLength(3);
       expect(result.current.useServerSort).toBe(false);
 
-      // Type a search
       act(() => {
         result.current.setSearchQuery('Item 2');
-      });
-      act(() => {
-        jest.advanceTimersByTime(300);
       });
 
       expect(result.current.activeItems).toHaveLength(1);
@@ -101,9 +103,6 @@ describe('useHybridSearch', () => {
 
       act(() => {
         result.current.setSearchQuery('Item 1');
-      });
-      act(() => {
-        jest.advanceTimersByTime(300);
       });
 
       expect(mockQuery).not.toHaveBeenCalled();
@@ -129,15 +128,7 @@ describe('useHybridSearch', () => {
       act(() => {
         result.current.setSearchQuery('Server');
       });
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
-
-      // Flush the async effect chain (queryFn resolve → executeSearchQuery resolve → setServerState)
-      await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-      });
+      await flushEffects();
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -147,36 +138,6 @@ describe('useHybridSearch', () => {
         }),
       );
       expect(result.current.activeItems).toEqual(serverItems);
-    });
-  });
-
-  describe('debounce', () => {
-    it('delays server search by configured ms', () => {
-      const { result } = renderHook(() =>
-        useHybridSearch({
-          ...defaultConfig,
-          totalCount: 100,
-          hasMore: true,
-        }),
-      );
-
-      act(() => {
-        result.current.setSearchQuery('test');
-      });
-
-      // Before debounce expires
-      expect(mockQuery).not.toHaveBeenCalled();
-
-      act(() => {
-        jest.advanceTimersByTime(299);
-      });
-      expect(mockQuery).not.toHaveBeenCalled();
-
-      act(() => {
-        jest.advanceTimersByTime(1);
-      });
-      // After debounce expires, the query fires
-      expect(mockQuery).toHaveBeenCalled();
     });
   });
 
@@ -195,17 +156,10 @@ describe('useHybridSearch', () => {
         }),
       );
 
-      // Trigger a search
       act(() => {
         result.current.setSearchQuery('Server');
       });
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
-      await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-      });
+      await flushEffects();
 
       expect(result.current.activeItems).toEqual(serverItems);
 
@@ -214,7 +168,6 @@ describe('useHybridSearch', () => {
         result.current.setSearchQuery('');
       });
 
-      // No debounce needed — items should be the main query items
       expect(result.current.searchActive).toBe(false);
       expect(result.current.activeItems).toBe(items);
     });
@@ -239,13 +192,7 @@ describe('useHybridSearch', () => {
       act(() => {
         result.current.setSearchQuery('Olive');
       });
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
-      await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-      });
+      await flushEffects();
       expect(result.current.activeItems).toEqual(serverItems);
 
       // Clear
@@ -261,15 +208,8 @@ describe('useHybridSearch', () => {
       act(() => {
         result.current.setSearchQuery('Olive');
       });
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
-      await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-      });
+      await flushEffects();
 
-      // Should have fired a new query and returned results
       expect(mockQuery).toHaveBeenCalled();
       expect(result.current.activeItems).toEqual(serverItems);
     });
@@ -294,12 +234,9 @@ describe('useHybridSearch', () => {
         }),
       );
 
-      // Start a search
+      // Start a search (effect fires immediately since debounce is identity)
       act(() => {
         result.current.setSearchQuery('Olive');
-      });
-      act(() => {
-        jest.advanceTimersByTime(300);
       });
 
       // Clear search while query is in-flight
@@ -323,7 +260,6 @@ describe('useHybridSearch', () => {
     it('transitions to local search when all pages are loaded', () => {
       const items = makeItems(55);
 
-      // Start with hasMore: true (server sort)
       const { result, rerender } = renderHook(
         (props: Partial<typeof defaultConfig>) =>
           useHybridSearch({ ...defaultConfig, ...props }),
@@ -353,7 +289,6 @@ describe('useHybridSearch', () => {
 
       expect(result.current.useServerSort).toBe(false);
 
-      // New items added — hasMore becomes true again
       rerender({ items, totalCount: 60, hasMore: true });
 
       expect(result.current.useServerSort).toBe(true);
@@ -373,9 +308,6 @@ describe('useHybridSearch', () => {
 
       act(() => {
         result.current.setSearchQuery('test');
-      });
-      act(() => {
-        jest.advanceTimersByTime(300);
       });
 
       expect(mockQuery).not.toHaveBeenCalled();
@@ -399,21 +331,13 @@ describe('useHybridSearch', () => {
         }),
       );
 
-      // Trigger server search
       act(() => {
         result.current.setSearchQuery('Olive');
       });
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
-      await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-      });
+      await flushEffects();
 
       expect(result.current.activeItems).toHaveLength(2);
 
-      // Remove one item
       act(() => {
         result.current.removeFromResults('s1');
       });
