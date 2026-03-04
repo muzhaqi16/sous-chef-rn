@@ -17,8 +17,6 @@ import {
   useCollaborationChangesSubscription,
   CollaborationChangeType,
   ShoppingListItemDisplayFragmentDoc,
-  GetShoppingListDocument,
-  GetShoppingListQuery,
   MutationType,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -38,35 +36,41 @@ import {
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 
-/** Re-sort shopping list edges by sortOrder after a subscription update */
+/** Re-sort shopping list edges by sortOrder after a subscription update.
+ *
+ * Uses cache.modify so the modifier runs once per storeFieldName variant,
+ * automatically sorting unfiltered, isPurchased:false, and isPurchased:true
+ * cache entries of itemsConnection.
+ */
 function resortEdges(cache: ApolloCache, shoppingListId: string): void {
   executeCacheUpdate(
     () => {
-      const queryResult = cache.readQuery({
-        query: GetShoppingListDocument,
-        variables: { id: shoppingListId },
-      }) as GetShoppingListQuery | null;
+      const parentCacheId = cache.identify({
+        __typename: 'ShoppingList',
+        id: shoppingListId,
+      });
+      if (!parentCacheId) return;
 
-      if (queryResult?.shoppingList?.itemsConnection?.edges) {
-        const sortedEdges = [...queryResult.shoppingList.itemsConnection.edges].sort(
-          (a, b) =>
-            (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''),
-        );
+      cache.modify({
+        id: parentCacheId,
+        fields: {
+          itemsConnection(existing: any, { readField }: any) {
+            if (!existing?.edges?.length) return existing;
 
-        cache.writeQuery({
-          query: GetShoppingListDocument,
-          variables: { id: shoppingListId },
-          data: {
-            shoppingList: {
-              ...queryResult.shoppingList,
-              itemsConnection: {
-                ...queryResult.shoppingList.itemsConnection,
-                edges: sortedEdges,
-              },
-            },
+            const sortedEdges = [...existing.edges].sort((a: any, b: any) => {
+              const nodeA = readField('node', a);
+              const nodeB = readField('node', b);
+              const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
+              const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
+              if (sortA < sortB) return -1;
+              if (sortA > sortB) return 1;
+              return 0;
+            });
+
+            return { ...existing, edges: sortedEdges };
           },
-        });
-      }
+        },
+      });
     },
     'Failed to re-sort edges after subscription update:',
   );

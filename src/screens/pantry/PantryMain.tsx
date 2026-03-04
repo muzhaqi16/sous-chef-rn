@@ -3,7 +3,6 @@ import React, {
   useEffect,
   useRef,
   useState,
-  startTransition,
 } from 'react';
 import { View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,7 +19,8 @@ import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useAppStore, selectIsOnline } from '#store/useAppStore';
 import { useShallow } from 'zustand/shallow';
-import { GetStorageLocationsQuery } from '#generated';
+import { GetStorageLocationsQuery, GetPantryDocument, type GetPantryQuery } from '#generated';
+import { normalizePantry } from '#/utils/connectionUtils';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useFeatureHint, getLoginCount } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
@@ -28,9 +28,9 @@ import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 import { Telemetry } from '#services/telemetry';
 import { useAuth } from '#hooks/auth/useAuth';
 import { type LocationFilter, locationFilterToQueryFilter, sortOptionToOrderBy } from '#/utils/pantryFilters';
-import { shouldUseServerSort } from '#/utils/hybridSort';
-import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
 import { DEFAULT_PAGE_SIZES } from '#/constants/pagination';
+import { pantryItemSearch } from '#/utils/searchUtils';
+import { useHybridSearch } from '#hooks/search/useHybridSearch';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import { PantryContent, type PantryContentRef } from '#components/pantry/PantryContent';
 import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
@@ -128,8 +128,6 @@ const PantryMainInner: React.FC = () => {
   useFocusEffect(onPantryFocus);
   // Location filter for redesigned tabs
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
-  // Search state managed locally (moved from usePantryQuery)
-  const [searchQuery, setSearchQuery] = useState('');
   // Network status for offline fallback
   const isOnline = useAppStore(selectIsOnline);
   // Add to pantry sheet state
@@ -175,23 +173,8 @@ const PantryMainInner: React.FC = () => {
   // Convert location filter to server-side query filter
   const locationQueryFilter = locationFilterToQueryFilter(locationFilter);
 
-  // Hybrid sort/search: use server when partial data, local when all loaded.
-  // Track totalCount from previous render using "adjusting state during render" pattern
-  // (useState + conditional setState) to avoid reading ref.current during render.
-  const [knownTotalCount, setKnownTotalCount] = useState(0);
-  const [allItemsLoaded, setAllItemsLoaded] = useState(false);
-
-  // Debounce search for server-side path (300ms)
-  const debouncedSearch = useDebouncedValue(searchQuery, 300);
-
-  // Use server sort/search when data exceeds page size AND we're online
-  const useServerSort = shouldUseServerSort(knownTotalCount, DEFAULT_PAGE_SIZES.MEDIUM, isOnline) && !allItemsLoaded;
-
-  // Build query filter: merge location filter with server-side search when applicable
-  const queryFilter = (() => {
-    if (!useServerSort || !debouncedSearch) return locationQueryFilter;
-    return { ...locationQueryFilter, search: debouncedSearch };
-  })();
+  // Main query never includes search — keeps cache stable on clear
+  const queryFilter = locationQueryFilter;
 
   // Always pass orderBy to server — harmless when all items fit in one page,
   // and ensures data arrives pre-sorted when server sort is active.
@@ -212,28 +195,46 @@ const PantryMainInner: React.FC = () => {
     locationCounts,
   } = usePantryManagement(pantry?.id, queryFilter, orderBy);
 
-  // Update knownTotalCount for next render's useServerSort decision
-  // ("adjusting state during render" pattern — avoids reading ref.current during render)
-  if (totalCount > 0 && totalCount !== knownTotalCount && !debouncedSearch) {
-    setKnownTotalCount(totalCount);
-  }
-
-  // Track when all pages have been loaded — "adjusting state during render" pattern.
-  // Guard on !debouncedSearch: search results have their own hasMore that doesn't
-  // reflect the full dataset's pagination state.
-  if (!hasMore && !loading && totalCount > 0 && !allItemsLoaded && !debouncedSearch) {
-    setAllItemsLoaded(true);
-  }
-  // Reset when more data becomes available (items added, filter changed, refetch)
-  if (hasMore && allItemsLoaded) {
-    setAllItemsLoaded(false);
-  }
+  // Hybrid search: server when partial data, local when all loaded
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchActive,
+    useServerSort,
+    activeItems,
+    removeFromResults,
+  } = useHybridSearch<GetPantryQuery, typeof rawPantryItems[number]>({
+    items: rawPantryItems,
+    totalCount,
+    hasMore,
+    loading,
+    pageSize: DEFAULT_PAGE_SIZES.MEDIUM,
+    isOnline,
+    searchDocument: GetPantryDocument,
+    buildSearchVariables: (search) => {
+      if (!pantry?.id?.trim()) return null;
+      return {
+        id: pantry.id,
+        itemsFirst: 50,
+        itemsFilter: { ...(locationQueryFilter ?? {}), search },
+        itemsOrderBy: orderBy,
+        storageLocationsFirst: 0,
+      };
+    },
+    extractItems: (data) => normalizePantry(data.pantry)?.items ?? [],
+    searchPredicate: pantryItemSearch,
+    debounceMs: 300,
+  });
 
   // PERF: Defer pantry items so Apollo cache updates (from subscriptions or
   // fetchMore) don't block user interactions like scrolling and tapping.
-  // Downstream memos (sortedItems → itemDisplayMap → FlashList)
-  // will only recompute when React has idle time.
-  const pantryItems = useDeferredValue(rawPantryItems);
+  const deferredItems = useDeferredValue(activeItems);
+  // When search is cleared (empty query), use items directly — they're already
+  // cached from the main query. useDeferredValue would defer the transition from
+  // search results back to the full list, and the deferred render gets repeatedly
+  // interrupted by other state updates (debounce timer, subscriptions), causing
+  // a multi-second delay.
+  const pantryItems = searchQuery ? deferredItems : activeItems;
   // PERF: Defer storage locations until pantry data has loaded (data-driven)
   // Default tabs (All/Fridge/Freezer/Pantry) show immediately; custom tabs appear after pantry loads
   const storageLocationsReady = !loading && isReady;
@@ -242,6 +243,11 @@ const PantryMainInner: React.FC = () => {
     createLocation,
     creating: creatingLocation,
   } = useStorageLocationManagement(storageLocationsReady ? selectedHomeId ?? undefined : undefined);
+  // Wrap removeItem to also clear the item from server search results
+  const handleRemoveItem = async (id: string) => {
+    removeFromResults(id);
+    await removeItem(id);
+  };
   // Stable navigateTo wrapper for usePantryItemActions
   const stableNavigateTo = ({ pantryItem: (params: { itemId: string }) => navigateTo.pantryItem(params) });
   // Extract item actions (modal state + mutations + handlers) to separate hook
@@ -259,7 +265,7 @@ const PantryMainInner: React.FC = () => {
     handleDeleteItem,
   } = usePantryItemActions({
     pantryItems,
-    removeItem,
+    removeItem: handleRemoveItem,
     navigateTo: stableNavigateTo,
   });
   // Refetch pantry items when switching between pantries
@@ -283,11 +289,10 @@ const PantryMainInner: React.FC = () => {
     selectorRef,
     navigate,
   });
-  // Handle location filter change
+  // Handle location filter change — avoid startTransition to prevent
+  // Apollo cache-and-network from firing on each concurrent render pass
   const handleLocationFilterChange = (filter: LocationFilter) => {
-    startTransition(() => {
-      setLocationFilter(filter);
-    });
+    setLocationFilter(filter);
   };
   // Build combined tabs: default temperature tabs + custom storage locations
   const defaultTabs: FilterTabConfig<LocationFilter>[] = [
@@ -426,8 +431,8 @@ const PantryMainInner: React.FC = () => {
         onAddItem={handleAddItem}
         onRefresh={handleRefresh}
         onEndReached={loadMore}
-        isLoadingMore={isLoadingMore}
-        hasMore={hasMore}
+        isLoadingMore={searchActive ? false : isLoadingMore}
+        hasMore={searchActive ? false : hasMore}
         refreshing={isRefreshing}
         loading={isLoadingInitial}
         onSwipeableWillOpen={handleSwipeableWillOpen}

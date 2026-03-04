@@ -2,7 +2,15 @@
  * Shared utilities for pantry item mutations
  */
 
-import { PantryItemFragment, StorageState, UnitType } from '#generated';
+import {
+  PantryItemFragment,
+  StorageState,
+  UnitType,
+  UpdatePantryItemInput,
+  StorageDetailsInput,
+  InventoryThresholdsInput,
+  NetWeightInput,
+} from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import type { UnitSelection, FormDataInput } from './types';
 
@@ -51,15 +59,15 @@ export function buildDirtyUpdateInput(
   dirtyFields: Record<string, boolean>,
   locationId: string | null,
   brandId: string | null,
-): Record<string, any> {
-  const input: Record<string, any> = {};
+): UpdatePantryItemInput {
+  const input: UpdatePantryItemInput = {};
 
   if (dirtyFields.itemName) {
     input.itemName = data.itemName;
   }
 
   // Group storage-related fields into storage: StorageDetailsInput
-  const storage: Record<string, any> = {};
+  const storage: StorageDetailsInput = {};
   if (dirtyFields.storageState) {
     storage.storageState = data.storageState;
   }
@@ -82,7 +90,7 @@ export function buildDirtyUpdateInput(
   }
 
   // Group threshold fields into thresholds: InventoryThresholdsInput
-  const thresholds: Record<string, any> = {};
+  const thresholds: InventoryThresholdsInput = {};
   if (dirtyFields.minQuantity) {
     thresholds.minQuantity = data.minQuantity
       ? parseFloat(data.minQuantity)
@@ -98,7 +106,7 @@ export function buildDirtyUpdateInput(
   }
 
   // Group net weight fields into netWeight: NetWeightInput
-  const netWeightInput: Record<string, any> = {};
+  const netWeightInput: NetWeightInput = {};
   if (dirtyFields.netWeight) {
     netWeightInput.netWeight = data.netWeight
       ? parseFloat(data.netWeight)

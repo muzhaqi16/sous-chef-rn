@@ -16,9 +16,10 @@ import {
   selectSelectedHomeId,
   selectHomeState,
   selectSetHomeAndPantry,
-  selectSetIsHomeSelectionReady } from '#store/useAppStore';
+  selectSetIsHomeSelectionReady,
+} from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 interface UseHomeSelectionOptions {
   homes: any[] | null;
@@ -43,13 +44,18 @@ interface UseHomeSelectionOptions {
  * });
  * ```
  */
-export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHomeSelectionOptions) {
+export function useHomeSelection({
+  homes,
+  remoteDefaultHomeId,
+  loading,
+}: UseHomeSelectionOptions) {
   const selectedHomeId = useAppStore(selectSelectedHomeId);
   const { setSelectedHomeId } = useAppStore(useShallow(selectHomeState));
   const { selectedPantryId, setSelectedPantryId } = useAppStore(
     useShallow(state => ({
       selectedPantryId: state.selectedPantryId,
-      setSelectedPantryId: state.setSelectedPantryId })),
+      setSelectedPantryId: state.setSelectedPantryId,
+    })),
   );
   const setHomeAndPantry = useAppStore(selectSetHomeAndPantry);
   const setIsHomeSelectionReady = useAppStore(selectSetIsHomeSelectionReady);
@@ -71,9 +77,12 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
         message: 'Default home set',
         settings: {
           __typename: 'UserSettings',
-          id: variables.homeId },
+          id: variables.homeId,
+        },
         // defaultPantry will be returned by server, null in optimistic response
-        defaultPantry: null } }),
+        defaultPantry: null,
+      },
+    }),
 
     // Update Apollo cache to set isDefault on the correct home
     update: (cache, _result, { variables }) => {
@@ -100,14 +109,19 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
                 cache.modify({
                   id: cacheId,
                   fields: {
-                    isDefault: () => homeId === variables.homeId } });
+                    isDefault: () => homeId === variables.homeId,
+                  },
+                });
               }
             });
 
             // Return existing unchanged - we modified entities directly
             return existingHomes;
-          } } });
-    } });
+          },
+        },
+      });
+    },
+  });
 
   // Auto-select first home if no default is set and we have homes (initialization for first-time users)
   // This runs ONCE when the user has homes but no default home set anywhere
@@ -126,9 +140,11 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
 
       // Sync this choice to the backend
       setDefaultHomeMutation({
-        variables: { homeId: firstHome.id } }).catch((error: any) => {
+        variables: { homeId: firstHome.id },
+      }).catch((error: any) => {
         const { message } = handleApolloError(error, {
-          operation: 'Set First Home as Default' });
+          operation: 'Set First Home as Default',
+        });
         console.warn('Failed to set first home as default:', message);
       });
     }
@@ -144,73 +160,76 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
   ]);
 
   const setDefaultHome = async (homeId: string) => {
-      // Prevent redundant calls if already set as default (check both local and remote)
-      if (homeId === selectedHomeId && homeId === remoteDefaultHomeId) {
-        return true;
-      }
+    // Prevent redundant calls if already set as default (check both local and remote)
+    if (homeId === selectedHomeId && homeId === remoteDefaultHomeId) {
+      return true;
+    }
 
-      // Validate homeId exists
-      if (!homeId) {
-        Alert.alert('Error', 'Invalid home ID');
-        return false;
-      }
-
-      // Find the target home and its default pantry BEFORE mutation
-      // This prevents race condition where cache updates but Zustand hasn't
-      const targetHome = homes?.find((home: any) => home.id === homeId);
-      if (!targetHome) {
-        Alert.alert('Error', 'Home not found');
-        return false;
-      }
-
-      // Get the default pantry from home data we already have
-      const localDefaultPantry =
-        targetHome.pantries?.find((p: any) => p.isDefault) ||
-        targetHome.pantries?.[0];
-
-      // Store old values for potential rollback
-      const previousHomeId = selectedHomeId;
-      const previousPantryId = selectedPantryId;
-
-      // 1. Gate all pantry queries by setting ready flag to false
-      // This prevents GetPantry from firing with invalid id during the transition
-      setIsHomeSelectionReady(false);
-
-      // 2. Update home and pantry - safe to set null because queries are gated
-      // This clears old pantry data to avoid showing wrong home's items
-      setHomeAndPantry(homeId, localDefaultPantry?.id ?? null);
-
-      const result = await executeMutationWithErrorHandler(
-        () => setDefaultHomeMutation({
-          variables: { homeId } }),
-        () => {
-          // Rollback on error and re-enable queries
-          setHomeAndPantry(previousHomeId, previousPantryId);
-          setIsHomeSelectionReady(true);
-          Alert.alert('Error', 'Failed to set default home');
-        },
-      );
-      if (!result) return false;
-
-      if (result.data?.setDefaultHome?.success) {
-        // Update pantry from server response (server is source of truth)
-        const serverPantry = result.data.setDefaultHome.defaultPantry;
-        if (serverPantry?.id) {
-          setSelectedPantryId(serverPantry.id);
-        }
-        // 3. Re-enable queries now that we have valid pantryId
-        setIsHomeSelectionReady(true);
-        return true;
-      }
-
-      // Mutation returned no data - rollback and re-enable queries
-      setHomeAndPantry(previousHomeId, previousPantryId);
-      setIsHomeSelectionReady(true);
+    // Validate homeId exists
+    if (!homeId) {
+      Alert.alert('Error', 'Invalid home ID');
       return false;
-    };
+    }
+
+    // Find the target home and its default pantry BEFORE mutation
+    // This prevents race condition where cache updates but Zustand hasn't
+    const targetHome = homes?.find((home: any) => home.id === homeId);
+    if (!targetHome) {
+      Alert.alert('Error', 'Home not found');
+      return false;
+    }
+
+    // Get the default pantry from home data we already have
+    const localDefaultPantry =
+      targetHome.pantries?.find((p: any) => p.isDefault) ||
+      targetHome.pantries?.[0];
+
+    // Store old values for potential rollback
+    const previousHomeId = selectedHomeId;
+    const previousPantryId = selectedPantryId;
+
+    // 1. Gate all pantry queries by setting ready flag to false
+    // This prevents GetPantry from firing with invalid id during the transition
+    setIsHomeSelectionReady(false);
+
+    // 2. Update home and pantry - safe to set null because queries are gated
+    // This clears old pantry data to avoid showing wrong home's items
+    setHomeAndPantry(homeId, localDefaultPantry?.id ?? null);
+
+    const result = await executeMutation(
+      () =>
+        setDefaultHomeMutation({
+          variables: { homeId },
+        }),
+      () => {
+        // Rollback on error and re-enable queries
+        setHomeAndPantry(previousHomeId, previousPantryId);
+        setIsHomeSelectionReady(true);
+        Alert.alert('Error', 'Failed to set default home');
+      },
+    );
+    if (!result) return false;
+
+    if (result.data?.setDefaultHome?.success) {
+      // Update pantry from server response (server is source of truth)
+      const serverPantry = result.data.setDefaultHome.defaultPantry;
+      if (serverPantry?.id) {
+        setSelectedPantryId(serverPantry.id);
+      }
+      // 3. Re-enable queries now that we have valid pantryId
+      setIsHomeSelectionReady(true);
+      return true;
+    }
+
+    // Mutation returned no data - rollback and re-enable queries
+    setHomeAndPantry(previousHomeId, previousPantryId);
+    setIsHomeSelectionReady(true);
+    return false;
+  };
 
   // Computed value for current default home
-  const defaultHome = homes?.find((home: any) => home.id === selectedHomeId) || null;
+  const defaultHome =
+    homes?.find((home: any) => home.id === selectedHomeId) || null;
   const isSynced = selectedHomeId === remoteDefaultHomeId;
 
   return {
@@ -220,5 +239,6 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
     setDefaultHome,
     setDefaultHomeMutation,
     setSelectedHomeId,
-    setSelectedPantryId };
+    setSelectedPantryId,
+  };
 }

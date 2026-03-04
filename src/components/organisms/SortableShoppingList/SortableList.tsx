@@ -19,6 +19,8 @@ import {
   type SortableListThemeColors } from './SortableListThemeContext';
 import { getTabBarBottomPadding } from '#constants/layout';
 
+const EMPTY_ARRAY: SortableShoppingListItem[] = [];
+
 // Module-scope functions — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: SortableShoppingListItem) => item.id;
 const renderItem = (info: ListRenderItemInfo<SortableShoppingListItem>) => (
@@ -97,18 +99,6 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     paddingBottom: getTabBarBottomPadding(insets.bottom),
   };
 
-  if (items.length === 0) {
-    return (
-      <View style={styles.container}>
-        {ListFooterComponent
-          ? (React.isValidElement(ListFooterComponent)
-              ? ListFooterComponent
-              : React.createElement(ListFooterComponent as React.ComponentType))
-          : null}
-      </View>
-    );
-  }
-
   return (
     <SortableListThemeContext.Provider value={themeColors}>
       <SortableListActionsProvider
@@ -117,8 +107,8 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
       >
         <View style={styles.container}>
           <FlashList<SortableShoppingListItem>
-            data={items}
-            extraData={items.length}
+            data={items.length > 0 ? items : EMPTY_ARRAY}
+            extraData={`${disabled}-${canRemoveItems}-${canEditItems}-${canMarkPurchased}-${canReorderItems}`}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
             drawDistance={500}
@@ -132,6 +122,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             onEndReachedThreshold={onEndReachedThreshold}
             onRefresh={onRefresh}
             refreshing={refreshing}
+            maintainVisibleContentPosition={{ disabled: true }}
           />
         </View>
       </SortableListActionsProvider>

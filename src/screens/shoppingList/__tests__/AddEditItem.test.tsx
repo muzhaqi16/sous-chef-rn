@@ -660,7 +660,7 @@ describe('AddEditItem', () => {
       expect.objectContaining({
         variables: expect.objectContaining({
           input: expect.objectContaining({
-            estimatedPrice: 12.99,
+            pricing: { estimatedPrice: 12.99 },
           }),
         }),
       }),

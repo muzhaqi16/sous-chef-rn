@@ -10,7 +10,7 @@ import {
   Unit,
   ShoppingListItem,
 } from '#generated';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 interface ItemDetailProps {
   item: ShoppingListItem;
@@ -31,7 +31,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   const [updateItem] = useUpdateShoppingListItemMutation();
 
   const handleSave = () => {
-    executeMutationWithErrorHandler(
+    executeMutation(
       async () => {
         await updateItem({
           variables: {
@@ -44,7 +44,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
         });
         onClose();
       },
-      (e) => {
+      e => {
         console.error('Update error', e);
       },
     );

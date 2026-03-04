@@ -3,8 +3,9 @@ import { View, Text, Pressable } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
-  BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+  BottomSheetScrollView,
+  BottomSheetTextInput,
+} from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Header } from '#/components/molecules/Header';
 import { StyleSheet } from 'react-native-unistyles';
@@ -95,12 +96,14 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   item,
   onClose,
   onSave,
-  loading = false }) => {
+  loading = false,
+}) => {
   const { ref, modalProps, theme } = useStandardBottomSheet({
     visible: visible && !!item,
     onDismiss: onClose,
     snapPoints: ['55%'],
-    keyboardAware: true });
+    keyboardAware: true,
+  });
 
   // Local state for editing
   const [quantityInput, setQuantityInput] = useState('');
@@ -129,7 +132,8 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     setPrevItemId(item?.id);
     if (visible && item) {
       // Initialize from quantityInput (user's original input) or fall back to formatted quantity
-      const initialInput = item.quantityInput || formatQuantity(item.quantity ?? 0);
+      const initialInput =
+        item.quantityInput || formatQuantity(item.quantity ?? 0);
       setQuantityInput(initialInput);
 
       // Sync unit with available item units (case-insensitive match)
@@ -221,9 +225,11 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   };
 
   // Check if values changed
-  const originalQuantityInput = item?.quantityInput || formatQuantity(item?.quantity ?? 0);
+  const originalQuantityInput =
+    item?.quantityInput || formatQuantity(item?.quantity ?? 0);
   const hasChanges =
-    item && (quantityInput !== originalQuantityInput || unitName !== item.unitName);
+    item &&
+    (quantityInput !== originalQuantityInput || unitName !== item.unitName);
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -237,16 +243,17 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             onPress: handleSave,
             variant: 'primary',
             disabled: !hasChanges || loading,
-            loading: loading },
+            loading: loading,
+          },
         ]}
       />
 
       <View style={styles.headerSpacer} />
 
-      <BottomSheetFormScrollView
+      <BottomSheetScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        bottomOffset={16}
       >
         {/* Quantity Section */}
         <View style={styles.section}>
@@ -258,11 +265,12 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           <View style={styles.counterContainer}>
             {/* Decrement Button */}
             <Pressable
-              style={({pressed}) => [
+              style={({ pressed }) => [
                 styles.counterButton,
                 {
                   backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border },
+                  borderColor: theme.colors.border,
+                },
                 pressed && styles.pressed,
               ]}
               onPress={handleDecrement}
@@ -281,7 +289,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
             {/* Quantity Display - Tappable for direct input */}
             <Pressable
-              style={({pressed}) => [
+              style={({ pressed }) => [
                 styles.quantityDisplay,
                 isEditing && styles.quantityDisplayEditing,
                 isEditing && { borderColor: theme.colors.primary },
@@ -317,7 +325,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
             {/* Increment Button */}
             <Pressable
-              style={({pressed}) => [
+              style={({ pressed }) => [
                 styles.counterButton,
                 styles.incrementButton,
                 { backgroundColor: theme.colors.primary },
@@ -325,11 +333,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               ]}
               onPress={handleIncrement}
             >
-              <Icon
-                name="add"
-                size={24}
-                color={theme.colors.white}
-              />
+              <Icon name="add" size={24} color={theme.colors.white} />
             </Pressable>
           </View>
         </View>
@@ -381,60 +385,76 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             }
           />
         </View>
-
-      </BottomSheetFormScrollView>
+      </BottomSheetScrollView>
     </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  scrollView: {
+    flex: 1,
+  },
   content: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.sm },
+    paddingTop: theme.spacing.sm,
+  },
   headerSpacer: {
-    height: theme.spacing.md },
+    height: theme.spacing.md,
+  },
   section: {
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   sectionLabel: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.medium,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   chipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.xs,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   counterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center' },
+    justifyContent: 'center',
+  },
   counterButton: {
     width: 56,
     height: 56,
     borderRadius: theme.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1 },
+    borderWidth: 1,
+  },
   incrementButton: {
-    borderWidth: 0 },
+    borderWidth: 0,
+  },
   quantityDisplay: {
     minWidth: 80,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: theme.spacing.lg },
+    paddingHorizontal: theme.spacing.lg,
+  },
   quantityText: {
     fontSize: theme.typography.fontSize['5xl'],
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   quantityDisplayEditing: {
     borderWidth: 2,
     borderRadius: theme.radii.md,
     paddingVertical: theme.spacing.xs,
-    marginHorizontal: theme.spacing.md },
+    marginHorizontal: theme.spacing.md,
+  },
   quantityInput: {
     fontSize: theme.typography.fontSize['5xl'],
     fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
     minWidth: 80,
-    padding: 0 },
+    padding: 0,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

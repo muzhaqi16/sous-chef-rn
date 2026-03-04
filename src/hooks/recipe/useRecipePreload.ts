@@ -15,9 +15,10 @@ import {
   MySavedRecipesDocument,
   SavedRecipeFoldersDocument,
   type MySavedRecipesQuery,
-  type SavedRecipeFoldersQuery } from '#generated';
+  type SavedRecipeFoldersQuery,
+} from '#generated';
 import { RecipeInformation } from '#/services/recipeApi/types';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { toastService } from '#/services/toastService';
 
 /**
@@ -63,7 +64,8 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
   // State
   const [preloading, setPreloading] = useState(false);
-  const [preloadedRecipe, setPreloadedRecipe] = useState<PreloadedRecipe | null>(null);
+  const [preloadedRecipe, setPreloadedRecipe] =
+    useState<PreloadedRecipe | null>(null);
   const [preloadError, setPreloadError] = useState<string | null>(null);
   const [savingToFavorites, setSavingToFavorites] = useState(false);
 
@@ -104,9 +106,14 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
                   {
                     __typename: 'SavedRecipeEdge' as const,
                     cursor: savedRecipe.id,
-                    node: savedRecipe },
+                    node: savedRecipe,
+                  },
                 ],
-                totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) + 1 } } };
+                totalCount:
+                  (existing.me.savedRecipesConnection.totalCount ?? 0) + 1,
+              },
+            },
+          };
         },
       );
 
@@ -126,11 +133,13 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
             // Add the new folder to the list
             return {
               ...existing,
-              savedRecipeFolders: [...existing.savedRecipeFolders, folder] };
+              savedRecipeFolders: [...existing.savedRecipeFolders, folder],
+            };
           },
         );
       }
-    } });
+    },
+  });
   const [upsertRecipe] = useUpsertExternalRecipeMutation();
 
   /**
@@ -143,9 +152,11 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     )?.amount;
 
     // Transform instructions to JSON format
-    const instructions = spoonacularRecipe.analyzedInstructions?.[0]?.steps?.map(step => ({
-      number: step.number,
-      step: step.step })) || [];
+    const instructions =
+      spoonacularRecipe.analyzedInstructions?.[0]?.steps?.map(step => ({
+        number: step.number,
+        step: step.step,
+      })) || [];
 
     return {
       // Basic recipe info
@@ -156,13 +167,16 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       cookTimeMinutes: spoonacularRecipe.cookingMinutes || undefined,
       imageUrl: spoonacularRecipe.image,
       instructions: instructions as unknown,
-      caloriesPerServing: caloriesPerServing ? Math.round(caloriesPerServing) : undefined,
+      caloriesPerServing: caloriesPerServing
+        ? Math.round(caloriesPerServing)
+        : undefined,
       cuisine: spoonacularRecipe.cuisines?.join(', '),
 
       // Attribution - original recipe source
       attribution: {
         source: spoonacularRecipe.sourceName,
-        sourceUrl: spoonacularRecipe.sourceUrl },
+        sourceUrl: spoonacularRecipe.sourceUrl,
+      },
 
       // External source fields
       source: ExternalSource.Spoonacular,
@@ -183,7 +197,9 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
           metricUnit: ing.measures?.metric?.unitShort,
           usAmount: ing.measures?.us?.amount,
           usUnit: ing.measures?.us?.unitShort,
-          sortOrder: idx })) || [] };
+          sortOrder: idx,
+        })) || [],
+    };
   };
 
   /**
@@ -194,57 +210,58 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
    * This is fire-and-forget - it only attempts once per recipe.
    */
   const preloadRecipe = async (
-      spoonacularRecipe: RecipeInformation,
-      externalSource: ExternalSource = ExternalSource.Spoonacular,
-      preloadOptions: { throwOnError?: boolean } = {},
-    ): Promise<PreloadedRecipe | null> => {
-      const externalId = String(spoonacularRecipe.id);
+    spoonacularRecipe: RecipeInformation,
+    externalSource: ExternalSource = ExternalSource.Spoonacular,
+    preloadOptions: { throwOnError?: boolean } = {},
+  ): Promise<PreloadedRecipe | null> => {
+    const externalId = String(spoonacularRecipe.id);
 
-      // Only attempt once per recipe (fire-and-forget)
-      if (attemptedPreloadsRef.current.has(externalId)) {
-        const cached = preloadCacheRef.current.get(externalId);
-        return cached || null;
-      }
-      attemptedPreloadsRef.current.add(externalId);
+    // Only attempt once per recipe (fire-and-forget)
+    if (attemptedPreloadsRef.current.has(externalId)) {
+      const cached = preloadCacheRef.current.get(externalId);
+      return cached || null;
+    }
+    attemptedPreloadsRef.current.add(externalId);
 
-      setPreloading(true);
+    setPreloading(true);
 
-      const input = transformToRecipeInput(spoonacularRecipe);
+    const input = transformToRecipeInput(spoonacularRecipe);
 
-      const result = await executeMutationWithErrorHandler(
-        () => upsertRecipe({ variables: { input } }),
-        (error) => {
-          console.error('[preloadRecipe] Error:', error);
-          if (preloadOptions.throwOnError) {
-            setPreloading(false);
-            throw error; // Propagate error for explicit saves
-          }
-        },
-      );
+    const result = await executeMutation(
+      () => upsertRecipe({ variables: { input } }),
+      error => {
+        console.error('[preloadRecipe] Error:', error);
+        if (preloadOptions.throwOnError) {
+          setPreloading(false);
+          throw error; // Propagate error for explicit saves
+        }
+      },
+    );
 
-      setPreloading(false);
+    setPreloading(false);
 
-      if (!result) return null;
+    if (!result) return null;
 
-      const data = result.data?.upsertExternalRecipe;
-      if (data?.recipe) {
-        const preloaded: PreloadedRecipe = {
-          id: data.recipe.id,
-          name: data.recipe.name,
-          imageUrl: data.recipe.imageUrl ?? undefined,
-          created: data.created,
-          externalSource,
-          externalId };
+    const data = result.data?.upsertExternalRecipe;
+    if (data?.recipe) {
+      const preloaded: PreloadedRecipe = {
+        id: data.recipe.id,
+        name: data.recipe.name,
+        imageUrl: data.recipe.imageUrl ?? undefined,
+        created: data.created,
+        externalSource,
+        externalId,
+      };
 
-        preloadCacheRef.current.set(externalId, preloaded);
-        setPreloadedRecipe(preloaded);
-        onPreloadSuccess?.(preloaded);
+      preloadCacheRef.current.set(externalId, preloaded);
+      setPreloadedRecipe(preloaded);
+      onPreloadSuccess?.(preloaded);
 
-        return preloaded;
-      }
+      return preloaded;
+    }
 
-      return null;
-    };
+    return null;
+  };
 
   /**
    * Save a preloaded recipe to user's favorites
@@ -253,61 +270,66 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
    * If not preloaded yet, this preloads first then favorites it.
    */
   const saveRecipeToFavorites = async (
-      spoonacularRecipe: RecipeInformation,
-      saveOptions?: SaveToFavoritesOptions,
-    ): Promise<{ success: boolean; recipeId?: string }> => {
-      setSavingToFavorites(true);
+    spoonacularRecipe: RecipeInformation,
+    saveOptions?: SaveToFavoritesOptions,
+  ): Promise<{ success: boolean; recipeId?: string }> => {
+    setSavingToFavorites(true);
 
-      const externalId = String(spoonacularRecipe.id);
-      let cached = preloadCacheRef.current.get(externalId);
+    const externalId = String(spoonacularRecipe.id);
+    let cached = preloadCacheRef.current.get(externalId);
 
-      // If not preloaded yet, preload first
-      if (!cached || cached.id.startsWith('pending_')) {
-        attemptedPreloadsRef.current.delete(externalId);
+    // If not preloaded yet, preload first
+    if (!cached || cached.id.startsWith('pending_')) {
+      attemptedPreloadsRef.current.delete(externalId);
 
-        const preloaded = await preloadRecipe(
-          spoonacularRecipe,
-          ExternalSource.Spoonacular,
-          { throwOnError: true },
-        );
-        if (!preloaded) {
-          setSavingToFavorites(false);
-          toastService.error('Failed to save recipe. Please try again.');
-          return { success: false };
-        }
-        cached = preloaded;
+      const preloaded = await preloadRecipe(
+        spoonacularRecipe,
+        ExternalSource.Spoonacular,
+        { throwOnError: true },
+      );
+      if (!preloaded) {
+        setSavingToFavorites(false);
+        toastService.error('Failed to save recipe. Please try again.');
+        return { success: false };
       }
+      cached = preloaded;
+    }
 
-      const recipeId = cached.id;
+    const recipeId = cached.id;
 
-      const result = await executeMutationWithErrorHandler(
-        () => favoriteRecipe({
+    const result = await executeMutation(
+      () =>
+        favoriteRecipe({
           variables: {
             input: {
               recipeId,
               folder: saveOptions?.folder,
               tags: saveOptions?.tags,
-              notes: saveOptions?.notes } } }),
-        (error: unknown) => {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          console.error('Failed to save recipe to favorites:', errorMessage);
-          toastService.error('Failed to save recipe. Please try again.');
+              notes: saveOptions?.notes,
+            },
+          },
+        }),
+      (error: unknown) => {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+        console.error('Failed to save recipe to favorites:', errorMessage);
+        toastService.error('Failed to save recipe. Please try again.');
 
-          if (error instanceof Error) {
-            onFavoriteError?.(error);
-          }
-        },
-      );
+        if (error instanceof Error) {
+          onFavoriteError?.(error);
+        }
+      },
+    );
 
-      setSavingToFavorites(false);
+    setSavingToFavorites(false);
 
-      if (!result) return { success: false };
+    if (!result) return { success: false };
 
-      toastService.success('Recipe saved to your collection!');
-      onFavoriteSuccess?.();
+    toastService.success('Recipe saved to your collection!');
+    onFavoriteSuccess?.();
 
-      return { success: true, recipeId };
-    };
+    return { success: true, recipeId };
+  };
 
   /**
    * Check if a recipe is preloaded
@@ -320,9 +342,11 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   /**
    * Get preloaded recipe by external ID
    */
-  const getPreloadedRecipe = (externalId: string): PreloadedRecipe | undefined => {
-      return preloadCacheRef.current.get(externalId);
-    };
+  const getPreloadedRecipe = (
+    externalId: string,
+  ): PreloadedRecipe | undefined => {
+    return preloadCacheRef.current.get(externalId);
+  };
 
   /**
    * Check if a recipe is fully saved (not just pending)
@@ -356,7 +380,8 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     isPreloaded,
     getPreloadedRecipe,
     isFullySaved,
-    clearCache };
+    clearCache,
+  };
 }
 
 export type UseRecipePreloadReturn = ReturnType<typeof useRecipePreload>;

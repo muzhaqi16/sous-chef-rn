@@ -9,7 +9,7 @@ import { useApolloClient } from '@apollo/client/react';
 import { GetUserProfileQuery, GetUserProfileDocument } from '#generated';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { errorService } from '#/services/errorService';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 /** Module-level function for profile updates with optimistic cache.
  *  Extracted to avoid try-catch inside component body (React Compiler bailout). */
@@ -20,7 +20,8 @@ async function performProfileUpdate(
 ): Promise<void> {
   // Read current cache
   const cache = client.readQuery<GetUserProfileQuery>({
-    query: GetUserProfileDocument });
+    query: GetUserProfileDocument,
+  });
 
   // Optimistically update the cache immediately
   if (cache?.me?.profile) {
@@ -32,13 +33,19 @@ async function performProfileUpdate(
           ...cache.me,
           profile: {
             ...cache.me.profile,
-            ...input } } } });
+            ...input,
+          },
+        },
+      },
+    });
   }
 
   // Then perform the actual mutation
   await updateProfileMutation({
     variables: {
-      input } });
+      input,
+    },
+  });
 }
 
 export const PersonalInformationScreen: React.FC = () => {
@@ -48,91 +55,101 @@ export const PersonalInformationScreen: React.FC = () => {
   const [updateProfileMutation] = useUpdateUserProfileMutation();
 
   const updateProfile = (input: Partial<Record<any, any>>) => {
-    executeMutationWithErrorHandler(
+    executeMutation(
       () => performProfileUpdate(client, updateProfileMutation, input),
-      (error) => {
-        errorService.reportError(error, { operation: 'PersonalInformation.updateProfile' });
+      error => {
+        errorService.reportError(error, {
+          operation: 'PersonalInformation.updateProfile',
+        });
         // On error, refetch to restore correct state
         client.refetchQueries({
-          include: [GetUserProfileDocument] });
+          include: [GetUserProfileDocument],
+        });
       },
     );
   };
 
   const createSettingItem = (config: any) => {
-      const baseItem: any = {
-        key: config.key,
-        label: config.label,
-        type: config.type };
-
-      switch (config.key) {
-        case 'email':
-          baseItem.value = user?.email || '';
-          break;
-
-        case 'firstName':
-          baseItem.value = profile?.firstName || '';
-          baseItem.onSave = (value: string) => updateProfile({ firstName: value });
-          break;
-
-        case 'lastName':
-          baseItem.value = profile?.lastName || '';
-          baseItem.onSave = (value: string) => updateProfile({ lastName: value });
-          break;
-
-        case 'displayName':
-          baseItem.value = profile?.displayName || '';
-          baseItem.onSave = (value: string) => updateProfile({ displayName: value });
-          break;
-
-        case 'bio':
-          baseItem.value = profile?.bio || '';
-          baseItem.onSave = (value: string) => updateProfile({ bio: value });
-          break;
-
-        case 'phone':
-          baseItem.value = profile?.phone || '';
-          baseItem.onSave = (value: string) => updateProfile({ phone: value });
-          break;
-
-        case 'dateOfBirth':
-          baseItem.value = extractDateString(profile?.dateOfBirth);
-          baseItem.onSave = (value: string) => {
-            const isoValue = dateStringToISO(value);
-            updateProfile({ dateOfBirth: isoValue });
-          };
-          break;
-
-        case 'gender':
-          baseItem.value = profile?.gender || '';
-          baseItem.options = config.options;
-          baseItem.onSave = (value: string) => updateProfile({ gender: value });
-          break;
-
-        case 'profileVisibility':
-          baseItem.value = profile?.profileVisibility || ProfileVisibility.Public;
-          baseItem.options = config.options;
-          baseItem.onSave = (value: string) => updateProfile({ profileVisibility: value });
-          break;
-
-        case 'showEmail':
-          baseItem.value = profile?.showEmail || false;
-          baseItem.onPress = () => updateProfile({ showEmail: !profile?.showEmail });
-          break;
-
-        case 'showPhone':
-          baseItem.value = profile?.showPhone || false;
-          baseItem.onPress = () => updateProfile({ showPhone: !profile?.showPhone });
-          break;
-      }
-
-      return baseItem;
+    const baseItem: any = {
+      key: config.key,
+      label: config.label,
+      type: config.type,
     };
+
+    switch (config.key) {
+      case 'email':
+        baseItem.value = user?.email || '';
+        break;
+
+      case 'firstName':
+        baseItem.value = profile?.firstName || '';
+        baseItem.onSave = (value: string) =>
+          updateProfile({ firstName: value });
+        break;
+
+      case 'lastName':
+        baseItem.value = profile?.lastName || '';
+        baseItem.onSave = (value: string) => updateProfile({ lastName: value });
+        break;
+
+      case 'displayName':
+        baseItem.value = profile?.displayName || '';
+        baseItem.onSave = (value: string) =>
+          updateProfile({ displayName: value });
+        break;
+
+      case 'bio':
+        baseItem.value = profile?.bio || '';
+        baseItem.onSave = (value: string) => updateProfile({ bio: value });
+        break;
+
+      case 'phone':
+        baseItem.value = profile?.phone || '';
+        baseItem.onSave = (value: string) => updateProfile({ phone: value });
+        break;
+
+      case 'dateOfBirth':
+        baseItem.value = extractDateString(profile?.dateOfBirth);
+        baseItem.onSave = (value: string) => {
+          const isoValue = dateStringToISO(value);
+          updateProfile({ dateOfBirth: isoValue });
+        };
+        break;
+
+      case 'gender':
+        baseItem.value = profile?.gender || '';
+        baseItem.options = config.options;
+        baseItem.onSave = (value: string) => updateProfile({ gender: value });
+        break;
+
+      case 'profileVisibility':
+        baseItem.value = profile?.profileVisibility || ProfileVisibility.Public;
+        baseItem.options = config.options;
+        baseItem.onSave = (value: string) =>
+          updateProfile({ profileVisibility: value });
+        break;
+
+      case 'showEmail':
+        baseItem.value = profile?.showEmail || false;
+        baseItem.onPress = () =>
+          updateProfile({ showEmail: !profile?.showEmail });
+        break;
+
+      case 'showPhone':
+        baseItem.value = profile?.showPhone || false;
+        baseItem.onPress = () =>
+          updateProfile({ showPhone: !profile?.showPhone });
+        break;
+    }
+
+    return baseItem;
+  };
 
   const sections = (() => {
     return PERSONAL_INFO_CONFIG.map(configSection => ({
       title: configSection.title,
-      items: configSection.items.map(createSettingItem) }));
+      items: configSection.items.map(createSettingItem),
+    }));
   })();
 
   return (

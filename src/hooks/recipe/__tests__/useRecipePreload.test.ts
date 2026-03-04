@@ -5,8 +5,14 @@ const mockFavoriteRecipe = jest.fn();
 const mockUpsertRecipe = jest.fn();
 
 jest.mock('#generated', () => ({
-  useFavoriteRecipeMutation: jest.fn(() => [mockFavoriteRecipe, { loading: false }]),
-  useUpsertExternalRecipeMutation: jest.fn(() => [mockUpsertRecipe, { loading: false }]),
+  useFavoriteRecipeMutation: jest.fn(() => [
+    mockFavoriteRecipe,
+    { loading: false },
+  ]),
+  useUpsertExternalRecipeMutation: jest.fn(() => [
+    mockUpsertRecipe,
+    { loading: false },
+  ]),
   ExternalSource: { Spoonacular: 'SPOONACULAR' },
   MySavedRecipesDocument: 'MySavedRecipesDocument',
   SavedRecipeFoldersDocument: 'SavedRecipeFoldersDocument',
@@ -40,9 +46,7 @@ const makeSpoonacularRecipe = (id = 123) =>
     sourceName: 'Test Source',
     sourceUrl: 'https://example.com/recipe',
     cuisines: ['Italian'],
-    analyzedInstructions: [
-      { steps: [{ number: 1, step: 'Boil water' }] },
-    ],
+    analyzedInstructions: [{ steps: [{ number: 1, step: 'Boil water' }] }],
     nutrition: { nutrients: [{ name: 'Calories', amount: 350 }] },
     extendedIngredients: [
       {
@@ -58,7 +62,7 @@ const makeSpoonacularRecipe = (id = 123) =>
         },
       },
     ],
-  }) as any;
+  } as any);
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -89,9 +93,7 @@ describe('useRecipePreload', () => {
     });
 
     const onPreloadSuccess = jest.fn();
-    const { result } = renderHook(() =>
-      useRecipePreload({ onPreloadSuccess }),
-    );
+    const { result } = renderHook(() => useRecipePreload({ onPreloadSuccess }));
 
     let preloaded: any;
     await act(async () => {
@@ -129,7 +131,9 @@ describe('useRecipePreload', () => {
     // Second call should return cached, not call mutation again
     let secondResult: any;
     await act(async () => {
-      secondResult = await result.current.preloadRecipe(makeSpoonacularRecipe(99));
+      secondResult = await result.current.preloadRecipe(
+        makeSpoonacularRecipe(99),
+      );
     });
 
     expect(secondResult?.id).toBe('backend-1');
@@ -137,14 +141,16 @@ describe('useRecipePreload', () => {
   });
 
   it('preloadRecipe returns null when mutation fails', async () => {
-    const { executeMutationWithErrorHandler } = require('#/utils/compilerSafeWrappers');
-    executeMutationWithErrorHandler.mockResolvedValueOnce(false);
+    const { executeMutation } = require('#/utils/compilerSafeWrappers');
+    executeMutation.mockResolvedValueOnce(false);
 
     const { result } = renderHook(() => useRecipePreload());
 
     let preloaded: any;
     await act(async () => {
-      preloaded = await result.current.preloadRecipe(makeSpoonacularRecipe(200));
+      preloaded = await result.current.preloadRecipe(
+        makeSpoonacularRecipe(200),
+      );
     });
 
     expect(preloaded).toBeNull();

@@ -6,10 +6,11 @@ import {
   useRestockPantryItemMutation,
   UsagePurpose,
   WasteReason,
-  PantryItemFragment } from '#generated';
+  PantryItemFragment,
+} from '#generated';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { Telemetry } from '#services/telemetry';
-import { executeMutationWithErrorHandler, executeMutation } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 interface UsePantryItemActionsOptions {
   pantryItems: PantryItemFragment[];
@@ -42,7 +43,8 @@ const CLOSED_MODAL: ActiveModal = { type: null };
 export function usePantryItemActions({
   pantryItems,
   removeItem,
-  navigateTo }: UsePantryItemActionsOptions) {
+  navigateTo,
+}: UsePantryItemActionsOptions) {
   const client = useApolloClient();
   // Single state for all modals — only one can be open at a time
   const [activeModal, setActiveModal] = useState<ActiveModal>(CLOSED_MODAL);
@@ -53,109 +55,127 @@ export function usePantryItemActions({
    * Optimistically update a pantry item's quantity in cache for instant UI feedback.
    */
   const optimisticUpdateQuantity = (itemId: string, newQuantity: number) => {
-      const cacheId = client.cache.identify({ __typename: 'PantryItem', id: itemId });
-      if (!cacheId) return;
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: itemId,
+    });
+    if (!cacheId) return;
 
-      client.cache.modify({
-        id: cacheId,
-        fields: {
-          quantity() {
-            return Math.max(0, newQuantity);
-          },
-          updatedAt() {
-            return new Date().toISOString();
-          } } });
-    };
+    client.cache.modify({
+      id: cacheId,
+      fields: {
+        quantity() {
+          return Math.max(0, newQuantity);
+        },
+        updatedAt() {
+          return new Date().toISOString();
+        },
+      },
+    });
+  };
 
   /**
    * Revert a pantry item's quantity in cache on mutation error.
    */
   const revertQuantity = (itemId: string, originalQty: number) => {
-      const cacheId = client.cache.identify({ __typename: 'PantryItem', id: itemId });
-      if (!cacheId) return;
+    const cacheId = client.cache.identify({
+      __typename: 'PantryItem',
+      id: itemId,
+    });
+    if (!cacheId) return;
 
-      client.cache.modify({
-        id: cacheId,
-        fields: {
-          quantity() {
-            return originalQty;
-          } } });
-    };
+    client.cache.modify({
+      id: cacheId,
+      fields: {
+        quantity() {
+          return originalQty;
+        },
+      },
+    });
+  };
 
   // Consume/Waste item mutation (both use createPantryItemUsage)
   const [createPantryItemUsage] = useCreatePantryItemUsageMutation({
-    errorPolicy: 'all' });
+    errorPolicy: 'all',
+  });
 
   // Restock item mutation
   const [restockPantryItem] = useRestockPantryItemMutation({
-    errorPolicy: 'all' });
+    errorPolicy: 'all',
+  });
 
   // Handler to confirm consumption
   const handleConfirmConsume = async (
-      quantityUsed: number,
-      _quantityInput: string,
-      purpose: UsagePurpose,
-      notes: string,
-      usageUnitId?: string,
-    ) => {
-      if (activeModal.type !== 'consume') return;
+    quantityUsed: number,
+    _quantityInput: string,
+    purpose: UsagePurpose,
+    notes: string,
+    usageUnitId?: string,
+  ) => {
+    if (activeModal.type !== 'consume') return;
 
-      const item = activeModal.item;
-      const originalQty = item.quantity;
-      // Only apply optimistic update when using the tracking unit (same unit = direct subtraction)
-      // When using a converted unit, the server response will update the cache
-      const canOptimistic = !usageUnitId || usageUnitId === item.unit?.id;
-      if (canOptimistic) {
-        optimisticUpdateQuantity(item.id, originalQty - quantityUsed);
-      }
+    const item = activeModal.item;
+    const originalQty = item.quantity;
+    // Only apply optimistic update when using the tracking unit (same unit = direct subtraction)
+    // When using a converted unit, the server response will update the cache
+    const canOptimistic = !usageUnitId || usageUnitId === item.unit?.id;
+    if (canOptimistic) {
+      optimisticUpdateQuantity(item.id, originalQty - quantityUsed);
+    }
 
-      const consumeNotes = notes || undefined;
-      const consumeResult = await executeMutationWithErrorHandler(
-        () => createPantryItemUsage({
+    const consumeNotes = notes || undefined;
+    const consumeResult = await executeMutation(
+      () =>
+        createPantryItemUsage({
           variables: {
             input: {
               pantryItemId: item.id,
               quantityUsed,
               purpose,
               notes: consumeNotes,
-              usageUnitId } } }),
-        (error: any) => {
-          if (canOptimistic) {
-            revertQuantity(item.id, originalQty);
-          }
-          if (!isNetworkError(error)) {
-            const errorMessage = error.message || 'Failed to record item usage. Please try again.';
-            console.error('Error consuming pantry item:', error);
-            Alert.alert('Error', errorMessage);
-          }
-        },
-      );
-      if (!consumeResult) return;
+              usageUnitId,
+            },
+          },
+        }),
+      (error: any) => {
+        if (canOptimistic) {
+          revertQuantity(item.id, originalQty);
+        }
+        if (!isNetworkError(error)) {
+          const errorMessage =
+            error.message || 'Failed to record item usage. Please try again.';
+          console.error('Error consuming pantry item:', error);
+          Alert.alert('Error', errorMessage);
+        }
+      },
+    );
+    if (!consumeResult) return;
 
-      closeModal();
-    };
+    closeModal();
+  };
 
   // Handler to confirm waste recording (uses createPantryItemUsage with purpose: WASTE)
   const handleConfirmWaste = async (
-      wasteAmount: number,
-      wasteReason: WasteReason,
-      isComposted: boolean,
-      isRecycled: boolean,
-      notes: string,
-      wasteUnitId?: string,
-    ) => {
-      if (activeModal.type !== 'waste') return;
+    wasteAmount: number,
+    wasteReason: WasteReason,
+    isComposted: boolean,
+    isRecycled: boolean,
+    notes: string,
+    wasteUnitId?: string,
+  ) => {
+    if (activeModal.type !== 'waste') return;
 
-      const item = activeModal.item;
-      const originalQty = item.quantity;
-      const canOptimistic = !wasteUnitId || wasteUnitId === item.unit?.id;
-      if (canOptimistic) {
-        optimisticUpdateQuantity(item.id, originalQty - wasteAmount);
-      }
+    const item = activeModal.item;
+    const originalQty = item.quantity;
+    const canOptimistic = !wasteUnitId || wasteUnitId === item.unit?.id;
+    if (canOptimistic) {
+      optimisticUpdateQuantity(item.id, originalQty - wasteAmount);
+    }
 
-      const wasteNotes = notes || undefined;
-      const wasteResult = await executeMutationWithErrorHandler(
-        () => createPantryItemUsage({
+    const wasteNotes = notes || undefined;
+    const wasteResult = await executeMutation(
+      () =>
+        createPantryItemUsage({
           variables: {
             input: {
               pantryItemId: item.id,
@@ -165,46 +185,51 @@ export function usePantryItemActions({
               usageUnitId: wasteUnitId,
               wasteReason,
               isComposted,
-              isRecycled } } }),
-        (error: any) => {
-          if (canOptimistic) {
-            revertQuantity(item.id, originalQty);
-          }
-          if (!isNetworkError(error)) {
-            const errorMessage = error.message || 'Failed to record item waste. Please try again.';
-            console.error('Error recording pantry item waste:', error);
-            Alert.alert('Error', errorMessage);
-          }
-        },
-      );
-      if (!wasteResult) return;
+              isRecycled,
+            },
+          },
+        }),
+      (error: any) => {
+        if (canOptimistic) {
+          revertQuantity(item.id, originalQty);
+        }
+        if (!isNetworkError(error)) {
+          const errorMessage =
+            error.message || 'Failed to record item waste. Please try again.';
+          console.error('Error recording pantry item waste:', error);
+          Alert.alert('Error', errorMessage);
+        }
+      },
+    );
+    if (!wasteResult) return;
 
-      closeModal();
-    };
+    closeModal();
+  };
 
   // Handler to confirm restock
   const handleConfirmRestock = async (
-      quantity: number,
-      _quantityInput: string,
-      notes: string,
-      unitId?: string,
-      costPerUnit?: number,
-      totalCost?: number,
-      expiresAt?: Date | null,
-    ) => {
-      if (activeModal.type !== 'restock') return;
+    quantity: number,
+    _quantityInput: string,
+    notes: string,
+    unitId?: string,
+    costPerUnit?: number,
+    totalCost?: number,
+    expiresAt?: Date | null,
+  ) => {
+    if (activeModal.type !== 'restock') return;
 
-      const item = activeModal.item;
-      const originalQty = item.quantity;
-      const canOptimistic = !unitId || unitId === item.unit?.id;
-      if (canOptimistic) {
-        optimisticUpdateQuantity(item.id, originalQty + quantity);
-      }
+    const item = activeModal.item;
+    const originalQty = item.quantity;
+    const canOptimistic = !unitId || unitId === item.unit?.id;
+    if (canOptimistic) {
+      optimisticUpdateQuantity(item.id, originalQty + quantity);
+    }
 
-      const restockNotes = notes || undefined;
-      const expiresAtValue = expiresAt ? expiresAt.toISOString() : null;
-      const restockResult = await executeMutationWithErrorHandler(
-        () => restockPantryItem({
+    const restockNotes = notes || undefined;
+    const expiresAtValue = expiresAt ? expiresAt.toISOString() : null;
+    const restockResult = await executeMutation(
+      () =>
+        restockPantryItem({
           variables: {
             id: item.id,
             input: {
@@ -213,80 +238,84 @@ export function usePantryItemActions({
               notes: restockNotes,
               costPerUnit,
               totalCost,
-              expiresAt: expiresAtValue } } }),
-        (error: any) => {
-          if (canOptimistic) {
-            revertQuantity(item.id, originalQty);
-          }
-          if (!isNetworkError(error)) {
-            const errorMessage = error.message || 'Failed to restock item. Please try again.';
-            console.error('Error restocking pantry item:', error);
-            Alert.alert('Error', errorMessage);
-          }
-        },
-      );
-      if (!restockResult) return;
+              expiresAt: expiresAtValue,
+            },
+          },
+        }),
+      (error: any) => {
+        if (canOptimistic) {
+          revertQuantity(item.id, originalQty);
+        }
+        if (!isNetworkError(error)) {
+          const errorMessage =
+            error.message || 'Failed to restock item. Please try again.';
+          console.error('Error restocking pantry item:', error);
+          Alert.alert('Error', errorMessage);
+        }
+      },
+    );
+    if (!restockResult) return;
 
-      closeModal();
-    };
+    closeModal();
+  };
 
   // Handler to open consume modal (for swipe action)
   const handleConsumeItem = (itemId: string) => {
-      const item = pantryItems.find(p => p.id === itemId);
-      if (item) {
-        setActiveModal({ type: 'consume', item });
-      }
-    };
+    const item = pantryItems.find(p => p.id === itemId);
+    if (item) {
+      setActiveModal({ type: 'consume', item });
+    }
+  };
 
   // Handler to open waste modal (for swipe action)
   const handleWasteItem = (itemId: string) => {
-      const item = pantryItems.find(p => p.id === itemId);
-      if (item) {
-        setActiveModal({ type: 'waste', item });
-      }
-    };
+    const item = pantryItems.find(p => p.id === itemId);
+    if (item) {
+      setActiveModal({ type: 'waste', item });
+    }
+  };
 
   // Handler to open restock modal (for swipe action)
   const handleRestockItem = (itemId: string) => {
-      const item = pantryItems.find(p => p.id === itemId);
-      if (item) {
-        setActiveModal({ type: 'restock', item });
-      }
-    };
+    const item = pantryItems.find(p => p.id === itemId);
+    if (item) {
+      setActiveModal({ type: 'restock', item });
+    }
+  };
 
   // Handler to edit item (for swipe action)
   const handleEditItem = (itemId: string) => {
-      navigateTo.pantryItem({ itemId });
-    };
+    navigateTo.pantryItem({ itemId });
+  };
 
   // Handler to delete item (for swipe action)
   const handleDeleteItem = async (itemId: string) => {
-      const deleteResult = await executeMutation(
-        async () => {
-          await removeItem(itemId);
-          Telemetry.trackEvent('delete_pantry_item_success', { item_id: itemId });
-          return true;
-        },
-        'Error deleting pantry item:',
-      );
-      if (!deleteResult) return;
-    };
+    const deleteResult = await executeMutation(async () => {
+      await removeItem(itemId);
+      Telemetry.trackEvent('delete_pantry_item_success', { item_id: itemId });
+      return true;
+    }, 'Error deleting pantry item:');
+    if (!deleteResult) return;
+  };
 
   // Derive modal states from the single activeModal for backward compatibility
-  const consumeModal = ({
+  const consumeModal = {
     visible: activeModal.type === 'consume',
     item: activeModal.type === 'consume' ? activeModal.item : null,
-    close: closeModal });
+    close: closeModal,
+  };
 
-  const wasteModal = ({
+  const wasteModal = {
     visible: activeModal.type === 'waste',
     item: activeModal.type === 'waste' ? activeModal.item : null,
-    close: closeModal });
+    close: closeModal,
+  };
 
-  const restockModal = ({
+  const restockModal = {
     visible: activeModal.type === 'restock',
     item: activeModal.type === 'restock' ? activeModal.item : null,
-    close: closeModal });
+    close: closeModal,
+  };
 
   return {
     // Modal states with close handlers
@@ -304,5 +333,6 @@ export function usePantryItemActions({
     handleWasteItem,
     handleRestockItem,
     handleEditItem,
-    handleDeleteItem };
+    handleDeleteItem,
+  };
 }

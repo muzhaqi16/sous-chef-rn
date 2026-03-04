@@ -12,7 +12,8 @@
 import { Alert } from 'react-native';
 import {
   useCreatePantryItemMutation,
-  useRestockPantryItemMutation } from '#generated';
+  useRestockPantryItemMutation,
+  CreatePantryItemInput } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   isPantryItemDuplicateError,
@@ -105,7 +106,7 @@ export function useCreatePantryItem({
                   netWeightUnitId: input.netWeightUnitId }) } }
           : {}) };
 
-      let mutationInput: any;
+      let mutationInput: CreatePantryItemInput;
 
       if (input.selectedItemId) {
         // Linking to existing catalog item

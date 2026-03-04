@@ -1,7 +1,7 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { usePagination } from '../usePagination';
 
 jest.mock('#/services/errorService', () => ({
@@ -180,8 +180,11 @@ describe('usePagination', () => {
 
   it('isLoadingMore is true during fetchMore and false after', async () => {
     let resolveFetch!: () => void;
-    jest.mocked(executeMutationWithErrorHandler).mockImplementationOnce(
-      () => new Promise<void>((resolve) => { resolveFetch = resolve; }),
+    jest.mocked(executeMutation).mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          resolveFetch = resolve;
+        }),
     );
 
     const { result } = renderHook(() =>
@@ -212,8 +215,11 @@ describe('usePagination', () => {
 
   it('loadMore() does nothing when already fetching more', async () => {
     let resolveFetch!: () => void;
-    jest.mocked(executeMutationWithErrorHandler).mockImplementationOnce(
-      () => new Promise<void>((resolve) => { resolveFetch = resolve; }),
+    jest.mocked(executeMutation).mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          resolveFetch = resolve;
+        }),
     );
 
     const { result } = renderHook(() =>
@@ -235,7 +241,7 @@ describe('usePagination', () => {
       await result.current.loadMore();
     });
 
-    expect(executeMutationWithErrorHandler).toHaveBeenCalledTimes(1);
+    expect(executeMutation).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       resolveFetch();

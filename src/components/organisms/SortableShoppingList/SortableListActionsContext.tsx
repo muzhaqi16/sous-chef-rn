@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useRef, useEffect, useState, type ReactNode } from 'react';
 
 /**
  * Actions available for list items.
@@ -88,8 +88,8 @@ export const SortableListActionsProvider: React.FC<SortableListActionsProviderPr
   });
 
   // Create stable callbacks that delegate to ref
-  // Empty dependency array = these never change = no consumer re-renders
-  const stableActions: SortableListActions = {
+  // useState initializer guarantees a single stable object across all renders
+  const [stableActions] = useState<SortableListActions>(() => ({
     onItemPress: (id: string) => actionsRef.current.onItemPress?.(id),
     onItemEdit: (id: string) => actionsRef.current.onItemEdit?.(id),
     onItemDelete: (id: string) => actionsRef.current.onItemDelete?.(id),
@@ -100,7 +100,7 @@ export const SortableListActionsProvider: React.FC<SortableListActionsProviderPr
     onSwipeableClose: () => actionsRef.current.onSwipeableClose?.(),
     onSortOrderUpdate: (itemId: string, afterItemId: string | null, beforeItemId: string | null) =>
       actionsRef.current.onSortOrderUpdate?.(itemId, afterItemId, beforeItemId),
-  };
+  }));
 
   // Context value - permissionsRef allows consumers to read latest permissions without context changes
   const contextValue: SortableListActionsContextValue = {

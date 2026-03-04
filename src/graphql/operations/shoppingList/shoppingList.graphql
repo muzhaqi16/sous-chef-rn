@@ -195,39 +195,21 @@ query GetDefaultShoppingList {
   }
 }
 
-# Combined paginated items query for Shopping/Purchased tabs
-# Uses GraphQL aliases to fetch BOTH lists in ONE request
-# Each tab has independent pagination cursors
-query GetShoppingListItemsPaginated(
+# Paginated items query for a single tab (unpurchased OR purchased)
+# Called twice in the hook — once per tab — so each has its own independent
+# cursor and cache entry (Apollo keyArgs: ['filters'] handles separation)
+query GetShoppingListItemsFiltered(
   $id: ID!
   $first: Int!
-  $unpurchasedAfter: String
-  $purchasedAfter: String
+  $after: String
+  $isPurchased: Boolean!
 ) {
   shoppingList(id: $id) {
     id
-    unpurchasedItems: itemsConnection(
+    itemsConnection(
       first: $first
-      after: $unpurchasedAfter
-      filters: { isPurchased: false }
-      orderBy: { sortOrder: ASC }
-    ) {
-      totalCount
-      edges {
-        cursor
-        node {
-          ...ShoppingListItemDisplayFragment
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-    purchasedItems: itemsConnection(
-      first: $first
-      after: $purchasedAfter
-      filters: { isPurchased: true }
+      after: $after
+      filters: { isPurchased: $isPurchased }
       orderBy: { sortOrder: ASC }
     ) {
       totalCount

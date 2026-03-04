@@ -16,7 +16,10 @@ import {
 } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import { normalizeHome } from '#/utils/connectionUtils';
-import { executeCacheUpdate, executeMutation, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 
 const addInviteToHomeCache = createAddToParentConnectionUpdater(
@@ -55,12 +58,14 @@ export function useHomeInvitations({
     update: (cache, { data }, { variables }) => {
       if (!data?.inviteToHome?.homeInvite || !variables) return;
 
-      executeCacheUpdate(
-        () => {
-          addInviteToHomeCache(cache, variables.input.homeId, data.inviteToHome!.homeInvite!, { position: 'end' });
-        },
-        'Cache update failed for inviteUser:',
-      );
+      executeCacheUpdate(() => {
+        addInviteToHomeCache(
+          cache,
+          variables.input.homeId,
+          data.inviteToHome!.homeInvite!,
+          { position: 'end' },
+        );
+      }, 'Cache update failed for inviteUser:');
     },
 
     onError: (error: any) => {
@@ -81,10 +86,9 @@ export function useHomeInvitations({
       update: (_cache, { data }) => {
         if (!data?.joinHomeByCode?.membership) return;
 
-        executeCacheUpdate(
-          () => { refetch(); },
-          'Failed to refetch homes after join:',
-        );
+        executeCacheUpdate(() => {
+          refetch();
+        }, 'Failed to refetch homes after join:');
       },
       onCompleted: data => {
         if (data?.joinHomeByCode?.membership) {
@@ -141,9 +145,10 @@ export function useHomeInvitations({
     }
 
     const result = await executeMutation(
-      () => joinHomeByCodeMutation({
-        variables: { joinCode: joinCode.trim() },
-      }),
+      () =>
+        joinHomeByCodeMutation({
+          variables: { joinCode: joinCode.trim() },
+        }),
       'Join home by code error:',
     );
     if (!result) return false;
@@ -156,10 +161,11 @@ export function useHomeInvitations({
       return null;
     }
 
-    const result = await executeMutationWithErrorHandler(
-      () => getHomeByJoinCode({
-        variables: { joinCode: joinCode.trim() },
-      }),
+    const result = await executeMutation(
+      () =>
+        getHomeByJoinCode({
+          variables: { joinCode: joinCode.trim() },
+        }),
       (error: any) => {
         const { message } = handleApolloError(error, {
           operation: 'Preview Home',

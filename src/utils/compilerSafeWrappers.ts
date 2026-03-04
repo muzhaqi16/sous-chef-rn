@@ -15,15 +15,22 @@
  * compiler can optimize normally.
  */
 
-/** Wraps an async mutation — returns T on success, false on failure */
+import { errorService } from '#/services/errorService';
+
+/** Wraps an async mutation — returns T on success, false on failure.
+ *  Pass a string for default logging, or a function for custom error handling (rollbacks, Alerts, etc.). */
 export async function executeMutation<T>(
   mutationFn: () => Promise<T>,
-  errorMsg: string,
+  errorMsgOrOnError: string | ((error: unknown) => void),
 ): Promise<T | false> {
   try {
     return await mutationFn();
   } catch (error) {
-    console.error(errorMsg, error);
+    if (typeof errorMsgOrOnError === 'function') {
+      errorMsgOrOnError(error);
+    } else if (__DEV__) {
+      console.error(errorMsgOrOnError, error);
+    }
     return false;
   }
 }
@@ -37,7 +44,7 @@ export function executeCacheUpdate(
   try {
     updateFn();
   } catch (error) {
-    console.warn(errorMsg, error);
+    errorService.reportError(error, { operation: errorMsg });
     refetch?.();
   }
 }
@@ -50,21 +57,8 @@ export async function executeQuery<T>(
   try {
     return await queryFn();
   } catch (error) {
-    console.error(errorMsg, error);
+    errorService.reportError(error, { operation: errorMsg });
     return null;
-  }
-}
-
-/** Wraps an async mutation with a custom error handler (for rollbacks, Alerts, etc.) */
-export async function executeMutationWithErrorHandler<T>(
-  mutationFn: () => Promise<T>,
-  onError: (error: unknown) => void,
-): Promise<T | false> {
-  try {
-    return await mutationFn();
-  } catch (error) {
-    onError(error);
-    return false;
   }
 }
 
@@ -76,7 +70,7 @@ export async function executeRefetch(
   try {
     await refetchFn();
   } catch (error) {
-    console.warn(errorMsg, error);
+    errorService.reportError(error, { operation: errorMsg });
   }
 }
 
@@ -93,23 +87,6 @@ export async function executeRefreshWithFinally(
   }
 }
 
-/** Wraps an async operation with loading state management (try-catch-finally).
- *  Sets loading true before, false after, and swallows errors (optionally calling onError). */
-export async function executeWithLoadingState(
-  fn: () => Promise<void>,
-  setLoading: (value: boolean) => void,
-  onError?: (error: unknown) => void,
-): Promise<void> {
-  setLoading(true);
-  try {
-    await fn();
-  } catch (error) {
-    onError?.(error);
-  } finally {
-    setLoading(false);
-  }
-}
-
 /** Wraps an async operation with try-catch-finally where loading state is set externally
  *  before the call. Only provides catch + finally cleanup. */
 export async function executeAsyncWithCleanup(
@@ -123,5 +100,30 @@ export async function executeAsyncWithCleanup(
     onError?.(error);
   } finally {
     cleanup();
+  }
+}
+
+/** Wraps an async operation with loading state management (try-catch-finally).
+ *  Sets loading true before, false after, and swallows errors (optionally calling onError). */
+export async function executeWithLoadingState(
+  fn: () => Promise<void>,
+  setLoading: (value: boolean) => void,
+  onError?: (error: unknown) => void,
+): Promise<void> {
+  setLoading(true);
+  await executeAsyncWithCleanup(fn, () => setLoading(false), onError);
+}
+
+/** Wraps an Apollo client.query() call — returns data on success, null on cancellation/failure */
+export async function executeSearchQuery<TData>(
+  queryFn: () => Promise<{ data?: TData }>,
+  cancelled: () => boolean,
+): Promise<TData | null> {
+  try {
+    const result = await queryFn();
+    if (cancelled()) return null;
+    return result.data ?? null;
+  } catch {
+    return null;
   }
 }

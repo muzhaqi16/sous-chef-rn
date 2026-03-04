@@ -186,13 +186,13 @@ describe('useShoppingListItemForm', () => {
   });
 
   describe('buildUnitInput', () => {
-    it('returns unitName from form state', () => {
+    it('returns nested unit object from form state', () => {
       const { result } = renderHook(() =>
         useShoppingListItemForm({ unit: 'gallon' }),
       );
 
       expect(result.current.buildUnitInput()).toEqual({
-        unitName: 'gallon',
+        unit: { unitName: 'gallon' },
       });
     });
 
@@ -205,9 +205,14 @@ describe('useShoppingListItemForm', () => {
       });
 
       expect(result.current.buildUnitInput()).toEqual({
-        unitName: 'gallon',
-        unitId: 'unit-123',
+        unit: { unitName: 'gallon', unitId: 'unit-123' },
       });
+    });
+
+    it('returns empty object when no unit data', () => {
+      const { result } = renderHook(() => useShoppingListItemForm());
+
+      expect(result.current.buildUnitInput()).toEqual({});
     });
   });
 
@@ -303,7 +308,7 @@ describe('useShoppingListItemForm', () => {
       });
 
       const dirty = result.current.buildDirtyInput();
-      expect(dirty.estimatedPrice).toBe(4.99);
+      expect(dirty.pricing).toEqual({ estimatedPrice: 4.99 });
     });
   });
 

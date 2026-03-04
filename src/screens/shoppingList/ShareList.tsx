@@ -79,7 +79,7 @@ const formatStatus = (status: string) => {
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ route }) => {
   const { theme } = useUnistyles();
   const navigation = useNavigation();
-  const { navigateTo } = useAppNavigation();
+  const { navigate } = useAppNavigation();
   const { listId } = route.params;
 
   const [email, setEmail] = useState('');
@@ -242,12 +242,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                 iconLibrary="Ionicons"
                 variant="warning"
               />
-              <Button
-                title="Manage Home"
-                onPress={() => navigateTo.homeManagement({ homeId: shoppingList?.homeId ?? undefined })}
-                variant="secondary"
-                icon="people-outline"
-              />
+              <View style={styles.homeLinkedButtonWrapper}>
+                <Button
+                  title="Manage Home"
+                  onPress={() => navigate('HomeDetail', { homeId: shoppingList?.homeId ?? '' })}
+                  variant="secondary"
+                  icon="people-outline"
+                />
+              </View>
             </View>
           ) : (
             <View style={styles.inviteSection}>
@@ -371,10 +373,11 @@ const styles = StyleSheet.create(theme => ({
   scrollContent: {
     flexGrow: 1 },
   homeLinkedSection: {
-    paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border },
+  homeLinkedButtonWrapper: {
+    paddingHorizontal: theme.spacing.md },
   inviteSection: {
     padding: theme.spacing.md,
     borderBottomWidth: 1,

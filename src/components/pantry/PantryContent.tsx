@@ -38,7 +38,6 @@ import {
 } from '#hooks/pantry/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { StorageState, type PantryStats } from '#generated';
-import { pantryItemSearch } from '#/utils/searchUtils';
 import { PantryAlertBar } from '#components/pantry/PantryAlertBar';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { EmptyState } from '#components/base/EmptyState';
@@ -559,16 +558,8 @@ export const PantryContent = React.forwardRef<
       onItemRestock,
     };
 
-    // Hybrid sort/search: when server handles sorting, pass items through directly;
-    // when local, apply client-side sort and search filtering.
-    const localFilteredItems = (() => {
-      if (useServerSort) return items;
-      // Local search filtering
-      if (!searchQuery) return items;
-      const trimmed = searchQuery.trim();
-      if (!trimmed) return items;
-      return items.filter(item => pantryItemSearch(item, trimmed));
-    })();
+    // Search filtering is now handled by useHybridSearch — items arrive pre-filtered.
+    const localFilteredItems = items;
 
     // Apply local sort only when not using server sort
     const sortedItems = useServerSort ? localFilteredItems : sortItems(localFilteredItems);
@@ -833,6 +824,9 @@ const styles = StyleSheet.create(theme => ({
   },
   stickySection: {
     backgroundColor: theme.colors.background,
+    zIndex: theme.zIndex.sticky,
+    paddingBottom: theme.spacing.sm,
+    marginBottom: -theme.spacing.sm,
   },
   searchContainer: {
     paddingHorizontal: theme.spacing.md,

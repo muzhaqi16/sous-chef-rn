@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen, act } from '@testing-library/react-native';
+import { render, screen } from '@testing-library/react-native';
 import { PantryMain } from '../PantryMain';
 
 // --- Prop capture for PantryContent ---
@@ -48,6 +48,21 @@ jest.mock('#store/useAppStore', () => {
 // --- Auth ---
 jest.mock('#hooks/auth/useAuth', () => ({
   useAuth: () => ({ user: { id: 'u1', name: 'Test', email: 'test@t.com', profilePicture: null } }),
+}));
+
+// --- Hybrid search hook ---
+const mockHybridSearch = {
+  searchQuery: '',
+  setSearchQuery: jest.fn((q: string) => { mockHybridSearch.searchQuery = q; }),
+  debouncedSearch: '',
+  searchActive: false,
+  useServerSort: false,
+  activeItems: [] as Array<{ id: string; itemName: string; quantity: number }>,
+  isSearching: false,
+  removeFromResults: jest.fn(),
+};
+jest.mock('#hooks/search/useHybridSearch', () => ({
+  useHybridSearch: jest.fn(() => mockHybridSearch),
 }));
 
 // --- Pantry hooks ---
@@ -212,10 +227,25 @@ function mockPantryManagement(overrides: Partial<typeof defaultPantryManagement>
   usePantryManagement.mockReturnValue({ ...defaultPantryManagement, ...overrides });
 }
 
+function mockHybridSearchState(overrides: Partial<typeof mockHybridSearch> = {}) {
+  const { useHybridSearch } = jest.requireMock('#hooks/search/useHybridSearch');
+  const state = { ...mockHybridSearch, ...overrides };
+  useHybridSearch.mockReturnValue(state);
+  return state;
+}
+
 describe('PantryMain', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     capturedPantryContentProps = {};
+    // Reset hybrid search to defaults
+    mockHybridSearch.searchQuery = '';
+    mockHybridSearch.debouncedSearch = '';
+    mockHybridSearch.searchActive = false;
+    mockHybridSearch.useServerSort = false;
+    mockHybridSearch.activeItems = [];
+    mockHybridSearch.isSearching = false;
+    mockHybridSearch.removeFromResults = jest.fn();
   });
 
   it('renders the pantry screen container', () => {
@@ -282,7 +312,8 @@ describe('PantryMain', () => {
         { id: 'i1', itemName: 'Milk', quantity: 1 },
         { id: 'i2', itemName: 'Eggs', quantity: 12 },
       ];
-      mockPantryManagement({ items, totalCount: 2 });
+      mockHybridSearchState({ activeItems: items });
+      mockPantryManagement({ totalCount: 2 });
       render(<PantryMain />);
       expect(capturedPantryContentProps.items).toHaveLength(2);
       expect(screen.getByTestId('prop-itemCount')).toHaveTextContent('2');
@@ -362,100 +393,56 @@ describe('PantryMain', () => {
     });
   });
 
-  describe('knownTotalCount oscillation guard', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it('does not oscillate when searching with server sort active', () => {
-      // Dynamic mock: returns different totalCount based on whether search is active
-      // hasMore: true simulates partial data (only page 1 loaded) so server sort stays active
-      const { usePantryManagement } = jest.requireMock(
-        '#hooks/home/pantry/usePantryManagement',
-      );
-      usePantryManagement.mockImplementation(
-        (_pantryId: string | undefined, queryFilter: any) => ({
-          ...defaultPantryManagement,
-          hasMore: true,
-          totalCount: queryFilter?.search ? 3 : 55,
-        }),
-      );
+  describe('hybrid search integration', () => {
+    it('passes useServerSort from hook to PantryContent', () => {
+      mockHybridSearchState({ useServerSort: true, searchActive: true });
+      mockPantryManagement({ hasMore: true, totalCount: 55 });
 
       render(<PantryMain />);
 
-      // knownTotalCount adjusts to 55 → useServerSort = true (55 > 50 page size)
       expect(capturedPantryContentProps.useServerSort).toBe(true);
-
-      // Simulate user typing a search
-      act(() => {
-        capturedPantryContentProps.onSearchChange('abc');
-      });
-
-      // Advance past the 300ms debounce — debouncedSearch becomes 'abc'
-      // Without the !debouncedSearch guard this would throw "Too many re-renders":
-      // totalCount=3 → setKnownTotalCount(3) → useServerSort=false → drops search
-      // → totalCount=55 → setKnownTotalCount(55) → useServerSort=true → adds search → loop
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
-
-      // Component survived; server sort stayed active, filtered totalCount is 3
-      expect(capturedPantryContentProps.useServerSort).toBe(true);
-      expect(capturedPantryContentProps.totalCount).toBe(3);
     });
 
-    it('updates knownTotalCount normally when search is cleared', () => {
-      // hasMore: true simulates partial data (only page 1 loaded) so server sort stays active
-      const { usePantryManagement } = jest.requireMock(
-        '#hooks/home/pantry/usePantryManagement',
-      );
-      usePantryManagement.mockImplementation(
-        (_pantryId: string | undefined, queryFilter: any) => ({
-          ...defaultPantryManagement,
-          hasMore: true,
-          totalCount: queryFilter?.search ? 3 : 55,
-        }),
-      );
+    it('suppresses pagination indicators when search is active', () => {
+      mockHybridSearchState({ searchActive: true, useServerSort: true });
+      mockPantryManagement({ hasMore: true, isLoadingMore: true });
 
       render(<PantryMain />);
-      expect(capturedPantryContentProps.useServerSort).toBe(true);
 
-      // Search → debounce
-      act(() => {
-        capturedPantryContentProps.onSearchChange('abc');
-      });
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
-      expect(capturedPantryContentProps.totalCount).toBe(3);
-      expect(capturedPantryContentProps.useServerSort).toBe(true);
-
-      // Clear search → debounce
-      act(() => {
-        capturedPantryContentProps.onSearchChange('');
-      });
-      act(() => {
-        jest.advanceTimersByTime(300);
-      });
-
-      // totalCount returns to 55, useServerSort still true — system stable
-      expect(capturedPantryContentProps.totalCount).toBe(55);
-      expect(capturedPantryContentProps.useServerSort).toBe(true);
+      expect(capturedPantryContentProps.hasMore).toBe(false);
+      expect(capturedPantryContentProps.isLoadingMore).toBe(false);
+      expect(capturedPantryContentProps.onEndReached).toBeDefined();
     });
 
-    it('uses local search when all pages have been loaded', () => {
-      // hasMore: false with totalCount > pageSize → all pages loaded → local search
+    it('passes items from hook as activeItems to PantryContent', () => {
+      const items = [
+        { id: 'i1', itemName: 'Milk', quantity: 1 },
+        { id: 'i2', itemName: 'Eggs', quantity: 12 },
+      ];
+      mockHybridSearchState({ activeItems: items });
+      mockPantryManagement({ totalCount: 2 });
+
+      render(<PantryMain />);
+
+      expect(capturedPantryContentProps.items).toHaveLength(2);
+    });
+
+    it('uses local search when useServerSort is false', () => {
+      mockHybridSearchState({ useServerSort: false });
       mockPantryManagement({ totalCount: 55, hasMore: false });
 
       render(<PantryMain />);
 
-      // allItemsLoaded=true overrides useServerSort to false
       expect(capturedPantryContentProps.useServerSort).toBe(false);
-      expect(capturedPantryContentProps.totalCount).toBe(55);
+    });
+
+    it('passes searchQuery and setSearchQuery from hook to PantryContent', () => {
+      mockHybridSearchState({ searchQuery: 'test' });
+
+      render(<PantryMain />);
+
+      expect(capturedPantryContentProps.searchQuery).toBe('test');
+      expect(typeof capturedPantryContentProps.onSearchChange).toBe('function');
     });
   });
 });

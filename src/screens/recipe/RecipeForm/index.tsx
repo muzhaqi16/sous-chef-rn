@@ -6,19 +6,28 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useGetRecipeQuery,
   useCreateRecipeMutation,
-  useUpdateRecipeMutation } from '#generated';
+  useUpdateRecipeMutation,
+} from '#generated';
 import { useRecipeForm } from './useRecipeForm';
 import { RecipeBasicFields } from './components/RecipeBasicFields';
 import { RecipeCategoryFields } from './components/RecipeCategoryFields';
 import { RecipeIngredientList } from './components/RecipeIngredientList';
-import { RecipeIngredientEditor, type RecipeIngredientEditorRef } from './components/RecipeIngredientEditor';
+import {
+  RecipeIngredientEditor,
+  type RecipeIngredientEditorRef,
+} from './components/RecipeIngredientEditor';
 import { RecipeStepList } from './components/RecipeStepList';
-import { RecipeStepEditor, type RecipeStepEditorRef } from './components/RecipeStepEditor';
+import {
+  RecipeStepEditor,
+  type RecipeStepEditorRef,
+} from './components/RecipeStepEditor';
 import { RecipeTagsSection } from './components/RecipeTagsSection';
 import type { IngredientFormState, StepFormState } from './useRecipeForm';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
-export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } | undefined>> = ({ route }) => {
+export const RecipeFormScreen: React.FC<
+  StaticScreenProps<{ recipeId?: string } | undefined>
+> = ({ route }) => {
   const recipeId = route.params?.recipeId;
   const isEditMode = !!recipeId;
 
@@ -31,7 +40,8 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
   // Fetch recipe for edit mode
   const { data: recipeData } = useGetRecipeQuery({
     variables: { id: recipeId! },
-    skip: !recipeId });
+    skip: !recipeId,
+  });
 
   // Populate form when recipe data arrives
   useEffect(() => {
@@ -40,8 +50,10 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
     }
   }, [recipeData?.recipe, form]);
 
-  const [createRecipeMutation, { loading: creating }] = useCreateRecipeMutation();
-  const [updateRecipeMutation, { loading: updating }] = useUpdateRecipeMutation();
+  const [createRecipeMutation, { loading: creating }] =
+    useCreateRecipeMutation();
+  const [updateRecipeMutation, { loading: updating }] =
+    useUpdateRecipeMutation();
   const loading = creating || updating;
 
   const handleSave = () => {
@@ -51,30 +63,39 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
       return;
     }
 
-    executeMutationWithErrorHandler(
+    executeMutation(
       async () => {
         if (isEditMode && recipeId) {
           const input = form.buildUpdateInput();
           const result = await updateRecipeMutation({
-            variables: { id: recipeId, input } });
+            variables: { id: recipeId, input },
+          });
           if (result.data?.updateRecipe?.success) {
             goBack();
           } else {
-            Alert.alert('Error', result.data?.updateRecipe?.message ?? 'Failed to update recipe.');
+            Alert.alert(
+              'Error',
+              result.data?.updateRecipe?.message ?? 'Failed to update recipe.',
+            );
           }
         } else {
           const input = form.buildCreateInput();
           const result = await createRecipeMutation({
-            variables: { input } });
+            variables: { input },
+          });
           if (result.data?.createRecipe?.success) {
             goBack();
           } else {
-            Alert.alert('Error', result.data?.createRecipe?.message ?? 'Failed to create recipe.');
+            Alert.alert(
+              'Error',
+              result.data?.createRecipe?.message ?? 'Failed to create recipe.',
+            );
           }
         }
       },
       (err: unknown) => {
-        const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
+        const message =
+          err instanceof Error ? err.message : 'An unexpected error occurred.';
         Alert.alert('Error', message);
       },
     );
@@ -90,14 +111,14 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
   };
 
   const handleSaveIngredient = (ingredient: IngredientFormState) => {
-      // Check if this is an existing ingredient being edited
-      const existing = form.state.ingredients.find(i => i.id === ingredient.id);
-      if (existing) {
-        form.updateIngredient(ingredient.id, ingredient);
-      } else {
-        form.addIngredient(ingredient);
-      }
-    };
+    // Check if this is an existing ingredient being edited
+    const existing = form.state.ingredients.find(i => i.id === ingredient.id);
+    if (existing) {
+      form.updateIngredient(ingredient.id, ingredient);
+    } else {
+      form.addIngredient(ingredient);
+    }
+  };
 
   // Step handlers
   const handleEditStep = (step: StepFormState) => {
@@ -109,13 +130,13 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
   };
 
   const handleSaveStep = (step: StepFormState) => {
-      const existing = form.state.steps.find(s => s.id === step.id);
-      if (existing) {
-        form.updateStep(step.id, step.instruction);
-      } else {
-        form.addStep(step.instruction);
-      }
-    };
+    const existing = form.state.steps.find(s => s.id === step.id);
+    if (existing) {
+      form.updateStep(step.id, step.instruction);
+    } else {
+      form.addStep(step.instruction);
+    }
+  };
 
   return (
     <>
@@ -130,7 +151,10 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
         <RecipeBasicFields state={form.state} updateField={form.updateField} />
 
         {/* Category fields */}
-        <RecipeCategoryFields state={form.state} updateField={form.updateField} />
+        <RecipeCategoryFields
+          state={form.state}
+          updateField={form.updateField}
+        />
 
         {/* Ingredients */}
         <RecipeIngredientList
@@ -160,7 +184,10 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
       </FormModal>
 
       {/* Bottom sheet editors */}
-      <RecipeIngredientEditor ref={ingredientEditorRef} onSave={handleSaveIngredient} />
+      <RecipeIngredientEditor
+        ref={ingredientEditorRef}
+        onSave={handleSaveIngredient}
+      />
       <RecipeStepEditor ref={stepEditorRef} onSave={handleSaveStep} />
     </>
   );

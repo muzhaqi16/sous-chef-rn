@@ -1,16 +1,18 @@
-import React, {useState, useRef} from 'react';
-import {Text} from 'react-native';
+import React, { useState, useRef } from 'react';
+import { Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import BottomSheet, {type BottomSheetRef} from '../molecules/BottomSheet/BottomSheet';
-import {Button} from "../base/Button";
+import BottomSheet, {
+  type BottomSheetRef,
+} from '../molecules/BottomSheet/BottomSheet';
+import { Button } from '../base/Button';
 import { EmailInput } from '../atoms/EmailInput';
-import {useStore} from '../../store';
+import { useStore } from '../../store';
 import {
   useAddCollaboratorMutation,
   CollaboratorRole,
 } from '../../graphql/generated';
 import { useOfflineDisabled } from '#hooks/useOfflineDisabled';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 const ShareShoppingListBottomSheet: React.FC = () => {
   const bottomSheetRef = useRef<BottomSheetRef>(null);
@@ -18,11 +20,13 @@ const ShareShoppingListBottomSheet: React.FC = () => {
   const [renderBottomSheet, setRenderBottomSheet] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedShoppingListId = useStore(state => state.selectedShoppingListId);
+  const selectedShoppingListId = useStore(
+    state => state.selectedShoppingListId,
+  );
   const shoppingListId = selectedShoppingListId;
   const [shareShoppingList] = useAddCollaboratorMutation();
   const { isDisabled: isOffline, showOfflineMessage } = useOfflineDisabled(
-    'Sharing requires an internet connection'
+    'Sharing requires an internet connection',
   );
 
   const handleShow = () => {
@@ -34,7 +38,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
     if (!shoppingListId || !email.trim()) {
       return;
     }
-    executeMutationWithErrorHandler(
+    executeMutation(
       async () => {
         await shareShoppingList({
           variables: {
@@ -59,20 +63,24 @@ const ShareShoppingListBottomSheet: React.FC = () => {
     <>
       <Button
         onPress={isOffline ? showOfflineMessage : handleShow}
-        style={{margin: 16}}>
+        style={{ margin: 16 }}
+      >
         Share Shopping List
       </Button>
       {!!renderBottomSheet && (
         <BottomSheet
           ref={bottomSheetRef}
           snapPoints={['40%', '60%']}
-          enableDynamicSizing={false}>
+          enableDynamicSizing={false}
+        >
           <EmailInput
             label="User email"
             value={email}
             onChangeText={setEmail}
           />
-          <Button onPress={handleShare} disabled={isOffline}>Share</Button>
+          <Button onPress={handleShare} disabled={isOffline}>
+            Share
+          </Button>
           {error ? <Text style={styles.errorText}>Error: {error}</Text> : null}
         </BottomSheet>
       )}

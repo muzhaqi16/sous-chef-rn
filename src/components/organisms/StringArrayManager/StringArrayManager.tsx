@@ -10,7 +10,10 @@ import {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
-import { executeWithLoadingState, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import {
+  executeWithLoadingState,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 
 const defaultTransform = (item: string) => item.trim();
 
@@ -197,9 +200,9 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   };
 
   const handleRemove = (item: string) => {
-    executeMutationWithErrorHandler(
+    executeMutation(
       () => onRemove(item),
-      (err) => {
+      err => {
         console.error('Failed to remove item:', err);
       },
     );
@@ -217,12 +220,14 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
       <View style={styles.header}>
         <Text style={commonStyles.subtitle}>{title}</Text>
         {!!showAddButton && (
-          <Pressable onPress={handleAddPress} style={({pressed}) => [styles.addButton, pressed && styles.pressed]}>
-            <Icon
-              name="add"
-              size={20}
-              color={theme.colors.primary}
-            />
+          <Pressable
+            onPress={handleAddPress}
+            style={({ pressed }) => [
+              styles.addButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Icon name="add" size={20} color={theme.colors.primary} />
           </Pressable>
         )}
       </View>
@@ -235,7 +240,10 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               <Text style={styles.displayChipText}>{item}</Text>
             </View>
             <Pressable
-              style={({pressed}) => [styles.removeButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.removeButton,
+                pressed && styles.pressed,
+              ]}
               onPress={() => handleRemove(item)}
             >
               <Icon
@@ -280,7 +288,11 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
 
             <View style={styles.modalButtons}>
               <Pressable
-                style={({pressed}) => [commonStyles.button, styles.modalButton, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  commonStyles.button,
+                  styles.modalButton,
+                  pressed && styles.pressed,
+                ]}
                 onPress={handleCancel}
                 disabled={loading}
               >
@@ -288,7 +300,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               </Pressable>
 
               <Pressable
-                style={({pressed}) => [
+                style={({ pressed }) => [
                   commonStyles.button,
                   commonStyles.buttonPrimary,
                   styles.modalButton,

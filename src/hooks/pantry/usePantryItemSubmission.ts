@@ -231,7 +231,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                 const retryResult = await executeMutation(
                   () => createPantryItem({
                     variables: {
-                      input: { ...mutationInput, forceAdd: true } as any } }),
+                      input: { ...mutationInput, forceAdd: true } } }),
                   'Force add pantry item error:',
                 );
                 if (!retryResult) {

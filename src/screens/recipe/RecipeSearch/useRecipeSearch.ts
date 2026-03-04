@@ -7,13 +7,15 @@ import { useDefaultHome } from '#hooks/home/useDefaultHome';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useDietaryProfile } from '#/hooks/profile/useDietaryProfile';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
-import type { SearchRecipesResult, RecipeSearchResult } from '#/services/recipeApi/types';
+import type {
+  SearchRecipesResult,
+  RecipeSearchResult,
+} from '#/services/recipeApi/types';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useGetHomeQuery, ReligiousDiet } from '#generated';
 import { transformRecipeForDisplay } from '#/utils/recipeTransform';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
-
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 export interface RecipeFilters {
   diet: string | null;
@@ -24,12 +26,21 @@ export interface RecipeFilters {
 
 /** Handles API error alerts — extracted for reuse across search functions */
 function handleSearchError(error: unknown, label: string): void {
-  const err = error as { isQuotaExceeded?: boolean; isRateLimitError?: boolean };
+  const err = error as {
+    isQuotaExceeded?: boolean;
+    isRateLimitError?: boolean;
+  };
   console.error(`${label}:`, error);
   if (err.isQuotaExceeded) {
-    Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
+    Alert.alert(
+      'API Limit Reached',
+      'Spoonacular API quota exceeded. Please try again later.',
+    );
   } else if (err.isRateLimitError) {
-    Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
+    Alert.alert(
+      'Rate Limit',
+      'Too many requests. Please try again in a moment.',
+    );
   } else {
     Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
   }
@@ -45,17 +56,18 @@ async function executePantrySearch(
   setLoading(true);
   setSearchPerformed(true);
 
-  await executeMutationWithErrorHandler(
+  await executeMutation(
     async () => {
       const results = await spoonacularService.searchRecipesByIngredients({
         ingredients: ingredientNames,
         number: 10,
         ranking: 1,
-        ignorePantry: true });
+        ignorePantry: true,
+      });
       setSearchResults(results);
       return results;
     },
-    (error) => handleSearchError(error, 'Pantry search error'),
+    error => handleSearchError(error, 'Pantry search error'),
   );
 
   setLoading(false);
@@ -73,7 +85,7 @@ async function executeTextSearch(
   setLoading(true);
   setSearchPerformed(true);
 
-  await executeMutationWithErrorHandler(
+  await executeMutation(
     async () => {
       const data = await spoonacularService.searchRecipes({
         query,
@@ -81,16 +93,21 @@ async function executeTextSearch(
         addRecipeInformation: true,
         ...(activeFilters.diet && { diet: activeFilters.diet }),
         ...(activeFilters.intolerances.length > 0 && {
-          intolerances: activeFilters.intolerances.join(',') }),
+          intolerances: activeFilters.intolerances.join(','),
+        }),
         ...(activeFilters.mealType && { type: activeFilters.mealType }),
-        ...(activeFilters.maxReadyTime && { maxReadyTime: activeFilters.maxReadyTime }),
+        ...(activeFilters.maxReadyTime && {
+          maxReadyTime: activeFilters.maxReadyTime,
+        }),
         ...(excludedIngredients.length > 0 && {
-          excludeIngredients: excludedIngredients.join(',') }) });
+          excludeIngredients: excludedIngredients.join(','),
+        }),
+      });
 
       setSearchResults(data.results || []);
       return data;
     },
-    (error) => handleSearchError(error, 'Search error'),
+    error => handleSearchError(error, 'Search error'),
   );
 
   setLoading(false);
@@ -108,23 +125,28 @@ async function executeIngredientSearch(
   setLoading(true);
   setSearchPerformed(true);
 
-  await executeMutationWithErrorHandler(
+  await executeMutation(
     async () => {
       const results = await spoonacularService.searchRecipesByIngredients({
         ingredients: ingredientString,
         number: 10,
         ...(activeFilters.diet && { diet: activeFilters.diet }),
         ...(activeFilters.intolerances.length > 0 && {
-          intolerances: activeFilters.intolerances.join(',') }),
+          intolerances: activeFilters.intolerances.join(','),
+        }),
         ...(activeFilters.mealType && { type: activeFilters.mealType }),
-        ...(activeFilters.maxReadyTime && { maxReadyTime: activeFilters.maxReadyTime }),
+        ...(activeFilters.maxReadyTime && {
+          maxReadyTime: activeFilters.maxReadyTime,
+        }),
         ...(excludedIngredients.length > 0 && {
-          excludeIngredients: excludedIngredients.join(',') }) });
+          excludeIngredients: excludedIngredients.join(','),
+        }),
+      });
 
       setSearchResults(results);
       return results;
     },
-    (error) => handleSearchError(error, 'Ingredient search error'),
+    error => handleSearchError(error, 'Ingredient search error'),
   );
 
   setLoading(false);
@@ -134,7 +156,8 @@ export function useRecipeSearch() {
   const { navigate, goBack } = useAppNavigation();
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
   const route = useRoute();
-  const initialQuery = (route.params as { initialQuery?: string } | undefined)?.initialQuery || '';
+  const initialQuery =
+    (route.params as { initialQuery?: string } | undefined)?.initialQuery || '';
 
   // Track screen performance
   useScreenTransition('RecipeSearch');
@@ -144,7 +167,8 @@ export function useRecipeSearch() {
     variables: { homeId: selectedHomeId ?? '' },
     skip: !selectedHomeId,
     fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all' });
+    errorPolicy: 'all',
+  });
 
   // Get pantry for ingredient selection
   const defaultPantry = getDefaultPantry(homeData);
@@ -155,16 +179,21 @@ export function useRecipeSearch() {
 
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<(SearchRecipesResult | RecipeSearchResult)[]>([]);
+  const [searchResults, setSearchResults] = useState<
+    (SearchRecipesResult | RecipeSearchResult)[]
+  >([]);
   const [searchPerformed, setSearchPerformed] = useState(false);
-  const [selectedIngredients, setSelectedIngredients] = useState<Set<string>>(new Set());
+  const [selectedIngredients, setSelectedIngredients] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Filter state
   const [activeFilters, setActiveFilters] = useState<RecipeFilters>({
     diet: null,
     intolerances: [],
     mealType: null,
-    maxReadyTime: null });
+    maxReadyTime: null,
+  });
 
   const ingredientSheetRef = useRef<BottomSheetModal>(null);
   const filterSheetRef = useRef<BottomSheetModal>(null);
@@ -180,15 +209,38 @@ export function useRecipeSearch() {
 
       if (religionDiet === ReligiousDiet.Halal) {
         excluded.push(
-          'pork', 'bacon', 'ham', 'sausage', 'pepperoni', 'prosciutto',
-          'alcohol', 'wine', 'beer', 'vodka', 'rum', 'whiskey', 'brandy',
-          'gelatin', 'lard',
+          'pork',
+          'bacon',
+          'ham',
+          'sausage',
+          'pepperoni',
+          'prosciutto',
+          'alcohol',
+          'wine',
+          'beer',
+          'vodka',
+          'rum',
+          'whiskey',
+          'brandy',
+          'gelatin',
+          'lard',
         );
       } else if (religionDiet === ReligiousDiet.Kosher) {
         excluded.push(
-          'pork', 'bacon', 'ham', 'sausage', 'pepperoni',
-          'shellfish', 'shrimp', 'crab', 'lobster', 'clam', 'oyster',
-          'squid', 'octopus', 'catfish',
+          'pork',
+          'bacon',
+          'ham',
+          'sausage',
+          'pepperoni',
+          'shellfish',
+          'shrimp',
+          'crab',
+          'lobster',
+          'clam',
+          'oyster',
+          'squid',
+          'octopus',
+          'catfish',
         );
       }
     }
@@ -212,15 +264,30 @@ export function useRecipeSearch() {
           .join(',');
 
         if (ingredientNames) {
-          await executePantrySearch(ingredientNames, setLoading, setSearchPerformed, setSearchResults);
+          await executePantrySearch(
+            ingredientNames,
+            setLoading,
+            setSearchPerformed,
+            setSearchResults,
+          );
           return;
         }
       }
-      Alert.alert('Search Required', 'Please enter a search term or add items to your pantry');
+      Alert.alert(
+        'Search Required',
+        'Please enter a search term or add items to your pantry',
+      );
       return;
     }
 
-    await executeTextSearch(searchQuery, activeFilters, excludedIngredients, setLoading, setSearchPerformed, setSearchResults);
+    await executeTextSearch(
+      searchQuery,
+      activeFilters,
+      excludedIngredients,
+      setLoading,
+      setSearchPerformed,
+      setSearchResults,
+    );
   };
 
   // Auto-trigger search on mount
@@ -230,7 +297,14 @@ export function useRecipeSearch() {
     if (initialQuery && initialQuery.trim()) {
       // Text search from navigation params
       hasAutoSearchedRef.current = true;
-      executeTextSearch(initialQuery, activeFilters, excludedIngredients, setLoading, setSearchPerformed, setSearchResults);
+      executeTextSearch(
+        initialQuery,
+        activeFilters,
+        excludedIngredients,
+        setLoading,
+        setSearchPerformed,
+        setSearchResults,
+      );
     } else if (pantryItems?.length) {
       // Auto-search with pantry ingredients
       const ingredientNames = pantryItems
@@ -241,7 +315,12 @@ export function useRecipeSearch() {
 
       if (ingredientNames) {
         hasAutoSearchedRef.current = true;
-        executePantrySearch(ingredientNames, setLoading, setSearchPerformed, setSearchResults);
+        executePantrySearch(
+          ingredientNames,
+          setLoading,
+          setSearchPerformed,
+          setSearchResults,
+        );
       }
     }
   }, [initialQuery, pantryItems, activeFilters, excludedIngredients]);
@@ -249,14 +328,24 @@ export function useRecipeSearch() {
   // Ingredient-based search
   const handleIngredientSearch = async () => {
     if (selectedIngredients.size === 0) {
-      Alert.alert('No Ingredients Selected', 'Please select at least one ingredient');
+      Alert.alert(
+        'No Ingredients Selected',
+        'Please select at least one ingredient',
+      );
       return;
     }
 
     const ingredientString = Array.from(selectedIngredients).join(',');
     ingredientSheetRef.current?.close();
 
-    await executeIngredientSearch(ingredientString, activeFilters, excludedIngredients, setLoading, setSearchPerformed, setSearchResults);
+    await executeIngredientSearch(
+      ingredientString,
+      activeFilters,
+      excludedIngredients,
+      setLoading,
+      setSearchPerformed,
+      setSearchResults,
+    );
   };
 
   const hasPantryItems = (pantryItems?.length ?? 0) > 0;
@@ -286,7 +375,8 @@ export function useRecipeSearch() {
       diet: null,
       intolerances: [],
       mealType: null,
-      maxReadyTime: null });
+      maxReadyTime: null,
+    });
   };
 
   const applyFilters = () => {
@@ -301,7 +391,8 @@ export function useRecipeSearch() {
   const activeFilterCount = (() => {
     let count = 0;
     if (activeFilters.diet) count++;
-    if (activeFilters.intolerances.length > 0) count += activeFilters.intolerances.length;
+    if (activeFilters.intolerances.length > 0)
+      count += activeFilters.intolerances.length;
     if (activeFilters.mealType) count++;
     if (activeFilters.maxReadyTime) count++;
     return count;
@@ -313,13 +404,14 @@ export function useRecipeSearch() {
   })();
 
   const handleItemPress = (id: string) => {
-      const item = items.find(i => i.id === id);
-      if (!item) return;
+    const item = items.find(i => i.id === id);
+    if (!item) return;
 
-      navigate('RecipeDetail', {
-        externalSource: 'SPOONACULAR',
-        externalId: String(item.spoonacularId) });
-    };
+    navigate('RecipeDetail', {
+      externalSource: 'SPOONACULAR',
+      externalId: String(item.spoonacularId),
+    });
+  };
 
   return {
     navigate,
@@ -345,5 +437,6 @@ export function useRecipeSearch() {
     activeFilterCount,
     hasPantryItems,
     items,
-    handleItemPress };
+    handleItemPress,
+  };
 }

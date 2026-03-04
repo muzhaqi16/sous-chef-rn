@@ -16,10 +16,11 @@ import { useApolloClient } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
 import { useClearShoppingListItemsMutation } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   clearAllPurchasedItemsFromCache,
-  clearAllUnpurchasedItemsFromCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+  clearAllUnpurchasedItemsFromCache,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 
 interface UseClearShoppingListItemsOptions {
   listId: string | null | undefined;
@@ -46,12 +47,13 @@ async function executeClearItems(
   }
 
   // 2. Fire single batch mutation
-  const result = await executeMutationWithErrorHandler(
-    () => clearMutation({
-      variables: { shoppingListId: listId, purchased },
-      update: () => {}, // Cache already cleared optimistically
-    }),
-    async (error) => {
+  const result = await executeMutation(
+    () =>
+      clearMutation({
+        variables: { shoppingListId: listId, purchased },
+        update: () => {}, // Cache already cleared optimistically
+      }),
+    async error => {
       console.warn(
         `Failed to clear ${purchased ? 'purchased' : 'shopping'} items:`,
         error,
@@ -87,26 +89,36 @@ async function executeClearItems(
 export function useClearShoppingListItems({
   listId,
   items,
-  refetch }: UseClearShoppingListItemsOptions) {
+  refetch,
+}: UseClearShoppingListItemsOptions) {
   const client = useApolloClient();
   const isClearingRef = useRef(false);
 
   const [clearMutation] = useClearShoppingListItemsMutation({
-    errorPolicy: 'all' });
+    errorPolicy: 'all',
+  });
 
   const clearItems = async (purchased: boolean) => {
-      if (!listId || isClearingRef.current) return;
+    if (!listId || isClearingRef.current) return;
 
-      const targetItems = items.filter(i =>
-        purchased ? i.purchaseInfo?.isPurchased : !i.purchaseInfo?.isPurchased,
-      );
-      if (targetItems.length === 0) return;
+    const targetItems = items.filter(i =>
+      purchased ? i.purchaseInfo?.isPurchased : !i.purchaseInfo?.isPurchased,
+    );
+    if (targetItems.length === 0) return;
 
-      isClearingRef.current = true;
-      const itemIds = targetItems.map(i => i.id);
+    isClearingRef.current = true;
+    const itemIds = targetItems.map(i => i.id);
 
-      await executeClearItems(client, clearMutation, listId, purchased, itemIds, refetch, isClearingRef);
-    };
+    await executeClearItems(
+      client,
+      clearMutation,
+      listId,
+      purchased,
+      itemIds,
+      refetch,
+      isClearingRef,
+    );
+  };
 
   return { clearItems };
 }

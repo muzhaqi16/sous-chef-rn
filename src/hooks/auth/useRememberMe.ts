@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '#/hooks/useToast';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
 
 export interface RememberMeCredentials {
@@ -21,7 +21,8 @@ export interface RememberMeEvents {
 export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
   // RememberMe modal state
   const [showRememberMeModal, setShowRememberMeModal] = useState(false);
-  const [pendingCredentials, setPendingCredentials] = useState<RememberMeCredentials | null>(null);
+  const [pendingCredentials, setPendingCredentials] =
+    useState<RememberMeCredentials | null>(null);
 
   // Dependencies
   const toast = useToast();
@@ -29,16 +30,17 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
 
   const handleRememberMeAccept = async () => {
     if (pendingCredentials) {
-      await executeMutationWithErrorHandler(
+      await executeMutation(
         async () => {
           await onAccept(pendingCredentials);
           console.log('Credentials accepted by user');
         },
-        (error) => {
+        error => {
           console.error('Failed to process credential acceptance:', error);
           toast({
             message: 'Failed to save login information',
-            type: 'error' });
+            type: 'error',
+          });
         },
       );
     }
@@ -74,5 +76,6 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
 
     // Internal state management
     setShowRememberMeModal,
-    setPendingCredentials };
+    setPendingCredentials,
+  };
 };

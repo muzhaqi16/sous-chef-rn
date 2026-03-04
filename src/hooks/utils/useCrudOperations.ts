@@ -23,17 +23,20 @@ import { useApolloClient } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
 import { DocumentNode } from 'graphql';
 import { errorService } from '#/services/errorService';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   handleVersionConflictAlert,
-  handleMutationErrorAlert } from '#/utils/errorHandlers';
+  handleMutationErrorAlert,
+} from '#/utils/errorHandlers';
 
 /**
  * Configuration for create operation
  */
 export interface CreateOperationConfig<TInput, TResult> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- wraps diverse Apollo mutation signatures
-  mutation: (...args: any[]) => Promise<{ data?: TResult; errors?: readonly { message: string }[] }>;
+  mutation: (
+    ...args: any[]
+  ) => Promise<{ data?: TResult; errors?: readonly { message: string }[] }>;
   parentId?: string | null | (() => string | null | undefined);
   transformInput?: (input: TInput) => Record<string, unknown>;
   validateInput?: (input: TInput) => boolean | string;
@@ -52,7 +55,10 @@ export interface UpdateOperationConfig<TInput, TResult> {
   itemId: string;
   transformInput?: (input: TInput) => Record<string, unknown>;
   validateInput?: (input: TInput) => boolean | string;
-  getFragmentData?: (client: ReturnType<typeof useApolloClient>, itemId: string) => { version?: number } | null;
+  getFragmentData?: (
+    client: ReturnType<typeof useApolloClient>,
+    itemId: string,
+  ) => { version?: number } | null;
   fragmentDoc?: DocumentNode;
   includeVersion?: boolean;
   onSuccess?: (data: TResult) => void;
@@ -78,7 +84,9 @@ export interface RemoveOperationConfig<TResult> {
 
 // --- Module-level factory implementations (outside hook body for React Compiler) ---
 
-function createAddOperationImpl<TInput, TResult>(config: CreateOperationConfig<TInput, TResult>) {
+function createAddOperationImpl<TInput, TResult>(
+  config: CreateOperationConfig<TInput, TResult>,
+) {
   return async (input: TInput): Promise<TResult | false> => {
     const {
       mutation,
@@ -87,11 +95,16 @@ function createAddOperationImpl<TInput, TResult>(config: CreateOperationConfig<T
       validateInput,
       onSuccess,
       onError,
-      operationName = 'Create Item' } = config;
+      operationName = 'Create Item',
+    } = config;
 
     // Validate parent ID only if it was explicitly provided in config
-    const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
-    if (parentId !== undefined && (resolvedParentId === null || resolvedParentId === '')) {
+    const resolvedParentId =
+      typeof parentId === 'function' ? parentId() : parentId;
+    if (
+      parentId !== undefined &&
+      (resolvedParentId === null || resolvedParentId === '')
+    ) {
       Alert.alert('Error', 'Parent context is required');
       return false;
     }
@@ -114,9 +127,9 @@ function createAddOperationImpl<TInput, TResult>(config: CreateOperationConfig<T
       ? { input: transformInput(input) }
       : { input };
 
-    const result = await executeMutationWithErrorHandler(
+    const result = await executeMutation(
       () => mutation({ variables }),
-      (error) => {
+      error => {
         errorService.reportError(error, { operation: operationName });
         onError?.(error);
         handleMutationErrorAlert(error, { operation: operationName });
@@ -128,7 +141,8 @@ function createAddOperationImpl<TInput, TResult>(config: CreateOperationConfig<T
     // Handle GraphQL errors returned with errorPolicy: 'all'
     // Check errors FIRST because result.data may be { mutationName: null } even on error
     if (result.errors && result.errors.length > 0) {
-      const errorMessage = result.errors[0].message || `Failed to ${operationName.toLowerCase()}`;
+      const errorMessage =
+        result.errors[0].message || `Failed to ${operationName.toLowerCase()}`;
       Alert.alert('Error', errorMessage);
       return false;
     }
@@ -159,11 +173,16 @@ function createUpdateOperationImpl<TInput, TResult>(
       onSuccess,
       onError,
       onVersionConflict,
-      operationName = 'Update Item' } = config;
+      operationName = 'Update Item',
+    } = config;
 
     // Validate parent ID if required
-    const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
-    if (resolvedParentId !== undefined && (resolvedParentId === null || resolvedParentId === '')) {
+    const resolvedParentId =
+      typeof parentId === 'function' ? parentId() : parentId;
+    if (
+      resolvedParentId !== undefined &&
+      (resolvedParentId === null || resolvedParentId === '')
+    ) {
       Alert.alert('Error', 'Parent context is required');
       return false;
     }
@@ -188,28 +207,31 @@ function createUpdateOperationImpl<TInput, TResult>(
     }
 
     // Transform input
-    let transformedInput = transformInput
-      ? transformInput(input)
-      : input;
+    let transformedInput = transformInput ? transformInput(input) : input;
 
     // Include version for optimistic concurrency control
     if (includeVersion && currentData?.version) {
       transformedInput = {
         ...transformedInput,
-        version: currentData.version };
+        version: currentData.version,
+      };
     }
 
-    const result = await executeMutationWithErrorHandler(
-      () => mutation({
-        variables: {
-          id: itemId,
-          input: transformedInput } }),
-      (error) => {
+    const result = await executeMutation(
+      () =>
+        mutation({
+          variables: {
+            id: itemId,
+            input: transformedInput,
+          },
+        }),
+      error => {
         // Handle version conflicts
         if (
           handleVersionConflictAlert(error, {
             itemName: 'Item',
-            onRefresh: onVersionConflict })
+            onRefresh: onVersionConflict,
+          })
         ) {
           return;
         }
@@ -240,9 +262,9 @@ async function executeRemoveImpl<TResult>(
   onSuccess?: (data: TResult) => void,
   onError?: (error: unknown) => void,
 ): Promise<TResult | false> {
-  const result = await executeMutationWithErrorHandler(
+  const result = await executeMutation(
     () => mutation({ variables: { id: itemId } }),
-    (error) => {
+    error => {
       errorService.reportError(error, { operation: operationName });
       onError?.(error);
       handleMutationErrorAlert(error, { operation: operationName });
@@ -260,7 +282,9 @@ async function executeRemoveImpl<TResult>(
   return false;
 }
 
-function createRemoveOperationImpl<TResult>(config: RemoveOperationConfig<TResult>) {
+function createRemoveOperationImpl<TResult>(
+  config: RemoveOperationConfig<TResult>,
+) {
   return async (): Promise<TResult | false> => {
     const {
       mutation,
@@ -270,11 +294,16 @@ function createRemoveOperationImpl<TResult>(config: RemoveOperationConfig<TResul
       itemName,
       onSuccess,
       onError,
-      operationName = 'Delete Item' } = config;
+      operationName = 'Delete Item',
+    } = config;
 
     // Validate parent ID if required
-    const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
-    if (resolvedParentId !== undefined && (resolvedParentId === null || resolvedParentId === '')) {
+    const resolvedParentId =
+      typeof parentId === 'function' ? parentId() : parentId;
+    if (
+      resolvedParentId !== undefined &&
+      (resolvedParentId === null || resolvedParentId === '')
+    ) {
       Alert.alert('Error', 'Parent context is required');
       return false;
     }
@@ -291,20 +320,34 @@ function createRemoveOperationImpl<TResult>(config: RemoveOperationConfig<TResul
             {
               text: 'Cancel',
               style: 'cancel',
-              onPress: () => resolve(false) },
+              onPress: () => resolve(false),
+            },
             {
               text: 'Delete',
               style: 'destructive',
               onPress: async () => {
-                const result = await executeRemoveImpl(mutation, itemId, operationName, onSuccess, onError);
+                const result = await executeRemoveImpl(
+                  mutation,
+                  itemId,
+                  operationName,
+                  onSuccess,
+                  onError,
+                );
                 resolve(result);
-              } },
+              },
+            },
           ],
         );
       });
     }
 
-    return executeRemoveImpl(mutation, itemId, operationName, onSuccess, onError);
+    return executeRemoveImpl(
+      mutation,
+      itemId,
+      operationName,
+      onSuccess,
+      onError,
+    );
   };
 }
 
@@ -321,7 +364,8 @@ function createSimpleOperationImpl<TArgs extends unknown[], TResult>(config: {
       validate,
       onSuccess,
       onError,
-      operationName = 'Operation' } = config;
+      operationName = 'Operation',
+    } = config;
 
     // Validate if validator provided
     if (validate) {
@@ -336,9 +380,9 @@ function createSimpleOperationImpl<TArgs extends unknown[], TResult>(config: {
       }
     }
 
-    const result = await executeMutationWithErrorHandler(
+    const result = await executeMutation(
       () => operation(...args),
-      (error) => {
+      error => {
         errorService.reportError(error, { operation: operationName });
         onError?.(error);
         handleMutationErrorAlert(error, { operation: operationName });
@@ -364,10 +408,12 @@ export function useCrudOperations() {
   const client = useApolloClient();
 
   return {
-    createAddOperation: <TInput, TResult>(config: CreateOperationConfig<TInput, TResult>) =>
-      createAddOperationImpl(config),
-    createUpdateOperation: <TInput, TResult>(config: UpdateOperationConfig<TInput, TResult>) =>
-      createUpdateOperationImpl(client, config),
+    createAddOperation: <TInput, TResult>(
+      config: CreateOperationConfig<TInput, TResult>,
+    ) => createAddOperationImpl(config),
+    createUpdateOperation: <TInput, TResult>(
+      config: UpdateOperationConfig<TInput, TResult>,
+    ) => createUpdateOperationImpl(client, config),
     createRemoveOperation: <TResult>(config: RemoveOperationConfig<TResult>) =>
       createRemoveOperationImpl(config),
     createSimpleOperation: <TArgs extends unknown[], TResult>(config: {

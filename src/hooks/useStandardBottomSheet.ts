@@ -16,12 +16,15 @@ interface UseStandardBottomSheetOptions {
   keyboardBehavior?: 'extend' | 'fillParent' | 'interactive';
   enableDynamicSizing?: boolean;
   /**
-   * When true:
-   * - Appends '95%' snap point (if not already present)
+   * When truthy:
+   * - Appends an expanded snap point (if not already present)
    * - Defaults keyboardBehavior to 'interactive'
    * - Snaps back to index 0 when keyboard hides
+   *
+   * Pass `true` to use the default '95%' expanded point,
+   * or a string (e.g. `'85%'`) to specify a custom expanded snap point.
    */
-  keyboardAware?: boolean;
+  keyboardAware?: boolean | string;
 }
 
 /**
@@ -59,9 +62,10 @@ export function useStandardBottomSheet({
   const animationConfigs = useSharedBottomSheetConfigs();
   useBottomSheetBackHandler(ref, visible ?? false);
 
-  // Compute final snap points: append '95%' when keyboardAware and not already present
-  const finalSnapPoints = keyboardAware && snapPoints[snapPoints.length - 1] !== '95%'
-    ? [...snapPoints, '95%']
+  // Compute final snap points: append expanded point when keyboardAware and not already present
+  const expandedPoint = typeof keyboardAware === 'string' ? keyboardAware : '95%';
+  const finalSnapPoints = keyboardAware && snapPoints[snapPoints.length - 1] !== expandedPoint
+    ? [...snapPoints, expandedPoint]
     : snapPoints;
 
   // Resolve keyboard behavior: keyboardAware defaults to 'interactive'

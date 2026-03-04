@@ -13,10 +13,14 @@ import { createRemoveFromQueryConnectionUpdater } from '#/apollo/utils/cacheUpda
 import { useErrorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { executeCacheUpdate, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 import type {
   SelectorConfig,
-  ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
+  ItemSelectorRef,
+} from '#components/organisms/AnimatedItemSelector/types';
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 
 /** Shopping list enriched with ownership flag */
@@ -54,23 +58,31 @@ type ListItemOrHeader = ShoppingListSelectorItem | SectionHeader;
 export function useShoppingListSelectorModal({
   listDataWithOwnership,
   currentListId,
-  setSelectedShoppingListId: _setSelectedShoppingListId }: UseShoppingListSelectorOptions) {
+  setSelectedShoppingListId: _setSelectedShoppingListId,
+}: UseShoppingListSelectorOptions) {
   const { navigate } = useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
   const {
-    theme: { colors } } = useUnistyles();
+    theme: { colors },
+  } = useUnistyles();
 
   const selectorRef = useRef<ItemSelectorRef>(null);
 
   // Manage selector with overlay coordination
-  const { handleOpenSelector: baseOpenSelector, handleOverlayOpen, handleOverlayClose: baseOverlayClose } =
-    useSelectorManagement({
-      selectorRef,
-      setOverlayOpen });
+  const {
+    handleOpenSelector: baseOpenSelector,
+    handleOverlayOpen,
+    handleOverlayClose: baseOverlayClose,
+  } = useSelectorManagement({
+    selectorRef,
+    setOverlayOpen,
+  });
 
   // --- Delete mode state & mutation ---
   const [isDeleteMode, setIsDeleteMode] = useState(false);
-  const [selectedForDeletion, setSelectedForDeletion] = useState<Set<string>>(() => new Set());
+  const [selectedForDeletion, setSelectedForDeletion] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   // Refs mirroring volatile state — allows renderListItem to stay stable
   const isDeleteModeRef = useRef(isDeleteMode);
@@ -86,23 +98,23 @@ export function useShoppingListSelectorModal({
     errorPolicy: 'all',
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
-        operation: 'Delete Shopping List' });
+        operation: 'Delete Shopping List',
+      });
       toastService.error(message);
     },
     update: (cache, { data }, { variables }) => {
       if (!data?.deleteShoppingList?.shoppingList || !variables) return;
 
-      executeCacheUpdate(
-        () => {
-          const removeFromShoppingListsCache = createRemoveFromQueryConnectionUpdater(
+      executeCacheUpdate(() => {
+        const removeFromShoppingListsCache =
+          createRemoveFromQueryConnectionUpdater(
             'shoppingLists',
             'ShoppingList',
           );
-          removeFromShoppingListsCache(cache, variables.id, { evictItem: true });
-        },
-        'Cache update failed for deleteList:',
-      );
-    } });
+        removeFromShoppingListsCache(cache, variables.id, { evictItem: true });
+      }, 'Cache update failed for deleteList:');
+    },
+  });
 
   // --- Delete mode handlers ---
   const exitDeleteMode = () => {
@@ -140,7 +152,9 @@ export function useShoppingListSelectorModal({
 
     Alert.alert(
       `Delete ${count} List${count > 1 ? 's' : ''}`,
-      `Are you sure you want to delete ${count > 1 ? 'these lists' : 'this list'}? This action cannot be undone.`,
+      `Are you sure you want to delete ${
+        count > 1 ? 'these lists' : 'this list'
+      }? This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -150,15 +164,20 @@ export function useShoppingListSelectorModal({
             const idsToDelete = Array.from(selectedForDeletion);
 
             // Register parent deletions to prevent subscription race conditions
-            idsToDelete.forEach(id => subscriptionService.registerParentDeletion(id));
+            idsToDelete.forEach(id =>
+              subscriptionService.registerParentDeletion(id),
+            );
 
-            const result = await executeMutationWithErrorHandler(
-              () => Promise.all(
-                idsToDelete.map(id => deleteList({ variables: { id } })),
-              ),
+            const result = await executeMutation(
+              () =>
+                Promise.all(
+                  idsToDelete.map(id => deleteList({ variables: { id } })),
+                ),
               () => {
                 // Deletion failed — unregister immediately
-                idsToDelete.forEach(id => subscriptionService.unregisterParentDeletion(id));
+                idsToDelete.forEach(id =>
+                  subscriptionService.unregisterParentDeletion(id),
+                );
                 toastService.error('Failed to delete lists');
               },
             );
@@ -171,14 +190,17 @@ export function useShoppingListSelectorModal({
                 l => !idsToDelete.includes(l.id),
               );
               const defaultList = remaining.find(l => l.isDefault);
-              useStore.getState().setSelectedShoppingListId(defaultList?.id || null);
+              useStore
+                .getState()
+                .setSelectedShoppingListId(defaultList?.id || null);
             }
 
             toastService.success(
               `Deleted ${count} list${count > 1 ? 's' : ''}`,
             );
             exitDeleteMode();
-          } },
+          },
+        },
       ],
     );
   };
@@ -199,9 +221,15 @@ export function useShoppingListSelectorModal({
         <Pressable
           onPress={handleDeleteSelected}
           disabled={!hasSelection}
-          style={hasSelection ? styles.deleteButton : styles.deleteButtonDisabled}
+          style={
+            hasSelection ? styles.deleteButton : styles.deleteButtonDisabled
+          }
         >
-          <Icon name="trash-outline" size={16} color={hasSelection ? colors.error : colors.textSecondary} />
+          <Icon
+            name="trash-outline"
+            size={16}
+            color={hasSelection ? colors.error : colors.textSecondary}
+          />
         </Pressable>
         <Pressable onPress={exitDeleteMode}>
           <Text style={styles.cancelText}>Cancel</Text>
@@ -220,7 +248,8 @@ export function useShoppingListSelectorModal({
       result.push({
         _isHeader: true,
         id: 'header-personal',
-        title: 'Personal Lists' });
+        title: 'Personal Lists',
+      });
       result.push(...personalLists);
     }
 
@@ -241,7 +270,8 @@ export function useShoppingListSelectorModal({
       result.push({
         _isHeader: true,
         id: `header-${homeId}`,
-        title: homeName });
+        title: homeName,
+      });
       result.push(...lists);
     });
 
@@ -250,136 +280,139 @@ export function useShoppingListSelectorModal({
 
   // Render function depends on isDeleteMode/selectedForDeletion so its identity
   // changes when delete state toggles, forcing SelectorItem to re-render.
-  const renderListItem = (item: ListItemOrHeader, isSelected: boolean, onPress: () => void) => {
-      // Render section header (non-selectable)
-      if ('_isHeader' in item && item._isHeader) {
-        return (
-          <View style={styles.sectionHeader}>
-            <Icon
-              name={item.title === 'Personal Lists' ? 'person' : 'home'}
-              size={14}
-              color={colors.textTertiary}
-            />
-            <Text style={styles.sectionHeaderText}>{item.title}</Text>
-          </View>
-        );
-      }
+  const renderListItem = (
+    item: ListItemOrHeader,
+    isSelected: boolean,
+    onPress: () => void,
+  ) => {
+    // Render section header (non-selectable)
+    if ('_isHeader' in item && item._isHeader) {
+      return (
+        <View style={styles.sectionHeader}>
+          <Icon
+            name={item.title === 'Personal Lists' ? 'person' : 'home'}
+            size={14}
+            color={colors.textTertiary}
+          />
+          <Text style={styles.sectionHeaderText}>{item.title}</Text>
+        </View>
+      );
+    }
 
-      // After the header guard above, item is always a ShoppingListSelectorItem
-      const list = item as ShoppingListSelectorItem;
+    // After the header guard above, item is always a ShoppingListSelectorItem
+    const list = item as ShoppingListSelectorItem;
 
-      // Delete mode rendering — read from state for re-render on toggle
-      if (isDeleteMode) {
-        const isSelectedForDelete = selectedForDeletion.has(list.id);
-        const canDelete = !!list._isOwner;
+    // Delete mode rendering — read from state for re-render on toggle
+    if (isDeleteMode) {
+      const isSelectedForDelete = selectedForDeletion.has(list.id);
+      const canDelete = !!list._isOwner;
 
-        return (
-          <Pressable
-            style={({pressed}) => [
-              styles.selectorItemContainer,
-              isSelectedForDelete && styles.selectorItemDeleteSelected,
-              !canDelete && styles.selectorItemDisabled,
-              pressed && canDelete && styles.pressed,
-            ]}
-            onPress={() => toggleDeleteSelection(list)}
-            disabled={!canDelete}
-          >
-            <Icon
-              name={isSelectedForDelete ? 'checkbox' : 'square-outline'}
-              size={20}
-              color={isSelectedForDelete ? colors.error : colors.textSecondary}
-            />
-            <ShoppingListAvatar list={list} size={32} />
-            <View style={styles.selectorItemInfo}>
-              <Text style={styles.selectorItemName}>{list.name}</Text>
-              {!canDelete && (
-                <Text style={styles.selectorItemSubtext}>
-                  Cannot delete (shared)
-                </Text>
-              )}
-            </View>
-          </Pressable>
-        );
-      }
-
-      // Normal mode rendering
       return (
         <Pressable
-          style={({pressed}) => [
+          style={({ pressed }) => [
             styles.selectorItemContainer,
-            isSelected && styles.selectorItemSelected,
-            pressed && styles.pressed,
+            isSelectedForDelete && styles.selectorItemDeleteSelected,
+            !canDelete && styles.selectorItemDisabled,
+            pressed && canDelete && styles.pressed,
           ]}
-          onPress={onPress}
-          onLongPress={() => handleLongPress(list)}
+          onPress={() => toggleDeleteSelection(list)}
+          disabled={!canDelete}
         >
+          <Icon
+            name={isSelectedForDelete ? 'checkbox' : 'square-outline'}
+            size={20}
+            color={isSelectedForDelete ? colors.error : colors.textSecondary}
+          />
           <ShoppingListAvatar list={list} size={32} />
           <View style={styles.selectorItemInfo}>
             <Text style={styles.selectorItemName}>{list.name}</Text>
-            {!list._isOwner && (
+            {!canDelete && (
               <Text style={styles.selectorItemSubtext}>
-                {`Shared by ${
-                  list.ownerships?.[0]?.user?.profile?.displayName ||
-                  list.ownerships?.[0]?.user?.email ||
-                  'someone'
-                }`}
+                Cannot delete (shared)
               </Text>
             )}
           </View>
-          {list.totalItems > 0 && (
-            <Text style={styles.selectorItemCount}>
-              {list.totalItems - list.completedItems} of {list.totalItems}
-            </Text>
-          )}
-          {!!isSelected && (
-            <Icon
-              name="checkmark"
-              size={20}
-              color={colors.primary}
-            />
-          )}
         </Pressable>
       );
-    };
+    }
+
+    // Normal mode rendering
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.selectorItemContainer,
+          isSelected && styles.selectorItemSelected,
+          pressed && styles.pressed,
+        ]}
+        onPress={onPress}
+        onLongPress={() => handleLongPress(list)}
+      >
+        <ShoppingListAvatar list={list} size={32} />
+        <View style={styles.selectorItemInfo}>
+          <Text style={styles.selectorItemName}>{list.name}</Text>
+          {!list._isOwner && (
+            <Text style={styles.selectorItemSubtext}>
+              {`Shared by ${
+                list.ownerships?.[0]?.user?.profile?.displayName ||
+                list.ownerships?.[0]?.user?.email ||
+                'someone'
+              }`}
+            </Text>
+          )}
+        </View>
+        {list.totalItems > 0 && (
+          <Text style={styles.selectorItemCount}>
+            {list.totalItems - list.completedItems} of {list.totalItems}
+          </Text>
+        )}
+        {!!isSelected && (
+          <Icon name="checkmark" size={20} color={colors.primary} />
+        )}
+      </Pressable>
+    );
+  };
 
   // PERFORMANCE: Memoize actions array separately
   // Note: setOverlayOpen(false) called before navigate to ensure overlay closes immediately
   const listActions = [
-      {
-        icon: 'add',
-        label: 'Create New List',
-        onPress: () => {
-          setOverlayOpen(false);
-          selectorRef.current?.close();
-          navigate('ListSettings');
-        },
-        iconLibrary: 'Ionicons' as IconLibrary },
-      ...(currentListId
-        ? [
-            {
-              icon: 'share-outline',
-              label: 'Share Current List',
-              onPress: () => {
-                setOverlayOpen(false);
-                selectorRef.current?.close();
-                navigate('ShareList', { listId: currentListId });
-              },
-              iconLibrary: 'Ionicons' as IconLibrary },
-            {
-              icon: 'settings-outline',
-              label: 'List Settings',
-              onPress: () => {
-                setOverlayOpen(false);
-                selectorRef.current?.close();
-                navigate('ListSettings', { listId: currentListId });
-              },
-              iconLibrary: 'Ionicons' as IconLibrary },
-          ]
-        : []),
-    ];
+    {
+      icon: 'add',
+      label: 'Create New List',
+      onPress: () => {
+        setOverlayOpen(false);
+        selectorRef.current?.close();
+        navigate('ListSettings');
+      },
+      iconLibrary: 'Ionicons' as IconLibrary,
+    },
+    ...(currentListId
+      ? [
+          {
+            icon: 'share-outline',
+            label: 'Share Current List',
+            onPress: () => {
+              setOverlayOpen(false);
+              selectorRef.current?.close();
+              navigate('ShareList', { listId: currentListId });
+            },
+            iconLibrary: 'Ionicons' as IconLibrary,
+          },
+          {
+            icon: 'settings-outline',
+            label: 'List Settings',
+            onPress: () => {
+              setOverlayOpen(false);
+              selectorRef.current?.close();
+              navigate('ListSettings', { listId: currentListId });
+            },
+            iconLibrary: 'Ionicons' as IconLibrary,
+          },
+        ]
+      : []),
+  ];
 
   // extraData signals FlashList to re-render items when delete state changes
-  const selectorExtraData = ({ isDeleteMode, selectedForDeletion });
+  const selectorExtraData = { isDeleteMode, selectedForDeletion };
 
   // PERFORMANCE: Stable onSelect — reads volatile state from refs + store
   const onSelect = (id: string, _item: ListItemOrHeader) => {
@@ -392,27 +425,29 @@ export function useShoppingListSelectorModal({
   };
 
   // PERFORMANCE: Combine memoized parts into final config
-  const listConfig: SelectorConfig<ListItemOrHeader> = ({
-      title: selectorExtraData.isDeleteMode
-        ? `${selectorExtraData.selectedForDeletion.size} Selected`
-        : 'Select Shopping List',
-      data: groupedData,
-      selectedId: currentListId,
-      onSelect,
-      displayProperty: 'id', // unused — renderCustomItem handles all rendering
-      loading: false,
-      emptyMessage: 'No shopping lists available',
-      renderCustomItem: renderListItem,
-      actions: listActions,
-      headerRight: deleteHeaderRight,
-      extraData: selectorExtraData });
+  const listConfig: SelectorConfig<ListItemOrHeader> = {
+    title: selectorExtraData.isDeleteMode
+      ? `${selectorExtraData.selectedForDeletion.size} Selected`
+      : 'Select Shopping List',
+    data: groupedData,
+    selectedId: currentListId,
+    onSelect,
+    displayProperty: 'id', // unused — renderCustomItem handles all rendering
+    loading: false,
+    emptyMessage: 'No shopping lists available',
+    renderCustomItem: renderListItem,
+    actions: listActions,
+    headerRight: deleteHeaderRight,
+    extraData: selectorExtraData,
+  };
 
   return {
     selectorRef,
     listConfig,
     handleOpenSelector: baseOpenSelector,
     handleOverlayOpen,
-    handleOverlayClose };
+    handleOverlayClose,
+  };
 }
 
 // Styles for the selector items
@@ -428,62 +463,78 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border },
+    borderColor: theme.colors.border,
+  },
   selectorItemSelected: {
     backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary },
+    borderColor: theme.colors.primary,
+  },
   selectorItemDeleteSelected: {
     backgroundColor: theme.colors.errorLight,
-    borderColor: theme.colors.error },
+    borderColor: theme.colors.error,
+  },
   selectorItemDisabled: {
-    opacity: 0.5 },
+    opacity: 0.5,
+  },
   selectorItemInfo: {
     flex: 1,
-    gap: 2 },
+    gap: 2,
+  },
   selectorItemName: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   selectorItemSubtext: {
     fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   selectorItemCount: {
     fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.xs },
+    marginTop: theme.spacing.xs,
+  },
   sectionHeaderText: {
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textTertiary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5 },
+    letterSpacing: 0.5,
+  },
   deleteHeaderActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   deleteButton: {
     width: 32,
     height: 32,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.errorLight,
     justifyContent: 'center',
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   deleteButtonDisabled: {
     width: 32,
     height: 32,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   cancelText: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary },
+    color: theme.colors.primary,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

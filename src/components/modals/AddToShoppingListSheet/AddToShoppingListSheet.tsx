@@ -9,6 +9,7 @@ import {
   useAddItemToShoppingListMutation,
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
+  type AddItemToShoppingListMutationVariables,
   ItemSuggestion } from '#generated';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
@@ -81,9 +82,9 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // Add shopping list item mutation with optimistic response for instant UI
   const [addItemMutation, { loading: adding }] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
-    optimisticResponse: (variables: any) => {
+    optimisticResponse: (variables: AddItemToShoppingListMutationVariables) => {
       const { tempId, entity } = createOptimisticShoppingListItem({
-        itemName: variables.input.itemName,
+        itemName: variables.input.itemName ?? '',
         itemId: variables.input.itemId,
         unitId: variables.input.unit?.unitId,
       });
