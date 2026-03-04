@@ -9,7 +9,7 @@
  */
 
 import { Alert } from 'react-native';
-import { useUpdatePantryItemMutation, PantryItemFragment } from '#generated';
+import { useUpdatePantryItemMutation, PantryItemFragment, StorageType } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
@@ -105,7 +105,7 @@ export function useUpdatePantryItem({
     }
 
     // Build optimistic update from form data (PantryItem-shaped, not mutation-input-shaped)
-    const optimisticUpdate: Record<string, any> = {};
+    const optimisticUpdate: Partial<PantryItemFragment> = {};
     if (dirtyFields.itemName) optimisticUpdate.itemName = input.itemName;
     if (dirtyFields.storageState)
       optimisticUpdate.storageState = input.storageState;
@@ -133,7 +133,7 @@ export function useUpdatePantryItem({
         __typename: 'StorageLocation',
         id: selectedStorageLocation.id,
         name: selectedStorageLocation.name,
-        type: selectedStorageLocation.type,
+        type: selectedStorageLocation.type as StorageType,
       };
     }
     if (dirtyFields.notes) optimisticUpdate.storageNotes = input.notes;

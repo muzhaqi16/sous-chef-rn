@@ -15,14 +15,23 @@ import { type LoginInput } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { Telemetry } from '#/services/telemetry';
-import { executeWithLoadingState, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import {
+  executeWithLoadingState,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 
 /** Module-level function to load auth info.
  *  Extracted from useEffect to avoid try-catch bailout. */
 async function loadAuthInfoAsync(
   checkStoredCredentials: () => Promise<boolean>,
-  getBiometricInfo: () => Promise<{ isAvailable: boolean; biometryType: string | null }>,
-  setBiometricInfo: (info: { isAvailable: boolean; biometryType: string | null }) => void,
+  getBiometricInfo: () => Promise<{
+    isAvailable: boolean;
+    biometryType: string | null;
+  }>,
+  setBiometricInfo: (info: {
+    isAvailable: boolean;
+    biometryType: string | null;
+  }) => void,
   setShouldShowBiometricButton: (v: boolean) => void,
 ): Promise<void> {
   try {
@@ -93,7 +102,7 @@ export function LoginScreen(): React.JSX.Element {
   const onSubmit = (input: LoginInput) => {
     Telemetry.trackEvent('login_attempt', { method: 'email_password' });
 
-    executeMutationWithErrorHandler(
+    executeMutation(
       async () => {
         await login(input);
         Telemetry.trackEvent('login_success', { method: 'email_password' });
@@ -222,14 +231,19 @@ export function LoginScreen(): React.JSX.Element {
       />
 
       {/* Loading indicator */}
-      {!!(isLoggingIn || isBiometricLoading) && <ActivityIndicator testID="login-loading" size="small" />}
+      {!!(isLoggingIn || isBiometricLoading) && (
+        <ActivityIndicator testID="login-loading" size="small" />
+      )}
 
       {/* Biometric Authentication Section */}
       {!!shouldShowBiometricButton && (
         <View style={styles.biometricContainer}>
           {/* Main Biometric Login Button */}
           <Pressable
-            style={({pressed}) => [styles.biometricButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.biometricButton,
+              pressed && styles.pressed,
+            ]}
             onPress={() => handleBiometricLogin()}
             disabled={isBiometricLoading || isLoggingIn}
             accessibilityRole="button"

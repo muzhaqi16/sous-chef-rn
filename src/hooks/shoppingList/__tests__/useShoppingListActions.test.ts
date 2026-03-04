@@ -100,9 +100,7 @@ describe('useShoppingListActions', () => {
   };
 
   it('returns all action handlers', () => {
-    const { result } = renderHook(() =>
-      useShoppingListActions(defaultProps),
-    );
+    const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
     expect(typeof result.current.handleIncrementQuantity).toBe('function');
     expect(typeof result.current.handleDecrementQuantity).toBe('function');
@@ -115,9 +113,7 @@ describe('useShoppingListActions', () => {
 
   describe('handleTogglePurchase', () => {
     it('calls toggleItem with the item id', async () => {
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleTogglePurchase('item-1');
@@ -129,9 +125,7 @@ describe('useShoppingListActions', () => {
     it('tracks telemetry event', async () => {
       const { Telemetry } = require('#/services/telemetry');
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleTogglePurchase('item-1');
@@ -146,9 +140,7 @@ describe('useShoppingListActions', () => {
 
   describe('handleDeleteItem', () => {
     it('calls removeItem with the item id', async () => {
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleDeleteItem('item-1');
@@ -160,18 +152,15 @@ describe('useShoppingListActions', () => {
     it('tracks telemetry event', async () => {
       const { Telemetry } = require('#/services/telemetry');
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleDeleteItem('item-1');
       });
 
-      expect(Telemetry.trackEvent).toHaveBeenCalledWith(
-        'delete_item',
-        { item_id: 'item-1' },
-      );
+      expect(Telemetry.trackEvent).toHaveBeenCalledWith('delete_item', {
+        item_id: 'item-1',
+      });
     });
   });
 
@@ -276,9 +265,7 @@ describe('useShoppingListActions', () => {
     });
 
     it('clears search query immediately', async () => {
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleAddItemFromSearch('Eggs');
@@ -288,9 +275,7 @@ describe('useShoppingListActions', () => {
     });
 
     it('calls addItem with trimmed name and quantity 1', async () => {
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleAddItemFromSearch('  Eggs  ');
@@ -305,18 +290,15 @@ describe('useShoppingListActions', () => {
     it('tracks success telemetry event', async () => {
       const { Telemetry } = require('#/services/telemetry');
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleAddItemFromSearch('Eggs');
       });
 
-      expect(Telemetry.trackEvent).toHaveBeenCalledWith(
-        'add_item_success',
-        { source: 'search' },
-      );
+      expect(Telemetry.trackEvent).toHaveBeenCalledWith('add_item_success', {
+        source: 'search',
+      });
     });
   });
 
@@ -324,9 +306,7 @@ describe('useShoppingListActions', () => {
     it('early returns when item not in cache', async () => {
       mockCacheIdentify.mockReturnValue(undefined);
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
@@ -350,9 +330,7 @@ describe('useShoppingListActions', () => {
         },
       });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
@@ -390,9 +368,7 @@ describe('useShoppingListActions', () => {
         },
       });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleDecrementQuantity('item-1');
@@ -413,9 +389,7 @@ describe('useShoppingListActions', () => {
     it('early returns when cache identify returns undefined', async () => {
       mockCacheIdentify.mockReturnValue(undefined);
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleDecrementQuantity('item-1');
@@ -428,9 +402,7 @@ describe('useShoppingListActions', () => {
       mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
       mockReadFragment.mockReturnValue(null);
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleDecrementQuantity('item-1');
@@ -454,9 +426,7 @@ describe('useShoppingListActions', () => {
         },
       });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleDecrementQuantity('item-1');
@@ -488,9 +458,7 @@ describe('useShoppingListActions', () => {
         },
       });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleDecrementQuantity('item-1');
@@ -512,9 +480,7 @@ describe('useShoppingListActions', () => {
       mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
       mockReadFragment.mockReturnValue(null);
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
@@ -538,9 +504,7 @@ describe('useShoppingListActions', () => {
         },
       });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
@@ -582,15 +546,13 @@ describe('useShoppingListActions', () => {
     it('handles error in addItem and resets searchQuery', async () => {
       const { toastService } = require('#/services/toastService');
       const { Telemetry } = require('#/services/telemetry');
-      const { executeMutationWithErrorHandler } = require('#/utils/compilerSafeWrappers');
+      const { executeMutation } = require('#/utils/compilerSafeWrappers');
 
-      // Make executeMutationWithErrorHandler call the error handler
-      executeMutationWithErrorHandler.mockImplementationOnce(
-        async (_fn: any, onError: any) => {
-          onError(new Error('Network error'));
-          return false;
-        },
-      );
+      // Make executeMutation call the error handler
+      executeMutation.mockImplementationOnce(async (_fn: any, onError: any) => {
+        onError(new Error('Network error'));
+        return false;
+      });
 
       const mockSetSearchQuery = jest.fn();
       const { result } = renderHook(() =>
@@ -625,7 +587,9 @@ describe('useShoppingListActions', () => {
         await result.current.handleAddItemFromSearch('Eggs');
       });
 
-      expect(Telemetry.trackEvent).toHaveBeenCalledWith('add_item_failed', { source: 'search' });
+      expect(Telemetry.trackEvent).toHaveBeenCalledWith('add_item_failed', {
+        source: 'search',
+      });
     });
 
     it('sets searchQuery back to trimmed value when addItem returns falsy', async () => {
@@ -654,18 +618,14 @@ describe('useShoppingListActions', () => {
     it('handles toggle error with haptic feedback and toast', async () => {
       const { toastService } = require('#/services/toastService');
       const { Telemetry } = require('#/services/telemetry');
-      const { executeMutationWithErrorHandler } = require('#/utils/compilerSafeWrappers');
+      const { executeMutation } = require('#/utils/compilerSafeWrappers');
 
-      executeMutationWithErrorHandler.mockImplementationOnce(
-        async (_fn: any, onError: any) => {
-          onError(new Error('Toggle failed'));
-          return false;
-        },
-      );
+      executeMutation.mockImplementationOnce(async (_fn: any, onError: any) => {
+        onError(new Error('Toggle failed'));
+        return false;
+      });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleTogglePurchase('item-1');
@@ -684,45 +644,36 @@ describe('useShoppingListActions', () => {
     it('handles delete error with haptic feedback and toast', async () => {
       const { toastService } = require('#/services/toastService');
       const { Telemetry } = require('#/services/telemetry');
-      const { executeMutationWithErrorHandler } = require('#/utils/compilerSafeWrappers');
+      const { executeMutation } = require('#/utils/compilerSafeWrappers');
 
-      executeMutationWithErrorHandler.mockImplementationOnce(
-        async (_fn: any, onError: any) => {
-          onError(new Error('Delete failed'));
-          return false;
-        },
-      );
+      executeMutation.mockImplementationOnce(async (_fn: any, onError: any) => {
+        onError(new Error('Delete failed'));
+        return false;
+      });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleDeleteItem('item-1');
       });
 
-      expect(Telemetry.trackEvent).toHaveBeenCalledWith(
-        'delete_item',
-        { item_id: 'item-1' },
-      );
+      expect(Telemetry.trackEvent).toHaveBeenCalledWith('delete_item', {
+        item_id: 'item-1',
+      });
       expect(Telemetry.trackError).toHaveBeenCalled();
       expect(toastService.error).toHaveBeenCalledWith('Failed to delete item');
     });
 
     it('tracks error as string when error is not Error instance', async () => {
       const { Telemetry } = require('#/services/telemetry');
-      const { executeMutationWithErrorHandler } = require('#/utils/compilerSafeWrappers');
+      const { executeMutation } = require('#/utils/compilerSafeWrappers');
 
-      executeMutationWithErrorHandler.mockImplementationOnce(
-        async (_fn: any, onError: any) => {
-          onError('string error');
-          return false;
-        },
-      );
+      executeMutation.mockImplementationOnce(async (_fn: any, onError: any) => {
+        onError('string error');
+        return false;
+      });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleDeleteItem('item-1');
@@ -738,18 +689,14 @@ describe('useShoppingListActions', () => {
   describe('handleTogglePurchase - error as string', () => {
     it('tracks error as string when error is not Error instance', async () => {
       const { Telemetry } = require('#/services/telemetry');
-      const { executeMutationWithErrorHandler } = require('#/utils/compilerSafeWrappers');
+      const { executeMutation } = require('#/utils/compilerSafeWrappers');
 
-      executeMutationWithErrorHandler.mockImplementationOnce(
-        async (_fn: any, onError: any) => {
-          onError('string toggle error');
-          return false;
-        },
-      );
+      executeMutation.mockImplementationOnce(async (_fn: any, onError: any) => {
+        onError('string toggle error');
+        return false;
+      });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleTogglePurchase('item-1');
@@ -765,14 +712,12 @@ describe('useShoppingListActions', () => {
   describe('handleClearAllPurchased - error path', () => {
     it('handles clearItems error for purchased items', async () => {
       const { toastService } = require('#/services/toastService');
-      const { executeMutationWithErrorHandler } = require('#/utils/compilerSafeWrappers');
+      const { executeMutation } = require('#/utils/compilerSafeWrappers');
 
-      executeMutationWithErrorHandler.mockImplementationOnce(
-        async (_fn: any, onError: any) => {
-          onError(new Error('Clear failed'));
-          return false;
-        },
-      );
+      executeMutation.mockImplementationOnce(async (_fn: any, onError: any) => {
+        onError(new Error('Clear failed'));
+        return false;
+      });
 
       const { result } = renderHook(() =>
         useShoppingListActions({
@@ -785,21 +730,21 @@ describe('useShoppingListActions', () => {
         await result.current.handleClearAllPurchased();
       });
 
-      expect(toastService.error).toHaveBeenCalledWith('Failed to clear purchased items');
+      expect(toastService.error).toHaveBeenCalledWith(
+        'Failed to clear purchased items',
+      );
     });
   });
 
   describe('handleClearAllShopping - error path', () => {
     it('handles clearItems error for unpurchased items', async () => {
       const { toastService } = require('#/services/toastService');
-      const { executeMutationWithErrorHandler } = require('#/utils/compilerSafeWrappers');
+      const { executeMutation } = require('#/utils/compilerSafeWrappers');
 
-      executeMutationWithErrorHandler.mockImplementationOnce(
-        async (_fn: any, onError: any) => {
-          onError(new Error('Clear failed'));
-          return false;
-        },
-      );
+      executeMutation.mockImplementationOnce(async (_fn: any, onError: any) => {
+        onError(new Error('Clear failed'));
+        return false;
+      });
 
       const { result } = renderHook(() =>
         useShoppingListActions({
@@ -812,14 +757,18 @@ describe('useShoppingListActions', () => {
         await result.current.handleClearAllShopping();
       });
 
-      expect(toastService.error).toHaveBeenCalledWith('Failed to clear shopping items');
+      expect(toastService.error).toHaveBeenCalledWith(
+        'Failed to clear shopping items',
+      );
     });
   });
 
   describe('handleIncrementQuantity - version conflict', () => {
     it('handles version conflict error on increment', async () => {
-      const { handleVersionConflict } = require('#/utils/errors/versionConflict');
-      const { executeMutationWithErrorHandler } = require('#/utils/compilerSafeWrappers');
+      const {
+        handleVersionConflict,
+      } = require('#/utils/errors/versionConflict');
+      const { executeMutation } = require('#/utils/compilerSafeWrappers');
 
       mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
       mockReadFragment.mockReturnValue({
@@ -828,18 +777,16 @@ describe('useShoppingListActions', () => {
         version: 1,
       });
 
-      // Make the inner executeMutationWithErrorHandler call the error handler
-      executeMutationWithErrorHandler.mockImplementationOnce(
-        async (_fn: any, onError: any) => {
-          onError({ graphQLErrors: [{ extensions: { code: 'VERSION_CONFLICT' } }] });
-          return false;
-        },
-      );
+      // Make the inner executeMutation call the error handler
+      executeMutation.mockImplementationOnce(async (_fn: any, onError: any) => {
+        onError({
+          graphQLErrors: [{ extensions: { code: 'VERSION_CONFLICT' } }],
+        });
+        return false;
+      });
       handleVersionConflict.mockReturnValueOnce(true);
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
@@ -852,7 +799,9 @@ describe('useShoppingListActions', () => {
 
   describe('handleIncrementQuantity - onCompleted clears persistence', () => {
     it('clears persistence data on successful mutation completion', async () => {
-      const { optimisticDataPersistence } = require('#/apollo/offline/OptimisticDataPersistence');
+      const {
+        optimisticDataPersistence,
+      } = require('#/apollo/offline/OptimisticDataPersistence');
 
       mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
       mockReadFragment.mockReturnValue({
@@ -873,9 +822,7 @@ describe('useShoppingListActions', () => {
         });
       });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
@@ -900,7 +847,9 @@ describe('useShoppingListActions', () => {
 
   describe('handleDecrementQuantity - onCompleted clears persistence', () => {
     it('clears persistence data on successful decrement mutation', async () => {
-      const { optimisticDataPersistence } = require('#/apollo/offline/OptimisticDataPersistence');
+      const {
+        optimisticDataPersistence,
+      } = require('#/apollo/offline/OptimisticDataPersistence');
 
       mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
       mockReadFragment.mockReturnValue({
@@ -921,9 +870,7 @@ describe('useShoppingListActions', () => {
         });
       });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleDecrementQuantity('item-1');
@@ -947,7 +894,9 @@ describe('useShoppingListActions', () => {
 
   describe('handleIncrementQuantity - persistence save', () => {
     it('saves optimistic data before mutation', async () => {
-      const { optimisticDataPersistence } = require('#/apollo/offline/OptimisticDataPersistence');
+      const {
+        optimisticDataPersistence,
+      } = require('#/apollo/offline/OptimisticDataPersistence');
 
       mockCacheIdentify.mockReturnValue('ShoppingListItem:item-1');
       mockReadFragment.mockReturnValue({
@@ -963,9 +912,7 @@ describe('useShoppingListActions', () => {
         },
       });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleIncrementQuantity('item-1');
@@ -983,28 +930,24 @@ describe('useShoppingListActions', () => {
   describe('handleAddItemFromSearch - error is Error instance', () => {
     it('tracks Error instance with trackError', async () => {
       const { Telemetry } = require('#/services/telemetry');
-      const { executeMutationWithErrorHandler } = require('#/utils/compilerSafeWrappers');
+      const { executeMutation } = require('#/utils/compilerSafeWrappers');
 
       const error = new Error('Add failed');
-      executeMutationWithErrorHandler.mockImplementationOnce(
-        async (_fn: any, onError: any) => {
-          onError(error);
-          return false;
-        },
-      );
+      executeMutation.mockImplementationOnce(async (_fn: any, onError: any) => {
+        onError(error);
+        return false;
+      });
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleAddItemFromSearch('Milk');
       });
 
-      expect(Telemetry.trackError).toHaveBeenCalledWith(
-        error,
-        { component: 'ShoppingListMain', operation: 'addItemFromSearch' },
-      );
+      expect(Telemetry.trackError).toHaveBeenCalledWith(error, {
+        component: 'ShoppingListMain',
+        operation: 'addItemFromSearch',
+      });
     });
   });
 
@@ -1012,26 +955,25 @@ describe('useShoppingListActions', () => {
     it('tracks add_item_from_search event with list_id and name length', async () => {
       const { Telemetry } = require('#/services/telemetry');
 
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleAddItemFromSearch('  Eggs  ');
       });
 
-      expect(Telemetry.trackEvent).toHaveBeenCalledWith('add_item_from_search', {
-        list_id: 'list-1',
-        item_name_length: 4,
-      });
+      expect(Telemetry.trackEvent).toHaveBeenCalledWith(
+        'add_item_from_search',
+        {
+          list_id: 'list-1',
+          item_name_length: 4,
+        },
+      );
     });
   });
 
   describe('handleAddItemFromSearch - haptic feedback', () => {
     it('triggers success haptic on successful add', async () => {
-      const { result } = renderHook(() =>
-        useShoppingListActions(defaultProps),
-      );
+      const { result } = renderHook(() => useShoppingListActions(defaultProps));
 
       await act(async () => {
         await result.current.handleAddItemFromSearch('Bread');

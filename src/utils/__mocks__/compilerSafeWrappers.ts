@@ -1,10 +1,16 @@
 /** Passthrough auto-mock — wraps every export in jest.fn() while preserving real behavior. */
 
 export const executeMutation = jest.fn(
-  async <T>(mutationFn: () => Promise<T>, _errorMsg: string): Promise<T | false> => {
+  async <T>(
+    mutationFn: () => Promise<T>,
+    errorMsgOrOnError: string | ((error: unknown) => void),
+  ): Promise<T | false> => {
     try {
       return await mutationFn();
-    } catch {
+    } catch (error) {
+      if (typeof errorMsgOrOnError === 'function') {
+        errorMsgOrOnError(error);
+      }
       return false;
     }
   },
@@ -21,7 +27,10 @@ export const executeCacheUpdate = jest.fn(
 );
 
 export const executeQuery = jest.fn(
-  async <T>(queryFn: () => Promise<T>, _errorMsg: string): Promise<T | null> => {
+  async <T>(
+    queryFn: () => Promise<T>,
+    _errorMsg: string,
+  ): Promise<T | null> => {
     try {
       return await queryFn();
     } catch {
@@ -30,19 +39,11 @@ export const executeQuery = jest.fn(
   },
 );
 
-export const executeMutationWithErrorHandler = jest.fn(
-  async <T>(mutationFn: () => Promise<T>, onError: (error: unknown) => void): Promise<T | false> => {
-    try {
-      return await mutationFn();
-    } catch (error) {
-      onError(error);
-      return false;
-    }
-  },
-);
-
 export const executeRefetch = jest.fn(
-  async (refetchFn: () => Promise<unknown>, _errorMsg: string): Promise<void> => {
+  async (
+    refetchFn: () => Promise<unknown>,
+    _errorMsg: string,
+  ): Promise<void> => {
     try {
       await refetchFn();
     } catch {
@@ -52,12 +53,31 @@ export const executeRefetch = jest.fn(
 );
 
 export const executeRefreshWithFinally = jest.fn(
-  async (refreshFn: () => Promise<unknown>, setRefreshing: (v: boolean) => void): Promise<void> => {
+  async (
+    refreshFn: () => Promise<unknown>,
+    setRefreshing: (v: boolean) => void,
+  ): Promise<void> => {
     setRefreshing(true);
     try {
       await refreshFn();
     } finally {
       setRefreshing(false);
+    }
+  },
+);
+
+export const executeAsyncWithCleanup = jest.fn(
+  async (
+    fn: () => Promise<void>,
+    cleanup: () => void,
+    onError?: (error: unknown) => void,
+  ): Promise<void> => {
+    try {
+      await fn();
+    } catch (error) {
+      onError?.(error);
+    } finally {
+      cleanup();
     }
   },
 );
@@ -75,22 +95,6 @@ export const executeWithLoadingState = jest.fn(
       onError?.(error);
     } finally {
       setLoading(false);
-    }
-  },
-);
-
-export const executeAsyncWithCleanup = jest.fn(
-  async (
-    fn: () => Promise<void>,
-    cleanup: () => void,
-    onError?: (error: unknown) => void,
-  ): Promise<void> => {
-    try {
-      await fn();
-    } catch (error) {
-      onError?.(error);
-    } finally {
-      cleanup();
     }
   },
 );

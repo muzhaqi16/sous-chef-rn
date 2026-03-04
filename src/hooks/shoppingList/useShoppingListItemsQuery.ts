@@ -14,7 +14,7 @@ export type ShoppingListDetail = NonNullable<GetShoppingListDetailsQuery['shoppi
  * - Handle offline-aware fetch policy
  * - Provide shoppingList details for permissions and collaborators
  *
- * Items are fetched separately by usePaginatedShoppingItems via GetShoppingListItemsPaginated.
+ * Items are fetched separately by usePaginatedShoppingItems via GetShoppingListItemsFiltered.
  * This hook is consumed by useShoppingListManagement for data orchestration.
  */
 export function useShoppingListItemsQuery(listId: string | null | undefined) {

@@ -2,13 +2,15 @@ import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
   ShoppingListItemDisplayFragmentDoc,
-  useUpdateShoppingListItemQuantityMutation } from '#generated';
+  useUpdateShoppingListItemQuantityMutation,
+} from '#generated';
 import { toastService } from '#/services/toastService';
 import {
   handleVersionConflict,
-  getVersionConflictMessage } from '#/utils/errors/versionConflict';
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useHaptic } from '#hooks/haptic/useHaptic';
 import { Telemetry } from '#/services/telemetry';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
@@ -31,23 +33,20 @@ async function executeQuantityUpdate(
   clearPersistence: () => void,
   refetchItems: () => Promise<any>,
 ): Promise<void> {
-  const result = await executeMutationWithErrorHandler(
-    updateFn,
-    (error: any) => {
-      revertCache();
-      clearPersistence();
+  const result = await executeMutation(updateFn, (error: any) => {
+    revertCache();
+    clearPersistence();
 
-      if (handleVersionConflict(error)) {
-        Alert.alert('Item Updated', getVersionConflictMessage(error), [
-          { text: 'Refresh', onPress: () => refetchItems() },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-        return;
-      }
-      console.error('Failed to update quantity:', error);
-      toastService.error('Failed to update quantity');
-    },
-  );
+    if (handleVersionConflict(error)) {
+      Alert.alert('Item Updated', getVersionConflictMessage(error), [
+        { text: 'Refresh', onPress: () => refetchItems() },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
+    console.error('Failed to update quantity:', error);
+    toastService.error('Failed to update quantity');
+  });
   if (result === false) return;
 }
 
@@ -56,13 +55,13 @@ async function executeTogglePurchase(
   toggleItem: (itemId: string) => Promise<any>,
   itemId: string,
 ): Promise<void> {
-  const result = await executeMutationWithErrorHandler(
+  const result = await executeMutation(
     async () => {
       haptic.selection();
       await toggleItem(itemId);
       Telemetry.trackEvent('toggle_item_purchase_success');
     },
-    (error) => {
+    error => {
       Telemetry.trackError(
         error instanceof Error ? error : 'Failed to toggle item purchase',
         { component: 'ShoppingListMain', operation: 'togglePurchase' },
@@ -79,13 +78,13 @@ async function executeDeleteItem(
   removeItem: (itemId: string) => Promise<any>,
   itemId: string,
 ): Promise<void> {
-  const result = await executeMutationWithErrorHandler(
+  const result = await executeMutation(
     async () => {
       haptic.warning();
       await removeItem(itemId);
       Telemetry.trackEvent('delete_item_success');
     },
-    (error) => {
+    error => {
       Telemetry.trackError(
         error instanceof Error ? error : 'Failed to delete item',
         { component: 'ShoppingListMain', operation: 'deleteItem' },
@@ -102,14 +101,18 @@ async function executeClearItems(
   clearItems: (purchased: boolean) => Promise<void>,
   purchased: boolean,
 ): Promise<void> {
-  const result = await executeMutationWithErrorHandler(
+  const result = await executeMutation(
     async () => {
       haptic.warning();
       await clearItems(purchased);
     },
     () => {
       haptic.error();
-      toastService.error(purchased ? 'Failed to clear purchased items' : 'Failed to clear shopping items');
+      toastService.error(
+        purchased
+          ? 'Failed to clear purchased items'
+          : 'Failed to clear shopping items',
+      );
     },
   );
   if (result === false) return;
@@ -122,11 +125,12 @@ async function executeAddItemFromSearch(
   setSearchQuery: (query: string) => void,
 ): Promise<void> {
   const trimmed = itemName.trim();
-  const result = await executeMutationWithErrorHandler(
+  const result = await executeMutation(
     async () => {
       const addResult = await addItem({
         itemName: trimmed,
-        quantity: 1 });
+        quantity: 1,
+      });
 
       if (addResult) {
         Telemetry.trackEvent('add_item_success', { source: 'search' });
@@ -138,7 +142,7 @@ async function executeAddItemFromSearch(
         setSearchQuery(trimmed);
       }
     },
-    (error) => {
+    error => {
       Telemetry.trackError(
         error instanceof Error ? error : 'Failed to add item from search',
         { component: 'ShoppingListMain', operation: 'addItemFromSearch' },
@@ -171,148 +175,189 @@ export function useShoppingListActions({
   toggleItem,
   removeItem,
   refetchItems,
-  setSearchQuery }: UseShoppingListActionsOptions) {
+  setSearchQuery,
+}: UseShoppingListActionsOptions) {
   const client = useApolloClient();
   const haptic = useHaptic();
 
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
-    errorPolicy: 'all' });
+    errorPolicy: 'all',
+  });
 
   // Quantity increment handler - uses cache.modify for instant UI without warnings
   const handleIncrementQuantity = async (itemId: string) => {
-      const cacheId = client.cache.identify({
-        __typename: 'ShoppingListItem',
-        id: itemId });
+    const cacheId = client.cache.identify({
+      __typename: 'ShoppingListItem',
+      id: itemId,
+    });
 
-      if (!cacheId) {
-        console.warn('Item not in cache, cannot increment:', itemId);
-        return;
-      }
+    if (!cacheId) {
+      console.warn('Item not in cache, cannot increment:', itemId);
+      return;
+    }
 
-      const cachedItem = client.readFragment<any>({
-        id: cacheId,
-        fragment: ShoppingListItemDisplayFragmentDoc,
-        fragmentName: 'ShoppingListItemDisplayFragment' });
+    const cachedItem = client.readFragment<any>({
+      id: cacheId,
+      fragment: ShoppingListItemDisplayFragmentDoc,
+      fragmentName: 'ShoppingListItemDisplayFragment',
+    });
 
-      if (!cachedItem) {
-        console.warn('Item not in cache, cannot increment:', itemId);
-        return;
-      }
+    if (!cachedItem) {
+      console.warn('Item not in cache, cannot increment:', itemId);
+      return;
+    }
 
-      const newQuantity = (cachedItem.quantity || 0) + 1;
+    const newQuantity = (cachedItem.quantity || 0) + 1;
 
-      client.cache.modify({
-        id: cacheId,
-        fields: {
-          quantity() {
-            return newQuantity;
-          } } });
-
-      optimisticDataPersistence.save('ShoppingListItem', itemId, 'quantity', newQuantity);
-
-      await executeQuantityUpdate(
-        async () => {
-          await updateQuantity({
-            variables: {
-              itemId,
-              quantity: newQuantity.toString(),
-              version: cachedItem.version },
-            onCompleted: data => {
-              const updatedItem = data?.updateShoppingListItemQuantity?.shoppingListItem;
-              if (updatedItem) {
-                optimisticDataPersistence.clear('ShoppingListItem', updatedItem.id, 'quantity');
-              }
-            } });
+    client.cache.modify({
+      id: cacheId,
+      fields: {
+        quantity() {
+          return newQuantity;
         },
-        () => {
-          client.cache.modify({
-            id: cacheId,
-            fields: {
-              quantity() {
-                return cachedItem.quantity;
-              } } });
-        },
-        () => optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity'),
-        refetchItems,
-      );
-    };
+      },
+    });
+
+    optimisticDataPersistence.save(
+      'ShoppingListItem',
+      itemId,
+      'quantity',
+      newQuantity,
+    );
+
+    await executeQuantityUpdate(
+      async () => {
+        await updateQuantity({
+          variables: {
+            itemId,
+            quantity: newQuantity.toString(),
+            version: cachedItem.version,
+          },
+          onCompleted: data => {
+            const updatedItem =
+              data?.updateShoppingListItemQuantity?.shoppingListItem;
+            if (updatedItem) {
+              optimisticDataPersistence.clear(
+                'ShoppingListItem',
+                updatedItem.id,
+                'quantity',
+              );
+            }
+          },
+        });
+      },
+      () => {
+        client.cache.modify({
+          id: cacheId,
+          fields: {
+            quantity() {
+              return cachedItem.quantity;
+            },
+          },
+        });
+      },
+      () =>
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity'),
+      refetchItems,
+    );
+  };
 
   // Quantity decrement handler - uses cache.modify for instant UI without warnings
   const handleDecrementQuantity = async (itemId: string) => {
-      const cacheId = client.cache.identify({
-        __typename: 'ShoppingListItem',
-        id: itemId });
+    const cacheId = client.cache.identify({
+      __typename: 'ShoppingListItem',
+      id: itemId,
+    });
 
-      if (!cacheId) {
-        console.warn('Item not in cache, cannot decrement:', itemId);
-        return;
-      }
+    if (!cacheId) {
+      console.warn('Item not in cache, cannot decrement:', itemId);
+      return;
+    }
 
-      const cachedItem = client.readFragment<any>({
-        id: cacheId,
-        fragment: ShoppingListItemDisplayFragmentDoc,
-        fragmentName: 'ShoppingListItemDisplayFragment' });
+    const cachedItem = client.readFragment<any>({
+      id: cacheId,
+      fragment: ShoppingListItemDisplayFragmentDoc,
+      fragmentName: 'ShoppingListItemDisplayFragment',
+    });
 
-      if (!cachedItem) {
-        console.warn('Item not in cache, cannot decrement:', itemId);
-        return;
-      }
+    if (!cachedItem) {
+      console.warn('Item not in cache, cannot decrement:', itemId);
+      return;
+    }
 
-      const newQuantity = Math.max(1, (cachedItem.quantity ?? 1) - 1);
+    const newQuantity = Math.max(1, (cachedItem.quantity ?? 1) - 1);
 
-      client.cache.modify({
-        id: cacheId,
-        fields: {
-          quantity() {
-            return newQuantity;
-          } } });
-
-      optimisticDataPersistence.save('ShoppingListItem', itemId, 'quantity', newQuantity);
-
-      await executeQuantityUpdate(
-        async () => {
-          await updateQuantity({
-            variables: {
-              itemId,
-              quantity: newQuantity.toString(),
-              version: cachedItem.version },
-            onCompleted: data => {
-              const updatedItem = data?.updateShoppingListItemQuantity?.shoppingListItem;
-              if (updatedItem) {
-                optimisticDataPersistence.clear('ShoppingListItem', updatedItem.id, 'quantity');
-              }
-            } });
+    client.cache.modify({
+      id: cacheId,
+      fields: {
+        quantity() {
+          return newQuantity;
         },
-        () => {
-          client.cache.modify({
-            id: cacheId,
-            fields: {
-              quantity() {
-                return cachedItem.quantity;
-              } } });
-        },
-        () => optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity'),
-        refetchItems,
-      );
-    };
+      },
+    });
+
+    optimisticDataPersistence.save(
+      'ShoppingListItem',
+      itemId,
+      'quantity',
+      newQuantity,
+    );
+
+    await executeQuantityUpdate(
+      async () => {
+        await updateQuantity({
+          variables: {
+            itemId,
+            quantity: newQuantity.toString(),
+            version: cachedItem.version,
+          },
+          onCompleted: data => {
+            const updatedItem =
+              data?.updateShoppingListItemQuantity?.shoppingListItem;
+            if (updatedItem) {
+              optimisticDataPersistence.clear(
+                'ShoppingListItem',
+                updatedItem.id,
+                'quantity',
+              );
+            }
+          },
+        });
+      },
+      () => {
+        client.cache.modify({
+          id: cacheId,
+          fields: {
+            quantity() {
+              return cachedItem.quantity;
+            },
+          },
+        });
+      },
+      () =>
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity'),
+      refetchItems,
+    );
+  };
 
   // Toggle purchase handler
   const handleTogglePurchase = async (itemId: string) => {
-      Telemetry.trackEvent('toggle_item_purchase', { item_id: itemId });
-      await executeTogglePurchase(haptic, toggleItem, itemId);
-    };
+    Telemetry.trackEvent('toggle_item_purchase', { item_id: itemId });
+    await executeTogglePurchase(haptic, toggleItem, itemId);
+  };
 
   // Delete item handler
   const handleDeleteItem = async (itemId: string) => {
-      Telemetry.trackEvent('delete_item', { item_id: itemId });
-      await executeDeleteItem(haptic, removeItem, itemId);
-    };
+    Telemetry.trackEvent('delete_item', { item_id: itemId });
+    await executeDeleteItem(haptic, removeItem, itemId);
+  };
 
   // Clear items handler - uses optimistic cache clearing for instant UI
   const { clearItems } = useClearShoppingListItems({
     listId: currentListId,
     items,
-    refetch: refetchItems });
+    refetch: refetchItems,
+  });
 
   const handleClearAllPurchased = async () => {
     const purchasedItems = items.filter(
@@ -337,20 +382,21 @@ export function useShoppingListActions({
 
   // Add item from search handler
   const handleAddItemFromSearch = async (itemName: string) => {
-      if (!currentListId) {
-        toastService.error('Please select a shopping list first');
-        return;
-      }
+    if (!currentListId) {
+      toastService.error('Please select a shopping list first');
+      return;
+    }
 
-      Telemetry.trackEvent('add_item_from_search', {
-        list_id: currentListId,
-        item_name_length: itemName.trim().length });
+    Telemetry.trackEvent('add_item_from_search', {
+      list_id: currentListId,
+      item_name_length: itemName.trim().length,
+    });
 
-      // Clear search input immediately for instant feedback
-      setSearchQuery('');
+    // Clear search input immediately for instant feedback
+    setSearchQuery('');
 
-      await executeAddItemFromSearch(addItem, haptic, itemName, setSearchQuery);
-    };
+    await executeAddItemFromSearch(addItem, haptic, itemName, setSearchQuery);
+  };
 
   return {
     // Quantity
@@ -362,5 +408,6 @@ export function useShoppingListActions({
     handleDeleteItem,
     handleClearAllPurchased,
     handleClearAllShopping,
-    handleAddItemFromSearch };
+    handleAddItemFromSearch,
+  };
 }

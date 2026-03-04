@@ -137,7 +137,7 @@ describe('useAddShoppingItem', () => {
       unitName: 'gallon',
     });
 
-    expect(transformed.unitName).toBe('gallon');
+    expect(transformed.unit.unitName).toBe('gallon');
   });
 
   it('transformInput omits optional fields when empty', () => {
@@ -152,8 +152,7 @@ describe('useAddShoppingItem', () => {
       itemName: 'Milk',
     });
 
-    expect(transformed).not.toHaveProperty('unitName');
-    expect(transformed).not.toHaveProperty('unitId');
+    expect(transformed).not.toHaveProperty('unit');
     expect(transformed).not.toHaveProperty('notes');
     expect(transformed).not.toHaveProperty('category');
   });

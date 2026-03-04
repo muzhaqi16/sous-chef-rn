@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useDeferredValue } from 'react';
 
 import { useAuth } from '#/hooks/auth/useAuth';
 import { preloadImages } from '#components/atoms/CachedImage';
@@ -73,11 +73,14 @@ export function useShoppingListScreen() {
   } = useShoppingListManagement(optimisticListId);
 
   // 4. Transform: Convert raw items to UI format (single consolidated call)
-  // Only transform unpurchased + purchased (skip redundant combined transform)
+  // PERF: Defer raw items so FlashList doesn't re-layout mid-scroll on cache updates
+  const deferredUnpurchasedItems = useDeferredValue(rawUnpurchasedItems);
+  const deferredPurchasedItems = useDeferredValue(rawPurchasedItems);
+
   const { unpurchasedItems: transformedUnpurchasedItems, purchasedItems: transformedPurchasedItems } =
     useShoppingListTransformMulti({
-      rawUnpurchasedItems,
-      rawPurchasedItems,
+      rawUnpurchasedItems: deferredUnpurchasedItems,
+      rawPurchasedItems: deferredPurchasedItems,
     });
 
   // Derive sortableItems from concatenation instead of a separate transform pass

@@ -1,6 +1,10 @@
 import { useState } from 'react';
 
-import { ShoppingListItemFragment } from '#generated';
+import {
+  ShoppingListItemFragment,
+  UpdateShoppingListItemInput,
+  UnitSpecInput,
+} from '#generated';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 
 type FormState = {
@@ -82,16 +86,20 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
     setSavedInitialState(state); // Save initial state for dirty comparison
   };
 
-  const buildUnitInput = () => {
+  const buildUnitInput = (): { unit: UnitSpecInput } | {} => {
+    if (!formState.unit && !formState.selectedUnitId) return {};
     return {
-      unitName: formState.unit,
-      ...(formState.selectedUnitId && { unitId: formState.selectedUnitId }) };
+      unit: {
+        unitName: formState.unit,
+        ...(formState.selectedUnitId && { unitId: formState.selectedUnitId }),
+      },
+    };
   };
 
   // Build partial input with only dirty fields (for edit mode)
   // Sends raw quantityInput string - server handles conversion via FlexibleQuantity
-  const buildDirtyInput = () => {
-    const input: Record<string, any> = {};
+  const buildDirtyInput = (): Partial<UpdateShoppingListItemInput> => {
+    const input: Partial<UpdateShoppingListItemInput> = {};
 
     if (dirtyFields.itemName) {
       input.itemName = formState.itemName;
@@ -102,12 +110,12 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       input.quantity = formState.quantityInput;
     }
 
-    // Send unit fields together if either changed
+    // Unit — nest into UnitSpecInput
     if (dirtyFields.unit || dirtyFields.selectedUnitId) {
-      input.unitName = formState.unit;
-      if (formState.selectedUnitId) {
-        input.unitId = formState.selectedUnitId;
-      }
+      input.unit = {
+        unitName: formState.unit,
+        ...(formState.selectedUnitId && { unitId: formState.selectedUnitId }),
+      };
     }
 
     if (dirtyFields.notes) {
@@ -118,8 +126,9 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       input.category = formState.category;
     }
 
+    // Pricing — nest into PricingEstimatesInput
     if (dirtyFields.estimatedPrice && formState.estimatedPrice) {
-      input.estimatedPrice = parseFloat(formState.estimatedPrice);
+      input.pricing = { estimatedPrice: parseFloat(formState.estimatedPrice) };
     }
 
     return input;

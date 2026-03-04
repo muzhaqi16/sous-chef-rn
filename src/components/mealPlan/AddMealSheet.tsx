@@ -344,6 +344,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary },
   mealTypeScroll: {
     flexGrow: 0,
+    flexShrink: 0,
     marginBottom: theme.spacing.md },
   mealTypeRow: {
     flexDirection: 'row',

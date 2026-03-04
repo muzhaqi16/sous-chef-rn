@@ -10,7 +10,11 @@ jest.mock('#/apollo/links/refreshToken');
 
 // --- Navigation ---
 jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
+const mockNav = (
+  jest.requireMock('#hooks/navigation/useAppNavigation') as {
+    useAppNavigation: jest.Mock;
+  }
+).useAppNavigation();
 
 // --- Store ---
 jest.mock('#store/useAppStore', () => {
@@ -43,7 +47,12 @@ const mockItemData = {
     storageState: 'REFRIGERATED',
     storageLocation: null,
     brand: { name: 'Organic Valley' },
-    item: { id: 'item1', categories: [{ category: { name: 'Dairy' } }], images: null, nutritions: null },
+    item: {
+      id: 'item1',
+      categories: [{ category: { name: 'Dairy' } }],
+      images: null,
+      nutritions: null,
+    },
     condition: 'GOOD',
     acquisitionMethod: 'PURCHASED',
     costPerUnit: 3.5,
@@ -73,7 +82,10 @@ jest.mock('#generated', () => ({
     error: null,
   })),
   useDeletePantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useAddItemToShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+  useAddItemToShoppingListMutation: jest.fn(() => [
+    jest.fn(),
+    { loading: false },
+  ]),
   UsagePurpose: { Adjustment: 'ADJUSTMENT' },
 }));
 
@@ -105,20 +117,21 @@ jest.mock('#hooks/pantry/usePantryItemTransformation', () => ({
   formatStorageState: jest.fn(() => 'Fridge'),
 }));
 jest.mock('#utils/formatQuantity', () => ({
-  getUnitDisplayText: jest.fn((unit) => unit?.symbol || ''),
+  getUnitDisplayText: jest.fn(unit => unit?.symbol || ''),
 }));
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   addNewItemToShoppingListCache: jest.fn(),
 }));
 jest.mock('#/services/recipeApi/SpoonacularService', () => ({
-  spoonacularService: { searchRecipes: jest.fn(() => Promise.resolve({ results: [] })) },
+  spoonacularService: {
+    searchRecipes: jest.fn(() => Promise.resolve({ results: [] })),
+  },
 }));
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeWithLoadingState: jest.fn(),
-  executeMutationWithErrorHandler: jest.fn(),
   executeMutation: jest.fn(),
   executeCacheUpdate: jest.fn(),
   executeQuery: jest.fn(),
@@ -144,11 +157,21 @@ jest.mock('#components/molecules/Header', () => ({
     );
   },
 }));
-jest.mock('#components/molecules/NutritionSummary', () => ({ NutritionSummary: () => null }));
-jest.mock('#components/molecules/ImageGalleryTabs', () => ({ ImageGalleryTabs: () => null }));
-jest.mock('#components/modals/AdjustQuantityModal', () => ({ AdjustQuantityModal: () => null }));
-jest.mock('#components/modals/CorrectWeightModal', () => ({ CorrectWeightModal: () => null }));
-jest.mock('#/components/base/SousChefLoader', () => ({ SousChefLoader: () => null }));
+jest.mock('#components/molecules/NutritionSummary', () => ({
+  NutritionSummary: () => null,
+}));
+jest.mock('#components/molecules/ImageGalleryTabs', () => ({
+  ImageGalleryTabs: () => null,
+}));
+jest.mock('#components/modals/AdjustQuantityModal', () => ({
+  AdjustQuantityModal: () => null,
+}));
+jest.mock('#components/modals/CorrectWeightModal', () => ({
+  CorrectWeightModal: () => null,
+}));
+jest.mock('#/components/base/SousChefLoader', () => ({
+  SousChefLoader: () => null,
+}));
 
 describe('PantryItemDetail', () => {
   const route = { params: { itemId: 'pi1' } };
@@ -217,7 +240,11 @@ describe('PantryItemDetail', () => {
     expect(screen.queryByText('Milk')).toBeNull();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders "No expiry" when expiresAt is null', () => {
@@ -237,7 +264,11 @@ describe('PantryItemDetail', () => {
     expect(screen.getByText('No expiry')).toBeTruthy();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('does not render brand row when brand is null', () => {
@@ -257,7 +288,11 @@ describe('PantryItemDetail', () => {
     expect(screen.queryByText('Brand')).toBeNull();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('does not render notes section when storageNotes is null', () => {
@@ -277,7 +312,11 @@ describe('PantryItemDetail', () => {
     expect(screen.queryByText('Notes')).toBeNull();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('does not render tags section when tags is empty', () => {
@@ -298,7 +337,11 @@ describe('PantryItemDetail', () => {
     expect(screen.queryByText('dairy')).toBeNull();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders condition row when condition is not GOOD', () => {
@@ -318,7 +361,11 @@ describe('PantryItemDetail', () => {
     expect(screen.getByText('Condition')).toBeTruthy();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('does not render condition row when condition is GOOD', () => {
@@ -350,7 +397,11 @@ describe('PantryItemDetail', () => {
     expect(screen.queryByText('Acquired')).toBeNull();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders cost rows when cost data exists', () => {
@@ -379,7 +430,11 @@ describe('PantryItemDetail', () => {
     expect(screen.queryByText('Total Cost')).toBeNull();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders discard button for expired items with quantity > 0', () => {
@@ -400,7 +455,11 @@ describe('PantryItemDetail', () => {
     expect(screen.getByTestId('pantry-item-discard-button')).toBeTruthy();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('does not render discard button when condition is GOOD', () => {
@@ -427,7 +486,11 @@ describe('PantryItemDetail', () => {
     expect(screen.getByText('Restock At')).toBeTruthy();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('does not render min stock and restock rows when values are null', () => {
@@ -458,7 +521,11 @@ describe('PantryItemDetail', () => {
     expect(screen.getByText('Storage')).toBeTruthy();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders storage location when it is an object with name', () => {
@@ -478,7 +545,11 @@ describe('PantryItemDetail', () => {
     expect(screen.getByText('Storage')).toBeTruthy();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders store name when store exists', () => {
@@ -499,7 +570,11 @@ describe('PantryItemDetail', () => {
     expect(screen.getByText('Whole Foods')).toBeTruthy();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders last used row when lastUsedAt exists', () => {
@@ -519,7 +594,11 @@ describe('PantryItemDetail', () => {
     expect(screen.getByText('Last Used')).toBeTruthy();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders with usage records', () => {
@@ -530,7 +609,14 @@ describe('PantryItemDetail', () => {
           ...mockItemData.pantryItem,
           usageRecords: {
             edges: [
-              { node: { id: 'usage-1', quantity: 1, purpose: 'ADJUSTMENT', createdAt: '2025-01-10T00:00:00Z' } },
+              {
+                node: {
+                  id: 'usage-1',
+                  quantity: 1,
+                  purpose: 'ADJUSTMENT',
+                  createdAt: '2025-01-10T00:00:00Z',
+                },
+              },
             ],
           },
         },
@@ -543,11 +629,17 @@ describe('PantryItemDetail', () => {
     expect(screen.getByText('Milk')).toBeTruthy();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders with package breakdown info', () => {
-    const { formatPackageBreakdownFull } = require('#hooks/pantry/usePantryItemTransformation');
+    const {
+      formatPackageBreakdownFull,
+    } = require('#hooks/pantry/usePantryItemTransformation');
     formatPackageBreakdownFull.mockReturnValue('6 x 330ml cans');
 
     const { useGetPantryItemQuery } = require('#generated');
@@ -567,11 +659,17 @@ describe('PantryItemDetail', () => {
 
     // Restore
     formatPackageBreakdownFull.mockReturnValue(null);
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders with net weight info', () => {
-    const { formatNetWeightDisplay } = require('#hooks/pantry/usePantryItemTransformation');
+    const {
+      formatNetWeightDisplay,
+    } = require('#hooks/pantry/usePantryItemTransformation');
     formatNetWeightDisplay.mockReturnValue('500g');
 
     const { useGetPantryItemQuery } = require('#generated');
@@ -592,7 +690,11 @@ describe('PantryItemDetail', () => {
 
     // Restore
     formatNetWeightDisplay.mockReturnValue(null);
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders with image url', () => {
@@ -632,11 +734,18 @@ describe('PantryItemDetail', () => {
     // Restore
     hasImages.mockReturnValue(false);
     parseImages.mockReturnValue([]);
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders with nutrition data', () => {
-    const { parseNutritions, hasNutritionData } = require('#utils/nutritionUtils');
+    const {
+      parseNutritions,
+      hasNutritionData,
+    } = require('#utils/nutritionUtils');
     hasNutritionData.mockReturnValue(true);
     parseNutritions.mockReturnValue([{ name: 'Calories', amount: 120 }]);
 
@@ -661,11 +770,17 @@ describe('PantryItemDetail', () => {
     // Restore
     hasNutritionData.mockReturnValue(false);
     parseNutritions.mockReturnValue([]);
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders with quantity breakdown', () => {
-    const { formatQuantityBreakdown } = require('#hooks/pantry/usePantryItemTransformation');
+    const {
+      formatQuantityBreakdown,
+    } = require('#hooks/pantry/usePantryItemTransformation');
     formatQuantityBreakdown.mockReturnValue('2 of 3 remaining');
 
     const { useGetPantryItemQuery } = require('#generated');
@@ -685,7 +800,11 @@ describe('PantryItemDetail', () => {
 
     // Restore
     formatQuantityBreakdown.mockReturnValue(null);
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 
   it('renders with expired item that has zero quantity', () => {
@@ -707,7 +826,11 @@ describe('PantryItemDetail', () => {
     expect(screen.queryByTestId('pantry-item-discard-button')).toBeNull();
 
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
   });
 });
 
@@ -732,7 +855,11 @@ describe('PantryItemDetail – helper functions', () => {
 
     afterEach(() => {
       jest.useRealTimers();
-      useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+      useGetPantryItemQuery.mockReturnValue({
+        data: mockItemData,
+        loading: false,
+        error: null,
+      });
     });
 
     it('shows "Expired" when expiresAt is in the past', () => {
@@ -822,7 +949,11 @@ describe('PantryItemDetail – helper functions', () => {
     const route = { params: { itemId: 'pi1' } };
 
     afterEach(() => {
-      useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+      useGetPantryItemQuery.mockReturnValue({
+        data: mockItemData,
+        loading: false,
+        error: null,
+      });
     });
 
     it('renders Added row with formatted date', () => {
@@ -861,7 +992,11 @@ describe('PantryItemDetail – helper functions', () => {
     const route = { params: { itemId: 'pi1' } };
 
     afterEach(() => {
-      useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+      useGetPantryItemQuery.mockReturnValue({
+        data: mockItemData,
+        loading: false,
+        error: null,
+      });
     });
 
     it('shows "Today" when item was just added', () => {
@@ -936,7 +1071,11 @@ describe('PantryItemDetail – helper functions', () => {
     const route = { params: { itemId: 'pi1' } };
 
     afterEach(() => {
-      useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+      useGetPantryItemQuery.mockReturnValue({
+        data: mockItemData,
+        loading: false,
+        error: null,
+      });
     });
 
     it('returns null for GOOD condition - no Condition row', () => {
@@ -998,7 +1137,11 @@ describe('PantryItemDetail – helper functions', () => {
     const route = { params: { itemId: 'pi1' } };
 
     afterEach(() => {
-      useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+      useGetPantryItemQuery.mockReturnValue({
+        data: mockItemData,
+        loading: false,
+        error: null,
+      });
     });
 
     it('formats PURCHASED method', () => {
@@ -1009,7 +1152,10 @@ describe('PantryItemDetail – helper functions', () => {
     it('formats multi-word acquisition method like HOME_GROWN', () => {
       useGetPantryItemQuery.mockReturnValue({
         data: {
-          pantryItem: { ...mockItemData.pantryItem, acquisitionMethod: 'HOME_GROWN' },
+          pantryItem: {
+            ...mockItemData.pantryItem,
+            acquisitionMethod: 'HOME_GROWN',
+          },
         },
         loading: false,
         error: null,
@@ -1036,13 +1182,21 @@ describe('PantryItemDetail – helper functions', () => {
     const route = { params: { itemId: 'pi1' } };
 
     afterEach(() => {
-      useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+      useGetPantryItemQuery.mockReturnValue({
+        data: mockItemData,
+        loading: false,
+        error: null,
+      });
     });
 
     it('does not render cost rows when costPerUnit is 0', () => {
       useGetPantryItemQuery.mockReturnValue({
         data: {
-          pantryItem: { ...mockItemData.pantryItem, costPerUnit: 0, totalCost: 0 },
+          pantryItem: {
+            ...mockItemData.pantryItem,
+            costPerUnit: 0,
+            totalCost: 0,
+          },
         },
         loading: false,
         error: null,
@@ -1055,7 +1209,11 @@ describe('PantryItemDetail – helper functions', () => {
     it('does not render cost rows when costPerUnit is negative', () => {
       useGetPantryItemQuery.mockReturnValue({
         data: {
-          pantryItem: { ...mockItemData.pantryItem, costPerUnit: -1, totalCost: -5 },
+          pantryItem: {
+            ...mockItemData.pantryItem,
+            costPerUnit: -1,
+            totalCost: -5,
+          },
         },
         loading: false,
         error: null,
@@ -1072,7 +1230,11 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   const route = { params: { itemId: 'pi1' } };
 
   afterEach(() => {
-    useGetPantryItemQuery.mockReturnValue({ data: mockItemData, loading: false, error: null });
+    useGetPantryItemQuery.mockReturnValue({
+      data: mockItemData,
+      loading: false,
+      error: null,
+    });
     jest.clearAllMocks();
   });
 
@@ -1099,7 +1261,9 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   });
 
   it('hides category badge when both categoryName and storageStateDisplay are null', () => {
-    const { formatStorageState } = require('#hooks/pantry/usePantryItemTransformation');
+    const {
+      formatStorageState,
+    } = require('#hooks/pantry/usePantryItemTransformation');
     formatStorageState.mockReturnValue(null);
     useGetPantryItemQuery.mockReturnValue({
       data: {
@@ -1121,7 +1285,9 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   });
 
   it('shows storageStateDisplay appended to category', () => {
-    const { formatStorageState } = require('#hooks/pantry/usePantryItemTransformation');
+    const {
+      formatStorageState,
+    } = require('#hooks/pantry/usePantryItemTransformation');
     formatStorageState.mockReturnValue('Freezer');
     render(<PantryItemDetail route={route} />);
     expect(screen.getByText(/Dairy in Freezer/)).toBeTruthy();
@@ -1133,7 +1299,9 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   // ---------- Net weight row branches ----------
 
   it('renders Net Weight row when netWeightText is truthy', () => {
-    const { formatNetWeightDisplay } = require('#hooks/pantry/usePantryItemTransformation');
+    const {
+      formatNetWeightDisplay,
+    } = require('#hooks/pantry/usePantryItemTransformation');
     formatNetWeightDisplay.mockReturnValue('500g');
     useGetPantryItemQuery.mockReturnValue({
       data: {
@@ -1159,7 +1327,9 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   });
 
   it('renders correct weight button inside net weight row when lastUsedAt exists', () => {
-    const { formatNetWeightDisplay } = require('#hooks/pantry/usePantryItemTransformation');
+    const {
+      formatNetWeightDisplay,
+    } = require('#hooks/pantry/usePantryItemTransformation');
     formatNetWeightDisplay.mockReturnValue('500g');
     useGetPantryItemQuery.mockReturnValue({
       data: {
@@ -1183,7 +1353,9 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   // ---------- Remaining weight row ----------
 
   it('renders Remaining Weight row when remainingNetWeightText is truthy', () => {
-    const { formatNetWeightDisplay } = require('#hooks/pantry/usePantryItemTransformation');
+    const {
+      formatNetWeightDisplay,
+    } = require('#hooks/pantry/usePantryItemTransformation');
     // First call is for netWeight, second for remainingNetWeight
     formatNetWeightDisplay
       .mockReturnValueOnce('500g')
@@ -1210,7 +1382,9 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   // ---------- Inventory breakdown row ----------
 
   it('renders Inventory row when quantityBreakdownText is truthy', () => {
-    const { formatQuantityBreakdown } = require('#hooks/pantry/usePantryItemTransformation');
+    const {
+      formatQuantityBreakdown,
+    } = require('#hooks/pantry/usePantryItemTransformation');
     formatQuantityBreakdown.mockReturnValue('2 of 3 remaining');
     render(<PantryItemDetail route={route} />);
     expect(screen.getByText('Inventory')).toBeTruthy();
@@ -1227,7 +1401,9 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   // ---------- Package breakdown row ----------
 
   it('renders Package row when packageBreakdownText is truthy', () => {
-    const { formatPackageBreakdownFull } = require('#hooks/pantry/usePantryItemTransformation');
+    const {
+      formatPackageBreakdownFull,
+    } = require('#hooks/pantry/usePantryItemTransformation');
     formatPackageBreakdownFull.mockReturnValue('6 x 330ml cans');
     render(<PantryItemDetail route={route} />);
     expect(screen.getByText('Package')).toBeTruthy();
@@ -1251,7 +1427,10 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   it('renders Storage with string storageLocation', () => {
     useGetPantryItemQuery.mockReturnValue({
       data: {
-        pantryItem: { ...mockItemData.pantryItem, storageLocation: 'Top shelf' },
+        pantryItem: {
+          ...mockItemData.pantryItem,
+          storageLocation: 'Top shelf',
+        },
       },
       loading: false,
       error: null,
@@ -1264,7 +1443,10 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   it('renders Storage with object storageLocation.name', () => {
     useGetPantryItemQuery.mockReturnValue({
       data: {
-        pantryItem: { ...mockItemData.pantryItem, storageLocation: { name: 'Fridge door' } },
+        pantryItem: {
+          ...mockItemData.pantryItem,
+          storageLocation: { name: 'Fridge door' },
+        },
       },
       loading: false,
       error: null,
@@ -1654,7 +1836,11 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   it('does not show discard button for non-EXPIRED items', () => {
     useGetPantryItemQuery.mockReturnValue({
       data: {
-        pantryItem: { ...mockItemData.pantryItem, condition: 'SPOILED', quantity: 5 },
+        pantryItem: {
+          ...mockItemData.pantryItem,
+          condition: 'SPOILED',
+          quantity: 5,
+        },
       },
       loading: false,
       error: null,
@@ -1693,7 +1879,10 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   });
 
   it('renders Nutrition section when showNutrition is true', () => {
-    const { hasNutritionData, parseNutritions } = require('#utils/nutritionUtils');
+    const {
+      hasNutritionData,
+      parseNutritions,
+    } = require('#utils/nutritionUtils');
     hasNutritionData.mockReturnValue(true);
     parseNutritions.mockReturnValue([{ name: 'Protein', amount: 10 }]);
 
@@ -1728,7 +1917,9 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
 
     render(<PantryItemDetail route={route} />);
     // Find the delete action
-    const deleteAction = capturedRightActions!.find((a: any) => a.testID === 'pantry-item-delete-button');
+    const deleteAction = capturedRightActions!.find(
+      (a: any) => a.testID === 'pantry-item-delete-button',
+    );
     deleteAction.onPress();
     expect(alertSpy).toHaveBeenCalledWith(
       'Delete Item',
@@ -1758,7 +1949,8 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
     const storeModule = require('#store/useAppStore');
     const origUseAppStore = storeModule.useAppStore;
     // Override to return null for selectedShoppingListId
-    storeModule.useAppStore = (selector: any) => selector({ selectedShoppingListId: null });
+    storeModule.useAppStore = (selector: any) =>
+      selector({ selectedShoppingListId: null });
     storeModule.useAppStore.getState = () => ({ selectedShoppingListId: null });
     storeModule.useAppStore.setState = jest.fn();
     storeModule.useAppStore.subscribe = jest.fn();
@@ -1779,7 +1971,9 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
     });
 
     render(<PantryItemDetail route={route} />);
-    const addToListAction = capturedRightActions!.find((a: any) => a.testID === 'pantry-item-add-to-list-button');
+    const addToListAction = capturedRightActions!.find(
+      (a: any) => a.testID === 'pantry-item-add-to-list-button',
+    );
     addToListAction.onPress();
     expect(alertSpy).toHaveBeenCalledWith(
       'No Shopping List Selected',
@@ -1822,9 +2016,13 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
     });
 
     render(<PantryItemDetail route={route} />);
-    const editAction = capturedRightActions!.find((a: any) => a.testID === 'pantry-item-edit-button');
+    const editAction = capturedRightActions!.find(
+      (a: any) => a.testID === 'pantry-item-edit-button',
+    );
     editAction.onPress();
-    expect(mockNav.navigateTo.pantryItem).toHaveBeenCalledWith({ itemId: 'pi1' });
+    expect(mockNav.navigateTo.pantryItem).toHaveBeenCalledWith({
+      itemId: 'pi1',
+    });
 
     // Restore header mock
     mockHeader.Header = jest.fn(({ rightActions, ...props }: any) => {
@@ -1872,7 +2070,9 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
     });
 
     render(<PantryItemDetail route={route} />);
-    const discardAction = capturedRightActions!.find((a: any) => a.testID === 'pantry-item-discard-button');
+    const discardAction = capturedRightActions!.find(
+      (a: any) => a.testID === 'pantry-item-discard-button',
+    );
     discardAction.onPress();
     expect(alertSpy).toHaveBeenCalledWith(
       'Discard Expired Item',
@@ -1914,7 +2114,9 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
     });
 
     render(<PantryItemDetail route={route} />);
-    const adjustAction = capturedRightActions!.find((a: any) => a.testID === 'pantry-item-adjust-button');
+    const adjustAction = capturedRightActions!.find(
+      (a: any) => a.testID === 'pantry-item-adjust-button',
+    );
     // Just verify the onPress doesn't throw - it opens the modal
     adjustAction.onPress();
     expect(screen.getByText('Milk')).toBeTruthy();

@@ -4,19 +4,24 @@ import {
   useLoginMutation,
   useRegisterMutation,
   LoginInput,
-  RegisterInput } from '#generated';
+  RegisterInput,
+} from '#generated';
 import { logger } from '#/utils/environment';
 import { useErrorService } from '#/services/errorService';
 import { useDeviceRegistration } from '#/hooks/useDeviceRegistration';
 import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
-import { executeMutationWithErrorHandler, executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
+import {
+  executeMutation,
+  executeQuery,
+} from '#/utils/compilerSafeWrappers';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { LogoutCleanup } from '#/apollo/logoutCleanup';
 import { useStore } from '#store';
 import {
   saveTempRegistrationPassword,
-  clearTempRegistrationPassword } from '#/storage/keychain';
+  clearTempRegistrationPassword,
+} from '#/storage/keychain';
 import { incrementLoginCount } from '#/hooks/useFeatureHint';
 
 // Simple credential representation - doesn't know about internal storage structure
@@ -73,7 +78,10 @@ interface AuthOperationsProps {
 export interface AuthOperationsReturn {
   isLoading: boolean;
   login: (input: LoginInput, showRememberPrompt?: boolean) => Promise<boolean>;
-  register: (input: RegisterInput, shouldRemember?: boolean) => Promise<boolean>;
+  register: (
+    input: RegisterInput,
+    shouldRemember?: boolean,
+  ) => Promise<boolean>;
   logout: (user: any, clearAllCredentials?: boolean) => Promise<void>;
   autoLogin: () => Promise<boolean>;
   handleLogin: (
@@ -81,7 +89,10 @@ export interface AuthOperationsReturn {
     shouldRemember?: boolean,
     loginCredentials?: LoginCredentials,
   ) => Promise<boolean>;
-  handleRegistration: (registerResponse: any, shouldRemember?: boolean) => Promise<void>;
+  handleRegistration: (
+    registerResponse: any,
+    shouldRemember?: boolean,
+  ) => Promise<void>;
   handleAuthSuccess: (message: string) => void;
   handleAuthError: (error: any, operation?: string) => void;
   clearRegistrationPassword: () => void;
@@ -98,11 +109,12 @@ function handleAuthErrorImpl(
   operation: string,
 ): void {
   // Fire and forget - error handling is fully contained in callbacks
-  executeMutationWithErrorHandler(
+  executeMutation(
     async () => {
       const { message, code, isAuthError } = handleApolloError(error, {
         operation,
-        logError: true });
+        logError: true,
+      });
 
       toast({ message, type: 'error' });
 
@@ -118,7 +130,8 @@ function handleAuthErrorImpl(
     () => {
       toast({
         message: 'Something went wrong. Please try again.',
-        type: 'error' });
+        type: 'error',
+      });
       setIsLoading(false);
     },
   );
@@ -130,7 +143,7 @@ async function autoLoginImpl(
   handleLogin: (response: any, shouldRemember?: boolean) => Promise<boolean>,
   handleAuthError: (error: any, operation?: string) => void,
 ): Promise<boolean> {
-  const result = await executeMutationWithErrorHandler(
+  const result = await executeMutation(
     async () => {
       const hasStoredCreds = await credentialStorage.onCredentialCheck();
 
@@ -157,7 +170,10 @@ async function autoLoginImpl(
         variables: {
           input: {
             email: credentials.email,
-            password: credentials.password } } });
+            password: credentials.password,
+          },
+        },
+      });
 
       if (loginResult.data?.login) {
         await handleLogin(loginResult.data.login, true);
@@ -173,7 +189,7 @@ async function autoLoginImpl(
 
       return false;
     },
-    async (error) => {
+    async error => {
       logger.error('Auto-login error:', error);
       await executeMutation(
         () => credentialStorage.onCredentialRemove(),
@@ -189,7 +205,11 @@ async function loginImpl(
   input: LoginInput,
   showRememberPrompt: boolean,
   loginMutation: (opts: any) => Promise<any>,
-  handleLogin: (response: any, shouldRemember?: boolean, credentials?: LoginCredentials) => Promise<boolean>,
+  handleLogin: (
+    response: any,
+    shouldRemember?: boolean,
+    credentials?: LoginCredentials,
+  ) => Promise<boolean>,
   handleAuthError: (error: any, operation?: string) => void,
   credentialStorage: CredentialStorageEvents,
   rememberMe: RememberMeEvents,
@@ -199,19 +219,26 @@ async function loginImpl(
 ): Promise<boolean> {
   setIsLoading(true);
 
-  const result = await executeMutationWithErrorHandler(
+  const result = await executeMutation(
     async () => {
       const mutationResult = await loginMutation({ variables: { input } });
 
       if (mutationResult.data?.login) {
         const loginCredentials = {
           email: input.email,
-          password: input.password };
+          password: input.password,
+        };
 
-        const biometricTriggered = await handleLogin(mutationResult.data.login, true, loginCredentials);
+        const biometricTriggered = await handleLogin(
+          mutationResult.data.login,
+          true,
+          loginCredentials,
+        );
 
         if (showRememberPrompt && !biometricTriggered) {
-          const hasStoredCreds = await credentialStorage.onCredentialCheck(input.email);
+          const hasStoredCreds = await credentialStorage.onCredentialCheck(
+            input.email,
+          );
           if (!hasStoredCreds && shouldShowCredentialPrompt()) {
             rememberMe.onShowRememberMe(loginCredentials);
             trackCredentialPromptShown();
@@ -228,7 +255,7 @@ async function loginImpl(
 
       return false;
     },
-    (error) => {
+    error => {
       handleAuthError(error);
     },
   );
@@ -241,7 +268,10 @@ async function registerImpl(
   input: RegisterInput,
   shouldRemember: boolean,
   registerMutation: (opts: any) => Promise<any>,
-  handleRegistration: (response: any, shouldRemember?: boolean) => Promise<void>,
+  handleRegistration: (
+    response: any,
+    shouldRemember?: boolean,
+  ) => Promise<void>,
   handleAuthError: (error: any, operation?: string) => void,
   authState: AuthStateEvents,
   clearRegistrationPreferences: (userId: string) => void,
@@ -251,7 +281,7 @@ async function registerImpl(
   setIsLoading(true);
   setIsInRegistrationFlow(true);
 
-  const result = await executeMutationWithErrorHandler(
+  const result = await executeMutation(
     async () => {
       const mutationResult = await registerMutation({ variables: { input } });
 
@@ -259,13 +289,10 @@ async function registerImpl(
         authState.onSetRegistrationPassword(input.password);
 
         // Persist to keychain — non-fatal if it fails
-        await executeMutation(
-          async () => {
-            await clearTempRegistrationPassword();
-            await saveTempRegistrationPassword(input.email, input.password);
-          },
-          'Non-fatal: failed to persist registration password to keychain',
-        );
+        await executeMutation(async () => {
+          await clearTempRegistrationPassword();
+          await saveTempRegistrationPassword(input.email, input.password);
+        }, 'Non-fatal: failed to persist registration password to keychain');
 
         if (mutationResult.data.register.user?.id) {
           clearRegistrationPreferences(mutationResult.data.register.user.id);
@@ -282,7 +309,7 @@ async function registerImpl(
 
       return false;
     },
-    (error) => {
+    error => {
       handleAuthError(error, 'Register');
     },
   );
@@ -300,33 +327,30 @@ async function logoutImpl(
   credentialStorage: CredentialStorageEvents,
   trackLogout: (userId: string) => void,
 ): Promise<void> {
-  await executeMutation(
-    async () => {
-      const currentUserEmail = user?.email;
-      const currentUserId = user?.id;
+  await executeMutation(async () => {
+    const currentUserEmail = user?.email;
+    const currentUserId = user?.id;
 
-      await LogoutCleanup.performLogoutCleanup();
+    await LogoutCleanup.performLogoutCleanup();
 
-      if (currentUserId) {
-        queueManager.onLogout(currentUserId);
-      }
+    if (currentUserId) {
+      queueManager.onLogout(currentUserId);
+    }
 
-      authState.onClearAuth();
-      LogoutCleanup.completeLogout();
-      navigation.onNavigate('auth');
+    authState.onClearAuth();
+    LogoutCleanup.completeLogout();
+    navigation.onNavigate('auth');
 
-      if (currentUserId) {
-        trackLogout(currentUserId);
-      }
+    if (currentUserId) {
+      trackLogout(currentUserId);
+    }
 
-      if (clearAllCredentials) {
-        await credentialStorage.onCredentialRemove();
-      } else if (currentUserEmail) {
-        await credentialStorage.onCredentialRemove(currentUserEmail);
-      }
-    },
-    'Logout error',
-  );
+    if (clearAllCredentials) {
+      await credentialStorage.onCredentialRemove();
+    } else if (currentUserEmail) {
+      await credentialStorage.onCredentialRemove(currentUserEmail);
+    }
+  }, 'Logout error');
 }
 
 /**
@@ -339,8 +363,7 @@ const bootstrapUserStore = (user: any): void => {
   if (user.defaultHomeId) {
     const pantries = user.defaultHome?.pantriesConnection?.edges;
     const defaultPantry =
-      pantries?.find((e: any) => e.node.isDefault)?.node ??
-      pantries?.[0]?.node;
+      pantries?.find((e: any) => e.node.isDefault)?.node ?? pantries?.[0]?.node;
     const pantryId = defaultPantry?.id ?? null;
 
     storeState.setHomeAndPantry(user.defaultHomeId, pantryId);
@@ -364,7 +387,8 @@ export const useAuthOperations = ({
   biometricSetup,
   navigation,
   authState,
-  shouldShowPostLoginBiometricPrompt }: AuthOperationsProps): AuthOperationsReturn => {
+  shouldShowPostLoginBiometricPrompt,
+}: AuthOperationsProps): AuthOperationsReturn => {
   // Local state for auth operations
   const [isLoading, setIsLoading] = useState(false);
   const [isInRegistrationFlow, setIsInRegistrationFlow] = useState(false);
@@ -377,7 +401,8 @@ export const useAuthOperations = ({
     shouldShowCredentialPrompt,
     clearRegistrationPreferences,
     trackCredentialPromptShown,
-    trackLogout } = useUserPreferences();
+    trackLogout,
+  } = useUserPreferences();
 
   // GraphQL mutations
   const [loginMutation] = useLoginMutation();
@@ -388,147 +413,197 @@ export const useAuthOperations = ({
     logger.info('Auth success:', message);
   };
 
-  const handleAuthError = (error: any, operation: string = 'Authentication') => {
-      handleAuthErrorImpl(error, handleApolloError, toast, authState.onClearAuth, setIsLoading, operation);
-    };
+  const handleAuthError = (
+    error: any,
+    operation: string = 'Authentication',
+  ) => {
+    handleAuthErrorImpl(
+      error,
+      handleApolloError,
+      toast,
+      authState.onClearAuth,
+      setIsLoading,
+      operation,
+    );
+  };
 
   const handleLogin = async (
-      loginResponse: any,
-      shouldRemember?: boolean,
-      loginCredentials?: LoginCredentials,
-    ): Promise<boolean> => {
-      if (!loginResponse?.user) {
-        return false;
-      }
-
-      const { user, accessToken, refreshToken } = loginResponse;
-
-      // Get previous user ID from queue store to detect user changes
-      const previousUserId = queueStore.getCurrentUserId();
-
-      // Set auth state first
-      authState.onSetAuth(user, accessToken, refreshToken);
-
-      // Notify queue manager about user change
-      // This will clear the previous user's queue if it's a different user
-      queueManager.onUserChange(user.id, previousUserId);
-
-      bootstrapUserStore(user);
-
-      if (shouldRemember !== undefined) {
-        authState.onSetRememberMe(shouldRemember);
-      }
-
-      if (user.id) {
-        authState.onSetUserNavigationState(user.id, {
-          lastLoginTimestamp: Date.now(),
-          rememberMeChoice: shouldRemember });
-      }
-
-      handleAuthSuccess('Login successful');
-      registerDeviceInBackground();
-      incrementLoginCount(user.id);
-
-      // **EXPLICIT NAVIGATION FLOW CONTROL**
-      if (!user.emailVerified) {
-        navigation.onNavigate('verification');
-        return false;
-      }
-
-      if (!user.onBoarded) {
-        navigation.onNavigate('onboarding');
-        return false;
-      }
-
-      // User is fully authenticated - check biometric setup eligibility
-      // BUT skip during registration flow, email verification, or onboarding to prevent unwanted biometric prompts
-      if (
-        loginCredentials &&
-        !isInRegistrationFlow &&
-        user.emailVerified &&
-        user.onBoarded
-      ) {
-        const biometricResult = await executeQuery(
-          () => shouldShowPostLoginBiometricPrompt({
-            id: user.id,
-            email: loginCredentials.email }),
-          'Error checking biometric eligibility',
-        );
-
-        if (biometricResult?.shouldShow) {
-          biometricSetup.onShowBiometricSetup(loginCredentials);
-          return true;
-        }
-      }
-
-      // Default: navigate to main app
-      navigation.onNavigate('main_app');
+    loginResponse: any,
+    shouldRemember?: boolean,
+    loginCredentials?: LoginCredentials,
+  ): Promise<boolean> => {
+    if (!loginResponse?.user) {
       return false;
-    };
+    }
 
-  const handleRegistration = async (registerResponse: any, shouldRemember?: boolean) => {
-      if (!registerResponse?.user) return;
+    const { user, accessToken, refreshToken } = loginResponse;
 
-      const { user, accessToken, refreshToken } = registerResponse;
+    // Get previous user ID from queue store to detect user changes
+    const previousUserId = queueStore.getCurrentUserId();
 
-      // Set auth state first
-      authState.onSetAuth(user, accessToken, refreshToken);
+    // Set auth state first
+    authState.onSetAuth(user, accessToken, refreshToken);
 
-      bootstrapUserStore(user);
+    // Notify queue manager about user change
+    // This will clear the previous user's queue if it's a different user
+    queueManager.onUserChange(user.id, previousUserId);
 
-      if (shouldRemember !== undefined) {
-        authState.onSetRememberMe(shouldRemember);
+    bootstrapUserStore(user);
+
+    if (shouldRemember !== undefined) {
+      authState.onSetRememberMe(shouldRemember);
+    }
+
+    if (user.id) {
+      authState.onSetUserNavigationState(user.id, {
+        lastLoginTimestamp: Date.now(),
+        rememberMeChoice: shouldRemember,
+      });
+    }
+
+    handleAuthSuccess('Login successful');
+    registerDeviceInBackground();
+    incrementLoginCount(user.id);
+
+    // **EXPLICIT NAVIGATION FLOW CONTROL**
+    if (!user.emailVerified) {
+      navigation.onNavigate('verification');
+      return false;
+    }
+
+    if (!user.onBoarded) {
+      navigation.onNavigate('onboarding');
+      return false;
+    }
+
+    // User is fully authenticated - check biometric setup eligibility
+    // BUT skip during registration flow, email verification, or onboarding to prevent unwanted biometric prompts
+    if (
+      loginCredentials &&
+      !isInRegistrationFlow &&
+      user.emailVerified &&
+      user.onBoarded
+    ) {
+      const biometricResult = await executeQuery(
+        () =>
+          shouldShowPostLoginBiometricPrompt({
+            id: user.id,
+            email: loginCredentials.email,
+          }),
+        'Error checking biometric eligibility',
+      );
+
+      if (biometricResult?.shouldShow) {
+        biometricSetup.onShowBiometricSetup(loginCredentials);
+        return true;
       }
+    }
 
-      if (user.id) {
-        authState.onSetUserNavigationState(user.id, {
-          lastLoginTimestamp: Date.now(),
-          rememberMeChoice: shouldRemember,
-          isNewUser: true });
-      }
+    // Default: navigate to main app
+    navigation.onNavigate('main_app');
+    return false;
+  };
 
-      handleAuthSuccess('Registration successful');
-      registerDeviceInBackground();
+  const handleRegistration = async (
+    registerResponse: any,
+    shouldRemember?: boolean,
+  ) => {
+    if (!registerResponse?.user) return;
 
-      // **EXPLICIT NAVIGATION FLOW CONTROL FOR NEW USERS**
-      // Skip biometric setup during registration - let onboarding handle it
-      if (!user.emailVerified) {
-        navigation.onNavigate('verification');
-        return;
-      }
+    const { user, accessToken, refreshToken } = registerResponse;
 
-      if (!user.onBoarded) {
-        navigation.onNavigate('onboarding');
-        return;
-      }
+    // Set auth state first
+    authState.onSetAuth(user, accessToken, refreshToken);
 
-      // If somehow user is already onboarded, go to main app
-      navigation.onNavigate('main_app');
-    };
+    bootstrapUserStore(user);
+
+    if (shouldRemember !== undefined) {
+      authState.onSetRememberMe(shouldRemember);
+    }
+
+    if (user.id) {
+      authState.onSetUserNavigationState(user.id, {
+        lastLoginTimestamp: Date.now(),
+        rememberMeChoice: shouldRemember,
+        isNewUser: true,
+      });
+    }
+
+    handleAuthSuccess('Registration successful');
+    registerDeviceInBackground();
+
+    // **EXPLICIT NAVIGATION FLOW CONTROL FOR NEW USERS**
+    // Skip biometric setup during registration - let onboarding handle it
+    if (!user.emailVerified) {
+      navigation.onNavigate('verification');
+      return;
+    }
+
+    if (!user.onBoarded) {
+      navigation.onNavigate('onboarding');
+      return;
+    }
+
+    // If somehow user is already onboarded, go to main app
+    navigation.onNavigate('main_app');
+  };
 
   // Auto-login functionality
   const autoLogin = async (): Promise<boolean> => {
-    return autoLoginImpl(credentialStorage, loginMutation, handleLogin, handleAuthError);
+    return autoLoginImpl(
+      credentialStorage,
+      loginMutation,
+      handleLogin,
+      handleAuthError,
+    );
   };
 
   // Auth mutations
-  const login = async (input: LoginInput, showRememberPrompt = true): Promise<boolean> => {
-      return loginImpl(
-        input, showRememberPrompt, loginMutation, handleLogin, handleAuthError,
-        credentialStorage, rememberMe, shouldShowCredentialPrompt, trackCredentialPromptShown, setIsLoading,
-      );
-    };
+  const login = async (
+    input: LoginInput,
+    showRememberPrompt = true,
+  ): Promise<boolean> => {
+    return loginImpl(
+      input,
+      showRememberPrompt,
+      loginMutation,
+      handleLogin,
+      handleAuthError,
+      credentialStorage,
+      rememberMe,
+      shouldShowCredentialPrompt,
+      trackCredentialPromptShown,
+      setIsLoading,
+    );
+  };
 
-  const register = async (input: RegisterInput, shouldRemember = true): Promise<boolean> => {
-      return registerImpl(
-        input, shouldRemember, registerMutation, handleRegistration, handleAuthError,
-        authState, clearRegistrationPreferences, setIsLoading, setIsInRegistrationFlow,
-      );
-    };
+  const register = async (
+    input: RegisterInput,
+    shouldRemember = true,
+  ): Promise<boolean> => {
+    return registerImpl(
+      input,
+      shouldRemember,
+      registerMutation,
+      handleRegistration,
+      handleAuthError,
+      authState,
+      clearRegistrationPreferences,
+      setIsLoading,
+      setIsInRegistrationFlow,
+    );
+  };
 
   const logout = async (user: any, clearAllCredentials = false) => {
-      await logoutImpl(user, clearAllCredentials, authState, navigation, credentialStorage, trackLogout);
-    };
+    await logoutImpl(
+      user,
+      clearAllCredentials,
+      authState,
+      navigation,
+      credentialStorage,
+      trackLogout,
+    );
+  };
 
   const clearRegistrationPassword = () => {
     authState.onClearRegistrationPassword();
@@ -551,5 +626,6 @@ export const useAuthOperations = ({
     handleAuthError,
 
     // Registration password management
-    clearRegistrationPassword };
+    clearRegistrationPassword,
+  };
 };

@@ -324,7 +324,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     };
 
   // Handle all empty-items cases before the TabView so tabs never appear for empty lists.
-  if (items.length === 0) {
+  // During transitions (list switches), items may briefly be empty — keep TabView mounted.
+  if (items.length === 0 && !isTransitioning) {
     // Initial load (loading but not refreshing): show skeletons without tabs
     if (loading && !refreshing) {
       return (

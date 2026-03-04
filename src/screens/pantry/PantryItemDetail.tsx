@@ -5,20 +5,27 @@ import {
   Alert,
   ScrollView,
   Pressable,
-  ActivityIndicator } from 'react-native';
+  ActivityIndicator,
+} from 'react-native';
 import Animated from 'react-native-reanimated';
 import {
   useGetPantryItemQuery,
   useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
-  UsagePurpose } from '#generated';
+  UsagePurpose,
+} from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
-import { formatPackageBreakdownFull, formatNetWeightDisplay, formatQuantityBreakdown, formatStorageState } from '#hooks/pantry/usePantryItemTransformation';
+import {
+  formatPackageBreakdownFull,
+  formatNetWeightDisplay,
+  formatQuantityBreakdown,
+  formatStorageState,
+} from '#hooks/pantry/usePantryItemTransformation';
 import { getUnitDisplayText } from '#utils/formatQuantity';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
@@ -36,7 +43,10 @@ import { useCorrectPantryItemWeight } from '#hooks/pantry/mutations/useCorrectPa
 import { AdjustQuantityModal } from '#components/modals/AdjustQuantityModal';
 import { CorrectWeightModal } from '#components/modals/CorrectWeightModal';
 import { errorService } from '#/services/errorService';
-import { executeWithLoadingState, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import {
+  executeWithLoadingState,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 // Helper function to calculate expiry info
@@ -56,7 +66,8 @@ const getExpiryInfo = (expiresAt: string | null | undefined) => {
   return {
     text: `${diffDays} days to expire`,
     isExpired: false,
-    isUrgent: diffDays <= 3 };
+    isUrgent: diffDays <= 3,
+  };
 };
 
 // Format date
@@ -66,7 +77,8 @@ const formatDate = (dateString: string | null | undefined) => {
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric' });
+    year: 'numeric',
+  });
 };
 
 // Calculate days in pantry
@@ -129,23 +141,30 @@ const PantryInfoRow: React.FC<{
     <Text style={styles.infoLabel}>{label}</Text>
     <View style={styles.infoValueContainer}>
       <View style={styles.infoIcon}>
-        <Icon name={icon} size={16} color={iconColor ?? styles.infoIconColor.color} />
+        <Icon
+          name={icon}
+          size={16}
+          color={iconColor ?? styles.infoIconColor.color}
+        />
       </View>
       {children ?? <Text style={[styles.infoValue, valueStyle]}>{value}</Text>}
     </View>
   </View>
 );
 
-export const PantryItemDetail: React.FC<StaticScreenProps<{
-  itemId: string;
-}>> = ({ route }) => {
+export const PantryItemDetail: React.FC<
+  StaticScreenProps<{
+    itemId: string;
+  }>
+> = ({ route }) => {
   useScreenTransition('PantryItemDetail');
   const itemId = route.params.itemId;
   const { goBack, navigateTo, navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
-  const { getCachedSuggestions, setCachedSuggestions } = useRecipeSuggestionsStore();
+  const { getCachedSuggestions, setCachedSuggestions } =
+    useRecipeSuggestionsStore();
 
   const [addToListStatus, setAddToListStatus] = useState<
     'idle' | 'loading' | 'success' | 'error'
@@ -172,21 +191,27 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
 
   const { data } = useGetPantryItemQuery({
     variables: { id: itemId },
-    fetchPolicy: 'cache-and-network' });
+    fetchPolicy: 'cache-and-network',
+  });
 
   const [deleteItem] = useDeletePantryItemMutation();
   const [addToShoppingList] = useAddItemToShoppingListMutation({
     update: (cache, { data: mutationData }) => {
-      const shoppingListItem = mutationData?.addItemToShoppingList?.shoppingListItem;
-      if (!shoppingListItem || !selectedShoppingListId)
-        return;
+      const shoppingListItem =
+        mutationData?.addItemToShoppingList?.shoppingListItem;
+      if (!shoppingListItem || !selectedShoppingListId) return;
 
       try {
-        addNewItemToShoppingListCache(cache, selectedShoppingListId, shoppingListItem);
+        addNewItemToShoppingListCache(
+          cache,
+          selectedShoppingListId,
+          shoppingListItem,
+        );
       } catch (error) {
         console.warn('Cache update failed for addToShoppingList:', error);
       }
-    } });
+    },
+  });
 
   // Adjust quantity modal state
   const [adjustModalVisible, setAdjustModalVisible] = useState(false);
@@ -197,7 +222,8 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   const { convertExpiredToWaste } = useConvertExpiredToWaste({
     onSuccess: () => {
       Alert.alert('Done', 'Expired item has been discarded.');
-    } });
+    },
+  });
 
   // Adjust quantity mutation
   const { adjustQuantity } = useAdjustPantryItemQuantity();
@@ -224,10 +250,14 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
     // Cache miss - fetch from API
     executeWithLoadingState(
       async () => {
-        const recipes = await spoonacularService.searchRecipes({
-          query: itemName,
-          number: 5,
-          addRecipeInformation: true }, controller.signal);
+        const recipes = await spoonacularService.searchRecipes(
+          {
+            query: itemName,
+            number: 5,
+            addRecipeInformation: true,
+          },
+          controller.signal,
+        );
         const results = recipes.results as unknown as RecipeInformation[];
         setSuggestedRecipes(results);
         setCachedSuggestions(itemName, results);
@@ -235,7 +265,9 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
       setLoadingRecipes,
       (error: unknown) => {
         if ((error as any)?.name === 'AbortError') return;
-        errorService.reportError(error, { operation: 'PantryItemDetail.fetchSuggestedRecipes' });
+        errorService.reportError(error, {
+          operation: 'PantryItemDetail.fetchSuggestedRecipes',
+        });
       },
     );
 
@@ -251,13 +283,17 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         onPress: async () => {
           try {
             await deleteItem({
-              variables: { id: itemId } });
+              variables: { id: itemId },
+            });
             goBack();
           } catch (error) {
-            errorService.reportError(error, { operation: 'PantryItemDetail.deleteItem' });
+            errorService.reportError(error, {
+              operation: 'PantryItemDetail.deleteItem',
+            });
             Alert.alert('Error', 'Failed to delete item');
           }
-        } },
+        },
+      },
     ]);
   };
 
@@ -270,7 +306,8 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Go to Shopping Lists',
-            onPress: () => navigateTo.shoppingListMain() },
+            onPress: () => navigateTo.shoppingListMain(),
+          },
         ],
       );
       return;
@@ -290,7 +327,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
       : undefined;
     const itemName = data?.pantryItem?.itemName || '';
 
-    executeMutationWithErrorHandler(
+    executeMutation(
       async () => {
         await addToShoppingList({
           variables: {
@@ -299,14 +336,25 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               itemId: catalogItemId,
               quantity,
               unit: unitInput,
-              itemName } } });
+              itemName,
+            },
+          },
+        });
         setAddToListStatus('success');
-        statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
+        statusTimeoutRef.current = setTimeout(
+          () => setAddToListStatus('idle'),
+          3000,
+        );
       },
-      (error) => {
-        errorService.reportError(error, { operation: 'PantryItemDetail.addToShoppingList' });
+      error => {
+        errorService.reportError(error, {
+          operation: 'PantryItemDetail.addToShoppingList',
+        });
         setAddToListStatus('error');
-        statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
+        statusTimeoutRef.current = setTimeout(
+          () => setAddToListStatus('idle'),
+          3000,
+        );
       },
     );
   };
@@ -319,33 +367,57 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
     // Navigate within Pantry stack - back navigation works automatically
     navigate('RecipeDetail', {
       externalSource: 'SPOONACULAR',
-      externalId: String(recipeId) });
+      externalId: String(recipeId),
+    });
   };
 
   const handleDiscardExpired = () => {
     if (!item) return;
     Alert.alert(
       'Discard Expired Item',
-      `This will mark the remaining ${item.quantity} ${item.unit?.name || ''} as wasted due to expiration.`,
+      `This will mark the remaining ${item.quantity} ${
+        item.unit?.name || ''
+      } as wasted due to expiration.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Discard',
           style: 'destructive',
-          onPress: () => convertExpiredToWaste(item.id) },
+          onPress: () => convertExpiredToWaste(item.id),
+        },
       ],
     );
   };
 
-  const handleConfirmAdjust = (newQuantity: number, reason: string, remainingNetWeight?: number) => {
-      if (!item) return;
-      adjustQuantity(item.id, newQuantity, reason, item.version ?? undefined, remainingNetWeight);
-    };
+  const handleConfirmAdjust = (
+    newQuantity: number,
+    reason: string,
+    remainingNetWeight?: number,
+  ) => {
+    if (!item) return;
+    adjustQuantity(
+      item.id,
+      newQuantity,
+      reason,
+      item.version ?? undefined,
+      remainingNetWeight,
+    );
+  };
 
-  const handleCorrectWeight = (netWeight: number, reason: string, netWeightUnitId?: string) => {
-      if (!item) return;
-      correctWeight(item.id, netWeight, reason, item.version ?? 0, netWeightUnitId);
-    };
+  const handleCorrectWeight = (
+    netWeight: number,
+    reason: string,
+    netWeightUnitId?: string,
+  ) => {
+    if (!item) return;
+    correctWeight(
+      item.id,
+      netWeight,
+      reason,
+      item.version ?? 0,
+      netWeightUnitId,
+    );
+  };
 
   // Computed values
   const imageUrl = resolveImageUrl(item, 'large');
@@ -361,10 +433,21 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   const itemNutritions = parseNutritions(item?.item?.nutritions);
   const showImages = hasImages(itemImages) || !!imageUrl;
   const showNutrition = hasNutritionData(itemNutritions);
-  const packageBreakdownText = formatPackageBreakdownFull(item?.packageBreakdown);
-  const netWeightText = formatNetWeightDisplay(item?.netWeight, item?.netWeightUnit);
-  const remainingNetWeightText = formatNetWeightDisplay(item?.remainingNetWeight, item?.netWeightUnit);
-  const quantityBreakdownText = formatQuantityBreakdown(item?.quantityBreakdown, item?.unit?.symbol);
+  const packageBreakdownText = formatPackageBreakdownFull(
+    item?.packageBreakdown,
+  );
+  const netWeightText = formatNetWeightDisplay(
+    item?.netWeight,
+    item?.netWeightUnit,
+  );
+  const remainingNetWeightText = formatNetWeightDisplay(
+    item?.remainingNetWeight,
+    item?.netWeightUnit,
+  );
+  const quantityBreakdownText = formatQuantityBreakdown(
+    item?.quantityBreakdown,
+    item?.unit?.symbol,
+  );
 
   if (!item) {
     return (
@@ -390,27 +473,34 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
             onPress: handleAddToShoppingList,
             variant: addToListStatus === 'success' ? 'success' : 'primary',
             loading: addToListStatus === 'loading',
-            testID: 'pantry-item-add-to-list-button' },
+            testID: 'pantry-item-add-to-list-button',
+          },
           ...(item.condition === 'EXPIRED' && item.quantity > 0
-            ? [{
-                icon: 'close-circle-outline' as const,
-                onPress: handleDiscardExpired,
-                variant: 'error' as const,
-                testID: 'pantry-item-discard-button' }]
+            ? [
+                {
+                  icon: 'close-circle-outline' as const,
+                  onPress: handleDiscardExpired,
+                  variant: 'error' as const,
+                  testID: 'pantry-item-discard-button',
+                },
+              ]
             : []),
           {
             icon: 'swap-vertical-outline',
             onPress: () => setAdjustModalVisible(true),
-            testID: 'pantry-item-adjust-button' },
+            testID: 'pantry-item-adjust-button',
+          },
           {
             icon: 'create-outline',
             onPress: handleEdit,
-            testID: 'pantry-item-edit-button' },
+            testID: 'pantry-item-edit-button',
+          },
           {
             icon: 'trash-outline',
             onPress: handleDelete,
             variant: 'error',
-            testID: 'pantry-item-delete-button' },
+            testID: 'pantry-item-delete-button',
+          },
         ]}
       />
 
@@ -444,7 +534,6 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               name="restaurant-outline"
               size={16}
               color={theme.colors.primary}
-
             />
             <Text style={styles.categoryText}>
               {categoryName || 'Item'}
@@ -492,7 +581,8 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 navigateTo.nutritionScreen({
                   itemId: item.id,
                   itemName: item.itemName,
-                  nutritions: item.item?.nutritions })
+                  nutritions: item.item?.nutritions,
+                })
               }
             />
           </View>
@@ -507,15 +597,26 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
 
         {/* Net Weight Row */}
         {!!netWeightText && (
-          <PantryInfoRow label="Net Weight" value={netWeightText} icon="scale-outline">
+          <PantryInfoRow
+            label="Net Weight"
+            value={netWeightText}
+            icon="scale-outline"
+          >
             <Text style={styles.infoValue}>{netWeightText}</Text>
             {!!item.lastUsedAt && (
               <Pressable
                 onPress={() => setCorrectWeightVisible(true)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={({pressed}) => [styles.correctWeightButton, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.correctWeightButton,
+                  pressed && styles.pressed,
+                ]}
               >
-                <Icon name="create-outline" size={16} color={theme.colors.primary} />
+                <Icon
+                  name="create-outline"
+                  size={16}
+                  color={theme.colors.primary}
+                />
               </Pressable>
             )}
           </PantryInfoRow>
@@ -523,36 +624,60 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
 
         {/* Remaining Weight Row - only show for dual-tracked items */}
         {!!remainingNetWeightText && (
-          <PantryInfoRow label="Remaining Weight" value={remainingNetWeightText} icon="scale-outline" />
+          <PantryInfoRow
+            label="Remaining Weight"
+            value={remainingNetWeightText}
+            icon="scale-outline"
+          />
         )}
 
         {/* Inventory Breakdown Row */}
         {!!quantityBreakdownText && (
-          <PantryInfoRow label="Inventory" value={quantityBreakdownText} icon="layers-outline" />
+          <PantryInfoRow
+            label="Inventory"
+            value={quantityBreakdownText}
+            icon="layers-outline"
+          />
         )}
 
         {/* Package Details Row */}
         {!!packageBreakdownText && (
-          <PantryInfoRow label="Package" value={packageBreakdownText} icon="layers-outline" />
+          <PantryInfoRow
+            label="Package"
+            value={packageBreakdownText}
+            icon="layers-outline"
+          />
         )}
 
         {/* Brand Row */}
         {!!brandName && (
-          <PantryInfoRow label="Brand" value={brandName} icon="pricetag-outline" />
+          <PantryInfoRow
+            label="Brand"
+            value={brandName}
+            icon="pricetag-outline"
+          />
         )}
 
         {/* Storage Location */}
         {!!item.storageLocation && (
           <PantryInfoRow
             label="Storage"
-            value={typeof item.storageLocation === 'string' ? item.storageLocation : item.storageLocation.name}
+            value={
+              typeof item.storageLocation === 'string'
+                ? item.storageLocation
+                : item.storageLocation.name
+            }
             icon="cube-outline"
           />
         )}
 
         {/* Store Row */}
         {!!item.store?.name && (
-          <PantryInfoRow label="Store" value={item.store.name} icon="storefront-outline" />
+          <PantryInfoRow
+            label="Store"
+            value={item.store.name}
+            icon="storefront-outline"
+          />
         )}
 
         {/* Condition Row - only show if not GOOD */}
@@ -567,7 +692,8 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 : theme.colors.warning
             }
             valueStyle={[
-              (item.condition === 'SPOILED' || item.condition === 'EXPIRED') && styles.infoValueError,
+              (item.condition === 'SPOILED' || item.condition === 'EXPIRED') &&
+                styles.infoValueError,
               item.condition === 'FAIR' && styles.infoValueWarning,
             ]}
           />
@@ -575,27 +701,47 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
 
         {/* Acquired Via Row */}
         {!!formatAcquisitionMethod(item.acquisitionMethod) && (
-          <PantryInfoRow label="Acquired" value={formatAcquisitionMethod(item.acquisitionMethod)} icon="bag-handle-outline" />
+          <PantryInfoRow
+            label="Acquired"
+            value={formatAcquisitionMethod(item.acquisitionMethod)}
+            icon="bag-handle-outline"
+          />
         )}
 
         {/* Cost Per Unit Row */}
         {!!formatCurrency(item.costPerUnit) && (
-          <PantryInfoRow label="Cost/Unit" value={formatCurrency(item.costPerUnit)} icon="cash-outline" />
+          <PantryInfoRow
+            label="Cost/Unit"
+            value={formatCurrency(item.costPerUnit)}
+            icon="cash-outline"
+          />
         )}
 
         {/* Total Cost Row */}
         {!!formatCurrency(item.totalCost) && (
-          <PantryInfoRow label="Total Cost" value={formatCurrency(item.totalCost)} icon="wallet-outline" />
+          <PantryInfoRow
+            label="Total Cost"
+            value={formatCurrency(item.totalCost)}
+            icon="wallet-outline"
+          />
         )}
 
         {/* Min Stock Row */}
         {item.minQuantity != null && item.minQuantity > 0 && (
-          <PantryInfoRow label="Min Stock" value={`${item.minQuantity} ${item.unit?.name ?? ''}`} icon="alert-circle-outline" />
+          <PantryInfoRow
+            label="Min Stock"
+            value={`${item.minQuantity} ${item.unit?.name ?? ''}`}
+            icon="alert-circle-outline"
+          />
         )}
 
         {/* Restock At Row */}
         {item.restockQuantity != null && item.restockQuantity > 0 && (
-          <PantryInfoRow label="Restock At" value={`${item.restockQuantity} ${item.unit?.name ?? ''}`} icon="refresh-outline" />
+          <PantryInfoRow
+            label="Restock At"
+            value={`${item.restockQuantity} ${item.unit?.name ?? ''}`}
+            icon="refresh-outline"
+          />
         )}
 
         {/* Purchase Date Row */}
@@ -613,7 +759,11 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
 
         {/* Usage Info Row */}
         {!!item.lastUsedAt && (
-          <PantryInfoRow label="Last Used" value={formatDate(item.lastUsedAt)} icon="time-outline" />
+          <PantryInfoRow
+            label="Last Used"
+            value={formatDate(item.lastUsedAt)}
+            icon="time-outline"
+          />
         )}
 
         {/* Notes Section */}
@@ -624,7 +774,6 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 name="document-text-outline"
                 size={16}
                 color={theme.colors.textSecondary}
-  
               />
               <Text style={styles.notesLabel}>Notes</Text>
             </View>
@@ -647,12 +796,20 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Added Info */}
-        <PantryInfoRow label="Added" value={formatDate(item.createdAt)} icon="calendar-outline" />
+        <PantryInfoRow
+          label="Added"
+          value={formatDate(item.createdAt)}
+          icon="calendar-outline"
+        />
 
         {/* Usage Records Section - only show if there are usage records */}
-        {!!item.usageRecords && item.usageRecords.edges.length > 0 && <>
+        {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
+          <>
             <Pressable
-              style={({pressed}) => [styles.sectionHeader, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.sectionHeader,
+                pressed && styles.pressed,
+              ]}
               onPress={() =>
                 setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
               }
@@ -664,19 +821,21 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 name={purchaseHistoryExpanded ? 'chevron-up' : 'chevron-down'}
                 size={20}
                 color={theme.colors.textSecondary}
-  
               />
             </Pressable>
 
             {!!purchaseHistoryExpanded && (
               <View style={styles.purchaseHistoryContent}>
                 {item.usageRecords.edges.slice(0, 5).map(({ node: usage }) => {
-                  const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
+                  const isAdjustment =
+                    usage.purpose === UsagePurpose.Adjustment;
                   const purposeLabel = isAdjustment
                     ? 'Inventory adjusted'
                     : usage.purpose;
                   const quantityPrefix = isAdjustment
-                    ? (usage.quantityUsed >= 0 ? '+' : '')
+                    ? usage.quantityUsed >= 0
+                      ? '+'
+                      : ''
                     : '-';
                   return (
                     <View key={usage.id} style={styles.purchaseRow}>
@@ -685,10 +844,12 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                           {formatDate(usage.usedAt)}
                         </Text>
                         {!!purposeLabel && (
-                          <Text style={[
-                            styles.purchaseStore,
-                            isAdjustment && styles.adjustmentPurpose,
-                          ]}>
+                          <Text
+                            style={[
+                              styles.purchaseStore,
+                              isAdjustment && styles.adjustmentPurpose,
+                            ]}
+                          >
                             {purposeLabel}
                           </Text>
                         )}
@@ -698,11 +859,17 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                           </Text>
                         )}
                       </View>
-                      <Text style={[
-                        styles.purchasePrice,
-                        isAdjustment && styles.adjustmentQuantity,
-                      ]}>
-                        {quantityPrefix}{usage.quantityUsed}{usage.usageUnit?.symbol ? ` ${usage.usageUnit.symbol}` : ''}
+                      <Text
+                        style={[
+                          styles.purchasePrice,
+                          isAdjustment && styles.adjustmentQuantity,
+                        ]}
+                      >
+                        {quantityPrefix}
+                        {usage.quantityUsed}
+                        {usage.usageUnit?.symbol
+                          ? ` ${usage.usageUnit.symbol}`
+                          : ''}
                       </Text>
                     </View>
                   );
@@ -714,7 +881,8 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 )}
               </View>
             )}
-          </>}
+          </>
+        )}
 
         {/* Recipes to try */}
         <View style={styles.recipesSection}>
@@ -734,7 +902,10 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               {suggestedRecipes.map(recipe => (
                 <Pressable
                   key={String(recipe.id)}
-                  style={({pressed}) => [styles.recipeCard, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.recipeCard,
+                    pressed && styles.pressed,
+                  ]}
                   onPress={() => handleRecipePress(recipe.id)}
                 >
                   <Animated.Image
@@ -784,43 +955,53 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background },
+    backgroundColor: theme.colors.background,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   scrollContent: {
-    flexGrow: 1 },
+    flexGrow: 1,
+  },
   imageSection: {
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.sm },
+    paddingTop: theme.spacing.sm,
+  },
   itemTitle: {
     flex: 1,
     fontSize: theme.fonts.size['2xl'],
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginRight: theme.spacing.md },
+    marginRight: theme.spacing.md,
+  },
   quantityBadge: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   categoryText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   infoColumns: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -828,33 +1009,41 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    marginTop: theme.spacing.sm },
+    marginTop: theme.spacing.sm,
+  },
   infoColumn: {
     alignItems: 'center',
-    flex: 1 },
+    flex: 1,
+  },
   infoColumnLabel: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
-    letterSpacing: 0.5 },
+    letterSpacing: 0.5,
+  },
   infoColumnValue: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   expiryColumnUrgent: {
-    color: theme.colors.warning },
+    color: theme.colors.warning,
+  },
   expiryColumnExpired: {
-    color: theme.colors.error },
+    color: theme.colors.error,
+  },
   nutritionSection: {
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md },
+    paddingVertical: theme.spacing.md,
+  },
   nutritionTitle: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -862,28 +1051,37 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border },
+    borderBottomColor: theme.colors.border,
+  },
   infoLabel: {
     fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   infoValueContainer: {
     flexDirection: 'row',
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   infoIcon: {
-    marginRight: theme.spacing.xs },
+    marginRight: theme.spacing.xs,
+  },
   infoIconColor: {
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   infoValue: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   correctWeightButton: {
     marginLeft: theme.spacing.sm,
-    padding: theme.spacing.xs },
+    padding: theme.spacing.xs,
+  },
   infoValueError: {
-    color: theme.colors.error },
+    color: theme.colors.error,
+  },
   infoValueWarning: {
-    color: theme.colors.warning },
+    color: theme.colors.warning,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -892,109 +1090,139 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     marginTop: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border },
+    borderBottomColor: theme.colors.border,
+  },
   sectionTitle: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   purchaseHistoryContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm },
+    paddingVertical: theme.spacing.sm,
+  },
   purchaseRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm },
+    paddingVertical: theme.spacing.sm,
+  },
   purchaseDateStore: {
-    flex: 1 },
+    flex: 1,
+  },
   purchaseDate: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   purchaseStore: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2 },
+    marginTop: 2,
+  },
   purchasePrice: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   noPurchaseData: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    fontStyle: 'italic' },
+    fontStyle: 'italic',
+  },
   adjustmentPurpose: {
-    color: theme.colors.info },
+    color: theme.colors.info,
+  },
   adjustmentReason: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.textTertiary,
-    marginTop: 1 },
+    marginTop: 1,
+  },
   adjustmentQuantity: {
-    color: theme.colors.info },
+    color: theme.colors.info,
+  },
   notesSection: {
     marginHorizontal: theme.spacing.lg,
     marginTop: theme.spacing.md,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md },
+    borderRadius: theme.radii.md,
+  },
   notesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.xs },
+    marginBottom: theme.spacing.xs,
+  },
   notesLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
-    marginLeft: theme.spacing.xs },
+    marginLeft: theme.spacing.xs,
+  },
   notesText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
-    lineHeight: 22 },
+    lineHeight: 22,
+  },
   tagsSection: {
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md },
+    paddingVertical: theme.spacing.md,
+  },
   tagsLabel: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   tagChip: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     backgroundColor: theme.colors.primaryLight,
-    borderRadius: theme.radii.full },
+    borderRadius: theme.radii.full,
+  },
   tagText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   recipesSection: {
     marginTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg },
+    paddingHorizontal: theme.spacing.lg,
+  },
   recipesLoading: {
-    marginTop: theme.spacing.md },
+    marginTop: theme.spacing.md,
+  },
   recipesList: {
     paddingTop: theme.spacing.md,
-    paddingRight: theme.spacing.lg },
+    paddingRight: theme.spacing.lg,
+  },
   recipeCard: {
     width: 140,
-    marginRight: theme.spacing.md },
+    marginRight: theme.spacing.md,
+  },
   recipeImage: {
     width: 140,
     height: 100,
     borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.surface },
+    backgroundColor: theme.colors.surface,
+  },
   recipeTitle: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     marginTop: theme.spacing.xs,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   noRecipes: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
-    fontStyle: 'italic' },
+    fontStyle: 'italic',
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

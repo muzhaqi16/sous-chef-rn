@@ -13,6 +13,9 @@ import {
   useCreatePantryItemMutation,
   useUpdatePantryItemMutation,
   useDeletePantryItemMutation,
+  type CreatePantryItemMutation,
+  type CreatePantryItemMutationVariables,
+  type UpdatePantryItemMutation,
 } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
@@ -30,7 +33,10 @@ import {
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { addToPantryItemsCache, removeFromPantryItemsCache } from './utils';
-import { executeCacheUpdate, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 import type { PantryItemInput, PantryItemUpdate } from './types';
 import type { PantryItemDisplayFragment } from '#generated';
 
@@ -63,35 +69,36 @@ export function usePantryItemMutations({
   // ADD MUTATION
   const [addItemMutation] = useCreatePantryItemMutation({
     errorPolicy: 'all',
-    onError: (error: any) => {
+    onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Add Pantry Item',
       });
       Alert.alert('Error', message);
     },
-    optimisticResponse: (variables: any) => {
+    optimisticResponse: (variables: CreatePantryItemMutationVariables) => {
       const tempId = `temp-${generateId()}`;
+      const input = variables.input;
       return buildOptimisticMutationResponse(
         'createPantryItem',
         'PantryItemPayload',
         'pantryItem',
         {
           ...createOptimisticEntity('PantryItem', tempId, {
-            itemName: variables.input.itemName,
-            quantity: variables.input.quantity || variables.input.initialQuantity,
-            storageState: variables.input.storageState,
-            storageLocation: variables.input.storageLocation || null,
-            storageNotes: variables.input.storageNotes || null,
-            expiresAt: variables.input.expiresAt || null,
-            autoReorderPoint: variables.input.autoReorderPoint || null,
+            itemName: input.item?.name ?? '',
+            quantity: input.quantity ?? 1,
+            storageState: input.storage?.storageState ?? null,
+            storageLocation: input.storage?.storageLocationName ?? null,
+            storageNotes: input.storage?.storageNotes ?? null,
+            expiresAt: input.expiresAt ?? null,
+            autoReorderPoint: null,
             pantry: {
               __typename: 'Pantry',
               id: pantryId || '',
             },
-            unit: variables.input.unitId
+            unit: input.unit?.unitId
               ? {
                   __typename: 'Unit',
-                  id: variables.input.unitId,
+                  id: input.unit.unitId,
                 }
               : null,
           }),
@@ -99,7 +106,7 @@ export function usePantryItemMutations({
         },
       );
     },
-    update: (cache: any, { data }: any) => {
+    update: (cache, { data }) => {
       const pantryItem = data?.createPantryItem?.pantryItem;
       if (!pantryItem || !pantryId) return;
 
@@ -111,7 +118,10 @@ export function usePantryItemMutations({
             fields: {
               stats(existingStats: any) {
                 if (!existingStats) return existingStats;
-                return { ...existingStats, totalItems: (existingStats.totalItems || 0) + 1 };
+                return {
+                  ...existingStats,
+                  totalItems: (existingStats.totalItems || 0) + 1,
+                };
               },
             },
           });
@@ -125,7 +135,7 @@ export function usePantryItemMutations({
   // UPDATE MUTATION
   const [updateItemMutation] = useUpdatePantryItemMutation({
     errorPolicy: 'all',
-    onError: (error: any) => {
+    onError: error => {
       if (handleVersionConflict(error)) {
         Alert.alert('Item Updated', getVersionConflictMessage(error), [
           { text: 'Refresh', onPress: () => refetch() },
@@ -187,14 +197,14 @@ export function usePantryItemMutations({
         'PantryItem',
         variables.id,
       ),
-    onError: (error: any) => {
+    onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Remove Pantry Item',
       });
       Alert.alert('Error', message);
       refetch(); // Restore state on error
     },
-    update: (cache: any, { data }: any, { variables }: any) => {
+    update: (cache, { data }, { variables }) => {
       if (!data?.deletePantryItem?.pantryItem || !pantryId || !variables) {
         return;
       }
@@ -206,7 +216,10 @@ export function usePantryItemMutations({
         fields: {
           stats(existingStats: any) {
             if (!existingStats) return existingStats;
-            return { ...existingStats, totalItems: Math.max(0, (existingStats.totalItems || 0) - 1) };
+            return {
+              ...existingStats,
+              totalItems: Math.max(0, (existingStats.totalItems || 0) - 1),
+            };
           },
         },
       });
@@ -235,7 +248,8 @@ export function usePantryItemMutations({
       },
       ...(input.expirationDate && { expiresAt: input.expirationDate }),
     }),
-    onSuccess: (data: any) => data?.createPantryItem?.pantryItem,
+    onSuccess: (data: CreatePantryItemMutation) =>
+      data?.createPantryItem?.pantryItem,
     operationName: 'Add Pantry Item',
   });
 
@@ -244,7 +258,8 @@ export function usePantryItemMutations({
       mutation: updateItemMutation,
       parentId: () => pantryId,
       itemId,
-      onSuccess: (data: any) => data?.updatePantryItem?.pantryItem,
+      onSuccess: (data: UpdatePantryItemMutation) =>
+        data?.updatePantryItem?.pantryItem,
       onVersionConflict: refetch,
       operationName: 'Update Pantry Item',
     });
@@ -265,11 +280,12 @@ export function usePantryItemMutations({
       'itemsConnection',
     );
 
-    const result = await executeMutationWithErrorHandler(
-      () => removeItemMutation({
-        variables: { id: itemId },
-      }),
-      (error) => {
+    const result = await executeMutation(
+      () =>
+        removeItemMutation({
+          variables: { id: itemId },
+        }),
+      error => {
         subscriptionService.unregisterPendingDelete(itemId);
         throw error;
       },

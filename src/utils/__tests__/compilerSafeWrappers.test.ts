@@ -1,10 +1,20 @@
 import {
-  executeMutation,
   executeCacheUpdate,
   executeQuery,
-  executeMutationWithErrorHandler,
+  executeMutation,
   executeRefetch,
 } from '../compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
+
+jest.mock('#/services/errorService', () => ({
+  errorService: { reportError: jest.fn() },
+}));
+
+const mockReportError = errorService.reportError as jest.Mock;
+
+beforeEach(() => {
+  mockReportError.mockClear();
+});
 
 describe('executeMutation', () => {
   it('returns the resolved value on success', async () => {
@@ -20,10 +30,19 @@ describe('executeMutation', () => {
     expect(result).toBe(false);
   });
 
-  it('logs an error message on failure', async () => {
+  it('logs to console only in __DEV__ when given a string', async () => {
     const err = new Error('oops');
     await executeMutation(() => Promise.reject(err), 'ctx');
+    // In test env __DEV__ is true, so console.error should be called
     expect(console.error).toHaveBeenCalledWith('ctx', err);
+  });
+
+  it('calls onError callback when given a function', async () => {
+    const onError = jest.fn();
+    const err = new Error('handled');
+    const result = await executeMutation(() => Promise.reject(err), onError);
+    expect(result).toBe(false);
+    expect(onError).toHaveBeenCalledWith(err);
   });
 });
 
@@ -48,30 +67,29 @@ describe('executeCacheUpdate', () => {
 
   it('does not throw when refetch is omitted and update throws', () => {
     expect(() =>
-      executeCacheUpdate(
-        () => {
-          throw new Error('no refetch');
-        },
-        'msg',
-      ),
+      executeCacheUpdate(() => {
+        throw new Error('no refetch');
+      }, 'msg'),
     ).not.toThrow();
   });
 
-  it('logs a warning on failure', () => {
+  it('reports error via errorService on failure', () => {
     const err = new Error('w');
-    executeCacheUpdate(
-      () => {
-        throw err;
-      },
-      'cache warn',
-    );
-    expect(console.warn).toHaveBeenCalledWith('cache warn', err);
+    executeCacheUpdate(() => {
+      throw err;
+    }, 'cache warn');
+    expect(mockReportError).toHaveBeenCalledWith(err, {
+      operation: 'cache warn',
+    });
   });
 });
 
 describe('executeQuery', () => {
   it('returns the resolved value on success', async () => {
-    const result = await executeQuery(() => Promise.resolve({ data: 1 }), 'fail');
+    const result = await executeQuery(
+      () => Promise.resolve({ data: 1 }),
+      'fail',
+    );
     expect(result).toEqual({ data: 1 });
   });
 
@@ -83,30 +101,10 @@ describe('executeQuery', () => {
     expect(result).toBeNull();
   });
 
-  it('logs an error message on failure', async () => {
-    await executeQuery(() => Promise.reject(new Error('q')), 'qmsg');
-    expect(console.error).toHaveBeenCalledWith('qmsg', expect.any(Error));
-  });
-});
-
-describe('executeMutationWithErrorHandler', () => {
-  it('returns the resolved value on success', async () => {
-    const result = await executeMutationWithErrorHandler(
-      () => Promise.resolve('ok'),
-      jest.fn(),
-    );
-    expect(result).toBe('ok');
-  });
-
-  it('calls onError and returns false on failure', async () => {
-    const onError = jest.fn();
-    const err = new Error('handled');
-    const result = await executeMutationWithErrorHandler(
-      () => Promise.reject(err),
-      onError,
-    );
-    expect(result).toBe(false);
-    expect(onError).toHaveBeenCalledWith(err);
+  it('reports error via errorService on failure', async () => {
+    const err = new Error('q');
+    await executeQuery(() => Promise.reject(err), 'qmsg');
+    expect(mockReportError).toHaveBeenCalledWith(err, { operation: 'qmsg' });
   });
 });
 
@@ -123,8 +121,9 @@ describe('executeRefetch', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('logs a warning on failure', async () => {
-    await executeRefetch(() => Promise.reject(new Error('r')), 'rmsg');
-    expect(console.warn).toHaveBeenCalledWith('rmsg', expect.any(Error));
+  it('reports error via errorService on failure', async () => {
+    const err = new Error('r');
+    await executeRefetch(() => Promise.reject(err), 'rmsg');
+    expect(mockReportError).toHaveBeenCalledWith(err, { operation: 'rmsg' });
   });
 });

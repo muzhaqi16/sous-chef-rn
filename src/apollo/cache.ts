@@ -170,20 +170,23 @@ function itemsConnectionFieldPolicy() {
       if (!incoming) return existing;
       if (!existing || !args?.after) return incoming;
 
-      // Pagination: merge edges with deduplication by node ID
-      const edgeMap = new Map();
-      (existing.edges || []).forEach((edge: any) => {
-        const id = readField('id', edge?.node);
-        if (id) edgeMap.set(id, edge);
-      });
-      (incoming.edges || []).forEach((edge: any) => {
-        const id = readField('id', edge?.node);
-        if (id) edgeMap.set(id, edge);
+      // Append-only: keep existing edges in place, add only new incoming edges
+      const existingIds = new Set<string>();
+      for (const edge of existing.edges || []) {
+        const node = readField('node', edge);
+        const id = node ? readField('id', node) as string | undefined : undefined;
+        if (id) existingIds.add(id);
+      }
+
+      const newEdges = (incoming.edges || []).filter((edge: any) => {
+        const node = readField('node', edge);
+        const id = node ? readField('id', node) as string | undefined : undefined;
+        return id && !existingIds.has(id);
       });
 
       return {
         ...incoming,
-        edges: Array.from(edgeMap.values()),
+        edges: [...(existing.edges || []), ...newEdges],
       };
     },
   };

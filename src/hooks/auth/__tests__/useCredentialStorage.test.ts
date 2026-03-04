@@ -5,6 +5,9 @@ import { useCredentialStorage } from '../useCredentialStorage';
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
+// Prevent transitive import: compilerSafeWrappers → errorService → telemetry → Environment.getConfig()
+jest.mock('#/utils/compilerSafeWrappers');
+
 // Mock keychain module
 const mockLoadCredentials = jest.fn();
 const mockLoadCredentialsForAccount = jest.fn();

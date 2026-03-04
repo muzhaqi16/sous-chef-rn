@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { errorService } from '#/services/errorService';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 /**
  * Configuration for pagination from normalized data
@@ -35,6 +35,8 @@ export interface UsePaginationReturn {
   loadMore: () => Promise<void>;
   /** Whether currently loading more items (not initial load) */
   isLoadingMore: boolean;
+  /** Whether the last loadMore call failed */
+  loadMoreError: boolean;
 }
 
 /**
@@ -70,7 +72,8 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     loading,
     fetchMore,
     fetchMoreVariables = {},
-    cursorVariableName = 'cursor' } = config;
+    cursorVariableName = 'cursor',
+  } = config;
 
   const hasMore = pageInfo?.hasNextPage || false;
   const endCursor = pageInfo?.endCursor;
@@ -89,6 +92,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
   });
 
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
 
   const loadMore = async () => {
     // Don't load if:
@@ -101,14 +105,24 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     }
 
     setIsFetchingMore(true);
-    await executeMutationWithErrorHandler(
-      () => fetchMore({
-        variables: {
-          ...fetchMoreVariablesRef.current,
-          [cursorVariableName]: endCursor } }),
-      (error) => errorService.reportError(error, { operation: 'Pagination.loadMore' }),
+    setLoadMoreError(false);
+
+    const result = await executeMutation(
+      () =>
+        fetchMore({
+          variables: {
+            ...fetchMoreVariablesRef.current,
+            [cursorVariableName]: endCursor,
+          },
+        }),
+      error =>
+        errorService.reportError(error, { operation: 'Pagination.loadMore' }),
     );
+
     setIsFetchingMore(false);
+    if (result === false) {
+      setLoadMoreError(true);
+    }
   };
 
   const isLoadingMore = isFetchingMore;
@@ -117,5 +131,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     hasMore,
     endCursor,
     loadMore,
-    isLoadingMore };
+    isLoadingMore,
+    loadMoreError,
+  };
 }

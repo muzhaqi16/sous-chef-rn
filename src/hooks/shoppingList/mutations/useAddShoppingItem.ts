@@ -9,7 +9,11 @@
 
 import { useRef } from 'react';
 import { Alert } from 'react-native';
-import { useAddItemToShoppingListMutation } from '#generated';
+import {
+  useAddItemToShoppingListMutation,
+  type AddItemToShoppingListMutation,
+  type AddItemToShoppingListMutationVariables,
+} from '#generated';
 import { useErrorService } from '#/services/errorService';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
@@ -42,15 +46,15 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
 
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
-    optimisticResponse: (variables: any) => {
+    optimisticResponse: (variables: AddItemToShoppingListMutationVariables) => {
       const { tempId, entity } = createOptimisticShoppingListItem({
-        itemName: variables.input.itemName,
-        quantity: variables.input.quantity ?? 1,
-        quantityInput: variables.input.quantityInput || null,
-        unitName: variables.input.unitName || null,
+        itemName: variables.input.itemName ?? '',
+        quantity: Number(variables.input.quantity) || 1,
+        quantityInput: null,
+        unitName: variables.input.unit?.unitName || null,
         category: variables.input.category || null,
         itemId: variables.input.itemId,
-        unitId: variables.input.unitId,
+        unitId: variables.input.unit?.unitId,
       });
       lastTempIdRef.current = tempId;
       return buildOptimisticMutationResponse(
@@ -98,12 +102,16 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
       shoppingListId: listId,
       itemName: input.itemName,
       quantity: input.quantity ?? 1,
-      ...(input.unitName && { unitName: input.unitName }),
-      ...(input.unitId && { unitId: input.unitId }),
+      ...((input.unitName || input.unitId) && {
+        unit: {
+          ...(input.unitId && { unitId: input.unitId }),
+          ...(input.unitName && { unitName: input.unitName }),
+        },
+      }),
       ...(input.notes && { notes: input.notes }),
       ...(input.category && { category: input.category }),
     }),
-    onSuccess: (data: any) => data?.addItemToShoppingList,
+    onSuccess: (data: AddItemToShoppingListMutation) => data?.addItemToShoppingList,
     operationName: 'Add Shopping List Item',
   });
 

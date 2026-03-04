@@ -7,6 +7,8 @@ import {
   useCreatePantryItemMutation,
   useRestockPantryItemMutation,
   useAddItemToShoppingListMutation,
+  type CreatePantryItemInput,
+  type PantryItemDisplayFragment,
 } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
@@ -16,16 +18,17 @@ import {
 } from '#/utils/errors/pantryItemDuplicate';
 import { useAppStore } from '#store/useAppStore';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import type { ScannedItem } from '#/store/slices/barcodeScannerSlice';
 
 // Cache updater for Pantry.itemsConnection
-const addToPantryItemsConnection = createAddToParentConnectionUpdater<any>(
+const addToPantryItemsConnection = createAddToParentConnectionUpdater<PantryItemDisplayFragment>(
   'Pantry',
   'itemsConnection',
   'PantryItem',
 );
 
 interface SearchResultsProps {
-  item: any;
+  item: ScannedItem;
   format?: string;
   onScanAnother: () => void;
   source?: 'pantry' | 'shoppingList';
@@ -46,7 +49,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const setPendingPantryScrollToTop = useAppStore(s => s.setPendingPantryScrollToTop);
   const [addToPantry] = useCreatePantryItemMutation({
     errorPolicy: 'all',
-    update: (cache, { data }: any) => {
+    update: (cache, { data }) => {
       const pantryItem = data?.createPantryItem?.pantryItem;
       if (pantryItem && pantryId) {
         addToPantryItemsConnection(cache, pantryId, pantryItem);
@@ -75,17 +78,14 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     executeWithLoadingState(
       async () => {
         if (source === 'pantry' && pantryId) {
-          const mutationInput = {
+          const quantity = item.netWeight ?? 1;
+          const mutationInput: CreatePantryItemInput = {
             pantryId,
             itemId: item.id,
-            quantity: item.netWeight ?? 1,
-            itemName: item.name,
-            itemUpc: item.upc || item.primaryUpc,
-            itemDisplayUnitId: item.displayUnit?.id,
-            itemNetWeight: item.netWeight,
-            itemBrand: item.brandName,
-            netWeight: item.netWeight,
-            netWeightUnitId: item.displayUnit?.id,
+            quantity,
+            ...(item.netWeight != null && item.displayUnit?.id
+              ? { netWeight: { netWeight: item.netWeight, netWeightUnitId: item.displayUnit.id } }
+              : {}),
           };
 
           const result = await addToPantry({
@@ -110,7 +110,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                           await restockPantryItem({
                             variables: {
                               id: duplicateInfo.existingPantryItemId,
-                              input: { quantity: mutationInput.quantity },
+                              input: { quantity },
                             },
                           });
                           setIsAdded(true);
@@ -131,7 +131,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                         async () => {
                           const retryResult = await addToPantry({
                             variables: {
-                              input: { ...mutationInput, forceAdd: true } as any,
+                              input: { ...mutationInput, forceAdd: true },
                             },
                           });
                           if (retryResult.data?.createPantryItem?.success) {

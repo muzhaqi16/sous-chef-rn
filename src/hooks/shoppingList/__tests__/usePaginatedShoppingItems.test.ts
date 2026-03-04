@@ -6,18 +6,34 @@ import { usePaginatedShoppingItems } from '../usePaginatedShoppingItems';
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
-const mockFetchMore = jest.fn();
-const mockRefetch = jest.fn();
+const mockUnpurchasedFetchMore = jest.fn();
+const mockPurchasedFetchMore = jest.fn();
+const mockUnpurchasedRefetch = jest.fn();
+const mockPurchasedRefetch = jest.fn();
+
+// Default return values per isPurchased filter
+let mockUnpurchasedReturn: Record<string, any> = {
+  data: null,
+  previousData: null,
+  loading: false,
+  error: undefined,
+  fetchMore: mockUnpurchasedFetchMore,
+  refetch: mockUnpurchasedRefetch,
+};
+let mockPurchasedReturn: Record<string, any> = {
+  data: null,
+  previousData: null,
+  loading: false,
+  error: undefined,
+  fetchMore: mockPurchasedFetchMore,
+  refetch: mockPurchasedRefetch,
+};
 
 jest.mock('#generated', () => ({
-  useGetShoppingListItemsPaginatedQuery: jest.fn(() => ({
-    data: null,
-    previousData: null,
-    loading: false,
-    error: undefined,
-    fetchMore: mockFetchMore,
-    refetch: mockRefetch,
-  })),
+  useGetShoppingListItemsFilteredQuery: jest.fn((options: any) => {
+    if (options?.variables?.isPurchased === false) return mockUnpurchasedReturn;
+    return mockPurchasedReturn;
+  }),
 }));
 
 jest.mock('#hooks/auth/useAuth', () => ({
@@ -32,14 +48,63 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/compilerSafeWrappers', () => ({
+  executeRefetch: jest.fn((fn: any) => fn()),
+  executeMutation: jest.fn((fn: any) => fn()),
+}));
+
+jest.mock('#hooks/utils/usePagination', () => ({
+  usePagination: jest.fn((config: any) => ({
+    hasMore: config.pageInfo?.hasNextPage ?? false,
+    endCursor: config.pageInfo?.endCursor ?? null,
+    loadMore: jest.fn(),
+    isLoadingMore: false,
+    loadMoreError: false,
+  })),
+}));
 
 // Mock requestIdleCallback/cancelIdleCallback
-(global as any).requestIdleCallback = jest.fn((cb: any) => { cb(); return 1; });
+(global as any).requestIdleCallback = jest.fn((cb: any) => {
+  cb();
+  return 1;
+});
 (global as any).cancelIdleCallback = jest.fn();
+
+/** Helper to build a mock connection data shape */
+function buildConnectionData(
+  edges: Array<{ id: string; itemName: string; sortOrder: string }>,
+  pageInfo = { hasNextPage: false, endCursor: null as string | null },
+  totalCount?: number,
+) {
+  return {
+    shoppingList: {
+      itemsConnection: {
+        edges: edges.map(node => ({ cursor: `cursor-${node.id}`, node })),
+        pageInfo,
+        totalCount: totalCount ?? edges.length,
+      },
+    },
+  };
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUnpurchasedReturn = {
+    data: null,
+    previousData: null,
+    loading: false,
+    error: undefined,
+    fetchMore: mockUnpurchasedFetchMore,
+    refetch: mockUnpurchasedRefetch,
+  };
+  mockPurchasedReturn = {
+    data: null,
+    previousData: null,
+    loading: false,
+    error: undefined,
+    fetchMore: mockPurchasedFetchMore,
+    refetch: mockPurchasedRefetch,
+  };
 });
 
 describe('usePaginatedShoppingItems', () => {
@@ -53,89 +118,67 @@ describe('usePaginatedShoppingItems', () => {
     expect(result.current.loading).toBe(false);
   });
 
-  it('skips query when listId is null', () => {
-    const { useGetShoppingListItemsPaginatedQuery } = require('#generated');
+  it('skips queries when listId is null', () => {
+    const { useGetShoppingListItemsFilteredQuery } = require('#generated');
 
     renderHook(() => usePaginatedShoppingItems({ listId: null }));
 
-    expect(useGetShoppingListItemsPaginatedQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: true }),
+    // Called twice (once per tab), both should have skip: true
+    const calls = useGetShoppingListItemsFilteredQuery.mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0][0]).toEqual(expect.objectContaining({ skip: true }));
+    expect(calls[1][0]).toEqual(expect.objectContaining({ skip: true }));
+  });
+
+  it('skips queries when skip option is true', () => {
+    const { useGetShoppingListItemsFilteredQuery } = require('#generated');
+
+    renderHook(() =>
+      usePaginatedShoppingItems({ listId: 'list-1', skip: true }),
+    );
+
+    const calls = useGetShoppingListItemsFilteredQuery.mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0][0]).toEqual(expect.objectContaining({ skip: true }));
+    expect(calls[1][0]).toEqual(expect.objectContaining({ skip: true }));
+  });
+
+  it('passes correct isPurchased variable to each query', () => {
+    const { useGetShoppingListItemsFilteredQuery } = require('#generated');
+
+    renderHook(() => usePaginatedShoppingItems({ listId: 'list-1' }));
+
+    const calls = useGetShoppingListItemsFilteredQuery.mock.calls;
+    expect(calls[0][0].variables).toEqual(
+      expect.objectContaining({ isPurchased: false }),
+    );
+    expect(calls[1][0].variables).toEqual(
+      expect.objectContaining({ isPurchased: true }),
     );
   });
 
-  it('skips query when skip option is true', () => {
-    const { useGetShoppingListItemsPaginatedQuery } = require('#generated');
-
-    renderHook(() => usePaginatedShoppingItems({ listId: 'list-1', skip: true }));
-
-    expect(useGetShoppingListItemsPaginatedQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: true }),
-    );
-  });
-
-  it('extracts and sorts unpurchased items', () => {
-    const { useGetShoppingListItemsPaginatedQuery } = require('#generated');
-    useGetShoppingListItemsPaginatedQuery.mockReturnValue({
-      data: {
-        shoppingList: {
-          unpurchasedItems: {
-            edges: [
-              { node: { id: '2', itemName: 'Bread', sortOrder: 'b' } },
-              { node: { id: '1', itemName: 'Milk', sortOrder: 'a' } },
-            ],
-            pageInfo: { hasNextPage: false, endCursor: null },
-            totalCount: 2,
-          },
-          purchasedItems: {
-            edges: [],
-            pageInfo: { hasNextPage: false, endCursor: null },
-            totalCount: 0,
-          },
-        },
-      },
-      previousData: null,
-      loading: false,
-      error: undefined,
-      fetchMore: mockFetchMore,
-      refetch: mockRefetch,
-    });
+  it('extracts unpurchased items in edge order', () => {
+    mockUnpurchasedReturn.data = buildConnectionData([
+      { id: '2', itemName: 'Bread', sortOrder: 'b' },
+      { id: '1', itemName: 'Milk', sortOrder: 'a' },
+    ]);
 
     const { result } = renderHook(() =>
       usePaginatedShoppingItems({ listId: 'list-1' }),
     );
 
     expect(result.current.unpurchased.items).toHaveLength(2);
-    expect(result.current.unpurchased.items[0].id).toBe('1');
-    expect(result.current.unpurchased.items[1].id).toBe('2');
+    // Items preserved in edge order (cache insertion order), not sorted by sortOrder
+    expect(result.current.unpurchased.items[0].id).toBe('2');
+    expect(result.current.unpurchased.items[1].id).toBe('1');
   });
 
   it('filters out items with missing id or itemName', () => {
-    const { useGetShoppingListItemsPaginatedQuery } = require('#generated');
-    useGetShoppingListItemsPaginatedQuery.mockReturnValue({
-      data: {
-        shoppingList: {
-          unpurchasedItems: {
-            edges: [
-              { node: { id: '1', itemName: 'Milk', sortOrder: 'a' } },
-              { node: { id: null, itemName: 'Bad', sortOrder: 'b' } },
-              { node: { id: '3', itemName: '', sortOrder: 'c' } },
-            ],
-            pageInfo: { hasNextPage: false, endCursor: null },
-            totalCount: 3,
-          },
-          purchasedItems: {
-            edges: [],
-            pageInfo: { hasNextPage: false, endCursor: null },
-            totalCount: 0,
-          },
-        },
-      },
-      previousData: null,
-      loading: false,
-      error: undefined,
-      fetchMore: mockFetchMore,
-      refetch: mockRefetch,
-    });
+    mockUnpurchasedReturn.data = buildConnectionData([
+      { id: '1', itemName: 'Milk', sortOrder: 'a' },
+      { id: null as any, itemName: 'Bad', sortOrder: 'b' },
+      { id: '3', itemName: '', sortOrder: 'c' },
+    ]);
 
     const { result } = renderHook(() =>
       usePaginatedShoppingItems({ listId: 'list-1' }),
@@ -146,28 +189,20 @@ describe('usePaginatedShoppingItems', () => {
   });
 
   it('exposes hasMore and totalCount for unpurchased', () => {
-    const { useGetShoppingListItemsPaginatedQuery } = require('#generated');
-    useGetShoppingListItemsPaginatedQuery.mockReturnValue({
-      data: {
-        shoppingList: {
-          unpurchasedItems: {
-            edges: [{ node: { id: '1', itemName: 'Milk', sortOrder: 'a' } }],
-            pageInfo: { hasNextPage: true, endCursor: 'cursor-1' },
-            totalCount: 50,
-          },
-          purchasedItems: {
-            edges: [],
-            pageInfo: { hasNextPage: false, endCursor: null },
-            totalCount: 0,
-          },
-        },
-      },
-      previousData: null,
-      loading: false,
-      error: undefined,
-      fetchMore: mockFetchMore,
-      refetch: mockRefetch,
-    });
+    mockUnpurchasedReturn.data = buildConnectionData(
+      [{ id: '1', itemName: 'Milk', sortOrder: 'a' }],
+      { hasNextPage: true, endCursor: 'cursor-1' },
+      50,
+    );
+
+    const { usePagination } = require('#hooks/utils/usePagination');
+    usePagination.mockImplementation((config: any) => ({
+      hasMore: config.pageInfo?.hasNextPage ?? false,
+      endCursor: config.pageInfo?.endCursor ?? null,
+      loadMore: jest.fn(),
+      isLoadingMore: false,
+      loadMoreError: false,
+    }));
 
     const { result } = renderHook(() =>
       usePaginatedShoppingItems({ listId: 'list-1' }),
@@ -177,46 +212,35 @@ describe('usePaginatedShoppingItems', () => {
     expect(result.current.unpurchased.totalCount).toBe(50);
   });
 
-  it('loadMoreUnpurchased calls fetchMore', async () => {
-    const { useGetShoppingListItemsPaginatedQuery } = require('#generated');
-    mockFetchMore.mockResolvedValue({});
-    useGetShoppingListItemsPaginatedQuery.mockReturnValue({
-      data: {
-        shoppingList: {
-          unpurchasedItems: {
-            edges: [{ node: { id: '1', itemName: 'Milk', sortOrder: 'a' } }],
-            pageInfo: { hasNextPage: true, endCursor: 'cursor-1' },
-            totalCount: 50,
-          },
-          purchasedItems: {
-            edges: [],
-            pageInfo: { hasNextPage: false, endCursor: null },
-            totalCount: 0,
-          },
-        },
-      },
-      previousData: null,
-      loading: false,
-      error: undefined,
-      fetchMore: mockFetchMore,
-      refetch: mockRefetch,
-    });
+  it('delegates loadMore to usePagination', () => {
+    const mockLoadMore = jest.fn();
+    const { usePagination } = require('#hooks/utils/usePagination');
+    usePagination.mockImplementation((config: any) => ({
+      hasMore: config.pageInfo?.hasNextPage ?? false,
+      endCursor: config.pageInfo?.endCursor ?? null,
+      loadMore: mockLoadMore,
+      isLoadingMore: false,
+      loadMoreError: false,
+    }));
+
+    mockUnpurchasedReturn.data = buildConnectionData(
+      [{ id: '1', itemName: 'Milk', sortOrder: 'a' }],
+      { hasNextPage: true, endCursor: 'cursor-1' },
+      50,
+    );
 
     const { result } = renderHook(() =>
       usePaginatedShoppingItems({ listId: 'list-1' }),
     );
 
-    await act(async () => {
-      await result.current.unpurchased.loadMore();
-    });
-
-    expect(mockFetchMore).toHaveBeenCalledWith({
-      variables: { unpurchasedAfter: 'cursor-1' },
-    });
+    result.current.unpurchased.loadMore();
+    expect(mockLoadMore).toHaveBeenCalled();
   });
 
-  it('refetch wraps with error handling', async () => {
-    mockRefetch.mockResolvedValue({});
+  it('refetch calls both query refetch functions', async () => {
+    mockUnpurchasedRefetch.mockResolvedValue({});
+    mockPurchasedRefetch.mockResolvedValue({});
+
     const { result } = renderHook(() =>
       usePaginatedShoppingItems({ listId: 'list-1' }),
     );
@@ -225,26 +249,44 @@ describe('usePaginatedShoppingItems', () => {
       await result.current.refetch();
     });
 
-    expect(mockRefetch).toHaveBeenCalled();
+    expect(mockUnpurchasedRefetch).toHaveBeenCalled();
+    expect(mockPurchasedRefetch).toHaveBeenCalled();
   });
 
   it('returns isTransitioning false when listId is stable', () => {
-    const { useGetShoppingListItemsPaginatedQuery } = require('#generated');
-    useGetShoppingListItemsPaginatedQuery.mockReturnValue({
-      data: null,
-      previousData: null,
-      loading: true,
-      error: undefined,
-      fetchMore: mockFetchMore,
-      refetch: mockRefetch,
-    });
+    mockUnpurchasedReturn.loading = true;
+    mockPurchasedReturn.loading = true;
 
     const { result } = renderHook(
       ({ listId }: { listId: string }) => usePaginatedShoppingItems({ listId }),
       { initialProps: { listId: 'list-1' } },
     );
 
-    // With a stable listId, isTransitioning should be false
     expect(result.current.isTransitioning).toBe(false);
+  });
+
+  it('combines errors from both queries', () => {
+    const testError = new Error('Network error');
+    mockUnpurchasedReturn.error = testError;
+
+    const { result } = renderHook(() =>
+      usePaginatedShoppingItems({ listId: 'list-1' }),
+    );
+
+    expect(result.current.error).toBe(testError);
+  });
+
+  it('returns purchased items independently from unpurchased', () => {
+    mockPurchasedReturn.data = buildConnectionData([
+      { id: '10', itemName: 'Eggs', sortOrder: 'a' },
+      { id: '11', itemName: 'Butter', sortOrder: 'b' },
+    ]);
+
+    const { result } = renderHook(() =>
+      usePaginatedShoppingItems({ listId: 'list-1' }),
+    );
+
+    expect(result.current.purchased.items).toHaveLength(2);
+    expect(result.current.unpurchased.items).toHaveLength(0);
   });
 });

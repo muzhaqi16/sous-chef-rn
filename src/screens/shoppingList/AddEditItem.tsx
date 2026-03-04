@@ -172,7 +172,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
                 ...unitData,
                 notes,
                 category,
-                ...(estimatedPrice && { estimatedPrice: parseFloat(estimatedPrice) }),
+                ...(estimatedPrice && { pricing: { estimatedPrice: parseFloat(estimatedPrice) } }),
               },
             },
           });

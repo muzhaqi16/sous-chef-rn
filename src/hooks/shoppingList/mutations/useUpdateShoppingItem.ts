@@ -17,7 +17,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import type { ShoppingListItemUpdate } from './types';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 interface UseUpdateShoppingItemOptions {
   listId: string | null | undefined;
@@ -34,7 +34,11 @@ interface UseUpdateShoppingItemOptions {
  * await updateItem('item-123', { quantity: 3 });
  * ```
  */
-export function useUpdateShoppingItem({ listId, items, refetch }: UseUpdateShoppingItemOptions) {
+export function useUpdateShoppingItem({
+  listId,
+  items,
+  refetch,
+}: UseUpdateShoppingItemOptions) {
   const { handleApolloError } = useErrorService();
 
   // Apollo auto-normalizes the server response by __typename + id
@@ -51,7 +55,10 @@ export function useUpdateShoppingItem({ listId, items, refetch }: UseUpdateShopp
 
   // Uses items array from props instead of reading from cache
   // Apollo auto-normalizes the server response by __typename + id, so we only need a basic optimistic response
-  const updateItem = async (itemId: string, updates: ShoppingListItemUpdate) => {
+  const updateItem = async (
+    itemId: string,
+    updates: ShoppingListItemUpdate,
+  ) => {
     if (!listId) return false;
 
     // Use items array (already in memory) instead of cache read
@@ -88,17 +95,18 @@ export function useUpdateShoppingItem({ listId, items, refetch }: UseUpdateShopp
       },
     );
 
-    const result = await executeMutationWithErrorHandler(
-      () => updateItemMutation({
-        variables: {
-          id: itemId,
-          input: { ...updates, version: item.version },
-        },
-        // Simple optimistic response - Apollo merges by __typename + id
-        // Only include fields from ShoppingListItemDisplayFragment
-        optimisticResponse,
-      }),
-      (error: any) => {
+    const result = await executeMutation(
+      () =>
+        updateItemMutation({
+          variables: {
+            id: itemId,
+            input: { ...updates, version: item.version },
+          },
+          // Simple optimistic response - Apollo merges by __typename + id
+          // Only include fields from ShoppingListItemDisplayFragment
+          optimisticResponse,
+        }),
+      error => {
         if (handleVersionConflict(error)) {
           Alert.alert('Item Updated', getVersionConflictMessage(error), [
             { text: 'Refresh', onPress: () => refetch() },

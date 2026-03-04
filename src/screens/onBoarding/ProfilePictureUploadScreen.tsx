@@ -7,7 +7,8 @@ import {
   Alert,
   Dimensions,
   ScrollView,
-  ActivityIndicator } from 'react-native';
+  ActivityIndicator,
+} from 'react-native';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { Icon } from '#utils/iconUtils';
@@ -18,11 +19,13 @@ import {
   ImagePickerResponse,
   MediaType,
   CameraOptions,
-  ImageLibraryOptions } from 'react-native-image-picker';
+  ImageLibraryOptions,
+} from 'react-native-image-picker';
 import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import {
   validateImageFile,
-  ImageValidationError } from '#utils/imageValidation';
+  ImageValidationError,
+} from '#utils/imageValidation';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -33,7 +36,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { executeWithLoadingState, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import {
+  executeWithLoadingState,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 
 /** Module-level helper to seed existing avatar URL from profile */
 function syncExistingAvatar(
@@ -50,7 +56,8 @@ const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   includeBase64: false,
   maxHeight: 2000,
   maxWidth: 2000,
-  quality: 0.8 };
+  quality: 0.8,
+};
 
 const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.4, 200);
@@ -66,7 +73,9 @@ export const ProfilePictureUploadScreen = () => {
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
   const [croppedImage, setCroppedImage] = useState<ImageFile | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [existingAvatarUrl, setExistingAvatarUrl] = useState<string | null>(null);
+  const [existingAvatarUrl, setExistingAvatarUrl] = useState<string | null>(
+    null,
+  );
 
   const { profile, loading: profileLoading } = useProfileData();
 
@@ -75,25 +84,23 @@ export const ProfilePictureUploadScreen = () => {
   const hasAnyImage = hasExistingAvatar || hasLocalImage;
 
   // Check for cropped image from MMKV when screen comes into focus
-  useFocusEffect(
-    () => {
-      try {
-        const storedCroppedImage = storage.getString('temp_cropped_image');
-        if (storedCroppedImage) {
-          const croppedImageFile: ImageFile = JSON.parse(storedCroppedImage);
+  useFocusEffect(() => {
+    try {
+      const storedCroppedImage = storage.getString('temp_cropped_image');
+      if (storedCroppedImage) {
+        const croppedImageFile: ImageFile = JSON.parse(storedCroppedImage);
 
-          setCroppedImage(croppedImageFile);
+        setCroppedImage(croppedImageFile);
 
-          // Clean up the temporary storage
-          storage.remove('temp_cropped_image');
-        }
-      } catch (error) {
-        console.error('Error reading cropped image from MMKV:', error);
-        // Clean up potentially corrupted data
+        // Clean up the temporary storage
         storage.remove('temp_cropped_image');
       }
-    },
-  );
+    } catch (error) {
+      console.error('Error reading cropped image from MMKV:', error);
+      // Clean up potentially corrupted data
+      storage.remove('temp_cropped_image');
+    }
+  });
 
   // Clean up MMKV on unmount
   useEffect(() => {
@@ -119,7 +126,8 @@ export const ProfilePictureUploadScreen = () => {
       uri: asset.uri!,
       fileName: asset.fileName,
       fileSize: asset.fileSize,
-      type: asset.type };
+      type: asset.type,
+    };
 
     try {
       validateImageFile(imageFile, true);
@@ -133,9 +141,10 @@ export const ProfilePictureUploadScreen = () => {
 
   const handleTakePhoto = () => {
     // Pre-compute permission outside try-catch to avoid value block bailout
-    const cameraPermission = PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA;
+    const cameraPermission =
+      PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA;
 
-    executeMutationWithErrorHandler(
+    executeMutation(
       async () => {
         const result = await request(cameraPermission);
         if (result === RESULTS.GRANTED) {
@@ -163,7 +172,8 @@ export const ProfilePictureUploadScreen = () => {
     if (!selectedImage) return;
 
     navigateTo.imageCrop({
-      imageFile: selectedImage });
+      imageFile: selectedImage,
+    });
   };
 
   const handleUpload = () => {
@@ -178,7 +188,8 @@ export const ProfilePictureUploadScreen = () => {
           {
             onError: (error: Error) => {
               Alert.alert('Upload Failed', error.message);
-            } },
+            },
+          },
         );
 
         if (imageUrl) {
@@ -187,7 +198,7 @@ export const ProfilePictureUploadScreen = () => {
         }
       },
       setIsUploading,
-      (error) => {
+      error => {
         console.error('Avatar upload error:', error);
         Alert.alert('Upload Failed', 'Failed to update profile photo');
       },
@@ -224,7 +235,10 @@ export const ProfilePictureUploadScreen = () => {
               />
               <Pressable
                 onPress={handleRemoveImage}
-                style={({pressed}) => [styles.avatarRemove, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.avatarRemove,
+                  pressed && styles.pressed,
+                ]}
                 disabled={isUploading}
               >
                 <Icon
@@ -236,13 +250,13 @@ export const ProfilePictureUploadScreen = () => {
             </>
           ) : hasExistingAvatar ? (
             <>
-              <CachedImage
-                uri={existingAvatarUrl}
-                style={styles.avatarImage}
-              />
+              <CachedImage uri={existingAvatarUrl} style={styles.avatarImage} />
               <Pressable
                 onPress={handleRemoveImage}
-                style={({pressed}) => [styles.avatarRemove, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.avatarRemove,
+                  pressed && styles.pressed,
+                ]}
               >
                 <Icon
                   color={theme.colors.error}
@@ -270,7 +284,7 @@ export const ProfilePictureUploadScreen = () => {
           <View style={styles.cropContainer}>
             <Pressable
               onPress={handleCropImage}
-              style={({pressed}) => [
+              style={({ pressed }) => [
                 styles.cropButton,
                 { backgroundColor: theme.colors.primary },
                 pressed && styles.pressed,
@@ -295,16 +309,14 @@ export const ProfilePictureUploadScreen = () => {
           <View style={styles.formAction}>
             <Pressable
               onPress={handleSelectPhoto}
-              style={({pressed}) => [styles.uploadOption, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.uploadOption,
+                pressed && styles.pressed,
+              ]}
               disabled={isUploading}
             >
               <View style={styles.uploadOptionIcon}>
-                <Icon
-
-                  color={theme.colors.primary}
-                  name="images"
-                  size={24}
-                />
+                <Icon color={theme.colors.primary} name="images" size={24} />
               </View>
 
               <View style={styles.uploadOptionContent}>
@@ -336,16 +348,14 @@ export const ProfilePictureUploadScreen = () => {
 
             <Pressable
               onPress={handleTakePhoto}
-              style={({pressed}) => [styles.uploadOption, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.uploadOption,
+                pressed && styles.pressed,
+              ]}
               disabled={isUploading}
             >
               <View style={styles.uploadOptionIcon}>
-                <Icon
-
-                  color={theme.colors.primary}
-                  name="camera"
-                  size={24}
-                />
+                <Icon color={theme.colors.primary} name="camera" size={24} />
               </View>
 
               <View style={styles.uploadOptionContent}>
@@ -392,7 +402,10 @@ export const ProfilePictureUploadScreen = () => {
               onPress={() => {
                 // handle onPress
               }}
-              style={({pressed}) => [styles.formFooterLink, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.formFooterLink,
+                pressed && styles.pressed,
+              ]}
             >
               <Text
                 style={[
@@ -419,7 +432,10 @@ export const ProfilePictureUploadScreen = () => {
               onPress={() => {
                 // handle onPress
               }}
-              style={({pressed}) => [styles.formFooterLink, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.formFooterLink,
+                pressed && styles.pressed,
+              ]}
             >
               <Text
                 style={[
@@ -435,8 +451,20 @@ export const ProfilePictureUploadScreen = () => {
       </ScrollView>
 
       <Button
-        title={isUploading ? 'Uploading...' : hasExistingAvatar ? 'Continue' : 'Upload & Continue'}
-        onPress={hasExistingAvatar ? () => navigateToNextStep('ProfilePictureUpload') : hasLocalImage ? handleUpload : () => {}}
+        title={
+          isUploading
+            ? 'Uploading...'
+            : hasExistingAvatar
+            ? 'Continue'
+            : 'Upload & Continue'
+        }
+        onPress={
+          hasExistingAvatar
+            ? () => navigateToNextStep('ProfilePictureUpload')
+            : hasLocalImage
+            ? handleUpload
+            : () => {}
+        }
         variant="primary"
         disabled={!hasAnyImage || isUploading}
       />
@@ -446,20 +474,24 @@ export const ProfilePictureUploadScreen = () => {
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    flex: 1 },
+    flex: 1,
+  },
   scrollContent: {
-    flexGrow: 1 },
+    flexGrow: 1,
+  },
   avatarPreview: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.md,
     position: 'relative',
-    alignSelf: 'center' },
+    alignSelf: 'center',
+  },
   avatarImage: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2 },
+    borderRadius: AVATAR_SIZE / 2,
+  },
   avatarPlaceholder: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
@@ -469,31 +501,38 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     borderStyle: 'dashed',
     alignItems: 'center',
-    justifyContent: 'center' },
+    justifyContent: 'center',
+  },
   avatarRemove: {
     position: 'absolute',
     right: -4,
     top: -4,
     backgroundColor: theme.colors.background,
     borderRadius: theme.radii.md,
-    padding: 0 },
+    padding: 0,
+  },
   cropContainer: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xl },
+    marginBottom: theme.spacing.xl,
+  },
   cropButton: {
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing['3'],
     borderRadius: theme.radii.sm,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   cropButtonText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   cropHint: {
     fontSize: theme.typography.fontSize.xs,
-    fontStyle: 'italic' },
+    fontStyle: 'italic',
+  },
   formAction: {
     marginVertical: theme.spacing.sm,
-    gap: theme.spacing['3'] },
+    gap: theme.spacing['3'],
+  },
   uploadOption: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -501,7 +540,8 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     borderRadius: theme.radii.md,
     borderWidth: 2,
-    borderColor: theme.colors.border },
+    borderColor: theme.colors.border,
+  },
   uploadOptionIcon: {
     width: 40,
     height: 40,
@@ -509,18 +549,22 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: theme.spacing['3'] },
+    marginRight: theme.spacing['3'],
+  },
   uploadOptionContent: {
-    flex: 1 },
+    flex: 1,
+  },
   uploadOptionLabel: {
     fontSize: theme.typography.fontSize.base,
     lineHeight: theme.typography.lineHeight.normal,
     fontWeight: theme.fonts.weight.semibold,
-    marginBottom: theme.spacing.xs },
+    marginBottom: theme.spacing.xs,
+  },
   uploadOptionDescription: {
     fontSize: theme.typography.fontSize.sm - 1,
     lineHeight: theme.typography.lineHeight.tight,
-    letterSpacing: 0.16 },
+    letterSpacing: 0.16,
+  },
   formFooter: {
     marginTop: 'auto',
     marginBottom: theme.spacing['2xl'],
@@ -528,17 +572,20 @@ const styles = StyleSheet.create(theme => ({
     lineHeight: theme.typography.lineHeight.normal,
     fontWeight: theme.fonts.weight.regular,
     textAlign: 'center',
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   formFooterText: {
     fontSize: theme.typography.fontSize.sm - 1,
     lineHeight: theme.typography.lineHeight.tight,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   formFooterLinks: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: theme.spacing.xs,
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   formFooterLink: {
     // Empty style for Pressable wrapper
   },
@@ -546,9 +593,13 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm - 1,
     lineHeight: theme.typography.lineHeight.tight,
     textDecorationLine: 'underline',
-    textDecorationStyle: 'solid' },
+    textDecorationStyle: 'solid',
+  },
   nextText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: 'bold' },
+    fontWeight: 'bold',
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

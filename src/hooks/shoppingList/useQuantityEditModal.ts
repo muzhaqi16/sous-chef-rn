@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import {
   useUpdateShoppingListItemQuantityMutation,
-  ShoppingListItemDisplayFragment } from '#generated';
+  ShoppingListItemDisplayFragment,
+} from '#generated';
 import { Telemetry } from '#/services/telemetry';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { resolveImageUrl } from '#utils/imageUtils';
 
 /**
@@ -98,35 +99,38 @@ export function useQuantityEditModal(
     errorPolicy: 'all',
     onError: error => {
       Alert.alert('Error', error.message || 'Failed to update item');
-    } });
+    },
+  });
 
   // Transform raw item to QuantityEditItem format
   const selectedItem: QuantityEditItem | null = selectedItemRaw
-        ? {
-            id: selectedItemRaw.id,
-            itemName: selectedItemRaw.itemName || 'Item',
-            quantity: selectedItemRaw.quantity ?? 0,
-            unitName:
-              selectedItemRaw.unit?.symbol || selectedItemRaw.unitName || null,
-            unitId: selectedItemRaw.unit?.id || null,
-            category: selectedItemRaw.category || null,
-            imageUrl: resolveImageUrl(selectedItemRaw) || null,
-            version: selectedItemRaw.version,
-            // Units are available on the Full fragment (detail view) but not the Display
-            // fragment used in list views. Provide the current unit as the only option.
-            itemUnits: selectedItemRaw.unit
-              ? [
-                  {
-                    id: selectedItemRaw.unit.id,
-                    symbol: selectedItemRaw.unit.symbol,
-                    name: selectedItemRaw.unit.name,
-                    isDefault: true,
-                    isPreferred: true,
-                    displayNameSingular: null,
-                    displayNamePlural: null },
-                ]
-              : [] }
-        : null;
+    ? {
+        id: selectedItemRaw.id,
+        itemName: selectedItemRaw.itemName || 'Item',
+        quantity: selectedItemRaw.quantity ?? 0,
+        unitName:
+          selectedItemRaw.unit?.symbol || selectedItemRaw.unitName || null,
+        unitId: selectedItemRaw.unit?.id || null,
+        category: selectedItemRaw.category || null,
+        imageUrl: resolveImageUrl(selectedItemRaw) || null,
+        version: selectedItemRaw.version,
+        // Units are available on the Full fragment (detail view) but not the Display
+        // fragment used in list views. Provide the current unit as the only option.
+        itemUnits: selectedItemRaw.unit
+          ? [
+              {
+                id: selectedItemRaw.unit.id,
+                symbol: selectedItemRaw.unit.symbol,
+                name: selectedItemRaw.unit.name,
+                isDefault: true,
+                isPreferred: true,
+                displayNameSingular: null,
+                displayNamePlural: null,
+              },
+            ]
+          : [],
+      }
+    : null;
 
   const openForItem = (itemId: string) => {
     const item = items.find(i => i.id === itemId);
@@ -142,37 +146,40 @@ export function useQuantityEditModal(
   };
 
   const save = async (
-      quantity: string,
-      _unitName: string | null,
-      unitId: string | null,
-    ) => {
-      if (!selectedItemRaw) return;
+    quantity: string,
+    _unitName: string | null,
+    unitId: string | null,
+  ) => {
+    if (!selectedItemRaw) return;
 
-      setIsLoading(true);
+    setIsLoading(true);
 
-      await executeMutationWithErrorHandler(
-        async () => {
-          await updateQuantity({
-            variables: {
-              itemId: selectedItemRaw.id,
-              quantity,
-              unitId,
-              version: selectedItemRaw.version } });
+    await executeMutation(
+      async () => {
+        await updateQuantity({
+          variables: {
+            itemId: selectedItemRaw.id,
+            quantity,
+            unitId,
+            version: selectedItemRaw.version,
+          },
+        });
 
-          Telemetry.trackEvent('shopping_item_quantity_updated', {
-            item_id: selectedItemRaw.id,
-            quantity });
+        Telemetry.trackEvent('shopping_item_quantity_updated', {
+          item_id: selectedItemRaw.id,
+          quantity,
+        });
 
-          setVisible(false);
-          setSelectedItemRaw(null);
-        },
-        () => {
-          // Error handled by mutation onError
-        },
-      );
+        setVisible(false);
+        setSelectedItemRaw(null);
+      },
+      () => {
+        // Error handled by mutation onError
+      },
+    );
 
-      setIsLoading(false);
-    };
+    setIsLoading(false);
+  };
 
   return { visible, selectedItem, isLoading, openForItem, close, save };
 }

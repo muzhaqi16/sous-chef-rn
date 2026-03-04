@@ -13,7 +13,7 @@ import {
 } from '#generated';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
-import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import type { ToastFn } from '#/components/atoms/Toast';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
@@ -176,7 +176,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
   };
 
   const onVerifyCode = (data: CodeVerificationValues) => {
-    executeMutationWithErrorHandler(
+    executeMutation(
       async () => {
         const response = await verifyEmail({
           variables: { code: data.code },
@@ -204,7 +204,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     // Prevent resend during countdown
     if (countdown > 0 || !user?.email) return;
 
-    executeMutationWithErrorHandler(
+    executeMutation(
       async () => {
         const response = await resendVerificationEmail({
           variables: { email: user.email },
