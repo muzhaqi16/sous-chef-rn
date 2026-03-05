@@ -324,7 +324,7 @@ function computeDisplayCache(
     const cached = prevCache.get(item.id);
 
     if (cached && cached.item === item) {
-      // Same object reference — Apollo hasn't updated this pantry item
+      // Same reference — reuse cached data.
       map.set(item.id, cached.data);
       nextCache.set(item.id, cached);
     } else {
@@ -359,7 +359,6 @@ const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
 interface PantryEmptyStateProps {
   showSkeletons: boolean;
   searchQuery: string;
-  totalCount?: number;
   itemCount: number;
   locationFilter: LocationFilter;
   tabs: FilterTabConfig<LocationFilter>[];
@@ -372,7 +371,6 @@ interface PantryEmptyStateProps {
 function PantryEmptyState({
   showSkeletons,
   searchQuery,
-  totalCount,
   itemCount,
   locationFilter,
   tabs,
@@ -422,7 +420,7 @@ function PantryEmptyState({
     );
   }
 
-  if (totalCount != null && totalCount > 0 && itemCount === 0) {
+  if (locationFilter !== 'all' && itemCount === 0) {
     const activeTab = tabs.find(tab => tab.id === locationFilter);
     const tabName = activeTab?.label ?? 'this location';
     return (
@@ -506,7 +504,11 @@ export const PantryContent = React.forwardRef<
 
     useImperativeHandle(ref, () => ({
       scrollToTop() {
-        flashListRef.current?.scrollToTop({ animated: true });
+        // Defer to next frame to avoid FlashList v2 blank-cell regression (#1784)
+        // when scroll reset races with an in-progress fling
+        requestAnimationFrame(() => {
+          flashListRef.current?.scrollToTop({ animated: true });
+        });
       },
     }));
 
@@ -613,7 +615,11 @@ export const PantryContent = React.forwardRef<
         prevSortDirection.current !== sortDirection;
 
       if (changed) {
-        flashListRef.current?.scrollToTop({ animated: false });
+        // Defer to next frame to avoid FlashList v2 blank-cell regression (#1784)
+        // when scroll position reset races with an in-progress fling
+        requestAnimationFrame(() => {
+          flashListRef.current?.scrollToOffset({ offset: 0, animated: false });
+        });
         prevLocationFilter.current = locationFilter;
         prevSortOption.current = sortOption;
         prevSortDirection.current = sortDirection;
@@ -769,7 +775,6 @@ export const PantryContent = React.forwardRef<
                   <PantryEmptyState
                     showSkeletons={showSkeletons}
                     searchQuery={searchQuery}
-                    totalCount={totalCount}
                     itemCount={items.length}
                     locationFilter={locationFilter}
                     tabs={tabs}

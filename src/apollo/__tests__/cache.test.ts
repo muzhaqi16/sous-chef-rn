@@ -429,6 +429,166 @@ describe('cache', () => {
     });
   });
 
+  describe('mergeConnectionByNodeId - refetch preserves paginated items', () => {
+    const HOME_QUERY = gql`
+      query GetHome($id: ID!, $after: String) {
+        home(id: $id) {
+          id
+          shoppingListsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `;
+
+    it('preserves page 2 items when page 1 is refetched with hasNextPage:true', () => {
+      const cache = makeCache();
+
+      // Page 1 (initial load, no cursor)
+      cache.writeQuery({
+        query: HOME_QUERY,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: {
+              __typename: 'ShoppingListsConnection',
+              edges: [
+                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' } },
+                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c2' },
+            },
+          },
+        },
+      });
+
+      // Page 2 (paginated with cursor)
+      cache.writeQuery({
+        query: HOME_QUERY,
+        variables: { id: 'home-1', after: 'c2' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: {
+              __typename: 'ShoppingListsConnection',
+              edges: [
+                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-3', name: 'C' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c3' },
+            },
+          },
+        },
+      });
+
+      // Verify all 3 items exist
+      let result: any = cache.readQuery({ query: HOME_QUERY, variables: { id: 'home-1' } });
+      expect(result?.home.shoppingListsConnection.edges).toHaveLength(3);
+
+      // Refetch page 1 (no cursor, hasNextPage: true) — should NOT wipe page 2
+      cache.writeQuery({
+        query: HOME_QUERY,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: {
+              __typename: 'ShoppingListsConnection',
+              edges: [
+                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' } },
+                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c2' },
+            },
+          },
+        },
+      });
+
+      result = cache.readQuery({ query: HOME_QUERY, variables: { id: 'home-1' } });
+      const ids = result?.home.shoppingListsConnection.edges.map((e: any) => e.node.id);
+      expect(ids).toContain('sl-1');
+      expect(ids).toContain('sl-2');
+      expect(ids).toContain('sl-3');
+    });
+
+    it('replaces entirely when refetch has hasNextPage:false (all items fit in one page)', () => {
+      const cache = makeCache();
+
+      // Initial multi-page load
+      cache.writeQuery({
+        query: HOME_QUERY,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: {
+              __typename: 'ShoppingListsConnection',
+              edges: [
+                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+            },
+          },
+        },
+      });
+
+      cache.writeQuery({
+        query: HOME_QUERY,
+        variables: { id: 'home-1', after: 'c1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: {
+              __typename: 'ShoppingListsConnection',
+              edges: [
+                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c2' },
+            },
+          },
+        },
+      });
+
+      // Refetch with hasNextPage:false — items were deleted, only 1 remains
+      cache.writeQuery({
+        query: HOME_QUERY,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: {
+              __typename: 'ShoppingListsConnection',
+              edges: [
+                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c1' },
+            },
+          },
+        },
+      });
+
+      const result: any = cache.readQuery({ query: HOME_QUERY, variables: { id: 'home-1' } });
+      // sl-2 should be gone since all items fit in one page now
+      expect(result?.home.shoppingListsConnection.edges).toHaveLength(1);
+      expect(result?.home.shoppingListsConnection.edges[0].node.id).toBe('sl-1');
+    });
+  });
+
   describe('itemsConnectionFieldPolicy (via ShoppingList.itemsConnection)', () => {
     // Need to add ShoppingList to the cache first - write via cache directly
     it('stores initial connection data', () => {
@@ -733,6 +893,311 @@ describe('cache', () => {
       });
       const result: any = cache.readQuery({ query: LIST_SUGGESTIONS_QUERY, variables: { id: 'list-1' } });
       expect(result?.shoppingList.suggestions).toHaveLength(1);
+    });
+  });
+
+  describe('Pantry.itemsConnection - refetch preserves paginated items', () => {
+    const PANTRY_CONNECTION_QUERY = gql`
+      query GetPantryItems($id: ID!, $after: String) {
+        pantry(id: $id) {
+          id
+          itemsConnection(after: $after) {
+            edges {
+              node { id name }
+            }
+            pageInfo { hasNextPage endCursor }
+          }
+        }
+      }
+    `;
+
+    it('preserves page 2 items when page 1 is refetched with hasNextPage:true', () => {
+      const cache = makeCache();
+
+      // Page 1
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              edges: [
+                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' } },
+                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c2' },
+            },
+          },
+        },
+      });
+
+      // Page 2 (with cursor)
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1', after: 'c2' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              edges: [
+                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-3', name: 'Olive Oil' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c3' },
+            },
+          },
+        },
+      });
+
+      // Verify all 3 items
+      let result: any = cache.readQuery({ query: PANTRY_CONNECTION_QUERY, variables: { id: 'p1' } });
+      expect(result?.pantry.itemsConnection.edges).toHaveLength(3);
+
+      // Refetch page 1 (no cursor, hasNextPage:true) — must NOT wipe Olive Oil
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              edges: [
+                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' } },
+                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c2' },
+            },
+          },
+        },
+      });
+
+      result = cache.readQuery({ query: PANTRY_CONNECTION_QUERY, variables: { id: 'p1' } });
+      const ids = result?.pantry.itemsConnection.edges.map((e: any) => e.node.id);
+      expect(ids).toContain('pi-1');
+      expect(ids).toContain('pi-2');
+      expect(ids).toContain('pi-3');
+    });
+
+    it('replaces entirely when refetch has hasNextPage:false', () => {
+      const cache = makeCache();
+
+      // Initial load
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              edges: [
+                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+            },
+          },
+        },
+      });
+
+      // Page 2
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1', after: 'c1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              edges: [
+                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c2' },
+            },
+          },
+        },
+      });
+
+      // Refetch — items deleted, all fit in one page (hasNextPage:false)
+      cache.writeQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p1',
+            itemsConnection: {
+              __typename: 'PantryItemsConnection',
+              edges: [
+                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c1' },
+            },
+          },
+        },
+      });
+
+      const result: any = cache.readQuery({ query: PANTRY_CONNECTION_QUERY, variables: { id: 'p1' } });
+      expect(result?.pantry.itemsConnection.edges).toHaveLength(1);
+      expect(result?.pantry.itemsConnection.edges[0].node.id).toBe('pi-1');
+    });
+  });
+
+  describe('itemsConnectionFieldPolicy - refetch preserves paginated items', () => {
+    const LIST_CONNECTION_QUERY = gql`
+      query GetList($id: ID!, $after: String) {
+        shoppingList(id: $id) {
+          id
+          itemsConnection(after: $after) {
+            edges {
+              node { id name }
+            }
+            pageInfo { hasNextPage endCursor }
+          }
+        }
+      }
+    `;
+
+    it('preserves page 2 items when page 1 is refetched with hasNextPage:true', () => {
+      const cache = makeCache();
+
+      // Page 1
+      cache.writeQuery({
+        query: LIST_CONNECTION_QUERY,
+        variables: { id: 'list-1' },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: {
+              __typename: 'ShoppingListItemsConnection',
+              edges: [
+                { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: 'si-1', name: 'Milk' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+            },
+          },
+        },
+      });
+
+      // Page 2 (with cursor)
+      cache.writeQuery({
+        query: LIST_CONNECTION_QUERY,
+        variables: { id: 'list-1', after: 'c1' },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: {
+              __typename: 'ShoppingListItemsConnection',
+              edges: [
+                { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: 'si-2', name: 'Bread' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c2' },
+            },
+          },
+        },
+      });
+
+      // Verify both pages present
+      let result: any = cache.readQuery({ query: LIST_CONNECTION_QUERY, variables: { id: 'list-1' } });
+      expect(result?.shoppingList.itemsConnection.edges).toHaveLength(2);
+
+      // Refetch page 1 (no cursor, hasNextPage:true) — must preserve page 2
+      cache.writeQuery({
+        query: LIST_CONNECTION_QUERY,
+        variables: { id: 'list-1' },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: {
+              __typename: 'ShoppingListItemsConnection',
+              edges: [
+                { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: 'si-1', name: 'Milk' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+            },
+          },
+        },
+      });
+
+      result = cache.readQuery({ query: LIST_CONNECTION_QUERY, variables: { id: 'list-1' } });
+      const ids = result?.shoppingList.itemsConnection.edges.map((e: any) => e.node.id);
+      expect(ids).toContain('si-1');
+      expect(ids).toContain('si-2');
+    });
+
+    it('replaces entirely when refetch has hasNextPage:false', () => {
+      const cache = makeCache();
+
+      // Page 1
+      cache.writeQuery({
+        query: LIST_CONNECTION_QUERY,
+        variables: { id: 'list-1' },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: {
+              __typename: 'ShoppingListItemsConnection',
+              edges: [
+                { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: 'si-1', name: 'Milk' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+            },
+          },
+        },
+      });
+
+      // Page 2
+      cache.writeQuery({
+        query: LIST_CONNECTION_QUERY,
+        variables: { id: 'list-1', after: 'c1' },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: {
+              __typename: 'ShoppingListItemsConnection',
+              edges: [
+                { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: 'si-2', name: 'Bread' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c2' },
+            },
+          },
+        },
+      });
+
+      // Refetch — all fits in one page now
+      cache.writeQuery({
+        query: LIST_CONNECTION_QUERY,
+        variables: { id: 'list-1' },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: {
+              __typename: 'ShoppingListItemsConnection',
+              edges: [
+                { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: 'si-1', name: 'Milk' } },
+              ],
+              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c1' },
+            },
+          },
+        },
+      });
+
+      const result: any = cache.readQuery({ query: LIST_CONNECTION_QUERY, variables: { id: 'list-1' } });
+      expect(result?.shoppingList.itemsConnection.edges).toHaveLength(1);
+      expect(result?.shoppingList.itemsConnection.edges[0].node.id).toBe('si-1');
     });
   });
 

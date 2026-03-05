@@ -1,0 +1,1090 @@
+'use no memo';
+
+jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
+  possibleTypes: {},
+}));
+
+import { gql } from '@apollo/client';
+import { makeCache, stopCacheMonitoring } from '../cache';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function buildEdge(
+  nodeTypeName: string,
+  edgeTypeName: string,
+  nodeFields: Record<string, unknown>,
+) {
+  return {
+    __typename: edgeTypeName,
+    node: { __typename: nodeTypeName, ...nodeFields },
+  };
+}
+
+function buildConnection(
+  connectionTypeName: string,
+  edges: ReturnType<typeof buildEdge>[],
+  pageInfo: { hasNextPage: boolean; endCursor: string | null },
+  totalCount?: number,
+) {
+  return {
+    __typename: connectionTypeName,
+    edges,
+    pageInfo: { __typename: 'PageInfo', ...pageInfo },
+    totalCount: totalCount ?? edges.length,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe('cache pagination integration', () => {
+  afterEach(() => {
+    stopCacheMonitoring();
+  });
+
+  // =========================================================================
+  // Section A: mergeConnectionByNodeId via Home.shoppingListsConnection
+  //   cursorArg = 'after', keyArgs = ['filters']
+  // =========================================================================
+
+  describe('mergeConnectionByNodeId (Home.shoppingListsConnection, cursor=after)', () => {
+    const QUERY = gql`
+      query GetHome($id: ID!, $after: String) {
+        home(id: $id) {
+          id
+          shoppingListsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+
+    const slEdge = (id: string, name: string) =>
+      buildEdge('ShoppingList', 'ShoppingListEdge', { id, name });
+
+    const writeConn = (
+      cache: ReturnType<typeof makeCache>,
+      edges: ReturnType<typeof buildEdge>[],
+      pageInfo: { hasNextPage: boolean; endCursor: string | null },
+      vars?: Record<string, unknown>,
+      totalCount?: number,
+    ) => {
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'home-1', ...vars },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: buildConnection(
+              'ShoppingListConnection',
+              edges,
+              pageInfo,
+              totalCount,
+            ),
+          },
+        },
+      });
+    };
+
+    const readEdges = (cache: ReturnType<typeof makeCache>) => {
+      const result: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+      });
+      return result?.home?.shoppingListsConnection?.edges ?? [];
+    };
+
+    it('full lifecycle: page 1 → page 2 → refetch preserves all items', () => {
+      const cache = makeCache();
+
+      // Page 1 (3 items, hasNextPage:true)
+      writeConn(
+        cache,
+        [slEdge('sl-1', 'A'), slEdge('sl-2', 'B'), slEdge('sl-3', 'C')],
+        { hasNextPage: true, endCursor: 'c3' },
+      );
+      expect(readEdges(cache)).toHaveLength(3);
+
+      // Page 2 (2 items with cursor)
+      writeConn(
+        cache,
+        [slEdge('sl-4', 'D'), slEdge('sl-5', 'E')],
+        { hasNextPage: false, endCursor: 'c5' },
+        { after: 'c3' },
+      );
+      expect(readEdges(cache)).toHaveLength(5);
+
+      // Refetch page 1 without cursor (hasNextPage:true) — must preserve page 2
+      writeConn(
+        cache,
+        [slEdge('sl-1', 'A'), slEdge('sl-2', 'B'), slEdge('sl-3', 'C')],
+        { hasNextPage: true, endCursor: 'c3' },
+      );
+
+      const edges = readEdges(cache);
+      expect(edges).toHaveLength(5);
+      const ids = edges.map((e: any) => e.node.id);
+      expect(ids).toEqual(
+        expect.arrayContaining(['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5']),
+      );
+    });
+
+    it('shrinkage: refetch with hasNextPage:false removes stale items', () => {
+      const cache = makeCache();
+
+      writeConn(
+        cache,
+        [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')],
+        { hasNextPage: true, endCursor: 'c2' },
+      );
+      writeConn(
+        cache,
+        [slEdge('sl-3', 'C')],
+        { hasNextPage: false, endCursor: 'c3' },
+        { after: 'c2' },
+      );
+      expect(readEdges(cache)).toHaveLength(3);
+
+      // Refetch — all items fit in one page now (sl-2 was deleted server-side)
+      writeConn(
+        cache,
+        [slEdge('sl-1', 'A'), slEdge('sl-3', 'C')],
+        { hasNextPage: false, endCursor: 'c3' },
+      );
+
+      const edges = readEdges(cache);
+      expect(edges).toHaveLength(2);
+      const ids = edges.map((e: any) => e.node.id);
+      expect(ids).toContain('sl-1');
+      expect(ids).toContain('sl-3');
+      expect(ids).not.toContain('sl-2');
+    });
+
+    it('updated items: refetch replaces page 1 items with updated data', () => {
+      const cache = makeCache();
+
+      writeConn(
+        cache,
+        [slEdge('sl-1', 'Old Name')],
+        { hasNextPage: true, endCursor: 'c1' },
+      );
+      writeConn(
+        cache,
+        [slEdge('sl-2', 'B')],
+        { hasNextPage: false, endCursor: 'c2' },
+        { after: 'c1' },
+      );
+
+      // Refetch with updated page 1 item
+      writeConn(
+        cache,
+        [slEdge('sl-1', 'New Name')],
+        { hasNextPage: true, endCursor: 'c1' },
+      );
+
+      const edges = readEdges(cache);
+      expect(edges).toHaveLength(2);
+      // Incoming edges replace existing for same id in mergeConnectionByNodeId
+      const sl1 = edges.find((e: any) => e.node.id === 'sl-1');
+      expect(sl1.node.name).toBe('New Name');
+      // Page 2 preserved
+      expect(edges.find((e: any) => e.node.id === 'sl-2')).toBeTruthy();
+    });
+
+    it('overlap deduplication: page 2 overlapping with page 1 produces no duplicates', () => {
+      const cache = makeCache();
+
+      writeConn(
+        cache,
+        [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')],
+        { hasNextPage: true, endCursor: 'c2' },
+      );
+      // Page 2 — sl-2 overlaps with page 1
+      writeConn(
+        cache,
+        [slEdge('sl-2', 'B-updated'), slEdge('sl-3', 'C')],
+        { hasNextPage: false, endCursor: 'c3' },
+        { after: 'c2' },
+      );
+
+      const edges = readEdges(cache);
+      expect(edges).toHaveLength(3);
+      const ids = edges.map((e: any) => e.node.id);
+      expect(ids.filter((id: string) => id === 'sl-2')).toHaveLength(1);
+    });
+  });
+
+  // =========================================================================
+  // Section B: mergeConnectionByNodeId with non-'after' cursor
+  //   Home.membersConnection — cursorArg = 'membersCursor', keyArgs = false
+  // =========================================================================
+
+  describe('mergeConnectionByNodeId (Home.membersConnection, cursor=membersCursor)', () => {
+    const QUERY = gql`
+      query GetHome($id: ID!, $membersCursor: String) {
+        home(id: $id) {
+          id
+          membersConnection(membersCursor: $membersCursor) {
+            edges {
+              node {
+                id
+                displayName
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+
+    const memberEdge = (id: string, displayName: string) =>
+      buildEdge('Membership', 'MembershipEdge', { id, displayName });
+
+    const writeConn = (
+      cache: ReturnType<typeof makeCache>,
+      edges: ReturnType<typeof buildEdge>[],
+      pageInfo: { hasNextPage: boolean; endCursor: string | null },
+      vars?: Record<string, unknown>,
+    ) => {
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'home-1', ...vars },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            membersConnection: buildConnection(
+              'MembershipConnection',
+              edges,
+              pageInfo,
+            ),
+          },
+        },
+      });
+    };
+
+    const readEdges = (cache: ReturnType<typeof makeCache>) => {
+      const result: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+      });
+      return result?.home?.membersConnection?.edges ?? [];
+    };
+
+    it('full lifecycle with membersCursor arg', () => {
+      const cache = makeCache();
+
+      writeConn(
+        cache,
+        [memberEdge('m-1', 'Alice'), memberEdge('m-2', 'Bob')],
+        { hasNextPage: true, endCursor: 'mc2' },
+      );
+      writeConn(
+        cache,
+        [memberEdge('m-3', 'Charlie')],
+        { hasNextPage: false, endCursor: 'mc3' },
+        { membersCursor: 'mc2' },
+      );
+      expect(readEdges(cache)).toHaveLength(3);
+
+      // Refetch without cursor (hasNextPage:true) — preserve page 2
+      writeConn(
+        cache,
+        [memberEdge('m-1', 'Alice'), memberEdge('m-2', 'Bob')],
+        { hasNextPage: true, endCursor: 'mc2' },
+      );
+
+      const ids = readEdges(cache).map((e: any) => e.node.id);
+      expect(ids).toEqual(expect.arrayContaining(['m-1', 'm-2', 'm-3']));
+    });
+
+    it('shrinkage with membersCursor', () => {
+      const cache = makeCache();
+
+      writeConn(
+        cache,
+        [memberEdge('m-1', 'Alice')],
+        { hasNextPage: true, endCursor: 'mc1' },
+      );
+      writeConn(
+        cache,
+        [memberEdge('m-2', 'Bob')],
+        { hasNextPage: false, endCursor: 'mc2' },
+        { membersCursor: 'mc1' },
+      );
+      expect(readEdges(cache)).toHaveLength(2);
+
+      // Refetch — member removed, all fit in one page
+      writeConn(
+        cache,
+        [memberEdge('m-1', 'Alice')],
+        { hasNextPage: false, endCursor: 'mc1' },
+      );
+
+      expect(readEdges(cache)).toHaveLength(1);
+      expect(readEdges(cache)[0].node.id).toBe('m-1');
+    });
+  });
+
+  // =========================================================================
+  // Section C: itemsConnectionFieldPolicy (ShoppingList.itemsConnection)
+  //   Append-only merge, keyArgs = ['filters']
+  // =========================================================================
+
+  describe('itemsConnectionFieldPolicy (ShoppingList.itemsConnection)', () => {
+    const QUERY = gql`
+      query GetList($id: ID!, $after: String) {
+        shoppingList(id: $id) {
+          id
+          itemsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+
+    const QUERY_WITH_FILTER = gql`
+      query GetList($id: ID!, $after: String, $filters: ShoppingListItemFilters) {
+        shoppingList(id: $id) {
+          id
+          itemsConnection(after: $after, filters: $filters) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+
+    const itemEdge = (id: string, name: string) =>
+      buildEdge('ShoppingListItem', 'ShoppingListItemEdge', { id, name });
+
+    const writeConn = (
+      cache: ReturnType<typeof makeCache>,
+      edges: ReturnType<typeof buildEdge>[],
+      pageInfo: { hasNextPage: boolean; endCursor: string | null },
+      vars?: Record<string, unknown>,
+      totalCount?: number,
+    ) => {
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'list-1', ...vars },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: buildConnection(
+              'ShoppingListItemConnection',
+              edges,
+              pageInfo,
+              totalCount,
+            ),
+          },
+        },
+      });
+    };
+
+    const readEdges = (cache: ReturnType<typeof makeCache>) => {
+      const result: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'list-1' },
+      });
+      return result?.shoppingList?.itemsConnection?.edges ?? [];
+    };
+
+    it('full lifecycle: append order preserved after pagination + refetch', () => {
+      const cache = makeCache();
+
+      // Page 1
+      writeConn(
+        cache,
+        [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')],
+        { hasNextPage: true, endCursor: 'c2' },
+      );
+
+      // Page 2
+      writeConn(
+        cache,
+        [itemEdge('si-3', 'Eggs')],
+        { hasNextPage: false, endCursor: 'c3' },
+        { after: 'c2' },
+      );
+
+      let edges = readEdges(cache);
+      expect(edges).toHaveLength(3);
+      // Append-only: page 1 edges come first, then page 2
+      expect(edges.map((e: any) => e.node.id)).toEqual([
+        'si-1',
+        'si-2',
+        'si-3',
+      ]);
+
+      // Refetch page 1 (no cursor, hasNextPage:true) — must preserve page 2
+      writeConn(
+        cache,
+        [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')],
+        { hasNextPage: true, endCursor: 'c2' },
+      );
+
+      edges = readEdges(cache);
+      expect(edges).toHaveLength(3);
+      expect(edges.map((e: any) => e.node.id)).toEqual([
+        'si-1',
+        'si-2',
+        'si-3',
+      ]);
+    });
+
+    it('overlap deduplication: existing position kept', () => {
+      const cache = makeCache();
+
+      writeConn(
+        cache,
+        [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')],
+        { hasNextPage: true, endCursor: 'c2' },
+      );
+      // Page 2 — si-2 overlaps with page 1
+      writeConn(
+        cache,
+        [itemEdge('si-2', 'Bread-updated'), itemEdge('si-3', 'Eggs')],
+        { hasNextPage: false, endCursor: 'c3' },
+        { after: 'c2' },
+      );
+
+      const edges = readEdges(cache);
+      // Append-only: si-2 already exists at position 1, not appended again
+      expect(edges).toHaveLength(3);
+      const ids = edges.map((e: any) => e.node.id);
+      expect(ids.filter((id: string) => id === 'si-2')).toHaveLength(1);
+      // Existing position preserved (si-2 stays at index 1)
+      expect(ids[1]).toBe('si-2');
+    });
+
+    it('shrinkage: hasNextPage:false replaces all', () => {
+      const cache = makeCache();
+
+      writeConn(
+        cache,
+        [itemEdge('si-1', 'Milk')],
+        { hasNextPage: true, endCursor: 'c1' },
+      );
+      writeConn(
+        cache,
+        [itemEdge('si-2', 'Bread')],
+        { hasNextPage: false, endCursor: 'c2' },
+        { after: 'c1' },
+      );
+      expect(readEdges(cache)).toHaveLength(2);
+
+      // Refetch — items removed, all fit in one page
+      writeConn(
+        cache,
+        [itemEdge('si-1', 'Milk')],
+        { hasNextPage: false, endCursor: 'c1' },
+      );
+
+      expect(readEdges(cache)).toHaveLength(1);
+      expect(readEdges(cache)[0].node.id).toBe('si-1');
+    });
+
+    it('filter separation: different filters create independent cache entries', () => {
+      const cache = makeCache();
+
+      // Write to default (no filter) entry
+      writeConn(
+        cache,
+        [itemEdge('si-1', 'Milk')],
+        { hasNextPage: false, endCursor: 'c1' },
+      );
+
+      // Write to filtered entry
+      cache.writeQuery({
+        query: QUERY_WITH_FILTER,
+        variables: { id: 'list-1', filters: { purchased: true } },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: buildConnection(
+              'ShoppingListItemConnection',
+              [itemEdge('si-2', 'Bread')],
+              { hasNextPage: false, endCursor: 'c1' },
+            ),
+          },
+        },
+      });
+
+      // Read default — should only have si-1
+      const defaultEdges = readEdges(cache);
+      expect(defaultEdges).toHaveLength(1);
+      expect(defaultEdges[0].node.id).toBe('si-1');
+
+      // Read filtered — should only have si-2
+      const filteredResult: any = cache.readQuery({
+        query: QUERY_WITH_FILTER,
+        variables: { id: 'list-1', filters: { purchased: true } },
+      });
+      const filteredEdges =
+        filteredResult?.shoppingList?.itemsConnection?.edges ?? [];
+      expect(filteredEdges).toHaveLength(1);
+      expect(filteredEdges[0].node.id).toBe('si-2');
+    });
+  });
+
+  // =========================================================================
+  // Section D: Pantry.itemsConnection (inline merge)
+  //   keyArgs = ['filters', 'orderBy']
+  // =========================================================================
+
+  describe('Pantry.itemsConnection', () => {
+    const QUERY = gql`
+      query GetPantry($id: ID!, $after: String) {
+        pantry(id: $id) {
+          id
+          itemsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+
+    const QUERY_WITH_ORDER = gql`
+      query GetPantry($id: ID!, $after: String, $orderBy: PantryItemOrderBy) {
+        pantry(id: $id) {
+          id
+          itemsConnection(after: $after, orderBy: $orderBy) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+
+    const piEdge = (id: string, name: string) =>
+      buildEdge('PantryItem', 'PantryItemEdge', { id, name });
+
+    const writeConn = (
+      cache: ReturnType<typeof makeCache>,
+      edges: ReturnType<typeof buildEdge>[],
+      pageInfo: { hasNextPage: boolean; endCursor: string | null },
+      vars?: Record<string, unknown>,
+    ) => {
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'p-1', ...vars },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p-1',
+            itemsConnection: buildConnection(
+              'PantryItemConnection',
+              edges,
+              pageInfo,
+            ),
+          },
+        },
+      });
+    };
+
+    const readEdges = (cache: ReturnType<typeof makeCache>) => {
+      const result: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'p-1' },
+      });
+      return result?.pantry?.itemsConnection?.edges ?? [];
+    };
+
+    it('full lifecycle: pagination + refetch preservation', () => {
+      const cache = makeCache();
+
+      writeConn(
+        cache,
+        [piEdge('pi-1', 'Flour'), piEdge('pi-2', 'Sugar')],
+        { hasNextPage: true, endCursor: 'c2' },
+      );
+      writeConn(
+        cache,
+        [piEdge('pi-3', 'Salt')],
+        { hasNextPage: false, endCursor: 'c3' },
+        { after: 'c2' },
+      );
+      expect(readEdges(cache)).toHaveLength(3);
+
+      // Refetch page 1 (no cursor, hasNextPage:true)
+      writeConn(
+        cache,
+        [piEdge('pi-1', 'Flour'), piEdge('pi-2', 'Sugar')],
+        { hasNextPage: true, endCursor: 'c2' },
+      );
+
+      const ids = readEdges(cache).map((e: any) => e.node.id);
+      expect(ids).toEqual(expect.arrayContaining(['pi-1', 'pi-2', 'pi-3']));
+    });
+
+    it('shrinkage: hasNextPage:false clears stale items', () => {
+      const cache = makeCache();
+
+      writeConn(
+        cache,
+        [piEdge('pi-1', 'Flour')],
+        { hasNextPage: true, endCursor: 'c1' },
+      );
+      writeConn(
+        cache,
+        [piEdge('pi-2', 'Sugar')],
+        { hasNextPage: false, endCursor: 'c2' },
+        { after: 'c1' },
+      );
+      expect(readEdges(cache)).toHaveLength(2);
+
+      // Refetch — all fit in one page
+      writeConn(
+        cache,
+        [piEdge('pi-1', 'Flour')],
+        { hasNextPage: false, endCursor: 'c1' },
+      );
+
+      expect(readEdges(cache)).toHaveLength(1);
+      expect(readEdges(cache)[0].node.id).toBe('pi-1');
+    });
+
+    it('orderBy separation: different orderBy create separate cache entries', () => {
+      const cache = makeCache();
+
+      // Write with orderBy: NAME_ASC
+      cache.writeQuery({
+        query: QUERY_WITH_ORDER,
+        variables: { id: 'p-1', orderBy: 'NAME_ASC' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p-1',
+            itemsConnection: buildConnection(
+              'PantryItemConnection',
+              [piEdge('pi-1', 'Apple'), piEdge('pi-2', 'Banana')],
+              { hasNextPage: false, endCursor: 'c2' },
+            ),
+          },
+        },
+      });
+
+      // Write with orderBy: NAME_DESC
+      cache.writeQuery({
+        query: QUERY_WITH_ORDER,
+        variables: { id: 'p-1', orderBy: 'NAME_DESC' },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p-1',
+            itemsConnection: buildConnection(
+              'PantryItemConnection',
+              [piEdge('pi-2', 'Banana'), piEdge('pi-1', 'Apple')],
+              { hasNextPage: false, endCursor: 'c2' },
+            ),
+          },
+        },
+      });
+
+      // Read NAME_ASC — order should be [Apple, Banana]
+      const ascResult: any = cache.readQuery({
+        query: QUERY_WITH_ORDER,
+        variables: { id: 'p-1', orderBy: 'NAME_ASC' },
+      });
+      const ascIds = ascResult?.pantry?.itemsConnection?.edges?.map(
+        (e: any) => e.node.id,
+      );
+      expect(ascIds).toEqual(['pi-1', 'pi-2']);
+
+      // Read NAME_DESC — order should be [Banana, Apple]
+      const descResult: any = cache.readQuery({
+        query: QUERY_WITH_ORDER,
+        variables: { id: 'p-1', orderBy: 'NAME_DESC' },
+      });
+      const descIds = descResult?.pantry?.itemsConnection?.edges?.map(
+        (e: any) => e.node.id,
+      );
+      expect(descIds).toEqual(['pi-2', 'pi-1']);
+    });
+  });
+
+  // =========================================================================
+  // Section E: Query.recipes via mergeConnectionByNodeId('cursor')
+  //   keyArgs = ['category', 'difficulty'], cursor arg = 'cursor'
+  // =========================================================================
+
+  describe('Query.recipes (cursor arg)', () => {
+    const QUERY = gql`
+      query GetRecipes($cursor: String) {
+        recipes(cursor: $cursor) {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
+        }
+      }
+    `;
+
+    const recipeEdge = (id: string, name: string) =>
+      buildEdge('Recipe', 'RecipeEdge', { id, name });
+
+    const writeRecipes = (
+      cache: ReturnType<typeof makeCache>,
+      edges: ReturnType<typeof buildEdge>[],
+      pageInfo: { hasNextPage: boolean; endCursor: string | null },
+      vars?: Record<string, unknown>,
+    ) => {
+      cache.writeQuery({
+        query: QUERY,
+        variables: vars ?? {},
+        data: {
+          recipes: buildConnection('RecipeConnection', edges, pageInfo),
+        },
+      });
+    };
+
+    const readEdges = (cache: ReturnType<typeof makeCache>) => {
+      const result: any = cache.readQuery({
+        query: QUERY,
+        variables: {},
+      });
+      return result?.recipes?.edges ?? [];
+    };
+
+    it('full lifecycle with cursor arg name', () => {
+      const cache = makeCache();
+
+      writeRecipes(
+        cache,
+        [recipeEdge('r-1', 'Pasta'), recipeEdge('r-2', 'Salad')],
+        { hasNextPage: true, endCursor: 'rc2' },
+      );
+      writeRecipes(
+        cache,
+        [recipeEdge('r-3', 'Soup')],
+        { hasNextPage: false, endCursor: 'rc3' },
+        { cursor: 'rc2' },
+      );
+      expect(readEdges(cache)).toHaveLength(3);
+
+      // Refetch (no cursor, hasNextPage:true)
+      writeRecipes(
+        cache,
+        [recipeEdge('r-1', 'Pasta'), recipeEdge('r-2', 'Salad')],
+        { hasNextPage: true, endCursor: 'rc2' },
+      );
+
+      const ids = readEdges(cache).map((e: any) => e.node.id);
+      expect(ids).toEqual(expect.arrayContaining(['r-1', 'r-2', 'r-3']));
+    });
+
+    it('shrinkage', () => {
+      const cache = makeCache();
+
+      writeRecipes(
+        cache,
+        [recipeEdge('r-1', 'Pasta')],
+        { hasNextPage: true, endCursor: 'rc1' },
+      );
+      writeRecipes(
+        cache,
+        [recipeEdge('r-2', 'Salad')],
+        { hasNextPage: false, endCursor: 'rc2' },
+        { cursor: 'rc1' },
+      );
+      expect(readEdges(cache)).toHaveLength(2);
+
+      // Refetch — only 1 recipe now
+      writeRecipes(
+        cache,
+        [recipeEdge('r-1', 'Pasta')],
+        { hasNextPage: false, endCursor: 'rc1' },
+      );
+
+      expect(readEdges(cache)).toHaveLength(1);
+      expect(readEdges(cache)[0].node.id).toBe('r-1');
+    });
+  });
+
+  // =========================================================================
+  // Section F: totalCount consistency
+  // =========================================================================
+
+  describe('totalCount consistency', () => {
+    const QUERY = gql`
+      query GetHome($id: ID!, $after: String) {
+        home(id: $id) {
+          id
+          shoppingListsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+
+    const slEdge = (id: string, name: string) =>
+      buildEdge('ShoppingList', 'ShoppingListEdge', { id, name });
+
+    it('totalCount reflects server value at each pagination stage', () => {
+      const cache = makeCache();
+
+      // Page 1: server says totalCount=5
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: buildConnection(
+              'ShoppingListConnection',
+              [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')],
+              { hasNextPage: true, endCursor: 'c2' },
+              5,
+            ),
+          },
+        },
+      });
+
+      let result: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+      });
+      expect(result?.home.shoppingListsConnection.totalCount).toBe(5);
+
+      // Page 2: server says totalCount=5 still
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'home-1', after: 'c2' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: buildConnection(
+              'ShoppingListConnection',
+              [slEdge('sl-3', 'C')],
+              { hasNextPage: false, endCursor: 'c3' },
+              5,
+            ),
+          },
+        },
+      });
+
+      result = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+      });
+      // After merge, totalCount comes from ...incoming spread
+      expect(result?.home.shoppingListsConnection.totalCount).toBe(5);
+
+      // Refetch: totalCount changed to 3 (items were deleted)
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: buildConnection(
+              'ShoppingListConnection',
+              [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')],
+              { hasNextPage: true, endCursor: 'c2' },
+              3,
+            ),
+          },
+        },
+      });
+
+      result = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+      });
+      expect(result?.home.shoppingListsConnection.totalCount).toBe(3);
+    });
+  });
+
+  // =========================================================================
+  // Section G: ApolloClient-level integration with MockLink
+  //
+  // Proves merge functions work through the full Apollo Client pipeline
+  // (variable normalization, field policy matching, fetchMore).
+  // =========================================================================
+
+  describe('ApolloClient-level integration with MockLink', () => {
+    const QUERY = gql`
+      query GetList($id: ID!, $after: String) {
+        shoppingList(id: $id) {
+          id
+          itemsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+
+    const itemEdge = (id: string, name: string) =>
+      buildEdge('ShoppingListItem', 'ShoppingListItemEdge', { id, name });
+
+    it('query + fetchMore accumulates pages through merge functions', async () => {
+      const { ApolloClient } = require('@apollo/client');
+      const { MockLink } = require('@apollo/client/testing');
+
+      const cache = makeCache();
+
+      const page1Data = {
+        shoppingList: {
+          __typename: 'ShoppingList',
+          id: 'list-1',
+          itemsConnection: buildConnection(
+            'ShoppingListItemConnection',
+            [itemEdge('si-1', 'Milk')],
+            { hasNextPage: true, endCursor: 'c1' },
+            2,
+          ),
+        },
+      };
+
+      const page2Data = {
+        shoppingList: {
+          __typename: 'ShoppingList',
+          id: 'list-1',
+          itemsConnection: buildConnection(
+            'ShoppingListItemConnection',
+            [itemEdge('si-2', 'Bread')],
+            { hasNextPage: false, endCursor: 'c2' },
+            2,
+          ),
+        },
+      };
+
+      const mocks = [
+        {
+          request: { query: QUERY, variables: { id: 'list-1' } },
+          result: { data: page1Data },
+        },
+        {
+          request: { query: QUERY, variables: { id: 'list-1', after: 'c1' } },
+          result: { data: page2Data },
+        },
+      ];
+
+      const client = new ApolloClient({
+        cache,
+        link: new MockLink(mocks, { addTypename: false }),
+      });
+
+      // Initial query
+      const { data: page1 } = await client.query({
+        query: QUERY,
+        variables: { id: 'list-1' },
+      });
+
+      expect(page1.shoppingList.itemsConnection.edges).toHaveLength(1);
+      expect(page1.shoppingList.itemsConnection.edges[0].node.id).toBe(
+        'si-1',
+      );
+
+      // fetchMore for page 2
+      const observable = client.watchQuery({
+        query: QUERY,
+        variables: { id: 'list-1' },
+      });
+
+      await observable.fetchMore({ variables: { after: 'c1' } });
+
+      // Read accumulated result from cache
+      const result: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'list-1' },
+      });
+
+      const edges = result?.shoppingList?.itemsConnection?.edges ?? [];
+      expect(edges).toHaveLength(2);
+
+      const ids = edges.map((e: any) => e.node.id);
+      expect(ids).toContain('si-1');
+      expect(ids).toContain('si-2');
+    });
+  });
+});

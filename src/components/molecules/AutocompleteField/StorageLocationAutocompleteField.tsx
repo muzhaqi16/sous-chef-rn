@@ -96,7 +96,6 @@ export const StorageLocationAutocompleteField: React.FC<StorageLocationAutocompl
         onSelect={handleSelect}
         showAddNew={showAddNew}
         addNewLabel={`Add "${searchTerm}"`}
-        addNewSubtext="Create new location"
         onAddNew={handleAddNew}
       />
     );
@@ -127,7 +126,6 @@ export const StorageLocationAutocompleteField: React.FC<StorageLocationAutocompl
       onSearchChange={setSearchTerm}
       showAddNew={showAddNew}
       addNewLabel={`Add "${searchTerm}"`}
-      addNewSubtext="Create new location"
       onAddNew={handleAddNew}
     />
   );

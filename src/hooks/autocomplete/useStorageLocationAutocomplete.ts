@@ -45,17 +45,28 @@ export function useStorageLocationAutocomplete({
     });
   })();
 
-  // Determine if "Add New" should be shown
+  // Deduplicate by name+parent (case-insensitive), keeping the first occurrence (defaults sort first)
+  const displayItems = (() => {
+    const seen = new Set<string>();
+    return sortedLocations.filter(loc => {
+      const key = `${loc.name.toLowerCase()}::${loc.parentLocation?.id ?? ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  })();
+
+  // Determine if "Add New" should be shown — check against ALL locations, not just filtered
   const showAddNew = (() => {
     if (searchTerm.length < 2) return false;
-    const exactMatch = sortedLocations.some(
+    const exactMatch = storageLocations.some(
       loc => loc.name.toLowerCase() === searchTerm.toLowerCase(),
     );
     return !exactMatch;
   })();
 
   return {
-    displayItems: sortedLocations,
+    displayItems,
     showAddNew,
     isLoading: false,
     isOnline: true,

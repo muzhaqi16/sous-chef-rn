@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
+import { toastService } from '#/services/toastService';
 import {
   useGetStorageLocationsQuery,
   useGetStorageLocationTreeLazyQuery,
@@ -134,8 +134,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
       // Update mutation automatically updates the cache for modified fields
       // No manual cache update needed - Apollo handles it automatically
       onError: error => {
-        const message = error.message || 'Failed to update storage location';
-        Alert.alert('Error', message);
+        toastService.error(error.message || 'Failed to update storage location');
       } });
 
   const [deleteMutation] = useDeleteStorageLocationMutation({
@@ -156,9 +155,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
       );
     },
     onError: error => {
-      const message =
-        error.message || 'Cannot delete location with items or child locations';
-      Alert.alert('Error', message);
+      toastService.error(error.message || 'Cannot delete location with items or child locations');
     } });
 
   const [setDefaultMutation] = useSetDefaultStorageLocationMutation({
@@ -166,7 +163,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     // Apollo automatically updates the cache for this location
     // No manual cache update needed
     onError: error => {
-      Alert.alert('Error', error.message || 'Failed to set default location');
+      toastService.error(error.message || 'Failed to set default location');
     } });
 
   // Action handlers using CRUD utilities
@@ -194,7 +191,13 @@ export function useStorageLocationManagement(homeId: string | undefined) {
       'Delete storage location error:',
     );
     if (!result) return false;
-    return result.data?.deleteStorageLocation?.success ?? false;
+    const payload = result.data?.deleteStorageLocation;
+    if (payload?.success) {
+      toastService.success('Storage location deleted');
+    } else {
+      toastService.error(payload?.message ?? 'Failed to delete storage location');
+    }
+    return payload?.success ?? false;
   };
 
   const setDefaultLocation = async (id: string) => {

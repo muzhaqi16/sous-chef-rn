@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { StorageLocationsScreen } from '../StorageLocationsScreen';
 
@@ -51,9 +51,16 @@ jest.mock('#components/templates/DetailTemplate', () => ({
 }));
 
 jest.mock('#components/organisms/storageLocation/StorageLocationCard', () => ({
-  StorageLocationCard: ({ location }: any) => {
-    const { Text } = require('react-native');
-    return <Text testID={`location-${location.id}`}>{location.name}</Text>;
+  StorageLocationCard: ({ location, onDelete }: any) => {
+    const { Text, Pressable } = require('react-native');
+    return (
+      <>
+        <Text testID={`location-${location.id}`}>{location.name}</Text>
+        <Pressable testID={`delete-${location.id}`} onPress={onDelete}>
+          <Text>Delete</Text>
+        </Pressable>
+      </>
+    );
   },
 }));
 
@@ -327,5 +334,136 @@ describe('StorageLocationsScreen', () => {
       <StorageLocationsScreen route={defaultRoute} />,
     );
     expect(getByText('Main Storage')).toBeTruthy();
+  });
+
+  it('shows blocking dialog when deleting default location', () => {
+    const { useStorageLocationManagement } = jest.requireMock(
+      '#hooks/storageLocation/useStorageLocationManagement',
+    );
+    useStorageLocationManagement.mockReturnValue({
+      locations: [
+        { id: 'loc-1', name: 'Fridge', isDefault: true, currentItemCount: 0 },
+      ],
+      tree: [],
+      initialLoading: false,
+      creating: false,
+      updateLocation: mockUpdateLocation,
+      deleteLocation: mockDeleteLocation,
+      setDefaultLocation: mockSetDefaultLocation,
+      createLocation: mockCreateLocation,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    const { getByTestId } = render(
+      <StorageLocationsScreen route={defaultRoute} />,
+    );
+    fireEvent.press(getByTestId('delete-loc-1'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Cannot Delete Default Location',
+      'Set another location as default first.',
+      [{ text: 'OK' }],
+    );
+    expect(mockDeleteLocation).not.toHaveBeenCalled();
+  });
+
+  it('shows informational dialog when deleting location with items', () => {
+    const { useStorageLocationManagement } = jest.requireMock(
+      '#hooks/storageLocation/useStorageLocationManagement',
+    );
+    useStorageLocationManagement.mockReturnValue({
+      locations: [
+        { id: 'loc-1', name: 'Fridge', isDefault: false, currentItemCount: 5 },
+      ],
+      tree: [],
+      initialLoading: false,
+      creating: false,
+      updateLocation: mockUpdateLocation,
+      deleteLocation: mockDeleteLocation,
+      setDefaultLocation: mockSetDefaultLocation,
+      createLocation: mockCreateLocation,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    const { getByTestId } = render(
+      <StorageLocationsScreen route={defaultRoute} />,
+    );
+    fireEvent.press(getByTestId('delete-loc-1'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Cannot Delete Location',
+      '"Fridge" has 5 items. Move or remove them first.',
+      [{ text: 'Got It' }],
+    );
+    expect(mockDeleteLocation).not.toHaveBeenCalled();
+  });
+
+  it('shows informational dialog when deleting location with children', () => {
+    const { useStorageLocationManagement } = jest.requireMock(
+      '#hooks/storageLocation/useStorageLocationManagement',
+    );
+    useStorageLocationManagement.mockReturnValue({
+      locations: [
+        { id: 'loc-1', name: 'Kitchen', isDefault: false, currentItemCount: 0 },
+        { id: 'loc-2', name: 'Fridge', isDefault: false, currentItemCount: 0, parentLocation: { id: 'loc-1' } },
+      ],
+      tree: [],
+      initialLoading: false,
+      creating: false,
+      updateLocation: mockUpdateLocation,
+      deleteLocation: mockDeleteLocation,
+      setDefaultLocation: mockSetDefaultLocation,
+      createLocation: mockCreateLocation,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    const { getByTestId } = render(
+      <StorageLocationsScreen route={defaultRoute} />,
+    );
+    fireEvent.press(getByTestId('delete-loc-1'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Cannot Delete Location',
+      '"Kitchen" has 1 sub-location. Move or remove them first.',
+      [{ text: 'Got It' }],
+    );
+    expect(mockDeleteLocation).not.toHaveBeenCalled();
+  });
+
+  it('shows normal confirmation when deleting empty non-default location', () => {
+    const { useStorageLocationManagement } = jest.requireMock(
+      '#hooks/storageLocation/useStorageLocationManagement',
+    );
+    useStorageLocationManagement.mockReturnValue({
+      locations: [
+        { id: 'loc-1', name: 'Empty Shelf', isDefault: false, currentItemCount: 0 },
+      ],
+      tree: [],
+      initialLoading: false,
+      creating: false,
+      updateLocation: mockUpdateLocation,
+      deleteLocation: mockDeleteLocation,
+      setDefaultLocation: mockSetDefaultLocation,
+      createLocation: mockCreateLocation,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    const { getByTestId } = render(
+      <StorageLocationsScreen route={defaultRoute} />,
+    );
+    fireEvent.press(getByTestId('delete-loc-1'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Delete Storage Location',
+      'Are you sure you want to delete "Empty Shelf"? This cannot be undone.',
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'Cancel' }),
+        expect.objectContaining({ text: 'Delete', style: 'destructive' }),
+      ]),
+    );
   });
 });

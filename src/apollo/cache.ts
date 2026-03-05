@@ -135,7 +135,9 @@ function mergeConnectionByNodeId(cursorArgName: string) {
     keyArgs: (cursorArgName === 'after' ? ['filters'] : false) as false | string[],
     merge(existing: any, incoming: any, { args, readField }: any) {
       if (!incoming) return existing;
-      if (!existing || !args?.[cursorArgName]) return incoming;
+      if (!existing) return incoming;
+      if (!args?.[cursorArgName] && !incoming.pageInfo?.hasNextPage)
+        return incoming;
 
       const edgeMap = new Map();
       (existing.edges || []).forEach((edge: any) => {
@@ -168,7 +170,8 @@ function itemsConnectionFieldPolicy() {
     keyArgs: ['filters'],
     merge(existing: any, incoming: any, { args, readField }: any) {
       if (!incoming) return existing;
-      if (!existing || !args?.after) return incoming;
+      if (!existing) return incoming;
+      if (!args?.after && !incoming.pageInfo?.hasNextPage) return incoming;
 
       // Append-only: keep existing edges in place, add only new incoming edges
       const existingIds = new Set<string>();
@@ -284,7 +287,9 @@ export function makeCache(): InMemoryCache {
             keyArgs: ['filters', 'orderBy'],
             merge(existing: any, incoming: any, { args, readField }: any) {
               if (!incoming) return existing;
-              if (!existing || !args?.after) return incoming;
+              if (!existing) return incoming;
+              if (!args?.after && !incoming.pageInfo?.hasNextPage)
+                return incoming;
 
               // Pagination: merge edges with deduplication by node ID
               const edgeMap = new Map();
