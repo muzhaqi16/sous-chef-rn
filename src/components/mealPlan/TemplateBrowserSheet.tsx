@@ -24,6 +24,8 @@ const CATEGORIES: ChipOption<TemplateCategory | undefined>[] = [
   { key: TemplateCategory.Custom, label: 'Custom' },
 ];
 
+const keyExtractor = (item: MealTemplateDisplayFragment) => item.id;
+
 interface TemplateBrowserSheetProps {
   visible: boolean;
   onClose: () => void;
@@ -52,8 +54,6 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   const renderTemplate = ({ item }: { item: MealTemplateDisplayFragment }) => (
       <TemplateCard template={item} onPress={onSelectTemplate} />
     );
-
-  const keyExtractor = (item: MealTemplateDisplayFragment) => item.id;
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
