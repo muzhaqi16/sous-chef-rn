@@ -220,6 +220,13 @@ const getLocationString = (
   }
 };
 
+// Module-scope getItemType — separate recycling pools by layout shape
+const getItemType = (item: PantryItem): string => {
+  if (item.quantity === 0) return 'out-of-stock';
+  if (!item.expiresAt) return 'no-expiry';
+  return 'with-expiry';
+};
+
 // Module-scope keyExtractor — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: PantryItem) => item.id;
 
@@ -627,6 +634,8 @@ export const PantryContent = React.forwardRef<
                   data={showSkeletons ? EMPTY_ARRAY : deferredSortedItems}
                   renderItem={renderItem}
                   keyExtractor={keyExtractor}
+                  getItemType={getItemType}
+                  drawDistance={400}
                   extraData={extraData}
                   contentContainerStyle={listContentStyle}
                   showsVerticalScrollIndicator={false}

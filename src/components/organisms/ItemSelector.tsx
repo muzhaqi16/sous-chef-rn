@@ -11,6 +11,8 @@ const ItemSeparator = () => <View style={separatorStyle} />;
 
 const separatorStyle = {height: 8};
 
+const defaultKeyExtractor = (item: { id: string }) => item.id;
+
 // Generic interface for selectable items
 interface SelectableItem {
   id: string;
@@ -43,7 +45,6 @@ export function ItemSelector<T extends SelectableItem>({
   renderCustomItem }: ItemSelectorProps<T>) {
   const {theme} = useUnistyles();
 
-  const defaultKeyExtractor = (item: T) => item.id;
   const getKey = keyExtractor || defaultKeyExtractor;
 
   const handleItemSelect = (item: T) => {

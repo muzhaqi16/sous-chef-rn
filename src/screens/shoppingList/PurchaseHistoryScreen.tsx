@@ -7,6 +7,8 @@ import { Icon } from '#utils/iconUtils';
 import { BackButton } from '#components/atoms/BackButton';
 import { commonStyles } from '#/styles/commonStyles';
 
+const keyExtractor = (item: { id: string }) => item.id;
+
 type RouteParams = {
   itemId: string;
   itemName: string;
@@ -128,7 +130,8 @@ export const PurchaseHistoryScreen: React.FC<{
       {/* Purchase List */}
       <FlashList
         data={purchases}
-        keyExtractor={item => item.id}
+        keyExtractor={keyExtractor}
+        drawDistance={200}
         renderItem={renderPurchaseItem}
         ListHeaderComponent={purchases.length > 0 ? renderListHeader : null}
         ListEmptyComponent={renderEmptyComponent}

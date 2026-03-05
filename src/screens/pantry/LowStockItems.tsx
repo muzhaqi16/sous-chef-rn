@@ -19,6 +19,8 @@ import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#hooks/pantry/useAddLowStockToShoppingList';
 import { commonStyles } from '#/styles/commonStyles';
 
+const keyExtractor = (item: { id: string }) => item.id;
+
 export const LowStockItems: React.FC = () => {
   const { theme } = useUnistyles();
 
@@ -109,7 +111,8 @@ export const LowStockItems: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         data={lowStockItems}
-        keyExtractor={item => item.id}
+        keyExtractor={keyExtractor}
+        drawDistance={200}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

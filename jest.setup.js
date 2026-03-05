@@ -582,6 +582,9 @@ jest.mock('@shopify/flash-list', () => {
       }, []);
       return [valueRef.current, setState];
     },
+    useMappingHelper: () => ({
+      getMappingKey: (itemKey, index) => `${itemKey}_${index}`,
+    }),
   };
 });
 

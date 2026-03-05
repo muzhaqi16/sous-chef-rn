@@ -32,7 +32,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
 }) => {
   useRenderTime('ItemCard');
   return (
-    <Pressable key={item?.id} onPress={onPress} style={({pressed}) => [styles.card, pressed && styles.pressed]}>
+    <Pressable onPress={onPress} style={({pressed}) => [styles.card, pressed && styles.pressed]}>
       <CachedImage
         accessibilityLabel={item?.name}
         resizeMode="contain"

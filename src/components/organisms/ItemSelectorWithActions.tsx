@@ -18,6 +18,8 @@ interface SelectableItem {
 
 const ListSeparator = () => <View style={styles.separator} />;
 
+const defaultKeyExtractor = (item: { id: string }) => item.id;
+
 interface ActionButton {
   icon: string;
   label: string;
@@ -57,7 +59,6 @@ export function ItemSelectorWithActions<T extends SelectableItem>({
 }: ItemSelectorWithActionsProps<T>) {
   const {theme} = useUnistyles();
 
-  const defaultKeyExtractor = (item: T) => item.id;
   const getKey = keyExtractor || defaultKeyExtractor;
 
   const handleItemSelect = (item: T) => {

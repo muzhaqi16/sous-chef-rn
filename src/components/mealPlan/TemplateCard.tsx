@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { useMappingHelper } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import type { MealTemplateDisplayFragment } from '#generated';
 
@@ -11,6 +12,7 @@ interface TemplateCardProps {
 
 export const TemplateCard: React.FC<TemplateCardProps> =
   ({ template, onPress }) => {
+    const { getMappingKey } = useMappingHelper();
     return (
       <Pressable
         onPress={() => onPress(template)}
@@ -57,8 +59,8 @@ export const TemplateCard: React.FC<TemplateCardProps> =
 
         {template.tags.length > 0 && (
           <View style={styles.tagRow}>
-            {template.tags.slice(0, 3).map(tag => (
-              <View key={tag} style={styles.tag}>
+            {template.tags.slice(0, 3).map((tag, index) => (
+              <View key={getMappingKey(tag, index)} style={styles.tag}>
                 <Text style={styles.tagText}>{tag}</Text>
               </View>
             ))}
