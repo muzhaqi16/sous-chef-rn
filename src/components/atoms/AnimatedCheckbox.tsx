@@ -52,26 +52,24 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
     }
   }
 
-  // Color animation — only re-evaluates when visuallyChecked changes
-  const animatedColorStyle = useAnimatedStyle(() => ({
-    backgroundColor: withTiming(
-      visuallyChecked ? theme.colors.primary : 'transparent',
-      { duration: TIMING.INSTANT, easing: standardEasing },
-    ),
-    borderColor: withTiming(
-      visuallyChecked ? theme.colors.primary : theme.colors.border,
-      { duration: TIMING.INSTANT, easing: standardEasing },
-    ) }), [visuallyChecked, theme]);
-
-  // Scale animation — separated so press changes don't re-evaluate color withTiming
-  const animatedScaleStyle = useAnimatedStyle(() => {
+  // Combined color + scale animation
+  const animatedStyle = useAnimatedStyle(() => {
     const baseScale = visuallyChecked ? 1.05 : 1;
     const pressScale = isPressed.value ? 0.9 : 1;
     return {
+      backgroundColor: withTiming(
+        visuallyChecked ? theme.colors.primary : 'transparent',
+        { duration: TIMING.INSTANT, easing: standardEasing },
+      ),
+      borderColor: withTiming(
+        visuallyChecked ? theme.colors.primary : theme.colors.border,
+        { duration: TIMING.INSTANT, easing: standardEasing },
+      ),
       transform: [
         { scale: withTiming(baseScale * pressScale, { duration: TIMING.INSTANT, easing: standardEasing }) },
-      ] };
-  }, [visuallyChecked]);
+      ],
+    };
+  }, [visuallyChecked, theme]);
 
   const handlePressIn = () => {
     if (!disabled) {
@@ -113,8 +111,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
         style={[
           styles.container,
           { width: size, height: size, borderRadius: 6 },
-          animatedColorStyle,
-          animatedScaleStyle,
+          animatedStyle,
         ]}
       >
         {/* PERFORMANCE: Simple conditional render without layout animations */}

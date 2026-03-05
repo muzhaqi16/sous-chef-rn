@@ -3386,16 +3386,21 @@ type LedgerPeriodData {
   wasted: Float!
 }
 
-"""Ledger summary showing additions vs consumption"""
+"""
+Ledger summary showing additions vs consumption.
+Top-level totals (totalAdded, totalConsumed, totalWasted, netQuantity) are only
+populated when ALL records in the query share the same unit. Otherwise, use the
+per-unit breakdowns (additionsByUnit, consumptionByUnit) for accurate data.
+"""
 type LedgerSummary {
   additionCount: Int!
   additionsByUnit: [UsageByUnit!]!
   consumptionByUnit: [UsageByUnit!]!
   consumptionCount: Int!
-  netQuantity: Float!
-  totalAdded: Float!
-  totalConsumed: Float!
-  totalWasted: Float!
+  netQuantity: Float
+  totalAdded: Float
+  totalConsumed: Float
+  totalWasted: Float
   unitName: String
   wasteCount: Int!
 }

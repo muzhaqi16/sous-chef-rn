@@ -3492,17 +3492,22 @@ export type LedgerPeriodData = {
   wasted: Scalars['Float']['output'];
 };
 
-/** Ledger summary showing additions vs consumption */
+/**
+ * Ledger summary showing additions vs consumption.
+ * Top-level totals (totalAdded, totalConsumed, totalWasted, netQuantity) are only
+ * populated when ALL records in the query share the same unit. Otherwise, use the
+ * per-unit breakdowns (additionsByUnit, consumptionByUnit) for accurate data.
+ */
 export type LedgerSummary = {
   __typename: 'LedgerSummary';
   additionCount: Scalars['Int']['output'];
   additionsByUnit: Array<UsageByUnit>;
   consumptionByUnit: Array<UsageByUnit>;
   consumptionCount: Scalars['Int']['output'];
-  netQuantity: Scalars['Float']['output'];
-  totalAdded: Scalars['Float']['output'];
-  totalConsumed: Scalars['Float']['output'];
-  totalWasted: Scalars['Float']['output'];
+  netQuantity: Maybe<Scalars['Float']['output']>;
+  totalAdded: Maybe<Scalars['Float']['output']>;
+  totalConsumed: Maybe<Scalars['Float']['output']>;
+  totalWasted: Maybe<Scalars['Float']['output']>;
   unitName: Maybe<Scalars['String']['output']>;
   wasteCount: Scalars['Int']['output'];
 };
@@ -12807,7 +12812,7 @@ export type GetPantryLedgerAnalyticsQueryVariables = Exact<{
 }>;
 
 
-export type GetPantryLedgerAnalyticsQuery = { __typename: 'Query', pantry: { __typename: 'Pantry', id: string, ledgerAnalytics: { __typename: 'LedgerAnalytics', granularity: PeriodGranularity, periodStart: string, periodEnd: string, summary: { __typename: 'LedgerSummary', totalAdded: number, totalConsumed: number, totalWasted: number, netQuantity: number, additionCount: number, consumptionCount: number, wasteCount: number, unitName: string | null, additionsByUnit: Array<{ __typename: 'UsageByUnit', unitId: string, unitName: string, unitSymbol: string, totalQuantity: number, count: number }>, consumptionByUnit: Array<{ __typename: 'UsageByUnit', unitId: string, unitName: string, unitSymbol: string, totalQuantity: number, count: number }> }, periodData: Array<{ __typename: 'LedgerPeriodData', periodStart: string, periodEnd: string, periodLabel: string, added: number, consumed: number, wasted: number, net: number, additionCost: number | null }>, costAnalytics: { __typename: 'AdditionCostAnalytics', totalSpent: number, averageCostPerUnit: number, costByStore: Array<{ __typename: 'StoreCostBreakdown', storeId: string | null, storeName: string | null, totalSpent: number, itemCount: number, averageCostPerUnit: number }> } | null, topRestockedItems: Array<{ __typename: 'UsageByItem', itemId: string, itemName: string, imageUrl: string | null, totalQuantity: number, unitName: string | null, count: number }> } } | null };
+export type GetPantryLedgerAnalyticsQuery = { __typename: 'Query', pantry: { __typename: 'Pantry', id: string, ledgerAnalytics: { __typename: 'LedgerAnalytics', granularity: PeriodGranularity, periodStart: string, periodEnd: string, summary: { __typename: 'LedgerSummary', totalAdded: number | null, totalConsumed: number | null, totalWasted: number | null, netQuantity: number | null, additionCount: number, consumptionCount: number, wasteCount: number, unitName: string | null, additionsByUnit: Array<{ __typename: 'UsageByUnit', unitId: string, unitName: string, unitSymbol: string, totalQuantity: number, count: number }>, consumptionByUnit: Array<{ __typename: 'UsageByUnit', unitId: string, unitName: string, unitSymbol: string, totalQuantity: number, count: number }> }, periodData: Array<{ __typename: 'LedgerPeriodData', periodStart: string, periodEnd: string, periodLabel: string, added: number, consumed: number, wasted: number, net: number, additionCost: number | null }>, costAnalytics: { __typename: 'AdditionCostAnalytics', totalSpent: number, averageCostPerUnit: number, costByStore: Array<{ __typename: 'StoreCostBreakdown', storeId: string | null, storeName: string | null, totalSpent: number, itemCount: number, averageCostPerUnit: number }> } | null, topRestockedItems: Array<{ __typename: 'UsageByItem', itemId: string, itemName: string, imageUrl: string | null, totalQuantity: number, unitName: string | null, count: number }> } } | null };
 
 export type CreatePantryMutationVariables = Exact<{
   input: CreatePantryInput;

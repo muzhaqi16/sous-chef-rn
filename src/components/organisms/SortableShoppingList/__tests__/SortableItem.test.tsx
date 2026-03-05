@@ -2,8 +2,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 
-jest.mock('#/components/molecules/SwipeableItem/SwipeableItem', () => ({
-  SwipeableItem: ({ children }: any) => {
+jest.mock('#/components/molecules/SwipeableItem/ShoppingSwipeable', () => ({
+  ShoppingSwipeable: ({ children }: any) => {
     const { View } = require('react-native');
     return <View testID="swipeable-item">{children}</View>;
   },

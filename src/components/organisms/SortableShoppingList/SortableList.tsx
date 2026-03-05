@@ -24,6 +24,8 @@ const keyExtractor = (item: SortableShoppingListItem) => item.id;
 const renderItem = (info: ListRenderItemInfo<SortableShoppingListItem>) => (
   <SwipeableListItem {...info} />
 );
+const getItemType = (item: SortableShoppingListItem) =>
+  item.isPurchased ? 'purchased' : 'shopping';
 
 const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   items,
@@ -109,7 +111,8 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             extraData={`${disabled}-${canRemoveItems}-${canEditItems}-${canMarkPurchased}-${canReorderItems}`}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
-            drawDistance={350}
+            getItemType={getItemType}
+            drawDistance={500}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={contentContainerStyle}
             ListHeaderComponent={ListHeaderComponent ?? undefined}
