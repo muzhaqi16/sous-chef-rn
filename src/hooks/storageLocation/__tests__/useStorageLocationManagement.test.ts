@@ -69,6 +69,18 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
+const mockToastSuccess = jest.fn();
+const mockToastError = jest.fn();
+
+jest.mock('#/services/toastService', () => ({
+  toastService: {
+    success: (...args: any[]) => mockToastSuccess(...args),
+    error: (...args: any[]) => mockToastError(...args),
+    info: jest.fn(),
+    warning: jest.fn(),
+  },
+}));
+
 describe('useStorageLocationManagement', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -140,6 +152,30 @@ describe('useStorageLocationManagement', () => {
     });
 
     expect(mockSetDefaultMutation).toHaveBeenCalled();
+  });
+
+  it('shows success toast on successful delete', async () => {
+    const { result } = renderHook(() => useStorageLocationManagement('home-1'));
+
+    await act(async () => {
+      await result.current.deleteLocation('loc-1');
+    });
+
+    expect(mockToastSuccess).toHaveBeenCalledWith('Storage location deleted');
+  });
+
+  it('shows error toast when delete returns success: false', async () => {
+    mockDeleteMutation.mockResolvedValueOnce({
+      data: { deleteStorageLocation: { success: false, message: 'Location has items' } },
+    });
+
+    const { result } = renderHook(() => useStorageLocationManagement('home-1'));
+
+    await act(async () => {
+      await result.current.deleteLocation('loc-1');
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith('Location has items');
   });
 
   it('returns refetch function', () => {

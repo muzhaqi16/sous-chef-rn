@@ -85,6 +85,8 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   canMarkPurchased?: boolean;
   // Drag-to-reorder permission (only for unpurchased items)
   canReorderItems?: boolean;
+  // Empty state component shown when items array is empty
+  ListEmptyComponent?: ReactElement | ComponentType<any> | null;
 }
 
 // Sort order update for API calls

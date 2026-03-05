@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { StorageState } from '#generated';
+import { StorageState, PantryItem } from '#generated';
 import { fonts } from '#/theme/foundations/typography';
 import { formatQuantityAsFraction } from '#/utils/formatQuantity';
 
@@ -16,52 +16,6 @@ export type ExpirationStatusType = 'expired' | 'critical' | 'warning' | 'normal'
 export interface ExpirationStatus {
   text: string;
   type: ExpirationStatusType;
-}
-
-interface PantryItem {
-  id: string;
-  itemName?: string | null;
-  expiresAt?: string | null;
-  createdAt?: string | null;
-  quantity: number;
-  autoReorderPoint?: number | null;
-  storageState?: string | null;
-  storageLocation?: {
-    id?: string;
-    name?: string;
-    type?: string;
-  } | null;
-  lowStockAlert?: boolean | null;
-  item?: {
-    name?: string;
-    imageUrl?: string | null;
-    images?: unknown;
-    netWeight?: number | null;
-    displayUnit?: {
-      symbol?: string;
-    } | null;
-  } | null;
-  unit?: {
-    symbol?: string;
-  } | null;
-  netWeight?: number | null;
-  remainingNetWeight?: number | null;
-  netWeightUnit?: { symbol?: string | null; name?: string | null } | null;
-  packageBreakdown?: {
-    count: number;
-    contentUnit: { name: string; symbol?: string | null };
-    perUnitNetWeight?: number | null;
-    perUnitNetWeightUnit?: { symbol?: string | null } | null;
-    totalNetWeight?: number | null;
-  } | null;
-  quantityBreakdown?: {
-    fullPackages: number;
-    looseContentUnits: number;
-    contentUnit?: { name?: string; symbol?: string | null } | null;
-    totalContentUnits: number;
-    remainingWeight?: number | null;
-    remainingWeightUnit?: { symbol?: string | null } | null;
-  } | null;
 }
 
 // Helper to get URGENT time-based info for list display (expiring/expired only)

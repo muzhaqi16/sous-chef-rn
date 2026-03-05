@@ -19,8 +19,6 @@ import {
   type SortableListThemeColors } from './SortableListThemeContext';
 import { getTabBarBottomPadding } from '#constants/layout';
 
-const EMPTY_ARRAY: SortableShoppingListItem[] = [];
-
 // Module-scope functions — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: SortableShoppingListItem) => item.id;
 const renderItem = (info: ListRenderItemInfo<SortableShoppingListItem>) => (
@@ -48,7 +46,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   canReorderItems = false,
   onEndReached,
   onEndReachedThreshold = 0.5,
-  ...flatListProps
+  ListEmptyComponent,
 }) => {
   // PERFORMANCE: Single useUnistyles call for entire list
   const { theme } = useUnistyles();
@@ -107,17 +105,16 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
       >
         <View style={styles.container}>
           <FlashList<SortableShoppingListItem>
-            data={items.length > 0 ? items : EMPTY_ARRAY}
+            data={items}
             extraData={`${disabled}-${canRemoveItems}-${canEditItems}-${canMarkPurchased}-${canReorderItems}`}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
-            drawDistance={500}
-            showsVerticalScrollIndicator={
-              flatListProps.showsVerticalScrollIndicator ?? true
-            }
+            drawDistance={350}
+            showsVerticalScrollIndicator={false}
             contentContainerStyle={contentContainerStyle}
             ListHeaderComponent={ListHeaderComponent ?? undefined}
             ListFooterComponent={ListFooterComponent ?? undefined}
+            ListEmptyComponent={ListEmptyComponent ?? undefined}
             onEndReached={onEndReached}
             onEndReachedThreshold={onEndReachedThreshold}
             onRefresh={onRefresh}

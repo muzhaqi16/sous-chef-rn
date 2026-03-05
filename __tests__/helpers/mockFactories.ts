@@ -282,11 +282,11 @@ export function createMockShoppingListItem(overrides?: Partial<MockShoppingListI
 
 export function createMockConnection<T>(
   nodes: T[],
-  overrides?: { hasNextPage?: boolean; endCursor?: string | null },
+  overrides?: { hasNextPage?: boolean; endCursor?: string | null; totalCount?: number },
 ) {
   return {
     edges: nodes.map((node) => ({ node })),
-    totalCount: nodes.length,
+    totalCount: overrides?.totalCount ?? nodes.length,
     pageInfo: {
       hasNextPage: overrides?.hasNextPage ?? false,
       hasPreviousPage: false,

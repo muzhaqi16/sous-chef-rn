@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { InlineAutocomplete } from '../InlineAutocomplete';
 import { BottomSheetAutocompleteInput } from '../BottomSheetAutocompleteInput';
@@ -20,7 +20,6 @@ interface SharedProps<TItem> {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   showAddNew?: boolean;
   addNewLabel?: string;
-  addNewSubtext?: string;
   onAddNew?: () => void;
 }
 
@@ -50,11 +49,9 @@ export type AutocompleteFieldProps<TItem> =
 
 function AddNewFooter({
   label,
-  subtext,
   onPress,
 }: {
   label: string;
-  subtext?: string;
   onPress: () => void;
 }) {
   return (
@@ -66,10 +63,7 @@ function AddNewFooter({
       ]}
     >
       <Text style={footerStyles.icon}>+</Text>
-      <View style={footerStyles.content}>
-        <Text style={footerStyles.label}>{label}</Text>
-        {subtext ? <Text style={footerStyles.subtext}>{subtext}</Text> : null}
-      </View>
+      <Text style={footerStyles.label}>{label}</Text>
     </Pressable>
   );
 }
@@ -81,9 +75,7 @@ const footerStyles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceVariant,
+    backgroundColor: theme.colors.surface,
   },
   pressed: {
     opacity: theme.opacity.pressed,
@@ -95,18 +87,10 @@ const footerStyles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.semibold,
   },
-  content: {
-    flex: 1,
-  },
   label: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
-  },
-  subtext: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
   },
 }));
 
@@ -116,7 +100,6 @@ export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
     return (
       <AddNewFooter
         label={props.addNewLabel}
-        subtext={props.addNewSubtext}
         onPress={props.onAddNew}
       />
     );

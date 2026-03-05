@@ -1,31 +1,29 @@
 import { renderHook } from '@testing-library/react-native';
-import {
-  useStorageLocationAutocomplete,
-  StorageLocation,
-} from '../useStorageLocationAutocomplete';
+import { useStorageLocationAutocomplete } from '../useStorageLocationAutocomplete';
+import { StorageLocation, StorageType } from '#generated';
 
 const makeLocation = (
   overrides: Partial<StorageLocation> = {},
 ): StorageLocation => ({
   id: 'loc-1',
   name: 'Fridge',
-  type: 'appliance',
+  type: StorageType.Refrigerator,
   isDefault: false,
   ...overrides,
-});
+} as StorageLocation);
 
 const storageLocations: StorageLocation[] = [
-  makeLocation({ id: '1', name: 'Fridge', type: 'appliance', isDefault: true }),
-  makeLocation({ id: '2', name: 'Pantry Shelf', type: 'shelf', isDefault: false }),
+  makeLocation({ id: '1', name: 'Fridge', type: StorageType.Refrigerator, isDefault: true }),
+  makeLocation({ id: '2', name: 'Pantry Shelf', type: StorageType.PantryShelf, isDefault: false }),
   makeLocation({
     id: '3',
     name: 'Freezer',
-    type: 'appliance',
+    type: StorageType.Freezer,
     isDefault: false,
-    parentLocation: { id: '1', name: 'Fridge' },
+    parentLocation: makeLocation({ id: '1', name: 'Fridge' }),
   }),
-  makeLocation({ id: '4', name: 'Counter', type: 'surface', isDefault: false }),
-  makeLocation({ id: '5', name: 'Cabinet', type: 'storage', isDefault: false }),
+  makeLocation({ id: '4', name: 'Counter', type: StorageType.Counter, isDefault: false }),
+  makeLocation({ id: '5', name: 'Cabinet', type: StorageType.Cabinet, isDefault: false }),
 ];
 
 beforeEach(() => {
@@ -55,12 +53,11 @@ describe('useStorageLocationAutocomplete', () => {
 
   it('filters locations by type match', () => {
     const { result } = renderHook(() =>
-      useStorageLocationAutocomplete({ storageLocations, searchTerm: 'appliance' }),
+      useStorageLocationAutocomplete({ storageLocations, searchTerm: 'refrigerator' }),
     );
 
     const names = result.current.displayItems.map(l => l.name);
     expect(names).toContain('Fridge');
-    expect(names).toContain('Freezer');
     expect(names).not.toContain('Counter');
   });
 

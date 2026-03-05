@@ -100,7 +100,7 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
   }
 
   // Track when all pages have been loaded
-  if (!hasMore && !loading && totalCount > 0 && !allItemsLoaded && !debouncedSearch) {
+  if (!hasMore && !loading && totalCount > 0 && !allItemsLoaded && !debouncedSearch && items.length >= totalCount) {
     setAllItemsLoaded(true);
   }
   // Reset when more data becomes available (items added, filter changed, refetch)

@@ -22,7 +22,7 @@ import {
 } from '#/utils/errors/pantryItemDuplicate';
 import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
-import type { StorageLocation } from '#hooks/autocomplete/useStorageLocationAutocomplete';
+import type { StorageLocation } from '#generated';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type {

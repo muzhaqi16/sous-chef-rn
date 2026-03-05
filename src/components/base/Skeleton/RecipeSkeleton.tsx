@@ -3,7 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { RecipeItemSkeleton } from './RecipeItemSkeleton';
 
-const ITEM_COUNT = 6;
+const ITEM_COUNT = 10;
 
 /**
  * Skeleton for the RecipeMain item list only.

@@ -14,6 +14,10 @@ import {
   ShoppingListTabsActionsProvider,
   type ShoppingListTabsActions,
 } from './ShoppingListTabsActionsContext';
+import {
+  ShoppingListDataProvider,
+  type ShoppingListTabData,
+} from './ShoppingListDataContext';
 
 type ShoppingListTabId = 'shopping' | 'purchased';
 
@@ -78,6 +82,19 @@ const ROUTES: TabRoute[] = [
   { key: 'shopping', title: 'Shopping' },
   { key: 'purchased', title: 'Purchased' },
 ];
+
+// Module-level renderScene — data-free so TabView never re-calls it on data changes.
+// Each tab reads its data from ShoppingListDataContext instead of props.
+const renderSceneDataFree = ({ route }: { route: TabRoute }) => {
+  switch (route.key) {
+    case 'shopping':
+      return <ShoppingTab />;
+    case 'purchased':
+      return <PurchasedTab />;
+    default:
+      return null;
+  }
+};
 
 const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   items,
@@ -280,48 +297,41 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       />
     );
 
-  // Render scene for TabView
-  const renderScene = ({ route }: { route: TabRoute }) => {
-      switch (route.key) {
-        case 'shopping':
-          return (
-            <ShoppingTab
-              items={unpurchasedItems}
-              onRefresh={onRefresh}
-              refreshing={refreshing}
-              loading={loading}
-              disabled={disabled}
-              onEndReached={onEndReachedUnpurchased}
-              hasMore={hasMoreUnpurchased}
-              isLoadingMore={isLoadingMoreUnpurchased}
-              canRemoveItems={canRemoveItems}
-              canEditItems={canEditItems}
-              canMarkPurchased={canMarkPurchased}
-              canReorderItems={canReorderItems}
-              isTransitioning={isTransitioning}
-            />
-          );
-        case 'purchased':
-          return (
-            <PurchasedTab
-              items={purchasedItems}
-              onRefresh={onRefresh}
-              refreshing={refreshing}
-              disabled={disabled}
-              loading={loading}
-              onEndReached={onEndReachedPurchased}
-              hasMore={hasMorePurchased}
-              isLoadingMore={isLoadingMorePurchased}
-              canRemoveItems={canRemoveItems}
-              canEditItems={canEditItems}
-              canMarkPurchased={canMarkPurchased}
-              isTransitioning={isTransitioning}
-            />
-          );
-        default:
-          return null;
-      }
-    };
+  // Per-tab data for context — decoupled from renderScene so TabView doesn't
+  // re-call renderScene on data changes (which would destroy FlashList recycling pools)
+  const shoppingTabData: ShoppingListTabData = {
+    items: unpurchasedItems,
+    onRefresh,
+    refreshing,
+    loading,
+    disabled,
+    onEndReached: onEndReachedUnpurchased,
+    hasMore: hasMoreUnpurchased,
+    isLoadingMore: isLoadingMoreUnpurchased,
+    canRemoveItems,
+    canEditItems,
+    canMarkPurchased,
+    canReorderItems,
+    isTransitioning,
+  };
+
+  const purchasedTabData: ShoppingListTabData = {
+    items: purchasedItems,
+    onRefresh,
+    refreshing,
+    loading,
+    disabled,
+    onEndReached: onEndReachedPurchased,
+    hasMore: hasMorePurchased,
+    isLoadingMore: isLoadingMorePurchased,
+    canRemoveItems,
+    canEditItems,
+    canMarkPurchased,
+    canReorderItems: false,
+    isTransitioning,
+  };
+
+  const tabData = { shopping: shoppingTabData, purchased: purchasedTabData };
 
   // Handle all empty-items cases before the TabView so tabs never appear for empty lists.
   // During transitions (list switches), items may briefly be empty — keep TabView mounted.
@@ -357,19 +367,21 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   return (
     <ShoppingListTabsActionsProvider actions={tabActions}>
-      <View style={{ flex: 1, ...(Platform.OS === 'android' && { elevation: 0 }) }}>
-        {listHeaderComponent}
-        <TabView
-          navigationState={{ index, routes: ROUTES }}
-          renderScene={renderScene}
-          renderTabBar={renderTabBar}
-          onIndexChange={handleIndexChange}
-          initialLayout={{ width: layout.width }}
-          swipeEnabled={true}
-          lazy={true}
-          overScrollMode="never"
-        />
-      </View>
+      <ShoppingListDataProvider data={tabData}>
+        <View style={{ flex: 1, ...(Platform.OS === 'android' && { elevation: 0 }) }}>
+          {listHeaderComponent}
+          <TabView
+            navigationState={{ index, routes: ROUTES }}
+            renderScene={renderSceneDataFree}
+            renderTabBar={renderTabBar}
+            onIndexChange={handleIndexChange}
+            initialLayout={{ width: layout.width }}
+            swipeEnabled={true}
+            lazy={true}
+            overScrollMode="never"
+          />
+        </View>
+      </ShoppingListDataProvider>
     </ShoppingListTabsActionsProvider>
   );
 };

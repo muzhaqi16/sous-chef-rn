@@ -23,8 +23,10 @@ jest.mock('../FilterTabBar', () => ({
 }));
 
 jest.mock('../ShoppingTab', () => ({
-  ShoppingTab: ({ items }: any) => {
+  ShoppingTab: () => {
     const { View, Text } = require('react-native');
+    const { useShoppingListData } = require('../ShoppingListDataContext');
+    const { items } = useShoppingListData('shopping');
     return (
       <View testID="shopping-tab">
         {items.map((item: any) => (
@@ -36,8 +38,10 @@ jest.mock('../ShoppingTab', () => ({
 }));
 
 jest.mock('../PurchasedTab', () => ({
-  PurchasedTab: ({ items }: any) => {
+  PurchasedTab: () => {
     const { View, Text } = require('react-native');
+    const { useShoppingListData } = require('../ShoppingListDataContext');
+    const { items } = useShoppingListData('purchased');
     return (
       <View testID="purchased-tab">
         {items.map((item: any) => (

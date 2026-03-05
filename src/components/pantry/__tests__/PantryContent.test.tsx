@@ -2,6 +2,65 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { PantryContent } from '../PantryContent';
+import { PantryItem, StorageState } from '#generated';
+
+function createMockPantryItem(overrides: Partial<PantryItem> = {}): PantryItem {
+  return {
+    __typename: 'PantryItem',
+    id: 'mock-id',
+    itemName: 'Mock Item',
+    quantity: 1,
+    expiresAt: null,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: null,
+    addedAt: '2024-01-01T00:00:00Z',
+    addedBy: null,
+    lastModifiedBy: null,
+    storageState: 'AMBIENT',
+    storageLocation: null,
+    storageNotes: null,
+    item: { __typename: 'Item', id: 'item-1', name: 'Mock Item', category: null, brand: null, upc: null, imageUrl: null, images: [], nutrition: null, averageShelfLife: null, defaultUnit: null, displayUnit: null, createdAt: '2024-01-01T00:00:00Z', updatedAt: null, isVerified: false, verifiedAt: null, aliases: [], netWeight: null, netWeightUnit: null, packageBreakdown: null } as any,
+    itemId: 'item-1',
+    unit: null,
+    unitId: null,
+    brand: null,
+    brandId: null,
+    itemUpc: null,
+    netWeight: null,
+    netWeightUnit: null,
+    remainingNetWeight: null,
+    packageBreakdown: null,
+    quantityBreakdown: null,
+    costPerUnit: null,
+    totalCost: null,
+    store: null,
+    storeId: null,
+    purchase: null,
+    purchaseId: null,
+    condition: 'FRESH' as any,
+    acquisitionMethod: 'PURCHASED' as any,
+    isLowStock: false,
+    lowStockAlert: false,
+    expirationAlert: false,
+    minQuantity: null,
+    restockQuantity: null,
+    lastUsedAt: null,
+    wasteDate: null,
+    wasteReason: null,
+    isComposted: false,
+    isRecycled: false,
+    tags: [],
+    photos: [],
+    sourceShoppingListItemId: null,
+    pantry: { __typename: 'Pantry', id: 'pantry-1' } as any,
+    pantryId: 'pantry-1',
+    version: 1,
+    changeHistory: { __typename: 'PantryItemChangeConnection', edges: [], pageInfo: { __typename: 'PageInfo', hasNextPage: false, hasPreviousPage: false } } as any,
+    usageRecords: { __typename: 'PantryItemUsageConnection', edges: [], pageInfo: { __typename: 'PageInfo', hasNextPage: false, hasPreviousPage: false } } as any,
+    ledger: { __typename: 'LedgerSummary' } as any,
+    ...overrides,
+  } as PantryItem;
+}
 
 jest.mock('#hooks/performance/useDeferredRender', () => ({
   useDeferredRender: jest.fn(() => true),
@@ -165,8 +224,8 @@ jest.mock('#/utils/pantryFilters', () => ({
 const defaultProps = {
   userName: 'John',
   householdName: 'My Kitchen',
-  items: [] as any[],
-  locationFilter: 'all' as any,
+  items: [] as PantryItem[],
+  locationFilter: 'all' as const,
   onLocationFilterChange: jest.fn(),
   locationCounts: { all: 5, fridge: 2, freezer: 1, pantry: 2 },
   searchQuery: '',
@@ -226,7 +285,7 @@ describe('PantryContent', () => {
     const { unmount } = render(
       <PantryContent
         {...defaultProps}
-        items={[{ id: '1', itemName: 'X', quantity: 1, expiresAt: null }]}
+        items={[createMockPantryItem({ id: '1', itemName: 'X', quantity: 1, expiresAt: null })]}
       />,
     );
     unmount();
@@ -235,7 +294,7 @@ describe('PantryContent', () => {
       <PantryContent
         {...defaultProps}
         items={[]}
-        locationFilter={'fridge' as any}
+        locationFilter={'fridge'}
         totalCount={5}
       />,
     );
@@ -244,8 +303,8 @@ describe('PantryContent', () => {
 
   it('renders pantry items when provided', () => {
     const items = [
-      { id: '1', itemName: 'Milk', quantity: 2, expiresAt: null },
-      { id: '2', itemName: 'Eggs', quantity: 12, expiresAt: null },
+      createMockPantryItem({ id: '1', itemName: 'Milk', quantity: 2 }),
+      createMockPantryItem({ id: '2', itemName: 'Eggs', quantity: 12 }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Milk')).toBeTruthy();
@@ -317,7 +376,7 @@ describe('PantryContent', () => {
   it('renders items with expiration dates', () => {
     const futureDate = new Date(Date.now() + 2 * 86400000).toISOString();
     const items = [
-      { id: '1', itemName: 'Yogurt', quantity: 1, expiresAt: futureDate },
+      createMockPantryItem({ id: '1', itemName: 'Yogurt', quantity: 1, expiresAt: futureDate }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Yogurt')).toBeTruthy();
@@ -326,7 +385,7 @@ describe('PantryContent', () => {
   it('renders items with expired dates', () => {
     const pastDate = new Date(Date.now() - 2 * 86400000).toISOString();
     const items = [
-      { id: '1', itemName: 'Old Milk', quantity: 1, expiresAt: pastDate },
+      createMockPantryItem({ id: '1', itemName: 'Old Milk', quantity: 1, expiresAt: pastDate }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Old Milk')).toBeTruthy();
@@ -334,7 +393,7 @@ describe('PantryContent', () => {
 
   it('renders items without itemName as Unknown Item', () => {
     const items = [
-      { id: '1', itemName: null, quantity: 1, expiresAt: null },
+      createMockPantryItem({ id: '1', itemName: null as any, quantity: 1 }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Unknown Item')).toBeTruthy();
@@ -342,7 +401,7 @@ describe('PantryContent', () => {
 
   it('renders items with zero quantity (out of stock)', () => {
     const items = [
-      { id: '1', itemName: 'Rice', quantity: 0, expiresAt: null },
+      createMockPantryItem({ id: '1', itemName: 'Rice', quantity: 0 }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Rice')).toBeTruthy();
@@ -385,7 +444,7 @@ describe('PantryContent', () => {
     render(
       <PantryContent
         {...defaultProps}
-        locationFilter={'fridge' as any}
+        locationFilter={'fridge'}
       />,
     );
     expect(screen.getByText('FRIDGE ITEMS')).toBeTruthy();
@@ -395,7 +454,7 @@ describe('PantryContent', () => {
     render(
       <PantryContent
         {...defaultProps}
-        locationFilter={'unknown-loc' as any}
+        locationFilter={'unknown-loc'}
       />,
     );
     // Falls back to 'All' when activeTab is not found
@@ -404,8 +463,8 @@ describe('PantryContent', () => {
 
   it('renders custom tabs when provided', () => {
     const customTabs = [
-      { id: 'all' as any, label: 'Everything' },
-      { id: 'custom' as any, label: 'Custom Loc' },
+      { id: 'all' as const, label: 'Everything' },
+      { id: 'custom', label: 'Custom Loc' },
     ];
     render(<PantryContent {...defaultProps} tabs={customTabs} />);
     expect(screen.getByText('Everything')).toBeTruthy();
@@ -414,13 +473,12 @@ describe('PantryContent', () => {
 
   it('renders items with storage location name', () => {
     const items = [
-      {
+      createMockPantryItem({
         id: '1',
         itemName: 'Cheese',
         quantity: 2,
-        expiresAt: null,
-        storageLocation: { id: 'loc-1', name: 'Kitchen Cabinet' },
-      },
+        storageLocation: { id: 'loc-1', name: 'Kitchen Cabinet' } as any,
+      }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Cheese')).toBeTruthy();
@@ -428,13 +486,12 @@ describe('PantryContent', () => {
 
   it('renders items with Refrigerated storage state', () => {
     const items = [
-      {
+      createMockPantryItem({
         id: '1',
         itemName: 'Butter',
         quantity: 1,
-        expiresAt: null,
-        storageState: 'REFRIGERATED',
-      },
+        storageState: StorageState.Refrigerated,
+      }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Butter')).toBeTruthy();
@@ -442,13 +499,12 @@ describe('PantryContent', () => {
 
   it('renders items with Frozen storage state', () => {
     const items = [
-      {
+      createMockPantryItem({
         id: '1',
         itemName: 'Ice Cream',
         quantity: 1,
-        expiresAt: null,
-        storageState: 'FROZEN',
-      },
+        storageState: StorageState.Frozen,
+      }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Ice Cream')).toBeTruthy();
@@ -456,13 +512,12 @@ describe('PantryContent', () => {
 
   it('renders items with unit symbol', () => {
     const items = [
-      {
+      createMockPantryItem({
         id: '1',
         itemName: 'Flour',
         quantity: 500,
-        expiresAt: null,
-        unit: { symbol: 'g' },
-      },
+        unit: { symbol: 'g' } as any,
+      }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Flour')).toBeTruthy();

@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { FormInput } from '#components/molecules/FormInput';
 import { StorageLocationAutocompleteField } from '#components/molecules/AutocompleteField/StorageLocationAutocompleteField';
-import type { StorageLocation } from '#hooks/autocomplete/useStorageLocationAutocomplete';
+import type { StorageLocation } from '#generated';
 
 export interface StoragePageProps {
   storageLocation: string;

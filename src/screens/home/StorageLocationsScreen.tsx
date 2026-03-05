@@ -68,7 +68,7 @@ export const StorageLocationsScreen: React.FC<{
         location={node}
         isDefault={node.isDefault}
         onEdit={() => handleOpenEdit(node)}
-        onDelete={() => handleDelete(node.id, node.name)}
+        onDelete={() => handleDelete(node)}
         onSetDefault={() => handleSetDefault(node.id)}
       />
       {node.childLocations?.map((child: any) =>
@@ -94,17 +94,46 @@ export const StorageLocationsScreen: React.FC<{
     return handleCreate(formData);
   };
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = (location: any) => {
+    // Default location cannot be deleted
+    if (location.isDefault) {
+      Alert.alert(
+        'Cannot Delete Default Location',
+        'Set another location as default first.',
+        [{ text: 'OK' }],
+      );
+      return;
+    }
+
+    // Check for items or child locations
+    const childCount = locations.filter(
+      (loc: any) => loc.parentLocation?.id === location.id,
+    ).length;
+    const itemCount = location.currentItemCount ?? 0;
+
+    if (itemCount > 0 || childCount > 0) {
+      const parts: string[] = [];
+      if (itemCount > 0) parts.push(`${itemCount} item${itemCount !== 1 ? 's' : ''}`);
+      if (childCount > 0) parts.push(`${childCount} sub-location${childCount !== 1 ? 's' : ''}`);
+      Alert.alert(
+        'Cannot Delete Location',
+        `"${location.name}" has ${parts.join(' and ')}. Move or remove them first.`,
+        [{ text: 'Got It' }],
+      );
+      return;
+    }
+
+    // Empty, non-default — normal confirmation
     Alert.alert(
       'Delete Storage Location',
-      `Are you sure you want to delete "${name}"? This cannot be undone.`,
+      `Are you sure you want to delete "${location.name}"? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await deleteLocation(id);
+            await deleteLocation(location.id);
           },
         },
       ],
@@ -184,7 +213,7 @@ export const StorageLocationsScreen: React.FC<{
                 location={location}
                 isDefault={location.isDefault}
                 onEdit={() => handleOpenEdit(location)}
-                onDelete={() => handleDelete(location.id, location.name)}
+                onDelete={() => handleDelete(location)}
                 onSetDefault={() => handleSetDefault(location.id)}
               />
             ))

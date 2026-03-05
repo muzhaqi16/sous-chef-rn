@@ -1,11 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
+import type { ReactElement, ComponentType } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList/SortableList';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
-import { useStaggeredEntry } from '#context/StaggeredEntryContext';
-import { staggeredEntryAnimation } from '#constants/animations';
 
 interface StaggeredTabContentProps {
   items: SortableShoppingListItem[];
@@ -33,6 +32,7 @@ interface StaggeredTabContentProps {
   ) => void;
   canReorderItems?: boolean;
   onMoveToPantry?: (id: string) => void;
+  listEmptyComponent?: ReactElement | ComponentType<any> | null;
 }
 
 export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
@@ -56,23 +56,8 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   onSortOrderUpdate,
   canReorderItems,
   onMoveToPantry,
+  listEmptyComponent,
 }) => {
-  const staggerCtx = useStaggeredEntry();
-
-  // Mark initial render complete after stagger animation window
-  useEffect(() => {
-    const totalStaggerTime =
-      staggeredEntryAnimation.initialDelay +
-      staggeredEntryAnimation.maxItems * staggeredEntryAnimation.delayPerItem +
-      staggeredEntryAnimation.duration;
-
-    const timer = setTimeout(() => {
-      staggerCtx?.markInitialRenderComplete();
-    }, totalStaggerTime);
-
-    return () => clearTimeout(timer);
-  }, [staggerCtx]);
-
   const footerComponent = (
     <PaginationFooter
       isLoadingMore={!!isLoadingMore}
@@ -94,13 +79,13 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
         onSortOrderUpdate={onSortOrderUpdate}
         onMoveToPantry={onMoveToPantry}
         disabled={disabled}
-        showsVerticalScrollIndicator={true}
         onSwipeableWillOpen={onSwipeableWillOpen}
         onSwipeableClose={onSwipeableClose}
         onRefresh={onRefresh}
         refreshing={refreshing}
         onEndReached={onEndReached}
         ListFooterComponent={footerComponent}
+        ListEmptyComponent={listEmptyComponent}
         canRemoveItems={canRemoveItems}
         canEditItems={canEditItems}
         canMarkPurchased={canMarkPurchased}
