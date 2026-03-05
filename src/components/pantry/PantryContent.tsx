@@ -1,9 +1,4 @@
-import React, {
-  useEffect,
-  useRef,
-  useState,
-  useImperativeHandle,
-} from 'react';
+import React, { useEffect, useRef, useImperativeHandle } from 'react';
 import { View, Pressable, RefreshControl } from 'react-native';
 import {
   FlashList,
@@ -18,11 +13,7 @@ import { SearchBar } from '../molecules/SearchBar';
 import { FilterTabs } from '../molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '../molecules/FilterTabs/types';
 import { SectionHeader } from '../molecules/SectionHeader';
-import {
-  PantryItemCard,
-  ItemVariant,
-  ExpirationVariant,
-} from './PantryItemCard';
+import { PantryItemCard, ItemVariant } from './PantryItemCard';
 import { PantryHeader } from './PantryHeader';
 import { PantrySortModal } from './PantrySortModal';
 import {
@@ -45,6 +36,8 @@ import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { differenceInCalendarDays } from 'date-fns';
+import { PantryItem } from '#generated';
 
 // Stable empty array reference to avoid FlashList re-renders when showing skeletons
 const EMPTY_ARRAY: PantryItem[] = [];
@@ -57,52 +50,6 @@ let hasEverShownContent = false;
 export type SortOption = 'name' | 'expiry' | 'quantity' | 'recent';
 export type SortDirection = 'asc' | 'desc';
 
-// Item type from pantry management
-interface PantryItem {
-  id: string;
-  itemName?: string | null;
-  expiresAt?: string | null;
-  quantity: number;
-  storageState?: string | null;
-  storageLocation?: {
-    id: string;
-    name: string;
-  } | null;
-  createdAt?: string;
-  unit?: {
-    symbol: string;
-  } | null;
-  item?: {
-    name?: string;
-    netWeight?: number | null;
-    displayUnit?: {
-      symbol?: string;
-    } | null;
-    category?: {
-      name?: string;
-    } | null;
-    imageUrl?: string | null;
-    images?: unknown;
-  } | null;
-  netWeight?: number | null;
-  remainingNetWeight?: number | null;
-  netWeightUnit?: { symbol?: string | null; name?: string | null } | null;
-  packageBreakdown?: {
-    count: number;
-    contentUnit: { name: string; symbol?: string | null };
-    perUnitNetWeight?: number | null;
-    perUnitNetWeightUnit?: { symbol?: string | null } | null;
-    totalNetWeight?: number | null;
-  } | null;
-  quantityBreakdown?: {
-    fullPackages: number;
-    looseContentUnits: number;
-    contentUnit?: { name?: string; symbol?: string | null } | null;
-    totalContentUnits: number;
-    remainingWeight?: number | null;
-    remainingWeightUnit?: { symbol?: string | null } | null;
-  } | null;
-}
 
 interface PantryContentProps {
   // User info
@@ -187,20 +134,6 @@ export interface PantryContentRef {
   scrollToTop(): void;
 }
 
-interface ItemDisplayData {
-  imageUrl: string | null;
-  expirationText: string | null;
-  expirationVariant?: ExpirationVariant;
-  expirationColor?: string;
-  variant: ItemVariant;
-  quantityDisplay: string;
-  location: string;
-  isOutOfStock: boolean;
-  packageBreakdownText: string | null;
-  remainingNetWeightText: string | null;
-  quantityBreakdownText: string | null;
-}
-
 const getItemVariant = (
   isExpired: boolean,
   isExpiringSoon: boolean,
@@ -212,20 +145,18 @@ const getItemVariant = (
 
 /**
  * Compute display data for a single pantry item.
- * Pure function — only depends on the item and shared expiration colors.
+ * Module-level so the React Compiler doesn't flag Date usage as impure in render.
  */
 function computeItemDisplay(
   item: PantryItem,
-  now: number,
   expirationColors: { expired: string; warning: string; normal: string },
   getLocation: (
     storageState?: string | null,
     storageLocation?: { name: string } | null,
   ) => string,
-): ItemDisplayData {
-  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+) {
   const expiresIn = item.expiresAt
-    ? Math.ceil((new Date(item.expiresAt).getTime() - now) / MS_PER_DAY)
+    ? differenceInCalendarDays(new Date(item.expiresAt), new Date())
     : null;
   const expStatus = getExpirationStatus(expiresIn);
   const isExpired = expiresIn !== null && expiresIn < 0;
@@ -287,62 +218,6 @@ const getLocationString = (
   }
 };
 
-/**
- * Fallback for renderItem when display cache misses.
- * Module-level so the React compiler doesn't flag Date.now() as impure in render.
- */
-function computeItemDisplayFallback(
-  item: PantryItem,
-  expirationColors: { expired: string; warning: string; normal: string },
-): ItemDisplayData {
-  return computeItemDisplay(
-    item,
-    Date.now(),
-    expirationColors,
-    getLocationString,
-  );
-}
-
-/**
- * Compute display data for all items, reusing cached entries when possible.
- * Calls Date.now() internally for expiration calculations.
- */
-function computeDisplayCache(
-  items: PantryItem[],
-  prevCache: Map<string, { item: PantryItem; data: ItemDisplayData }>,
-  expirationColors: { expired: string; warning: string; normal: string },
-) {
-  const now = Date.now();
-  const map = new Map<string, ItemDisplayData>();
-  const nextCache = new Map<
-    string,
-    { item: PantryItem; data: ItemDisplayData }
-  >();
-  let cacheChanged = items.length !== prevCache.size;
-
-  for (const item of items) {
-    const cached = prevCache.get(item.id);
-
-    if (cached && cached.item === item) {
-      // Same reference — reuse cached data.
-      map.set(item.id, cached.data);
-      nextCache.set(item.id, cached);
-    } else {
-      cacheChanged = true;
-      const data = computeItemDisplay(
-        item,
-        now,
-        expirationColors,
-        getLocationString,
-      );
-      map.set(item.id, data);
-      nextCache.set(item.id, { item, data });
-    }
-  }
-
-  return { map, nextCache, cacheChanged };
-}
-
 // Module-scope keyExtractor — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: PantryItem) => item.id;
 
@@ -389,7 +264,9 @@ function PantryEmptyState({
         title="No home yet"
         description="Create or join a home to start tracking food"
         action={
-          onSelectHome ? { label: 'Get Started', onPress: onSelectHome } : undefined
+          onSelectHome
+            ? { label: 'Get Started', onPress: onSelectHome }
+            : undefined
         }
       />
     );
@@ -403,7 +280,9 @@ function PantryEmptyState({
         title="No home selected"
         description="Select a home to view your pantry"
         action={
-          onSelectHome ? { label: 'Go to My Homes', onPress: onSelectHome } : undefined
+          onSelectHome
+            ? { label: 'Go to My Homes', onPress: onSelectHome }
+            : undefined
         }
       />
     );
@@ -532,7 +411,7 @@ export const PantryContent = React.forwardRef<
     // but useDeferredValue hasn't propagated items yet (items=[] while totalCount>0).
     const awaitingDeferredItems =
       items.length === 0 && (totalCount ?? 0) > 0 && !loading;
-    const showSkeletons = 
+    const showSkeletons =
       !hasShownContent && (!isReady || loading || awaitingDeferredItems);
 
     // Use sorting hook for sort state and logic
@@ -564,7 +443,9 @@ export const PantryContent = React.forwardRef<
     const localFilteredItems = items;
 
     // Apply local sort only when not using server sort
-    const sortedItems = useServerSort ? localFilteredItems : sortItems(localFilteredItems);
+    const sortedItems = useServerSort
+      ? localFilteredItems
+      : sortItems(localFilteredItems);
 
     // Precomputed expiration colors — avoids per-item useUnistyles in ExpirationText
     const expirationColors = {
@@ -578,31 +459,15 @@ export const PantryContent = React.forwardRef<
     // FlashList data from itemDisplayMap, causing getItemType instability.
     const deferredSortedItems = sortedItems;
 
-    // Persist display cache across renders — "adjusting state during render" pattern.
-    // Store both cache and map together so itemDisplayMap reference is stable when
-    // data hasn't changed (prevents defeating React Compiler auto-memoization of renderItem).
-    const [displayState, setDisplayState] = useState(() => ({
-      cache: new Map() as Map<string, { item: PantryItem; data: ItemDisplayData }>,
-      map: new Map() as Map<string, ItemDisplayData>,
-    }));
-    const { map, nextCache, cacheChanged } = computeDisplayCache(
-      deferredSortedItems,
-      displayState.cache,
-      expirationColors,
-    );
-    if (cacheChanged) {
-      setDisplayState({ cache: nextCache, map });
-    }
-    const itemDisplayMap = displayState.map;
-
     // Preload images for visible + upcoming items to prevent blank shimmer during fast scroll
     useEffect(() => {
       const urls: string[] = [];
-      for (const display of itemDisplayMap.values()) {
-        if (display.imageUrl) urls.push(display.imageUrl);
+      for (const item of deferredSortedItems) {
+        const url = resolveImageUrl(item);
+        if (url) urls.push(url);
       }
       if (urls.length > 0) preloadImages(urls);
-    }, [itemDisplayMap]);
+    }, [deferredSortedItems]);
 
     // Scroll to top when filter or sort changes to reset position after reorder
     const prevLocationFilter = useRef(locationFilter);
@@ -626,12 +491,13 @@ export const PantryContent = React.forwardRef<
       }
     }, [locationFilter, sortOption, sortDirection]);
 
-    // Render list item — stable callback via ref pattern to avoid FlashList full re-renders
     const renderItem = ({ item }: ListRenderItemInfo<PantryItem>) => {
       if (!item) return null;
-      const display =
-        itemDisplayMap.get(item.id) ??
-        computeItemDisplayFallback(item, expirationColors);
+      const display = computeItemDisplay(
+        item,
+        expirationColors,
+        getLocationString,
+      );
 
       return (
         <PantryItemCard
@@ -798,7 +664,6 @@ export const PantryContent = React.forwardRef<
                 maintainVisibleContentPosition={{ disabled: true }}
               />
             </View>
-
           </View>
 
           {/* Sort Modal */}

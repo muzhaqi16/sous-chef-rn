@@ -229,16 +229,16 @@ describe('cache pagination integration', () => {
   });
 
   // =========================================================================
-  // Section B: mergeConnectionByNodeId with non-'after' cursor
-  //   Home.membersConnection — cursorArg = 'membersCursor', keyArgs = false
+  // Section B: mergeConnectionByNodeId via Home.membersConnection
+  //   cursorArg = 'after', keyArgs = ['filters']
   // =========================================================================
 
-  describe('mergeConnectionByNodeId (Home.membersConnection, cursor=membersCursor)', () => {
+  describe('mergeConnectionByNodeId (Home.membersConnection, cursor=after)', () => {
     const QUERY = gql`
-      query GetHome($id: ID!, $membersCursor: String) {
+      query GetHome($id: ID!, $after: String) {
         home(id: $id) {
           id
-          membersConnection(membersCursor: $membersCursor) {
+          membersConnection(after: $after) {
             edges {
               node {
                 id
@@ -289,7 +289,7 @@ describe('cache pagination integration', () => {
       return result?.home?.membersConnection?.edges ?? [];
     };
 
-    it('full lifecycle with membersCursor arg', () => {
+    it('full lifecycle with after arg', () => {
       const cache = makeCache();
 
       writeConn(
@@ -301,7 +301,7 @@ describe('cache pagination integration', () => {
         cache,
         [memberEdge('m-3', 'Charlie')],
         { hasNextPage: false, endCursor: 'mc3' },
-        { membersCursor: 'mc2' },
+        { after: 'mc2' },
       );
       expect(readEdges(cache)).toHaveLength(3);
 
@@ -316,7 +316,7 @@ describe('cache pagination integration', () => {
       expect(ids).toEqual(expect.arrayContaining(['m-1', 'm-2', 'm-3']));
     });
 
-    it('shrinkage with membersCursor', () => {
+    it('shrinkage with after', () => {
       const cache = makeCache();
 
       writeConn(
@@ -328,7 +328,7 @@ describe('cache pagination integration', () => {
         cache,
         [memberEdge('m-2', 'Bob')],
         { hasNextPage: false, endCursor: 'mc2' },
-        { membersCursor: 'mc1' },
+        { after: 'mc1' },
       );
       expect(readEdges(cache)).toHaveLength(2);
 
@@ -763,14 +763,14 @@ describe('cache pagination integration', () => {
   });
 
   // =========================================================================
-  // Section E: Query.recipes via mergeConnectionByNodeId('cursor')
-  //   keyArgs = ['category', 'difficulty'], cursor arg = 'cursor'
+  // Section E: Query.recipes via mergeConnectionByNodeId()
+  //   keyArgs = ['category', 'difficulty'], cursor arg = 'after'
   // =========================================================================
 
-  describe('Query.recipes (cursor arg)', () => {
+  describe('Query.recipes (after arg)', () => {
     const QUERY = gql`
-      query GetRecipes($cursor: String) {
-        recipes(cursor: $cursor) {
+      query GetRecipes($after: String) {
+        recipes(after: $after) {
           edges {
             node {
               id
@@ -812,7 +812,7 @@ describe('cache pagination integration', () => {
       return result?.recipes?.edges ?? [];
     };
 
-    it('full lifecycle with cursor arg name', () => {
+    it('full lifecycle with after arg', () => {
       const cache = makeCache();
 
       writeRecipes(
@@ -824,7 +824,7 @@ describe('cache pagination integration', () => {
         cache,
         [recipeEdge('r-3', 'Soup')],
         { hasNextPage: false, endCursor: 'rc3' },
-        { cursor: 'rc2' },
+        { after: 'rc2' },
       );
       expect(readEdges(cache)).toHaveLength(3);
 
@@ -851,7 +851,7 @@ describe('cache pagination integration', () => {
         cache,
         [recipeEdge('r-2', 'Salad')],
         { hasNextPage: false, endCursor: 'rc2' },
-        { cursor: 'rc1' },
+        { after: 'rc1' },
       );
       expect(readEdges(cache)).toHaveLength(2);
 

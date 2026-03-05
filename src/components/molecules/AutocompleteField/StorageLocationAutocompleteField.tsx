@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
-import {
-  useStorageLocationAutocomplete,
-  type StorageLocation } from '#hooks/autocomplete/useStorageLocationAutocomplete';
+import { useStorageLocationAutocomplete } from '#hooks/autocomplete/useStorageLocationAutocomplete';
+import type { StorageLocation } from '#generated';
 import { AutocompleteField } from './AutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
 

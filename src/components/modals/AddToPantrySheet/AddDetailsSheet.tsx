@@ -5,8 +5,7 @@ import PagerView from 'react-native-pager-view';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { usePantryItemSubmission } from '#hooks/pantry/usePantryItemSubmission';
-import type { StorageLocation } from '#hooks/autocomplete/useStorageLocationAutocomplete';
-import { StorageState } from '#generated';
+import { StorageState, type StorageLocation } from '#generated';
 
 import { MainDetailsPage } from './MainDetailsPage';
 import { DetailsPage } from './DetailsPage';

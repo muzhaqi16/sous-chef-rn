@@ -23,20 +23,7 @@ interface StorageLocationData {
   isDefault?: boolean | null;
 }
 
-interface StorageLocation {
-  id: string;
-  name: string;
-  type: string;
-  icon?: string | null;
-  parentLocationId?: string | null;
-  description?: string | null;
-  temperature?: string | null;
-  color?: string | null;
-  isClimateControlled?: boolean;
-  capacity?: number | null;
-  capacityUnit?: string | null;
-  isDefault?: boolean;
-}
+import { StorageLocation } from '#generated';
 
 interface StorageLocationSheetProps {
   visible: boolean;

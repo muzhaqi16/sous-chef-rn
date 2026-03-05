@@ -9,23 +9,9 @@ import {
 import {FormTextArea} from '#components/molecules/FormTextArea';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { DatePickerField } from '#components/molecules/DatePickerField';
-import {StorageState} from '#generated';
+import {StorageState, StorageLocation} from '#generated';
 
 const STORAGE_STATES = Object.values(StorageState);
-
-interface StorageLocation {
-  id: string;
-  name: string;
-  type: string;
-  icon?: string | null;
-  color?: string | null;
-  temperature?: string | null;
-  isDefault: boolean;
-  parentLocation?: {
-    id: string;
-    name: string;
-  } | null;
-}
 
 interface StorageDetailsSectionProps {
   control: Control<any>;

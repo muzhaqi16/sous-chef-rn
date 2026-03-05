@@ -1,17 +1,4 @@
-
-export interface StorageLocation {
-  id: string;
-  name: string;
-  type: string;
-  icon?: string | null;
-  color?: string | null;
-  temperature?: string | null;
-  isDefault: boolean;
-  parentLocation?: {
-    id: string;
-    name: string;
-  } | null;
-}
+import { StorageLocation } from '#generated';
 
 interface UseStorageLocationAutocompleteOptions {
   storageLocations: StorageLocation[];

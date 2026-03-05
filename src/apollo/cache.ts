@@ -128,15 +128,14 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
  * over existing ones (fresh data wins). When no cursor is provided
  * (initial load), incoming data replaces existing data entirely.
  *
- * @param cursorArgName - The GraphQL argument name for the cursor (e.g. 'after', 'membersCursor')
  */
-function mergeConnectionByNodeId(cursorArgName: string) {
+function mergeConnectionByNodeId() {
   return {
-    keyArgs: (cursorArgName === 'after' ? ['filters'] : false) as false | string[],
+    keyArgs: ['filters'] as string[],
     merge(existing: any, incoming: any, { args, readField }: any) {
       if (!incoming) return existing;
       if (!existing) return incoming;
-      if (!args?.[cursorArgName] && !incoming.pageInfo?.hasNextPage)
+      if (!args?.after && !incoming.pageInfo?.hasNextPage)
         return incoming;
 
       const edgeMap = new Map();
@@ -263,12 +262,12 @@ export function makeCache(): InMemoryCache {
       Home: {
         keyFields: ['id'],
         fields: {
-          membersConnection: mergeConnectionByNodeId('membersCursor'),
-          invitesConnection: mergeConnectionByNodeId('invitesCursor'),
-          pantriesConnection: mergeConnectionByNodeId('pantriesCursor'),
-          shoppingListsConnection: mergeConnectionByNodeId('after'),
-          mealPlansConnection: mergeConnectionByNodeId('after'),
-          mealTemplatesConnection: mergeConnectionByNodeId('after'),
+          membersConnection: mergeConnectionByNodeId(),
+          invitesConnection: mergeConnectionByNodeId(),
+          pantriesConnection: mergeConnectionByNodeId(),
+          shoppingListsConnection: mergeConnectionByNodeId(),
+          mealPlansConnection: mergeConnectionByNodeId(),
+          mealTemplatesConnection: mergeConnectionByNodeId(),
         },
       },
       Pantry: {
@@ -308,7 +307,7 @@ export function makeCache(): InMemoryCache {
               };
             },
           },
-          storageLocationsConnection: mergeConnectionByNodeId('after'),
+          storageLocationsConnection: mergeConnectionByNodeId(),
           suggestions: {
             merge(existing = [], incoming) {
               if (incoming == null) return existing;
@@ -503,10 +502,10 @@ export function makeCache(): InMemoryCache {
           },
           recipes: {
             keyArgs: ['category', 'difficulty'],
-            merge: mergeConnectionByNodeId('cursor').merge,
+            merge: mergeConnectionByNodeId().merge,
           },
           mealPlans: {
-            ...mergeConnectionByNodeId('after'),
+            ...mergeConnectionByNodeId(),
             keyArgs: ['filters'],
           },
         },
