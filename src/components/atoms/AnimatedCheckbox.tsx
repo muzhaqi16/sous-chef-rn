@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
@@ -33,12 +33,12 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
 
   // Local state for pending visual state (shows immediately on press)
   // useRecyclingState auto-resets when itemId changes (FlashList view recycling)
-  const [pendingChecked, setPendingChecked] = useRecyclingState<boolean | null>(null, [itemId]);
-
-  // Reset shared value on recycling — useRecyclingState handles React state only
-  useEffect(() => {
-    isPressed.set(false);
-  }, [itemId, isPressed]);
+  // onReset callback synchronously resets shared values during render (before paint)
+  const [pendingChecked, setPendingChecked] = useRecyclingState<boolean | null>(
+    null,
+    [itemId],
+    () => { isPressed.set(false); },
+  );
 
   // Determine visual checked state: pending takes priority, otherwise actual
   const visuallyChecked = pendingChecked !== null ? pendingChecked : checked;

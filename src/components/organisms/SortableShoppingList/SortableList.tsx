@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   FlashList,
+  type FlashListRef,
   type ListRenderItemInfo } from '@shopify/flash-list';
 import type {
   SortableShoppingListProps,
   SortableShoppingListItem } from './types';
+import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { SwipeableListItem } from './SortableItem';
 import {
   SortableListActionsProvider,
@@ -50,6 +52,8 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onEndReachedThreshold = 0.5,
   ListEmptyComponent,
 }) => {
+  const flashListRef = useRef<FlashListRef<SortableShoppingListItem>>(null);
+
   // PERFORMANCE: Single useUnistyles call for entire list
   const { theme } = useUnistyles();
   // PERFORMANCE: Single useWindowDimensions call - shared via context to avoid N subscriptions in items
@@ -72,12 +76,22 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   const handleSwipeableWillOpen = externalOnSwipeableWillOpen ?? internalCoordinator.handleSwipeableWillOpen;
   const handleSwipeableClose = internalCoordinator.handleSwipeableClose;
 
-  // Actions for context
+  // Actions for context — wrap delete/toggle to prepare FlashList for layout animation
   const actions: SortableListActions = {
     onItemPress,
     onItemEdit,
-    onItemDelete,
-    onTogglePurchase,
+    onItemDelete: onItemDelete
+      ? (id: string) => {
+          flashListRef.current?.prepareForLayoutAnimationRender();
+          onItemDelete(id);
+        }
+      : undefined,
+    onTogglePurchase: onTogglePurchase
+      ? (id: string) => {
+          flashListRef.current?.prepareForLayoutAnimationRender();
+          onTogglePurchase(id);
+        }
+      : undefined,
     onMoveToPantry,
     onQuantityPress,
     onSwipeableWillOpen: handleSwipeableWillOpen,
@@ -107,12 +121,14 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
       >
         <View style={styles.container}>
           <FlashList<SortableShoppingListItem>
+            ref={flashListRef}
+            CellRendererComponent={AnimatedCellRenderer}
             data={items}
             extraData={`${disabled}-${canRemoveItems}-${canEditItems}-${canMarkPurchased}-${canReorderItems}`}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
             getItemType={getItemType}
-            drawDistance={500}
+            drawDistance={600}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={contentContainerStyle}
             ListHeaderComponent={ListHeaderComponent ?? undefined}

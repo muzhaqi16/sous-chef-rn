@@ -6,6 +6,9 @@ import { EmptyState } from '../base/EmptyState';
 import { ItemCard } from './ItemCard';
 import { IconName } from '#/utils/iconUtils';
 import { getTabBarBottomPadding } from '#constants/layout';
+
+const keyExtractor = (item: Item) => item.id;
+
 interface Item {
   id: string;
   title: string;
@@ -94,8 +97,6 @@ export const ItemList: React.FC<ItemListProps> = ({
         testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
       />
     );
-
-  const keyExtractor = (item: Item) => item.id;
 
   if (items.length === 0 && emptyState) {
     return (

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { View, Pressable, type AccessibilityActionEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -8,6 +8,7 @@ import Animated, {
   cancelAnimation,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+import { useRecyclingState } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
@@ -47,11 +48,11 @@ export const ShoppingSwipeable: React.FC<ShoppingSwipeableProps> = ({
     },
   });
 
-  // Reset on cell recycling
-  useEffect(() => {
+  // Synchronous reset on cell recycling — fires during render (before paint)
+  useRecyclingState(undefined, [itemId], () => {
     cancelAnimation(translateX);
     translateX.set(0);
-  }, [itemId, translateX]);
+  });
 
   // Pre-defined in RN runtime scope — scheduleOnRN requires this pattern
   const notifyWillOpen = () => {

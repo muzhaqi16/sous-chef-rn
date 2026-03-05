@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Text, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -7,6 +7,7 @@ import Animated, {
   Easing,
   cancelAnimation } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+import { useRecyclingState } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseItemCard } from '../molecules/BaseItemCard/BaseItemCard';
 import { CardLeftSlot } from '../molecules/BaseItemCard/CardLeftSlot';
@@ -76,14 +77,14 @@ const SlideAnimatedWrapper: React.FC<{
     transform: [{ translateX: translateX.value }],
     opacity: slideOpacity.value }));
 
-  // Reset on FlashList cell recycling — runs synchronously on layout commit.
-  useEffect(() => {
+  // Synchronous reset on FlashList cell recycling — fires during render (before paint)
+  useRecyclingState(undefined, [itemId], () => {
     cancelAnimation(translateX);
     cancelAnimation(slideOpacity);
     translateX.set(0);
     slideOpacity.set(1);
     isAnimating.set(false);
-  }, [itemId, translateX, slideOpacity, isAnimating]);
+  });
 
   // Stable callback for scheduleOnRN — captures actions/itemId via closure
   const doDelete = () => {

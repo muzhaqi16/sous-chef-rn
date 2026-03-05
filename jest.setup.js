@@ -560,12 +560,13 @@ jest.mock('@shopify/flash-list', () => {
   return {
     FlashList: FlatList,
     MasonryFlashList: FlatList,
-    useRecyclingState: (initialState, deps) => {
+    useRecyclingState: (initialState, deps, onReset) => {
       // Minimal implementation: reset state when deps change via useMemo
       const valueRef = React.useRef();
       React.useMemo(() => {
         valueRef.current =
           typeof initialState === 'function' ? initialState() : initialState;
+        onReset?.();
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, deps);
       const [, setCounter] = React.useState(0);
