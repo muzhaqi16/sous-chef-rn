@@ -1050,15 +1050,6 @@ fragment RecipeFragment on Recipe {
   rating3Count
   rating4Count
   rating5Count
-  reviews {
-    edges {
-      node {
-        ...RecipeReviewFragment
-      }
-    }
-    totalCount
-  }
-
   # Relations
   createdBy {
     ...BasicUser

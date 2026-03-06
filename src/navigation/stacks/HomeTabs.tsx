@@ -29,6 +29,7 @@ function HomeTabsLayout({ children }: { children: React.ReactNode }) {
 export const HomeTabs = createBottomTabNavigator({
   tabBar: (props) => <FloatingTabBar {...props} />,
   layout: HomeTabsLayout,
+  implementation: 'custom',
   screenOptions: {
     headerShown: false,
     tabBarHideOnKeyboard: true,

@@ -5,7 +5,7 @@ import { apolloCachePersistence } from '../ApolloCachePersistence';
 
 const CACHE_KEY = 'apollo-cache-v1';
 const VERSION_KEY = 'apollo-cache-version';
-const CURRENT_VERSION = '1.1.3';
+const CURRENT_VERSION = '1.1.4';
 
 describe('ApolloCachePersistence', () => {
   beforeEach(() => {

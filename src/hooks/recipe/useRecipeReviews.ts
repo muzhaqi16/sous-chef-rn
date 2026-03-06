@@ -4,7 +4,9 @@ import {
   useUpdateRecipeReviewMutation,
   useDeleteRecipeReviewMutation,
   useToggleReviewHelpfulMutation,
+  useGetRecipeReviewsQuery,
   GetRecipeDocument,
+  GetRecipeReviewsDocument,
   type RecipeFragment,
   type RecipeReviewFragment } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -19,6 +21,11 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
   const { user } = useAuth();
   const userId = user?.id;
 
+  // Fetch reviews separately to avoid exceeding query depth limit
+  const { data: reviewsData } = useGetRecipeReviewsQuery({
+    variables: { id: recipeId },
+  });
+
   // Derived data from recipe
   const totalReviews = backendRecipe?.totalReviews ?? 0;
   const averageRating = backendRecipe?.averageRating ?? 0;
@@ -30,7 +37,7 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
 
   // Sort reviews: most helpful first, then newest
   const reviews = (() => {
-    const raw = backendRecipe?.reviews?.edges?.map(edge => edge.node) ?? [];
+    const raw = reviewsData?.recipe?.reviews?.edges?.map(edge => edge.node) ?? [];
     return [...raw].sort((a, b) => {
       if (b.helpful !== a.helpful) return b.helpful - a.helpful;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -43,29 +50,30 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
   const hasReviewed = !!userReview;
   const isOwnRecipe = backendRecipe?.createdBy?.id === userId;
 
-  // Refetch recipe query to refresh all review-related fields (reviews, counts, average)
-  const refetchRecipe = {
-    query: GetRecipeDocument,
-    variables: { id: recipeId } };
+  // Refetch both queries: reviews list + recipe metadata (counts, average)
+  const refetchQueries = [
+    { query: GetRecipeReviewsDocument, variables: { id: recipeId } },
+    { query: GetRecipeDocument, variables: { id: recipeId } },
+  ];
 
   // Mutations
   const [createReviewMutation, { loading: createLoading }] =
     useCreateRecipeReviewMutation({
-      refetchQueries: [refetchRecipe],
+      refetchQueries: refetchQueries,
       onError: err => {
         toastService.error(err.message || 'Failed to submit review');
       } });
 
   const [updateReviewMutation, { loading: updateLoading }] =
     useUpdateRecipeReviewMutation({
-      refetchQueries: [refetchRecipe],
+      refetchQueries: refetchQueries,
       onError: err => {
         toastService.error(err.message || 'Failed to update review');
       } });
 
   const [deleteReviewMutation, { loading: deleteLoading }] =
     useDeleteRecipeReviewMutation({
-      refetchQueries: [refetchRecipe],
+      refetchQueries: refetchQueries,
       update: (cache, { data }, { variables }) => {
         if (!data?.deleteRecipeReview?.success || !variables?.id) return;
         cache.evict({ id: cache.identify({ __typename: 'RecipeReview', id: variables.id }) });

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { AppState, StatusBar } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -34,6 +34,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { initializeDeviceId } from '#/utils/deviceId';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { setupGlobalErrorHandler } from '#/utils/globalErrorHandler';
+import { WindowBackground } from '#/native/WindowBackground';
 
 // Install global JS exception and promise rejection handlers before any component renders
 setupGlobalErrorHandler();
@@ -76,11 +77,17 @@ const App = () => {
   );
   const getTelemetryConfig = useAppStore(state => state.getTelemetryConfig);
   const { theme } = useTheme();
+  const { theme: uniTheme } = useUnistyles();
 
   // PERFORMANCE: Track if hydration init has run to prevent restarting on theme changes
   const hydrationInitializedRef = useRef(false);
   // Track if Detox requested background services to be disabled
   const detoxBackgroundServicesDisabledRef = useRef(false);
+
+  // Sync iOS window background color with theme (covers safe area regions)
+  useEffect(() => {
+    WindowBackground.setBackgroundColor(uniTheme.colors.background);
+  }, [uniTheme.colors.background]);
 
   // Initialize network monitoring
   useNetworkStatus();
@@ -220,7 +227,7 @@ const App = () => {
 
   return (
     <AppErrorBoundary>
-      <GestureHandlerRootView style={styles.container}>
+      <GestureHandlerRootView style={[styles.container, { backgroundColor: uniTheme.colors.background }]}>
         <KeyboardProvider>
           <ApolloProvider client={client}>
           <DataProvider>

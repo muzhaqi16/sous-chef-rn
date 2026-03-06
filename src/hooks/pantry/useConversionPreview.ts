@@ -14,6 +14,8 @@ interface UseConversionPreviewOptions {
   trackingUnitSymbol: string;
   /** The item's current quantity in tracking units */
   availableInTrackingUnit: number;
+  /** Ratio from compatibleUnitsForItem: selectedUnit = trackingUnit * ratio */
+  conversionRatio: number | null;
 }
 
 interface ConversionPreviewResult {
@@ -51,6 +53,7 @@ export function useConversionPreview({
   trackingUnitId,
   trackingUnitSymbol,
   availableInTrackingUnit,
+  conversionRatio,
 }: UseConversionPreviewOptions): ConversionPreviewResult {
   const [previewText, setPreviewText] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -59,7 +62,7 @@ export function useConversionPreview({
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [convertQuantity] = useConvertQuantityLazyQuery({ fetchPolicy: 'cache-first' });
+  const [convertQuantity] = useConvertQuantityLazyQuery({ fetchPolicy: 'network-only' });
 
   const isSameUnit = selectedUnitId === trackingUnitId || !selectedUnitId || !trackingUnitId;
   const shouldShowPreview = !isSameUnit && inputQuantity != null && inputQuantity > 0;
@@ -72,7 +75,12 @@ export function useConversionPreview({
     if (isSameUnit) {
       setAvailableInSelectedUnit(null);
       setAvailableLoading(false);
+    } else if (conversionRatio != null) {
+      // Local conversion — instant, no network call
+      setAvailableInSelectedUnit(availableInTrackingUnit * conversionRatio);
+      setAvailableLoading(false);
     } else {
+      // Network fallback
       setAvailableLoading(true);
       queueMicrotask(() => {
         executeQuery(
@@ -103,15 +111,25 @@ export function useConversionPreview({
       // Clearing — no conversion needed
       setPreviewText(null);
       setPreviewLoading(false);
+    } else if (conversionRatio != null) {
+      // Local computation — instant, no debounce
+      const trackingValue = inputQuantity! / conversionRatio;
+      const formattedValue = Number.isInteger(trackingValue)
+        ? trackingValue.toString()
+        : trackingValue.toFixed(2).replace(/\.?0+$/, '');
+      setPreviewText(
+        `${inputQuantity} ${selectedUnitSymbol} \u2248 ${formattedValue} ${trackingUnitSymbol}`,
+      );
+      setPreviewLoading(false);
     } else {
       // Mark as loading, effect will debounce the actual fetch
       setPreviewLoading(true);
     }
   }
 
-  // Debounced input preview conversion — setState only in async callbacks
+  // Debounced input preview conversion — network fallback only (skipped when local ratio available)
   useEffect(() => {
-    if (!shouldShowPreview) return;
+    if (!shouldShowPreview || conversionRatio != null) return;
 
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
@@ -151,7 +169,7 @@ export function useConversionPreview({
     };
   }, [
     shouldShowPreview, inputQuantity, selectedUnitId, trackingUnitId,
-    selectedUnitSymbol, trackingUnitSymbol, itemId, convertQuantity,
+    selectedUnitSymbol, trackingUnitSymbol, itemId, convertQuantity, conversionRatio,
   ]);
 
   return { previewText, availableInSelectedUnit, previewLoading, availableLoading };

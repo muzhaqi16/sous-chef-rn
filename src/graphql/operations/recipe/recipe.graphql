@@ -68,6 +68,20 @@ query GetRecipe($id: ID!) {
   }
 }
 
+query GetRecipeReviews($id: ID!) {
+  recipe(id: $id) {
+    id
+    reviews {
+      edges {
+        node {
+          ...RecipeReviewFragment
+        }
+      }
+      totalCount
+    }
+  }
+}
+
 query MySavedRecipes($folder: String, $first: Int, $after: String) {
   me {
     id
@@ -141,6 +155,20 @@ mutation UpdateRecipe($id: ID!, $input: UpdateRecipeInput!) {
     code
     recipe {
       ...BasicRecipeFragment
+    }
+  }
+}
+
+mutation UpdateRecipeIngredients($recipeId: ID!, $ingredients: [RecipeIngredientInput!]!) {
+  updateRecipeIngredients(recipeId: $recipeId, ingredients: $ingredients) {
+    success
+    message
+    code
+    recipe {
+      id
+      ingredients {
+        ...RecipeIngredientFragment
+      }
     }
   }
 }

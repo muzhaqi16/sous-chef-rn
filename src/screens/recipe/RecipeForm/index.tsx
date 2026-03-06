@@ -7,6 +7,9 @@ import {
   useGetRecipeQuery,
   useCreateRecipeMutation,
   useUpdateRecipeMutation,
+  useUpdateRecipeIngredientsMutation,
+  MyRecipesDocument,
+  type MyRecipesQuery,
 } from '#generated';
 import { useRecipeForm } from './useRecipeForm';
 import { RecipeBasicFields } from './components/RecipeBasicFields';
@@ -44,17 +47,42 @@ export const RecipeFormScreen: React.FC<
   });
 
   // Populate form when recipe data arrives
+  const { populateFromRecipe } = form;
   useEffect(() => {
     if (recipeData?.recipe) {
-      form.populateFromRecipe(recipeData.recipe);
+      populateFromRecipe(recipeData.recipe);
     }
-  }, [recipeData?.recipe, form]);
+  }, [recipeData?.recipe, populateFromRecipe]);
 
   const [createRecipeMutation, { loading: creating }] =
-    useCreateRecipeMutation();
+    useCreateRecipeMutation({
+      update: (cache, { data }) => {
+        if (!data?.createRecipe?.success || !data.createRecipe.recipe) return;
+        const newRecipe = data.createRecipe.recipe;
+        cache.updateQuery<MyRecipesQuery>(
+          { query: MyRecipesDocument },
+          (existing) => {
+            if (!existing?.recipes) return existing;
+            return {
+              ...existing,
+              recipes: {
+                ...existing.recipes,
+                edges: [
+                  { __typename: 'RecipeEdge' as const, cursor: newRecipe.id, node: newRecipe },
+                  ...existing.recipes.edges,
+                ],
+                totalCount: (existing.recipes.totalCount ?? 0) + 1,
+              },
+            };
+          },
+        );
+      },
+    });
   const [updateRecipeMutation, { loading: updating }] =
     useUpdateRecipeMutation();
-  const loading = creating || updating;
+  const [updateRecipeIngredientsMutation, { loading: updatingIngredients }] =
+    useUpdateRecipeIngredientsMutation();
+  const loading = creating || updating || updatingIngredients;
 
   const handleSave = () => {
     const error = form.validate();
@@ -67,16 +95,27 @@ export const RecipeFormScreen: React.FC<
       async () => {
         if (isEditMode && recipeId) {
           const input = form.buildUpdateInput();
-          const result = await updateRecipeMutation({
-            variables: { id: recipeId, input },
-          });
-          if (result.data?.updateRecipe?.success) {
+          const [updateResult, ingredientsResult] = await Promise.all([
+            updateRecipeMutation({
+              variables: { id: recipeId, input },
+            }),
+            updateRecipeIngredientsMutation({
+              variables: {
+                recipeId,
+                ingredients: form.buildIngredientsInput(),
+              },
+            }),
+          ]);
+          const recipeSuccess = updateResult.data?.updateRecipe?.success;
+          const ingredientsSuccess = ingredientsResult.data?.updateRecipeIngredients?.success;
+          if (recipeSuccess && ingredientsSuccess) {
             goBack();
           } else {
-            Alert.alert(
-              'Error',
-              result.data?.updateRecipe?.message ?? 'Failed to update recipe.',
-            );
+            const errorMessage =
+              updateResult.data?.updateRecipe?.message ??
+              ingredientsResult.data?.updateRecipeIngredients?.message ??
+              'Failed to update recipe.';
+            Alert.alert('Error', errorMessage);
           }
         } else {
           const input = form.buildCreateInput();

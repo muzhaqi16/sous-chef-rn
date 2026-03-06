@@ -10,6 +10,18 @@ jest.mock('../../../../../src/apollo/links/refreshToken');
 jest.mock('../../../../../src/components/atoms/GlobalBottomSheetBackdrop', () => ({
   GlobalBottomSheetBackdrop: () => null,
 }));
+jest.mock('../../../../../src/components/molecules/AutocompleteField/ItemAutocompleteField', () => ({
+  ItemAutocompleteField: (props: any) => {
+    const { Text } = require('react-native');
+    return <Text>{props.label}</Text>;
+  },
+}));
+jest.mock('../../../../../src/components/molecules/AutocompleteField/UnitAutocompleteField', () => ({
+  UnitAutocompleteField: (props: any) => {
+    const { Text } = require('react-native');
+    return <Text>{props.label}</Text>;
+  },
+}));
 jest.mock('../../../../../src/components/molecules/FormInput', () => ({
   FormInput: (props: any) => {
     const { Text } = require('react-native');
@@ -20,6 +32,12 @@ jest.mock('../../../../../src/components/molecules/EditableCounter', () => ({
   EditableCounter: (props: any) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;
+  },
+}));
+jest.mock('../../../../../src/components/molecules/FieldRow', () => ({
+  FieldRow: (props: any) => {
+    const { View } = require('react-native');
+    return <View>{props.children}</View>;
   },
 }));
 jest.mock('../../../../../src/components/molecules/Header', () => ({

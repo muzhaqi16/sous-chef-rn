@@ -10,6 +10,7 @@ export interface SelectedUnitInfo {
   unitName: string;
   unitType: UnitType;
   isTrackingUnit: boolean;
+  conversionRatio: number | null;
   conversionConfidence: number | null;
 }
 
@@ -161,6 +162,7 @@ function toSelectedUnitInfo(unit: EnrichedUnit): SelectedUnitInfo {
     unitName: unit.unitName,
     unitType: unit.unitType,
     isTrackingUnit: unit.isTrackingUnit,
+    conversionRatio: unit.conversionRatio,
     conversionConfidence: unit.conversionConfidence,
   };
 }
@@ -176,7 +178,7 @@ export function useCompatibleUnits({
   const { data, loading, error } = useCompatibleUnitsForItemQuery({
     variables: { itemId: itemId!, currentUnitId: trackingUnitId },
     skip: !itemId,
-    fetchPolicy: 'cache-first',
+    fetchPolicy: 'cache-and-network',
   });
 
   const compatibleUnits = data?.compatibleUnitsForItem ?? [];
