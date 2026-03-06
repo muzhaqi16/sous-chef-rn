@@ -193,14 +193,17 @@ type HomeLike = {
   updatedAt?: string;
   membersConnection?: {
     edges?: Array<Edge<any>> | null;
+    totalCount?: number | null;
     pageInfo?: PageInfo | null;
   } | null;
   invitesConnection?: {
     edges?: Array<Edge<any>> | null;
+    totalCount?: number | null;
     pageInfo?: PageInfo | null;
   } | null;
   pantriesConnection?: {
     edges?: Array<Edge<any>> | null;
+    totalCount?: number | null;
     pageInfo?: PageInfo | null;
   } | null;
   shoppingListsConnection?: {
@@ -254,6 +257,9 @@ export type NormalizedHome<T extends HomeLike> = T & {
   shoppingLists: any[];
   mealPlans: any[];
   mealTemplates: any[];
+  membersTotalCount: number;
+  invitesTotalCount: number;
+  pantriesTotalCount: number;
   membersPageInfo?: PageInfo;
   invitesPageInfo?: PageInfo;
   pantriesPageInfo?: PageInfo;
@@ -288,16 +294,19 @@ export const normalizeHome = createEntityNormalizer<HomeLike>([
   {
     connectionField: 'membersConnection',
     arrayName: 'members',
+    includeTotalCount: true,
     includePageInfo: true,
   },
   {
     connectionField: 'invitesConnection',
     arrayName: 'invites',
+    includeTotalCount: true,
     includePageInfo: true,
   },
   {
     connectionField: 'pantriesConnection',
     arrayName: 'pantries',
+    includeTotalCount: true,
     includePageInfo: true,
   },
   {

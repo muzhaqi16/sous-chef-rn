@@ -10,11 +10,12 @@ describe('useSwipeableCoordinator', () => {
     current: { close: jest.fn() },
   });
 
-  it('returns handleSwipeableWillOpen and handleSwipeableClose', () => {
+  it('returns handleSwipeableWillOpen, handleSwipeableClose, and closeAll', () => {
     const { result } = renderHook(() => useSwipeableCoordinator());
 
     expect(result.current.handleSwipeableWillOpen).toBeInstanceOf(Function);
     expect(result.current.handleSwipeableClose).toBeInstanceOf(Function);
+    expect(result.current.closeAll).toBeInstanceOf(Function);
   });
 
   it('does not throw when opening the first swipeable (no previous one)', () => {
@@ -63,12 +64,12 @@ describe('useSwipeableCoordinator', () => {
     expect(ref1.current.close).not.toHaveBeenCalled();
   });
 
-  it('handleSwipeableClose clears the tracked ref', () => {
+  it('handleSwipeableClose does not clear the tracked ref (race-safe)', () => {
     const { result } = renderHook(() => useSwipeableCoordinator());
     const ref1 = createMockSwipeableRef();
     const ref2 = createMockSwipeableRef();
 
-    // Open ref1, then close it
+    // Open ref1, then fire close (e.g. from RNGH async callback)
     act(() => {
       result.current.handleSwipeableWillOpen(ref1);
     });
@@ -76,12 +77,12 @@ describe('useSwipeableCoordinator', () => {
       result.current.handleSwipeableClose();
     });
 
-    // Now opening ref2 should NOT close ref1 (since the tracker was cleared)
+    // Opening ref2 still calls close on ref1 (harmless noop on already-closed item)
     act(() => {
       result.current.handleSwipeableWillOpen(ref2);
     });
 
-    expect(ref1.current.close).not.toHaveBeenCalled();
+    expect(ref1.current.close).toHaveBeenCalledTimes(1);
   });
 
   it('handles three sequential swipeable opens correctly', () => {
@@ -138,5 +139,39 @@ describe('useSwipeableCoordinator', () => {
 
     // Nothing should have been closed since we cleared before opening
     expect(ref1.current.close).not.toHaveBeenCalled();
+  });
+
+  it('closeAll closes the tracked swipeable and clears the ref', () => {
+    const { result } = renderHook(() => useSwipeableCoordinator());
+    const ref1 = createMockSwipeableRef();
+
+    act(() => {
+      result.current.handleSwipeableWillOpen(ref1);
+    });
+
+    act(() => {
+      result.current.closeAll();
+    });
+
+    expect(ref1.current.close).toHaveBeenCalledTimes(1);
+
+    // Opening a new item after closeAll should not close ref1 again
+    const ref2 = createMockSwipeableRef();
+    act(() => {
+      result.current.handleSwipeableWillOpen(ref2);
+    });
+
+    expect(ref1.current.close).toHaveBeenCalledTimes(1);
+    expect(ref2.current.close).not.toHaveBeenCalled();
+  });
+
+  it('closeAll is safe to call when no swipeable is tracked', () => {
+    const { result } = renderHook(() => useSwipeableCoordinator());
+
+    expect(() => {
+      act(() => {
+        result.current.closeAll();
+      });
+    }).not.toThrow();
   });
 });

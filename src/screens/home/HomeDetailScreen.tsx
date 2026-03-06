@@ -79,10 +79,8 @@ export const HomeDetailScreen: React.FC<{
     );
   };
 
-  // Find current user's membership to check permissions
-  const currentUserMembership = home?.members?.find(
-    member => member.userId === currentUser?.id,
-  );
+  // Use myMembership for reliable current user membership (not affected by connection limits)
+  const currentUserMembership = home?.myMembership;
 
   const isOwner = currentUserMembership?.role === 'OWNER';
 

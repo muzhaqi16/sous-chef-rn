@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Pressable } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
-import { ShoppingSwipeable } from '#/components/molecules/SwipeableItem/ShoppingSwipeable';
+import { SwipeableItem } from '#/components/molecules/SwipeableItem/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
 import { QuantityBadge } from '#/components/atoms/QuantityBadge';
@@ -13,7 +13,12 @@ import { Icon } from '#utils/iconUtils';
 import { createPropsComparator } from '#utils/memoUtils';
 import { HIT_SLOP } from '#/constants/touch';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
-import { TIMING } from '#constants/animations';
+import {
+  standardEasing,
+  staggeredEntryAnimation,
+  TIMING,
+} from '#constants/animations';
+import { useStaggeredEntry } from '#context/StaggeredEntryContext';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useSortableListTheme } from './SortableListThemeContext';
@@ -41,9 +46,20 @@ type SwipeableListItemProps = ListRenderItemInfo<ItemData>;
 
 const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   item,
+  index,
 }) => {
   // PERFORMANCE: Get theme colors from context (single useUnistyles at list level)
   const themeColors = useSortableListTheme();
+
+  // Staggered entry animation (only during initial render, disabled after)
+  const staggerCtx = useStaggeredEntry();
+  const entryDelay = staggerCtx?.getEntryDelay(index) ?? 0;
+  const entering = (() => {
+    if (entryDelay <= 0) return undefined;
+    return FadeIn.delay(entryDelay)
+      .duration(staggeredEntryAnimation.duration)
+      .easing(standardEasing.factory());
+  })();
 
   // PERFORMANCE: Get screen width from context (single subscription at list level, not per-item)
   const screenWidth = themeColors?.screenWidth ?? 375;
@@ -161,9 +177,10 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // PERF: Single Animated.View for both entry animation and slide style
   return (
     <Animated.View
-      style={[styles.container, commonStyles.shadow, animatedSlideStyle]}
+      entering={entering}
+      style={[styles.container, animatedSlideStyle]}
     >
-      <ShoppingSwipeable
+      <SwipeableItem
         itemId={item.id}
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onLongPress={onItemPress ? () => onItemPress(item.id) : undefined}
@@ -175,8 +192,11 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             ? () => onItemDelete(item.id)
             : undefined
         }
+        isPurchased={item.isPurchased}
+        friction={1}
         onSwipeableWillOpen={onSwipeableWillOpen}
         onSwipeableClose={onSwipeableClose}
+        swipeMode="shopping"
       >
         <ListItem
           title={item.title}
@@ -190,7 +210,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           isPurchased={item.isPurchased}
           themeColors={themeColors}
         />
-      </ShoppingSwipeable>
+      </SwipeableItem>
     </Animated.View>
   );
 };
@@ -220,6 +240,7 @@ const styles = StyleSheet.create(theme => ({
 
 // PERFORMANCE: Custom comparator for React.memo
 const arePropsEqual = createPropsComparator<SwipeableListItemProps>({
+  referenceKeys: ['index'],
   nestedComparisons: {
     item: ['id', 'title', 'subtitle', 'isPurchased', 'leftElementConfig'],
     'item.rightElementConfig': [

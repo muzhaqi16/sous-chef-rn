@@ -42,15 +42,28 @@ export function useSwipeableCoordinator() {
   };
 
   /**
-   * Handler to be called when a swipeable item closes
+   * Handler to be called when a swipeable item closes.
    *
-   * Clears the reference to the open swipeable.
+   * Intentionally does NOT clear the open ref. Only handleSwipeableWillOpen
+   * manages it. RNGH's Swipeable fires onSwipeableClose asynchronously after
+   * the close animation, so clearing here would race: coordinator opens B →
+   * closes A → A's async onSwipeableClose wipes B's ref.
    */
   const handleSwipeableClose = () => {
+    // no-op — handleSwipeableWillOpen exclusively manages the ref
+  };
+
+  /**
+   * Explicitly close the current open swipeable and clear the ref.
+   * Use for tab-change or other "close all" scenarios.
+   */
+  const closeAll = () => {
+    openSwipeableRef.current?.current?.close();
     openSwipeableRef.current = null;
   };
 
   return {
     handleSwipeableWillOpen,
-    handleSwipeableClose };
+    handleSwipeableClose,
+    closeAll };
 }

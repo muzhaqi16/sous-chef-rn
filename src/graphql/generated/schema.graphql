@@ -5975,6 +5975,14 @@ type QuantityDisplay {
   unit: Unit
 }
 
+"""Sub-input for quantity display preferences"""
+input QuantityDisplayInput {
+  alwaysShowFractions: Boolean
+  maxDecimalPlaces: Int
+  preferredFractionSet: JSON
+  quantityDisplayPreference: QuantityDisplayPreference
+}
+
 """User preference for quantity display"""
 enum QuantityDisplayPreference {
   AUTO
@@ -6611,6 +6619,14 @@ enum RecurringPattern {
 type RefreshTokenPayload {
   accessToken: String!
   refreshToken: String!
+}
+
+"""Sub-input for regional/locale settings"""
+input RegionalSettingsInput {
+  language: String
+  preferredCurrency: String
+  preferredUnitSystem: UnitSystem
+  timezone: String
 }
 
 input RegisterInput {
@@ -8606,8 +8622,9 @@ input UpdateUserProfileInput {
 input UpdateUserSettingsInput {
   features: FeatureTogglesInput
   notifications: UserNotificationSettingsInput
-  preferredUnitSystem: UnitSystem
   privacy: PrivacySettingsInput
+  quantityDisplay: QuantityDisplayInput
+  regional: RegionalSettingsInput
   sync: SyncSettingsInput
   ui: UiPreferencesInput
 }

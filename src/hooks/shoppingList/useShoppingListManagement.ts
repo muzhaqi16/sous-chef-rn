@@ -45,7 +45,9 @@ export function useShoppingListManagement(currentListId: string | undefined) {
   const unpurchasedItems = unpurchased.items;
   const purchasedItems = purchased.items;
   const totalCountUnpurchased = unpurchased.totalCount;
-  const totalCountPurchased = purchased.totalCount;
+  // Fallback to completedItems from GetShoppingListDetails so the tab badge
+  // shows immediately before the deferred purchased query completes
+  const totalCountPurchased = purchased.totalCount || shoppingList?.completedItems || 0;
 
   // Combined items for backwards compatibility
   const items = [...unpurchasedItems, ...purchasedItems];

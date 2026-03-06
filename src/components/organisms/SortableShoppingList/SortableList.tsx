@@ -42,6 +42,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   ListHeaderComponent,
   ListFooterComponent,
   onSwipeableWillOpen: externalOnSwipeableWillOpen,
+  onSwipeableClose: externalOnSwipeableClose,
   onRefresh,
   refreshing = false,
   canRemoveItems = true,
@@ -74,7 +75,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   // Coordinate swipeable items — use external coordinator if provided, otherwise internal fallback
   const internalCoordinator = useSwipeableCoordinator();
   const handleSwipeableWillOpen = externalOnSwipeableWillOpen ?? internalCoordinator.handleSwipeableWillOpen;
-  const handleSwipeableClose = internalCoordinator.handleSwipeableClose;
+  const handleSwipeableClose = externalOnSwipeableClose ?? internalCoordinator.handleSwipeableClose;
 
   // Actions for context — wrap delete/toggle to prepare FlashList for layout animation
   const actions: SortableListActions = {
@@ -146,8 +147,11 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
-    flex: 1 } }));
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+}));
 
 export const SortableShoppingList = SortableShoppingListComponent;

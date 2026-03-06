@@ -3,6 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMappingHelper } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
+import { createPropsComparator } from '#utils/memoUtils';
 import type { MealTemplateDisplayFragment } from '#generated';
 
 interface TemplateCardProps {
@@ -10,7 +11,7 @@ interface TemplateCardProps {
   onPress: (template: MealTemplateDisplayFragment) => void;
 }
 
-export const TemplateCard: React.FC<TemplateCardProps> =
+const TemplateCardComponent: React.FC<TemplateCardProps> =
   ({ template, onPress }) => {
     const { getMappingKey } = useMappingHelper();
     return (
@@ -73,7 +74,15 @@ export const TemplateCard: React.FC<TemplateCardProps> =
     );
   };
 
-TemplateCard.displayName = 'TemplateCard';
+TemplateCardComponent.displayName = 'TemplateCard';
+
+const areTemplateCardPropsEqual = createPropsComparator<TemplateCardProps>({
+  nestedComparisons: {
+    template: ['id', 'name', 'usageCount', 'description', 'durationDays', 'defaultServings', 'category'],
+  },
+});
+
+export const TemplateCard = React.memo(TemplateCardComponent, areTemplateCardPropsEqual);
 
 const styles = StyleSheet.create(theme => ({
   card: {

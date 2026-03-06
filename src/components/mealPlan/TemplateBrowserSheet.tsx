@@ -7,6 +7,7 @@ import {
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { TemplateCard } from './TemplateCard';
+import { TemplateBrowserProvider, useTemplateBrowserActions } from './TemplateBrowserContext';
 import { ChipScrollRow, type ChipOption } from '#components/atoms/ChipScrollRow';
 import { useMealTemplates } from '#hooks/mealPlan/useMealTemplates';
 import { TemplateCategory, type MealTemplateDisplayFragment } from '#generated';
@@ -25,6 +26,15 @@ const CATEGORIES: ChipOption<TemplateCategory | undefined>[] = [
 ];
 
 const keyExtractor = (item: MealTemplateDisplayFragment) => item.id;
+
+const TemplateBrowserRenderItem: React.FC<{ item: MealTemplateDisplayFragment }> = ({ item }) => {
+  const { onSelectTemplate } = useTemplateBrowserActions();
+  return <TemplateCard template={item} onPress={onSelectTemplate} />;
+};
+
+const renderTemplate = ({ item }: { item: MealTemplateDisplayFragment }) => (
+  <TemplateBrowserRenderItem item={item} />
+);
 
 interface TemplateBrowserSheetProps {
   visible: boolean;
@@ -50,10 +60,6 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
     setSelectedCategory,
     loadMore,
     hasMore } = useMealTemplates();
-
-  const renderTemplate = ({ item }: { item: MealTemplateDisplayFragment }) => (
-      <TemplateCard template={item} onPress={onSelectTemplate} />
-    );
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -104,16 +110,18 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
             <Text style={styles.emptyText}>No templates found</Text>
           </View>
         ) : (
-          <FlashList
-            data={templates}
-            renderItem={renderTemplate}
-            keyExtractor={keyExtractor}
-            style={styles.list}
-            showsVerticalScrollIndicator={false}
-            onEndReached={hasMore ? loadMore : undefined}
-            onEndReachedThreshold={0.5}
-            drawDistance={200}
-          />
+          <TemplateBrowserProvider onSelectTemplate={onSelectTemplate}>
+            <FlashList
+              data={templates}
+              renderItem={renderTemplate}
+              keyExtractor={keyExtractor}
+              style={styles.list}
+              showsVerticalScrollIndicator={false}
+              onEndReached={hasMore ? loadMore : undefined}
+              onEndReachedThreshold={0.5}
+              drawDistance={200}
+            />
+          </TemplateBrowserProvider>
         )}
       </BottomSheetView>
     </BottomSheetModal>

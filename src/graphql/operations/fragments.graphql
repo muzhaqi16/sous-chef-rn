@@ -90,17 +90,12 @@ fragment ShoppingListItemFragment on ShoppingListItem {
   addedBy {
     ...UserSummary
   }
-  # Purchase history (paginated connection for performance)
+  # Purchase history
   purchasesConnection(first: 10) {
     edges {
-      cursor
       node {
         ...PurchaseFragment
       }
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
     }
     totalCount
   }
@@ -515,13 +510,12 @@ fragment PantryItemFragment on PantryItem {
     totalPrice
     quantity
   }
-  usageRecords(first: 20) {
+  usageRecords(first: 5) {
     edges {
       node {
         id
         quantityUsed
         usageUnit {
-          id
           symbol
         }
         usedAt
@@ -598,15 +592,7 @@ fragment BasicPantryFragment on Pantry {
   id
   homeId
   name
-  description
   isDefault
-  location
-  temperature
-  tags
-  metadata
-  version
-  createdAt
-  updatedAt
 }
 
 # ============================================
@@ -643,24 +629,14 @@ fragment HomeDisplay on Home {
       node {
         ...HomeInviteDisplay
       }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
     }
     totalCount
   }
-  pantriesConnection(first: 50) {
+  pantriesConnection(first: 20) {
     edges {
       node {
         ...BasicPantryFragment
       }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
     }
     totalCount
   }
@@ -684,7 +660,7 @@ fragment HomeListFragment on Home {
   name
   isDefault
   version
-  membersConnection(first: 10) {
+  membersConnection(first: 5) {
     edges {
       node {
         id
@@ -696,7 +672,7 @@ fragment HomeListFragment on Home {
     }
     totalCount
   }
-  invitesConnection(first: 10) {
+  invitesConnection(first: 5) {
     edges {
       node {
         id
@@ -707,7 +683,7 @@ fragment HomeListFragment on Home {
     }
     totalCount
   }
-  pantriesConnection(first: 50) {
+  pantriesConnection(first: 10) {
     edges {
       node {
         id
@@ -715,6 +691,7 @@ fragment HomeListFragment on Home {
         isDefault
       }
     }
+    totalCount
   }
   myMembership {
     id
@@ -740,48 +717,56 @@ fragment HomeFragment on Home {
   createdAt
   updatedAt
 
-  invitesConnection(first: 50) {
+  invitesConnection(first: 20) {
     edges {
       node {
-        ...HomeInviteFragment
+        id
+        email
+        recipientName
+        role
+        status
       }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
     }
     totalCount
   }
 
-  membersConnection(first: 100) {
+  membersConnection(first: 20) {
     edges {
       node {
-        ...MemberShipFragment
+        id
+        homeId
+        userId
+        role
+        status
+        displayName
+        canManageHome
+        user {
+          id
+          email
+        }
       }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
     }
     totalCount
   }
 
-  pantriesConnection(first: 50) {
+  pantriesConnection(first: 20) {
     edges {
       node {
-        ...BasicPantryFragment
+        id
+        name
+        isDefault
       }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
     }
     totalCount
   }
 
+  myMembership {
+    id
+    role
+    status
+    displayName
+    canManageHome
+  }
 }
 
 fragment NotificationFragment on Notification {
@@ -800,8 +785,6 @@ fragment PurchaseFragment on Purchase {
   purchaseDate
   quantity
   unitPrice
-  totalPrice
-  itemName
   unitSymbol
   # Removed user.profile to prevent subscription normalization crash
   # The server sends incomplete user data in subscriptions, causing
@@ -811,6 +794,14 @@ fragment PurchaseFragment on Purchase {
 # ============================================
 # MEAL PLAN FRAGMENTS
 # ============================================
+
+fragment MealPlanRecipeFragment on Recipe {
+  id
+  name
+  imageUrl
+  servings
+  totalTimeMinutes
+}
 
 fragment MealPlanItemFragment on MealPlanItem {
   id
@@ -830,7 +821,7 @@ fragment MealPlanItemFragment on MealPlanItem {
   nutritionSource
   usedPantryItems
   recipe {
-    ...BasicRecipeFragment
+    ...MealPlanRecipeFragment
   }
 }
 
@@ -968,7 +959,7 @@ fragment MealTemplateItemFragment on MealTemplateItem {
   servings
   notes
   recipe {
-    ...BasicRecipeFragment
+    ...MealPlanRecipeFragment
   }
 }
 

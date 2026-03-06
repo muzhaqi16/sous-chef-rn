@@ -6,7 +6,7 @@ import {
   Pressable,
   ActivityIndicator,
   Linking } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -30,8 +30,10 @@ import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
 import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
 import { useRecipeReviews } from '#/hooks/recipe/useRecipeReviews';
 import { ReviewSection } from '#/components/recipe/ReviewSection';
+import { createPropsComparator } from '#utils/memoUtils';
 import { useRecipeDetail } from './useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
+import { SelectableIngredientProvider, useSelectableIngredients } from './SelectableIngredientContext';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -40,6 +42,68 @@ import { SousChefLoader } from '#/components/base/SousChefLoader';
 const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
 
 const IngredientSeparator = () => <View style={{ width: 12 }} />;
+
+// --- Module-scope FlashList infrastructure for selectable ingredients ---
+
+interface SelectableIngredientItemProps {
+  item: {
+    id: string;
+    name: string;
+    quantity: number;
+    unit: { symbol: string } | null;
+  };
+}
+
+// Module-scope keyExtractor — zero runtime overhead
+const ingredientKeyExtractor = (item: { id: string }) => item.id;
+
+// Bridge component — reads selection state from context, theme from unistyles
+const SelectableIngredientItemComponent: React.FC<ListRenderItemInfo<SelectableIngredientItemProps['item']>> = ({
+  item,
+}) => {
+  const { selectedIngredients, toggleIngredient } = useSelectableIngredients();
+  const { theme } = useUnistyles();
+  const isSelected = selectedIngredients.has(item.id);
+
+  return (
+    <Pressable
+      style={({pressed}) => [styles.ingredientItem, pressed && styles.pressed]}
+      onPress={() => toggleIngredient(item.id)}
+    >
+      <Ionicons
+        name={isSelected ? 'checkbox' : 'square-outline'}
+        size={24}
+        color={
+          isSelected
+            ? theme.colors.primary
+            : theme.colors.textSecondary
+        }
+      />
+      <View style={styles.ingredientInfo}>
+        <Text style={styles.ingredientName}>{item.name}</Text>
+        <Text style={styles.ingredientAmount}>
+          {item.quantity ?? ''} {item.unit?.symbol || ''}
+        </Text>
+      </View>
+    </Pressable>
+  );
+};
+
+// PERFORMANCE: Custom comparator for React.memo — value-equality on nested item fields
+const areIngredientPropsEqual = createPropsComparator<ListRenderItemInfo<SelectableIngredientItemProps['item']>>({
+  nestedComparisons: {
+    item: ['id', 'name', 'quantity'],
+  },
+});
+
+const SelectableIngredientItem = React.memo(SelectableIngredientItemComponent, areIngredientPropsEqual);
+
+// Module-scope renderItem — zero runtime overhead (no compiler tracking/comparison)
+const renderSelectableIngredientItem = (info: ListRenderItemInfo<SelectableIngredientItemProps['item']>) => (
+  <SelectableIngredientItem {...info} />
+);
+
+// --- End module-scope FlashList infrastructure ---
 
 const RecipeDetailScreen: React.FC = () => {
   useScreenTransition('RecipeDetail');
@@ -168,33 +232,6 @@ const RecipeDetailScreen: React.FC = () => {
   const handleCloseManageSheet = () => {
     setShowManageSheet(false);
   };
-
-  // Render callbacks for list components
-  const renderSelectableIngredientItem = ({ item }: { item: NonNullable<typeof backendRecipe>['ingredients'][number] }) => {
-      const isSelected = selectedIngredients.has(item.id);
-      return (
-        <Pressable
-          style={({pressed}) => [styles.ingredientItem, pressed && styles.pressed]}
-          onPress={() => toggleIngredient(item.id)}
-        >
-          <Ionicons
-            name={isSelected ? 'checkbox' : 'square-outline'}
-            size={24}
-            color={
-              isSelected
-                ? theme.colors.primary
-                : theme.colors.textSecondary
-            }
-          />
-          <View style={styles.ingredientInfo}>
-            <Text style={styles.ingredientName}>{item.name}</Text>
-            <Text style={styles.ingredientAmount}>
-              {item.quantity ?? ''} {item.unit?.symbol || ''}
-            </Text>
-          </View>
-        </Pressable>
-      );
-    };
 
   const renderShoppingListItem = ({ item }: { item: (typeof shoppingLists)[number] }) => (
       <Pressable
@@ -701,14 +738,21 @@ const RecipeDetailScreen: React.FC = () => {
         snapPoints={['50%', '75%', '90%']}
         onDismiss={handleSheetDismiss}
       >
-        <FlashList
-          data={backendRecipe?.ingredients || []}
-          keyExtractor={(item) => item.id}
-          renderItem={renderSelectableIngredientItem}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No ingredients available</Text>
-          }
-        />
+        <SelectableIngredientProvider
+          selectedIngredients={selectedIngredients}
+          toggleIngredient={toggleIngredient}
+        >
+          <FlashList
+            data={backendRecipe?.ingredients || []}
+            keyExtractor={ingredientKeyExtractor}
+            renderItem={renderSelectableIngredientItem}
+            extraData={selectedIngredients.size}
+            drawDistance={200}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>No ingredients available</Text>
+            }
+          />
+        </SelectableIngredientProvider>
         <Pressable
           style={({pressed}) => [
             styles.addSelectedButton,

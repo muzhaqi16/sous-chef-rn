@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Switch, TextInput } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { createPropsComparator } from '#utils/memoUtils';
 import {
   type EditableMatch,
   getAvailabilityStatus,
@@ -21,7 +22,7 @@ const BADGE_CONFIG = {
   missing: { label: 'Missing', color: 'error' as const },
 } as const;
 
-export const IngredientMatchRow: React.FC<IngredientMatchRowProps> =
+const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> =
   ({ editableMatch, index, onUpdate }) => {
     const { theme } = useUnistyles();
     const { match, adjustedQuantity, isIncluded } = editableMatch;
@@ -96,7 +97,17 @@ export const IngredientMatchRow: React.FC<IngredientMatchRowProps> =
     );
   };
 
-IngredientMatchRow.displayName = 'IngredientMatchRow';
+IngredientMatchRowComponent.displayName = 'IngredientMatchRow';
+
+const areIngredientMatchRowPropsEqual = createPropsComparator<IngredientMatchRowProps>({
+  referenceKeys: ['index'],
+  nestedComparisons: {
+    editableMatch: ['adjustedQuantity', 'isIncluded'],
+    'editableMatch.match.ingredient': ['id'],
+  },
+});
+
+export const IngredientMatchRow = React.memo(IngredientMatchRowComponent, areIngredientMatchRowPropsEqual);
 
 const styles = StyleSheet.create(theme => ({
   row: {

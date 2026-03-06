@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { RefreshControl, Alert, useWindowDimensions, View, Platform } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { TabView, type Route } from 'react-native-tab-view';
@@ -55,6 +55,7 @@ interface ShoppingListTabsProps {
   onClearAllShopping?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
+  onCloseAllSwipeables?: () => void;
   // Pagination props for shopping tab
   onEndReachedUnpurchased?: () => void;
   hasMoreUnpurchased?: boolean;
@@ -118,6 +119,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onClearAllShopping,
   onSwipeableWillOpen,
   onSwipeableClose,
+  onCloseAllSwipeables,
   // Pagination props
   onEndReachedUnpurchased,
   hasMoreUnpurchased,
@@ -139,9 +141,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   listHeaderComponent }) => {
   const layout = useWindowDimensions();
 
-  // Track open swipeable across both tabs
-  const openSwipeableRef = useRef<any>(null);
-
   // TabView navigation state
   const [index, setIndex] = useState(0);
 
@@ -156,28 +155,10 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   const unpurchasedCount = totalCountUnpurchased ?? unpurchasedItems.length;
   const purchasedCount = totalCountPurchased ?? purchasedItems.length;
 
-  // Handle tab change - close any open swipeable
+  // Handle tab change - close any open swipeable via external coordinator
   const handleIndexChange = (newIndex: number) => {
-    if (openSwipeableRef.current) {
-      openSwipeableRef.current.current?.close();
-      openSwipeableRef.current = null;
-    }
+    onCloseAllSwipeables?.();
     setIndex(newIndex);
-  };
-
-  // Wrap swipeable handlers to use shared ref across tabs
-  const handleSwipeableWillOpen = (ref: any) => {
-      if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
-        openSwipeableRef.current.current?.close();
-      }
-      openSwipeableRef.current = ref;
-      onSwipeableWillOpen?.(ref);
-    };
-
-  // Handle swipeable close
-  const handleSwipeableClose = () => {
-    openSwipeableRef.current = null;
-    onSwipeableClose?.();
   };
 
   // Action callbacks for context provider — consumed by ShoppingTab/PurchasedTab
@@ -189,8 +170,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     onMoveToPantry,
     onQuantityPress,
     onSortOrderUpdate,
-    onSwipeableWillOpen: handleSwipeableWillOpen,
-    onSwipeableClose: handleSwipeableClose,
+    onSwipeableWillOpen,
+    onSwipeableClose,
   };
 
   const confirmAction = (
