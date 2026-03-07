@@ -6,7 +6,7 @@ import {
   Pressable,
   ActivityIndicator,
   Linking } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -17,6 +17,7 @@ import TurboImage from 'react-native-turbo-image';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { BackButton } from '#components/atoms/BackButton';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { FolderPicker } from '#components/molecules/FolderPicker';
@@ -30,8 +31,10 @@ import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
 import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
 import { useRecipeReviews } from '#/hooks/recipe/useRecipeReviews';
 import { ReviewSection } from '#/components/recipe/ReviewSection';
+import { createPropsComparator } from '#utils/memoUtils';
 import { useRecipeDetail } from './useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
+import { SelectableIngredientProvider, useSelectableIngredients } from './SelectableIngredientContext';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -41,9 +44,72 @@ const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
 
 const IngredientSeparator = () => <View style={{ width: 12 }} />;
 
+// --- Module-scope FlashList infrastructure for selectable ingredients ---
+
+interface SelectableIngredientItemProps {
+  item: {
+    id: string;
+    name: string;
+    quantity: number;
+    unit: { symbol: string } | null;
+  };
+}
+
+// Module-scope keyExtractor — zero runtime overhead
+const ingredientKeyExtractor = (item: { id: string }) => item.id;
+
+// Bridge component — reads selection state from context, theme from unistyles
+const SelectableIngredientItemComponent: React.FC<ListRenderItemInfo<SelectableIngredientItemProps['item']>> = ({
+  item,
+}) => {
+  const { selectedIngredients, toggleIngredient } = useSelectableIngredients();
+  const { theme } = useUnistyles();
+  const isSelected = selectedIngredients.has(item.id);
+
+  return (
+    <Pressable
+      style={({pressed}) => [styles.ingredientItem, pressed && styles.pressed]}
+      onPress={() => toggleIngredient(item.id)}
+    >
+      <Ionicons
+        name={isSelected ? 'checkbox' : 'square-outline'}
+        size={24}
+        color={
+          isSelected
+            ? theme.colors.primary
+            : theme.colors.textSecondary
+        }
+      />
+      <View style={styles.ingredientInfo}>
+        <Text style={styles.ingredientName}>{item.name}</Text>
+        <Text style={styles.ingredientAmount}>
+          {item.quantity ?? ''} {item.unit?.symbol || ''}
+        </Text>
+      </View>
+    </Pressable>
+  );
+};
+
+// PERFORMANCE: Custom comparator for React.memo — value-equality on nested item fields
+const areIngredientPropsEqual = createPropsComparator<ListRenderItemInfo<SelectableIngredientItemProps['item']>>({
+  nestedComparisons: {
+    item: ['id', 'name', 'quantity'],
+  },
+});
+
+const SelectableIngredientItem = React.memo(SelectableIngredientItemComponent, areIngredientPropsEqual);
+
+// Module-scope renderItem — zero runtime overhead (no compiler tracking/comparison)
+const renderSelectableIngredientItem = (info: ListRenderItemInfo<SelectableIngredientItemProps['item']>) => (
+  <SelectableIngredientItem {...info} />
+);
+
+// --- End module-scope FlashList infrastructure ---
+
 const RecipeDetailScreen: React.FC = () => {
   useScreenTransition('RecipeDetail');
   const { theme } = useUnistyles();
+  const insets = useSafeAreaInsets();
   const { navigate } = useAppNavigation();
   const { user } = useAuth();
   const {
@@ -168,33 +234,6 @@ const RecipeDetailScreen: React.FC = () => {
   const handleCloseManageSheet = () => {
     setShowManageSheet(false);
   };
-
-  // Render callbacks for list components
-  const renderSelectableIngredientItem = ({ item }: { item: NonNullable<typeof backendRecipe>['ingredients'][number] }) => {
-      const isSelected = selectedIngredients.has(item.id);
-      return (
-        <Pressable
-          style={({pressed}) => [styles.ingredientItem, pressed && styles.pressed]}
-          onPress={() => toggleIngredient(item.id)}
-        >
-          <Ionicons
-            name={isSelected ? 'checkbox' : 'square-outline'}
-            size={24}
-            color={
-              isSelected
-                ? theme.colors.primary
-                : theme.colors.textSecondary
-            }
-          />
-          <View style={styles.ingredientInfo}>
-            <Text style={styles.ingredientName}>{item.name}</Text>
-            <Text style={styles.ingredientAmount}>
-              {item.quantity ?? ''} {item.unit?.symbol || ''}
-            </Text>
-          </View>
-        </Pressable>
-      );
-    };
 
   const renderShoppingListItem = ({ item }: { item: (typeof shoppingLists)[number] }) => (
       <Pressable
@@ -352,8 +391,62 @@ const RecipeDetailScreen: React.FC = () => {
             </View>
           </View>
         )}
+        {!displayData.image && (
+          <View style={[styles.noImageHeader, { paddingTop: insets.top + theme.spacing.sm }]}>
+            <BackButton onPress={goBack} />
+            <View style={styles.noImageRightButtons}>
+              {!!recipeId && (
+                <Pressable
+                  onPress={() => setShowAddToMealPlanSheet(true)}
+                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                  accessibilityLabel="Add to meal plan"
+                >
+                  <Ionicons name="calendar-outline" size={22} color={theme.colors.primary} />
+                </Pressable>
+              )}
+              {!!isOwner && (
+                <Pressable
+                  onPress={handleEditRecipe}
+                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                >
+                  <Ionicons name="create-outline" size={22} color={theme.colors.primary} />
+                </Pressable>
+              )}
+              {!!showFolderIcon && (
+                <Pressable
+                  onPress={handleFolderPress}
+                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                  disabled={saving || updatingFolderTags}
+                >
+                  <Ionicons
+                    name={isInOtherFolder ? 'folder' : 'folder-outline'}
+                    size={22}
+                    color={theme.colors.primary}
+                  />
+                </Pressable>
+              )}
+              {!!showHeartIcon && (
+                <Pressable
+                  onPress={handleHeartPress}
+                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                  disabled={saving || updatingFolderTags}
+                >
+                  {saving || updatingFolderTags ? (
+                    <ActivityIndicator size="small" color={theme.colors.favorite} />
+                  ) : (
+                    <Ionicons
+                      name={isInFavorites ? 'heart' : 'heart-outline'}
+                      size={24}
+                      color={theme.colors.favorite}
+                    />
+                  )}
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
 
-        <View style={styles.content}>
+        <View style={[styles.content, !displayData.image && { marginTop: 0 }]}>
           <Text style={styles.title}>{displayData.title}</Text>
 
           {/* Recipe Metadata */}
@@ -363,7 +456,7 @@ const RecipeDetailScreen: React.FC = () => {
                 🍽️ {displayData.servings} servings
               </Text>
             )}
-            {displayData.readyInMinutes != null && (
+            {!!displayData.readyInMinutes && (
               <Text style={styles.metadataText}>
                 ⏱️ {displayData.readyInMinutes} min
               </Text>
@@ -591,15 +684,20 @@ const RecipeDetailScreen: React.FC = () => {
 
             return (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Recipe</Text>
-                {!!hasBackendInstructions && displayData.instructions.map((step: any, index: number) => (
-                    <View key={index} style={styles.instructionStep}>
-                      <Text style={styles.stepNumber}>
-                        {step.number || index + 1}.
-                      </Text>
-                      <Text style={styles.stepText}>{step.step}</Text>
-                    </View>
-                  ))}
+                <Text style={styles.sectionTitle}>Instructions</Text>
+                {!!hasBackendInstructions && displayData.instructions.map((step: any, index: number) => {
+                    // Support both formats:
+                    // User-created: { step: number, text: string }
+                    // Preloaded external: { number: number, step: string }
+                    const stepText = step.text ?? step.step;
+                    const stepNum = step.text != null ? (step.step ?? index + 1) : (step.number ?? index + 1);
+                    return (
+                      <View key={index} style={styles.instructionStep}>
+                        <Text style={styles.stepNumber}>{stepNum}.</Text>
+                        <Text style={styles.stepText}>{stepText}</Text>
+                      </View>
+                    );
+                  })}
                 {!!hasAnalyzedInstructions && displayData.instructions[0].steps.map(
                     (step: any, index: number) => (
                       <View key={index} style={styles.instructionStep}>
@@ -608,13 +706,22 @@ const RecipeDetailScreen: React.FC = () => {
                       </View>
                     ),
                   )}
-                {!hasBackendInstructions && !hasAnalyzedInstructions && !!hasHtmlInstructions && (
-                    <Text style={styles.description}>
-                      {displayData.instructionsHtml
-                        ?.replace(/<[^>]*>/g, '\n')
-                        .trim()}
-                    </Text>
-                  )}
+                {!hasBackendInstructions && !hasAnalyzedInstructions && !!hasHtmlInstructions && (() => {
+                    const steps = displayData.instructionsHtml!
+                      .replace(/<li[^>]*>/gi, '\n<STEP>')
+                      .replace(/<\/li>/gi, '')
+                      .replace(/<[^>]*>/g, '\n')
+                      .split('\n')
+                      .map(s => s.replace('<STEP>', '').trim())
+                      .filter(s => s.length > 0);
+
+                    return steps.map((step, index) => (
+                      <View key={index} style={styles.instructionStep}>
+                        <Text style={styles.stepNumber}>{index + 1}.</Text>
+                        <Text style={styles.stepText}>{step}</Text>
+                      </View>
+                    ));
+                  })()}
               </View>
             );
           })()}
@@ -701,14 +808,21 @@ const RecipeDetailScreen: React.FC = () => {
         snapPoints={['50%', '75%', '90%']}
         onDismiss={handleSheetDismiss}
       >
-        <FlashList
-          data={backendRecipe?.ingredients || []}
-          keyExtractor={(item) => item.id}
-          renderItem={renderSelectableIngredientItem}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No ingredients available</Text>
-          }
-        />
+        <SelectableIngredientProvider
+          selectedIngredients={selectedIngredients}
+          toggleIngredient={toggleIngredient}
+        >
+          <FlashList
+            data={backendRecipe?.ingredients || []}
+            keyExtractor={ingredientKeyExtractor}
+            renderItem={renderSelectableIngredientItem}
+            extraData={selectedIngredients.size}
+            drawDistance={200}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>No ingredients available</Text>
+            }
+          />
+        </SelectableIngredientProvider>
         <Pressable
           style={({pressed}) => [
             styles.addSelectedButton,
@@ -893,6 +1007,14 @@ const styles = StyleSheet.create(theme => ({
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
     elevation: 3 },
+  noImageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.md },
+  noImageRightButtons: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm },
   content: {
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.background,
@@ -994,7 +1116,8 @@ const styles = StyleSheet.create(theme => ({
   sectionTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm },
   addAllButton: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,

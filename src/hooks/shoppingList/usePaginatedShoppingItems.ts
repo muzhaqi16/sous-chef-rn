@@ -98,6 +98,16 @@ export function usePaginatedShoppingItems({
   const listIdChanged = previousListId !== listId;
   if (listIdChanged) { setPreviousListId(listId); }
 
+  // Defer purchased query until JS thread is idle — it's for the non-default tab
+  const [purchasedReady, setPurchasedReady] = useState(false);
+  if (listIdChanged) { setPurchasedReady(false); }
+
+  useEffect(() => {
+    if (shouldSkip) return;
+    const id = requestIdleCallback(() => setPurchasedReady(true));
+    return () => cancelIdleCallback(id);
+  }, [shouldSkip, listId]);
+
   // --- Two independent queries ---
   const {
     data: unpurchasedData,
@@ -123,7 +133,7 @@ export function usePaginatedShoppingItems({
     refetch: pRefetch,
   } = useGetShoppingListItemsFilteredQuery({
     variables: { id: listId!, first: PAGINATION.ITEMS_PAGE_SIZE, isPurchased: true },
-    skip: shouldSkip,
+    skip: shouldSkip || !purchasedReady,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',
     errorPolicy: 'all',
@@ -205,9 +215,8 @@ export function usePaginatedShoppingItems({
   ]);
 
   // --- Combined loading state ---
-  const loading = (uLoading || pLoading) &&
-    unpurchasedItems.length === 0 &&
-    purchasedItems.length === 0;
+  // Only block on unpurchased (the default tab); purchased is deferred
+  const loading = uLoading && unpurchasedItems.length === 0;
 
   return {
     unpurchased: {

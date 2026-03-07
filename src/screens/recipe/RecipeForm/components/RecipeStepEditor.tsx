@@ -1,6 +1,6 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native-unistyles';
-import BottomSheet, { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { FormTextArea } from '#components/molecules/FormTextArea';
@@ -19,7 +19,7 @@ interface RecipeStepEditorProps {
 
 export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditorProps>(
   ({ onSave }, ref) => {
-    const bottomSheetRef = useRef<BottomSheet>(null);
+    const bottomSheetRef = useRef<BottomSheetModal>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [instruction, setInstruction] = useState('');
 
@@ -32,9 +32,9 @@ export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditor
           setEditingId(null);
           setInstruction('');
         }
-        bottomSheetRef.current?.expand();
+        bottomSheetRef.current?.present();
       },
-      close: () => bottomSheetRef.current?.close() }));
+      close: () => bottomSheetRef.current?.dismiss() }));
 
     const handleSave = () => {
       if (!instruction.trim()) return;
@@ -42,18 +42,18 @@ export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditor
         id: editingId ?? `temp-step-${generateId()}`,
         instruction: instruction.trim(),
         sortOrder: 0 });
-      bottomSheetRef.current?.close();
+      bottomSheetRef.current?.dismiss();
     };
 
     const renderBackdrop = (props: BottomSheetBackdropProps) => (
-        <GlobalBottomSheetBackdrop {...props} />
+        <GlobalBottomSheetBackdrop {...props} onClose={() => bottomSheetRef.current?.dismiss()} />
       );
 
     return (
-      <BottomSheet
+      <BottomSheetModal
         ref={bottomSheetRef}
-        index={-1}
         snapPoints={['50%', '95%']}
+        enableDynamicSizing={false}
         keyboardBehavior="interactive"
         enablePanDownToClose
         backdropComponent={renderBackdrop}
@@ -65,7 +65,7 @@ export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditor
           centerTitle
           leftActions={[{
             icon: 'close',
-            onPress: () => bottomSheetRef.current?.close() }]}
+            onPress: () => bottomSheetRef.current?.dismiss() }]}
           rightActions={[{
             icon: 'checkmark',
             onPress: handleSave }]}
@@ -80,7 +80,7 @@ export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditor
             required
           />
         </BottomSheetFormScrollView>
-      </BottomSheet>
+      </BottomSheetModal>
     );
   },
 );
@@ -93,5 +93,6 @@ const styles = StyleSheet.create(theme => ({
   sheetBackground: {
     backgroundColor: theme.colors.background },
   content: {
+    paddingTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl } }));

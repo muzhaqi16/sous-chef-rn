@@ -121,6 +121,7 @@ const RestockActionFields: React.FC<{
     trackingUnitId: shared.trackingUnitId,
     trackingUnitSymbol: shared.trackingUnitSymbol,
     availableInTrackingUnit: shared.trackingQuantity,
+    conversionRatio: shared.selectedUnitInfo?.conversionRatio ?? null,
   });
 
   const currentInUnit = shared.isConvertedUnit

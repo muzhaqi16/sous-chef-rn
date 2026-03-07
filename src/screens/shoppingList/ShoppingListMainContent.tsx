@@ -142,7 +142,7 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     const [refreshing, setRefreshing] = useState(false);
 
     // Coordinate swipeable items so only one is open at a time
-    const { handleSwipeableWillOpen, handleSwipeableClose } = useSwipeableCoordinator();
+    const { handleSwipeableWillOpen, handleSwipeableClose, closeAll } = useSwipeableCoordinator();
 
     // Show swipe hint after items load
     useEffect(() => {
@@ -239,6 +239,7 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       onClearAllShopping: handleClearAllShopping,
       onSwipeableWillOpen: handleSwipeableWillOpen,
       onSwipeableClose: handleSwipeableClose,
+      onCloseAllSwipeables: closeAll,
       onBatchMoveToPantry: batchMoveToPantry });
 
     const listState = ({

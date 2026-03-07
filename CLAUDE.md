@@ -20,6 +20,12 @@
   pattern (`useState` + conditional `setState`) for comparing previous/current values.
 - **Hook return objects are auto-memoized by the compiler** — but only if the compiler doesn't
   bail out. Once try-catch is extracted, return objects like `{ actions }` become stable automatically.
+- **`React.memo` is unnecessary for most components** — the compiler caches JSX elements at the
+  parent call site, making `React.memo` redundant. **Exception: FlashList/FlatList `renderItem`
+  components** still need `React.memo` because the parent call site is either module-scope
+  (not compiled) or library internals (not compiled), so there is no compiled parent to cache
+  the element. Custom comparators doing value-equality on nested fields (via `createPropsComparator`)
+  remain valuable since the compiler only uses reference equality (`===`).
 
 ### `scheduleOnRN` Worklet Convention
 

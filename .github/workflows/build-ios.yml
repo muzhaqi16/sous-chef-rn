@@ -156,6 +156,6 @@ jobs:
           echo -n "$ASC_API_KEY_BASE64" | base64 --decode -o ~/.private_keys/AuthKey_${ASC_API_KEY_ID}.p8
           xcrun altool --upload-app \
             --type ios \
-            --file "$RUNNER_TEMP/build/SousChefRN.ipa" \
+            --file "$RUNNER_TEMP/build/SousChef.ipa" \
             --apiKey "$ASC_API_KEY_ID" \
             --apiIssuer "$ASC_API_ISSUER_ID"

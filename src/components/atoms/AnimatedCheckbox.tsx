@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
@@ -33,12 +33,12 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
 
   // Local state for pending visual state (shows immediately on press)
   // useRecyclingState auto-resets when itemId changes (FlashList view recycling)
-  const [pendingChecked, setPendingChecked] = useRecyclingState<boolean | null>(null, [itemId]);
-
-  // Reset shared value on recycling — useRecyclingState handles React state only
-  useEffect(() => {
-    isPressed.set(false);
-  }, [itemId, isPressed]);
+  // onReset callback synchronously resets shared values during render (before paint)
+  const [pendingChecked, setPendingChecked] = useRecyclingState<boolean | null>(
+    null,
+    [itemId],
+    () => { isPressed.set(false); },
+  );
 
   // Determine visual checked state: pending takes priority, otherwise actual
   const visuallyChecked = pendingChecked !== null ? pendingChecked : checked;
@@ -52,26 +52,24 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
     }
   }
 
-  // Color animation — only re-evaluates when visuallyChecked changes
-  const animatedColorStyle = useAnimatedStyle(() => ({
-    backgroundColor: withTiming(
-      visuallyChecked ? theme.colors.primary : 'transparent',
-      { duration: TIMING.INSTANT, easing: standardEasing },
-    ),
-    borderColor: withTiming(
-      visuallyChecked ? theme.colors.primary : theme.colors.border,
-      { duration: TIMING.INSTANT, easing: standardEasing },
-    ) }), [visuallyChecked, theme]);
-
-  // Scale animation — separated so press changes don't re-evaluate color withTiming
-  const animatedScaleStyle = useAnimatedStyle(() => {
+  // Combined color + scale animation
+  const animatedStyle = useAnimatedStyle(() => {
     const baseScale = visuallyChecked ? 1.05 : 1;
     const pressScale = isPressed.value ? 0.9 : 1;
     return {
+      backgroundColor: withTiming(
+        visuallyChecked ? theme.colors.primary : 'transparent',
+        { duration: TIMING.INSTANT, easing: standardEasing },
+      ),
+      borderColor: withTiming(
+        visuallyChecked ? theme.colors.primary : theme.colors.border,
+        { duration: TIMING.INSTANT, easing: standardEasing },
+      ),
       transform: [
         { scale: withTiming(baseScale * pressScale, { duration: TIMING.INSTANT, easing: standardEasing }) },
-      ] };
-  }, [visuallyChecked]);
+      ],
+    };
+  }, [visuallyChecked, theme]);
 
   const handlePressIn = () => {
     if (!disabled) {
@@ -113,8 +111,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
         style={[
           styles.container,
           { width: size, height: size, borderRadius: 6 },
-          animatedColorStyle,
-          animatedScaleStyle,
+          animatedStyle,
         ]}
       >
         {/* PERFORMANCE: Simple conditional render without layout animations */}

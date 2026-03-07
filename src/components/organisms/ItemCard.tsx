@@ -112,7 +112,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
   );
 };
 
-export const ItemCard = ItemCardComponent;
+export const ItemCard = React.memo(ItemCardComponent);
 
 const styles = StyleSheet.create(theme => ({
   container: {

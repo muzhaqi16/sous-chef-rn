@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import {
   BottomSheetModal,
   BottomSheetView } from '@gorhom/bottom-sheet';
@@ -8,9 +8,24 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { IngredientMatchRow } from '#components/recipe/IngredientMatchRow';
+import {
+  IngredientMatchingProvider,
+  useIngredientMatchingActions,
+} from '#components/modals/IngredientMatchingContext';
 import type {
   EditableMatch,
   MatchSummary } from '#hooks/recipe/useRecipeIngredientMatching';
+
+const keyExtractor = (item: EditableMatch) => item.match.ingredient.id;
+
+const IngredientMatchRenderItem = ({ item, index }: { item: EditableMatch; index: number }) => {
+  const { onUpdate } = useIngredientMatchingActions();
+  return <IngredientMatchRow editableMatch={item} index={index} onUpdate={onUpdate} />;
+};
+
+const renderItem = ({ item, index }: ListRenderItemInfo<EditableMatch>) => (
+  <IngredientMatchRenderItem item={item} index={index} />
+);
 
 interface IngredientMatchingSheetProps {
   visible: boolean;
@@ -40,16 +55,6 @@ export const IngredientMatchingSheet: React.FC<IngredientMatchingSheetProps> =
       visible,
       onDismiss: onClose,
       snapPoints: ['80%'] });
-
-    const renderItem = ({ item, index }: { item: EditableMatch; index: number }) => (
-        <IngredientMatchRow
-          editableMatch={item}
-          index={index}
-          onUpdate={onUpdate}
-        />
-      );
-
-    const keyExtractor = (item: EditableMatch) => item.match.ingredient.id;
 
     return (
       <BottomSheetModal ref={ref} {...modalProps}>
@@ -88,13 +93,16 @@ export const IngredientMatchingSheet: React.FC<IngredientMatchingSheetProps> =
           </View>
 
           {/* Ingredient list */}
-          <FlashList
-            data={editableMatches}
-            renderItem={renderItem}
-            keyExtractor={keyExtractor}
-            style={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
+          <IngredientMatchingProvider onUpdate={onUpdate}>
+            <FlashList
+              data={editableMatches}
+              renderItem={renderItem}
+              keyExtractor={keyExtractor}
+              drawDistance={200}
+              style={styles.list}
+              showsVerticalScrollIndicator={false}
+            />
+          </IngredientMatchingProvider>
 
           {/* Bottom actions */}
           <View style={styles.bottomActions}>

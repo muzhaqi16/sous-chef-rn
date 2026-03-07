@@ -136,7 +136,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
   },
   pressed: {
     opacity: theme.opacity.pressed,

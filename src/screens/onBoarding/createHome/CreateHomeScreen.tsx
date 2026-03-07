@@ -10,6 +10,9 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { formatRole } from '#utils/formatters/roleFormatters';
+import { createPropsComparator } from '#utils/memoUtils';
+import type { HomeInviteFragment } from '#generated';
+import { InviteActionsProvider, useInviteActions } from './InviteActionsContext';
 
 // Components
 import { FormContent, type FormValues } from './FormContent';
@@ -134,9 +137,93 @@ function syncExistingResources(
   setCheckingExisting(false);
 }
 
+// --- Module-scope FlashList helpers ---
+
+const inviteKeyExtractor = (invite: { id: string }) => invite.id;
+
+interface InviteRenderItemProps {
+  item: HomeInviteFragment;
+}
+
+const InviteRenderItemComponent: React.FC<InviteRenderItemProps> = ({ item: invite }) => {
+  const { theme } = useUnistyles();
+  const { handleAcceptInvite, handleDeclineInvite, accepting } = useInviteActions();
+
+  const inviterName =
+    invite.inviter?.profile?.displayName ||
+    invite.inviter?.email ||
+    'Someone';
+  const inviteHomeName = invite.home?.name || 'Unknown Home';
+
+  return (
+    <View style={styles.inviteCard}>
+      <Text style={styles.inviteHomeName}>{inviteHomeName}</Text>
+
+      <View style={styles.inviteDetailsContainer}>
+        <Text style={styles.inviteDetail}>
+          <Text style={styles.inviteDetailLabel}>From: </Text>
+          <Text style={styles.inviteDetailValue}>
+            {inviterName}
+          </Text>
+        </Text>
+
+        <Text style={styles.inviteDetail}>
+          <Text style={styles.inviteDetailLabel}>Role: </Text>
+          <Text style={styles.inviteRoleText}>
+            {formatRole(invite.role)}
+          </Text>
+        </Text>
+      </View>
+
+      <View style={styles.inviteActions}>
+        <Pressable
+          style={({pressed}) => [styles.button, styles.inviteDeclineButton, pressed && styles.pressed]}
+          onPress={() =>
+            handleDeclineInvite(invite.id, inviteHomeName)
+          }
+          disabled={accepting}
+        >
+          <Text style={styles.inviteDeclineButtonText}>
+            Decline
+          </Text>
+        </Pressable>
+        <Pressable
+          style={({pressed}) => [styles.button, styles.inviteAcceptButton, pressed && styles.pressed]}
+          onPress={() => handleAcceptInvite(invite.id)}
+          disabled={accepting}
+        >
+          {accepting ? (
+            <ActivityIndicator
+              size="small"
+              color={theme.colors.white}
+            />
+          ) : (
+            <Text style={styles.inviteAcceptButtonText}>
+              Accept
+            </Text>
+          )}
+        </Pressable>
+      </View>
+    </View>
+  );
+};
+
+const areInvitePropsEqual = createPropsComparator<InviteRenderItemProps>({
+  nestedComparisons: {
+    item: ['id'],
+    'item.home': ['name'],
+    'item.inviter': ['email'],
+  },
+});
+
+const InviteRenderItem = React.memo(InviteRenderItemComponent, areInvitePropsEqual);
+
+const renderInviteItem = ({ item }: { item: HomeInviteFragment }) => (
+  <InviteRenderItem item={item} />
+);
+
 const CreateHomeScreenComponent = () => {
   useScreenTransition('CreateHomeScreen');
-  const { theme } = useUnistyles();
   const { navigateToNextStep, setUserNavigationState, skipToStep } =
     useOnboardingNavigation();
 
@@ -365,66 +452,6 @@ const CreateHomeScreenComponent = () => {
     );
   };
 
-  const renderInviteItem = ({ item: invite }: { item: (typeof pendingInvites)[number] }) => {
-      const inviterName =
-        invite.inviter?.profile?.displayName ||
-        invite.inviter?.email ||
-        'Someone';
-      const inviteHomeName = invite.home?.name || 'Unknown Home';
-
-      return (
-        <View style={styles.inviteCard}>
-          <Text style={styles.inviteHomeName}>{inviteHomeName}</Text>
-
-          <View style={styles.inviteDetailsContainer}>
-            <Text style={styles.inviteDetail}>
-              <Text style={styles.inviteDetailLabel}>From: </Text>
-              <Text style={styles.inviteDetailValue}>
-                {inviterName}
-              </Text>
-            </Text>
-
-            <Text style={styles.inviteDetail}>
-              <Text style={styles.inviteDetailLabel}>Role: </Text>
-              <Text style={styles.inviteRoleText}>
-                {formatRole(invite.role)}
-              </Text>
-            </Text>
-          </View>
-
-          <View style={styles.inviteActions}>
-            <Pressable
-              style={({pressed}) => [styles.button, styles.inviteDeclineButton, pressed && styles.pressed]}
-              onPress={() =>
-                handleDeclineInvite(invite.id, inviteHomeName)
-              }
-              disabled={accepting}
-            >
-              <Text style={styles.inviteDeclineButtonText}>
-                Decline
-              </Text>
-            </Pressable>
-            <Pressable
-              style={({pressed}) => [styles.button, styles.inviteAcceptButton, pressed && styles.pressed]}
-              onPress={() => handleAcceptInvite(invite.id)}
-              disabled={accepting}
-            >
-              {accepting ? (
-                <ActivityIndicator
-                  size="small"
-                  color={theme.colors.white}
-                />
-              ) : (
-                <Text style={styles.inviteAcceptButtonText}>
-                  Accept
-                </Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
-      );
-    };
-
   // Loading state
   if (
     checkingExisting ||
@@ -459,11 +486,18 @@ const CreateHomeScreenComponent = () => {
       >
         <View style={styles.invitesContainer}>
           <Text style={styles.invitesSectionTitle}>Pending Invitations</Text>
-          <FlashList
-            data={pendingInvites}
-            keyExtractor={invite => invite.id}
-            renderItem={renderInviteItem}
-          />
+          <InviteActionsProvider
+            handleAcceptInvite={handleAcceptInvite}
+            handleDeclineInvite={handleDeclineInvite}
+            accepting={accepting}
+          >
+            <FlashList
+              data={pendingInvites}
+              keyExtractor={inviteKeyExtractor}
+              renderItem={renderInviteItem}
+              extraData={accepting}
+            />
+          </InviteActionsProvider>
         </View>
 
         <View style={styles.orDivider}>

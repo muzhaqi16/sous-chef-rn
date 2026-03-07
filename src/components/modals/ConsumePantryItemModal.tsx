@@ -110,6 +110,7 @@ const ConsumeActionFields: React.FC<{
     trackingUnitId: shared.trackingUnitId,
     trackingUnitSymbol: shared.trackingUnitSymbol,
     availableInTrackingUnit: shared.trackingQuantity,
+    conversionRatio: shared.selectedUnitInfo?.conversionRatio ?? null,
   });
 
   // Use converted available quantity when using a non-tracking unit

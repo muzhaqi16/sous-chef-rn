@@ -272,7 +272,7 @@ export const useConfigurableSettings = (profile: any) => {
             ];
             baseItem.onSave = (value: ThemePreference) => {
               setTheme(value);
-              updateUserPreferences({ theme: value });
+              updateUserPreferences({ ui: { theme: value } });
             };
           }
           break;
@@ -287,7 +287,7 @@ export const useConfigurableSettings = (profile: any) => {
                   ? ThemePreference.LIGHT
                   : ThemePreference.DARK;
               setTheme(newTheme);
-              updateUserPreferences({ theme: newTheme });
+              updateUserPreferences({ ui: { theme: newTheme } });
             };
           }
           break;
@@ -302,7 +302,7 @@ export const useConfigurableSettings = (profile: any) => {
             ];
             baseItem.onSave = (value: string) => {
               setLanguage(value);
-              updateUserPreferences({ language: value });
+              updateUserPreferences({ regional: { language: value } });
             };
           }
           break;

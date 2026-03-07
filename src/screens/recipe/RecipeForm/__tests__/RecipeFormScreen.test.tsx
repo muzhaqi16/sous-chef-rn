@@ -17,6 +17,7 @@ jest.mock('#generated', () => ({
   useGetRecipeQuery: jest.fn(() => ({ data: null })),
   useCreateRecipeMutation: () => [mockCreateRecipe, { loading: false }],
   useUpdateRecipeMutation: () => [mockUpdateRecipe, { loading: false }],
+  useUpdateRecipeIngredientsMutation: () => [jest.fn(), { loading: false }],
   Difficulty: { Easy: 'EASY' },
   RecipeCategory: { MainCourse: 'MAIN_COURSE' },
   Visibility: { Public: 'PUBLIC' },

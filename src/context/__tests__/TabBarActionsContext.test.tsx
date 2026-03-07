@@ -187,8 +187,8 @@ describe('TabBarActionsContext', () => {
       });
 
       expect(result.current.addButtonConfig).toEqual({
-        icon: 'search',
-        iconLibrary: 'Feather',
+        icon: 'add',
+        iconLibrary: 'Ionicons',
       });
     });
 

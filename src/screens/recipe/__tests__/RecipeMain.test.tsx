@@ -37,6 +37,17 @@ jest.mock('#/hooks/recipe/useSavedRecipes', () => ({
   })),
 }));
 
+jest.mock('#/hooks/recipe/useRecipeManagement', () => ({
+  useRecipeManagement: jest.fn(() => ({
+    recipes: [],
+    loading: false,
+    refetch: jest.fn(),
+    loadMore: jest.fn(),
+    hasMore: false,
+    totalCount: 0,
+  })),
+}));
+
 jest.mock('#/hooks/recipe/useRecipeFolders', () => ({
   useRecipeFolders: jest.fn(() => ({
     folders: [],
@@ -65,7 +76,9 @@ jest.mock('#/services/recipeApi/SpoonacularService', () => ({
 
 jest.mock('#generated', () => ({
   useUnfavoriteRecipeMutation: jest.fn(() => [jest.fn()]),
+  useDeleteRecipeMutation: jest.fn(() => [jest.fn()]),
   MySavedRecipesDocument: {},
+  MyRecipesDocument: {},
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -82,6 +95,7 @@ let mockItemListImpl: (props: AnyProps) => React.ReactElement | null = () => nul
 let mockFilterTabsImpl: (props: AnyProps) => React.ReactElement | null = () => null;
 let mockFolderPickerImpl: (props: AnyProps) => React.ReactElement | null = () => null;
 let mockTagPickerImpl: (props: AnyProps) => React.ReactElement | null = () => null;
+let mockSegmentedControlImpl: (props: AnyProps) => React.ReactElement | null = () => null;
 
 jest.mock('#components/organisms/ItemList', () => ({
   ItemList: (props: AnyProps) => mockItemListImpl(props),
@@ -97,6 +111,10 @@ jest.mock('#components/molecules/TagPicker', () => ({
 
 jest.mock('#components/molecules/FilterTabs/FilterTabs', () => ({
   FilterTabs: (props: AnyProps) => mockFilterTabsImpl(props),
+}));
+
+jest.mock('#components/molecules/SegmentedControl', () => ({
+  SegmentedControl: (props: AnyProps) => mockSegmentedControlImpl(props),
 }));
 
 const mockDeferredScreen = jest.fn(({ fallback }: any) => fallback);
@@ -142,6 +160,7 @@ describe('RecipeMain', () => {
     mockFilterTabsImpl = () => null;
     mockFolderPickerImpl = () => null;
     mockTagPickerImpl = () => null;
+    mockSegmentedControlImpl = () => null;
   });
 
   it('renders the outer component with fallback', () => {
@@ -1617,5 +1636,313 @@ describe('RecipeMain', () => {
     // After tag selection, should show only 1
     expect(capturedItems!.length).toBe(1);
     expect(capturedItems![0].title).toBe('Easy Recipe');
+  });
+
+  // --- SegmentedControl / My Recipes view tests ---
+
+  it('renders SegmentedControl in inner component', () => {
+    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
+      <Component />
+    ));
+
+    let capturedProps: AnyProps | undefined;
+    mockSegmentedControlImpl = (props: AnyProps) => {
+      capturedProps = props;
+      return null;
+    };
+
+    render(<RecipeMain />);
+
+    expect(capturedProps).toBeDefined();
+    expect(capturedProps!.value).toBe('saved');
+    expect(capturedProps!.options).toEqual(['saved', 'myRecipes']);
+    expect(capturedProps!.size).toBe('compact');
+  });
+
+  it('switches to My Recipes view and shows user-created recipes', () => {
+    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
+      <Component />
+    ));
+
+    const { useRecipeManagement } = jest.requireMock('#/hooks/recipe/useRecipeManagement');
+    useRecipeManagement.mockReturnValue({
+      recipes: [
+        { id: 'my-1', name: 'My Pasta', description: 'Homemade', servings: 4, totalTimeMinutes: 30, imageUrl: null },
+      ],
+      loading: false,
+      refetch: jest.fn(),
+      loadMore: jest.fn(),
+      hasMore: false,
+      totalCount: 1,
+    });
+
+    let capturedItems: any[] | undefined;
+    mockItemListImpl = (props: AnyProps) => {
+      capturedItems = props.items;
+      return null;
+    };
+
+    let capturedOnChange: ((value: string) => void) | undefined;
+    mockSegmentedControlImpl = (props: AnyProps) => {
+      capturedOnChange = props.onChange;
+      return null;
+    };
+
+    render(<RecipeMain />);
+
+    // Switch to My Recipes
+    act(() => {
+      capturedOnChange!('myRecipes');
+    });
+
+    expect(capturedItems!.length).toBe(1);
+    expect(capturedItems![0].id).toBe('my-1');
+    expect(capturedItems![0].title).toBe('My Pasta');
+  });
+
+  it('shows My Recipes empty state with Create Recipe action', () => {
+    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
+      <Component />
+    ));
+
+    let capturedEmptyState: any;
+    mockItemListImpl = (props: AnyProps) => {
+      capturedEmptyState = props.emptyState;
+      return null;
+    };
+
+    let capturedOnChange: ((value: string) => void) | undefined;
+    mockSegmentedControlImpl = (props: AnyProps) => {
+      capturedOnChange = props.onChange;
+      return null;
+    };
+
+    render(<RecipeMain />);
+
+    act(() => {
+      capturedOnChange!('myRecipes');
+    });
+
+    expect(capturedEmptyState.title).toBe('No recipes yet');
+    expect(capturedEmptyState.description).toBe('Create your first recipe');
+    expect(capturedEmptyState.icon).toBe('create-outline');
+    expect(capturedEmptyState.action.label).toBe('Create Recipe');
+  });
+
+  it('navigates to RecipeDetail with recipeId for My Recipes items', () => {
+    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
+      <Component />
+    ));
+
+    const mockNavigate = jest.fn();
+    const { useAppNavigation } = jest.requireMock('#hooks/navigation/useAppNavigation');
+    useAppNavigation.mockReturnValue({
+      navigate: mockNavigate,
+      goBack: jest.fn(),
+    });
+
+    const { useRecipeManagement } = jest.requireMock('#/hooks/recipe/useRecipeManagement');
+    useRecipeManagement.mockReturnValue({
+      recipes: [
+        { id: 'my-1', name: 'My Pasta', servings: 2, totalTimeMinutes: 20, imageUrl: null },
+      ],
+      loading: false,
+      refetch: jest.fn(),
+      loadMore: jest.fn(),
+      hasMore: false,
+      totalCount: 1,
+    });
+
+    let capturedOnItemPress: ((id: string | number) => void) | undefined;
+    mockItemListImpl = (props: AnyProps) => {
+      capturedOnItemPress = props.onItemPress;
+      return null;
+    };
+
+    let capturedOnChange: ((value: string) => void) | undefined;
+    mockSegmentedControlImpl = (props: AnyProps) => {
+      capturedOnChange = props.onChange;
+      return null;
+    };
+
+    render(<RecipeMain />);
+
+    act(() => {
+      capturedOnChange!('myRecipes');
+    });
+
+    act(() => {
+      capturedOnItemPress!('my-1');
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('RecipeDetail', { recipeId: 'my-1' });
+  });
+
+  it('calls deleteRecipeMutation when deleting a My Recipes item', async () => {
+    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
+      <Component />
+    ));
+
+    const mockDelete = jest.fn().mockResolvedValue({});
+    const { useDeleteRecipeMutation } = jest.requireMock('#generated');
+    useDeleteRecipeMutation.mockReturnValue([mockDelete]);
+
+    const { useRecipeManagement } = jest.requireMock('#/hooks/recipe/useRecipeManagement');
+    useRecipeManagement.mockReturnValue({
+      recipes: [
+        { id: 'my-1', name: 'Delete Me', servings: 2, totalTimeMinutes: 10, imageUrl: null },
+      ],
+      loading: false,
+      refetch: jest.fn(),
+      loadMore: jest.fn(),
+      hasMore: false,
+      totalCount: 1,
+    });
+
+    let capturedOnItemDelete: ((id: string) => Promise<void>) | undefined;
+    mockItemListImpl = (props: AnyProps) => {
+      capturedOnItemDelete = props.onItemDelete;
+      return null;
+    };
+
+    let capturedOnChange: ((value: string) => void) | undefined;
+    mockSegmentedControlImpl = (props: AnyProps) => {
+      capturedOnChange = props.onChange;
+      return null;
+    };
+
+    render(<RecipeMain />);
+
+    act(() => {
+      capturedOnChange!('myRecipes');
+    });
+
+    await act(async () => {
+      await capturedOnItemDelete!('my-1');
+    });
+
+    expect(mockDelete).toHaveBeenCalledWith({ variables: { id: 'my-1' } });
+  });
+
+  it('hides FilterTabs, FolderPicker, TagPicker in My Recipes view', () => {
+    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
+      <Component />
+    ));
+
+    const { useRecipeFolders } = jest.requireMock('#/hooks/recipe/useRecipeFolders');
+    useRecipeFolders.mockReturnValue({ folders: ['Dinner'] });
+
+    const { useRecipeTags } = jest.requireMock('#/hooks/recipe/useRecipeTags');
+    useRecipeTags.mockReturnValue({ tags: ['easy'] });
+
+    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    useSavedRecipes.mockReturnValue({
+      recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Dinner', tags: ['easy'] }],
+      loading: false,
+      refetch: jest.fn(),
+    });
+
+    let filterTabsRendered = false;
+    mockFilterTabsImpl = () => {
+      filterTabsRendered = true;
+      return null;
+    };
+
+    let folderPickerRendered = false;
+    mockFolderPickerImpl = () => {
+      folderPickerRendered = true;
+      return null;
+    };
+
+    let tagPickerRendered = false;
+    mockTagPickerImpl = () => {
+      tagPickerRendered = true;
+      return null;
+    };
+
+    let capturedOnChange: ((value: string) => void) | undefined;
+    mockSegmentedControlImpl = (props: AnyProps) => {
+      capturedOnChange = props.onChange;
+      return null;
+    };
+
+    render(<RecipeMain />);
+
+    // Verify they render in saved view
+    expect(filterTabsRendered).toBe(true);
+    expect(folderPickerRendered).toBe(true);
+    expect(tagPickerRendered).toBe(true);
+
+    // Reset flags
+    filterTabsRendered = false;
+    folderPickerRendered = false;
+    tagPickerRendered = false;
+
+    // Switch to My Recipes
+    act(() => {
+      capturedOnChange!('myRecipes');
+    });
+
+    expect(filterTabsRendered).toBe(false);
+    expect(folderPickerRendered).toBe(false);
+    expect(tagPickerRendered).toBe(false);
+  });
+
+  it('filters My Recipes by search query', () => {
+    mockDeferredScreen.mockImplementation(({ component: Component }: any) => (
+      <Component />
+    ));
+
+    const { useRecipeManagement } = jest.requireMock('#/hooks/recipe/useRecipeManagement');
+    useRecipeManagement.mockReturnValue({
+      recipes: [
+        { id: 'my-1', name: 'Pasta Carbonara', description: 'Italian', servings: 2, totalTimeMinutes: 30, imageUrl: null },
+        { id: 'my-2', name: 'Chicken Tikka', description: 'Indian', servings: 4, totalTimeMinutes: 45, imageUrl: null },
+      ],
+      loading: false,
+      refetch: jest.fn(),
+      loadMore: jest.fn(),
+      hasMore: false,
+      totalCount: 2,
+    });
+
+    let capturedItems: any[] | undefined;
+    mockItemListImpl = (props: AnyProps) => {
+      capturedItems = props.items;
+      return null;
+    };
+
+    let capturedOnChange: ((value: string) => void) | undefined;
+    mockSegmentedControlImpl = (props: AnyProps) => {
+      capturedOnChange = props.onChange;
+      return null;
+    };
+
+    let capturedOnChangeText: ((text: string) => void) | undefined;
+    const SearchBarModule = require('#components/molecules/SearchBar');
+    const originalSearchBar = SearchBarModule.SearchBar;
+    SearchBarModule.SearchBar = ({ onChangeText }: AnyProps) => {
+      capturedOnChangeText = onChangeText;
+      return null;
+    };
+
+    render(<RecipeMain />);
+
+    act(() => {
+      capturedOnChange!('myRecipes');
+    });
+
+    // Shows both initially
+    expect(capturedItems!.length).toBe(2);
+
+    act(() => {
+      capturedOnChangeText!('pasta');
+    });
+
+    // Should filter to 1
+    expect(capturedItems!.length).toBe(1);
+    expect(capturedItems![0].title).toBe('Pasta Carbonara');
+
+    SearchBarModule.SearchBar = originalSearchBar;
   });
 });

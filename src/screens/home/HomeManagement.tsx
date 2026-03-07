@@ -17,7 +17,6 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useHomeManagement } from '#hooks/home/hooks/useHomeManagement';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
-import { useAuth } from '#/hooks/auth/useAuth';
 import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
 import { Button } from '#/components/base/Button';
@@ -26,7 +25,6 @@ import { HomeStats } from '#/components/organisms/home/HomeStats';
 import { CreateHomeForm } from '#/components/organisms/home/CreateHomeForm';
 import { HomeCard, type PartialHome } from '#/components/organisms/home/HomeCard';
 import {
-  findUserMembership,
   getInvitableRoles,
   canInviteToHome } from '#/utils/permissions/homePermissions';
 import { commonStyles } from '#/styles/commonStyles';
@@ -38,7 +36,6 @@ import { SousChefLoader } from '#/components/base/SousChefLoader';
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
   const { goBack, navigate } = useAppNavigation();
-  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const { theme } = useUnistyles();
 
@@ -83,7 +80,7 @@ export const HomeManagement: React.FC = () => {
         return;
       }
 
-      const membership = findUserMembership(home.members, user?.id);
+      const membership = home.myMembership;
       if (!membership) {
         toastService.error('You are not a member of this home');
         return;
@@ -351,9 +348,8 @@ export const HomeManagement: React.FC = () => {
             }
           >
             {sortedHomes.map((home, index) => {
-              const membership = findUserMembership(home.members, user?.id);
-              const userCanInvite = membership
-                ? canInviteToHome(membership.role)
+              const userCanInvite = home.myMembership
+                ? canInviteToHome(home.myMembership.role)
                 : false;
               const userCanDelete = home.myMembership?.canManageHome ?? false;
 

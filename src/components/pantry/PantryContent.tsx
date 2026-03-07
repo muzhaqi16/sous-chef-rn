@@ -13,7 +13,8 @@ import { SearchBar } from '../molecules/SearchBar';
 import { FilterTabs } from '../molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '../molecules/FilterTabs/types';
 import { SectionHeader } from '../molecules/SectionHeader';
-import { PantryItemCard, ItemVariant } from './PantryItemCard';
+import { PantryItemCard, type ItemVariant } from './PantryItemCard';
+import { PantryThemeProvider, usePantryTheme } from './PantryThemeContext';
 import { PantryHeader } from './PantryHeader';
 import { PantrySortModal } from './PantrySortModal';
 import {
@@ -34,6 +35,7 @@ import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { EmptyState } from '#components/base/EmptyState';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
+import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { differenceInCalendarDays } from 'date-fns';
@@ -218,8 +220,44 @@ const getLocationString = (
   }
 };
 
+// Module-scope getItemType — separate recycling pools by layout shape
+const getItemType = (item: PantryItem): string => {
+  if (item.quantity === 0) return 'out-of-stock';
+  if (!item.expiresAt) return 'no-expiry';
+  return 'with-expiry';
+};
+
 // Module-scope keyExtractor — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: PantryItem) => item.id;
+
+// Module-scope renderItem — stable reference, no closure recreation per render
+const renderItem = ({ item }: ListRenderItemInfo<PantryItem>) => {
+  if (!item) return null;
+  return <PantryRenderItem item={item} />;
+};
+
+// Module-scope bridge component — reads expirationColors from context
+const PantryRenderItem: React.FC<{ item: PantryItem }> = ({ item }) => {
+  const expirationColors = usePantryTheme();
+  const display = computeItemDisplay(item, expirationColors, getLocationString);
+  return (
+    <PantryItemCard
+      id={item.id}
+      name={item.itemName || 'Unknown Item'}
+      expirationText={display.expirationText}
+      expirationVariant={display.expirationVariant}
+      expirationColor={display.expirationColor}
+      quantity={display.quantityDisplay}
+      location={display.location}
+      variant={display.variant}
+      imageUrl={display.imageUrl}
+      isOutOfStock={display.isOutOfStock}
+      packageBreakdownText={display.packageBreakdownText}
+      remainingNetWeightText={display.remainingNetWeightText}
+      quantityBreakdownText={display.quantityBreakdownText}
+    />
+  );
+};
 
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
@@ -429,11 +467,16 @@ export const PantryContent = React.forwardRef<
       onSortChange,
     });
 
-    // Actions for context provider
+    // Actions for context provider — wrap delete to prepare FlashList for layout animation
     const itemActions: PantryItemActions = {
       onItemPress,
       onItemEdit,
-      onItemDelete,
+      onItemDelete: onItemDelete
+        ? (id: string) => {
+            flashListRef.current?.prepareForLayoutAnimationRender();
+            onItemDelete(id);
+          }
+        : undefined,
       onItemConsume,
       onItemWaste,
       onItemRestock,
@@ -490,33 +533,6 @@ export const PantryContent = React.forwardRef<
         prevSortDirection.current = sortDirection;
       }
     }, [locationFilter, sortOption, sortDirection]);
-
-    const renderItem = ({ item }: ListRenderItemInfo<PantryItem>) => {
-      if (!item) return null;
-      const display = computeItemDisplay(
-        item,
-        expirationColors,
-        getLocationString,
-      );
-
-      return (
-        <PantryItemCard
-          id={item.id}
-          name={item.itemName || 'Unknown Item'}
-          expirationText={display.expirationText}
-          expirationVariant={display.expirationVariant}
-          expirationColor={display.expirationColor}
-          quantity={display.quantityDisplay}
-          location={display.location}
-          variant={display.variant}
-          imageUrl={display.imageUrl}
-          isOutOfStock={display.isOutOfStock}
-          packageBreakdownText={display.packageBreakdownText}
-          remainingNetWeightText={display.remainingNetWeightText}
-          quantityBreakdownText={display.quantityBreakdownText}
-        />
-      );
-    };
 
     // Build tabs with optional add button at the end
     const tabsWithAddButton = (() => {
@@ -610,59 +626,63 @@ export const PantryContent = React.forwardRef<
           {/* Content List */}
           <View style={styles.listContainer}>
             <View style={styles.contentFill}>
-              <FlashList<PantryItem>
-                ref={flashListRef}
-                testID="pantry-list"
-                data={showSkeletons ? EMPTY_ARRAY : deferredSortedItems}
-                renderItem={renderItem}
-                keyExtractor={keyExtractor}
-                extraData={extraData}
-                contentContainerStyle={listContentStyle}
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                  onRefresh ? (
-                    <RefreshControl
-                      testID="pantry-refresh-control"
-                      refreshing={refreshing}
-                      onRefresh={onRefresh}
+              <PantryThemeProvider value={expirationColors}>
+                <FlashList<PantryItem>
+                  ref={flashListRef}
+                  CellRendererComponent={AnimatedCellRenderer}
+                  testID="pantry-list"
+                  data={showSkeletons ? EMPTY_ARRAY : deferredSortedItems}
+                  renderItem={renderItem}
+                  keyExtractor={keyExtractor}
+                  getItemType={getItemType}
+                  drawDistance={400}
+                  extraData={extraData}
+                  contentContainerStyle={listContentStyle}
+                  showsVerticalScrollIndicator={false}
+                  refreshControl={
+                    onRefresh ? (
+                      <RefreshControl
+                        testID="pantry-refresh-control"
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                      />
+                    ) : undefined
+                  }
+                  ListHeaderComponent={
+                    <SectionHeader
+                      title={sectionTitle}
+                      variant="default"
+                      actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
+                      onActionPress={openSortModal}
+                      testID="pantry-sort-button"
                     />
-                  ) : undefined
-                }
-                ListHeaderComponent={
-                  <SectionHeader
-                    title={sectionTitle}
-                    variant="default"
-                    actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
-                    onActionPress={openSortModal}
-                    testID="pantry-sort-button"
-                  />
-                }
-                ListEmptyComponent={
-                  <PantryEmptyState
-                    showSkeletons={showSkeletons}
-                    searchQuery={searchQuery}
-                    itemCount={items.length}
-                    locationFilter={locationFilter}
-                    tabs={tabs}
-                    onAddItem={onAddItem}
-                    noHomeSelected={noHomeSelected}
-                    noHomes={noHomes}
-                    onSelectHome={onSelectHome}
-                  />
-                }
-                ListFooterComponent={
-                  <PaginationFooter
-                    isLoadingMore={isLoadingMore}
-                    hasMore={hasMore}
-                    loading={loading}
-                    itemCount={deferredSortedItems.length}
-                  />
-                }
-                onEndReached={onEndReached}
-                onEndReachedThreshold={0.5}
-                drawDistance={350}
-                maintainVisibleContentPosition={{ disabled: true }}
-              />
+                  }
+                  ListEmptyComponent={
+                    <PantryEmptyState
+                      showSkeletons={showSkeletons}
+                      searchQuery={searchQuery}
+                      itemCount={items.length}
+                      locationFilter={locationFilter}
+                      tabs={tabs}
+                      onAddItem={onAddItem}
+                      noHomeSelected={noHomeSelected}
+                      noHomes={noHomes}
+                      onSelectHome={onSelectHome}
+                    />
+                  }
+                  ListFooterComponent={
+                    <PaginationFooter
+                      isLoadingMore={isLoadingMore}
+                      hasMore={hasMore}
+                      loading={loading}
+                      itemCount={deferredSortedItems.length}
+                    />
+                  }
+                  onEndReached={onEndReached}
+                  onEndReachedThreshold={0.5}
+                  maintainVisibleContentPosition={{ disabled: true }}
+                />
+              </PantryThemeProvider>
             </View>
           </View>
 

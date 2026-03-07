@@ -17,6 +17,9 @@ export const BarcodeStack = createNativeStackNavigator({
     BarcodeScanner: {
       screen: BarcodeScannerScreen,
       linking: 'scan',
+      options: {
+        statusBarHidden: true,
+      },
     },
     SearchResults: {
       screen: SearchResultsScreen,
