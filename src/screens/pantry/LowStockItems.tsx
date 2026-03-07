@@ -18,6 +18,97 @@ import { useAddItemToShoppingListMutation } from '#generated';
 import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#hooks/pantry/useAddLowStockToShoppingList';
 import { commonStyles } from '#/styles/commonStyles';
+import { createPropsComparator } from '#utils/memoUtils';
+import { LowStockActionsProvider, useLowStockActions } from './LowStockActionsContext';
+
+const keyExtractor = (item: { id: string }) => item.id;
+
+interface LowStockItem {
+  id: string;
+  itemName: string;
+  quantity: number;
+  unit: { symbol: string } | null;
+  isLowStock: boolean;
+}
+
+// --- Module-scope LowStockRenderItem ---
+
+interface LowStockRenderItemProps {
+  item: LowStockItem;
+}
+
+const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({ item }) => {
+  const { theme } = useUnistyles();
+  const { navigateTo, handleAddToList } = useLowStockActions();
+
+  return (
+    <SwipeableItem
+      onPress={() => navigateTo({ itemId: item.id })}
+    >
+      <View style={[commonStyles.card, styles.itemCard]}>
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemName}>{item.itemName}</Text>
+          <Text style={[commonStyles.caption, styles.itemDetails]}>
+            {item.quantity} {item.unit?.symbol} remaining
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => handleAddToList(item.id)}
+          style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+        >
+          <Icon
+            name="cart-outline"
+            size={20}
+            color={theme.colors.primary}
+          />
+        </Pressable>
+      </View>
+    </SwipeableItem>
+  );
+};
+
+const arePropsEqual = createPropsComparator<LowStockRenderItemProps>({
+  nestedComparisons: {
+    item: ['id', 'itemName', 'quantity'],
+    'item.unit': ['symbol'],
+  },
+});
+
+const LowStockRenderItem = React.memo(LowStockRenderItemComponent, arePropsEqual);
+
+const renderItem = ({ item }: { item: LowStockItem }) => <LowStockRenderItem item={item} />;
+
+// --- Module-scope LowStockEmpty ---
+
+interface LowStockEmptyProps {
+  loading: boolean;
+  hasItems: boolean;
+}
+
+const LowStockEmpty: React.FC<LowStockEmptyProps> = ({ loading, hasItems }) => {
+  const { theme } = useUnistyles();
+
+  if (loading || !hasItems) {
+    return (
+      <View style={styles.skeletonContainer}>
+        {[1, 2, 3, 4, 5].map(key => (
+          <PantryItemSkeleton key={key} />
+        ))}
+      </View>
+    );
+  }
+
+  return (
+    <View style={[commonStyles.center, styles.emptyState]}>
+      <Icon name="cube-outline" size={64} color={theme.colors.success} />
+      <Text style={[commonStyles.body, styles.emptyText]}>
+        All items are above minimum stock levels
+      </Text>
+    </View>
+  );
+};
+
+// --- Main component ---
 
 export const LowStockItems: React.FC = () => {
   const { theme } = useUnistyles();
@@ -64,31 +155,10 @@ export const LowStockItems: React.FC = () => {
     }
   };
 
-  const renderLowStockItem = 
-    ({ item }: { item: (typeof lowStockItems)[number] }) => (
-      <SwipeableItem
-        onPress={() => navigateTo.pantryItemDetail({ itemId: item.id })}
-      >
-        <View style={[commonStyles.card, styles.itemCard]}>
-          <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{item.itemName}</Text>
-            <Text style={[commonStyles.caption, styles.itemDetails]}>
-              {item.quantity} {item.unit?.symbol} remaining
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => handleAddToList(item.id)}
-            style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
-          >
-            <Icon
-              name="cart-outline"
-              size={20}
-              color={theme.colors.primary}
-            />
-          </Pressable>
-        </View>
-      </SwipeableItem>
-    );
+  const actions = {
+    navigateTo: (params: { itemId: string }) => navigateTo.pantryItemDetail(params),
+    handleAddToList,
+  };
 
   return (
     <View style={commonStyles.container}>
@@ -105,37 +175,27 @@ export const LowStockItems: React.FC = () => {
         ]}
       />
 
-      <FlashList
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        data={lowStockItems}
-        keyExtractor={item => item.id}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            colors={[theme.colors.primary]}
-            tintColor={theme.colors.primary}
-          />
-        }
-        ListEmptyComponent={
-          loading || !allItems ? (
-            <View style={styles.skeletonContainer}>
-              {[1, 2, 3, 4, 5].map(key => (
-                <PantryItemSkeleton key={key} />
-              ))}
-            </View>
-          ) : (
-            <View style={[commonStyles.center, styles.emptyState]}>
-              <Icon name="cube-outline" size={64} color={theme.colors.success} />
-              <Text style={[commonStyles.body, styles.emptyText]}>
-                All items are above minimum stock levels
-              </Text>
-            </View>
-          )
-        }
-        renderItem={renderLowStockItem}
-      />
+      <LowStockActionsProvider actions={actions}>
+        <FlashList
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          data={lowStockItems}
+          keyExtractor={keyExtractor}
+          drawDistance={200}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
+            />
+          }
+          ListEmptyComponent={
+            <LowStockEmpty loading={loading} hasItems={!!allItems} />
+          }
+          renderItem={renderItem}
+        />
+      </LowStockActionsProvider>
     </View>
   );
 };

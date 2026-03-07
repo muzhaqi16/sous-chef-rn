@@ -16,6 +16,8 @@ export type PartialHome = {
   name: string;
   joinCode?: string;
   allowJoinCode?: boolean;
+  membersTotalCount?: number;
+  pantriesTotalCount?: number;
   members?: Array<{
     id: string;
     role: string;
@@ -115,10 +117,10 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           style={({pressed}) => [styles.homeHeader, pressed && onPress && styles.pressed]}
           onPress={() => onPress?.(home.id)}
           accessibilityRole="button"
-          accessibilityLabel={`${home.name}, ${home.members?.length || 0} ${
-            (home.members?.length || 0) === 1 ? 'member' : 'members'
-          }, ${home.pantries?.length || 0} ${
-            (home.pantries?.length || 0) === 1 ? 'pantry' : 'pantries'
+          accessibilityLabel={`${home.name}, ${home.membersTotalCount ?? home.members?.length ?? 0} ${
+            (home.membersTotalCount ?? home.members?.length ?? 0) === 1 ? 'member' : 'members'
+          }, ${home.pantriesTotalCount ?? home.pantries?.length ?? 0} ${
+            (home.pantriesTotalCount ?? home.pantries?.length ?? 0) === 1 ? 'pantry' : 'pantries'
           }${isDefault ? ', default home' : ''}`}
           accessibilityHint="Tap to view home details"
           disabled={!onPress}
@@ -127,10 +129,10 @@ export const HomeCard: React.FC<HomeCardProps> = ({
             <Text style={styles.homeName}>{home.name}</Text>
 
             <Text style={styles.homeDetails}>
-              {home.members?.length || 0}{' '}
-              {(home.members?.length || 0) === 1 ? 'member' : 'members'} •{' '}
-              {home.pantries?.length || 0}{' '}
-              {(home.pantries?.length || 0) === 1 ? 'pantry' : 'pantries'}
+              {home.membersTotalCount ?? home.members?.length ?? 0}{' '}
+              {(home.membersTotalCount ?? home.members?.length ?? 0) === 1 ? 'member' : 'members'} •{' '}
+              {home.pantriesTotalCount ?? home.pantries?.length ?? 0}{' '}
+              {(home.pantriesTotalCount ?? home.pantries?.length ?? 0) === 1 ? 'pantry' : 'pantries'}
             </Text>
           </View>
           {!!isDefault && (

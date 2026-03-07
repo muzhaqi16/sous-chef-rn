@@ -152,6 +152,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
                           unitName: unit.unitName,
                           unitType: unit.unitType,
                           isTrackingUnit: unit.isTrackingUnit,
+                          conversionRatio: unit.conversionRatio,
                           conversionConfidence: unit.conversionConfidence,
                         })
                       }

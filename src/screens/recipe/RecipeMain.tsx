@@ -7,15 +7,20 @@ import { commonStyles } from '#/styles/commonStyles';
 import { ItemList } from '#components/organisms/ItemList';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { FolderPicker } from '#components/molecules/FolderPicker';
 import { TagPicker } from '#components/molecules/TagPicker';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import {
   useUnfavoriteRecipeMutation,
+  useDeleteRecipeMutation,
   MySavedRecipesDocument,
-  type MySavedRecipesQuery } from '#generated';
+  MyRecipesDocument,
+  type MySavedRecipesQuery,
+  type MyRecipesQuery } from '#generated';
 import { useSavedRecipes } from '#/hooks/recipe/useSavedRecipes';
+import { useRecipeManagement } from '#/hooks/recipe/useRecipeManagement';
 import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
 import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
 import { useFolderActions } from '#/hooks/recipe/useFolderActions';
@@ -28,6 +33,8 @@ import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { RecipeSkeleton } from '#components/base/Skeleton/RecipeSkeleton';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+
+const viewOptions = ['saved', 'myRecipes'] as const;
 
 /** Module-level helper to clear random recipes when user has saved recipes */
 function clearRandomRecipesIfNeeded(
@@ -52,6 +59,7 @@ const RecipeMainInner: React.FC = () => {
   const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeView, setActiveView] = useState<'saved' | 'myRecipes'>('saved');
 
   // Filter state
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -78,6 +86,12 @@ const RecipeMainInner: React.FC = () => {
 
   // Fetch user's saved/favorited recipes from backend
   const { recipes, loading, refetch } = useSavedRecipes();
+
+  // Fetch user-created recipes
+  const {
+    recipes: myRecipes,
+    refetch: myRecipesRefetch,
+  } = useRecipeManagement();
 
   // Fetch random recipes ONLY ONCE when user has no saved recipes
   useEffect(() => {
@@ -145,7 +159,7 @@ const RecipeMainInner: React.FC = () => {
   };
 
   // Determine if we should show random recipes
-  const showRandomRecipes = recipes.length === 0 && randomRecipes.length > 0;
+  const showRandomRecipes = activeView === 'saved' && recipes.length === 0 && randomRecipes.length > 0;
 
   // Filter recipes based on search query, folder, and tags
   const filteredRecipes = (() => {
@@ -209,8 +223,67 @@ const RecipeMainInner: React.FC = () => {
       );
     } });
 
-  // Transform filtered recipes to list items format (handles both saved and random)
+  // Delete recipe mutation (for user-created recipes)
+  const [deleteRecipeMutation] = useDeleteRecipeMutation({
+    update: (cache, { data }, { variables }) => {
+      if (!data?.deleteRecipe?.success || !variables?.id) return;
+
+      cache.updateQuery<MyRecipesQuery>(
+        { query: MyRecipesDocument },
+        existing => {
+          if (!existing?.recipes) return existing;
+          return {
+            ...existing,
+            recipes: {
+              ...existing.recipes,
+              edges: existing.recipes.edges.filter(
+                edge => edge.node.id !== variables.id,
+              ),
+              totalCount: (existing.recipes.totalCount ?? 0) - 1,
+            },
+          };
+        },
+      );
+    },
+  });
+
+  // Filter myRecipes by search query
+  const filteredMyRecipes = (() => {
+    if (activeView !== 'myRecipes') return [];
+    if (!searchQuery.trim()) return myRecipes;
+    const query = searchQuery.toLowerCase();
+    return myRecipes.filter((recipe: any) => {
+      const name = recipe.name?.toLowerCase() || '';
+      const description = recipe.description?.toLowerCase() || '';
+      return name.includes(query) || description.includes(query);
+    });
+  })();
+
+  // Transform filtered recipes to list items format (handles saved, random, and my recipes)
   const items = (() => {
+    if (activeView === 'myRecipes') {
+      return filteredMyRecipes.map((recipe: any) => {
+        const totalTime =
+          recipe.totalTimeMinutes ||
+          (recipe.prepTimeMinutes && recipe.cookTimeMinutes
+            ? recipe.prepTimeMinutes + recipe.cookTimeMinutes
+            : recipe.prepTimeMinutes || recipe.cookTimeMinutes || null);
+
+        return {
+          id: String(recipe.id),
+          title: recipe.name,
+          subtitle: `${recipe.servings} servings${
+            totalTime ? ` • ${totalTime} min` : ''
+          }`,
+          leftElement: recipe.imageUrl ? (
+            <View style={commonStyles.listItemImageContainerCompact}>
+              <CachedImage uri={recipe.imageUrl} style={commonStyles.listItemImageCompact} displaySize={48} />
+            </View>
+          ) : undefined,
+        };
+      });
+    }
+
     // Use random recipes if showing them, otherwise use filtered saved recipes
     const recipesToShow = showRandomRecipes ? randomRecipes : filteredRecipes;
 
@@ -248,7 +321,9 @@ const RecipeMainInner: React.FC = () => {
   };
 
   const handleRefresh = async () => {
-    if (showRandomRecipes) {
+    if (activeView === 'myRecipes') {
+      await myRecipesRefetch();
+    } else if (showRandomRecipes) {
       await handleRefreshRandom();
     } else {
       await refetch();
@@ -264,6 +339,15 @@ const RecipeMainInner: React.FC = () => {
         Alert.alert('Error', 'Failed to remove recipe. Please try again.');
       }
     };
+
+  const handleDeleteMyRecipe = async (id: string) => {
+    try {
+      await deleteRecipeMutation({ variables: { id } });
+    } catch (error) {
+      console.error('Failed to delete recipe:', error);
+      Alert.alert('Error', 'Failed to delete recipe. Please try again.');
+    }
+  };
 
   // Header right action - navigate to recipe search
   const headerRight = (
@@ -281,17 +365,31 @@ const RecipeMainInner: React.FC = () => {
       </Pressable>
     );
 
-  const emptyStateConfig = {
-    icon: 'book' as const,
-    title: 'No saved recipes',
-    description: 'Search for recipes and save your favorites',
-    action: {
-      label: 'Search Recipes',
-      onPress: handleSearchRecipes } };
+  const emptyStateConfig = activeView === 'myRecipes'
+    ? {
+        icon: 'create-outline' as const,
+        title: 'No recipes yet',
+        description: 'Create your first recipe',
+        action: {
+          label: 'Create Recipe',
+          onPress: () => navigate('RecipeCreate'),
+        },
+      }
+    : {
+        icon: 'book' as const,
+        title: 'No saved recipes',
+        description: 'Search for recipes and save your favorites',
+        action: {
+          label: 'Search Recipes',
+          onPress: handleSearchRecipes,
+        },
+      };
 
-  // Handle item press - navigate differently for saved vs random recipes
+  // Handle item press - navigate differently for saved vs random vs my recipes
   const handleItemPress = (id: string | number) => {
-      if (showRandomRecipes) {
+      if (activeView === 'myRecipes') {
+        navigate('RecipeDetail', { recipeId: String(id) });
+      } else if (showRandomRecipes) {
         // Random recipe from Spoonacular - navigate with external source params
         navigate('RecipeDetail', {
           externalSource: 'SPOONACULAR',
@@ -331,6 +429,20 @@ const RecipeMainInner: React.FC = () => {
         </Pressable>
       </View>
     );
+  })();
+
+  const formatViewLabel = (value: 'saved' | 'myRecipes') =>
+    value === 'saved' ? 'Saved' : 'My Recipes';
+
+  const handleEditRecipe = (id: string) => {
+    navigate('RecipeEdit', { recipeId: id });
+  };
+
+  // Determine the delete handler based on active view
+  const handleItemDelete = (() => {
+    if (activeView === 'myRecipes') return handleDeleteMyRecipe;
+    if (showRandomRecipes) return undefined;
+    return handleRemoveRecipe;
   })();
 
   // Check if any filters are active
@@ -435,17 +547,28 @@ const RecipeMainInner: React.FC = () => {
           showSearchIcon
         />
       </View>
-      {FilterHeader}
+      <View style={styles.segmentContainer}>
+        <SegmentedControl
+          options={viewOptions}
+          value={activeView}
+          onChange={setActiveView}
+          formatLabel={formatViewLabel}
+          size="compact"
+          testID="recipe-view-toggle"
+        />
+      </View>
+      {activeView === 'saved' && FilterHeader}
       <ItemList
         items={items}
         onItemPress={handleItemPress}
-        onItemDelete={showRandomRecipes ? undefined : handleRemoveRecipe}
+        onItemDelete={handleItemDelete}
+        onItemEdit={activeView === 'myRecipes' ? handleEditRecipe : undefined}
         onRefresh={handleRefresh}
         emptyState={emptyStateConfig}
       />
 
       {/* Folder Picker Modal - filter only, no folder creation, with rename/delete */}
-      <FolderPicker
+      {activeView === 'saved' && <FolderPicker
         visible={showFolderPicker}
         folders={folders}
         selectedFolder={selectedFolder}
@@ -470,16 +593,16 @@ const RecipeMainInner: React.FC = () => {
           return success;
         }}
         folderActionLoading={folderActionLoading}
-      />
+      />}
 
       {/* Tag Picker Modal - multi-select filter */}
-      <TagPicker
+      {activeView === 'saved' && <TagPicker
         visible={showTagPicker}
         tags={availableTags}
         selectedTags={selectedTags}
         onSelect={setSelectedTags}
         onCancel={() => setShowTagPicker(false)}
-      />
+      />}
     </View>
   );
 };
@@ -504,6 +627,15 @@ export const RecipeMain: React.FC = () => (
             editable={false}
           />
         </View>
+        <View style={styles.segmentContainer}>
+          <SegmentedControl
+            options={viewOptions}
+            value="saved"
+            onChange={noop}
+            formatLabel={(v: string) => v === 'saved' ? 'Saved' : 'My Recipes'}
+            size="compact"
+          />
+        </View>
         <RecipeSkeleton />
       </View>
     }
@@ -517,6 +649,9 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background },
   searchBarContainer: {
     paddingHorizontal: theme.spacing.md },
+  segmentContainer: {
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.sm },
   suggestedHeader: {
     flexDirection: 'row',
     alignItems: 'center',

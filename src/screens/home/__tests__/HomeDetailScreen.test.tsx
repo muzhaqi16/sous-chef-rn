@@ -33,6 +33,7 @@ jest.mock('#hooks/home/useHomeDetailManagement', () => ({
         { userId: 'user-2', role: 'MEMBER', profile: { displayName: 'Jane' } },
       ],
       invites: [],
+      myMembership: { id: 'membership-1', role: 'OWNER', status: 'ACTIVE', canManageHome: true },
     },
     loading: false,
     leaving: false,
@@ -159,6 +160,7 @@ beforeEach(() => {
         { userId: 'user-2', role: 'MEMBER', profile: { displayName: 'Jane' } },
       ],
       invites: [],
+      myMembership: { id: 'membership-1', role: 'OWNER', status: 'ACTIVE', canManageHome: true },
     },
     loading: false,
     leaving: false,
@@ -238,6 +240,34 @@ describe('HomeDetailScreen', () => {
   });
 
   it('shows leave home button for non-owner member', () => {
+    const { useHomeDetailManagement } = require('#hooks/home/useHomeDetailManagement');
+    useHomeDetailManagement.mockReturnValue({
+      home: {
+        id: 'home-1',
+        name: 'My Home',
+        allowJoinCode: true,
+        joinCode: 'ABC123',
+        members: [
+          { userId: 'user-1', role: 'OWNER', profile: { displayName: 'John' } },
+          { userId: 'user-2', role: 'MEMBER', profile: { displayName: 'Jane' } },
+        ],
+        invites: [],
+        myMembership: { id: 'membership-2', role: 'MEMBER', status: 'ACTIVE', canManageHome: false },
+      },
+      loading: false,
+      leaving: false,
+      refetch: mockRefetch,
+      rolePickerState: mockRolePickerState,
+      handleRoleSelect: mockHandleRoleSelect,
+      closeRolePicker: mockCloseRolePicker,
+      saveName: mockSaveName,
+      changeRole: mockChangeRole,
+      removeMember: mockRemoveMember,
+      revokeInvite: mockRevokeInvite,
+      leaveHome: mockLeaveHome,
+      toggleJoinCode: mockToggleJoinCode,
+    });
+
     const { useAppStore } = require('#store/useAppStore');
     useAppStore.mockImplementation((selector: any) =>
       selector({ user: { id: 'user-2' } }),

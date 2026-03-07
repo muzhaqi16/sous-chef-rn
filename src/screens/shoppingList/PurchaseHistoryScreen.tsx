@@ -1,11 +1,15 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { FlashList, type ListRenderItem } from '@shopify/flash-list';
+import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
 import { BackButton } from '#components/atoms/BackButton';
 import { commonStyles } from '#/styles/commonStyles';
+import { createPropsComparator } from '#utils/memoUtils';
+import { PurchaseHistoryProvider, usePurchaseHistoryContext } from './PurchaseHistoryContext';
+
+const keyExtractor = (item: { id: string }) => item.id;
 
 type RouteParams = {
   itemId: string;
@@ -25,93 +29,124 @@ type RouteParams = {
   }>;
 };
 
+type PurchaseItem = RouteParams['purchases'][0];
+
+// Pure function at module scope
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
+
+// --- Module-scope FlashList components ---
+
+type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem>;
+
+const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({ item: purchase, index }) => {
+  const { theme } = useUnistyles();
+  const { totalCount } = usePurchaseHistoryContext();
+
+  return (
+    <View style={styles.purchaseCard}>
+      <View style={styles.purchaseHeader}>
+        <View style={styles.purchaseNumber}>
+          <Text style={styles.purchaseNumberText}>
+            #{totalCount - index}
+          </Text>
+        </View>
+        <Text style={styles.purchaseDate}>
+          {formatDate(purchase.purchaseDate)}
+        </Text>
+      </View>
+
+      <View style={styles.purchaseDetails}>
+        <View style={styles.purchaseDetailRow}>
+          <Icon
+            name="cube-outline"
+            size={18}
+            color={theme.colors.iconSecondary}
+          />
+          <Text style={styles.purchaseDetailLabel}>Quantity:</Text>
+          <Text style={styles.purchaseDetailValue}>
+            {purchase.quantity} {purchase.unitSymbol}
+          </Text>
+        </View>
+
+        {!!purchase.user && (
+          <View style={styles.purchaseDetailRow}>
+            <Icon
+              name="person-outline"
+              size={18}
+              color={theme.colors.iconSecondary}
+            />
+            <Text style={styles.purchaseDetailLabel}>
+              Purchased by:
+            </Text>
+            <Text style={styles.purchaseDetailValue}>
+              {purchase.user.profile?.displayName ||
+                purchase.user.email}
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
+
+// PERFORMANCE: Custom comparator for React.memo
+const arePurchaseItemPropsEqual = createPropsComparator<PurchaseHistoryItemProps>({
+  referenceKeys: ['index'],
+  nestedComparisons: {
+    item: ['id', 'purchaseDate', 'quantity', 'unitSymbol'],
+  },
+});
+
+const PurchaseHistoryItem = React.memo(PurchaseHistoryItemComponent, arePurchaseItemPropsEqual);
+
+const renderItem = (info: ListRenderItemInfo<PurchaseItem>) => (
+  <PurchaseHistoryItem {...info} />
+);
+
+const PurchaseHistoryHeader: React.FC<{ totalCount: number }> = ({ totalCount }) => (
+  <View style={styles.statsContainer}>
+    <Text style={styles.statsText}>
+      Total Purchases:{' '}
+      <Text style={styles.statsValue}>{totalCount}</Text>
+    </Text>
+  </View>
+);
+
+const PurchaseHistoryEmpty: React.FC = () => {
+  const { theme } = useUnistyles();
+
+  return (
+    <View style={styles.emptyContainer}>
+      <Icon
+        name="receipt-outline"
+        size={64}
+        color={theme.colors.iconDisabled}
+      />
+      <Text style={styles.emptyText}>No purchase history</Text>
+      <Text style={styles.emptySubtext}>
+        Mark this item as purchased to start tracking history
+      </Text>
+    </View>
+  );
+};
+
+// --- Main screen component ---
+
 export const PurchaseHistoryScreen: React.FC<{
   route: { params: RouteParams };
 }> = ({ route }) => {
   const { goBack } = useAppNavigation();
   const { theme } = useUnistyles();
   const { itemName, purchases } = route.params;
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit' });
-  };
-
-  const renderPurchaseItem: ListRenderItem<RouteParams['purchases'][0]> = ({ item: purchase, index }) => (
-      <View style={styles.purchaseCard}>
-        <View style={styles.purchaseHeader}>
-          <View style={styles.purchaseNumber}>
-            <Text style={styles.purchaseNumberText}>
-              #{purchases.length - index}
-            </Text>
-          </View>
-          <Text style={styles.purchaseDate}>
-            {formatDate(purchase.purchaseDate)}
-          </Text>
-        </View>
-
-        <View style={styles.purchaseDetails}>
-          <View style={styles.purchaseDetailRow}>
-            <Icon
-              name="cube-outline"
-              size={18}
-              color={theme.colors.iconSecondary}
-            />
-            <Text style={styles.purchaseDetailLabel}>Quantity:</Text>
-            <Text style={styles.purchaseDetailValue}>
-              {purchase.quantity} {purchase.unitSymbol}
-            </Text>
-          </View>
-
-          {!!purchase.user && (
-            <View style={styles.purchaseDetailRow}>
-              <Icon
-                name="person-outline"
-                size={18}
-                color={theme.colors.iconSecondary}
-              />
-              <Text style={styles.purchaseDetailLabel}>
-                Purchased by:
-              </Text>
-              <Text style={styles.purchaseDetailValue}>
-                {purchase.user.profile?.displayName ||
-                  purchase.user.email}
-              </Text>
-            </View>
-          )}
-        </View>
-      </View>
-    );
-
-  // PERFORMANCE: Memoize render functions to avoid recreation on every render
-  const renderListHeader = () => (
-      <View style={styles.statsContainer}>
-        <Text style={styles.statsText}>
-          Total Purchases:{' '}
-          <Text style={styles.statsValue}>{purchases.length}</Text>
-        </Text>
-      </View>
-    );
-
-  const renderEmptyComponent = () => (
-      <View style={styles.emptyContainer}>
-        <Icon
-          name="receipt-outline"
-          size={64}
-          color={theme.colors.iconDisabled}
-
-        />
-        <Text style={styles.emptyText}>No purchase history</Text>
-        <Text style={styles.emptySubtext}>
-          Mark this item as purchased to start tracking history
-        </Text>
-      </View>
-    );
 
   return (
     <View style={styles.container}>
@@ -126,15 +161,18 @@ export const PurchaseHistoryScreen: React.FC<{
       </View>
 
       {/* Purchase List */}
-      <FlashList
-        data={purchases}
-        keyExtractor={item => item.id}
-        renderItem={renderPurchaseItem}
-        ListHeaderComponent={purchases.length > 0 ? renderListHeader : null}
-        ListEmptyComponent={renderEmptyComponent}
-        contentContainerStyle={styles.content}
-        style={styles.scrollView}
-      />
+      <PurchaseHistoryProvider value={{ totalCount: purchases.length }}>
+        <FlashList
+          data={purchases}
+          keyExtractor={keyExtractor}
+          drawDistance={200}
+          renderItem={renderItem}
+          ListHeaderComponent={purchases.length > 0 ? <PurchaseHistoryHeader totalCount={purchases.length} /> : null}
+          ListEmptyComponent={PurchaseHistoryEmpty}
+          contentContainerStyle={styles.content}
+          style={styles.scrollView}
+        />
+      </PurchaseHistoryProvider>
     </View>
   );
 };

@@ -189,9 +189,9 @@ export function useRecipeForm() {
     return null;
   };
 
-  // Build CreateRecipeInput
-  const buildCreateInput = (): CreateRecipeInput => {
-    const ingredients: RecipeIngredientInput[] = state.ingredients.map((ing, index) => ({
+  // Build ingredient input array (shared by create and update-ingredients)
+  const buildIngredientsInput = (): RecipeIngredientInput[] => {
+    return state.ingredients.map((ing, index) => ({
       name: ing.name.trim(),
       quantity: ing.quantity,
       unitId: ing.unitId ?? undefined,
@@ -201,6 +201,11 @@ export function useRecipeForm() {
       notes: ing.notes?.trim() || undefined,
       isOptional: ing.isOptional,
       sortOrder: index }));
+  };
+
+  // Build CreateRecipeInput
+  const buildCreateInput = (): CreateRecipeInput => {
+    const ingredients = buildIngredientsInput();
 
     const instructions = state.steps.map((step, index) => ({
       step: index + 1,
@@ -308,6 +313,7 @@ export function useRecipeForm() {
     validate,
     buildCreateInput,
     buildUpdateInput,
+    buildIngredientsInput,
     populateFromRecipe,
     hasDirtyFields };
 }

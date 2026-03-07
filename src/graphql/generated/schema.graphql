@@ -3386,16 +3386,21 @@ type LedgerPeriodData {
   wasted: Float!
 }
 
-"""Ledger summary showing additions vs consumption"""
+"""
+Ledger summary showing additions vs consumption.
+Top-level totals (totalAdded, totalConsumed, totalWasted, netQuantity) are only
+populated when ALL records in the query share the same unit. Otherwise, use the
+per-unit breakdowns (additionsByUnit, consumptionByUnit) for accurate data.
+"""
 type LedgerSummary {
   additionCount: Int!
   additionsByUnit: [UsageByUnit!]!
   consumptionByUnit: [UsageByUnit!]!
   consumptionCount: Int!
-  netQuantity: Float!
-  totalAdded: Float!
-  totalConsumed: Float!
-  totalWasted: Float!
+  netQuantity: Float
+  totalAdded: Float
+  totalConsumed: Float
+  totalWasted: Float
   unitName: String
   wasteCount: Int!
 }
@@ -5970,6 +5975,14 @@ type QuantityDisplay {
   unit: Unit
 }
 
+"""Sub-input for quantity display preferences"""
+input QuantityDisplayInput {
+  alwaysShowFractions: Boolean
+  maxDecimalPlaces: Int
+  preferredFractionSet: JSON
+  quantityDisplayPreference: QuantityDisplayPreference
+}
+
 """User preference for quantity display"""
 enum QuantityDisplayPreference {
   AUTO
@@ -6606,6 +6619,14 @@ enum RecurringPattern {
 type RefreshTokenPayload {
   accessToken: String!
   refreshToken: String!
+}
+
+"""Sub-input for regional/locale settings"""
+input RegionalSettingsInput {
+  language: String
+  preferredCurrency: String
+  preferredUnitSystem: UnitSystem
+  timezone: String
 }
 
 input RegisterInput {
@@ -8601,8 +8622,9 @@ input UpdateUserProfileInput {
 input UpdateUserSettingsInput {
   features: FeatureTogglesInput
   notifications: UserNotificationSettingsInput
-  preferredUnitSystem: UnitSystem
   privacy: PrivacySettingsInput
+  quantityDisplay: QuantityDisplayInput
+  regional: RegionalSettingsInput
   sync: SyncSettingsInput
   ui: UiPreferencesInput
 }

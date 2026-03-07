@@ -1,12 +1,16 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { View, Switch, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import BottomSheet, { BottomSheetBackdropProps, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetBackdropProps, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
+import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
+import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FormInput } from '#components/molecules/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
+import { FieldRow } from '#components/molecules/FieldRow';
 import { Header } from '#components/molecules/Header';
 import { generateId } from '#/utils/generateId';
+import type { ItemSuggestion } from '#generated';
 import type { IngredientFormState } from '../useRecipeForm';
 
 export interface RecipeIngredientEditorRef {
@@ -20,10 +24,13 @@ interface RecipeIngredientEditorProps {
 
 export const RecipeIngredientEditor = forwardRef<RecipeIngredientEditorRef, RecipeIngredientEditorProps>(
   ({ onSave }, ref) => {
-    const bottomSheetRef = useRef<BottomSheet>(null);
+    const bottomSheetRef = useRef<BottomSheetModal>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [name, setName] = useState('');
+    const [itemId, setItemId] = useState<string | null>(null);
     const [quantity, setQuantity] = useState('1');
+    const [unit, setUnit] = useState('');
+    const [unitId, setUnitId] = useState<string | null>(null);
     const [preparation, setPreparation] = useState('');
     const [section, setSection] = useState('');
     const [notes, setNotes] = useState('');
@@ -34,7 +41,10 @@ export const RecipeIngredientEditor = forwardRef<RecipeIngredientEditorRef, Reci
         if (ingredient) {
           setEditingId(ingredient.id);
           setName(ingredient.name);
+          setItemId(ingredient.itemId ?? null);
           setQuantity(String(ingredient.quantity));
+          setUnit(''); // Unit display text not stored - user can re-select
+          setUnitId(ingredient.unitId ?? null);
           setPreparation(ingredient.preparation ?? '');
           setSection(ingredient.section ?? '');
           setNotes(ingredient.notes ?? '');
@@ -42,15 +52,37 @@ export const RecipeIngredientEditor = forwardRef<RecipeIngredientEditorRef, Reci
         } else {
           setEditingId(null);
           setName('');
+          setItemId(null);
           setQuantity('1');
+          setUnit('');
+          setUnitId(null);
           setPreparation('');
           setSection('');
           setNotes('');
           setIsOptional(false);
         }
-        bottomSheetRef.current?.expand();
+        bottomSheetRef.current?.present();
       },
-      close: () => bottomSheetRef.current?.close() }));
+      close: () => bottomSheetRef.current?.dismiss() }));
+
+    const handleNameChange = (text: string) => {
+      setName(text);
+      setItemId(null);
+    };
+
+    const handleItemSelect = (item: ItemSuggestion) => {
+      setItemId(item.id);
+      if (item.defaultUnit?.symbol) {
+        setUnit(item.defaultUnit.symbol);
+      }
+      if (item.defaultUnit?.id) {
+        setUnitId(item.defaultUnit.id);
+      }
+    };
+
+    const handleUnitSelect = (selectedUnitId: string | null) => {
+      setUnitId(selectedUnitId);
+    };
 
     const handleSave = () => {
       if (!name.trim()) return;
@@ -58,23 +90,25 @@ export const RecipeIngredientEditor = forwardRef<RecipeIngredientEditorRef, Reci
         id: editingId ?? `temp-ing-${generateId()}`,
         name: name.trim(),
         quantity: parseFloat(quantity) || 1,
+        itemId,
+        unitId,
         preparation: preparation.trim(),
         section: section.trim(),
         notes: notes.trim(),
         isOptional,
         sortOrder: 0 });
-      bottomSheetRef.current?.close();
+      bottomSheetRef.current?.dismiss();
     };
 
     const renderBackdrop = (props: BottomSheetBackdropProps) => (
-        <GlobalBottomSheetBackdrop {...props} />
+        <GlobalBottomSheetBackdrop {...props} onClose={() => bottomSheetRef.current?.dismiss()} />
       );
 
     return (
-      <BottomSheet
+      <BottomSheetModal
         ref={bottomSheetRef}
-        index={-1}
         snapPoints={['80%']}
+        enableDynamicSizing={false}
         enablePanDownToClose
         backdropComponent={renderBackdrop}
         handleIndicatorStyle={styles.handleIndicator}
@@ -85,29 +119,45 @@ export const RecipeIngredientEditor = forwardRef<RecipeIngredientEditorRef, Reci
           centerTitle
           leftActions={[{
             icon: 'close',
-            onPress: () => bottomSheetRef.current?.close() }]}
+            onPress: () => bottomSheetRef.current?.dismiss() }]}
           rightActions={[{
             icon: 'checkmark',
             onPress: handleSave }]}
         />
 
-        <BottomSheetScrollView contentContainerStyle={styles.content}>
-          <FormInput
-            label="Ingredient Name"
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g., Chicken breast"
-            required
-            useBottomSheetInput
-          />
+        <BottomSheetScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.autocompleteWrapper}>
+            <ItemAutocompleteField
+              variant="inline"
+              label="Ingredient Name"
+              value={name}
+              onChangeText={handleNameChange}
+              onSelectItem={handleItemSelect}
+              placeholder="e.g., Chicken breast"
+              required
+            />
+          </View>
 
-          <EditableCounter
-            label="Quantity"
-            value={quantity}
-            onChangeText={setQuantity}
-            min={0}
-            step={0.25}
-          />
+          <FieldRow>
+            <EditableCounter
+              label="Quantity"
+              value={quantity}
+              onChangeText={setQuantity}
+              min={0}
+              step={0.25}
+            />
+            <UnitAutocompleteField
+              variant="modal"
+              label="Unit"
+              value={unit}
+              onChangeText={setUnit}
+              onUnitSelected={handleUnitSelect}
+              placeholder="pcs, kg, etc."
+            />
+          </FieldRow>
 
           <FormInput
             label="Preparation"
@@ -138,7 +188,7 @@ export const RecipeIngredientEditor = forwardRef<RecipeIngredientEditorRef, Reci
             <Switch value={isOptional} onValueChange={setIsOptional} />
           </View>
         </BottomSheetScrollView>
-      </BottomSheet>
+      </BottomSheetModal>
     );
   },
 );
@@ -151,8 +201,13 @@ const styles = StyleSheet.create(theme => ({
   sheetBackground: {
     backgroundColor: theme.colors.background },
   content: {
+    paddingTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl },
+    paddingBottom: theme.spacing.xl,
+    overflow: 'visible' },
+  autocompleteWrapper: {
+    zIndex: 10,
+    marginBottom: theme.spacing.md },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',

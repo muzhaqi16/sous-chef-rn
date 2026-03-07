@@ -53,15 +53,17 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
         >
           {recipeName}
         </Text>
-        <View style={styles.meta}>
-          <Text style={styles.metaText}>
-            {[
-              totalTime != null && `${totalTime} min`,
-              item.servings != null && `${item.servings} servings`,
-              item.calories != null && item.calories > 0 && `${Math.round(item.calories)} cal`,
-            ].filter(Boolean).join(' \u00B7 ')}
-          </Text>
-        </View>
+        {!!(totalTime != null || item.servings != null || (item.calories != null && item.calories > 0)) && (
+          <View style={styles.meta}>
+            <Text style={styles.metaText}>
+              {[
+                totalTime != null && `${totalTime} min`,
+                item.servings != null && `${item.servings} servings`,
+                item.calories != null && item.calories > 0 && `${Math.round(item.calories)} cal`,
+              ].filter(Boolean).join(' \u00B7 ')}
+            </Text>
+          </View>
+        )}
         {!!hasPantryDeductions && (
           <View style={styles.pantryBadge}>
             <Icon name="leaf-outline" size={12} color={styles.pantryBadgeText.color} />

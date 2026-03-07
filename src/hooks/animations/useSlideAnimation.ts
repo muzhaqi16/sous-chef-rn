@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import {
   useSharedValue,
   useAnimatedStyle,
@@ -6,6 +6,7 @@ import {
   Easing,
   cancelAnimation } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+import { useRecyclingState } from '@shopify/flash-list';
 import type {
   SlideDirection,
   UseSlideAnimationOptions,
@@ -59,7 +60,6 @@ export function useSlideAnimation({
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
   const isAnimatingShared = useSharedValue(false);
-  const itemIdRef = useRef(itemId);
 
   // Ref to store pending completion callback
   // This allows dynamic callbacks to be invoked via a stable RN-runtime wrapper
@@ -73,18 +73,17 @@ export function useSlideAnimation({
     callback?.();
   };
 
-  // Reset when FlashList recycles this view for a different item
-  useEffect(() => {
-    if (itemIdRef.current !== itemId) {
-      cancelAnimation(translateX);
-      cancelAnimation(opacity);
-      translateX.set(0);
-      opacity.set(1);
-      isAnimatingShared.set(false);
-      onCompleteRef.current = null; // Clear pending callback
-      itemIdRef.current = itemId;
-    }
-  }, [itemId, translateX, opacity, isAnimatingShared]);
+  // Synchronous reset when FlashList recycles this view for a different item.
+  // useRecyclingState's onReset fires inside useMemo (during render, BEFORE paint),
+  // preventing stale shared values from being briefly visible.
+  useRecyclingState(undefined, [itemId], () => {
+    cancelAnimation(translateX);
+    cancelAnimation(opacity);
+    translateX.set(0);
+    opacity.set(1);
+    isAnimatingShared.set(false);
+    onCompleteRef.current = null;
+  });
 
   const animatedSlideStyle = useAnimatedStyle(() => {
     const style: { transform: { translateX: number }[]; opacity?: number } = {

@@ -191,20 +191,7 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   const effectiveAddPress =
     onAddPress || (activeTab ? tabHandlers[activeTab] : undefined);
 
-  // Get icon configuration based on active tab
-  let addButtonConfig: AddButtonConfig;
-  switch (activeTab) {
-    case 'Recipe':
-      addButtonConfig = { icon: 'search', iconLibrary: 'Feather' };
-      break;
-    case 'MealPlan':
-      addButtonConfig = { icon: 'add', iconLibrary: 'Ionicons' };
-      break;
-    default:
-      // Pantry, ShoppingList use the default add icon
-      addButtonConfig = { icon: 'add', iconLibrary: 'Ionicons' };
-      break;
-  }
+  const addButtonConfig: AddButtonConfig = { icon: 'add', iconLibrary: 'Ionicons' };
 
   const stateValue: TabBarStateContextType = {
     onScanPress,

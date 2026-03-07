@@ -6,12 +6,16 @@ const mockUpdateReview = jest.fn();
 const mockDeleteReview = jest.fn();
 const mockToggleHelpful = jest.fn();
 
+const mockUseGetRecipeReviewsQuery = jest.fn();
+
 jest.mock('#generated', () => ({
   useCreateRecipeReviewMutation: jest.fn(() => [mockCreateReview, { loading: false }]),
   useUpdateRecipeReviewMutation: jest.fn(() => [mockUpdateReview, { loading: false }]),
   useDeleteRecipeReviewMutation: jest.fn(() => [mockDeleteReview, { loading: false }]),
   useToggleReviewHelpfulMutation: jest.fn(() => [mockToggleHelpful, { loading: false }]),
+  useGetRecipeReviewsQuery: (...args: any[]) => mockUseGetRecipeReviewsQuery(...args),
   GetRecipeDocument: 'GetRecipeDocument',
+  GetRecipeReviewsDocument: 'GetRecipeReviewsDocument',
 }));
 
 jest.mock('#hooks/auth/useAuth', () => ({
@@ -36,7 +40,41 @@ jest.mock('../../../apollo/links/tokenScheduler');
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUseGetRecipeReviewsQuery.mockReturnValue({ data: reviewsQueryData });
 });
+
+const reviewsQueryData = {
+  recipe: {
+    id: 'recipe-1',
+    reviews: {
+      edges: [
+        {
+          node: {
+            id: 'rev-1',
+            rating: 5,
+            comment: 'Great!',
+            helpful: 3,
+            createdAt: '2025-01-01T00:00:00Z',
+            user: { id: 'user-2' },
+            helpfulVotes: [{ user: { id: 'user-1' } }],
+          },
+        },
+        {
+          node: {
+            id: 'rev-2',
+            rating: 4,
+            comment: 'Good',
+            helpful: 1,
+            createdAt: '2025-01-02T00:00:00Z',
+            user: { id: 'user-1' },
+            helpfulVotes: [],
+          },
+        },
+      ],
+      totalCount: 2,
+    },
+  },
+};
 
 const makeBackendRecipe = (overrides?: any) => ({
   totalReviews: 3,
@@ -47,32 +85,6 @@ const makeBackendRecipe = (overrides?: any) => ({
   rating4Count: 1,
   rating5Count: 1,
   createdBy: { id: 'other-user' },
-  reviews: {
-    edges: [
-      {
-        node: {
-          id: 'rev-1',
-          rating: 5,
-          comment: 'Great!',
-          helpful: 3,
-          createdAt: '2025-01-01T00:00:00Z',
-          user: { id: 'user-2' },
-          helpfulVotes: [{ user: { id: 'user-1' } }],
-        },
-      },
-      {
-        node: {
-          id: 'rev-2',
-          rating: 4,
-          comment: 'Good',
-          helpful: 1,
-          createdAt: '2025-01-02T00:00:00Z',
-          user: { id: 'user-1' },
-          helpfulVotes: [],
-        },
-      },
-    ],
-  },
   ...overrides,
 });
 
@@ -192,6 +204,7 @@ describe('useRecipeReviews', () => {
   });
 
   it('returns defaults when backendRecipe is null', () => {
+    mockUseGetRecipeReviewsQuery.mockReturnValue({ data: undefined });
     const { result } = renderHook(() =>
       useRecipeReviews({ recipeId: 'recipe-1', backendRecipe: null }),
     );

@@ -178,7 +178,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   return (
     <Animated.View
       entering={entering}
-      style={[styles.container, commonStyles.shadow, animatedSlideStyle]}
+      style={[styles.container, animatedSlideStyle]}
     >
       <SwipeableItem
         itemId={item.id}

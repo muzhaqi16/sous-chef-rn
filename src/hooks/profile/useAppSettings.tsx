@@ -4,7 +4,8 @@ import {
   useGetUserSettingsQuery,
   useUpdateUserPreferencesMutation,
   AppTheme,
-  UnitSystem } from '#generated';
+  UnitSystem,
+  UpdateUserSettingsInput } from '#generated';
 import {executeMutation} from '#/utils/compilerSafeWrappers';
 import {storage} from '#/storage/mmkv';
 
@@ -39,17 +40,43 @@ export const useAppSettings = () => {
       betaFeatures: settings?.betaFeatures || [] };
   };
 
+  const toSettingsInput = (updates: Partial<AppSettings>): UpdateUserSettingsInput => {
+    const input: UpdateUserSettingsInput = {};
+    if ('theme' in updates || 'compactMode' in updates || 'showTutorials' in updates) {
+      input.ui = {};
+      if ('theme' in updates) input.ui.theme = updates.theme;
+      if ('compactMode' in updates) input.ui.compactMode = updates.compactMode;
+      if ('showTutorials' in updates) input.ui.showTutorials = updates.showTutorials;
+    }
+    if ('autoSync' in updates || 'offlineMode' in updates) {
+      input.sync = {};
+      if ('autoSync' in updates) input.sync.autoSync = updates.autoSync;
+      if ('offlineMode' in updates) input.sync.offlineMode = updates.offlineMode;
+    }
+    if ('preferredUnitSystem' in updates) {
+      input.regional = {preferredUnitSystem: updates.preferredUnitSystem};
+    }
+    if ('enabledFeatures' in updates || 'betaFeatures' in updates) {
+      input.features = {};
+      if ('enabledFeatures' in updates) input.features.enabledFeatures = updates.enabledFeatures;
+      if ('betaFeatures' in updates) input.features.betaFeatures = updates.betaFeatures;
+    }
+    return input;
+  };
+
   const updateAppSetting = async (key: keyof AppSettings, value: any) => {
+      const input = toSettingsInput({[key]: value} as Partial<AppSettings>);
       const result = await executeMutation(
-        () => updateSettings({ variables: { input: {[key]: value} } }),
+        () => updateSettings({ variables: { input } }),
         'Failed to update app setting',
       );
       return result !== false;
     };
 
   const updateMultipleSettings = async (updates: Partial<AppSettings>) => {
+      const input = toSettingsInput(updates);
       const result = await executeMutation(
-        () => updateSettings({ variables: { input: updates } }),
+        () => updateSettings({ variables: { input } }),
         'Failed to update app settings',
       );
       return result !== false;

@@ -54,9 +54,9 @@ export function useHomeQuery() {
   let totalPantries: number;
 
   if (allHomesLoaded) {
-    // All data is loaded, calculate the actual count
+    // Use totalCount from the server for accurate counts, fall back to array length
     totalPantries = validHomes.reduce((acc, home: any) => {
-      const count = Array.isArray(home?.pantries) ? home.pantries.length : 0;
+      const count = home?.pantriesTotalCount ?? (Array.isArray(home?.pantries) ? home.pantries.length : 0);
       return acc + count;
     }, 0);
     // Update our last known count (only if changed to avoid extra re-renders)
@@ -71,7 +71,7 @@ export function useHomeQuery() {
   const stats = {
     totalHomes: validHomes.length,
     totalMembers: validHomes.reduce((acc, home: any) => {
-      const count = Array.isArray(home?.members) ? home.members.length : 0;
+      const count = home?.membersTotalCount ?? (Array.isArray(home?.members) ? home.members.length : 0);
       return acc + count;
     }, 0),
     totalPantries,

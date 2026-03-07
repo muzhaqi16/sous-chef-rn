@@ -80,7 +80,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
   },
   segmentCompact: {
-    paddingVertical: theme.spacing.xs,
+    paddingVertical: theme.spacing.sm,
   },
   segmentActive: {
     backgroundColor: theme.colors.primary,

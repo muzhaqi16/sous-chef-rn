@@ -133,6 +133,8 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.lg,
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
   },
   contentContainer: {
     flexDirection: 'row',

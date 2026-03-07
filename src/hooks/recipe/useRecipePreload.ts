@@ -151,11 +151,11 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       n => n.name === 'Calories',
     )?.amount;
 
-    // Transform instructions to JSON format
+    // Transform instructions to JSON format (matches user-created format: { step, text })
     const instructions =
       spoonacularRecipe.analyzedInstructions?.[0]?.steps?.map(step => ({
-        number: step.number,
-        step: step.step,
+        step: step.number,
+        text: step.step,
       })) || [];
 
     return {

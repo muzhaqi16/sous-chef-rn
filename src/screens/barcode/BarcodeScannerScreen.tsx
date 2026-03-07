@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  StatusBar,
   Dimensions,
   Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -68,15 +67,9 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
       setIsActive(true);
       setScanning(true);
 
-      // Hide status bar for immersive camera interface
-      StatusBar.setHidden(true, 'slide');
-
       return () => {
         setIsActive(false);
         setScanning(false);
-        // Show status bar when leaving
-        StatusBar.setHidden(false, 'slide');
-        // Don't set barStyle - let App.tsx handle theme-aware styling
       };
     },
   );
