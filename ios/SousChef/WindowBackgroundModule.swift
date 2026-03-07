@@ -6,20 +6,60 @@ class WindowBackgroundModule: NSObject {
 
   @objc static func requiresMainQueueSetup() -> Bool { true }
 
-  @objc func setBackgroundColor(_ hex: String) {
+  private static func keyWindow() -> UIWindow? {
+    return UIApplication.shared
+      .connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .flatMap { $0.windows }
+      .first { $0.isKeyWindow }
+  }
+
+  @objc func setTheme(_ theme: String) {
     DispatchQueue.main.async {
-      guard let appDelegate = UIApplication.shared.delegate as? AppDelegate,
-            let window = appDelegate.window else { return }
+      guard let window = Self.keyWindow() else { return }
+      let style: UIUserInterfaceStyle = theme == "dark" ? .dark : .light
+      window.overrideUserInterfaceStyle = style
+      window.rootViewController?.overrideUserInterfaceStyle = style
+      window.rootViewController?.setNeedsStatusBarAppearanceUpdate()
+    }
+  }
+
+  @objc func setThemeAndBackground(_ theme: String, hex: String) {
+    NSLog("[SousChef:WindowBG] setThemeAndBackground called — theme=%@, hex=%@", theme, hex)
+    // Persist for next cold start — AppDelegate reads this synchronously
+    UserDefaults.standard.set(theme, forKey: "sous_chef_theme")
+    NSLog("[SousChef:WindowBG] persisted theme=%@ to UserDefaults", theme)
+
+    DispatchQueue.main.async {
+      guard let window = Self.keyWindow() else {
+        NSLog("[SousChef:WindowBG] ERROR: keyWindow is nil!")
+        return
+      }
+      let style: UIUserInterfaceStyle = theme == "dark" ? .dark : .light
+      window.overrideUserInterfaceStyle = style
+      window.rootViewController?.overrideUserInterfaceStyle = style
+      window.rootViewController?.setNeedsStatusBarAppearanceUpdate()
+      NSLog("[SousChef:WindowBG] set overrideUserInterfaceStyle=%@", theme)
 
       let color = Self.color(fromHex: hex)
       window.backgroundColor = color
       if let rootView = window.rootViewController?.view {
         rootView.backgroundColor = color
-        // Also set background on the React surface view (direct subview of rootVC's view)
-        // which gets recreated on JS reload with a default white background
-        for subview in rootView.subviews {
-          subview.backgroundColor = color
-        }
+        NSLog("[SousChef:WindowBG] set bg on window + rootView")
+      } else {
+        NSLog("[SousChef:WindowBG] WARNING: rootViewController.view is nil")
+      }
+    }
+  }
+
+  @objc func setBackgroundColor(_ hex: String) {
+    DispatchQueue.main.async {
+      guard let window = Self.keyWindow() else { return }
+
+      let color = Self.color(fromHex: hex)
+      window.backgroundColor = color
+      if let rootView = window.rootViewController?.view {
+        rootView.backgroundColor = color
       }
     }
   }

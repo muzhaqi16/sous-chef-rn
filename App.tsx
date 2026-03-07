@@ -1,7 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { AppState, StatusBar } from 'react-native';
-import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { AppState } from 'react-native';
+import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+  initialWindowMetrics,
+} from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
@@ -13,14 +17,14 @@ import { Navigation } from '#navigation/RootNavigator';
 import { hasCredentials } from '#storage/keychain';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/atoms/Toast';
-import { StatusBarBackground } from '#components/atoms/StatusBarBackground';
 import { OfflineBanner } from '#components/atoms/OfflineBanner';
-import { useTheme } from '#hooks/useTheme';
+import { ThemedStatusBar } from '#components/atoms/ThemedStatusBar';
 import { Telemetry } from '#services/telemetry';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#hooks/useNetworkStatus';
+import { useTheme } from '#hooks/useTheme';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { NotificationProvider } from '#/components/notifications/NotificationProvider';
 import { DataProvider } from '#/components/providers/DataProvider';
@@ -34,13 +38,13 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { initializeDeviceId } from '#/utils/deviceId';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { setupGlobalErrorHandler } from '#/utils/globalErrorHandler';
-import { WindowBackground } from '#/native/WindowBackground';
 
 // Install global JS exception and promise rejection handlers before any component renders
 setupGlobalErrorHandler();
 
 // Enable native screens for better performance
 enableScreens();
+
 
 /** Module-level helper: Detox launch argument injection (DEV-only) */
 function injectDetoxLaunchArgs(
@@ -76,18 +80,13 @@ const App = () => {
     state => state.setHasStoredCredentials,
   );
   const getTelemetryConfig = useAppStore(state => state.getTelemetryConfig);
-  const { theme } = useTheme();
-  const { theme: uniTheme } = useUnistyles();
-
   // PERFORMANCE: Track if hydration init has run to prevent restarting on theme changes
   const hydrationInitializedRef = useRef(false);
   // Track if Detox requested background services to be disabled
   const detoxBackgroundServicesDisabledRef = useRef(false);
 
-  // Sync iOS window background color with theme (covers safe area regions)
-  useEffect(() => {
-    WindowBackground.setBackgroundColor(uniTheme.colors.background);
-  }, [uniTheme.colors.background]);
+  // Sync user theme preference -> UnistylesRuntime adaptive themes
+  useTheme();
 
   // Initialize network monitoring
   useNetworkStatus();
@@ -159,7 +158,7 @@ const App = () => {
 
       // Track app launch event (captures theme at launch time)
       Telemetry.trackEvent('app_launched', {
-        theme,
+        theme: UnistylesRuntime.themeName,
         timestamp: new Date().toISOString(),
       });
 
@@ -185,19 +184,7 @@ const App = () => {
       // Cleanup AppState token refresh listener
       cleanupAppStateTokenRefresh();
     };
-  }, [isHydrated, theme, setHasStoredCredentials, getTelemetryConfig]);
-
-  // Track theme changes separately
-  const prevThemeRef = useRef(theme);
-  useEffect(() => {
-    if (isHydrated && prevThemeRef.current !== theme) {
-      Telemetry.trackEvent('theme_changed', {
-        from: prevThemeRef.current,
-        to: theme,
-      });
-      prevThemeRef.current = theme;
-    }
-  }, [theme, isHydrated]);
+  }, [isHydrated, setHasStoredCredentials, getTelemetryConfig]);
 
   useEffect(() => {
     const handleAppStateChange = (nextAppState: string) => {
@@ -227,37 +214,34 @@ const App = () => {
 
   return (
     <AppErrorBoundary>
-      <GestureHandlerRootView style={[styles.container, { backgroundColor: uniTheme.colors.background }]}>
+      {/* By default GestureHandlerRootView applies flex: 1, do not set style on it */}
+      <GestureHandlerRootView>
         <KeyboardProvider>
           <ApolloProvider client={client}>
-          <DataProvider>
-            <SubscriptionProvider>
-              <SafeAreaProvider>
-                <OverlayBackdropProvider>
-                  <StatusBar
-                    barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
-                  />
-                  <BottomSheetModalProvider>
-                    {/* Render order matters for stacking (no zIndex used):
-                        1. StatusBarBackground - at the back
-                        2. SafeAreaView with content
-                        3. GlobalBackdrop - covers everything including status bar
-                        4. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
-                    <StatusBarBackground />
-                    <SafeAreaView style={styles.container}>
-                      <OfflineBanner />
-                      <ToastProvider>
-                        <NotificationProvider>
-                          <Navigation />
-                        </NotificationProvider>
-                      </ToastProvider>
-                    </SafeAreaView>
-                    <GlobalBackdrop />
-                  </BottomSheetModalProvider>
-                </OverlayBackdropProvider>
-              </SafeAreaProvider>
-            </SubscriptionProvider>
-          </DataProvider>
+            <DataProvider>
+              <SubscriptionProvider>
+                <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+                  <OverlayBackdropProvider>
+                    <BottomSheetModalProvider>
+                      {/* Render order matters for stacking (no zIndex used):
+                        1. SafeAreaView with content (background extends under status bar via padding mode)
+                        2. GlobalBackdrop - covers everything including status bar
+                        3. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
+                      <ThemedStatusBar />
+                      <SafeAreaView mode = "padding" style={styles.container} edges={[ 'top','bottom']}>
+                        <OfflineBanner />
+                        <ToastProvider>
+                          <NotificationProvider>
+                            <Navigation />
+                          </NotificationProvider>
+                        </ToastProvider>
+                      </SafeAreaView>
+                      <GlobalBackdrop />
+                    </BottomSheetModalProvider>
+                  </OverlayBackdropProvider>
+                </SafeAreaProvider>
+              </SubscriptionProvider>
+            </DataProvider>
           </ApolloProvider>
         </KeyboardProvider>
       </GestureHandlerRootView>
@@ -265,11 +249,11 @@ const App = () => {
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'transparent', // Use theme background, but allow it to extend under status bar
   },
-}));
+});
 
 export default App;

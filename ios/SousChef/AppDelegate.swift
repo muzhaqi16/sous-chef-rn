@@ -22,7 +22,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     reactNativeFactory = factory
  
     window = UIWindow(frame: UIScreen.main.bounds)
- 
+
     factory.startReactNative(
       withModuleName: "SousChef",
       in: window,
@@ -67,4 +67,5 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
     Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif
   }
+
 }

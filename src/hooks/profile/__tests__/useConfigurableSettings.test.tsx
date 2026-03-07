@@ -204,7 +204,7 @@ describe('useConfigurableSettings', () => {
 
     expect(mockSetTheme).toHaveBeenCalledWith('DARK');
     expect(mockUpdateSettingsMutation).toHaveBeenCalledWith({
-      variables: { input: { theme: 'DARK' } },
+      variables: { input: { ui: { theme: 'DARK' } } },
     });
   });
 
@@ -317,7 +317,7 @@ describe('useConfigurableSettings', () => {
     act(() => { langItem.onSave('es'); });
     expect(mockSetLanguage).toHaveBeenCalledWith('es');
     expect(mockUpdateSettingsMutation).toHaveBeenCalledWith({
-      variables: { input: { language: 'es' } },
+      variables: { input: { regional: { language: 'es' } } },
     });
   });
 
