@@ -27,21 +27,18 @@ export const ThemedStatusBar = () => {
   const barStyle =
     resolvedTheme === 'dark' ? 'light-content' : 'dark-content';
 
-  // Look up bg color from theme definitions, not the potentially-stale
-  // useUnistyles() theme object.
   const bgColor =
     resolvedTheme === 'dark'
       ? darkTheme.colors.background
       : lightTheme.colors.background;
 
-  // Sync native window chrome. Skip before hydration to preserve AppDelegate's setup.
-  // Status bar text color is handled by overrideUserInterfaceStyle + setNeedsStatusBarAppearanceUpdate
-  // in the native WindowBackgroundModule (VC-based status bar appearance).
+  // Sync native theme: root view background (cross-platform) and iOS system UI style.
+  // Skip before hydration to preserve AppDelegate's setup.
   useLayoutEffect(() => {
     if (!isHydrated) return;
 
-    WindowBackground.setThemeAndBackground(resolvedTheme, bgColor);
     UnistylesRuntime.setRootViewBackgroundColor(bgColor);
+    WindowBackground.setTheme(resolvedTheme);
   }, [isHydrated, resolvedTheme, bgColor]);
 
   // Track theme changes for telemetry
