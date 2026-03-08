@@ -89,7 +89,7 @@ export const TabView: React.FC<TabViewProps> = ({
             style={{
               backgroundColor: theme.colors.surface,
               elevation: 0,
-              shadowOpacity: 0,
+              boxShadow: [],
               borderBottomWidth: 1,
               borderBottomColor: theme.colors.border }}
             activeColor={theme.colors.primary}

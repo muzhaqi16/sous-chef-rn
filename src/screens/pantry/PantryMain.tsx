@@ -41,6 +41,7 @@ import { AddStorageLocationSheet } from '#components/modals/AddStorageLocationSh
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
+import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
@@ -48,6 +49,15 @@ import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import { SectionHeader } from '#components/molecules/SectionHeader';
+// Module-scope focus callback — pauses cache persistence on blur, resumes on focus.
+// Defined outside component body so the reference is stable (no useCallback needed).
+const onScreenFocus = () => {
+  apolloCachePersistence.resume();
+  return () => {
+    apolloCachePersistence.pause();
+  };
+};
+
 /**
  * Inner component that runs all heavy hooks.
  * Only mounts after DeferredScreen gates rendering, so the skeleton paints instantly.
@@ -123,6 +133,10 @@ const PantryMainInner: React.FC = () => {
       setPendingPantryScrollToTop(false);
     }
   });
+
+  // PERF: Pause cache persistence on blur so heavy serialization doesn't
+  // fire during the next screen's scroll. Resume on focus to flush pending saves.
+  useFocusEffect(onScreenFocus);
 
   // Scroll to top when returning from barcode scanner after adding an item
   useFocusEffect(onPantryFocus);

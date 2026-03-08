@@ -132,86 +132,73 @@ export const useConfigurableSettings = (profile: any) => {
     };
 
   const createSettingItem = (config: any) => {
+      // ==== TEST IDs for Detox ====
+      const testIDMap: Record<string, string> = {
+        personalInformation: 'profile-menu-personalInformation',
+        notifications: 'profile-menu-notifications',
+        dietaryProfile: 'profile-menu-dietaryProfile',
+        appSettings: 'profile-menu-appSettings',
+        debugInfo: 'profile-menu-debugInfo',
+        performanceDashboard: 'profile-menu-performanceDashboard',
+        logout: 'profile-logout-button',
+        privacy: 'profile-menu-privacy',
+        help: 'profile-menu-help',
+        about: 'profile-menu-about',
+        feedback: 'profile-menu-feedback',
+        changePassword: 'profile-menu-changePassword',
+      };
+
       const baseItem: any = {
         key: config.key,
         label: config.label,
-        type: config.type };
+        type: config.type,
+        ...(testIDMap[config.key] ? { testID: testIDMap[config.key] } : {}),
+      };
 
       // Map configuration keys to actual implementation
       switch (config.key) {
         // Personal Information fields
         case 'firstName':
-          baseItem.value = profile?.firstName || '';
-          baseItem.onSave = (value: string) => {
-            const updateObj = { firstName: value } as Partial<Record<any, any>>;
-            updateProfile(updateObj);
-          };
-          break;
+          return { ...baseItem, value: profile?.firstName || '', onSave: (v: string) => updateProfile({ firstName: v } as Partial<Record<any, any>>) };
 
         case 'lastName':
-          baseItem.value = profile?.lastName || '';
-          baseItem.onSave = (value: string) => {
-            const updateObj = { lastName: value } as Partial<Record<any, any>>;
-            updateProfile(updateObj);
-          };
-          break;
+          return { ...baseItem, value: profile?.lastName || '', onSave: (v: string) => updateProfile({ lastName: v } as Partial<Record<any, any>>) };
 
         case 'displayName':
-          baseItem.value = profile?.displayName || '';
-          baseItem.onSave = (value: string) => {
-            const updateObj = { displayName: value } as Partial<
-              Record<any, any>
-            >;
-            updateProfile(updateObj);
-          };
-          break;
+          return { ...baseItem, value: profile?.displayName || '', onSave: (v: string) => updateProfile({ displayName: v } as Partial<Record<any, any>>) };
 
         case 'bio':
-          baseItem.value = profile?.bio || '';
-          baseItem.onSave = (value: string) => {
-            const updateObj = { bio: value } as Partial<Record<any, any>>;
-            updateProfile(updateObj);
-          };
-          break;
+          return { ...baseItem, value: profile?.bio || '', onSave: (v: string) => updateProfile({ bio: v } as Partial<Record<any, any>>) };
 
         case 'phone':
-          baseItem.value = profile?.phone || '';
-          baseItem.onSave = (value: string) => {
-            const updateObj = { phone: value } as Partial<Record<any, any>>;
-            updateProfile(updateObj);
-          };
-          break;
+          return { ...baseItem, value: profile?.phone || '', onSave: (v: string) => updateProfile({ phone: v } as Partial<Record<any, any>>) };
 
         case 'website':
-          baseItem.value = profile?.website || '';
-          baseItem.onSave = (value: string) => {
-            const updateObj = { website: value } as Partial<Record<any, any>>;
-            updateProfile(updateObj);
-          };
-          break;
+          return { ...baseItem, value: profile?.website || '', onSave: (v: string) => updateProfile({ website: v } as Partial<Record<any, any>>) };
 
         case 'dateOfBirth':
-          baseItem.value = extractDateString(profile?.dateOfBirth);
-          baseItem.onSave = (value: string) => {
-            const isoValue = dateStringToISO(value);
-            const updateObj = { dateOfBirth: isoValue };
-            updateProfile(updateObj);
+          return {
+            ...baseItem,
+            value: extractDateString(profile?.dateOfBirth),
+            onSave: (v: string) => {
+              const isoValue = dateStringToISO(v);
+              updateProfile({ dateOfBirth: isoValue });
+            },
           };
-          break;
 
         case 'gender':
           if (config.type === 'modal') {
-            baseItem.value = profile?.gender || '';
-            baseItem.options = config.options || [
-              { label: 'Male', value: 'male' },
-              { label: 'Female', value: 'female' },
-              { label: 'Non-binary', value: 'non-binary' },
-              { label: 'Other', value: 'other' },
-              { label: 'Prefer not to say', value: 'prefer-not-to-say' },
-            ];
-            baseItem.onSave = (value: string) => {
-              const updateObj = { gender: value } as Partial<Record<any, any>>;
-              updateProfile(updateObj);
+            return {
+              ...baseItem,
+              value: profile?.gender || '',
+              options: config.options || [
+                { label: 'Male', value: 'male' },
+                { label: 'Female', value: 'female' },
+                { label: 'Non-binary', value: 'non-binary' },
+                { label: 'Other', value: 'other' },
+                { label: 'Prefer not to say', value: 'prefer-not-to-say' },
+              ],
+              onSave: (v: string) => updateProfile({ gender: v } as Partial<Record<any, any>>),
             };
           }
           break;
@@ -219,44 +206,35 @@ export const useConfigurableSettings = (profile: any) => {
         // Privacy Settings
         case 'profileVisibility':
           if (config.type === 'modal') {
-            baseItem.value =
-              profile?.profileVisibility || ProfileVisibility.Public;
-            baseItem.options = config.options || [
-              { label: 'Public', value: ProfileVisibility.Public },
-              { label: 'Friends Only', value: ProfileVisibility.Friends },
-              { label: 'Private', value: ProfileVisibility.Private },
-            ];
-            baseItem.onSave = (value: string) => {
-              const updateObj = { profileVisibility: value } as Partial<
-                Record<any, any>
-              >;
-              updateProfile(updateObj);
+            return {
+              ...baseItem,
+              value: profile?.profileVisibility || ProfileVisibility.Public,
+              options: config.options || [
+                { label: 'Public', value: ProfileVisibility.Public },
+                { label: 'Friends Only', value: ProfileVisibility.Friends },
+                { label: 'Private', value: ProfileVisibility.Private },
+              ],
+              onSave: (v: string) => updateProfile({ profileVisibility: v } as Partial<Record<any, any>>),
             };
           }
           break;
 
         case 'showEmail':
           if (config.type === 'switch') {
-            baseItem.value = profile?.showEmail || false;
-            baseItem.onPress = () => {
-              const newValue = !profile?.showEmail;
-              const updateObj = { showEmail: newValue } as Partial<
-                Record<any, any>
-              >;
-              updateProfile(updateObj);
+            return {
+              ...baseItem,
+              value: profile?.showEmail || false,
+              onPress: () => updateProfile({ showEmail: !profile?.showEmail } as Partial<Record<any, any>>),
             };
           }
           break;
 
         case 'showPhone':
           if (config.type === 'switch') {
-            baseItem.value = profile?.showPhone || false;
-            baseItem.onPress = () => {
-              const newValue = !profile?.showPhone;
-              const updateObj = { showPhone: newValue } as Partial<
-                Record<any, any>
-              >;
-              updateProfile(updateObj);
+            return {
+              ...baseItem,
+              value: profile?.showPhone || false,
+              onPress: () => updateProfile({ showPhone: !profile?.showPhone } as Partial<Record<any, any>>),
             };
           }
           break;
@@ -264,15 +242,18 @@ export const useConfigurableSettings = (profile: any) => {
         // Theme & Language settings
         case 'theme':
           if (config.type === 'modal') {
-            baseItem.value = userThemePreference;
-            baseItem.options = config.options || [
-              { label: '☀️ Light', value: 'LIGHT' },
-              { label: '🌙 Dark', value: 'DARK' },
-              { label: '📱 System', value: 'SYSTEM' },
-            ];
-            baseItem.onSave = (value: ThemePreference) => {
-              setTheme(value);
-              updateUserPreferences({ ui: { theme: value } });
+            return {
+              ...baseItem,
+              value: userThemePreference,
+              options: config.options || [
+                { label: '☀️ Light', value: 'LIGHT' },
+                { label: '🌙 Dark', value: 'DARK' },
+                { label: '📱 System', value: 'SYSTEM' },
+              ],
+              onSave: (v: ThemePreference) => {
+                setTheme(v);
+                updateUserPreferences({ ui: { theme: v } });
+              },
             };
           }
           break;
@@ -280,29 +261,35 @@ export const useConfigurableSettings = (profile: any) => {
         // Keep backward compatibility with old darkMode setting
         case 'darkMode':
           if (config.type === 'switch') {
-            baseItem.value = userThemePreference === 'DARK';
-            baseItem.onPress = () => {
-              const newTheme =
-                userThemePreference === ThemePreference.DARK
-                  ? ThemePreference.LIGHT
-                  : ThemePreference.DARK;
-              setTheme(newTheme);
-              updateUserPreferences({ ui: { theme: newTheme } });
+            return {
+              ...baseItem,
+              value: userThemePreference === 'DARK',
+              onPress: () => {
+                const newTheme =
+                  userThemePreference === ThemePreference.DARK
+                    ? ThemePreference.LIGHT
+                    : ThemePreference.DARK;
+                setTheme(newTheme);
+                updateUserPreferences({ ui: { theme: newTheme } });
+              },
             };
           }
           break;
 
         case 'language':
           if (config.type === 'modal') {
-            baseItem.value = language || 'en';
-            baseItem.options = config.options || [
-              { label: 'English', value: 'en' },
-              { label: 'Spanish', value: 'es' },
-              { label: 'French', value: 'fr' },
-            ];
-            baseItem.onSave = (value: string) => {
-              setLanguage(value);
-              updateUserPreferences({ regional: { language: value } });
+            return {
+              ...baseItem,
+              value: language || 'en',
+              options: config.options || [
+                { label: 'English', value: 'en' },
+                { label: 'Spanish', value: 'es' },
+                { label: 'French', value: 'fr' },
+              ],
+              onSave: (v: string) => {
+                setLanguage(v);
+                updateUserPreferences({ regional: { language: v } });
+              },
             };
           }
           break;
@@ -313,57 +300,61 @@ export const useConfigurableSettings = (profile: any) => {
             const navState = user?.id ? getUserNavigationState(user.id) : null;
             const wasDeclined = navState?.biometricDeclinedPermanently;
 
-            baseItem.value = biometricEnabled;
-            baseItem.disabled = biometricLoading || !biometricAvailable;
-
+            let subtitle: string;
             if (biometricLoading) {
-              baseItem.subtitle = 'Checking availability...';
+              subtitle = 'Checking availability...';
             } else if (!biometricAvailable) {
-              baseItem.subtitle = 'Not available on this device';
+              subtitle = 'Not available on this device';
             } else if (wasDeclined && !biometricEnabled) {
-              baseItem.subtitle = `Tap to enable ${
+              subtitle = `Tap to enable ${
                 biometricType || 'biometric'
               } login`;
             } else {
-              baseItem.subtitle = `Use ${
+              subtitle = `Use ${
                 biometricType || 'biometric'
               } to login`;
             }
 
-            baseItem.onPress = async () => {
-              if (!biometricAvailable) return;
+            return {
+              ...baseItem,
+              value: biometricEnabled,
+              disabled: biometricLoading || !biometricAvailable,
+              subtitle,
+              onPress: async () => {
+                if (!biometricAvailable) return;
 
-              if (!biometricEnabled) {
-                setShowBiometricModal(true);
-              } else {
-                Alert.alert(
-                  'Disable Biometric Authentication',
-                  'This will remove your saved credentials. You can re-enable it later.',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Disable',
-                      style: 'destructive',
-                      onPress: async () => {
-                        const result = await executeMutation(
-                          async () => {
-                            if (user?.email) {
-                              await removeCredentials(user.email);
-                              setBiometricEnabled(false);
-                            }
-                          },
-                          'Failed to disable biometric authentication',
-                        );
-                        if (result === false) {
-                          Alert.alert(
-                            'Error',
-                            'Failed to disable biometric authentication.',
+                if (!biometricEnabled) {
+                  setShowBiometricModal(true);
+                } else {
+                  Alert.alert(
+                    'Disable Biometric Authentication',
+                    'This will remove your saved credentials. You can re-enable it later.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Disable',
+                        style: 'destructive',
+                        onPress: async () => {
+                          const result = await executeMutation(
+                            async () => {
+                              if (user?.email) {
+                                await removeCredentials(user.email);
+                                setBiometricEnabled(false);
+                              }
+                            },
+                            'Failed to disable biometric authentication',
                           );
-                        }
-                      } },
-                  ],
-                );
-              }
+                          if (result === false) {
+                            Alert.alert(
+                              'Error',
+                              'Failed to disable biometric authentication.',
+                            );
+                          }
+                        } },
+                    ],
+                  );
+                }
+              },
             };
           }
           break;
@@ -377,74 +368,28 @@ export const useConfigurableSettings = (profile: any) => {
         case 'performanceDashboard':
         case 'changePassword':
           if (config.type === 'navigation') {
-            baseItem.onPress = () => {
-              // Navigation will be handled in ProfileScreen
-              // by checking the type and calling navigate
+            return {
+              ...baseItem,
+              onPress: () => {
+                // Navigation will be handled in ProfileScreen
+                // by checking the type and calling navigate
+              },
             };
           }
           break;
 
         // Action items
         case 'logout':
-          baseItem.onPress = () => {
-            // Call the store's reset method or handle logout logic here
-            logout();
-            // You might want to add additional logout logic here
-            // like clearing auth tokens, navigation, etc.
-            console.log('User logged out');
+          return {
+            ...baseItem,
+            onPress: () => {
+              logout();
+              console.log('User logged out');
+            },
           };
-          break;
 
         default:
           console.warn(`Unhandled setting key: ${config.key}`);
-      }
-
-      // ==== TEST IDs for Detox ====
-      switch (config.key) {
-        case 'personalInformation':
-          baseItem.testID = 'profile-menu-personalInformation';
-          break;
-
-        case 'notifications':
-          baseItem.testID = 'profile-menu-notifications';
-          break;
-
-        case 'dietaryProfile':
-          baseItem.testID = 'profile-menu-dietaryProfile';
-          break;
-
-        case 'appSettings':
-          baseItem.testID = 'profile-menu-appSettings';
-          break;
-
-        case 'debugInfo':
-          baseItem.testID = 'profile-menu-debugInfo';
-          break;
-
-        case 'performanceDashboard':
-          baseItem.testID = 'profile-menu-performanceDashboard';
-          break;
-
-        case 'logout':
-          baseItem.testID = 'profile-logout-button';
-          break;
-
-        // Optional menu/test cases
-        case 'privacy':
-          baseItem.testID = 'profile-menu-privacy';
-          break;
-
-        case 'help':
-          baseItem.testID = 'profile-menu-help';
-          break;
-
-        case 'about':
-          baseItem.testID = 'profile-menu-about';
-          break;
-
-        case 'feedback':
-          baseItem.testID = 'profile-menu-feedback';
-          break;
       }
 
       return baseItem;

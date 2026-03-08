@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
@@ -13,8 +14,18 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
 import { ShoppingListModalsProvider } from '#/context/ShoppingListModalsContext';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
+import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 
 import { ShoppingListMainContent } from './ShoppingListMainContent';
+
+// Module-scope focus callback — pauses cache persistence on blur, resumes on focus.
+// Defined outside component body so the reference is stable (no useCallback needed).
+const onScreenFocus = () => {
+  apolloCachePersistence.resume();
+  return () => {
+    apolloCachePersistence.pause();
+  };
+};
 
 /**
  * Inner component that runs all heavy hooks.
@@ -24,6 +35,10 @@ const ShoppingListMainInner: React.FC = () => {
   // Restore optimistic data on mount (offline changes that haven't synced)
   // Hook handles array stability internally - inline array is fine
   useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
+
+  // PERF: Pause cache persistence on blur so heavy serialization doesn't
+  // fire during the next screen's scroll. Resume on focus to flush pending saves.
+  useFocusEffect(onScreenFocus);
 
   const { navigate } = useAppNavigation();
 

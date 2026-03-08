@@ -19,14 +19,14 @@ export const styles = StyleSheet.create(theme => {
     // Background matches action containers so the area behind the sliding card
     // is dark during swipe — no transparent gap between card and actions.
     swipeableContainer: {
-      overflow: 'visible' as const,
+      overflow: 'visible',
       backgroundColor: 'transparent',
       borderRadius: SWIPEABLE_RADIUS,
     },
 
     // Children container style for Swipeable component
     childrenContainer: {
-      overflow: 'hidden' as const,
+      overflow: 'hidden',
       borderRadius: SWIPEABLE_RADIUS,
     },
 

@@ -7,6 +7,8 @@ import type {
   ImageElementConfig,
 } from '#components/organisms/SortableShoppingList/types';
 
+const EMPTY_SORTABLE_ITEMS: SortableShoppingListItem[] = [];
+
 interface TransformOptions {
   /**
    * Force the isPurchased state for all items.
@@ -88,6 +90,7 @@ function transformItems(
   forcePurchasedState?: boolean,
   showImages: boolean = true,
 ): SortableShoppingListItem[] {
+  if (items.length === 0) return EMPTY_SORTABLE_ITEMS;
   return items
     .map(item => transformItem(item, forcePurchasedState, showImages))
     .filter((item): item is SortableShoppingListItem => item !== null);

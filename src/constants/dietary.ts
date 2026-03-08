@@ -15,4 +15,4 @@ export const DIETARY_LIMITS = {
   protein: { min: 0, max: 500 },
   carbs: { min: 0, max: 1000 },
   fat: { min: 0, max: 500 },
-} as const;
+};

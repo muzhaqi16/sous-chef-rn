@@ -80,7 +80,7 @@ jest.mock('react-native-reanimated', () => {
       modify: noOp,
       get: jest.fn(() => sv.value),
       set: jest.fn(v => {
-        sv.value = v;
+        sv.value = v; // eslint-disable-line no-restricted-syntax -- mock simulates SharedValue internals
       }),
     };
     return sv;

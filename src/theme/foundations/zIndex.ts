@@ -15,4 +15,4 @@ export const zIndex = {
   fab: 800,
   toast: 900,
   overlay: 1000,
-} as const;
+};

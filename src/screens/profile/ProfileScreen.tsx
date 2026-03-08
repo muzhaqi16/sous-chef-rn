@@ -35,7 +35,7 @@ export const ProfileScreen = () => {
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: event => {
-      scrollY.value = event.contentOffset.y;
+      scrollY.set(event.contentOffset.y);
     } });
 
   // Track screen view on mount

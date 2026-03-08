@@ -22,6 +22,21 @@ module.exports = {
         '@typescript-eslint/no-deprecated': 'warn',
       },
     },
+    {
+      // Warn on `as const` in style helper files — prefer defineStyles() or StyleSheet.create generics
+      files: ['src/styles/**/*.ts'],
+      rules: {
+        'no-restricted-syntax': [
+          'warn',
+          {
+            selector: 'TSAsExpression[typeAnnotation.type="TSTypeReference"][typeAnnotation.typeName.name="const"]',
+            message:
+              'Prefer `defineStyles()` for style helpers or rely on StyleSheet.create generics. ' +
+              'Use `as const` only for union type derivation, GraphQL __typename, or discriminated unions.',
+          },
+        ],
+      },
+    },
   ],
   rules: {
     // Prevent barrel file imports for better tree shaking
@@ -119,6 +134,14 @@ module.exports = {
       {
         selector: 'CallExpression[callee.name="scheduleOnRN"] > :matches(ArrowFunctionExpression, FunctionExpression)',
         message: 'Do not pass inline functions to scheduleOnRN — define the callback in RN runtime scope first. Inline functions inside worklets cause native crashes on Android.',
+      },
+      {
+        selector: ':matches(Property[key.name="shadowColor"], Property[key.name="shadowOffset"], Property[key.name="shadowOpacity"], Property[key.name="shadowRadius"])',
+        message: 'Use CSS boxShadow syntax instead of individual shadow properties. See src/styles/listStyles.ts for the correct pattern.',
+      },
+      {
+        selector: 'AssignmentExpression[left.type="MemberExpression"][left.property.name="value"]',
+        message: 'Use .set() instead of .value assignment for SharedValues (React Compiler compatibility). If this is not a SharedValue, refactor to avoid .value mutation.',
       },
     ],
   },

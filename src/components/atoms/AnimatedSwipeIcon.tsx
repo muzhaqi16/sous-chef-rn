@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
@@ -52,7 +52,7 @@ export const AnimatedSwipeIcon: React.FC<AnimatedSwipeIconProps> = ({
   // Use direction-appropriate arrow if no custom icon provided
   const iconName = icon || (direction === 'left' ? 'arrow-back' : 'arrow-forward');
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const swipeDistance = direction === 'left' ? -distance : distance;
 
     translateX.set(withDelay(

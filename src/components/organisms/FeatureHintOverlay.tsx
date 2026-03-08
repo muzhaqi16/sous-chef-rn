@@ -114,11 +114,7 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.xl,
     maxWidth: 400,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 8, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.3)' }],
   },
   hintContent: {
     alignItems: 'center',

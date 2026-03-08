@@ -84,7 +84,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     onSwipeableClose,
   } = actions;
 
-  // Read permissions from context snapshot
   const {
     canRemoveItems = true,
     canEditItems = true,

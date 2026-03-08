@@ -1,10 +1,11 @@
 import { StyleSheet } from 'react-native-unistyles';
 import type { AnyTheme } from '#/theme/themes';
+import { defineStyles } from './defineStyles';
 
 /**
  * Typography and interaction state style definitions.
  */
-export const typographyDefs = (theme: AnyTheme) => ({
+export const typographyDefs = (theme: AnyTheme) => defineStyles({
   // Typography presets
   h1: {
     fontSize: theme.fonts.size['4xl'],
@@ -48,7 +49,7 @@ export const typographyDefs = (theme: AnyTheme) => ({
   },
   link: {
     color: theme.colors.primary,
-    textDecorationLine: 'underline' as const,
+    textDecorationLine: 'underline',
   },
 
   // Interaction states

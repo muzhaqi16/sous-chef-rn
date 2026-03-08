@@ -70,11 +70,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
     backgroundColor: theme.colors.surface,
-    shadowColor: theme.colors.backgroundSecondary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 2,
+    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 3, spreadDistance: 0, color: `${theme.colors.backgroundSecondary}0A` }],
   },
   image: {
     marginRight: theme.spacing['3'],

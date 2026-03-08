@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native-unistyles';
 import type { AnyTheme } from '#/theme/themes';
+import { defineStyles } from './defineStyles';
 
 const shadowStyle = {
   boxShadow: [
@@ -16,11 +17,11 @@ const shadowStyle = {
 /**
  * List, empty state, and loading style definitions.
  */
-export const listDefs = (theme: AnyTheme) => ({
+export const listDefs = (theme: AnyTheme) => defineStyles({
   // List items
   listItem: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
@@ -44,9 +45,10 @@ export const listDefs = (theme: AnyTheme) => ({
     height: theme.sizes.listImage.height,
     marginRight: theme.spacing.sm,
     borderRadius: theme.radii.md,
-    overflow: 'hidden' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: theme.colors.primary,
     ...shadowStyle,
@@ -55,16 +57,17 @@ export const listDefs = (theme: AnyTheme) => ({
     width: theme.sizes.listImage.width,
     height: theme.sizes.listImage.height,
     borderRadius: theme.radii.md,
-    resizeMode: 'cover' as const,
+    resizeMode: 'cover',
   },
   listItemImageContainerCompact: {
     width: theme.sizes.itemCard.compact.image,
     height: theme.sizes.itemCard.compact.image,
     marginRight: theme.spacing['3'],
     borderRadius: theme.radii.md,
-    overflow: 'hidden' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: theme.colors.primary,
     ...shadowStyle,
@@ -73,7 +76,7 @@ export const listDefs = (theme: AnyTheme) => ({
     width: theme.sizes.itemCard.compact.image,
     height: theme.sizes.itemCard.compact.image,
     borderRadius: theme.radii.md,
-    resizeMode: 'cover' as const,
+    resizeMode: 'cover',
   },
 
   // Reusable shadow
@@ -82,8 +85,8 @@ export const listDefs = (theme: AnyTheme) => ({
   // Empty states
   emptyState: {
     flex: 1,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: theme.spacing.xl,
   },
   emptyStateIcon: {
@@ -94,20 +97,20 @@ export const listDefs = (theme: AnyTheme) => ({
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
-    textAlign: 'center' as const,
+    textAlign: 'center',
   },
   emptyStateText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    textAlign: 'center' as const,
+    textAlign: 'center',
     marginBottom: theme.spacing.lg,
   },
 
   // Loading states
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: theme.colors.background,
   },
   loadingText: {

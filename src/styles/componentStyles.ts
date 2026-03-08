@@ -1,10 +1,11 @@
 import { StyleSheet } from 'react-native-unistyles';
 import type { AnyTheme } from '#/theme/themes';
+import { defineStyles } from './defineStyles';
 
 /**
  * Component style definitions — badges, chips, FAB.
  */
-export const componentDefs = (theme: AnyTheme) => ({
+export const componentDefs = (theme: AnyTheme) => defineStyles({
   // Badges
   badge: {
     paddingHorizontal: theme.spacing.sm,
@@ -40,15 +41,15 @@ export const componentDefs = (theme: AnyTheme) => ({
 
   // FAB
   fab: {
-    position: 'absolute' as const,
+    position: 'absolute',
     bottom: theme.spacing['5'],
     right: theme.spacing['5'],
     width: 56,
     height: 56,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.primary,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
+    justifyContent: 'center',
+    alignItems: 'center',
     ...theme.shadows.lg,
   },
 });

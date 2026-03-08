@@ -275,7 +275,7 @@ const RecipeDetailScreen: React.FC = () => {
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: event => {
-      scrollY.value = event.contentOffset.y;
+      scrollY.set(event.contentOffset.y);
     } });
 
   const imageAnimatedStyle = useAnimatedStyle(() => {
@@ -984,11 +984,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2.22,
-    elevation: 3 },
+    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 2.22, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.22)' }] },
   rightButtons: {
     position: 'absolute',
     top: 48,
@@ -1002,11 +998,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2.22,
-    elevation: 3 },
+    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 2.22, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.22)' }] },
   noImageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -136,11 +136,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing['5'],
     width: '80%',
     maxWidth: theme.sizes.modal.sm,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: theme.spacing.xs },
-    shadowOpacity: 0.15,
-    shadowRadius: theme.spacing['3'],
-    elevation: 10,
+    boxShadow: [{ offsetX: 0, offsetY: theme.spacing.xs, blurRadius: theme.spacing['3'], spreadDistance: 0, color: 'rgba(0, 0, 0, 0.15)' }],
   },
   sortModalTitle: {
     fontSize: theme.typography.fontSize.lg,

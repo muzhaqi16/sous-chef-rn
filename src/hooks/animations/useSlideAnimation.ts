@@ -87,9 +87,9 @@ export function useSlideAnimation({
 
   const animatedSlideStyle = useAnimatedStyle(() => {
     const style: { transform: { translateX: number }[]; opacity?: number } = {
-      transform: [{ translateX: translateX.value }] };
+      transform: [{ translateX: translateX.get() }] };
     if (withOpacity) {
-      style.opacity = opacity.value;
+      style.opacity = opacity.get();
     }
     return style;
   });
@@ -110,7 +110,7 @@ export function useSlideAnimation({
       if (allowedDirections === 'left' && direction === 1) return;
 
       // Guard: prevent double-tap / re-entry while animating
-      if (isAnimatingShared.value) return;
+      if (isAnimatingShared.get()) return;
 
       isAnimatingShared.set(true);
 
@@ -131,7 +131,7 @@ export function useSlideAnimation({
         direction * slideDistance,
         timingConfig,
         finished => {
-          isAnimatingShared.value = false;
+          isAnimatingShared.set(false);
           if (finished && onComplete) {
             scheduleOnRN(executeOnComplete);
           }

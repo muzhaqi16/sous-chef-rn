@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { StyleProp, ViewStyle, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
@@ -39,7 +39,7 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   const rotation = useSharedValue(0);
 
   // Animate icon scale and rotation when isHighlighted changes to true
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isHighlighted) {
       // Pulse animation with rotation
       scale.set(withSequence(

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import Icon from '@react-native-vector-icons/ionicons';
 import {Text, View, Pressable} from 'react-native';
 import Animated, {
@@ -26,7 +26,7 @@ export const Counter = ({
   const countScale = useSharedValue(1);
 
   // Bounce animation when count changes
-  useEffect(() => {
+  useLayoutEffect(() => {
     countScale.set(withSequence(
       withSpring(1.15, SPRING.SNAPPY),
       withSpring(1, SPRING.SNAPPY),

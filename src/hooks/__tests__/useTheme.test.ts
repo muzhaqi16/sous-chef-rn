@@ -12,11 +12,13 @@ jest.mock('#/store/useAppStore', () => ({
     selector({
       theme: mockUserThemePreference,
       setTheme: mockSetTheme,
+      isHydrated: true,
     }),
   selectPreferences: (s: any) => ({
     theme: s.theme,
     setTheme: s.setTheme,
   }),
+  selectHydrated: (s: any) => s.isHydrated,
 }));
 
 jest.mock('zustand/shallow', () => ({

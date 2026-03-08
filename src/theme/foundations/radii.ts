@@ -10,4 +10,4 @@ export const radii = {
   '4xl': 28, // For FAB buttons, circular elements
   pill: 9999, // For pill-shaped buttons and badges
   full: 9999,
-} as const;
+};

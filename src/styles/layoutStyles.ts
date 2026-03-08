@@ -1,11 +1,12 @@
 import { StyleSheet } from 'react-native-unistyles';
 import type { AnyTheme } from '#/theme/themes';
+import { defineStyles } from './defineStyles';
 
 /**
  * Layout style definitions — containers, surfaces, cards, flex, spacing, headers, dividers, and utility.
  * Export the raw definitions for composition in commonStyles.
  */
-export const layoutDefs = (theme: AnyTheme) => ({
+export const layoutDefs = (theme: AnyTheme) => defineStyles({
   // Containers
   container: {
     flex: 1,
@@ -19,8 +20,8 @@ export const layoutDefs = (theme: AnyTheme) => ({
   containerCentered: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // Surfaces
@@ -30,25 +31,24 @@ export const layoutDefs = (theme: AnyTheme) => ({
   surfaceRounded: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
 
   // Cards
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
   cardWithShadow: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
     marginBottom: theme.spacing.sm,
-    shadowColor: theme.colors.primaryDark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 4, spreadDistance: 0, color: `${theme.colors.primaryDark}1A` }],
   },
   bottomBorder: {
     borderBottomWidth: 1,
@@ -57,28 +57,28 @@ export const layoutDefs = (theme: AnyTheme) => ({
 
   // Flex patterns
   row: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   rowSpaceBetween: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   rowCenter: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   column: {
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
   },
   flex1: {
     flex: 1,
   },
   center: {
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // Spacing
@@ -118,9 +118,9 @@ export const layoutDefs = (theme: AnyTheme) => ({
 
   // Headers
   header: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
     paddingVertical: {
@@ -157,7 +157,7 @@ export const layoutDefs = (theme: AnyTheme) => ({
 
   // Utility
   absoluteFill: {
-    position: 'absolute' as const,
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,

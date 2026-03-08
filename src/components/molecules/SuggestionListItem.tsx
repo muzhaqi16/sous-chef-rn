@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
@@ -67,7 +67,7 @@ export const SuggestionListItem = ({
     onExitCompleteRef.current?.();
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isExiting) {
       translateX.set(withTiming(EXIT_CONFIG.slideDistance, { duration: EXIT_CONFIG.duration }));
       opacity.set(

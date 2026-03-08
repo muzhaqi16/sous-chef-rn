@@ -30,7 +30,7 @@ export const typography = {
     normal: 0,
     wide: 0.5,
   },
-} as const;
+};
 
 /**
  * Canonical typography API - preferred access path: `theme.fonts.*`
@@ -43,14 +43,24 @@ export const typography = {
  *   theme.typography.lineHeight.normal
  *   theme.typography.letterSpacing.tight
  */
+/** Explicit type keeps literal font-weight values without `as const`. */
+interface FontWeights {
+  regular: '400';
+  medium: '500';
+  semibold: '600';
+  bold: '700';
+}
+
+const fontWeights: FontWeights = {
+  regular: '400',
+  medium: '500',
+  semibold: '600',
+  bold: '700',
+};
+
 export const fonts = {
   size: typography.fontSize,
-  weight: {
-    regular: '400' as const,
-    medium: '500' as const,
-    semibold: '600' as const,
-    bold: '700' as const,
-  },
+  weight: fontWeights,
   lineHeight: typography.lineHeight,
   letterSpacing: typography.letterSpacing,
 };

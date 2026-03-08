@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -84,7 +84,7 @@ export const CollapsiblePurchasedSection: React.FC<
   const chevronRotation = useSharedValue(expanded ? 180 : 0);
 
   // Update chevron rotation when expanded state changes
-  useEffect(() => {
+  useLayoutEffect(() => {
     chevronRotation.set(withSpring(expanded ? 180 : 0, SPRING.EXPAND));
   }, [expanded, chevronRotation]);
 

@@ -81,11 +81,26 @@ export const SortableListActionsProvider: React.FC<SortableListActionsProviderPr
     actionsRef.current = actions;
   });
 
-  // Store latest permissions in ref - consumers can read current values via ref
+  // Store latest permissions in ref - for use in event handlers (not during render)
   const permissionsRef = useRef(permissions);
   useEffect(() => {
     permissionsRef.current = permissions;
   });
+
+  // Value-compare permissions so context only updates when booleans actually change.
+  // Parent re-renders (e.g. Apollo cache updates) create new permission object references
+  // even when the boolean values are identical — this guard prevents unnecessary context updates.
+  const [stablePermissions, setStablePermissions] = useState(permissions);
+
+  if (
+    stablePermissions.canRemoveItems !== permissions.canRemoveItems ||
+    stablePermissions.canEditItems !== permissions.canEditItems ||
+    stablePermissions.canMarkPurchased !== permissions.canMarkPurchased ||
+    stablePermissions.canReorderItems !== permissions.canReorderItems ||
+    stablePermissions.disabled !== permissions.disabled
+  ) {
+    setStablePermissions(permissions);
+  }
 
   // Create stable callbacks that delegate to ref
   // useState initializer guarantees a single stable object across all renders
@@ -102,11 +117,11 @@ export const SortableListActionsProvider: React.FC<SortableListActionsProviderPr
       actionsRef.current.onSortOrderUpdate?.(itemId, afterItemId, beforeItemId),
   }));
 
-  // Context value - permissionsRef allows consumers to read latest permissions without context changes
+  // Context value - only stable refs/objects to prevent context-triggered re-renders
   const contextValue: SortableListActionsContextValue = {
     actions: stableActions,
-    permissions, // Snapshot for current render
-    permissionsRef, // Ref for latest values - always current
+    permissions: stablePermissions,
+    permissionsRef, // Ref for latest values in event handlers (not during render)
   };
 
   return (

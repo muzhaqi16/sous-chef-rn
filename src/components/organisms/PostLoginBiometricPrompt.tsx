@@ -150,11 +150,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     maxWidth: 340,
     width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 12, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.1)' }],
   },
   iconContainer: {
     marginBottom: theme.spacing.lg,

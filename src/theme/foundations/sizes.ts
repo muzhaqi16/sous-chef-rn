@@ -68,4 +68,4 @@ export const sizes = {
     md: 44,
     lg: 52,
   },
-} as const;
+};

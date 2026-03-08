@@ -1,5 +1,7 @@
 import {useState, useEffect} from 'react';
 
+const EMPTY_LIST: never[] = [];
+
 export interface SearchableListOptions {
   /** Debounce delay in milliseconds (default: 0) */
   debounceMs?: number;
@@ -36,8 +38,8 @@ export function useSearchableList<T>(
     }
   }, [query, debounceMs]);
 
-  // Ensure we have an array
-  const list = Array.isArray(items) ? items : [];
+  // Ensure we have an array (module-level constant prevents new ref each render)
+  const list = Array.isArray(items) ? items : EMPTY_LIST;
 
   // Use debounced query for filtering
   const searchQuery = debounceMs > 0 ? debouncedQuery : query;

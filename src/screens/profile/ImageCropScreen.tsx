@@ -77,11 +77,11 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
   const pinch = Gesture.Pinch()
     .onStart(() => {
       'worklet';
-      startScale.value = scale.value;
+      startScale.set(scale.get());
     })
     .onUpdate(e => {
       'worklet';
-      scale.value = clamp(startScale.value * e.scale, 0.5, 3);
+      scale.set(clamp(startScale.get() * e.scale, 0.5, 3));
     });
 
   // Create pan gesture
@@ -89,21 +89,23 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
     .averageTouches(true)
     .onStart(() => {
       'worklet';
-      startOffset.value = { x: offset.value.x, y: offset.value.y };
+      const currentOffset = offset.get();
+      startOffset.set({ x: currentOffset.x, y: currentOffset.y });
     })
     .onUpdate(e => {
       'worklet';
       // Calculate bounds based on current scale and image size
-      const scaledWidth = (imageSize.width || CROP_SIZE) * scale.value;
-      const scaledHeight = (imageSize.height || CROP_SIZE) * scale.value;
+      const scaledWidth = (imageSize.width || CROP_SIZE) * scale.get();
+      const scaledHeight = (imageSize.height || CROP_SIZE) * scale.get();
 
       const maxX = Math.max(0, (scaledWidth - CROP_SIZE) / 2);
       const maxY = Math.max(0, (scaledHeight - CROP_SIZE) / 2);
 
-      const newX = clamp(startOffset.value.x + e.translationX, -maxX, maxX);
-      const newY = clamp(startOffset.value.y + e.translationY, -maxY, maxY);
+      const currentStartOffset = startOffset.get();
+      const newX = clamp(currentStartOffset.x + e.translationX, -maxX, maxX);
+      const newY = clamp(currentStartOffset.y + e.translationY, -maxY, maxY);
 
-      offset.value = { x: newX, y: newY };
+      offset.set({ x: newX, y: newY });
     });
 
   // Compose gestures
@@ -111,11 +113,12 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
 
   // Animated style
   const animatedStyle = useAnimatedStyle(() => {
+    const currentOffset = offset.get();
     return {
       transform: [
-        { translateX: offset.value.x },
-        { translateY: offset.value.y },
-        { scale: scale.value },
+        { translateX: currentOffset.x },
+        { translateY: currentOffset.y },
+        { scale: scale.get() },
       ] };
   });
 

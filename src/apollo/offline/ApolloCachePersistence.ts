@@ -172,7 +172,7 @@ class ApolloCachePersistence {
         'requestIdleCallback' in globalThis
       ) {
         // justified: requestIdleCallback not in React Native's global type definitions
-        this.idleCallbackId = (globalThis as any).requestIdleCallback(serialize, { timeout: 2000 });
+        this.idleCallbackId = (globalThis as any).requestIdleCallback(serialize);
       } else if (typeof requestAnimationFrame === 'function') {
         // requestAnimationFrame defers to next frame, then use setTimeout to avoid blocking paint
         this.idleCallbackId = requestAnimationFrame(() => {

@@ -1,19 +1,20 @@
 import { StyleSheet } from 'react-native-unistyles';
 import type { AnyTheme } from '#/theme/themes';
+import { defineStyles } from './defineStyles';
 
 /**
  * Modal and bottom sheet style definitions.
  */
-export const modalDefs = (theme: AnyTheme) => ({
+export const modalDefs = (theme: AnyTheme) => defineStyles({
   // Modals
   modalContainer: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
   modalHeader: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
@@ -23,7 +24,7 @@ export const modalDefs = (theme: AnyTheme) => ({
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     flex: 1,
-    textAlign: 'center' as const,
+    textAlign: 'center',
   },
   modalContent: {
     padding: theme.spacing.md,
@@ -50,8 +51,8 @@ export const modalDefs = (theme: AnyTheme) => ({
     marginBottom: theme.spacing.xs,
   },
   bottomSheetItemRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   bottomSheetItemLabel: {
     fontSize: theme.fonts.size.base,
@@ -77,13 +78,13 @@ export const modalDefs = (theme: AnyTheme) => ({
 
   // Chip/Option selection (for purpose, waste reason, etc.)
   bottomSheetOptionContainer: {
-    flexDirection: 'row' as const,
-    flexWrap: 'wrap' as const,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: theme.spacing.sm,
   },
   bottomSheetOption: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,

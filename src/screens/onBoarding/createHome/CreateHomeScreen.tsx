@@ -659,11 +659,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2 },
+    boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 4, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.1)' }] },
   inviteHomeName: {
     fontSize: theme.typography.fontSize.xl,
     fontWeight: theme.fonts.weight.bold,

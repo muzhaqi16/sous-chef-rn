@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, Pressable } from 'react-native';
+import { Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -68,14 +68,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     // Shadow for elevated effect
-    shadowColor: theme.colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: theme.spacing.xs },
-    shadowOpacity: 0.3,
-    shadowRadius: theme.radii.md,
-    ...(Platform.OS === 'ios' && { elevation: 8 }) },
+    boxShadow: [{ offsetX: 0, offsetY: theme.spacing.xs, blurRadius: theme.radii.md, spreadDistance: 0, color: `${theme.colors.primary}4D` }] },
   addButtonDisabled: {
     opacity: 0.4,
-    shadowOpacity: 0,
-    elevation: 0 } }));
+    boxShadow: [] } }));
