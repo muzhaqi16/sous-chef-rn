@@ -173,4 +173,4 @@ export const MESSAGES = {
     noShoppingListItems: 'Your shopping list is empty',
     noInvitations: 'No pending invitations',
   },
-} as const;
+};

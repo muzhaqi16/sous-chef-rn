@@ -22,6 +22,21 @@ module.exports = {
         '@typescript-eslint/no-deprecated': 'warn',
       },
     },
+    {
+      // Warn on `as const` in style helper files — prefer defineStyles() or StyleSheet.create generics
+      files: ['src/styles/**/*.ts'],
+      rules: {
+        'no-restricted-syntax': [
+          'warn',
+          {
+            selector: 'TSAsExpression[typeAnnotation.type="TSTypeReference"][typeAnnotation.typeName.name="const"]',
+            message:
+              'Prefer `defineStyles()` for style helpers or rely on StyleSheet.create generics. ' +
+              'Use `as const` only for union type derivation, GraphQL __typename, or discriminated unions.',
+          },
+        ],
+      },
+    },
   ],
   rules: {
     // Prevent barrel file imports for better tree shaking

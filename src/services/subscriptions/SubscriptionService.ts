@@ -191,7 +191,7 @@ export class SubscriptionService {
       enableLogging: config.enableLogging ?? __DEV__,
       logLevel: config.logLevel || LogLevel.INFO,
       entityId: config.entityId,
-    } as const;
+    };
 
     // Register subscription in tracking registry
     const key = this.getSubscriptionKey(finalConfig);

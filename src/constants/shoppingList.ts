@@ -10,7 +10,7 @@
 export const FRAGMENT_NAMES = {
   ITEM_VERSION_DATA: 'ItemVersionData',
   ITEM_VERSION_DATA_2: 'ItemVersionData2',
-} as const;
+};
 
 /**
  * Icon names used in shopping list UI
@@ -24,7 +24,7 @@ export const ICONS = {
   EDIT: 'create-outline',
   DELETE: 'trash-outline',
   CHECKMARK: 'checkmark',
-} as const;
+};
 
 /**
  * Action labels and text
@@ -38,7 +38,7 @@ export const LABELS = {
   NO_ITEMS: 'No Items',
   CREATE_LIST: 'Create List',
   ADD_FIRST_ITEM: 'Add First Item',
-} as const;
+};
 
 /**
  * Empty state messages
@@ -48,7 +48,7 @@ export const EMPTY_STATE_MESSAGES = {
   NO_LISTS_SUBTITLE: 'Create your first shopping list to get started',
   NO_ITEMS_TITLE: 'Your list is empty',
   NO_ITEMS_SUBTITLE: 'Add items to your shopping list',
-} as const;
+};
 
 /**
  * Pagination configuration for shopping list items
@@ -56,7 +56,7 @@ export const EMPTY_STATE_MESSAGES = {
 export const PAGINATION = {
   /** Number of items to fetch per page in shopping list queries */
   ITEMS_PAGE_SIZE: 20,
-} as const;
+};
 
 /**
  * Default values and configuration
@@ -64,4 +64,4 @@ export const PAGINATION = {
 export const DEFAULTS = {
   SKELETON_COUNT: 5,
   REFRESH_DELAY: 300, // ms
-} as const;
+};

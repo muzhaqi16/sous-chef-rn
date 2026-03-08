@@ -115,7 +115,7 @@
     "react-native-keychain": "^10.0.0",
     "react-native-launch-arguments": "^4.1.1",
     "react-native-mmkv": "^4.1.2",
-    "react-native-nitro-modules": "^0.35.0",
+    "react-native-nitro-modules": "^0.33.9",
     "react-native-pager-view": "^7.0.2",
     "react-native-performance": "^6.0.0",
     "react-native-permissions": "^5.4.4",

@@ -30,7 +30,7 @@ export const DEFAULT_PAGE_SIZES = {
 
   /** Infinite scroll increment */
   INFINITE_SCROLL: 30,
-} as const;
+};
 
 /**
  * Maximum query depth allowed by API

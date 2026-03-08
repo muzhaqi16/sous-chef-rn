@@ -43,7 +43,7 @@ export const HomeTabs = createBottomTabNavigator({
         const routeName = getTabRouteName(route) ?? 'PantryMain';
         return {
           title: 'Pantry',
-          tabBarStyle: routeName !== 'PantryMain' ? {display: 'none' as const} : undefined,
+          tabBarStyle: routeName !== 'PantryMain' ? {display: 'none'} : undefined,
         };
       },
     },
@@ -53,7 +53,7 @@ export const HomeTabs = createBottomTabNavigator({
         const routeName = getTabRouteName(route) ?? 'ShoppingListMain';
         return {
           title: 'List',
-          tabBarStyle: routeName !== 'ShoppingListMain' ? {display: 'none' as const} : undefined,
+          tabBarStyle: routeName !== 'ShoppingListMain' ? {display: 'none'} : undefined,
         };
       },
     },
@@ -63,7 +63,7 @@ export const HomeTabs = createBottomTabNavigator({
         const routeName = getTabRouteName(route) ?? 'RecipeMain';
         return {
           title: 'Recipes',
-          tabBarStyle: routeName !== 'RecipeMain' ? {display: 'none' as const} : undefined,
+          tabBarStyle: routeName !== 'RecipeMain' ? {display: 'none'} : undefined,
         };
       },
     },
@@ -73,7 +73,7 @@ export const HomeTabs = createBottomTabNavigator({
         const routeName = getTabRouteName(route) ?? 'MealPlanMain';
         return {
           title: 'Meal Plan',
-          tabBarStyle: routeName !== 'MealPlanMain' ? {display: 'none' as const} : undefined,
+          tabBarStyle: routeName !== 'MealPlanMain' ? {display: 'none'} : undefined,
         };
       },
     },

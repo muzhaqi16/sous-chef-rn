@@ -21,7 +21,7 @@ export const SPRING = {
   GENTLE: { damping: 20, stiffness: 180 },
   HEAVY: { damping: 25, stiffness: 350, mass: 0.8 },
   EXPAND: { damping: 20, stiffness: 200 },
-} as const;
+};
 
 /**
  * Bottom-sheet / modal animation constants.
@@ -31,7 +31,7 @@ export const SHEET = {
   BACKDROP_OPACITY: 0.5,
   BACKDROP_FADE_IN: 100,
   BACKDROP_FADE_OUT: 300,
-} as const;
+};
 
 /**
  * Named timing duration presets (in ms).
@@ -42,7 +42,7 @@ export const TIMING = {
   STANDARD: 200,
   MODERATE: 250,
   SLOW: 300,
-} as const;
+};
 
 /**
  * Reusable slide animation presets for common patterns.
@@ -90,7 +90,7 @@ export const SLIDE_PRESETS = {
     withOpacity: true,
     opacityTarget: 0,
   },
-} as const satisfies Record<string, SlideAnimationConfig>;
+} satisfies Record<string, SlideAnimationConfig>;
 
 /**
  * Animation preset for form show/hide transitions
@@ -151,7 +151,7 @@ export const listItemExitAnimation = {
     duration: 200,
   },
   itemHeight: 95, // 87px content + 8px margins (spacing.xs = 4px each side)
-} as const;
+};
 
 /**
  * PERFORMANCE: Faster exit animation for checkbox toggles
@@ -185,7 +185,7 @@ export const listItemFastExitAnimation = {
   layoutAnimation: {
     duration: 150,
   },
-} as const;
+};
 
 /**
  * Animation preset for list item entry transitions
@@ -194,7 +194,7 @@ export const listItemFastExitAnimation = {
 export const listItemEntryAnimation = {
   fade: { duration: 250 },
   slide: { distance: 50, duration: 300 },
-} as const;
+};
 
 /**
  * Layout animation for list items
@@ -217,7 +217,7 @@ export const staggeredEntryAnimation = {
   maxItems: 6, // Cap stagger for long lists (reduced from 8)
   duration: 200, // Individual item fade duration (reduced from 250ms)
   initialDelay: 30, // Delay before first item for smoother skeleton→content transition
-} as const;
+};
 
 /**
  * Screen content entry animation preset.
@@ -229,4 +229,4 @@ export const screenEntryAnimation = {
   maxItems: 5,
   duration: 250,
   initialDelay: 100,
-} as const;
+};
