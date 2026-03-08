@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useDeferredValue } from 'react';
 
 import { useAuth } from '#/hooks/auth/useAuth';
 import { preloadImages } from '#components/atoms/CachedImage';
@@ -73,16 +73,19 @@ export function useShoppingListScreen() {
   } = useShoppingListManagement(optimisticListId);
 
   // 4. Transform: Convert raw items to UI format (single consolidated call)
-  // Apollo's cache-and-network policy already provides instant cached data + background refresh,
-  // so useDeferredValue is not needed here and was causing FlashList blank cells.
   const { unpurchasedItems: transformedUnpurchasedItems, purchasedItems: transformedPurchasedItems } =
     useShoppingListTransformMulti({
       rawUnpurchasedItems,
       rawPurchasedItems,
     });
 
-  // Derive sortableItems from concatenation instead of a separate transform pass
-  const sortableItems = [...transformedUnpurchasedItems, ...transformedPurchasedItems];
+  // Defer Apollo cache/subscription updates so scroll events aren't blocked.
+  // Applied AFTER transform to avoid stale-data issues that caused FlashList blank cells.
+  const deferredUnpurchased = useDeferredValue(transformedUnpurchasedItems);
+  const deferredPurchased = useDeferredValue(transformedPurchasedItems);
+
+  // Derive sortableItems from deferred values
+  const sortableItems = [...deferredUnpurchased, ...deferredPurchased];
 
   // 5. Ownership: Enrich lists with ownership info
   const listDataWithOwnership = lists.map(list => ({
@@ -126,8 +129,8 @@ export function useShoppingListScreen() {
     // Items (transformed for UI)
     items,
     sortableItems,
-    unpurchasedItems: transformedUnpurchasedItems,
-    purchasedItems: transformedPurchasedItems,
+    unpurchasedItems: deferredUnpurchased,
+    purchasedItems: deferredPurchased,
     rawUnpurchasedItems,
 
     // Loading states

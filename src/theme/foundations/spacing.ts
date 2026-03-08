@@ -9,7 +9,7 @@ export const spacing = {
   xl: 32,
   '2xl': 48,
   '3xl': 64,
-} as const;
+};
 
 // Helper function for consistent spacing
 export const space = (...values: (keyof typeof spacing)[]) => {

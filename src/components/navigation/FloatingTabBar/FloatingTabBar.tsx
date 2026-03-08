@@ -1,4 +1,4 @@
-import React, { startTransition, useEffect } from 'react';
+import React, { startTransition, useEffect, useLayoutEffect } from 'react';
 import { Platform, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -52,7 +52,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
     const activeTabIndex = useSharedValue(state.index);
 
     // Sync shared value with React Navigation state
-    useEffect(() => {
+    useLayoutEffect(() => {
       activeTabIndex.set(state.index);
     }, [state.index, activeTabIndex]);
 
@@ -76,7 +76,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
       focusedOptions.tabBarStyle.display === 'none';
 
     // Animate tab bar visibility
-    useEffect(() => {
+    useLayoutEffect(() => {
       const shouldHide = isOverlayOpen || shouldHideFromNavigation;
 
       // Fast timing for opacity (linear, no spring)
@@ -216,19 +216,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii['2xl'],
     position: 'absolute',
     paddingHorizontal: '5%',
-    // Apply shadows only on iOS to prevent visual artifacts in Android edge-to-edge mode
-    ...(Platform.OS === 'ios'
-      ? {
-          shadowColor: theme.colors.black,
-          shadowOffset: {
-            width: 0,
-            height: theme.spacing.sm },
-          shadowOpacity: 0.15,
-          shadowRadius: theme.spacing.md,
-          elevation: 12 }
-      : {
-          elevation: 0, // Explicitly prevent Android elevation artifacts
-        }),
+    boxShadow: [{ offsetX: 0, offsetY: theme.spacing.sm, blurRadius: theme.spacing.md, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.15)' }],
     zIndex: theme.zIndex.overlay },
   tabsRow: {
     flex: 1,

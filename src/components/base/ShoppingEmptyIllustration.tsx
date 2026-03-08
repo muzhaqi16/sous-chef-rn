@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { View } from 'react-native';
 import {
   Canvas,
@@ -49,7 +49,7 @@ export const ShoppingEmptyIllustration: React.FC<ShoppingEmptyIllustrationProps>
   const bobY = useSharedValue(0);
 
   // Start bob animation on mount
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Gentle continuous bob animation for empty cart
     bobY.set(withRepeat(
       withSequence(

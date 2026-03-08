@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -79,7 +79,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   const highlightOpacity = useSharedValue(0);
 
   // Trigger highlight animation when isHighlighted changes
-  useEffect(() => {
+  useLayoutEffect(() => {
     highlightOpacity.set(withTiming(isHighlighted ? 1 : 0, {
       duration: TIMING.FAST,
       easing: Easing.out(Easing.ease),

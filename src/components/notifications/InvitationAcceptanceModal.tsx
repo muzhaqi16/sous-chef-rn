@@ -397,11 +397,7 @@ const styles = StyleSheet.create(theme => ({
     width: '100%',
     maxWidth: 400,
     overflow: 'hidden',
-    elevation: 8,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 8, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.25)' }],
   },
   header: {
     flexDirection: 'row',

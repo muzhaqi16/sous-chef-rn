@@ -6,6 +6,7 @@ import { getMemberDisplayName, type Member } from '#/utils/formatters/memberForm
 import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
 import { HomeMemberCard } from './HomeMemberCard';
 import { HomeInviteCard } from './HomeInviteCard';
+import { InviteStatus } from '#/graphql/generated';
 
 interface Invite {
   id: string;
@@ -39,7 +40,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
   const { theme } = useUnistyles();
 
   // Filter pending invites
-  const pendingInvites = invites.filter(inv => inv.status !== 'ACCEPTED');
+  const pendingInvites = invites.filter(inv => inv.status !== InviteStatus.Accepted);
 
   return (
     <View>
@@ -82,6 +83,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
                 key={invite.id}
                 invite={invite}
                 displayName={displayName}
+                canRevoke={currentUserMembership?.canManageHome}
                 onRevoke={() => onRevokeInvite(invite.id, invite.email)}
               />
             );

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { View, type DimensionValue, type ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -44,7 +44,7 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
 }) => {
   const shimmerTranslate = useSharedValue(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (animated) {
       shimmerTranslate.set(withRepeat(
         withTiming(1, {

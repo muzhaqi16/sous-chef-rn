@@ -188,4 +188,4 @@ export const colors = {
   // Special colors
   transparent: 'transparent',
   overlay: 'rgba(0, 0, 0, 0.6)', // Default overlay - kept for backwards compatibility
-} as const;
+};

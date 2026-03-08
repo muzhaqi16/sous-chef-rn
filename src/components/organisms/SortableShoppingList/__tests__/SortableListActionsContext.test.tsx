@@ -106,15 +106,47 @@ describe('SortableListActionsContext', () => {
     );
   });
 
-  it('exposes permissions snapshot', () => {
+  it('exposes permissions via context and ref', () => {
     const { result } = renderHook(() => useSortableListActions(), {
       wrapper: wrapper(),
     });
 
+    // Permissions available directly from context (for render-time reads)
     expect(result.current.permissions.canRemoveItems).toBe(true);
     expect(result.current.permissions.canEditItems).toBe(true);
     expect(result.current.permissions.canReorderItems).toBe(true);
     expect(result.current.permissions.disabled).toBe(false);
+
+    // Also available via ref (for event handlers)
+    expect(result.current.permissionsRef.current.canRemoveItems).toBe(true);
+    expect(result.current.permissionsRef.current.canEditItems).toBe(true);
+    expect(result.current.permissionsRef.current.canReorderItems).toBe(true);
+    expect(result.current.permissionsRef.current.disabled).toBe(false);
+  });
+
+  it('keeps permissions reference stable when values are unchanged', () => {
+    const permissions: SortableListPermissions = {
+      canRemoveItems: true,
+      canEditItems: true,
+      canMarkPurchased: true,
+      canReorderItems: true,
+      disabled: false,
+    };
+
+    const { result, rerender } = renderHook(() => useSortableListActions(), {
+      wrapper: ({ children }: { children: React.ReactNode }) => (
+        <SortableListActionsProvider actions={defaultActions} permissions={{ ...permissions }}>
+          {children}
+        </SortableListActionsProvider>
+      ),
+    });
+
+    const firstPermissions = result.current.permissions;
+
+    // Re-render with new object reference but same values
+    rerender({});
+
+    expect(result.current.permissions).toBe(firstPermissions);
   });
 
   it('handles actions with no optional callbacks set', () => {

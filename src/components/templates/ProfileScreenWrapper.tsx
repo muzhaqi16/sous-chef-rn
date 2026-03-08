@@ -1,6 +1,5 @@
 import React from 'react';
-import { ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Header } from '#components/molecules/Header';
@@ -26,16 +25,20 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
   const { theme } = useUnistyles();
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={['bottom']}
       testID={testID}
     >
       {!!showBackButton && (
         <Header title={title ?? ''} onBack={goBack} centerTitle />
       )}
-      <ScrollView style={styles.scrollView}>{children}</ScrollView>
-    </SafeAreaView>
+      <ScrollView
+        style={styles.scrollView}
+        contentInsetAdjustmentBehavior="automatic"
+      >
+        {children}
+      </ScrollView>
+    </View>
   );
 };
 

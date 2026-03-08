@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -44,7 +44,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
   // Chevron rotation animation
   const chevronRotation = useSharedValue(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     chevronRotation.set(withSpring(expanded ? 180 : 0, SPRING.EXPAND));
   }, [expanded, chevronRotation]);
 

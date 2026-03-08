@@ -26,46 +26,46 @@ export function useAnimatedPresence(
 
   const open = () => {
     'worklet';
-    if (isVisible.value) return;
+    if (isVisible.get()) return;
 
-    isVisible.value = true;
+    isVisible.set(true);
     scheduleOnRN(setShouldRender, true);
     if (onOpenStart) scheduleOnRN(onOpenStart);
 
-    progress.value = withSpring(1, springConfig, finished => {
+    progress.set(withSpring(1, springConfig, finished => {
       'worklet';
       if (finished) {
         if (onOpenComplete) scheduleOnRN(onOpenComplete);
       }
-    });
+    }));
   };
 
   const close = () => {
     'worklet';
-    if (!isVisible.value) return;
+    if (!isVisible.get()) return;
 
-    isVisible.value = false;
+    isVisible.set(false);
     if (onCloseStart) scheduleOnRN(onCloseStart);
 
-    progress.value = withSpring(0, springConfig, finished => {
+    progress.set(withSpring(0, springConfig, finished => {
       'worklet';
       if (finished) {
         scheduleOnRN(setShouldRender, false);
         if (onCloseComplete) scheduleOnRN(onCloseComplete);
       }
-    });
+    }));
   };
 
   const toggle = () => {
     'worklet';
-    if (isVisible.value) {
+    if (isVisible.get()) {
       close();
     } else {
       open();
     }
   };
 
-  const isActive = () => isVisible.value;
+  const isActive = () => isVisible.get();
 
   return { shouldRender, isVisible, progress, open, close, toggle, isActive };
 }

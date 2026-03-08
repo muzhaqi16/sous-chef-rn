@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { HomeInviteCard } from '../HomeInviteCard';
+import { InviteStatus } from '#/graphql/generated';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -21,7 +22,7 @@ describe('HomeInviteCard', () => {
     id: '1',
     email: 'user@test.com',
     recipientName: 'Test User',
-    status: 'PENDING',
+    status: InviteStatus.Pending,
   };
   const onRevoke = jest.fn();
 
@@ -31,15 +32,20 @@ describe('HomeInviteCard', () => {
     expect(screen.getByText('user@test.com')).toBeTruthy();
   });
 
-  it('shows revoke button for pending invites', () => {
-    render(<HomeInviteCard invite={invite} displayName="Test User" onRevoke={onRevoke} />);
+  it('shows revoke button for pending invites when canRevoke is true', () => {
+    render(<HomeInviteCard invite={invite} displayName="Test User" canRevoke onRevoke={onRevoke} />);
     // close icon is the revoke button
     expect(screen.getByText('close')).toBeTruthy();
   });
 
+  it('hides revoke button for pending invites when canRevoke is false', () => {
+    render(<HomeInviteCard invite={invite} displayName="Test User" canRevoke={false} onRevoke={onRevoke} />);
+    expect(screen.queryByText('close')).toBeNull();
+  });
+
   it('hides revoke button for non-pending invites', () => {
-    const acceptedInvite = { ...invite, status: 'ACCEPTED' };
-    render(<HomeInviteCard invite={acceptedInvite} displayName="Test User" onRevoke={onRevoke} />);
+    const acceptedInvite = { ...invite, status: InviteStatus.Accepted };
+    render(<HomeInviteCard invite={acceptedInvite} displayName="Test User" canRevoke onRevoke={onRevoke} />);
     expect(screen.queryByText('close')).toBeNull();
   });
 });

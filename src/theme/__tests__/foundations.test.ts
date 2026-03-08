@@ -177,27 +177,41 @@ describe('theme foundations', () => {
   describe('shadows', () => {
     it('exports shadow presets', () => {
       expect(shadows.none).toEqual({});
-      expect(shadows.sm.elevation).toBe(2);
-      expect(shadows.md.elevation).toBe(4);
-      expect(shadows.lg.elevation).toBe(8);
-      expect(shadows.xl.elevation).toBe(12);
+      expect(shadows.sm.boxShadow).toEqual([
+        { offsetX: 0, offsetY: 1, blurRadius: 2, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.05)' },
+      ]);
+      expect(shadows.md.boxShadow).toEqual([
+        { offsetX: 0, offsetY: 2, blurRadius: 4, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.1)' },
+      ]);
+      expect(shadows.lg.boxShadow).toEqual([
+        { offsetX: 0, offsetY: 4, blurRadius: 8, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.15)' },
+      ]);
+      expect(shadows.xl.boxShadow).toEqual([
+        { offsetX: 0, offsetY: 8, blurRadius: 12, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.2)' },
+      ]);
     });
 
-    it('each shadow (except none) has expected properties', () => {
+    it('each shadow (except none) has a boxShadow array with expected structure', () => {
       const levels = [shadows.sm, shadows.md, shadows.lg, shadows.xl];
       for (const shadow of levels) {
-        expect(shadow.shadowColor).toBe('#000');
-        expect(shadow.shadowOffset).toBeDefined();
-        expect(typeof shadow.shadowOpacity).toBe('number');
-        expect(typeof shadow.shadowRadius).toBe('number');
-        expect(typeof shadow.elevation).toBe('number');
+        expect(shadow.boxShadow).toHaveLength(1);
+        const entry = shadow.boxShadow[0];
+        expect(entry.offsetX).toBe(0);
+        expect(typeof entry.offsetY).toBe('number');
+        expect(typeof entry.blurRadius).toBe('number');
+        expect(entry.spreadDistance).toBe(0);
+        expect(entry.color).toMatch(/^rgba\(0, 0, 0, [\d.]+\)$/);
       }
     });
 
-    it('shadow opacity increases with severity', () => {
-      expect(shadows.sm.shadowOpacity).toBeLessThan(shadows.md.shadowOpacity);
-      expect(shadows.md.shadowOpacity).toBeLessThan(shadows.lg.shadowOpacity);
-      expect(shadows.lg.shadowOpacity).toBeLessThan(shadows.xl.shadowOpacity);
+    it('shadow intensity increases with severity', () => {
+      const opacityOf = (shadow: (typeof shadows)[keyof Omit<typeof shadows, 'none'>]) => {
+        const match = shadow.boxShadow[0].color.match(/rgba\(0, 0, 0, ([\d.]+)\)/);
+        return match ? parseFloat(match[1]) : 0;
+      };
+      expect(opacityOf(shadows.sm)).toBeLessThan(opacityOf(shadows.md));
+      expect(opacityOf(shadows.md)).toBeLessThan(opacityOf(shadows.lg));
+      expect(opacityOf(shadows.lg)).toBeLessThan(opacityOf(shadows.xl));
     });
   });
 

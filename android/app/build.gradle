@@ -50,8 +50,8 @@ android {
         applicationId "dev.souschef.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 76
-        versionName "3.1.11"
+        versionCode 77
+        versionName "3.1.13"
         testBuildType System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -107,7 +107,11 @@ android {
                 keyAlias keystoreKeyAlias
                 keyPassword keystoreKeyPassword
             } else {
-                println "Warning: Release signing configuration not found."
+                println "Warning: Release signing configuration not found, using debug."
+                storeFile file('debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
             }
         }
     }
@@ -143,6 +147,12 @@ android {
             shrinkResources enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             resValue "string", "build_config_package", "dev.souschef.app"
+            matchingFallbacks = ['release', 'debug']
+        }
+        localRelease {
+            initWith release
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
+            signingConfig signingConfigs.debug
             matchingFallbacks = ['release', 'debug']
         }
     }

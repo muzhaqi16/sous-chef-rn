@@ -78,68 +78,44 @@ export const PersonalInformationScreen: React.FC = () => {
 
     switch (config.key) {
       case 'email':
-        baseItem.value = user?.email || '';
-        break;
+        return { ...baseItem, value: user?.email || '' };
 
       case 'firstName':
-        baseItem.value = profile?.firstName || '';
-        baseItem.onSave = (value: string) =>
-          updateProfile({ firstName: value });
-        break;
+        return { ...baseItem, value: profile?.firstName || '', onSave: (v: string) => updateProfile({ firstName: v }) };
 
       case 'lastName':
-        baseItem.value = profile?.lastName || '';
-        baseItem.onSave = (value: string) => updateProfile({ lastName: value });
-        break;
+        return { ...baseItem, value: profile?.lastName || '', onSave: (v: string) => updateProfile({ lastName: v }) };
 
       case 'displayName':
-        baseItem.value = profile?.displayName || '';
-        baseItem.onSave = (value: string) =>
-          updateProfile({ displayName: value });
-        break;
+        return { ...baseItem, value: profile?.displayName || '', onSave: (v: string) => updateProfile({ displayName: v }) };
 
       case 'bio':
-        baseItem.value = profile?.bio || '';
-        baseItem.onSave = (value: string) => updateProfile({ bio: value });
-        break;
+        return { ...baseItem, value: profile?.bio || '', onSave: (v: string) => updateProfile({ bio: v }) };
 
       case 'phone':
-        baseItem.value = profile?.phone || '';
-        baseItem.onSave = (value: string) => updateProfile({ phone: value });
-        break;
+        return { ...baseItem, value: profile?.phone || '', onSave: (v: string) => updateProfile({ phone: v }) };
 
       case 'dateOfBirth':
-        baseItem.value = extractDateString(profile?.dateOfBirth);
-        baseItem.onSave = (value: string) => {
-          const isoValue = dateStringToISO(value);
-          updateProfile({ dateOfBirth: isoValue });
+        return {
+          ...baseItem,
+          value: extractDateString(profile?.dateOfBirth),
+          onSave: (v: string) => {
+            const isoValue = dateStringToISO(v);
+            updateProfile({ dateOfBirth: isoValue });
+          },
         };
-        break;
 
       case 'gender':
-        baseItem.value = profile?.gender || '';
-        baseItem.options = config.options;
-        baseItem.onSave = (value: string) => updateProfile({ gender: value });
-        break;
+        return { ...baseItem, value: profile?.gender || '', options: config.options, onSave: (v: string) => updateProfile({ gender: v }) };
 
       case 'profileVisibility':
-        baseItem.value = profile?.profileVisibility || ProfileVisibility.Public;
-        baseItem.options = config.options;
-        baseItem.onSave = (value: string) =>
-          updateProfile({ profileVisibility: value });
-        break;
+        return { ...baseItem, value: profile?.profileVisibility || ProfileVisibility.Public, options: config.options, onSave: (v: string) => updateProfile({ profileVisibility: v }) };
 
       case 'showEmail':
-        baseItem.value = profile?.showEmail || false;
-        baseItem.onPress = () =>
-          updateProfile({ showEmail: !profile?.showEmail });
-        break;
+        return { ...baseItem, value: profile?.showEmail || false, onPress: () => updateProfile({ showEmail: !profile?.showEmail }) };
 
       case 'showPhone':
-        baseItem.value = profile?.showPhone || false;
-        baseItem.onPress = () =>
-          updateProfile({ showPhone: !profile?.showPhone });
-        break;
+        return { ...baseItem, value: profile?.showPhone || false, onPress: () => updateProfile({ showPhone: !profile?.showPhone }) };
     }
 
     return baseItem;

@@ -68,7 +68,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     query: searchQuery,
     setQuery: setSearchQuery,
     filtered: filteredItems,
-  } = useSearchableList(items, shoppingListItemSearch);
+  } = useSearchableList(items, shoppingListItemSearch, { debounceMs: 300 });
 
   // Filter unpurchased/purchased items by search query
   const filteredUnpurchasedItems = !searchQuery.trim()

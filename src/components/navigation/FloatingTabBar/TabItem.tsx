@@ -49,13 +49,13 @@ export const TabItem: React.FC<TabItemProps> = ({
 
   // Drive scale animation from shared value on the UI thread
   useAnimatedReaction(
-    () => activeTabIndex.value === tabIndex,
+    () => activeTabIndex.get() === tabIndex,
     (isActive, prevIsActive) => {
       if (isActive !== prevIsActive) {
-        iconScale.value = withTiming(isActive ? 1.2 : 1, {
+        iconScale.set(withTiming(isActive ? 1.2 : 1, {
           duration: TIMING.FAST,
           easing: Easing.inOut(Easing.ease),
-        });
+        }));
       }
     },
     [tabIndex],
@@ -71,7 +71,7 @@ export const TabItem: React.FC<TabItemProps> = ({
   };
 
   const animatedIconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: iconScale.value }],
+    transform: [{ scale: iconScale.get() }],
   }));
 
   const label = options.title || route.name;

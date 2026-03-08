@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import {
   Pressable,
   Text,
@@ -41,7 +41,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   const textOpacity = useSharedValue(1);
   const isDisabled = disabled || loading;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (loading) {
       textOpacity.set(withTiming(0, { duration: TIMING.FAST }));
     } else {
@@ -147,8 +147,8 @@ const styles = StyleSheet.create(theme => ({
   },
   pressableInner: {
     flex: 1,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   text: {
     fontSize: theme.typography.fontSize.base,

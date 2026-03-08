@@ -3,6 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatInviteStatus, getInviteStatusColor } from '#/utils/formatters/inviteFormatters';
+import { InviteStatus } from '#/graphql/generated';
 
 interface Invite {
   id: string;
@@ -14,6 +15,7 @@ interface Invite {
 interface HomeInviteCardProps {
   invite: Invite;
   displayName: string;
+  canRevoke?: boolean;
   onRevoke: () => void;
 }
 
@@ -23,6 +25,7 @@ interface HomeInviteCardProps {
 export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
   invite,
   displayName,
+  canRevoke,
   onRevoke,
 }) => {
   const { theme } = useUnistyles();
@@ -46,7 +49,7 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
             {statusText}
           </Text>
         </View>
-        {invite.status === 'PENDING' && (
+        {!!canRevoke && invite.status === InviteStatus.Pending && (
           <Pressable style={({pressed}) => [styles.revokeButton, pressed && styles.pressed]} onPress={onRevoke}>
             <Icon name="close" size={20} />
           </Pressable>

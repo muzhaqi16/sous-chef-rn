@@ -74,8 +74,8 @@ const SlideAnimatedWrapper: React.FC<{
   const isAnimating = useSharedValue(false);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-    opacity: slideOpacity.value }));
+    transform: [{ translateX: translateX.get() }],
+    opacity: slideOpacity.get() }));
 
   // Synchronous reset on FlashList cell recycling — fires during render (before paint)
   useRecyclingState(undefined, [itemId], () => {
@@ -105,7 +105,7 @@ const SlideAnimatedWrapper: React.FC<{
     ));
     translateX.set(withTiming(SCREEN_WIDTH, config, finished => {
       'worklet';
-      isAnimating.value = false;
+      isAnimating.set(false);
       if (finished) {
         scheduleOnRN(doDelete);
       }

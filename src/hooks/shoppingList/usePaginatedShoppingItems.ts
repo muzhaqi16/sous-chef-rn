@@ -39,6 +39,9 @@ type ItemEdge = NonNullable<
   GetShoppingListItemsFilteredQuery['shoppingList']
 >['itemsConnection']['edges'][number];
 
+const EMPTY_EDGES: readonly ItemEdge[] = [];
+const EMPTY_ITEMS: ShoppingListItemDisplayFragment[] = [];
+
 /**
  * Extract items from connection edges in cache insertion order.
  * Filters out incomplete nodes (missing id/itemName) to guard against
@@ -49,7 +52,7 @@ type ItemEdge = NonNullable<
  * edges directly in the cache via useItemReordering's cache.modify.
  */
 function extractItems(edges: readonly ItemEdge[] | null | undefined): ShoppingListItemDisplayFragment[] {
-  if (!edges) return [];
+  if (!edges || edges.length === 0) return EMPTY_ITEMS;
   return edges
     .filter(edge => {
       const node = edge?.node;
@@ -65,12 +68,12 @@ function resolveEdges(
   listIdChanged: boolean,
 ): readonly ItemEdge[] {
   if (listIdChanged) {
-    return data?.shoppingList?.itemsConnection?.edges ?? [];
+    return data?.shoppingList?.itemsConnection?.edges ?? EMPTY_EDGES;
   }
   return (
     data?.shoppingList?.itemsConnection?.edges ??
     previousData?.shoppingList?.itemsConnection?.edges ??
-    []
+    EMPTY_EDGES
   );
 }
 

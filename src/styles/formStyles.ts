@@ -1,10 +1,11 @@
 import { StyleSheet } from 'react-native-unistyles';
 import type { AnyTheme } from '#/theme/themes';
+import { defineStyles } from './defineStyles';
 
 /**
  * Form and button style definitions — inputs, labels, errors, buttons.
  */
-export const formDefs = (theme: AnyTheme) => ({
+export const formDefs = (theme: AnyTheme) => defineStyles({
   // Form elements
   input: {
     borderWidth: 1,
@@ -38,7 +39,7 @@ export const formDefs = (theme: AnyTheme) => ({
   },
   textArea: {
     minHeight: 80,
-    textAlignVertical: 'top' as const,
+    textAlignVertical: 'top',
   },
 
   // Buttons
@@ -52,9 +53,9 @@ export const formDefs = (theme: AnyTheme) => ({
       md: theme.spacing.lg,
     },
     borderRadius: theme.radii.lg,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    flexDirection: 'row' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
   },
   buttonPrimary: {
     backgroundColor: theme.colors.primary,
@@ -82,8 +83,8 @@ export const formDefs = (theme: AnyTheme) => ({
   },
   iconButton: {
     padding: theme.spacing.sm,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // Settings screen shared styles (PantrySettings, ListSettings, etc.)
@@ -118,9 +119,9 @@ export const formDefs = (theme: AnyTheme) => ({
     backgroundColor: theme.colors.surface,
   },
   settingsRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: theme.spacing['3'],
   },
   settingsRowInfo: {

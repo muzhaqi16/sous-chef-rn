@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useLayoutEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   View,
   Text,
@@ -129,7 +129,7 @@ export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLoc
     }
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     chevronRotation.set(withSpring(advancedExpanded ? 180 : 0, SPRING.EXPAND));
   }, [advancedExpanded, chevronRotation]);
 

@@ -109,6 +109,13 @@ jest.mock('../SortableListActionsContext', () => ({
       canEditItems: true,
       canMarkPurchased: true,
     },
+    permissionsRef: {
+      current: {
+        canRemoveItems: true,
+        canEditItems: true,
+        canMarkPurchased: true,
+      },
+    },
   })),
 }));
 

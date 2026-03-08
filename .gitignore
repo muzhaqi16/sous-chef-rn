@@ -71,6 +71,7 @@ output.js.map
 
 # testing
 /coverage
+.eslintcache
 
 # Yarn
 .yarn/*

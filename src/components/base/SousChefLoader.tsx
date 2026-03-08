@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { View, Text } from 'react-native';
 import {
   Canvas,
@@ -61,7 +61,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
   const leavesY = useSharedValue(0);
 
   // Start animations on mount with staggered timing (all on UI thread)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const bounceConfig = {
       duration: 600,
       easing: Easing.bezier(0.25, 0.1, 0.25, 1),

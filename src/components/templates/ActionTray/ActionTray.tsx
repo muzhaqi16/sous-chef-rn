@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle, useEffect, useRef } from 'react';
-import { Platform, useWindowDimensions } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
 import { ActionTrayContent } from './ActionTrayContent';
@@ -144,18 +144,7 @@ const styles = UnistylesStyleSheet.create(theme => ({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
-    // Apply shadows only on iOS to prevent visual artifacts in Android edge-to-edge mode
-    ...(Platform.OS === 'ios'
-      ? {
-          shadowColor: theme.colors.textPrimary,
-          shadowOffset: {
-            width: 0,
-            height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 8 }
-      : {
-          elevation: 0 }) },
+    boxShadow: [{ offsetX: 0, offsetY: -2, blurRadius: 8, spreadDistance: 0, color: `${theme.colors.textPrimary}1A` }] },
   background: {
     backgroundColor: theme.colors.surface,
     borderRadius: 16 },

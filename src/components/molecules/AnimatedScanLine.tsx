@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useLayoutEffect} from 'react';
 import {View} from 'react-native';
 import Animated, {
   useSharedValue,
@@ -29,7 +29,7 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
 }) => {
   const animatedValue = useSharedValue(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     animatedValue.set(withRepeat(withTiming(1, {duration}), -1, true));
   }, [animatedValue, duration]);
 
@@ -60,11 +60,7 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
             height: 2,
             backgroundColor: color,
             width: '100%',
-            shadowColor: color,
-            shadowOffset: {width: 0, height: 0},
-            shadowOpacity: 0.8,
-            shadowRadius: 3,
-            elevation: 2, // For Android shadow
+            boxShadow: [{offsetX: 0, offsetY: 0, blurRadius: 3, spreadDistance: 0, color: `${color}CC`}],
           },
           animatedStyle,
         ]}
