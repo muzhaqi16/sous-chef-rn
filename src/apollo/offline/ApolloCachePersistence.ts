@@ -31,7 +31,7 @@ const CURRENT_CACHE_VERSION = '1.1.4'; // Purge stale convertQuantity cache entr
  * ```
  */
 class ApolloCachePersistence {
-  private saveTimeout: NodeJS.Timeout | null = null;
+  private saveTimeout: ReturnType<typeof setTimeout> | null = null;
   private idleCallbackId: number | null = null;
   private readonly debounceMs = 3000; // Wait 3s before saving to reduce writes during burst operations
   private paused = false;
@@ -145,7 +145,6 @@ class ApolloCachePersistence {
     this.saveTimeout = setTimeout(() => {
       // PERFORMANCE: Use requestIdleCallback to run serialization when JS thread is idle
       // This prevents blocking UI interactions and list rendering
-      // Falls back to requestAnimationFrame which defers until after current paint
       const serialize = () => {
         try {
           // Extract cache data lazily - only runs once after debounce
@@ -164,24 +163,8 @@ class ApolloCachePersistence {
         }
       };
 
-      // Use requestIdleCallback if available (web/newer RN), otherwise use requestAnimationFrame
-      // requestIdleCallback runs when browser is idle (optimal for background work)
-      // requestAnimationFrame defers until after current frame paint (better than setTimeout)
-      if (
-        typeof globalThis !== 'undefined' &&
-        'requestIdleCallback' in globalThis
-      ) {
-        // justified: requestIdleCallback not in React Native's global type definitions
-        this.idleCallbackId = (globalThis as any).requestIdleCallback(serialize);
-      } else if (typeof requestAnimationFrame === 'function') {
-        // requestAnimationFrame defers to next frame, then use setTimeout to avoid blocking paint
-        this.idleCallbackId = requestAnimationFrame(() => {
-          setTimeout(serialize, 0);
-        });
-      } else {
-        // Final fallback
-        setTimeout(serialize, 0);
-      }
+      // Defer serialization to when the JS thread is idle
+      this.idleCallbackId = requestIdleCallback(serialize);
     }, this.debounceMs);
   }
 
@@ -195,11 +178,7 @@ class ApolloCachePersistence {
       this.saveTimeout = null;
     }
     if (this.idleCallbackId != null) {
-      if (typeof globalThis !== 'undefined' && 'cancelIdleCallback' in globalThis) {
-        (globalThis as any).cancelIdleCallback(this.idleCallbackId); // justified: cancelIdleCallback not in RN types
-      } else if (typeof cancelAnimationFrame === 'function') {
-        cancelAnimationFrame(this.idleCallbackId);
-      }
+      cancelIdleCallback(this.idleCallbackId);
       this.idleCallbackId = null;
     }
   }
