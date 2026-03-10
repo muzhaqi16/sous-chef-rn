@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { useAuth } from '#/hooks/auth/useAuth';
+import { useAuthUser } from '#/hooks/auth/useAuthUser';
+import { useAppStore } from '#store/useAppStore';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { enableAutoReconnect, disableAutoReconnect } from '#/apollo/links/wsLink';
 import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
@@ -64,7 +65,8 @@ interface SubscriptionProviderProps {
  * ```
  */
 export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+  const user = useAuthUser();
+  const isAuthenticated = useAppStore(state => !!(state.user && state.accessToken));
   // Block subscriptions until token is validated/refreshed to prevent 401 race condition
   const [isTokenReady, setIsTokenReady] = useState(false);
   // Defer WebSocket subscriptions to avoid competing with startup queries on the JS thread

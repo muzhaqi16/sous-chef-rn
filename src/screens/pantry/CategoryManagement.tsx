@@ -61,7 +61,7 @@ export const CategoryManagement: React.FC = () => {
   // This prevents query cascade when switching between pantry screens
   const {pantry} = useCurrentPantry();
 
-  const {items} = usePantryManagement(pantry?.id);
+  const {state: {items}} = usePantryManagement(pantry?.id);
 
   const categorizedItems = (() => {
     if (!items) return {};

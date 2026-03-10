@@ -224,27 +224,32 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         return id && !existingIds.has(id);
       });
 
-      // Preserve existing pageInfo when a background refetch (no cursor) returns
-      // fewer edges than already accumulated
+      // Determine authoritative pageInfo once.
+      // Existing pageInfo wins when:
+      //   1. Background refetch (no cursor) returned fewer edges than cache has
+      //   2. Cursor-based request returned all duplicates — we already advanced past that cursor
       const isBackgroundRefetch = !args?.after;
       const existingHasMoreData = (existing.edges || []).length > (incoming.edges || []).length;
-      const preservePageInfo = isBackgroundRefetch && existingHasMoreData && !!existing.pageInfo;
+      const keepExistingPageInfo =
+        (isBackgroundRefetch && existingHasMoreData && !!existing.pageInfo) ||
+        (!!args?.after && newEdges.length === 0);
+      const pageInfo = keepExistingPageInfo ? existing.pageInfo : incoming.pageInfo;
 
-      if (__DEV__ && preservePageInfo) {
+      if (__DEV__ && keepExistingPageInfo) {
         console.log(`📊 [Cache] preserved existing pageInfo (existing=${(existing.edges || []).length} incoming=${(incoming.edges || []).length})`);
       }
 
       // When no new edges, return stable reference when possible
       if (newEdges.length === 0) {
         const pageInfoUnchanged =
-          preservePageInfo ||
-          (incoming.pageInfo?.hasNextPage === existing.pageInfo?.hasNextPage &&
-           incoming.pageInfo?.endCursor === existing.pageInfo?.endCursor);
+          pageInfo === existing.pageInfo &&
+          incoming.pageInfo?.hasNextPage === existing.pageInfo?.hasNextPage &&
+          incoming.pageInfo?.endCursor === existing.pageInfo?.endCursor;
         const totalCountUnchanged =
           incoming.totalCount === undefined ||
           incoming.totalCount === existing.totalCount;
 
-        if (pageInfoUnchanged && totalCountUnchanged) {
+        if ((keepExistingPageInfo || pageInfoUnchanged) && totalCountUnchanged) {
           return existing;
         }
 
@@ -256,7 +261,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
             `📊 [Cache] itemsConnection merge (stable): existing=${existingCount} incoming=${incomingCount} merged=${existingCount} cursor=${hasCursor}`
           );
         }
-        return { ...incoming, ...(preservePageInfo ? { pageInfo: existing.pageInfo } : {}), edges: existing.edges };
+        return { ...incoming, pageInfo, edges: existing.edges };
       }
 
       let mergedEdges = [...(existing.edges || []), ...newEdges];
@@ -283,11 +288,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         Telemetry.gauge('apollo_cache_edge_count', mergedEdges.length, { field: 'itemsConnection' });
       }
 
-      return {
-        ...incoming,
-        ...(preservePageInfo ? { pageInfo: existing.pageInfo } : {}),
-        edges: mergedEdges,
-      };
+      return { ...incoming, pageInfo, edges: mergedEdges };
     },
   };
 }

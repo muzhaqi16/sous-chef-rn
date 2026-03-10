@@ -18,14 +18,13 @@ import {
   useDeleteAccountMutation,
   useCanDeleteAccountQuery,
 } from '#generated';
-import { useAuth } from '#hooks/auth/useAuth';
+import { authService } from '#/services/authService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { errorService } from '#/services/errorService';
 
 export const DeleteAccountScreen: React.FC = () => {
   const { goBack } = useAppNavigation();
   const { theme } = useUnistyles();
-  const { logout } = useAuth();
 
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -44,7 +43,7 @@ export const DeleteAccountScreen: React.FC = () => {
   const blockers = eligibilityData?.canDeleteAccount?.blockers ?? [];
 
   const [deleteAccountMutation] = useDeleteAccountMutation({
-    onCompleted: () => logout(),
+    onCompleted: () => authService.logout(),
     onError: error => {
       Alert.alert('Error', `Failed to delete account: ${error.message}`);
       setIsDeleting(false);

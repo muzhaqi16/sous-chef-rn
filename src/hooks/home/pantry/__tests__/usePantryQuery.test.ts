@@ -23,8 +23,8 @@ jest.mock('#generated', () => ({
   },
 }));
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({ isLoggedOut: false }),
+jest.mock('#hooks/auth/useIsLoggedOut', () => ({
+  useIsLoggedOut: () => false,
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
@@ -83,8 +83,8 @@ describe('usePantryQuery', () => {
   it('returns empty items when no pantryId', () => {
     const { result } = renderHook(() => usePantryQuery(undefined));
 
-    expect(result.current.pantryItems).toEqual([]);
-    expect(result.current.loading).toBe(false);
+    expect(result.current.state.pantryItems).toEqual([]);
+    expect(result.current.state.loading).toBe(false);
   });
 
   it('skips query when pantryId is empty string', () => {
@@ -131,8 +131,8 @@ describe('usePantryQuery', () => {
 
     const { result } = renderHook(() => usePantryQuery('pantry-1'));
 
-    expect(result.current.pantryItems).toEqual([{ id: 'item-1', itemName: 'Milk' }]);
-    expect(result.current.totalCount).toBe(1);
+    expect(result.current.state.pantryItems).toEqual([{ id: 'item-1', itemName: 'Milk' }]);
+    expect(result.current.state.totalCount).toBe(1);
   });
 
   it('passes itemsOrderBy to query variables', () => {
@@ -148,14 +148,14 @@ describe('usePantryQuery', () => {
     );
   });
 
-  it('passes itemsFirst as 20 (DEFAULT_PAGE_SIZES.SMALL)', () => {
+  it('passes itemsFirst as 25 (PAGE_SIZE.DEFAULT)', () => {
     const { useGetPantryQuery } = require('#generated');
 
     renderHook(() => usePantryQuery('pantry-1'));
 
     expect(useGetPantryQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        variables: expect.objectContaining({ itemsFirst: 20 }),
+        variables: expect.objectContaining({ itemsFirst: 25 }),
       }),
     );
   });
@@ -164,7 +164,7 @@ describe('usePantryQuery', () => {
     const { result } = renderHook(() => usePantryQuery('pantry-1'));
 
     await act(async () => {
-      await result.current.refetch();
+      await result.current.actions.refetch();
     });
 
     expect(mockRefetch).toHaveBeenCalled();
@@ -194,9 +194,9 @@ describe('usePantryQuery', () => {
   it('returns pagination helpers', () => {
     const { result } = renderHook(() => usePantryQuery('pantry-1'));
 
-    expect(result.current.hasMore).toBe(false);
-    expect(typeof result.current.loadMore).toBe('function');
-    expect(result.current.isLoadingMore).toBe(false);
+    expect(result.current.state.hasMore).toBe(false);
+    expect(typeof result.current.actions.loadMore).toBe('function');
+    expect(result.current.state.isLoadingMore).toBe(false);
   });
 
   it('filters pending deletes from items', () => {

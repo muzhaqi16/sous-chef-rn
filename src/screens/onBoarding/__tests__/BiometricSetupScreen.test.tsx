@@ -14,11 +14,14 @@ jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
   }),
 }));
 
+const mockClearRegistrationPassword = jest.fn();
 jest.mock('#store/useAppStore', () => {
   const selectUser = (s: any) => s.user;
   const fn = (selector: any) => selector({
     user: { id: 'u1', email: 'test@test.com' },
     setUserNavigationState: jest.fn(),
+    registrationPassword: 'password123',
+    clearRegistrationPassword: mockClearRegistrationPassword,
   });
   fn.getState = () => ({});
   fn.setState = jest.fn();
@@ -28,13 +31,11 @@ jest.mock('#store/useAppStore', () => {
 
 let mockBiometricInfo = { isAvailable: true, biometryType: 'Face ID' };
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({
-    registrationPassword: 'password123',
-    clearRegistrationPassword: jest.fn(),
+jest.mock('#/services/authService', () => ({
+  authService: {
     getBiometricInfo: jest.fn(() => Promise.resolve(mockBiometricInfo)),
     storeCredentials: jest.fn(() => Promise.resolve(true)),
-  }),
+  },
 }));
 
 jest.mock('#hooks/navigation/useUserPreferences', () => ({

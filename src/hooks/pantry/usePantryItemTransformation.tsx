@@ -217,6 +217,77 @@ export const formatQuantityBreakdown = (
   return `${total} ${contentLabel}${total !== 1 ? 's' : ''}`;
 };
 
+// Helper function to calculate expiry info for detail views
+export const getExpiryInfo = (expiresAt: string | null | undefined) => {
+  if (!expiresAt) return null;
+  const now = new Date();
+  const expiry = new Date(expiresAt);
+  const diffDays = Math.ceil(
+    (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  if (diffDays < 0) return { text: 'Expired', isExpired: true, isUrgent: true };
+  if (diffDays === 0)
+    return { text: 'Expires today', isExpired: false, isUrgent: true };
+  if (diffDays === 1)
+    return { text: '1 day to expire', isExpired: false, isUrgent: true };
+  return {
+    text: `${diffDays} days to expire`,
+    isExpired: false,
+    isUrgent: diffDays <= 3,
+  };
+};
+
+// Format date for display
+export const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+// Calculate days in pantry
+export const getDaysInPantry = (createdAt: string | null | undefined) => {
+  if (!createdAt) return null;
+  const created = new Date(createdAt);
+  const now = new Date();
+  return Math.floor(
+    (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24),
+  );
+};
+
+// Format days in pantry for display
+export const formatDaysInPantry = (days: number | null): string => {
+  if (days === null) return '-';
+  if (days === 0) return 'Today';
+  if (days === 1) return '1 day';
+  return `${days} days`;
+};
+
+// Format condition enum for display
+export const formatCondition = (condition?: string | null): string | null => {
+  if (!condition || condition === 'GOOD') return null;
+  return condition.charAt(0) + condition.slice(1).toLowerCase();
+};
+
+// Format acquisition method enum for display
+export const formatAcquisitionMethod = (method?: string | null): string | null => {
+  if (!method) return null;
+  return method
+    .split('_')
+    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+// Format currency for display
+export const formatCurrency = (amount?: number | null): string | null => {
+  if (amount == null || amount <= 0) return null;
+  return `$${amount.toFixed(2)}`;
+};
+
 interface ThemeColors {
   surface: string;
   error: string;

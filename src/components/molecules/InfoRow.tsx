@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
+import { Icon } from '#/utils/iconUtils';
 
 export interface InfoRowProps {
   /**
@@ -43,6 +44,26 @@ export interface InfoRowProps {
    * Custom container style
    */
   containerStyle?: any;
+
+  /**
+   * Append a colon after the label (default: true)
+   */
+  showColon?: boolean;
+
+  /**
+   * Optional Ionicon name to display before the value
+   */
+  icon?: string;
+
+  /**
+   * Custom icon color (defaults to theme textSecondary)
+   */
+  iconColor?: string;
+
+  /**
+   * Optional children to render instead of the default value text
+   */
+  children?: React.ReactNode;
 }
 
 /**
@@ -84,6 +105,10 @@ export const InfoRow: React.FC<InfoRowProps> = ({
   labelStyle,
   valueStyle,
   containerStyle,
+  showColon = true,
+  icon,
+  iconColor,
+  children,
 }) => {
   let formattedValue: string;
   if (value === null || value === undefined) {
@@ -96,6 +121,12 @@ export const InfoRow: React.FC<InfoRowProps> = ({
     formattedValue = unit ? `${stringValue} ${unit}` : stringValue;
   }
 
+  const valueContent = children ?? (
+    <Text style={[commonStyles.subtitle, styles.value, valueStyle]}>
+      {formattedValue}
+    </Text>
+  );
+
   return (
     <View
       style={[
@@ -105,11 +136,22 @@ export const InfoRow: React.FC<InfoRowProps> = ({
       ]}
     >
       <Text style={[commonStyles.body, styles.label, labelStyle]}>
-        {label}:
+        {label}{showColon ? ':' : ''}
       </Text>
-      <Text style={[commonStyles.subtitle, styles.value, valueStyle]}>
-        {formattedValue}
-      </Text>
+      {icon ? (
+        <View style={styles.valueWithIcon}>
+          <View style={styles.iconContainer}>
+            <Icon
+              name={icon}
+              size={16}
+              color={iconColor ?? styles.iconDefaultColor.color}
+            />
+          </View>
+          {valueContent}
+        </View>
+      ) : (
+        valueContent
+      )}
     </View>
   );
 };
@@ -131,5 +173,15 @@ const styles = StyleSheet.create(theme => ({
   value: {
     flex: 1,
     textAlign: 'right',
+  },
+  valueWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    marginRight: theme.spacing.xs,
+  },
+  iconDefaultColor: {
+    color: theme.colors.textSecondary,
   },
 }));

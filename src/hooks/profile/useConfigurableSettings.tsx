@@ -8,7 +8,7 @@ import {
   selectNavigationUtils,
   selectPreferences } from '#store/useAppStore';
 import { useTheme } from '#hooks/useTheme';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useCredentialStorage } from '#hooks/auth/useCredentialStorage';
 import {
   useUpdateUserProfileMutation,
   useUpdateUserPreferencesMutation,
@@ -30,7 +30,7 @@ export const useConfigurableSettings = (profile: any) => {
   const { language, setLanguage } = useAppStore(useShallow(selectPreferences));
   const { userThemePreference, setTheme } = useTheme();
   const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
-    useAuth();
+    useCredentialStorage();
   const { resetBiometricDeclination, markBiometricEnabled } =
     useUserPreferences();
   // ===== MUTATION 1: Update User Profile =====

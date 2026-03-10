@@ -1,5 +1,5 @@
 import { useMySavedRecipesQuery } from '#generated';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -36,7 +36,7 @@ export interface SavedRecipe {
  * Uses MySavedRecipes query which returns recipes saved via FavoriteRecipe mutation
  */
 export function useSavedRecipes(folder?: string | null) {
-  const { isLoggedOut } = useAuth();
+  const isLoggedOut = useIsLoggedOut();
   const shouldSkip = isLoggedOut;
 
   const { data, loading, error, refetch, fetchMore } = useMySavedRecipesQuery({
@@ -46,7 +46,6 @@ export function useSavedRecipes(folder?: string | null) {
     skip: shouldSkip,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',
-    notifyOnNetworkStatusChange: true,
     errorPolicy: 'all' });
 
   useApolloErrorLogger('MySavedRecipes', error);
@@ -92,22 +91,22 @@ export function useSavedRecipes(folder?: string | null) {
   };
 
   return {
-    // Data
-    recipes,
-    loading,
-    error,
-    totalCount,
-    hasNextPage,
-
-    // Actions
-    refetch,
-    loadMore,
-
-    // Helper functions
-    getRecipeById: (recipeId: string) =>
-      recipes.find(recipe => recipe.recipeId === recipeId),
-    getRecipesByFolder: (folderName: string) =>
-      recipes.filter(recipe => recipe.folder === folderName),
-    getRecipesByTag: (tag: string) =>
-      recipes.filter(recipe => recipe.tags.includes(tag)) };
+    state: {
+      recipes,
+      loading,
+      error,
+      totalCount,
+      hasNextPage,
+    },
+    actions: {
+      refetch,
+      loadMore,
+      getRecipeById: (recipeId: string) =>
+        recipes.find(recipe => recipe.recipeId === recipeId),
+      getRecipesByFolder: (folderName: string) =>
+        recipes.filter(recipe => recipe.folder === folderName),
+      getRecipesByTag: (tag: string) =>
+        recipes.filter(recipe => recipe.tags.includes(tag)),
+    },
+  };
 }

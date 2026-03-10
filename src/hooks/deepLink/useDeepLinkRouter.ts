@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { jwtDecode } from 'jwt-decode';
 import { useAppStore } from '#store/useAppStore';
-import { useAuth } from '#hooks/auth/useAuth';
 import { logger } from '#/utils/environment';
 import { DeepLinkAction } from '#store/slices/navigationSlice';
 import { toastService } from '#/services/toastService';
@@ -83,7 +82,7 @@ const validateDeepLinkToken = (
 export const useDeepLinkRouter = () => {
   const navigation = useNavigation();
   const isHydrated = useAppStore(state => state.isHydrated);
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = useAppStore(state => !!(state.user && state.accessToken));
 
   // Queue for deep link actions that arrive before app is ready
   const pendingDeepLinkAction = useAppStore(state => state.pendingDeepLinkAction);

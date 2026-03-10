@@ -27,13 +27,12 @@ import { useFolderActions } from '#/hooks/recipe/useFolderActions';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils/iconUtils';
-import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { RecipeSkeleton } from '#components/base/Skeleton/RecipeSkeleton';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
-import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
 const viewOptions = ['saved', 'myRecipes'] as const;
@@ -56,10 +55,7 @@ function clearRandomRecipesIfNeeded(
  * Only mounts after isReady is true, so the skeleton paints instantly.
  */
 const RecipeMainInner: React.FC = () => {
-  useScreenTransition('RecipeMain');
   useRenderTime('RecipeMain');
-  // Restore persisted optimistic field values (e.g. isFavorited) from offline storage
-  useOptimisticDataRestorationMultiple(['Recipe', 'SavedRecipe']);
   const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,12 +85,22 @@ const RecipeMainInner: React.FC = () => {
   const hasFetchedRandom = useRef(false);
 
   // Fetch user's saved/favorited recipes from backend
-  const { recipes, loading, refetch } = useSavedRecipes();
+  const { state: { recipes, loading }, actions: { refetch } } = useSavedRecipes();
+
+  // Lifecycle: optimistic restoration, cache persistence, perf tracking
+  useTabScreenLifecycle({
+    screenName: 'RecipeMain',
+    optimisticTypes: ['Recipe', 'SavedRecipe'],
+    telemetryProperties: () => ({
+      recipe_count: recipes.length,
+      view: activeView,
+    }),
+  });
 
   // Fetch user-created recipes
   const {
-    recipes: myRecipes,
-    refetch: myRecipesRefetch,
+    state: { recipes: myRecipes },
+    actions: { refetch: myRecipesRefetch },
   } = useRecipeManagement();
 
   // Fetch random recipes ONLY ONCE when user has no saved recipes

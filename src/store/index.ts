@@ -239,6 +239,10 @@ export const useStore = create<RootState>()(
             registrationPassword,
             postLoginCredentials,
 
+            // Auth service transient loading state
+            authIsLoading,
+            authIsLoadingCredentials,
+
             ...persistedState
           } = state;
           // ========== PERSISTENT STATE (everything else) ==========

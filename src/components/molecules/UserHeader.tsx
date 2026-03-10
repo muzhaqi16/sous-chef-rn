@@ -2,14 +2,14 @@ import React from 'react';
 import {View, Text, Pressable} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {CachedImage} from '#components/atoms/CachedImage';
-import {useAuth} from '#hooks/auth/useAuth';
+import {useAuthUser} from '#hooks/auth/useAuthUser';
 import {useAppNavigation} from '#hooks/navigation/useAppNavigation';
 import {Icon} from '#utils/iconUtils';
 import {useAppStore} from '#store/useAppStore';
 
 export const UserHeader: React.FC = () => {
   const {navigateTo} = useAppNavigation();
-  const {user} = useAuth();
+  const user = useAuthUser();
   const unreadCount = useAppStore(state => state.unreadCount);
 
   return (

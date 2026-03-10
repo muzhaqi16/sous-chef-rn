@@ -565,6 +565,53 @@ describe('cache pagination integration', () => {
       expect(filteredEdges).toHaveLength(1);
       expect(filteredEdges[0].node.id).toBe('si-2');
     });
+
+    it('cursor-based fetchMore with all-duplicate edges preserves existing pageInfo', () => {
+      const cache = makeCache();
+
+      // Page 1
+      writeConn(
+        cache,
+        [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')],
+        { hasNextPage: true, endCursor: 'c2' },
+      );
+
+      // Page 2 (final page)
+      writeConn(
+        cache,
+        [itemEdge('si-3', 'Eggs')],
+        { hasNextPage: false, endCursor: 'c3' },
+        { after: 'c2' },
+      );
+
+      // Verify final state: 3 edges, hasNextPage=false
+      let result: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'list-1' },
+      });
+      expect(result.shoppingList.itemsConnection.edges).toHaveLength(3);
+      expect(result.shoppingList.itemsConnection.pageInfo.hasNextPage).toBe(false);
+      expect(result.shoppingList.itemsConnection.pageInfo.endCursor).toBe('c3');
+
+      // Duplicate cursor request: same cursor c2 sent again due to race condition.
+      // Server returns items after c2 with hasNextPage=true (correct from c2's perspective).
+      // All edges are duplicates — must NOT overwrite hasNextPage=false with true.
+      writeConn(
+        cache,
+        [itemEdge('si-3', 'Eggs')],
+        { hasNextPage: true, endCursor: 'c3' },
+        { after: 'c2' },
+      );
+
+      result = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'list-1' },
+      });
+      expect(result.shoppingList.itemsConnection.edges).toHaveLength(3);
+      // Existing pageInfo preserved — hasNextPage stays false
+      expect(result.shoppingList.itemsConnection.pageInfo.hasNextPage).toBe(false);
+      expect(result.shoppingList.itemsConnection.pageInfo.endCursor).toBe('c3');
+    });
   });
 
   // =========================================================================
@@ -1493,5 +1540,92 @@ describe('cache pagination integration', () => {
       expect(ids).toContain('si-1');
       expect(ids).toContain('si-2');
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Persistence: stripConnectionFields
+// ---------------------------------------------------------------------------
+
+describe('stripConnectionFields', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { stripConnectionFields } = require('../../apollo/offline/ApolloCachePersistence');
+
+  it('removes connection-shaped fields while preserving entity data', () => {
+    const cacheData = {
+      'ShoppingList:1': {
+        __typename: 'ShoppingList',
+        id: '1',
+        name: 'Groceries',
+        itemsConnection: {
+          edges: [{ __ref: 'ShoppingListItem:a' }],
+          pageInfo: { hasNextPage: true, endCursor: 'c1' },
+        },
+      },
+      'ShoppingListItem:a': {
+        __typename: 'ShoppingListItem',
+        id: 'a',
+        name: 'Milk',
+      },
+      ROOT_QUERY: {
+        __typename: 'Query',
+        'shoppingList({"id":"1"})': { __ref: 'ShoppingList:1' },
+      },
+    };
+
+    const result = stripConnectionFields(cacheData);
+
+    // Entity scalar fields preserved
+    expect(result['ShoppingList:1'].id).toBe('1');
+    expect(result['ShoppingList:1'].name).toBe('Groceries');
+    // Connection field stripped
+    expect(result['ShoppingList:1'].itemsConnection).toBeUndefined();
+    // Normalized entity untouched
+    expect(result['ShoppingListItem:a']).toEqual(cacheData['ShoppingListItem:a']);
+    // ROOT_QUERY preserved (no connection fields inside it)
+    expect(result.ROOT_QUERY).toEqual(cacheData.ROOT_QUERY);
+  });
+
+  it('handles keyArgs-generated connection keys', () => {
+    const cacheData = {
+      'Pantry:1': {
+        __typename: 'Pantry',
+        id: '1',
+        'itemsConnection:{"filters":{"categoryId":"cat-1"}}': {
+          edges: [{ __ref: 'PantryItem:x' }],
+          pageInfo: { hasNextPage: false, endCursor: null },
+        },
+        'itemsConnection:{"filters":{"categoryId":"cat-2"}}': {
+          edges: [],
+          pageInfo: { hasNextPage: false, endCursor: null },
+        },
+      },
+    };
+
+    const result = stripConnectionFields(cacheData);
+
+    expect(result['Pantry:1'].id).toBe('1');
+    expect(
+      result['Pantry:1']['itemsConnection:{"filters":{"categoryId":"cat-1"}}'],
+    ).toBeUndefined();
+    expect(
+      result['Pantry:1']['itemsConnection:{"filters":{"categoryId":"cat-2"}}'],
+    ).toBeUndefined();
+  });
+
+  it('preserves non-connection object fields', () => {
+    const cacheData = {
+      'User:1': {
+        __typename: 'User',
+        id: '1',
+        profile: { __ref: 'UserProfile:1' },
+        settings: { theme: 'dark', language: 'en' },
+      },
+    };
+
+    const result = stripConnectionFields(cacheData);
+
+    expect(result['User:1'].profile).toEqual({ __ref: 'UserProfile:1' });
+    expect(result['User:1'].settings).toEqual({ theme: 'dark', language: 'en' });
   });
 });

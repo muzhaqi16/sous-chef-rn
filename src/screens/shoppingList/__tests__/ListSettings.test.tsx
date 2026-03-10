@@ -35,8 +35,8 @@ jest.mock('#hooks/shoppingList/useShoppingListDetails', () => ({
   }),
 }));
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({ user: { id: 'u1', email: 'test@test.com' } }),
+jest.mock('#hooks/auth/useAuthUser', () => ({
+  useAuthUser: () => ({ id: 'u1', email: 'test@test.com' }),
 }));
 
 jest.mock('#/hooks/home/useLazyHomeData', () => ({

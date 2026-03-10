@@ -7,7 +7,7 @@
  * sort and search because the client only has a partial window.
  *
  * @param totalCount - Total number of items reported by the server
- * @param pageSize   - Page size used by the query (e.g. DEFAULT_PAGE_SIZES.MEDIUM)
+ * @param pageSize   - Page size used by the query (e.g. PAGE_SIZE.EXTENDED)
  * @param isOnline   - Whether the device is currently online
  * @returns true when the server should handle sort/search
  */

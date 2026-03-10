@@ -38,7 +38,7 @@ import { IngredientCard } from './components/IngredientCard';
 import { SelectableIngredientProvider, useSelectableIngredients } from './SelectableIngredientContext';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useAuthUser } from '#hooks/auth/useAuthUser';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
@@ -118,7 +118,7 @@ const RecipeDetailScreen: React.FC = () => {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const { navigate } = useAppNavigation();
-  const { user } = useAuth();
+  const user = useAuthUser();
   const {
     goBack,
     recipeId,
@@ -172,7 +172,7 @@ const RecipeDetailScreen: React.FC = () => {
   const { tags: availableTags } = useRecipeTags();
 
   // Recipe reviews
-  const recipeReviews = useRecipeReviews({
+  const { state: reviewState, actions: reviewActions } = useRecipeReviews({
     recipeId: recipeId ?? '',
     backendRecipe: backendRecipe ?? null });
 
@@ -734,7 +734,7 @@ const RecipeDetailScreen: React.FC = () => {
           })()}
 
           {/* Reviews Section */}
-          {!!isBackendRecipe && !!recipeId && <ReviewSection {...recipeReviews} />}
+          {!!isBackendRecipe && !!recipeId && <ReviewSection {...reviewState} {...reviewActions} />}
 
           {/* Source Attribution */}
           {!!(displayData.sourceName || displayData.sourceUrl) && (

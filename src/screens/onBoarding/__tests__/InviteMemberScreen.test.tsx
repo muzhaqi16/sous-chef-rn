@@ -14,8 +14,8 @@ jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
   }),
 }));
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({ user: { id: 'u1', email: 'me@test.com' } }),
+jest.mock('#hooks/auth/useAuthUser', () => ({
+  useAuthUser: () => ({ id: 'u1', email: 'me@test.com' }),
 }));
 
 let mockSelectedHomeId: string | null = 'h1';

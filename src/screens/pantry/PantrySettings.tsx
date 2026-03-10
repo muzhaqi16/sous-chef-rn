@@ -27,11 +27,21 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { useErrorService, errorService } from '#/services/errorService';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { executeWithLoadingState, executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
+import {
+  executeWithLoadingState,
+  executeAsyncWithCleanup,
+} from '#/utils/compilerSafeWrappers';
 
 /** Module-level helper to sync pantry form state from loaded data */
 function syncPantryFormState(
-  pantry: { name?: string | null; description?: string | null; isDefault?: boolean | null } | null | undefined,
+  pantry:
+    | {
+        name?: string | null;
+        description?: string | null;
+        isDefault?: boolean | null;
+      }
+    | null
+    | undefined,
   pantryId: string | undefined,
   setName: (v: string) => void,
   setDescription: (v: string) => void,
@@ -48,9 +58,14 @@ function syncPantryFormState(
   }
 }
 
-export const PantrySettings: React.FC<StaticScreenProps<{
-  pantryId?: string;
-} | undefined>> = ({ route }) => {
+export const PantrySettings: React.FC<
+  StaticScreenProps<
+    | {
+        pantryId?: string;
+      }
+    | undefined
+  >
+> = ({ route }) => {
   const { goBack } = useAppNavigation();
   const { theme } = useUnistyles();
   const pantryId = route.params?.pantryId;
@@ -76,7 +91,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
     variables: {
       id: pantryId!,
       itemsFirst: 25,
-      storageLocationsFirst: 50,
+      storageLocationsFirst: 15,
     },
     skip: !hasValidPantryId,
   });
@@ -111,7 +126,8 @@ export const PantrySettings: React.FC<StaticScreenProps<{
     },
     // Update cache directly instead of refetching
     update: (cache, { data }, { variables }) => {
-      if (!data?.deletePantry?.pantry || !variables?.id || !selectedHomeId) return;
+      if (!data?.deletePantry?.pantry || !variables?.id || !selectedHomeId)
+        return;
 
       try {
         const deletedPantryId = variables.id;
@@ -178,7 +194,6 @@ export const PantrySettings: React.FC<StaticScreenProps<{
       if (!newPantry || !selectedHomeId) return;
 
       try {
-
         // Add new pantry to home's pantries array
         const homeCacheId = cache.identify({
           __typename: 'Home',
@@ -245,7 +260,9 @@ export const PantrySettings: React.FC<StaticScreenProps<{
   useEffect(() => {
     // Handle error case
     if (pantryError && pantryId) {
-      errorService.reportError(pantryError, { operation: 'PantrySettings.loadPantry' });
+      errorService.reportError(pantryError, {
+        operation: 'PantrySettings.loadPantry',
+      });
       Alert.alert(
         'Error Loading Pantry',
         'Failed to load pantry data. Please try again.',
@@ -253,7 +270,13 @@ export const PantrySettings: React.FC<StaticScreenProps<{
       return;
     }
 
-    syncPantryFormState(pantry, pantryId, setName, setDescription, setIsDefault);
+    syncPantryFormState(
+      pantry,
+      pantryId,
+      setName,
+      setDescription,
+      setIsDefault,
+    );
   }, [pantry, pantryId, pantryError]);
 
   const handleToggleDefault = async (newValue: boolean) => {
@@ -273,7 +296,9 @@ export const PantrySettings: React.FC<StaticScreenProps<{
         },
       });
     } catch (error) {
-      errorService.reportError(error, { operation: 'PantrySettings.setDefaultPantry' });
+      errorService.reportError(error, {
+        operation: 'PantrySettings.setDefaultPantry',
+      });
     }
   };
 
@@ -346,7 +371,9 @@ export const PantrySettings: React.FC<StaticScreenProps<{
                 goBack();
               },
               // Cleanup (timeout in service provides fallback)
-              () => { subscriptionService.unregisterParentDeletion(pantryId); },
+              () => {
+                subscriptionService.unregisterParentDeletion(pantryId);
+              },
             );
           },
         },
@@ -370,7 +397,11 @@ export const PantrySettings: React.FC<StaticScreenProps<{
         title={!pantryId ? 'Create New Pantry' : 'Pantry Settings'}
         onBack={goBack}
         rightElement={
-          <Pressable onPress={handleSave} disabled={saving} style={({pressed}) => pressed && styles.pressed}>
+          <Pressable
+            onPress={handleSave}
+            disabled={saving}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
             <Text style={styles.saveButton}>
               {saving ? 'Saving...' : !pantryId ? 'Create' : 'Save'}
             </Text>
@@ -394,7 +425,9 @@ export const PantrySettings: React.FC<StaticScreenProps<{
           </View>
 
           <View style={commonStyles.settingsInputGroup}>
-            <Text style={commonStyles.settingsLabel}>Description (Optional)</Text>
+            <Text style={commonStyles.settingsLabel}>
+              Description (Optional)
+            </Text>
             <TextInput
               style={commonStyles.settingsInput}
               value={description}
@@ -425,9 +458,15 @@ export const PantrySettings: React.FC<StaticScreenProps<{
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>Information</Text>
 
-            <InfoRow label="Items in pantry" value={`${pantry?.items?.length || 0} items`} />
+            <InfoRow
+              label="Items in pantry"
+              value={`${pantry?.items?.length || 0} items`}
+            />
 
-            <InfoRow label="Created" value={new Date(pantry.createdAt).toLocaleDateString()} />
+            <InfoRow
+              label="Created"
+              value={new Date(pantry.createdAt).toLocaleDateString()}
+            />
           </View>
         )}
 
@@ -437,7 +476,10 @@ export const PantrySettings: React.FC<StaticScreenProps<{
             <Text style={commonStyles.settingsSectionTitle}>Danger Zone</Text>
 
             <Pressable
-              style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.deleteButton,
+                pressed && styles.pressed,
+              ]}
               onPress={handleDelete}
             >
               <Icon name="trash-outline" size={20} color={theme.colors.error} />

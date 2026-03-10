@@ -12,24 +12,25 @@ import { ItemList } from '#components/organisms/ItemList';
 import { RecipeCardSkeleton } from '#components/base/Skeleton/RecipeCardSkeleton';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { createPropsComparator } from '#utils/memoUtils';
 import { useRecipeSearch } from './useRecipeSearch';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { IngredientSelectorProvider, useIngredientSelector } from './IngredientSelectorContext';
 
-const IngredientItem = React.memo(({
-    name,
-    selected,
-    onToggle,
-    primaryColor,
-    textSecondary }: {
+const IngredientItemComponent: React.FC<{
     name: string;
     selected: boolean;
     onToggle: (name: string) => void;
     primaryColor: string;
     textSecondary: string;
-  }) => {
+  }> = ({
+    name,
+    selected,
+    onToggle,
+    primaryColor,
+    textSecondary }) => {
     const handlePress = () => onToggle(name);
 
     return (
@@ -42,32 +43,44 @@ const IngredientItem = React.memo(({
         <Text style={styles.ingredientText}>{name}</Text>
       </Pressable>
     );
-  });
-IngredientItem.displayName = 'IngredientItem';
+  };
+
+const areIngredientItemPropsEqual = createPropsComparator<{
+  name: string;
+  selected: boolean;
+  onToggle: (name: string) => void;
+  primaryColor: string;
+  textSecondary: string;
+}>({
+  referenceKeys: ['name', 'selected', 'primaryColor', 'textSecondary'],
+});
+
+const IngredientItem = React.memo(IngredientItemComponent, areIngredientItemPropsEqual);
 
 const ingredientKeyExtractor = (item: any) => item.id;
 
-interface IngredientRenderItemProps {
-  item: any;
-  primaryColor: string;
-  textSecondary: string;
-}
-
-const IngredientRenderItem = ({ item, primaryColor, textSecondary }: IngredientRenderItemProps) => {
+// Module-scope renderItem — reads theme from useUnistyles to avoid closure over parent scope
+const IngredientRenderItem = ({ item }: { item: any }) => {
   const { selectedIngredients, toggleIngredient } = useIngredientSelector();
+  const { theme } = useUnistyles();
   const itemName = item.itemName || '';
   return (
     <IngredientItem
       name={itemName}
       selected={selectedIngredients.has(itemName)}
       onToggle={toggleIngredient}
-      primaryColor={primaryColor}
-      textSecondary={textSecondary}
+      primaryColor={theme.colors.primary}
+      textSecondary={theme.colors.textSecondary}
     />
   );
 };
 
 const getIngredientItemType = () => 'item' as const;
+
+// Module-scope renderItem — stable reference for FlashList
+const renderIngredientItem = ({ item }: { item: any }) => (
+  <IngredientRenderItem item={item} />
+);
 
 const RecipeSearchContent: React.FC<{
   items: any[];
@@ -227,13 +240,7 @@ export const RecipeSearch: React.FC = () => {
           <FlashList
             data={pantryItems}
             keyExtractor={ingredientKeyExtractor}
-            renderItem={({ item }: { item: any }) => (
-              <IngredientRenderItem
-                item={item}
-                primaryColor={theme.colors.primary}
-                textSecondary={theme.colors.textSecondary}
-              />
-            )}
+            renderItem={renderIngredientItem}
             getItemType={getIngredientItemType}
             extraData={selectedIngredients.size}
             {...FLASHLIST_DEFAULTS.bottomSheet}

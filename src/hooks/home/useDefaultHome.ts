@@ -10,7 +10,6 @@ import {
   selectIsLoggingOut,
 } from '#store/useAppStore';
 import { useStore } from '#store';
-import { useAuth } from '#hooks/auth/useAuth';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import {
   normalizeHome,
@@ -18,6 +17,11 @@ import {
   extractNodes,
 } from '#/utils/connectionUtils';
 
+/**
+ * Manages home selection, default home resolution, and pantry ID tracking.
+ *
+ * @returns `{ state, actions }` — home/pantry selection state and helpers like getDefaultPantry
+ */
 export const useDefaultHome = () => {
   const client = useApolloClient();
   const {
@@ -26,7 +30,7 @@ export const useDefaultHome = () => {
     selectedPantryId,
     setSelectedPantryId,
   } = useAppStore(useShallow(selectPantryState));
-  const { canAttemptQueries } = useAuth();
+  const canAttemptQueries = useAppStore(state => !!(state.accessToken || state.refreshToken) && !state.isLoggingOut);
 
   // Track if we've already initialized defaults to prevent cascading re-renders
   const hasInitializedRef = useRef(false);
@@ -118,8 +122,7 @@ export const useDefaultHome = () => {
   // Derive default home from isDefault field (no separate query needed)
   const remoteDefaultHomeId = homesList?.find(h => h.isDefault)?.id ?? null;
 
-  // PERFORMANCE: Extract default pantry ID with stable reference to prevent infinite loops
-  // Using useMemo ensures we only recalculate when the underlying data changes
+  // Extract default pantry ID (React Compiler auto-memoizes this derivation)
   const defaultPantryId = (() => {
     // Find the default home from the homes list
     const defaultHome = homesList?.find(h => h.isDefault);
@@ -453,15 +456,19 @@ export const useDefaultHome = () => {
   const currentHomeId = selectedHomeId ?? remoteDefaultHomeId;
 
   return {
-    selectedHomeId: currentHomeId,
-    homes: homesList,
-    loading,
-    error,
-    hasDefaultHome: !!currentHomeId,
-    getDefaultPantry,
-    remoteDefaultHomeId,
-    selectedPantryId,
-    setSelectedPantryId,
-    isHomeSelectionReady,
+    state: {
+      selectedHomeId: currentHomeId,
+      homes: homesList,
+      loading,
+      error,
+      hasDefaultHome: !!currentHomeId,
+      remoteDefaultHomeId,
+      selectedPantryId,
+      isHomeSelectionReady,
+    },
+    actions: {
+      getDefaultPantry,
+      setSelectedPantryId,
+    },
   };
 };

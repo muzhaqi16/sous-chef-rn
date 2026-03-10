@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, Modal } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { useAuth } from '#hooks/auth/useAuth';
+import { authService } from '#/services/authService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 interface PostLoginBiometricPromptProps {
@@ -19,7 +19,6 @@ export const PostLoginBiometricPrompt = ({
   userPassword,
 }: PostLoginBiometricPromptProps) => {
   const { theme } = useUnistyles();
-  const { getBiometricInfo, storeCredentials } = useAuth();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
     biometryType: string | null;
@@ -29,7 +28,7 @@ export const PostLoginBiometricPrompt = ({
   // Load biometric info when modal becomes visible
   useEffect(() => {
     if (visible) {
-      getBiometricInfo()
+      authService.getBiometricInfo()
         .then(info => {
           setBiometricInfo(info);
         })
@@ -37,7 +36,7 @@ export const PostLoginBiometricPrompt = ({
           console.error('Error loading biometric info:', error);
         });
     }
-  }, [visible, getBiometricInfo]);
+  }, [visible]);
 
   const handleEnableNow = () => {
     if (isEnabling) return;
@@ -50,7 +49,7 @@ export const PostLoginBiometricPrompt = ({
           return;
         }
 
-        const success = await storeCredentials(userEmail, userPassword);
+        const success = await authService.storeCredentials(userEmail, userPassword);
         onComplete(success);
       },
       setIsEnabling,

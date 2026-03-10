@@ -22,85 +22,27 @@ jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
   useTabBarAddButton: jest.fn(),
 }));
 
-// --- Store ---
-jest.mock('#store/useAppStore', () => {
-  const fn = (selector: any) =>
-    selector({
-      showBiometricSetup: false,
-      unreadCount: 0,
-      pantrySortOption: 'recent',
-      pantrySortDirection: 'desc',
-      setPantrySortOption: jest.fn(),
-      setPantrySortDirection: jest.fn(),
+// --- Store (useStore for getState in focus handler) ---
+jest.mock('#store', () => {
+  const fn = Object.assign(jest.fn(), {
+    getState: () => ({
       pendingPantryScrollToTop: false,
       setPendingPantryScrollToTop: jest.fn(),
-      isOnline: true,
-    });
-  fn.getState = () => ({});
-  fn.setState = jest.fn();
-  fn.subscribe = jest.fn();
-  return {
-    useAppStore: fn,
-    selectIsOnline: (s: any) => s.isOnline,
-  };
+    }),
+    setState: jest.fn(),
+    subscribe: jest.fn(),
+  });
+  return { useStore: fn, storeApi: fn };
 });
 
-// --- Auth ---
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({ user: { id: 'u1', name: 'Test', email: 'test@t.com', profilePicture: null } }),
-}));
+// --- Facade hook: usePantryScreen ---
+const defaultPantryScreen = {
+  // User
+  authUser: { id: 'u1', name: 'Test', email: 'test@t.com', profilePicture: null },
+  userName: 'Test',
+  householdName: 'My Home',
 
-// --- Hybrid search hook ---
-const mockHybridSearch = {
-  searchQuery: '',
-  setSearchQuery: jest.fn((q: string) => { mockHybridSearch.searchQuery = q; }),
-  debouncedSearch: '',
-  searchActive: false,
-  useServerSort: false,
-  activeItems: [] as Array<{ id: string; itemName: string; quantity: number }>,
-  isSearching: false,
-  removeFromResults: jest.fn(),
-};
-jest.mock('#hooks/search/useHybridSearch', () => ({
-  useHybridSearch: jest.fn(() => mockHybridSearch),
-}));
-
-// --- Pantry hooks ---
-jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
-  usePantryManagement: jest.fn(() => ({
-    items: [],
-    stats: { totalItems: 0, expiringCount: 0, lowStockCount: 0 },
-    totalCount: 0,
-    removeItem: jest.fn(),
-    refetch: jest.fn(),
-    loading: false,
-    isRefreshing: false,
-    error: null,
-    loadMore: jest.fn(),
-    hasMore: false,
-    isLoadingMore: false,
-    locationCounts: {},
-  })),
-}));
-jest.mock('#hooks/pantry/usePantrySelectorConfig', () => ({
-  usePantrySelectorConfig: () => ({ items: [], selectedId: null }),
-}));
-jest.mock('#hooks/pantry/usePantryItemActions', () => ({
-  usePantryItemActions: () => ({
-    consumeModal: { visible: false, item: null, close: jest.fn() },
-    wasteModal: { visible: false, item: null, close: jest.fn() },
-    restockModal: { visible: false, item: null, close: jest.fn() },
-    handleConfirmConsume: jest.fn(),
-    handleConfirmWaste: jest.fn(),
-    handleConfirmRestock: jest.fn(),
-    handleConsumeItem: jest.fn(),
-    handleWasteItem: jest.fn(),
-    handleRestockItem: jest.fn(),
-    handleEditItem: jest.fn(),
-    handleDeleteItem: jest.fn(),
-  }),
-}));
-const mockUseCurrentPantry = jest.fn(() => ({
+  // Home / Pantry resolution
   pantry: { id: 'p1', name: 'Kitchen' },
   pantries: [{ id: 'p1', name: 'Kitchen' }],
   currentHome: { name: 'My Home' },
@@ -108,16 +50,106 @@ const mockUseCurrentPantry = jest.fn(() => ({
   setSelectedPantryId: jest.fn(),
   homeCount: 1,
   isReady: true,
+  noHomeSelected: false,
+  noHomes: false,
+
+  // Store state
+  showBiometricSetup: false,
+  unreadCount: 0,
+  pantrySortOption: 'recent' as const,
+  pantrySortDirection: 'desc' as const,
+  pendingPantryScrollToTop: false,
+  setPendingPantryScrollToTop: jest.fn(),
+
+  // Pantry data
+  pantryItems: [] as Array<{ id: string; itemName: string; quantity: number }>,
+  rawPantryItems: [] as Array<{ id: string; itemName: string; quantity: number }>,
+  pantryStorageLocations: [] as Array<{ id: string; name: string; icon: string | null }>,
+  stats: { totalItems: 0, expiringCount: 0, lowStockCount: 0 } as {
+    totalItems: number;
+    expiringCount: number;
+    lowStockCount: number;
+  } | null,
+  totalCount: 0,
+  pantryError: null as any,
+
+  // Loading states
+  loading: false,
+  isLoadingInitial: false,
+  isRefreshing: false,
+
+  // Search
+  searchQuery: '',
+  setSearchQuery: jest.fn(),
+  searchActive: false,
+  useServerSort: false,
+
+  // Pagination
+  loadMore: jest.fn(),
+  hasMore: false,
+  isLoadingMore: false,
+
+  // Location filter
+  locationFilter: 'all' as const,
+  handleLocationFilterChange: jest.fn(),
+  combinedTabs: [
+    { id: 'all', label: 'All' },
+    { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline' },
+    { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
+    { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
+  ],
+  completeCounts: {},
+
+  // Sort
+  handleSortChange: jest.fn(),
+
+  // Mutations / actions
+  handleRemoveItem: jest.fn(),
+  removeItem: jest.fn(),
+  refetch: jest.fn(),
+  handleRefresh: jest.fn(),
+  createLocation: jest.fn(),
+  creatingLocation: false,
+
+  // Network
+  isOnline: true,
+};
+
+const mockUsePantryScreen = jest.fn(() => ({ ...defaultPantryScreen }));
+jest.mock('#hooks/pantry/usePantryScreen', () => ({
+  usePantryScreen: () => mockUsePantryScreen(),
 }));
-jest.mock('#hooks/pantry/useCurrentPantry', () => ({
-  useCurrentPantry: () => mockUseCurrentPantry(),
+
+// --- Lifecycle hook ---
+jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
+  useTabScreenLifecycle: jest.fn(),
+}));
+
+// --- Pantry modals context ---
+const mockPantryModals = {
+  handleConsumeItem: jest.fn(),
+  handleWasteItem: jest.fn(),
+  handleRestockItem: jest.fn(),
+  handleEditItem: jest.fn(),
+  handleDeleteItem: jest.fn(),
+  addSheetVisible: false,
+  setAddSheetVisible: jest.fn(),
+  addLocationSheetVisible: false,
+  setAddLocationSheetVisible: jest.fn(),
+  handleAddSheetClose: jest.fn(),
+  handleItemAdded: jest.fn(),
+};
+jest.mock('#/context/PantryModalsContext', () => ({
+  PantryModalsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  usePantryModals: () => mockPantryModals,
+}));
+
+// --- Pantry hooks still used directly by PantryMainInner ---
+jest.mock('#hooks/pantry/usePantrySelectorConfig', () => ({
+  usePantrySelectorConfig: () => ({ items: [], selectedId: null }),
 }));
 
 // --- Performance / scanner / UI hooks ---
-jest.mock('#hooks/performance/useScreenTransition');
-jest.mock('#hooks/performance/useScreenTelemetry', () => ({
-  useScreenTelemetry: jest.fn(),
-}));
 jest.mock('#hooks/scanner/useScannerSetup', () => ({
   useScannerSetup: jest.fn(),
 }));
@@ -126,12 +158,6 @@ jest.mock('#hooks/ui/useSelectorManagement', () => ({
     handleOpenSelector: jest.fn(),
     handleOverlayOpen: jest.fn(),
     handleOverlayClose: jest.fn(),
-  }),
-}));
-jest.mock('#hooks/ui/useSwipeableCoordinator', () => ({
-  useSwipeableCoordinator: () => ({
-    handleSwipeableWillOpen: jest.fn(),
-    handleSwipeableClose: jest.fn(),
   }),
 }));
 jest.mock('#hooks/useFeatureHint', () => ({
@@ -144,13 +170,6 @@ jest.mock('#hooks/useFeatureHint', () => ({
 }));
 jest.mock('#services/telemetry', () => ({
   Telemetry: { trackEvent: jest.fn(), trackScreen: jest.fn() },
-}));
-jest.mock('#hooks/storageLocation/useStorageLocationManagement', () => ({
-  useStorageLocationManagement: () => ({
-    locations: [],
-    createLocation: jest.fn(),
-    creating: false,
-  }),
 }));
 
 // --- Error boundary & performance ---
@@ -191,61 +210,23 @@ jest.mock('#components/organisms/AnimatedItemSelector/AnimatedItemSelector', () 
   const { View } = require('react-native');
   return { AnimatedItemSelector: forwardRef(() => <View testID="item-selector" />) };
 });
-jest.mock('#components/modals/ConsumePantryItemModal', () => ({ ConsumePantryItemModal: () => null }));
-jest.mock('#components/modals/RecordWastePantryItemModal', () => ({ RecordWastePantryItemModal: () => null }));
-jest.mock('#components/modals/RestockPantryItemModal', () => ({ RestockPantryItemModal: () => null }));
-jest.mock('#components/modals/AddToPantrySheet/AddToPantrySheet', () => ({ AddToPantrySheet: () => null }));
-jest.mock('#components/modals/AddStorageLocationSheet/AddStorageLocationSheet', () => ({ AddStorageLocationSheet: () => null }));
 jest.mock('#/components/organisms/FeatureHintOverlay', () => ({ FeatureHintOverlay: () => null }));
 jest.mock('#components/base/Skeleton/PantryScreenSkeleton', () => ({ PantryScreenSkeleton: () => null }));
 jest.mock('#components/molecules/TabScreenHeader', () => ({ TabScreenHeader: () => null }));
 jest.mock('#components/molecules/SearchBar', () => ({ SearchBar: () => null }));
 jest.mock('#components/molecules/FilterTabs/FilterTabs', () => ({ FilterTabs: () => null }));
+jest.mock('#components/molecules/SectionHeader', () => ({ SectionHeader: () => null }));
 
 // --- Per-test mock override helper ---
-const defaultPantryManagement = {
-  items: [] as Array<{ id: string; itemName: string; quantity: number }>,
-  stats: { totalItems: 0, expiringCount: 0, lowStockCount: 0 } as {
-    totalItems: number;
-    expiringCount: number;
-    lowStockCount: number;
-  } | null,
-  totalCount: 0,
-  removeItem: jest.fn(),
-  refetch: jest.fn(),
-  loading: false,
-  isRefreshing: false,
-  error: null,
-  loadMore: jest.fn(),
-  hasMore: false,
-  isLoadingMore: false,
-  locationCounts: {},
-};
-
-function mockPantryManagement(overrides: Partial<typeof defaultPantryManagement> = {}) {
-  const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
-  usePantryManagement.mockReturnValue({ ...defaultPantryManagement, ...overrides });
-}
-
-function mockHybridSearchState(overrides: Partial<typeof mockHybridSearch> = {}) {
-  const { useHybridSearch } = jest.requireMock('#hooks/search/useHybridSearch');
-  const state = { ...mockHybridSearch, ...overrides };
-  useHybridSearch.mockReturnValue(state);
-  return state;
+function mockPantryScreen(overrides: Partial<typeof defaultPantryScreen> = {}) {
+  mockUsePantryScreen.mockReturnValue({ ...defaultPantryScreen, ...overrides });
 }
 
 describe('PantryMain', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     capturedPantryContentProps = {};
-    // Reset hybrid search to defaults
-    mockHybridSearch.searchQuery = '';
-    mockHybridSearch.debouncedSearch = '';
-    mockHybridSearch.searchActive = false;
-    mockHybridSearch.useServerSort = false;
-    mockHybridSearch.activeItems = [];
-    mockHybridSearch.isSearching = false;
-    mockHybridSearch.removeFromResults = jest.fn();
+    mockUsePantryScreen.mockReturnValue({ ...defaultPantryScreen });
   });
 
   it('renders the pantry screen container', () => {
@@ -282,26 +263,26 @@ describe('PantryMain', () => {
   describe('passes hook data as props to PantryContent', () => {
     it('passes stats to PantryContent when stats exist', () => {
       const stats = { totalItems: 12, expiringCount: 3, lowStockCount: 2 };
-      mockPantryManagement({ stats });
+      mockPantryScreen({ stats });
       render(<PantryMain />);
       expect(capturedPantryContentProps.stats).toEqual(stats);
     });
 
     it('passes null stats when hook returns null', () => {
-      mockPantryManagement({ stats: null });
+      mockPantryScreen({ stats: null });
       render(<PantryMain />);
       expect(capturedPantryContentProps.stats).toBeNull();
     });
 
     it('passes totalCount to PantryContent', () => {
-      mockPantryManagement({ totalCount: 42 });
+      mockPantryScreen({ totalCount: 42 });
       render(<PantryMain />);
       expect(capturedPantryContentProps.totalCount).toBe(42);
       expect(screen.getByTestId('prop-totalCount')).toHaveTextContent('42');
     });
 
-    it('passes loading=true when loading with no items', () => {
-      mockPantryManagement({ loading: true, items: [] });
+    it('passes loading=true when isLoadingInitial is true', () => {
+      mockPantryScreen({ isLoadingInitial: true });
       render(<PantryMain />);
       expect(capturedPantryContentProps.loading).toBe(true);
       expect(screen.getByTestId('prop-loading')).toHaveTextContent('true');
@@ -312,8 +293,7 @@ describe('PantryMain', () => {
         { id: 'i1', itemName: 'Milk', quantity: 1 },
         { id: 'i2', itemName: 'Eggs', quantity: 12 },
       ];
-      mockHybridSearchState({ activeItems: items });
-      mockPantryManagement({ totalCount: 2 });
+      mockPantryScreen({ pantryItems: items, totalCount: 2 });
       render(<PantryMain />);
       expect(capturedPantryContentProps.items).toHaveLength(2);
       expect(screen.getByTestId('prop-itemCount')).toHaveTextContent('2');
@@ -321,7 +301,7 @@ describe('PantryMain', () => {
 
     it('passes pagination props (hasMore, isLoadingMore, onEndReached)', () => {
       const loadMore = jest.fn();
-      mockPantryManagement({ hasMore: true, isLoadingMore: true, loadMore });
+      mockPantryScreen({ hasMore: true, isLoadingMore: true, loadMore });
       render(<PantryMain />);
       expect(capturedPantryContentProps.hasMore).toBe(true);
       expect(capturedPantryContentProps.isLoadingMore).toBe(true);
@@ -331,14 +311,16 @@ describe('PantryMain', () => {
 
   describe('no-home states', () => {
     it('passes noHomeSelected=true when ready, no home selected, but homes exist', () => {
-      mockUseCurrentPantry.mockReturnValue({
+      mockPantryScreen({
         pantry: null as any,
         pantries: [],
         currentHome: null as any,
         selectedHomeId: null as any,
-        setSelectedPantryId: jest.fn(),
         homeCount: 3,
         isReady: true,
+        noHomeSelected: true,
+        noHomes: false,
+        householdName: 'Tap to select a home',
       });
       render(<PantryMain />);
       expect(capturedPantryContentProps.noHomeSelected).toBe(true);
@@ -347,14 +329,16 @@ describe('PantryMain', () => {
     });
 
     it('passes noHomes=true when ready, no home selected, and no homes exist', () => {
-      mockUseCurrentPantry.mockReturnValue({
+      mockPantryScreen({
         pantry: null as any,
         pantries: [],
         currentHome: null as any,
         selectedHomeId: null as any,
-        setSelectedPantryId: jest.fn(),
         homeCount: 0,
         isReady: true,
+        noHomeSelected: false,
+        noHomes: true,
+        householdName: 'No homes yet',
       });
       render(<PantryMain />);
       expect(capturedPantryContentProps.noHomes).toBe(true);
@@ -363,29 +347,21 @@ describe('PantryMain', () => {
     });
 
     it('passes onSelectHome callback that navigates to HomeManagement', () => {
-      mockUseCurrentPantry.mockReturnValue({
+      mockPantryScreen({
         pantry: null as any,
         pantries: [],
         currentHome: null as any,
         selectedHomeId: null as any,
-        setSelectedPantryId: jest.fn(),
         homeCount: 3,
         isReady: true,
+        noHomeSelected: true,
+        noHomes: false,
       });
       render(<PantryMain />);
       expect(typeof capturedPantryContentProps.onSelectHome).toBe('function');
     });
 
     it('passes noHomeSelected=false and noHomes=false when home is selected', () => {
-      mockUseCurrentPantry.mockReturnValue({
-        pantry: { id: 'p1', name: 'Kitchen' },
-        pantries: [{ id: 'p1', name: 'Kitchen' }],
-        currentHome: { name: 'My Home' },
-        selectedHomeId: 'h1',
-        setSelectedPantryId: jest.fn(),
-        homeCount: 1,
-        isReady: true,
-      });
       render(<PantryMain />);
       expect(capturedPantryContentProps.noHomeSelected).toBe(false);
       expect(capturedPantryContentProps.noHomes).toBe(false);
@@ -395,20 +371,15 @@ describe('PantryMain', () => {
 
   describe('hybrid search integration', () => {
     it('passes useServerSort from hook to PantryContent', () => {
-      mockHybridSearchState({ useServerSort: true, searchActive: true });
-      mockPantryManagement({ hasMore: true, totalCount: 55 });
-
+      mockPantryScreen({ useServerSort: true, searchActive: true, hasMore: true, totalCount: 55 });
       render(<PantryMain />);
-
       expect(capturedPantryContentProps.useServerSort).toBe(true);
     });
 
     it('suppresses pagination indicators when search is active', () => {
-      mockHybridSearchState({ searchActive: true, useServerSort: true });
-      mockPantryManagement({ hasMore: true, isLoadingMore: true });
-
+      mockPantryScreen({ searchActive: true, useServerSort: true, hasMore: true, isLoadingMore: true });
       render(<PantryMain />);
-
+      // PantryMainContent passes searchActive ? false : screen.isLoadingMore
       expect(capturedPantryContentProps.hasMore).toBe(false);
       expect(capturedPantryContentProps.isLoadingMore).toBe(false);
       expect(capturedPantryContentProps.onEndReached).toBeDefined();
@@ -419,28 +390,20 @@ describe('PantryMain', () => {
         { id: 'i1', itemName: 'Milk', quantity: 1 },
         { id: 'i2', itemName: 'Eggs', quantity: 12 },
       ];
-      mockHybridSearchState({ activeItems: items });
-      mockPantryManagement({ totalCount: 2 });
-
+      mockPantryScreen({ pantryItems: items, totalCount: 2 });
       render(<PantryMain />);
-
       expect(capturedPantryContentProps.items).toHaveLength(2);
     });
 
     it('uses local search when useServerSort is false', () => {
-      mockHybridSearchState({ useServerSort: false });
-      mockPantryManagement({ totalCount: 55, hasMore: false });
-
+      mockPantryScreen({ useServerSort: false, totalCount: 55, hasMore: false });
       render(<PantryMain />);
-
       expect(capturedPantryContentProps.useServerSort).toBe(false);
     });
 
     it('passes searchQuery and setSearchQuery from hook to PantryContent', () => {
-      mockHybridSearchState({ searchQuery: 'test' });
-
+      mockPantryScreen({ searchQuery: 'test' });
       render(<PantryMain />);
-
       expect(capturedPantryContentProps.searchQuery).toBe('test');
       expect(typeof capturedPantryContentProps.onSearchChange).toBe('function');
     });

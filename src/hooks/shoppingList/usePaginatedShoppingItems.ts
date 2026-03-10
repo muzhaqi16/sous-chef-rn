@@ -4,11 +4,12 @@ import {
   ShoppingListItemDisplayFragment,
   GetShoppingListItemsFilteredQuery,
 } from '#generated';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { PAGINATION } from '#/constants/shoppingList';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { usePagination } from '#hooks/utils/usePagination';
 import { executeRefetch } from '#/utils/compilerSafeWrappers';
+import type { HookReturn } from '#hooks/types';
 
 interface UsePaginatedShoppingItemsOptions {
   listId: string | null | undefined;
@@ -24,14 +25,19 @@ interface ConnectionData {
   loadMoreError: boolean;
 }
 
-interface UsePaginatedShoppingItemsResult {
+interface PaginatedShoppingItemsState {
   unpurchased: ConnectionData;
   purchased: ConnectionData;
   loading: boolean;
   error: Error | undefined;
-  refetch: () => Promise<void>;
   isTransitioning: boolean;
 }
+
+interface PaginatedShoppingItemsActions {
+  refetch: () => Promise<void>;
+}
+
+type UsePaginatedShoppingItemsResult = HookReturn<PaginatedShoppingItemsState, PaginatedShoppingItemsActions>;
 
 // --- Helpers (module-level for stability) ---
 
@@ -105,20 +111,21 @@ function resolveEdges(
 }
 
 /**
- * usePaginatedShoppingItems — Two independent queries for shopping list tabs
+ * Fetches paginated shopping list items via two independent queries (unpurchased + purchased).
  *
- * Uses two calls to GetShoppingListItemsFiltered (one per tab) so each tab
- * has its own cursor, cache entry, and fetchMore — eliminating the alias-based
- * cross-contamination and ordering bugs from the previous single-query approach.
+ * Each tab gets its own cursor, cache entry, and fetchMore to avoid alias-based
+ * cross-contamination. Apollo's `keyArgs: ['filters']` on `itemsConnection` ensures
+ * separate cache entries per `isPurchased` filter value.
  *
- * Apollo's `keyArgs: ['filters']` on `itemsConnection` ensures separate cache
- * entries per `isPurchased` filter value.
+ * @param options - Configuration with `listId` and optional `skip` flag
+ * @returns `{ state, actions }` — state contains unpurchased/purchased connection data,
+ *   loading, error, and transition flags; actions contains refetch
  */
 export function usePaginatedShoppingItems({
   listId,
   skip = false,
 }: UsePaginatedShoppingItemsOptions): UsePaginatedShoppingItemsResult {
-  const { isLoggedOut } = useAuth();
+  const isLoggedOut = useIsLoggedOut();
 
   const hasValidListId = !!listId && !isLoggedOut;
   const shouldSkip = skip || !hasValidListId;
@@ -265,25 +272,29 @@ export function usePaginatedShoppingItems({
   const loading = uLoading && unpurchasedItems.length === 0;
 
   return {
-    unpurchased: {
-      items: unpurchasedItems,
-      totalCount: unpurchasedTotalCount,
-      hasMore: unpurchasedPagination.hasMore,
-      isLoadingMore: unpurchasedPagination.isLoadingMore,
-      loadMore: unpurchasedPagination.loadMore,
-      loadMoreError: unpurchasedPagination.loadMoreError,
+    state: {
+      unpurchased: {
+        items: unpurchasedItems,
+        totalCount: unpurchasedTotalCount,
+        hasMore: unpurchasedPagination.hasMore,
+        isLoadingMore: unpurchasedPagination.isLoadingMore,
+        loadMore: unpurchasedPagination.loadMore,
+        loadMoreError: unpurchasedPagination.loadMoreError,
+      },
+      purchased: {
+        items: purchasedItems,
+        totalCount: purchasedTotalCount,
+        hasMore: purchasedPagination.hasMore,
+        isLoadingMore: purchasedPagination.isLoadingMore,
+        loadMore: purchasedPagination.loadMore,
+        loadMoreError: purchasedPagination.loadMoreError,
+      },
+      loading,
+      error: (uError ?? pError) as Error | undefined,
+      isTransitioning: listIdChanged && (uLoading || pLoading),
     },
-    purchased: {
-      items: purchasedItems,
-      totalCount: purchasedTotalCount,
-      hasMore: purchasedPagination.hasMore,
-      isLoadingMore: purchasedPagination.isLoadingMore,
-      loadMore: purchasedPagination.loadMore,
-      loadMoreError: purchasedPagination.loadMoreError,
+    actions: {
+      refetch: handleRefetch,
     },
-    loading,
-    error: (uError ?? pError) as Error | undefined,
-    refetch: handleRefetch,
-    isTransitioning: listIdChanged && (uLoading || pLoading),
   };
 }

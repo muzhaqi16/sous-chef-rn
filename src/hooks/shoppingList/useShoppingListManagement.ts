@@ -31,12 +31,14 @@ export function useShoppingListManagement(currentListId: string | undefined) {
 
   // 2. Single query fetches BOTH unpurchased and purchased items (no cache collision)
   const {
-    unpurchased,
-    purchased,
-    loading: itemsLoading,
-    error: itemsError,
-    refetch,
-    isTransitioning,
+    state: {
+      unpurchased,
+      purchased,
+      loading: itemsLoading,
+      error: itemsError,
+      isTransitioning,
+    },
+    actions: { refetch },
   } = usePaginatedShoppingItems({
     listId: currentListId,
   });

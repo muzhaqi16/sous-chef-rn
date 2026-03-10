@@ -13,7 +13,7 @@ import { object, string, ref } from 'yup';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { PasswordInput } from '#components/atoms/PasswordInput';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useAppStore } from '#store/useAppStore';
 import { useResetPasswordMutation } from '#generated';
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
@@ -80,7 +80,7 @@ export const ResetPasswordScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { theme } = useUnistyles();
-  const { clearAuth } = useAuth();
+  const clearAuth = useAppStore(state => state.clearAuth);
   const { navigateToLogin } = useAuthNavigation();
   const toast = useToast();
 

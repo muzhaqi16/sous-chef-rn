@@ -12,7 +12,7 @@ import {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { PasswordInput } from '#components/atoms/PasswordInput';
-import { useAuth } from '#hooks/auth/useAuth';
+import { authService } from '#/services/authService';
 import {
   executeWithLoadingState,
   executeMutation,
@@ -39,12 +39,6 @@ export const BiometricSetupModal = ({
   mode = 'onboarding',
 }: BiometricSetupModalProps) => {
   const { theme } = useUnistyles();
-  const {
-    getBiometricInfo,
-    storeCredentials,
-    loadStoredCredentials,
-    checkStoredCredentials,
-  } = useAuth();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
     biometryType: string | null;
@@ -62,13 +56,13 @@ export const BiometricSetupModal = ({
       syncBiometricCheckState(setHasCheckedBiometric); // Reset check state
       const credentialsCheck =
         mode === 'settings'
-          ? checkStoredCredentials(userEmail)
+          ? authService.checkStoredCredentials(userEmail)
           : Promise.resolve(false);
 
       executeMutation(
         async () => {
           const [info, credentialsExist] = await Promise.all([
-            getBiometricInfo(),
+            authService.getBiometricInfo(),
             credentialsCheck,
           ]);
 
@@ -82,7 +76,7 @@ export const BiometricSetupModal = ({
         },
       );
     }
-  }, [visible, getBiometricInfo, checkStoredCredentials, mode, userEmail]);
+  }, [visible, mode, userEmail]);
 
   // Handle biometric unavailable case after checking
   useEffect(() => {
@@ -101,7 +95,7 @@ export const BiometricSetupModal = ({
           if (hasExistingCredentials) {
             // User has existing credentials - try to load them with biometric auth
             // Note: loadStoredCredentials may throw if biometric auth fails
-            const credentials = await loadStoredCredentials(userEmail);
+            const credentials = await authService.loadStoredCredentials(userEmail);
             if (credentials) {
               // Successfully authenticated with biometric - enable the setting
               onComplete(true);
@@ -130,7 +124,7 @@ export const BiometricSetupModal = ({
             }
 
             // Save credentials with the entered password
-            const success = await storeCredentials(userEmail, password);
+            const success = await authService.storeCredentials(userEmail, password);
             if (success) {
               onComplete(true);
               return;
@@ -158,7 +152,7 @@ export const BiometricSetupModal = ({
         const passwordToUse = userPassword || password;
 
         // Store credentials with biometric protection
-        const success = await storeCredentials(userEmail, passwordToUse);
+        const success = await authService.storeCredentials(userEmail, passwordToUse);
 
         if (success) {
           onComplete(true);

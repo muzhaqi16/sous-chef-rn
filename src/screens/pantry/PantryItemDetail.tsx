@@ -13,7 +13,6 @@ import {
   useGetPantryItemQuery,
   useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
-  UsagePurpose,
 } from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
@@ -26,8 +25,13 @@ import {
   formatNetWeightDisplay,
   formatQuantityBreakdown,
   formatStorageState,
+  getExpiryInfo,
+  getDaysInPantry,
+  formatDaysInPantry,
 } from '#hooks/pantry/usePantryItemTransformation';
 import { getUnitDisplayText } from '#utils/formatQuantity';
+import { PantryDetailInfo } from '#components/pantry/PantryDetailInfo';
+import { PantryUsageHistory } from '#components/pantry/PantryUsageHistory';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
@@ -53,88 +57,6 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
-const usagePurposeLabels: Record<string, string> = {
-  [UsagePurpose.General]: 'Consumed',
-  [UsagePurpose.Cooking]: 'Cooking',
-  [UsagePurpose.Snack]: 'Snack',
-  [UsagePurpose.MealPrep]: 'Meal prep',
-  [UsagePurpose.Restock]: 'Restocked',
-  [UsagePurpose.Waste]: 'Wasted',
-  [UsagePurpose.Gift]: 'Gift',
-  [UsagePurpose.Transfer]: 'Transfer',
-};
-
-// Helper function to calculate expiry info
-const getExpiryInfo = (expiresAt: string | null | undefined) => {
-  if (!expiresAt) return null;
-  const now = new Date();
-  const expiry = new Date(expiresAt);
-  const diffDays = Math.ceil(
-    (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (diffDays < 0) return { text: 'Expired', isExpired: true, isUrgent: true };
-  if (diffDays === 0)
-    return { text: 'Expires today', isExpired: false, isUrgent: true };
-  if (diffDays === 1)
-    return { text: '1 day to expire', isExpired: false, isUrgent: true };
-  return {
-    text: `${diffDays} days to expire`,
-    isExpired: false,
-    isUrgent: diffDays <= 3,
-  };
-};
-
-// Format date
-const formatDate = (dateString: string | null | undefined) => {
-  if (!dateString) return null;
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
-
-// Calculate days in pantry
-const getDaysInPantry = (createdAt: string | null | undefined) => {
-  if (!createdAt) return null;
-  const created = new Date(createdAt);
-  const now = new Date();
-  return Math.floor(
-    (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24),
-  );
-};
-
-// Format days in pantry for display
-const formatDaysInPantry = (days: number | null): string => {
-  if (days === null) return '-';
-  if (days === 0) return 'Today';
-  if (days === 1) return '1 day';
-  return `${days} days`;
-};
-
-// Format condition enum for display
-const formatCondition = (condition?: string | null): string | null => {
-  if (!condition || condition === 'GOOD') return null;
-  return condition.charAt(0) + condition.slice(1).toLowerCase();
-};
-
-// Format acquisition method enum for display
-const formatAcquisitionMethod = (method?: string | null): string | null => {
-  if (!method) return null;
-  return method
-    .split('_')
-    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-    .join(' ');
-};
-
-// Format currency
-const formatCurrency = (amount?: number | null): string | null => {
-  if (amount == null || amount <= 0) return null;
-  return `$${amount.toFixed(2)}`;
-};
-
 /** Module-level helper to sync suggested recipes from cache */
 function syncSuggestedRecipesFromCache(
   cachedRecipes: RecipeInformation[],
@@ -142,30 +64,6 @@ function syncSuggestedRecipesFromCache(
 ) {
   setSuggestedRecipes(cachedRecipes);
 }
-
-// Reusable info row component for icon + label + value pattern
-const PantryInfoRow: React.FC<{
-  label: string;
-  value: string | null | undefined;
-  icon: string;
-  iconColor?: string;
-  valueStyle?: any;
-  children?: React.ReactNode;
-}> = ({ label, value, icon, iconColor, valueStyle, children }) => (
-  <View style={styles.infoRow}>
-    <Text style={styles.infoLabel}>{label}</Text>
-    <View style={styles.infoValueContainer}>
-      <View style={styles.infoIcon}>
-        <Icon
-          name={icon}
-          size={16}
-          color={iconColor ?? styles.infoIconColor.color}
-        />
-      </View>
-      {children ?? <Text style={[styles.infoValue, valueStyle]}>{value}</Text>}
-    </View>
-  </View>
-);
 
 export const PantryItemDetail: React.FC<
   StaticScreenProps<{
@@ -641,218 +539,15 @@ export const PantryItemDetail: React.FC<
           </View>
         )}
 
-        {/* Quantity Row */}
-        <PantryInfoRow
-          label="Quantity"
-          value={`${item.quantity} ${getUnitDisplayText(item.unit)}`}
-          icon="apps-outline"
-        />
-
-        {/* Net Weight Row */}
-        {!!netWeightText && (
-          <PantryInfoRow
-            label="Net Weight"
-            value={netWeightText}
-            icon="scale-outline"
-          >
-            <Text style={styles.infoValue}>{netWeightText}</Text>
-            {!!item.lastUsedAt && (
-              <Pressable
-                onPress={() => setCorrectWeightVisible(true)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={({ pressed }) => [
-                  styles.correctWeightButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Icon
-                  name="create-outline"
-                  size={16}
-                  color={theme.colors.primary}
-                />
-              </Pressable>
-            )}
-          </PantryInfoRow>
-        )}
-
-        {/* Remaining Weight Row - only show for dual-tracked items */}
-        {!!remainingNetWeightText && (
-          <PantryInfoRow
-            label="Remaining Weight"
-            value={remainingNetWeightText}
-            icon="scale-outline"
-          />
-        )}
-
-        {/* Inventory Breakdown Row */}
-        {!!quantityBreakdownText && (
-          <PantryInfoRow
-            label="Inventory"
-            value={quantityBreakdownText}
-            icon="layers-outline"
-          />
-        )}
-
-        {/* Package Details Row */}
-        {!!packageBreakdownText && (
-          <PantryInfoRow
-            label="Package"
-            value={packageBreakdownText}
-            icon="layers-outline"
-          />
-        )}
-
-        {/* Brand Row */}
-        {!!brandName && (
-          <PantryInfoRow
-            label="Brand"
-            value={brandName}
-            icon="pricetag-outline"
-          />
-        )}
-
-        {/* Storage Location */}
-        {!!item.storageLocation && (
-          <PantryInfoRow
-            label="Storage"
-            value={
-              typeof item.storageLocation === 'string'
-                ? item.storageLocation
-                : item.storageLocation.name
-            }
-            icon="cube-outline"
-          />
-        )}
-
-        {/* Store Row */}
-        {!!item.store?.name && (
-          <PantryInfoRow
-            label="Store"
-            value={item.store.name}
-            icon="storefront-outline"
-          />
-        )}
-
-        {/* Condition Row - only show if not GOOD */}
-        {!!formatCondition(item.condition) && (
-          <PantryInfoRow
-            label="Condition"
-            value={formatCondition(item.condition)}
-            icon="fitness-outline"
-            iconColor={
-              item.condition === 'SPOILED' || item.condition === 'EXPIRED'
-                ? theme.colors.error
-                : theme.colors.warning
-            }
-            valueStyle={[
-              (item.condition === 'SPOILED' || item.condition === 'EXPIRED') &&
-                styles.infoValueError,
-              item.condition === 'FAIR' && styles.infoValueWarning,
-            ]}
-          />
-        )}
-
-        {/* Acquired Via Row */}
-        {!!formatAcquisitionMethod(item.acquisitionMethod) && (
-          <PantryInfoRow
-            label="Acquired"
-            value={formatAcquisitionMethod(item.acquisitionMethod)}
-            icon="bag-handle-outline"
-          />
-        )}
-
-        {/* Cost Per Unit Row */}
-        {!!formatCurrency(item.costPerUnit) && (
-          <PantryInfoRow
-            label="Cost/Unit"
-            value={formatCurrency(item.costPerUnit)}
-            icon="cash-outline"
-          />
-        )}
-
-        {/* Total Cost Row */}
-        {!!formatCurrency(item.totalCost) && (
-          <PantryInfoRow
-            label="Total Cost"
-            value={formatCurrency(item.totalCost)}
-            icon="wallet-outline"
-          />
-        )}
-
-        {/* Min Stock Row */}
-        {item.minQuantity != null && item.minQuantity > 0 && (
-          <PantryInfoRow
-            label="Min Stock"
-            value={`${item.minQuantity} ${item.unit?.name ?? ''}`}
-            icon="alert-circle-outline"
-          />
-        )}
-
-        {/* Restock At Row */}
-        {item.restockQuantity != null && item.restockQuantity > 0 && (
-          <PantryInfoRow
-            label="Restock At"
-            value={`${item.restockQuantity} ${item.unit?.name ?? ''}`}
-            icon="refresh-outline"
-          />
-        )}
-
-        {/* Purchase Date Row */}
-        {!!item.purchase?.purchaseDate && (
-          <PantryInfoRow
-            label="Purchased"
-            value={`${formatDate(item.purchase.purchaseDate)}${
-              item.purchase.unitPrice != null && item.purchase.unitPrice > 0
-                ? ` @ ${formatCurrency(item.purchase.unitPrice)}`
-                : ''
-            }`}
-            icon="receipt-outline"
-          />
-        )}
-
-        {/* Usage Info Row */}
-        {!!item.lastUsedAt && (
-          <PantryInfoRow
-            label="Last Used"
-            value={formatDate(item.lastUsedAt)}
-            icon="time-outline"
-          />
-        )}
-
-        {/* Notes Section */}
-        {!!item.storageNotes && (
-          <View style={styles.notesSection}>
-            <View style={styles.notesHeader}>
-              <Icon
-                name="document-text-outline"
-                size={16}
-                color={theme.colors.textSecondary}
-              />
-              <Text style={styles.notesLabel}>Notes</Text>
-            </View>
-            <Text style={styles.notesText}>{item.storageNotes}</Text>
-          </View>
-        )}
-
-        {/* Tags Section */}
-        {!!item.tags && item.tags.length > 0 && (
-          <View style={styles.tagsSection}>
-            <Text style={styles.tagsLabel}>Tags</Text>
-            <View style={styles.tagsContainer}>
-              {item.tags.map(tag => (
-                <View key={tag} style={styles.tagChip}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Added Info */}
-        <PantryInfoRow
-          label="Added"
-          value={formatDate(item.createdAt)}
-          icon="calendar-outline"
+        {/* Detail Info Rows */}
+        <PantryDetailInfo
+          item={item}
+          brandName={brandName}
+          netWeightText={netWeightText}
+          remainingNetWeightText={remainingNetWeightText}
+          quantityBreakdownText={quantityBreakdownText}
+          packageBreakdownText={packageBreakdownText}
+          onCorrectWeight={() => setCorrectWeightVisible(true)}
         />
 
         {/* Batch Section - only show when item has active batches */}
@@ -864,91 +559,13 @@ export const PantryItemDetail: React.FC<
           />
         )}
 
-        {/* Usage Records Section - only show if there are usage records */}
+        {/* Usage Records Section */}
         {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
-          <>
-            <Pressable
-              style={({ pressed }) => [
-                styles.sectionHeader,
-                pressed && styles.pressed,
-              ]}
-              onPress={() =>
-                setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
-              }
-            >
-              <Text style={styles.sectionTitle}>
-                Usage History ({item.usageRecords.edges.length})
-              </Text>
-              <Icon
-                name={purchaseHistoryExpanded ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color={theme.colors.textSecondary}
-              />
-            </Pressable>
-
-            {!!purchaseHistoryExpanded && (
-              <View style={styles.purchaseHistoryContent}>
-                {item.usageRecords.edges.slice(0, 5).map(({ node: usage }) => {
-                  const isAdjustment =
-                    usage.purpose === UsagePurpose.Adjustment;
-                  const isRestock =
-                    usage.purpose === UsagePurpose.Restock;
-                  const purposeLabel = isAdjustment
-                    ? 'Inventory adjusted'
-                    : usagePurposeLabels[usage.purpose] ?? usage.purpose;
-                  const quantityPrefix =
-                    isAdjustment
-                      ? usage.quantityUsed >= 0
-                        ? '+'
-                        : ''
-                      : isRestock
-                        ? '+'
-                        : '-';
-                  return (
-                    <View key={usage.id} style={styles.purchaseRow}>
-                      <View style={styles.purchaseDateStore}>
-                        <Text style={styles.purchaseDate}>
-                          {formatDate(usage.usedAt)}
-                        </Text>
-                        {!!purposeLabel && (
-                          <Text
-                            style={[
-                              styles.purchaseStore,
-                              isAdjustment && styles.adjustmentPurpose,
-                            ]}
-                          >
-                            {purposeLabel}
-                          </Text>
-                        )}
-                        {!!isAdjustment && !!usage.adjustmentReason && (
-                          <Text style={styles.adjustmentReason}>
-                            {usage.adjustmentReason}
-                          </Text>
-                        )}
-                      </View>
-                      <Text
-                        style={[
-                          styles.purchasePrice,
-                          isAdjustment && styles.adjustmentQuantity,
-                        ]}
-                      >
-                        {quantityPrefix}
-                        {usage.quantityUsed}
-                        {usage.usageUnit?.symbol
-                          ? ` ${usage.usageUnit.symbol}`
-                          : ''}
-                      </Text>
-                    </View>
-                  );
-                })}
-                {item.usageRecords.edges.length > 5 && (
-                  <Text style={styles.noPurchaseData}>
-                    +{item.usageRecords.edges.length - 5} more entries
-                  </Text>
-                )}
-              </View>
-            )}
-          </>
+          <PantryUsageHistory
+            usageRecords={item.usageRecords.edges}
+            expanded={purchaseHistoryExpanded}
+            onToggle={() => setPurchaseHistoryExpanded(!purchaseHistoryExpanded)}
+          />
         )}
 
         {/* Recipes to try */}
@@ -1111,150 +728,10 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  infoLabel: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary,
-  },
-  infoValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  infoIcon: {
-    marginRight: theme.spacing.xs,
-  },
-  infoIconColor: {
-    color: theme.colors.textSecondary,
-  },
-  infoValue: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  correctWeightButton: {
-    marginLeft: theme.spacing.sm,
-    padding: theme.spacing.xs,
-  },
-  infoValueError: {
-    color: theme.colors.error,
-  },
-  infoValueWarning: {
-    color: theme.colors.warning,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
   sectionTitle: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-  },
-  purchaseHistoryContent: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-  },
-  purchaseRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-  },
-  purchaseDateStore: {
-    flex: 1,
-  },
-  purchaseDate: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  purchaseStore: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  purchasePrice: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
-  noPurchaseData: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  adjustmentPurpose: {
-    color: theme.colors.info,
-  },
-  adjustmentReason: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textTertiary,
-    marginTop: 1,
-  },
-  adjustmentQuantity: {
-    color: theme.colors.info,
-  },
-  notesSection: {
-    marginHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-  },
-  notesHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.xs,
-  },
-  notesLabel: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-    marginLeft: theme.spacing.xs,
-  },
-  notesText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-    lineHeight: 22,
-  },
-  tagsSection: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-  },
-  tagsLabel: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.xs,
-  },
-  tagChip: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    backgroundColor: theme.colors.primaryLight,
-    borderRadius: theme.radii.full,
-  },
-  tagText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
   recipesSection: {
     marginTop: theme.spacing.lg,

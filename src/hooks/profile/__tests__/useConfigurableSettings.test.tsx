@@ -49,8 +49,8 @@ const mockGetBiometricInfo = jest.fn().mockResolvedValue({
 });
 const mockRemoveCredentials = jest.fn();
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('#hooks/auth/useCredentialStorage', () => ({
+  useCredentialStorage: jest.fn(() => ({
     checkStoredCredentials: mockCheckStoredCredentials,
     getBiometricInfo: mockGetBiometricInfo,
     removeCredentials: mockRemoveCredentials,

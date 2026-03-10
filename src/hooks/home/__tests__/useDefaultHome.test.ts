@@ -42,6 +42,8 @@ const mockStoreState = {
   isLoggingOut: false,
   hasInitializedHomeData: false,
   setHasInitializedHomeData: jest.fn(),
+  accessToken: 'mock-token' as string | null,
+  refreshToken: 'mock-refresh' as string | null,
 };
 
 jest.mock('#store/useAppStore', () => ({
@@ -65,10 +67,6 @@ jest.mock('#store', () => ({
       setHasInitializedHomeData: mockStoreState.setHasInitializedHomeData,
     })),
   },
-}));
-
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({ canAttemptQueries: true }),
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
@@ -103,11 +101,11 @@ describe('useDefaultHome', () => {
   it('returns initial state when no data', () => {
     const { result } = renderHook(() => useDefaultHome());
 
-    expect(result.current.selectedHomeId).toBeNull();
-    expect(result.current.homes).toEqual([]);
-    expect(result.current.hasDefaultHome).toBe(false);
-    expect(result.current.remoteDefaultHomeId).toBeNull();
-    expect(result.current.isHomeSelectionReady).toBe(false);
+    expect(result.current.state.selectedHomeId).toBeNull();
+    expect(result.current.state.homes).toEqual([]);
+    expect(result.current.state.hasDefaultHome).toBe(false);
+    expect(result.current.state.remoteDefaultHomeId).toBeNull();
+    expect(result.current.state.isHomeSelectionReady).toBe(false);
   });
 
   it('returns selectedHomeId from store', () => {
@@ -115,8 +113,8 @@ describe('useDefaultHome', () => {
 
     const { result } = renderHook(() => useDefaultHome());
 
-    expect(result.current.selectedHomeId).toBe('home-1');
-    expect(result.current.hasDefaultHome).toBe(true);
+    expect(result.current.state.selectedHomeId).toBe('home-1');
+    expect(result.current.state.hasDefaultHome).toBe(true);
   });
 
   it('falls back to remoteDefaultHomeId when no selectedHomeId', () => {
@@ -137,8 +135,8 @@ describe('useDefaultHome', () => {
     const { result } = renderHook(() => useDefaultHome());
 
     // selectedHomeId is null, remoteDefaultHomeId is 'home-1'
-    expect(result.current.selectedHomeId).toBe('home-1');
-    expect(result.current.remoteDefaultHomeId).toBe('home-1');
+    expect(result.current.state.selectedHomeId).toBe('home-1');
+    expect(result.current.state.remoteDefaultHomeId).toBe('home-1');
   });
 
   it('returns homes from query data', () => {
@@ -153,7 +151,7 @@ describe('useDefaultHome', () => {
 
     const { result } = renderHook(() => useDefaultHome());
 
-    expect(result.current.homes).toHaveLength(2);
+    expect(result.current.state.homes).toHaveLength(2);
   });
 
   it('exposes loading state', () => {
@@ -161,7 +159,7 @@ describe('useDefaultHome', () => {
 
     const { result } = renderHook(() => useDefaultHome());
 
-    expect(result.current.loading).toBe(true);
+    expect(result.current.state.loading).toBe(true);
   });
 
   it('exposes error', () => {
@@ -169,7 +167,7 @@ describe('useDefaultHome', () => {
 
     const { result } = renderHook(() => useDefaultHome());
 
-    expect(result.current.error).toBeDefined();
+    expect(result.current.state.error).toBeDefined();
   });
 
   describe('getDefaultPantry', () => {
@@ -183,7 +181,7 @@ describe('useDefaultHome', () => {
         ],
       };
 
-      const pantry = result.current.getDefaultPantry(home);
+      const pantry = result.current.actions.getDefaultPantry(home);
       expect(pantry?.id).toBe('p-2');
     });
 
@@ -197,14 +195,14 @@ describe('useDefaultHome', () => {
         ],
       };
 
-      const pantry = result.current.getDefaultPantry(home);
+      const pantry = result.current.actions.getDefaultPantry(home);
       expect(pantry?.id).toBe('p-1');
     });
 
     it('returns null when no pantries', () => {
       const { result } = renderHook(() => useDefaultHome());
 
-      const pantry = result.current.getDefaultPantry({ pantries: [] });
+      const pantry = result.current.actions.getDefaultPantry({ pantries: [] });
       expect(pantry).toBeNull();
     });
 
@@ -217,14 +215,14 @@ describe('useDefaultHome', () => {
         },
       };
 
-      const pantry = result.current.getDefaultPantry(homeData);
+      const pantry = result.current.actions.getDefaultPantry(homeData);
       expect(pantry?.id).toBe('p-1');
     });
 
     it('returns null for null input', () => {
       const { result } = renderHook(() => useDefaultHome());
 
-      const pantry = result.current.getDefaultPantry(null);
+      const pantry = result.current.actions.getDefaultPantry(null);
       expect(pantry).toBeNull();
     });
   });
@@ -234,8 +232,8 @@ describe('useDefaultHome', () => {
 
     const { result } = renderHook(() => useDefaultHome());
 
-    expect(result.current.selectedPantryId).toBe('pantry-1');
-    expect(typeof result.current.setSelectedPantryId).toBe('function');
+    expect(result.current.state.selectedPantryId).toBe('pantry-1');
+    expect(typeof result.current.actions.setSelectedPantryId).toBe('function');
   });
 
   it('sets early ready when persisted home/pantry IDs exist', () => {
@@ -274,14 +272,14 @@ describe('useDefaultHome', () => {
     it('returns null when home has no pantries property', () => {
       const { result } = renderHook(() => useDefaultHome());
 
-      const pantry = result.current.getDefaultPantry({});
+      const pantry = result.current.actions.getDefaultPantry({});
       expect(pantry).toBeNull();
     });
 
     it('returns null for undefined input', () => {
       const { result } = renderHook(() => useDefaultHome());
 
-      const pantry = result.current.getDefaultPantry(undefined);
+      const pantry = result.current.actions.getDefaultPantry(undefined);
       expect(pantry).toBeNull();
     });
   });
@@ -346,7 +344,7 @@ describe('useDefaultHome', () => {
       const { result } = renderHook(() => useDefaultHome());
 
       // remoteDefaultHomeId should be home-1
-      expect(result.current.remoteDefaultHomeId).toBe('home-1');
+      expect(result.current.state.remoteDefaultHomeId).toBe('home-1');
     });
 
     it('falls back to first pantry when no default marked', () => {
@@ -367,7 +365,7 @@ describe('useDefaultHome', () => {
       };
 
       const { result } = renderHook(() => useDefaultHome());
-      expect(result.current.remoteDefaultHomeId).toBe('home-1');
+      expect(result.current.state.remoteDefaultHomeId).toBe('home-1');
     });
   });
 
@@ -376,12 +374,12 @@ describe('useDefaultHome', () => {
 
     const { result } = renderHook(() => useDefaultHome());
 
-    expect(result.current.hasDefaultHome).toBe(true);
+    expect(result.current.state.hasDefaultHome).toBe(true);
   });
 
   it('returns hasDefaultHome as false when no home is selected or default', () => {
     const { result } = renderHook(() => useDefaultHome());
-    expect(result.current.hasDefaultHome).toBe(false);
+    expect(result.current.state.hasDefaultHome).toBe(false);
   });
 
   describe('sync remote defaults on mismatch (invitation acceptance restart)', () => {

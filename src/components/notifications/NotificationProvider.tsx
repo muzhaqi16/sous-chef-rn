@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNotifications } from '#hooks/notifications/useNotifications';
 import { useNotificationSettings } from '#hooks/notifications/useNotificationSettings';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useAppStore } from '#store/useAppStore';
 
 interface NotificationProviderProps {
   children: React.ReactNode;
@@ -16,7 +17,8 @@ interface NotificationProviderProps {
  * since it returns null (no React elements to reconcile).
  */
 const NotificationListener: React.FC = () => {
-  const {user, isAuthenticated} = useAuth();
+  const user = useAuthUser();
+  const isAuthenticated = useAppStore(state => !!(state.user && state.accessToken));
   const {settings} = useNotificationSettings();
 
   // Defer subscription by 3s to avoid competing with startup queries on the JS thread

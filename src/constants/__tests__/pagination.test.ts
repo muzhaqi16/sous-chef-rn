@@ -1,6 +1,6 @@
 import {
   MAX_PAGINATION_LIMIT,
-  DEFAULT_PAGE_SIZES,
+  PAGE_SIZE,
   MAX_QUERY_DEPTH,
   MAX_QUERY_FIELDS,
   capPagination,
@@ -12,11 +12,12 @@ describe('pagination constants', () => {
     expect(MAX_PAGINATION_LIMIT).toBe(100);
   });
 
-  it('exports DEFAULT_PAGE_SIZES with expected keys', () => {
-    expect(DEFAULT_PAGE_SIZES.SMALL).toBe(20);
-    expect(DEFAULT_PAGE_SIZES.MEDIUM).toBe(50);
-    expect(DEFAULT_PAGE_SIZES.LARGE).toBe(100);
-    expect(DEFAULT_PAGE_SIZES.INFINITE_SCROLL).toBe(30);
+  it('exports PAGE_SIZE with expected keys', () => {
+    expect(PAGE_SIZE.COMPACT).toBe(15);
+    expect(PAGE_SIZE.DEFAULT).toBe(25);
+    expect(PAGE_SIZE.SCROLL).toBe(30);
+    expect(PAGE_SIZE.EXTENDED).toBe(50);
+    expect(PAGE_SIZE.MAX).toBe(100);
   });
 
   it('exports MAX_QUERY_DEPTH as 10', () => {

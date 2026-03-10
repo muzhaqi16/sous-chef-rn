@@ -154,7 +154,7 @@ async function executeIngredientSearch(
 
 export function useRecipeSearch() {
   const { navigate, goBack } = useAppNavigation();
-  const { selectedHomeId, getDefaultPantry } = useDefaultHome();
+  const { state: { selectedHomeId }, actions: { getDefaultPantry } } = useDefaultHome();
   const route = useRoute();
   const initialQuery =
     (route.params as { initialQuery?: string } | undefined)?.initialQuery || '';
@@ -172,7 +172,7 @@ export function useRecipeSearch() {
 
   // Get pantry for ingredient selection
   const defaultPantry = getDefaultPantry(homeData);
-  const { items: pantryItems } = usePantryManagement(defaultPantry?.id);
+  const { state: { items: pantryItems } } = usePantryManagement(defaultPantry?.id);
 
   // Get dietary profile for filter defaults
   const { profile: dietaryProfile } = useDietaryProfile();

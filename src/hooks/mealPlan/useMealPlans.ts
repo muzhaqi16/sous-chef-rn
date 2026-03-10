@@ -1,11 +1,11 @@
 
 
 import { useGetMealPlansQuery, SortOrder, type MealPlanFilters } from '#generated';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 export function useMealPlans(filters?: MealPlanFilters) {
-  const { isLoggedOut } = useAuth();
+  const isLoggedOut = useIsLoggedOut();
 
   const { data, loading, error, refetch, fetchMore } = useGetMealPlansQuery({
     variables: {

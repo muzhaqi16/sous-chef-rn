@@ -1,8 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useFocusEffect } from '@react-navigation/native';
-
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabBar } from '#components/organisms/ShoppingListTabs/FilterTabBar';
@@ -13,44 +11,38 @@ import { ShoppingListSkeleton } from '#components/base/Skeleton/ShoppingListSkel
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
 import { ShoppingListModalsProvider } from '#/context/ShoppingListModalsContext';
-import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
-import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
+import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 
 import { ShoppingListMainContent } from './ShoppingListMainContent';
-
-// Module-scope focus callback — pauses cache persistence on blur, resumes on focus.
-// Defined outside component body so the reference is stable (no useCallback needed).
-const onScreenFocus = () => {
-  apolloCachePersistence.resume();
-  return () => {
-    apolloCachePersistence.pause();
-  };
-};
 
 /**
  * Inner component that runs all heavy hooks.
  * Only mounts after DeferredScreen gates rendering, so the skeleton paints instantly.
  */
 const ShoppingListMainInner: React.FC = () => {
-  // Restore optimistic data on mount (offline changes that haven't synced)
-  // Hook handles array stability internally - inline array is fine
-  useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
-
-  // PERF: Pause cache persistence on blur so heavy serialization doesn't
-  // fire during the next screen's scroll. Resume on focus to flush pending saves.
-  useFocusEffect(onScreenFocus);
-
   const { navigate } = useAppNavigation();
 
   // --- Screen Data Hook ---
   const screenData = useShoppingListScreen();
 
+  // --- Lifecycle: optimistic restoration, cache persistence, perf tracking ---
+  useTabScreenLifecycle({
+    screenName: 'ShoppingListMain',
+    optimisticTypes: ['ShoppingList', 'ShoppingListItem'],
+    telemetryProperties: () => ({
+      list_id: screenData.state.currentListId,
+      item_count: (screenData.state.totalCountUnpurchased ?? 0) + (screenData.state.totalCountPurchased ?? 0),
+      purchased_count: screenData.state.totalCountPurchased ?? 0,
+      has_lists: screenData.state.lists.length > 0,
+    }),
+  });
+
   return (
     <ShoppingListModalsProvider
-      currentListId={screenData.currentListId}
-      items={[...screenData.rawUnpurchasedItems, ...screenData.rawPurchasedItems]}
-      searchQuery={screenData.searchQuery}
-      onSearchQueryClear={() => screenData.setSearchQuery('')}
+      currentListId={screenData.state.currentListId}
+      items={[...screenData.state.rawUnpurchasedItems, ...screenData.state.rawPurchasedItems]}
+      searchQuery={screenData.state.searchQuery}
+      onSearchQueryClear={() => screenData.actions.setSearchQuery('')}
       onNavigateToListSettings={() => navigate('ListSettings')}
     >
       <ShoppingListMainContent screenData={screenData} />

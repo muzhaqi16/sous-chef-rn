@@ -2,7 +2,7 @@ import React from 'react';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#hooks/profile/useProfileData';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useAuthUser } from '#hooks/auth/useAuthUser';
 import { PERSONAL_INFO_CONFIG } from '#/config/settingsConfig';
 import { useUpdateUserProfileMutation, ProfileVisibility } from '#generated';
 import { useApolloClient } from '@apollo/client/react';
@@ -50,7 +50,7 @@ async function performProfileUpdate(
 
 export const PersonalInformationScreen: React.FC = () => {
   const { profile } = useProfileData();
-  const { user } = useAuth();
+  const user = useAuthUser();
   const client = useApolloClient();
   const [updateProfileMutation] = useUpdateUserProfileMutation();
 

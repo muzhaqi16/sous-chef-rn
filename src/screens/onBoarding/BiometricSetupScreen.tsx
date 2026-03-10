@@ -3,7 +3,7 @@ import { View, Text, Pressable, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Icon } from '#utils/iconUtils';
-import { useAuth } from '#hooks/auth/useAuth';
+import { authService } from '#/services/authService';
 import { useTextInputModal } from '#components/organisms/modal/useTextInputModal';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
@@ -20,11 +20,8 @@ export const BiometricSetupScreen = () => {
   const { navigateToNextStep } = useOnboardingNavigation();
   const user = useAppStore(selectUser);
   const setUserNavigationState = useAppStore(state => state.setUserNavigationState);
-  const {
-    registrationPassword,
-    clearRegistrationPassword,
-    getBiometricInfo,
-    storeCredentials } = useAuth();
+  const registrationPassword = useAppStore(state => state.registrationPassword);
+  const clearRegistrationPassword = useAppStore(state => state.clearRegistrationPassword);
   const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
   const { show: showPasswordModal, TextModalComponent } = useTextInputModal();
   const [biometricInfo, setBiometricInfo] = useState<{
@@ -37,7 +34,7 @@ export const BiometricSetupScreen = () => {
   useEffect(() => {
     const loadBiometricInfo = async () => {
       try {
-        const info = await getBiometricInfo();
+        const info = await authService.getBiometricInfo();
         setBiometricInfo(info);
         setHasCheckedBiometric(true);
       } catch (error) {
@@ -47,7 +44,7 @@ export const BiometricSetupScreen = () => {
       }
     };
     loadBiometricInfo();
-  }, [getBiometricInfo]);
+  }, []);
 
   // Handle completion
   const handleComplete = (biometricEnabled: boolean) => {
@@ -98,7 +95,7 @@ export const BiometricSetupScreen = () => {
   const enableBiometricWithPassword = (email: string, password: string) => {
     executeWithLoadingState(
       async () => {
-        const success = await storeCredentials(email, password);
+        const success = await authService.storeCredentials(email, password);
         if (success) {
           handleComplete(true);
         } else {

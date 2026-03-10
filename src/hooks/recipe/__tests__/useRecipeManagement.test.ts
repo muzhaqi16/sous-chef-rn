@@ -92,35 +92,35 @@ describe('useRecipeManagement', () => {
   it('returns recipes from query data', () => {
     const { result } = renderHook(() => useRecipeManagement());
 
-    expect(result.current.recipes).toHaveLength(3);
-    expect(result.current.recipes[0].name).toBe('Pasta');
-    expect(result.current.totalCount).toBe(3);
+    expect(result.current.state.recipes).toHaveLength(3);
+    expect(result.current.state.recipes[0].name).toBe('Pasta');
+    expect(result.current.state.totalCount).toBe(3);
   });
 
   it('returns loading and error state', () => {
     const { result } = renderHook(() => useRecipeManagement());
 
-    expect(result.current.loading).toBe(false);
-    expect(result.current.error).toBeUndefined();
+    expect(result.current.state.loading).toBe(false);
+    expect(result.current.state.error).toBeUndefined();
   });
 
   it('getRecipeById finds a recipe by ID', () => {
     const { result } = renderHook(() => useRecipeManagement());
 
-    const recipe = result.current.getRecipeById('r2');
+    const recipe = result.current.actions.getRecipeById('r2');
     expect(recipe?.name).toBe('Salad');
   });
 
   it('getRecipeById returns undefined for unknown ID', () => {
     const { result } = renderHook(() => useRecipeManagement());
 
-    expect(result.current.getRecipeById('unknown')).toBeUndefined();
+    expect(result.current.actions.getRecipeById('unknown')).toBeUndefined();
   });
 
   it('getRecipesByCategory filters by category', () => {
     const { result } = renderHook(() => useRecipeManagement());
 
-    const mainCourses = result.current.getRecipesByCategory('MAIN_COURSE' as any);
+    const mainCourses = result.current.actions.getRecipesByCategory('MAIN_COURSE' as any);
     expect(mainCourses).toHaveLength(1);
     expect(mainCourses[0].name).toBe('Pasta');
   });
@@ -128,13 +128,13 @@ describe('useRecipeManagement', () => {
   it('getRecipesByDifficulty filters by difficulty', () => {
     const { result } = renderHook(() => useRecipeManagement());
 
-    const easy = result.current.getRecipesByDifficulty('EASY' as any);
+    const easy = result.current.actions.getRecipesByDifficulty('EASY' as any);
     expect(easy).toHaveLength(2);
   });
 
   it('exposes refetch', () => {
     const { result } = renderHook(() => useRecipeManagement());
 
-    expect(result.current.refetch).toBe(mockRefetch);
+    expect(result.current.actions.refetch).toBe(mockRefetch);
   });
 });

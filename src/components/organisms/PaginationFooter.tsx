@@ -7,8 +7,6 @@ export interface PaginationFooterProps {
   isLoadingMore: boolean;
   /** Whether there are more items to load */
   hasMore: boolean;
-  /** Whether the query is currently loading (initial or more) */
-  loading: boolean;
   /** Current number of items */
   itemCount: number;
   /** Custom loading text (default: "Loading more items...") */
@@ -36,7 +34,6 @@ export interface PaginationFooterProps {
  *     <PaginationFooter
  *       isLoadingMore={isLoadingMore}
  *       hasMore={hasMore}
- *       loading={loading}
  *       itemCount={items.length}
  *     />
  *   }
@@ -45,7 +42,6 @@ export interface PaginationFooterProps {
 export const PaginationFooter: React.FC<PaginationFooterProps> = ({
   isLoadingMore,
   hasMore,
-  loading,
   itemCount,
   loadingText = 'Loading more items...',
   hintText = 'Scroll to load more',
@@ -69,8 +65,8 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
     );
   }
 
-  // Show hint when more items available and not loading and have items
-  if (hasMore && !loading && itemCount > 0) {
+  // Show hint when more items available and not already loading more
+  if (hasMore && !isLoadingMore && itemCount > 0) {
     return (
       <View style={styles.footerHint}>
         <Text maxFontSizeMultiplier={1.5} style={styles.footerHintText}>{hintText}</Text>

@@ -1,7 +1,7 @@
 
 
 import { useMyRecipesQuery, RecipeCategory, Difficulty } from '#generated';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { normalizeRecipes } from '#/utils/connectionUtils';
 import { usePagination } from '#/hooks/utils/usePagination';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
@@ -16,7 +16,7 @@ export interface RecipeFilters {
  * Uses Connection pattern for infinite scroll
  */
 export function useRecipeManagement(filters?: RecipeFilters) {
-  const { isLoggedOut } = useAuth();
+  const isLoggedOut = useIsLoggedOut();
   const shouldSkip = isLoggedOut;
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
@@ -34,7 +34,6 @@ export function useRecipeManagement(filters?: RecipeFilters) {
     skip: shouldSkip,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',
-    notifyOnNetworkStatusChange: true,
     errorPolicy: 'all',
   });
 
@@ -57,26 +56,23 @@ export function useRecipeManagement(filters?: RecipeFilters) {
   });
 
   return {
-    // Data
-    recipes,
-    loading,
-    error,
-    totalCount,
-
-    // Pagination
-    loadMore,
-    hasMore,
-    isLoadingMore,
-
-    // Actions
-    refetch,
-
-    // Helper functions
-    getRecipeById: (recipeId: string) =>
-      recipes.find(recipe => recipe.id === recipeId),
-    getRecipesByCategory: (category: RecipeCategory) =>
-      recipes.filter(recipe => recipe.category === category),
-    getRecipesByDifficulty: (difficulty: Difficulty) =>
-      recipes.filter(recipe => recipe.difficulty === difficulty),
+    state: {
+      recipes,
+      loading,
+      error,
+      totalCount,
+      hasMore,
+      isLoadingMore,
+    },
+    actions: {
+      loadMore,
+      refetch,
+      getRecipeById: (recipeId: string) =>
+        recipes.find(recipe => recipe.id === recipeId),
+      getRecipesByCategory: (category: RecipeCategory) =>
+        recipes.filter(recipe => recipe.category === category),
+      getRecipesByDifficulty: (difficulty: Difficulty) =>
+        recipes.filter(recipe => recipe.difficulty === difficulty),
+    },
   };
 }

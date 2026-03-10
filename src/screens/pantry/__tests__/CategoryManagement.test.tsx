@@ -19,11 +19,14 @@ jest.mock('#components/molecules/Header', () => ({
 }));
 jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
   usePantryManagement: () => ({
-    items: [
-      { id: '1', item: { categories: [{ category: { name: 'Dairy' } }] } },
-      { id: '2', item: { categories: [{ category: { name: 'Dairy' } }] } },
-      { id: '3', item: { categories: [] } },
-    ],
+    state: {
+      items: [
+        { id: '1', item: { categories: [{ category: { name: 'Dairy' } }] } },
+        { id: '2', item: { categories: [{ category: { name: 'Dairy' } }] } },
+        { id: '3', item: { categories: [] } },
+      ],
+    },
+    actions: {},
   }),
 }));
 jest.mock('#hooks/pantry/useCurrentPantry', () => ({

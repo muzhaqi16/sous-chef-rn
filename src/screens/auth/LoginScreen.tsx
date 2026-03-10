@@ -14,6 +14,8 @@ import { getLoginValidationSchema } from '#/utils/validation/auth';
 import { type LoginInput } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
+import { useAppStore } from '#store/useAppStore';
+import { authService } from '#/services/authService';
 import { Telemetry } from '#/services/telemetry';
 import {
   executeWithLoadingState,
@@ -62,13 +64,8 @@ async function loadAuthInfoAsync(
 export function LoginScreen(): React.JSX.Element {
   const { theme } = useUnistyles();
   const { navigateToForgotPassword, navigateToSignUp } = useAuthNavigation();
+  const isLoggingIn = useAppStore(state => state.authIsLoading);
   const {
-    login,
-    handleAuthError,
-    isLoading: isLoggingIn,
-    loadStoredCredentials,
-    checkStoredCredentials,
-    getBiometricInfo,
     showRememberMeModal,
     pendingCredentials,
     handleRememberMeAccept,
@@ -91,12 +88,12 @@ export function LoginScreen(): React.JSX.Element {
   // Track screen view and load stored credentials and biometric info on mount
   useEffect(() => {
     loadAuthInfoAsync(
-      checkStoredCredentials,
-      getBiometricInfo,
+      authService.checkStoredCredentials,
+      authService.getBiometricInfo,
       setBiometricInfo,
       setShouldShowBiometricButton,
     );
-  }, [checkStoredCredentials, getBiometricInfo]);
+  }, []);
 
   // Simple form submission - directly use login with default rememberMe=true
   const onSubmit = (input: LoginInput) => {
@@ -104,7 +101,7 @@ export function LoginScreen(): React.JSX.Element {
 
     executeMutation(
       async () => {
-        await login(input);
+        await authService.login(input);
         Telemetry.trackEvent('login_success', { method: 'email_password' });
       },
       (err: unknown) => {
@@ -112,7 +109,7 @@ export function LoginScreen(): React.JSX.Element {
           component: 'LoginScreen',
           operation: 'email_password_login',
         });
-        handleAuthError(err, 'Login');
+        authService.handleAuthError(err, 'Login');
       },
     );
   };
@@ -128,15 +125,15 @@ export function LoginScreen(): React.JSX.Element {
 
     executeWithLoadingState(
       async () => {
-        const credentials = await loadStoredCredentials();
+        const credentials = await authService.loadStoredCredentials();
 
         if (credentials) {
-          await login(
+          await authService.login(
             {
               email: credentials.email,
               password: credentials.password,
             },
-            false,
+            { showRememberPrompt: false },
           );
           Telemetry.trackEvent('login_success', {
             method: 'biometric',
@@ -154,7 +151,7 @@ export function LoginScreen(): React.JSX.Element {
             biometric_type: biometricInfo.biometryType,
           },
         );
-        handleAuthError(error, 'Biometric login');
+        authService.handleAuthError(error, 'Biometric login');
       },
     );
   };

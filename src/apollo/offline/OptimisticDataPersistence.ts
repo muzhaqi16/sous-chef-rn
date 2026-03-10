@@ -277,6 +277,13 @@ class OptimisticDataPersistence {
    */
   clearAll(): void {
     try {
+      // Cancel any pending batch flush
+      if (this.batchTimeout) {
+        clearTimeout(this.batchTimeout);
+        this.batchTimeout = null;
+      }
+      this.pendingUpdates = {};
+
       storage.remove(OPTIMISTIC_DATA_KEY);
       this.cache = null; // Invalidate cache
       if (__DEV__) {

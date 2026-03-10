@@ -90,5 +90,6 @@ output.js.map
 ios/tmp.xcconfig
 .claude/
 .agents/
+openspec/
 artifacts/
 e2e/artifacts/

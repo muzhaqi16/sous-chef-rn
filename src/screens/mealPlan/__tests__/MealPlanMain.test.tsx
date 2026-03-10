@@ -138,8 +138,8 @@ jest.mock('#/services/toastService', () => ({
   toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
 }));
 
-jest.mock('#/hooks/offline/useOptimisticDataRestoration', () => ({
-  useOptimisticDataRestorationMultiple: jest.fn(),
+jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
+  useTabScreenLifecycle: jest.fn(),
 }));
 
 const mockDeferredScreen = jest.fn(({ fallback }: any) => fallback);

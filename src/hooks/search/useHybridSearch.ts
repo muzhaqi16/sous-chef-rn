@@ -18,7 +18,7 @@ export interface UseHybridSearchConfig<TQuery, TItem extends { id: string }> {
   hasMore: boolean;
   /** Whether the main query is currently loading */
   loading: boolean;
-  /** Page size (e.g. DEFAULT_PAGE_SIZES.MEDIUM) */
+  /** Page size (e.g. PAGE_SIZE.EXTENDED) */
   pageSize: number;
   /** Whether the device is online */
   isOnline: boolean;

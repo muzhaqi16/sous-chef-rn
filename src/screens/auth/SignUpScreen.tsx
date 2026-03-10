@@ -10,14 +10,15 @@ import { PasswordInput } from '#components/atoms/PasswordInput';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { getSignUpValidationSchema } from '#/utils/validation/auth';
 import { type RegisterInput } from '#generated';
-import { useAuth } from '#hooks/auth/useAuth';
+import { authService } from '#/services/authService';
+import { useAppStore } from '#store/useAppStore';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 
 type SignUpValues = RegisterInput & { confirmPassword: string; name: string };
 
 export const SignUpScreen = (): React.JSX.Element => {
   const navigation = useNavigation();
-  const { register, handleAuthError, isLoading: isRegistering } = useAuth();
+  const isRegistering = useAppStore(state => state.authIsLoading);
   const { navigateToLogin } = useAuthNavigation();
 
   const form = useForm<SignUpValues>({
@@ -35,9 +36,9 @@ export const SignUpScreen = (): React.JSX.Element => {
     const input: RegisterInput = { name, email, password };
 
     try {
-      await register(input); // Uses default rememberMe=true
+      await authService.register(input); // Uses default rememberMe=true
     } catch (err: any) {
-      handleAuthError(err, 'Registration');
+      authService.handleAuthError(err, 'Registration');
     }
   };
 

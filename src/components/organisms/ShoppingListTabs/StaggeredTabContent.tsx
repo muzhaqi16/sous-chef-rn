@@ -62,7 +62,6 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
     <PaginationFooter
       isLoadingMore={!!isLoadingMore}
       hasMore={!!hasMore}
-      loading={false}
       itemCount={items.length}
     />
   );

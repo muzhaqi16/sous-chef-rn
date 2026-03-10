@@ -4,7 +4,8 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useAppStore } from '#store/useAppStore';
 import { useVerifyEmailMutation } from '#generated';
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
@@ -19,8 +20,8 @@ interface EmailVerificationRouteParams {
 async function performVerificationImpl(
   token: string | undefined,
   verifyEmail: ReturnType<typeof useVerifyEmailMutation>[0],
-  user: ReturnType<typeof useAuth>['user'],
-  updateUser: ReturnType<typeof useAuth>['updateUser'],
+  user: ReturnType<typeof useAuthUser>,
+  updateUser: (updates: Partial<{ emailVerified: boolean }>) => void,
   toast: ReturnType<typeof useToast>,
   setVerificationResult: (v: 'success' | 'error' | null) => void,
   setErrorMessage: (v: string) => void,
@@ -92,7 +93,8 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { theme } = useUnistyles();
-  const { user, updateUser } = useAuth();
+  const user = useAuthUser();
+  const updateUser = useAppStore(state => state.updateUser);
   const toast = useToast();
 
   const { token } = (route.params ??

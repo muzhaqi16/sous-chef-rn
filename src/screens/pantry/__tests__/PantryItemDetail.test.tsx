@@ -113,12 +113,16 @@ jest.mock('#utils/nutritionUtils', () => ({
   parseNutritions: jest.fn(() => []),
   hasNutritionData: jest.fn(() => false),
 }));
-jest.mock('#hooks/pantry/usePantryItemTransformation', () => ({
-  formatPackageBreakdownFull: jest.fn(() => null),
-  formatNetWeightDisplay: jest.fn(() => null),
-  formatQuantityBreakdown: jest.fn(() => null),
-  formatStorageState: jest.fn(() => 'Fridge'),
-}));
+jest.mock('#hooks/pantry/usePantryItemTransformation', () => {
+  const actual = jest.requireActual('#hooks/pantry/usePantryItemTransformation');
+  return {
+    ...actual,
+    formatPackageBreakdownFull: jest.fn(() => null),
+    formatNetWeightDisplay: jest.fn(() => null),
+    formatQuantityBreakdown: jest.fn(() => null),
+    formatStorageState: jest.fn(() => 'Fridge'),
+  };
+});
 jest.mock('#utils/formatQuantity', () => ({
   getUnitDisplayText: jest.fn(unit => unit?.symbol || ''),
 }));

@@ -50,24 +50,28 @@ jest.mock('../useShoppingListItemsQuery', () => ({
 
 jest.mock('../usePaginatedShoppingItems', () => ({
   usePaginatedShoppingItems: () => ({
-    unpurchased: {
-      items: mockUnpurchasedItems,
-      totalCount: 2,
-      hasMore: false,
-      isLoadingMore: false,
-      loadMore: jest.fn(),
+    state: {
+      unpurchased: {
+        items: mockUnpurchasedItems,
+        totalCount: 2,
+        hasMore: false,
+        isLoadingMore: false,
+        loadMore: jest.fn(),
+      },
+      purchased: {
+        items: mockPurchasedItems,
+        totalCount: 1,
+        hasMore: false,
+        isLoadingMore: false,
+        loadMore: jest.fn(),
+      },
+      loading: false,
+      error: undefined,
+      isTransitioning: false,
     },
-    purchased: {
-      items: mockPurchasedItems,
-      totalCount: 1,
-      hasMore: false,
-      isLoadingMore: false,
-      loadMore: jest.fn(),
+    actions: {
+      refetch: mockRefetch,
     },
-    loading: false,
-    error: undefined,
-    refetch: mockRefetch,
-    isTransitioning: false,
   }),
 }));
 

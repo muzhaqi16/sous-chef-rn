@@ -25,10 +25,8 @@ jest.mock('#hooks/profile/useProfileData', () => ({
   }),
 }));
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({
-    user: { email: 'john@example.com' },
-  }),
+jest.mock('#hooks/auth/useAuthUser', () => ({
+  useAuthUser: () => ({ email: 'john@example.com' }),
 }));
 
 jest.mock('@apollo/client/react', () => ({

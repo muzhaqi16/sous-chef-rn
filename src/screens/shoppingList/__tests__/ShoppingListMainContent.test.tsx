@@ -82,12 +82,6 @@ jest.mock('#/hooks/auth/useAuth', () => ({
   })),
 }));
 
-jest.mock('#hooks/performance/useScreenTransition');
-
-jest.mock('#hooks/performance/useScreenTelemetry', () => ({
-  useScreenTelemetry: jest.fn(),
-}));
-
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: { clearType: jest.fn() },
 }));
@@ -132,37 +126,47 @@ jest.mock('#components/organisms/SwipeHintOverlay', () => ({
   SwipeHintOverlay: () => null,
 }));
 
-const makeScreenData = (overrides: any = {}) => ({
-  lists: [{ id: 'list-1', name: 'Groceries' }],
-  listDataWithOwnership: [
-    { id: 'list-1', name: 'Groceries', _isOwner: true },
-  ],
-  currentList: { id: 'list-1', name: 'Groceries' },
-  currentListDetails: null,
-  currentListId: 'list-1',
-  unpurchasedItems: [],
-  purchasedItems: [],
-  rawUnpurchasedItems: [],
-  rawPurchasedItems: [],
-  isLoadingInitial: false,
-  searchQuery: '',
-  setSearchQuery: jest.fn(),
-  addItem: jest.fn(),
-  toggleItem: jest.fn(),
-  removeItem: jest.fn(),
-  refetch: jest.fn().mockResolvedValue({}),
-  totalCountUnpurchased: 0,
-  totalCountPurchased: 0,
-  loadMoreUnpurchased: jest.fn(),
-  hasMoreUnpurchased: false,
-  isLoadingMoreUnpurchased: false,
-  loadMorePurchased: jest.fn(),
-  hasMorePurchased: false,
-  isLoadingMorePurchased: false,
-  setSelectedShoppingListId: jest.fn(),
-  isTransitioning: false,
-  ...overrides,
-});
+const makeScreenData = (overrides: any = {}) => {
+  const { state: stateOverrides, actions: actionsOverrides, ...legacyOverrides } = overrides;
+  return {
+    state: {
+      lists: [{ id: 'list-1', name: 'Groceries' }],
+      listDataWithOwnership: [
+        { id: 'list-1', name: 'Groceries', _isOwner: true },
+      ],
+      currentList: { id: 'list-1', name: 'Groceries' },
+      currentListDetails: null,
+      currentListId: 'list-1',
+      selectedShoppingListId: 'list-1',
+      unpurchasedItems: [],
+      purchasedItems: [],
+      rawUnpurchasedItems: [],
+      rawPurchasedItems: [],
+      isLoadingInitial: false,
+      searchQuery: '',
+      totalCountUnpurchased: 0,
+      totalCountPurchased: 0,
+      hasMoreUnpurchased: false,
+      isLoadingMoreUnpurchased: false,
+      hasMorePurchased: false,
+      isLoadingMorePurchased: false,
+      isTransitioning: false,
+      ...legacyOverrides,
+      ...stateOverrides,
+    },
+    actions: {
+      setSearchQuery: jest.fn(),
+      addItem: jest.fn(),
+      toggleItem: jest.fn(),
+      removeItem: jest.fn(),
+      refetch: jest.fn().mockResolvedValue({}),
+      loadMoreUnpurchased: jest.fn(),
+      loadMorePurchased: jest.fn(),
+      setSelectedShoppingListId: jest.fn(),
+      ...actionsOverrides,
+    },
+  };
+};
 
 describe('ShoppingListMainContent', () => {
   beforeEach(() => {

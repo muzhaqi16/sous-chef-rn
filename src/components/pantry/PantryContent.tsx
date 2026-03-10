@@ -132,9 +132,6 @@ interface PantryContentProps {
   refreshing?: boolean;
   loading?: boolean;
 
-  // Swipeable coordination
-  onSwipeableWillOpen?: (ref: any) => void;
-  onSwipeableClose?: () => void;
 }
 
 export interface PantryContentRef {
@@ -450,7 +447,6 @@ export const PantryContent = React.forwardRef<
       noHomeSelected,
       noHomes,
       onSelectHome,
-      // onSwipeableWillOpen and onSwipeableClose are handled by PantryActionsContext
     },
     ref,
   ) => {
@@ -722,7 +718,6 @@ export const PantryContent = React.forwardRef<
                     <PaginationFooter
                       isLoadingMore={isLoadingMore}
                       hasMore={hasMore}
-                      loading={loading}
                       itemCount={deferredSortedItems.length}
                     />
                   }

@@ -18,18 +18,17 @@ export const MAX_PAGINATION_LIMIT = 100;
 /**
  * Default pagination sizes for different use cases
  */
-export const DEFAULT_PAGE_SIZES = {
-  /** Small lists (e.g., notifications, recent items) */
-  SMALL: 20,
-
-  /** Medium lists (e.g., shopping lists, pantry items) */
-  MEDIUM: 50,
-
-  /** Large lists (e.g., search results) */
-  LARGE: 100,
-
+export const PAGE_SIZE = {
+  /** Compact lists (e.g., storage locations, dropdowns) */
+  COMPACT: 15,
+  /** Standard paginated lists (e.g., pantry items, shopping lists) */
+  DEFAULT: 25,
   /** Infinite scroll increment */
-  INFINITE_SCROLL: 30,
+  SCROLL: 30,
+  /** Larger datasets (e.g., hybrid sort threshold) */
+  EXTENDED: 50,
+  /** API maximum */
+  MAX: 100,
 };
 
 /**

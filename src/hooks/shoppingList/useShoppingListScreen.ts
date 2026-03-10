@@ -1,7 +1,7 @@
 
 import { useEffect, useDeferredValue } from 'react';
 
-import { useAuth } from '#/hooks/auth/useAuth';
+import { useAuthUser } from '#/hooks/auth/useAuthUser';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -23,7 +23,7 @@ import { useShoppingListManagement } from './useShoppingListManagement';
  * easier to understand, test, and maintain.
  */
 export function useShoppingListScreen() {
-  const { user } = useAuth();
+  const user = useAuthUser();
 
   // 1. Query: Fetch all user's shopping lists (independent of home)
   const { lists, loading: listsLoading } = useShoppingListsQuery();
@@ -114,51 +114,51 @@ export function useShoppingListScreen() {
   const loading = listsLoading || itemsLoading;
 
   return {
-    // Lists
-    lists,
-    listDataWithOwnership,
-    currentList,
-    currentListDetails,
-    currentListId,
-    defaultList,
+    state: {
+      // Lists
+      lists,
+      listDataWithOwnership,
+      currentList,
+      currentListDetails,
+      currentListId,
+      defaultList,
+      selectedShoppingListId,
 
-    // Selection
-    selectedShoppingListId,
-    setSelectedShoppingListId,
+      // Items (transformed for UI)
+      unpurchasedItems,
+      purchasedItems,
+      rawUnpurchasedItems,
+      rawPurchasedItems,
 
-    // Items (transformed for UI)
-    unpurchasedItems,
-    purchasedItems,
-    rawUnpurchasedItems,
-    rawPurchasedItems,
+      // Loading states
+      loading,
+      isLoadingInitial,
+      isTransitioning,
+      error,
 
-    // Loading states
-    loading,
-    isLoadingInitial,
-    isTransitioning,
-    error,
+      // Total counts
+      totalCountUnpurchased,
+      totalCountPurchased,
 
-    // Total counts
-    totalCountUnpurchased,
-    totalCountPurchased,
+      // Pagination state
+      hasMoreUnpurchased,
+      isLoadingMoreUnpurchased,
+      hasMorePurchased,
+      isLoadingMorePurchased,
 
-    // Pagination
-    loadMoreUnpurchased,
-    hasMoreUnpurchased,
-    isLoadingMoreUnpurchased,
-    loadMorePurchased,
-    hasMorePurchased,
-    isLoadingMorePurchased,
-
-    // Search
-    searchQuery,
-    setSearchQuery,
-
-    // Actions
-    addItem,
-    updateItem,
-    removeItem,
-    toggleItem,
-    refetch,
+      // Search
+      searchQuery,
+    },
+    actions: {
+      setSelectedShoppingListId,
+      setSearchQuery,
+      addItem,
+      updateItem,
+      removeItem,
+      toggleItem,
+      refetch,
+      loadMoreUnpurchased,
+      loadMorePurchased,
+    },
   };
 }
