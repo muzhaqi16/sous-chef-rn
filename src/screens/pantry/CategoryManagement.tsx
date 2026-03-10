@@ -9,6 +9,7 @@ import {useCurrentPantry} from '#hooks/pantry/useCurrentPantry';
 import {commonStyles} from '#/styles/commonStyles';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {createPropsComparator} from '#utils/memoUtils';
+import {FLASHLIST_DEFAULTS} from '#utils/flashListDefaults';
 
 interface CategoryItemData {
   name: string;
@@ -17,40 +18,44 @@ interface CategoryItemData {
 
 const keyExtractor = (item: CategoryItemData) => item.name;
 
-const areCategoryItemPropsEqual = createPropsComparator<{ item: CategoryItemData }>({
+interface CategoryItemProps {
+  item: CategoryItemData;
+  textSecondaryColor: string;
+}
+
+const areCategoryItemPropsEqual = createPropsComparator<CategoryItemProps>({
+  referenceKeys: ['textSecondaryColor'],
   nestedComparisons: {
     item: ['name', 'count'],
   },
 });
 
-const CategoryItem = React.memo(({ item }: { item: CategoryItemData }) => {
-  const {theme} = useUnistyles();
+const CategoryItemComponent: React.FC<CategoryItemProps> = ({ item, textSecondaryColor }) => (
+  <Pressable
+    style={({pressed}) => [commonStyles.card, styles.categoryCard, pressed && styles.pressed]}
+    onPress={() => {}}>
+    <View style={styles.categoryInfo}>
+      <Text style={styles.categoryName}>{item.name}</Text>
+      <Text style={[commonStyles.caption, styles.categoryDetails]}>
+        {item.count} items
+      </Text>
+    </View>
+    <Icon
+      name="chevron-right"
+      size={24}
+      color={textSecondaryColor}
+    />
+  </Pressable>
+);
 
-  return (
-    <Pressable
-      style={({pressed}) => [commonStyles.card, styles.categoryCard, pressed && styles.pressed]}
-      onPress={() => {}}>
-      <View style={styles.categoryInfo}>
-        <Text style={styles.categoryName}>{item.name}</Text>
-        <Text style={[commonStyles.caption, styles.categoryDetails]}>
-          {item.count} items
-        </Text>
-      </View>
-      <Icon
-        name="chevron-right"
-        size={24}
-        color={theme.colors.textSecondary}
-      />
-    </Pressable>
-  );
-}, areCategoryItemPropsEqual);
-
+const CategoryItem = React.memo(CategoryItemComponent, areCategoryItemPropsEqual);
 CategoryItem.displayName = 'CategoryItem';
 
-const renderItem = ({ item }: { item: CategoryItemData }) => <CategoryItem item={item} />;
+const getCategoryItemType = () => 'item' as const;
 
 export const CategoryManagement: React.FC = () => {
   const {goBack} = useAppNavigation();
+  const {theme} = useUnistyles();
 
   // Use cache-only hook for pantry resolution (no network requests)
   // This prevents query cascade when switching between pantry screens
@@ -86,8 +91,11 @@ export const CategoryManagement: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         data={categoryData}
         keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        drawDistance={200}
+        renderItem={({ item }: { item: CategoryItemData }) => (
+          <CategoryItem item={item} textSecondaryColor={theme.colors.textSecondary} />
+        )}
+        getItemType={getCategoryItemType}
+        {...FLASHLIST_DEFAULTS.fullScreen}
       />
     </View>
   );

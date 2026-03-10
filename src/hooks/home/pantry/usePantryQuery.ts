@@ -16,6 +16,24 @@ import { usePagination } from '#/hooks/utils/usePagination';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { usePreservedArrayData, usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import { useAppStore, selectIsHomeSelectionReady, selectSetIsPantryQueryComplete } from '#store/useAppStore';
+import { DEFAULT_PAGE_SIZES } from '#/constants/pagination';
+
+// Structural fingerprint: return stable array reference when item IDs + order are unchanged.
+// Prevents unnecessary FlashList diffing when normalizePantry produces a new array object
+// but the content is structurally identical.
+let _pantryLastFingerprint = '';
+let _pantryLastItems: any[] = [];
+
+function stabilizePantryItems<T extends { id: string }>(items: T[] | undefined): T[] | undefined {
+  if (!items || items.length === 0) return items;
+  const fingerprint = items.map(i => i.id).join(',');
+  if (fingerprint === _pantryLastFingerprint && _pantryLastItems.length === items.length) {
+    return _pantryLastItems as T[];
+  }
+  _pantryLastFingerprint = fingerprint;
+  _pantryLastItems = items;
+  return items;
+}
 
 // Module-level helpers — outside hook body so React Compiler doesn't bail out on try-catch
 async function executePantryRefetch(
@@ -74,7 +92,7 @@ export function usePantryQuery(
   const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
     variables: {
       id: pantryId || '',
-      itemsFirst: 50,
+      itemsFirst: DEFAULT_PAGE_SIZES.SMALL,
       itemsFilter: itemsFilter ?? undefined,
       itemsOrderBy: itemsOrderBy ?? undefined,
       storageLocationsFirst: 25 },
@@ -92,8 +110,11 @@ export function usePantryQuery(
   // Normalize pantry data to flatten Connection pattern
   const normalizedPantry = normalizePantry(data?.pantry);
 
+  // Stabilize array reference when content is structurally identical
+  const stableItems = stabilizePantryItems(normalizedPantry?.items);
+
   // Preserve pantry items across network failures
-  const preservedItems = usePreservedArrayData(normalizedPantry?.items);
+  const preservedItems = usePreservedArrayData(stableItems);
 
   // Filter out items that are pending deletion to prevent flicker
   const pantryItems = subscriptionService.filterPendingDeletes(preservedItems);
@@ -130,6 +151,13 @@ export function usePantryQuery(
       setIsPantryQueryComplete(false);
     }
   }, [loading, hasValidPantryId, setIsPantryQueryComplete]);
+
+  // DEV: log when pagination state changes for diagnosing blank frames / footer reappearance
+  useEffect(() => {
+    if (__DEV__) {
+      console.log(`📊 [Pantry] hasMore=${hasMore} totalCount=${totalCount} items=${pantryItems.length}`);
+    }
+  }, [hasMore, totalCount, pantryItems.length]);
 
   // Auto-refetch when edges are depleted but totalCount indicates items remain
   // (pagination edge depletion scenario — same pattern as usePaginatedShoppingItems)

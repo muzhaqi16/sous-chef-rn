@@ -85,3 +85,19 @@ export interface ProcessingResult {
   error?: QueueError;
   serverResponse?: any;
 }
+
+/**
+ * Information about a permanently failed mutation, passed to the failure handler
+ */
+export interface FailedMutationInfo {
+  mutationId: string;
+  operationName: string;
+  entityType: string | null;
+  entityId: string | null;
+  error: QueueError;
+}
+
+/**
+ * Callback invoked when a mutation permanently fails after exhausting retries
+ */
+export type FailureHandler = (info: FailedMutationInfo) => void;

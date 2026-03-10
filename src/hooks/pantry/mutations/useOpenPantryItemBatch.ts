@@ -5,6 +5,7 @@
 import { Alert } from 'react-native';
 import { useOpenPantryItemBatchMutation } from '#generated';
 import { useErrorService } from '#/services/errorService';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
 interface UseOpenPantryItemBatchOptions {
   onSuccess?: () => void;
@@ -34,10 +35,14 @@ export function useOpenPantryItemBatch({
             openedAt: () => now,
           },
         });
+
+        // Persist optimistic state to survive cache-and-network refetches while offline
+        optimisticDataPersistence.save('PantryItemBatch', batchId, 'isOpened', true);
       },
     });
 
     if (result.data?.openPantryItemBatch?.pantryItem) {
+      optimisticDataPersistence.clear('PantryItemBatch', batchId, 'isOpened');
       onSuccess?.();
       return true;
     }

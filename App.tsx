@@ -26,7 +26,11 @@ import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#hooks/useNetworkStatus';
 import { useTheme } from '#hooks/useTheme';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
+import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
 import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { toastService } from '#/services/toastService';
+import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { NotificationProvider } from '#/components/notifications/NotificationProvider';
 import { DataProvider } from '#/components/providers/DataProvider';
 import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
@@ -48,6 +52,42 @@ enableScreens();
 // Freeze all inactive screens globally — prevents background re-renders
 // across all navigators (tabs + stacks), not just the tab navigator
 enableFreeze(true);
+
+/**
+ * Module-level handler for permanently failed queued mutations.
+ * Evicts stale optimistic data from cache, clears persistence, shows toast, and removes from queue.
+ * Defined at module scope (not inside a hook) so try-catch is safe — React Compiler doesn't apply.
+ */
+function handleFailedMutation(info: FailedMutationInfo): void {
+  const { mutationId, entityType, entityId } = info;
+
+  try {
+    // 1. Evict stale optimistic entity from Apollo cache
+    if (entityType && entityId) {
+      const cacheId = client.cache.identify({ __typename: entityType, id: entityId });
+      if (cacheId) {
+        client.cache.evict({ id: cacheId });
+        client.cache.gc();
+      }
+    }
+
+    // 2. Clear persisted optimistic fields for this entity
+    if (entityType && entityId) {
+      optimisticDataPersistence.clearEntity(entityType, entityId);
+    }
+
+    // 3. Notify user via toast
+    toastService.error("Couldn't sync changes. Pull to refresh.");
+
+    // 4. Remove permanently failed mutation from queue
+    queueStore.removeMutation(mutationId);
+  } catch (error) {
+    console.error('Failed to handle mutation failure cleanup:', error);
+  }
+}
+
+// Register the failure handler on the singleton queue manager
+queueManager.setFailureHandler(handleFailedMutation);
 
 
 /** Module-level helper: Detox launch argument injection (DEV-only) */

@@ -8,6 +8,8 @@ import {
   ProcessingResult,
   QueueConfig,
   QueueError,
+  type FailedMutationInfo,
+  type FailureHandler,
 } from './types';
 import {
   SyncPantryItemDocument,
@@ -56,9 +58,18 @@ export class QueueManager {
   private isProcessing = false;
   private processingPromise: Promise<void> | null = null;
   private idMapping = new Map<string, string>(); // temp-ID → real-ID
+  private failureHandler: FailureHandler | null = null;
 
   constructor(config: Partial<QueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+
+  /**
+   * Register a callback invoked when a mutation permanently fails after exhausting retries.
+   * Only one handler is supported — subsequent calls replace the previous handler.
+   */
+  setFailureHandler(handler: FailureHandler): void {
+    this.failureHandler = handler;
   }
 
   /**
@@ -553,6 +564,7 @@ export class QueueManager {
 
     // Max retries exceeded or non-retryable error
     queueStore.markMutationFailed(mutation.id, queueError);
+    this.invokeFailureHandler(mutation, queueError);
 
     return {
       success: false,
@@ -581,10 +593,9 @@ export class QueueManager {
 
     // Token refresh failed - mark as auth error
     logger.error(`❌ Queue: Token refresh failed for ${mutation.id}`);
-    queueStore.markMutationFailed(mutation.id, {
-      ...error,
-      type: 'auth',
-    });
+    const authError: QueueError = { ...error, type: 'auth' };
+    queueStore.markMutationFailed(mutation.id, authError);
+    this.invokeFailureHandler(mutation, authError);
 
     return {
       success: false,
@@ -622,6 +633,65 @@ export class QueueManager {
     // Token exists and no deferred refresh — assume valid
     // The Apollo auth link will handle expired tokens automatically via attemptTokenRefresh
     return true;
+  }
+
+  /**
+   * Extract entity type and ID from a mutation's variables.
+   * Inspects common variable patterns used across the app.
+   */
+  private extractEntityInfo(mutation: QueuedMutation): { entityType: string | null; entityId: string | null } {
+    const vars = mutation.variables ?? {};
+    const opName = mutation.operationName;
+
+    // Extract entity ID from common variable shapes
+    const entityId =
+      vars.id ??
+      vars.input?.id ??
+      vars.input?.pantryItemId ??
+      vars.input?.itemId ??
+      vars.input?.recipeId ??
+      vars.input?.mealPlanId ??
+      vars.input?.batchId ??
+      vars.clientId ??
+      null;
+
+    // Infer entity type from operation name
+    let entityType: string | null = null;
+    if (opName.includes('PantryItemBatch')) entityType = 'PantryItemBatch';
+    else if (opName.includes('PantryItem') || opName.includes('Pantry')) entityType = 'PantryItem';
+    else if (opName.includes('ShoppingListItem') || opName.includes('ShoppingList')) entityType = 'ShoppingListItem';
+    else if (opName.includes('MealPlanItem')) entityType = 'MealPlanItem';
+    else if (opName.includes('MealPlan')) entityType = 'MealPlan';
+    else if (opName.includes('Recipe') || opName.includes('Favorite')) entityType = 'SavedRecipe';
+
+    return { entityType, entityId };
+  }
+
+  /**
+   * Invoke the registered failure handler for a permanently failed mutation.
+   * Extracts entity metadata and passes it to the handler.
+   */
+  private invokeFailureHandler(mutation: QueuedMutation, error: QueueError): void {
+    if (!this.failureHandler) {
+      logger.debug(`Queue: No failure handler registered for failed mutation ${mutation.id}`);
+      return;
+    }
+
+    const { entityType, entityId } = this.extractEntityInfo(mutation);
+
+    const info: FailedMutationInfo = {
+      mutationId: mutation.id,
+      operationName: mutation.operationName,
+      entityType,
+      entityId,
+      error,
+    };
+
+    try {
+      this.failureHandler(info);
+    } catch (handlerError) {
+      logger.error('Queue: Failure handler threw an error:', handlerError);
+    }
   }
 
   /**

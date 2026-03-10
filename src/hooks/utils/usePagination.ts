@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, startTransition } from 'react';
 import { errorService } from '#/services/errorService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
@@ -91,6 +91,9 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     }
   });
 
+  // Ref guard prevents duplicate fetches when two rapid onEndReached calls
+  // both read isFetchingMore as false before React batches the state update
+  const isFetchingMoreRef = useRef(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
 
@@ -99,13 +102,19 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     // - No more items to load
     // - Already loading
     // - No cursor available
-    // - Already fetching more
-    if (!hasMore || loading || !endCursor || isFetchingMore) {
+    // - Already fetching more (ref checked synchronously)
+    if (!hasMore || loading || !endCursor || isFetchingMoreRef.current) {
+      if (__DEV__) {
+        console.log(`📊 [Pagination] loadMore guarded: hasMore=${hasMore} loading=${loading} cursor=${!!endCursor} fetching=${isFetchingMoreRef.current}`);
+      }
       return;
     }
 
-    setIsFetchingMore(true);
-    setLoadMoreError(false);
+    isFetchingMoreRef.current = true;
+    startTransition(() => {
+      setIsFetchingMore(true);
+      setLoadMoreError(false);
+    });
 
     const result = await executeMutation(
       () =>
@@ -119,6 +128,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
         errorService.reportError(error, { operation: 'Pagination.loadMore' }),
     );
 
+    isFetchingMoreRef.current = false;
     setIsFetchingMore(false);
     if (result === false) {
       setLoadMoreError(true);

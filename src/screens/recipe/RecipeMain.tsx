@@ -33,6 +33,8 @@ import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { RecipeSkeleton } from '#components/base/Skeleton/RecipeSkeleton';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
 const viewOptions = ['saved', 'myRecipes'] as const;
 
@@ -56,6 +58,8 @@ function clearRandomRecipesIfNeeded(
 const RecipeMainInner: React.FC = () => {
   useScreenTransition('RecipeMain');
   useRenderTime('RecipeMain');
+  // Restore persisted optimistic field values (e.g. isFavorited) from offline storage
+  useOptimisticDataRestorationMultiple(['Recipe', 'SavedRecipe']);
   const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const [searchQuery, setSearchQuery] = useState('');
@@ -221,6 +225,9 @@ const RecipeMainInner: React.FC = () => {
                 totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) - 1 } } };
         },
       );
+
+      // Persist optimistic unfavorite state to survive cache-and-network refetches while offline
+      optimisticDataPersistence.save('SavedRecipe', variables.recipeId, 'isFavorited', false);
     } });
 
   // Delete recipe mutation (for user-created recipes)
@@ -334,6 +341,8 @@ const RecipeMainInner: React.FC = () => {
       try {
         await unfavoriteRecipeMutation({
           variables: { recipeId } });
+        // Clear persisted optimistic favorite state on server confirmation
+        optimisticDataPersistence.clear('SavedRecipe', recipeId, 'isFavorited');
       } catch (error) {
         console.error('Failed to remove recipe:', error);
         Alert.alert('Error', 'Failed to remove recipe. Please try again.');

@@ -8,6 +8,7 @@ import {
   type WasteReason,
 } from '#generated';
 import { useErrorService } from '#/services/errorService';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
 interface UseWastePantryItemBatchOptions {
   onSuccess?: () => void;
@@ -29,6 +30,9 @@ export function useWastePantryItemBatch({
     isRecycled?: boolean,
     notes?: string,
   ): Promise<boolean> => {
+    // Persist optimistic waste state to survive cache-and-network refetches while offline
+    optimisticDataPersistence.save('PantryItemBatch', batchId, 'isWasted', true);
+
     const result = await wasteMutation({
       variables: {
         input: {
@@ -42,6 +46,7 @@ export function useWastePantryItemBatch({
     });
 
     if (result.data?.wastePantryItemBatch?.pantryItem) {
+      optimisticDataPersistence.clear('PantryItemBatch', batchId, 'isWasted');
       onSuccess?.();
       return true;
     }

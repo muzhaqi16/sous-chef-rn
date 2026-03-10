@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useImperativeHandle } from 'react';
-import { View, Pressable, RefreshControl } from 'react-native';
+import React, { createContext, useContext, useEffect, useRef, useImperativeHandle } from 'react';
+import { View, Pressable, RefreshControl, Dimensions } from 'react-native';
 import {
   FlashList,
   type FlashListRef,
@@ -14,7 +14,6 @@ import { FilterTabs } from '../molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '../molecules/FilterTabs/types';
 import { SectionHeader } from '../molecules/SectionHeader';
 import { PantryItemCard, type ItemVariant } from './PantryItemCard';
-import { PantryThemeProvider, usePantryTheme } from './PantryThemeContext';
 import { PantryHeader } from './PantryHeader';
 import { PantrySortModal } from './PantrySortModal';
 import {
@@ -41,9 +40,14 @@ import { useFlashListPerformance } from '#hooks/performance/useFlashListPerforma
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { differenceInCalendarDays } from 'date-fns';
 import { PantryItem } from '#generated';
+import type { ExpirationVariant } from './PantryItemCard';
 
 // Stable empty array reference to avoid FlashList re-renders when showing skeletons
 const EMPTY_ARRAY: PantryItem[] = [];
+
+// Screen-relative draw distance: scales with viewport so buffer stays ~7-10 items
+// regardless of device size (vs fixed 250 which is 37% on SE but 27% on Pro Max)
+const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 0.75);
 
 // Module-level flag: once pantry content has been shown, skip skeletons on remount.
 // Persists across component unmount/remount (stack navigation), resets on app restart.
@@ -146,64 +150,90 @@ const getItemVariant = (
   return 'normal';
 };
 
+/** Pre-computed display data for a single pantry item. */
+interface ItemDisplayData {
+  id: string;
+  name: string;
+  imageUrl: string | null | undefined;
+  expirationText: string | null;
+  expirationVariant: ExpirationVariant | undefined;
+  expirationColor: string | undefined;
+  variant: ItemVariant;
+  quantityDisplay: string;
+  location: string;
+  isOutOfStock: boolean;
+  packageBreakdownText: string | null | undefined;
+  remainingNetWeightText: string | null | undefined;
+  quantityBreakdownText: string | null | undefined;
+  activeBatchCount: number | undefined;
+}
+
 /**
- * Compute display data for a single pantry item.
+ * Pre-compute display data for all pantry items at list level.
  * Module-level so the React Compiler doesn't flag Date usage as impure in render.
+ * Called once per list render (only when items/colors change), NOT per-item.
  */
-function computeItemDisplay(
-  item: PantryItem,
+function computeDisplayMap(
+  items: PantryItem[],
   expirationColors: { expired: string; warning: string; normal: string },
   getLocation: (
     storageState?: string | null,
     storageLocation?: { name: string } | null,
   ) => string,
-) {
-  const expiresIn = item.expiresAt
-    ? differenceInCalendarDays(new Date(item.expiresAt), new Date())
-    : null;
-  const expStatus = getExpirationStatus(expiresIn);
-  const isExpired = expiresIn !== null && expiresIn < 0;
-  const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-  const variant: ItemVariant = getItemVariant(isExpired, isExpiringSoon);
-  const hasExpiry = item.expiresAt != null;
+): Map<string, ItemDisplayData> {
+  const map = new Map<string, ItemDisplayData>();
+  for (const item of items) {
+    const expiresIn = item.expiresAt
+      ? differenceInCalendarDays(new Date(item.expiresAt), new Date())
+      : null;
+    const expStatus = getExpirationStatus(expiresIn);
+    const isExpired = expiresIn !== null && expiresIn < 0;
+    const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
+    const variant: ItemVariant = getItemVariant(isExpired, isExpiringSoon);
+    const hasExpiry = item.expiresAt != null;
 
-  let expirationColor: string | undefined;
-  if (hasExpiry) {
-    const expType = expStatus.type;
-    if (expType === 'expired' || expType === 'critical') {
-      expirationColor = expirationColors.expired;
-    } else if (expType === 'warning') {
-      expirationColor = expirationColors.warning;
-    } else {
-      expirationColor = expirationColors.normal;
+    let expirationColor: string | undefined;
+    if (hasExpiry) {
+      const expType = expStatus.type;
+      if (expType === 'expired' || expType === 'critical') {
+        expirationColor = expirationColors.expired;
+      } else if (expType === 'warning') {
+        expirationColor = expirationColors.warning;
+      } else {
+        expirationColor = expirationColors.normal;
+      }
     }
+
+    map.set(item.id, {
+      id: item.id,
+      name: item.itemName || 'Unknown Item',
+      imageUrl: resolveImageUrl(item),
+      expirationText: hasExpiry ? expStatus.text : null,
+      expirationVariant: hasExpiry ? expStatus.type : undefined,
+      expirationColor,
+      variant,
+      quantityDisplay: formatQuantityDisplay(item.quantity, item.unit?.symbol),
+      location: getLocation(item.storageState, item.storageLocation),
+      isOutOfStock: item.quantity === 0,
+      packageBreakdownText: formatPackageBreakdown(
+        item.packageBreakdown,
+        item.quantityBreakdown?.totalContentUnits,
+      ),
+      remainingNetWeightText: formatRemainingNetWeight(
+        item.remainingNetWeight,
+        item.netWeightUnit,
+      ),
+      quantityBreakdownText: formatQuantityBreakdown(
+        item.quantityBreakdown,
+      ),
+      activeBatchCount: item.activeBatchCount,
+    });
   }
-
-  const imageUrl = resolveImageUrl(item);
-
-  return {
-    imageUrl,
-    expirationText: hasExpiry ? expStatus.text : null,
-    expirationVariant: hasExpiry ? expStatus.type : undefined,
-    expirationColor,
-    variant,
-    quantityDisplay: formatQuantityDisplay(item.quantity, item.unit?.symbol),
-    location: getLocation(item.storageState, item.storageLocation),
-    isOutOfStock: item.quantity === 0,
-    packageBreakdownText: formatPackageBreakdown(
-      item.packageBreakdown,
-      item.quantityBreakdown?.totalContentUnits,
-    ),
-    remainingNetWeightText: formatRemainingNetWeight(
-      item.remainingNetWeight,
-      item.netWeightUnit,
-    ),
-    quantityBreakdownText: formatQuantityBreakdown(
-      item.quantityBreakdown,
-    ),
-    activeBatchCount: item.activeBatchCount,
-  };
+  return map;
 }
+
+// Context for passing pre-computed display map to module-scope renderItem
+const DisplayMapContext = createContext<Map<string, ItemDisplayData>>(new Map());
 
 // Get location string from storage state (pure function — no component state dependency)
 const getLocationString = (
@@ -234,17 +264,22 @@ const keyExtractor = (item: PantryItem) => item.id;
 // Module-scope renderItem — stable reference, no closure recreation per render
 const renderItem = ({ item }: ListRenderItemInfo<PantryItem>) => {
   if (!item) return null;
-  return <PantryRenderItem item={item} />;
+  return <PantryRenderItem itemId={item.id} />;
 };
 
-// Module-scope bridge component — reads expirationColors from context
-const PantryRenderItem: React.FC<{ item: PantryItem }> = ({ item }) => {
-  const expirationColors = usePantryTheme();
-  const display = computeItemDisplay(item, expirationColors, getLocationString);
+// Module-scope bridge component — looks up pre-computed display data from context.
+// React.memo is required because this is a FlashList renderItem (module-scope,
+// parent not compiled by React Compiler). The custom comparator checks the itemId
+// primitive; display data changes propagate via context re-render only when the
+// map reference changes (i.e., when items actually change).
+const PantryRenderItemInner: React.FC<{ itemId: string }> = ({ itemId }) => {
+  const displayMap = useContext(DisplayMapContext);
+  const display = displayMap.get(itemId);
+  if (!display) return null;
   return (
     <PantryItemCard
-      id={item.id}
-      name={item.itemName || 'Unknown Item'}
+      id={display.id}
+      name={display.name}
       expirationText={display.expirationText}
       expirationVariant={display.expirationVariant}
       expirationColor={display.expirationColor}
@@ -260,6 +295,8 @@ const PantryRenderItem: React.FC<{ item: PantryItem }> = ({ item }) => {
     />
   );
 };
+
+const PantryRenderItem = React.memo(PantryRenderItemInner);
 
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
@@ -495,7 +532,7 @@ export const PantryContent = React.forwardRef<
       ? localFilteredItems
       : sortItems(localFilteredItems);
 
-    // Precomputed expiration colors — avoids per-item useUnistyles in ExpirationText
+    // Precomputed expiration colors — used by computeDisplayMap
     const expirationColors = {
       expired: theme.colors.expiration.expiredText,
       warning: theme.colors.expiration.warningText,
@@ -506,6 +543,11 @@ export const PantryContent = React.forwardRef<
     // defers Apollo cache updates. A second deferral here only desynchronizes
     // FlashList data from itemDisplayMap, causing getItemType instability.
     const deferredSortedItems = sortedItems;
+
+    // Pre-compute display data for ALL items at list level — eliminates per-item
+    // computeItemDisplay calls during scroll/recycling. React Compiler auto-memoizes
+    // this when deferredSortedItems and expirationColors are stable.
+    const displayMap = computeDisplayMap(deferredSortedItems, expirationColors, getLocationString);
 
     // Preload images for visible + upcoming items to prevent blank shimmer during fast scroll
     useEffect(() => {
@@ -631,7 +673,7 @@ export const PantryContent = React.forwardRef<
           {/* Content List */}
           <View style={styles.listContainer}>
             <View style={styles.contentFill}>
-              <PantryThemeProvider value={expirationColors}>
+              <DisplayMapContext.Provider value={displayMap}>
                 <FlashList<PantryItem>
                   ref={flashListRef}
                   CellRendererComponent={AnimatedCellRenderer}
@@ -640,7 +682,8 @@ export const PantryContent = React.forwardRef<
                   renderItem={renderItem}
                   keyExtractor={keyExtractor}
                   getItemType={getItemType}
-                  drawDistance={250}
+                  drawDistance={DRAW_DISTANCE}
+                  maxItemsInRecyclePool={15}
                   extraData={extraData}
                   contentContainerStyle={listContentStyle}
                   showsVerticalScrollIndicator={false}
@@ -689,7 +732,7 @@ export const PantryContent = React.forwardRef<
                   onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
                   maintainVisibleContentPosition={{ disabled: true }}
                 />
-              </PantryThemeProvider>
+              </DisplayMapContext.Provider>
             </View>
           </View>
 

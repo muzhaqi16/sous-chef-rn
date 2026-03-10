@@ -7,6 +7,7 @@ import {
   type MealPlanItemFragment,
   GetMealPlanDocument } from '#generated';
 import { toastService } from '#/services/toastService';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import {
   createAddToParentArrayUpdater,
   createRemoveFromParentArrayUpdater } from '#/apollo/utils/cacheUpdaters';
@@ -71,6 +72,9 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       const hasRecipe = !!item.recipe;
       const deductFromPantry = options?.deductFromPantry;
 
+      // Persist optimistic completion state to survive cache-and-network refetches while offline
+      optimisticDataPersistence.save('MealPlanItem', item.id, 'isCompleted', markingComplete);
+
       const result = await updateItemMutation({
         variables: {
           id: item.id,
@@ -99,6 +103,9 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         toastService.error(payload?.message ?? 'Failed to update meal');
         return null;
       }
+
+      // Clear persisted optimistic state on server confirmation
+      optimisticDataPersistence.clear('MealPlanItem', item.id, 'isCompleted');
 
       if (markingComplete) {
         if (hasRecipe && deductFromPantry) {

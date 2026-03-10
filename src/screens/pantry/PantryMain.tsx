@@ -41,6 +41,7 @@ import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
+import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
@@ -64,6 +65,8 @@ const onScreenFocus = () => {
 const PantryMainInner: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
   useUnistyles();
+  // Restore persisted optimistic field values (e.g. quantity, status) from offline storage
+  useOptimisticDataRestorationMultiple(['Pantry', 'PantryItem']);
   const { setOverlayOpen } = useTabBarSetters();
   // User name/avatar come from the auth store (populated during login)
   // so the greeting renders immediately without a separate GetUserProfile query

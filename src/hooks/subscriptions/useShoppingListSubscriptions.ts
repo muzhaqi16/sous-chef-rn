@@ -39,11 +39,14 @@ import {
 
 /** Re-sort shopping list edges by sortOrder after a subscription update.
  *
- * Uses cache.modify so the modifier runs once per storeFieldName variant,
- * automatically sorting unfiltered, isPurchased:false, and isPurchased:true
- * cache entries of itemsConnection.
+ * Uses cache.modify so the modifier runs once per storeFieldName variant.
+ * When `targetVariant` is provided, only the matching cache variant is sorted;
+ * non-matching variants are returned unchanged to avoid unnecessary work.
+ *
+ * @param targetVariant - Optional substring to match against storeFieldName
+ *   (e.g., `'"isPurchased":false'`). If omitted, all variants are sorted.
  */
-function resortEdges(cache: ApolloCache, shoppingListId: string): void {
+function resortEdges(cache: ApolloCache, shoppingListId: string, targetVariant?: string): void {
   executeCacheUpdate(
     () => {
       const t0 = __DEV__ ? performance.now() : 0;
@@ -57,11 +60,22 @@ function resortEdges(cache: ApolloCache, shoppingListId: string): void {
       cache.modify({
         id: parentCacheId,
         fields: {
-          itemsConnection(existing: any, { readField }: any) {
+          itemsConnection(existing: any, { readField, storeFieldName }: any) {
             if (!existing?.edges?.length) return existing;
 
+            // Skip sorting for non-matching variants when a target is specified
+            if (targetVariant && !storeFieldName.includes(targetVariant)) {
+              if (__DEV__) {
+                console.log(`📊 [resortEdges] skipped variant: ${storeFieldName}`);
+              }
+              return existing;
+            }
+
             if (__DEV__) {
-              console.log(`📊 [resortEdges] variant edge count: ${existing.edges.length}`);
+              if (!storeFieldName.includes('isPurchased') && !storeFieldName.includes('filters')) {
+                console.warn(`⚠️ [resortEdges] unexpected storeFieldName format: ${storeFieldName}`);
+              }
+              console.log(`📊 [resortEdges] sorting variant: ${storeFieldName} (${existing.edges.length} edges)`);
             }
 
             const sortedEdges = [...existing.edges].sort((a: any, b: any) => {
@@ -236,19 +250,32 @@ export function useShoppingListSubscriptions(
                 ? moveShoppingListItemToPurchased
                 : moveShoppingListItemToUnpurchased;
 
+              // Sort only the destination variant after the move
+              const sortVariant = isCompletedMutation
+                ? '"isPurchased":true'
+                : '"isPurchased":false';
+
               scheduleAnimation(item.id, direction, () => {
                 // PERF: Batch move + sort into a single cache notification
                 client.cache.batch({
                   update(cache: ApolloCache) {
                     moveOp(cache, selectedShoppingListId, item);
                     if (sortOrderChanged) {
-                      resortEdges(cache, selectedShoppingListId);
+                      resortEdges(cache, selectedShoppingListId, sortVariant);
                     }
                   },
                 });
                 scheduleEntryAnimation?.(item.id, direction);
               });
             } else {
+              // Determine which variant to sort: completed→purchased, uncompleted→unpurchased,
+              // otherwise sort all variants (general ItemUpdated — variant unknown)
+              const nonAnimSortVariant = isCompletedMutation
+                ? '"isPurchased":true'
+                : isUncompletedMutation
+                  ? '"isPurchased":false'
+                  : undefined;
+
               // PERF: Non-animated path — batch ALL cache operations into a single
               // observer notification. This prevents cascading re-renders when
               // writeFragment + move + sort would otherwise trigger 2-3 notifications.
@@ -268,7 +295,7 @@ export function useShoppingListSubscriptions(
                   }
 
                   if (sortOrderChanged) {
-                    resortEdges(cache, selectedShoppingListId);
+                    resortEdges(cache, selectedShoppingListId, nonAnimSortVariant);
                   }
                 },
               });

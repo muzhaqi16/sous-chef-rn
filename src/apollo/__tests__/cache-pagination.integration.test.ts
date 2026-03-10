@@ -568,7 +568,127 @@ describe('cache pagination integration', () => {
   });
 
   // =========================================================================
-  // Section D: Pantry.itemsConnection (inline merge)
+  // Section C.2: itemsConnectionFieldPolicy — bounded edge window
+  //   Verifies MAX_WINDOW_EDGES eviction behavior
+  // =========================================================================
+
+  describe('itemsConnectionFieldPolicy bounded edge window', () => {
+    const QUERY = gql`
+      query GetList($id: ID!, $after: String) {
+        shoppingList(id: $id) {
+          id
+          itemsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+
+    const itemEdge = (id: string, name: string) =>
+      buildEdge('ShoppingListItem', 'ShoppingListItemEdge', { id, name });
+
+    const writeConn = (
+      cache: ReturnType<typeof makeCache>,
+      edges: ReturnType<typeof buildEdge>[],
+      pageInfo: { hasNextPage: boolean; endCursor: string | null },
+      vars?: Record<string, unknown>,
+      totalCount?: number,
+    ) => {
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'list-1', ...vars },
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: buildConnection(
+              'ShoppingListItemConnection',
+              edges,
+              pageInfo,
+              totalCount,
+            ),
+          },
+        },
+      });
+    };
+
+    const readEdges = (cache: ReturnType<typeof makeCache>) => {
+      const result: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'list-1' },
+      });
+      return result?.shoppingList?.itemsConnection?.edges ?? [];
+    };
+
+    it('initial load within window limit retains all edges', () => {
+      const cache = makeCache();
+
+      const edges = Array.from({ length: 50 }, (_, i) =>
+        itemEdge(`si-${i}`, `Item ${i}`),
+      );
+      writeConn(cache, edges, { hasNextPage: true, endCursor: 'c50' }, undefined, 200);
+
+      expect(readEdges(cache)).toHaveLength(50);
+    });
+
+    it('evicts oldest edges when exceeding window limit', () => {
+      const cache = makeCache();
+
+      // Write 100 edges as page 1
+      const page1 = Array.from({ length: 100 }, (_, i) =>
+        itemEdge(`si-${i}`, `Item ${i}`),
+      );
+      writeConn(cache, page1, { hasNextPage: true, endCursor: 'c100' }, undefined, 300);
+
+      // Write 60 more edges as page 2 (total would be 160, exceeding 150)
+      const page2 = Array.from({ length: 60 }, (_, i) =>
+        itemEdge(`si-${100 + i}`, `Item ${100 + i}`),
+      );
+      writeConn(cache, page2, { hasNextPage: true, endCursor: 'c160' }, { after: 'c100' }, 300);
+
+      const edges = readEdges(cache);
+      // Should be capped at 150
+      expect(edges).toHaveLength(150);
+      // Oldest 10 edges (si-0 through si-9) should be evicted
+      const ids = edges.map((e: any) => e.node.id);
+      expect(ids).not.toContain('si-0');
+      expect(ids).not.toContain('si-9');
+      expect(ids).toContain('si-10');
+      expect(ids).toContain('si-159');
+    });
+
+    it('background refetch within window limit does not evict', () => {
+      const cache = makeCache();
+
+      // Write 100 edges
+      const page1 = Array.from({ length: 100 }, (_, i) =>
+        itemEdge(`si-${i}`, `Item ${i}`),
+      );
+      writeConn(cache, page1, { hasNextPage: true, endCursor: 'c100' }, undefined, 200);
+
+      // Background refetch returns first 50 (no cursor, hasNextPage:true)
+      const refetch = Array.from({ length: 50 }, (_, i) =>
+        itemEdge(`si-${i}`, `Item ${i}`),
+      );
+      writeConn(cache, refetch, { hasNextPage: true, endCursor: 'c50' }, undefined, 200);
+
+      // All 100 should still be there (deduped, within limit)
+      expect(readEdges(cache)).toHaveLength(100);
+    });
+  });
+
+  // =========================================================================
+  // Section D: Pantry.itemsConnection (shared policy)
   //   keyArgs = ['filters', 'orderBy']
   // =========================================================================
 
@@ -975,7 +1095,294 @@ describe('cache pagination integration', () => {
   });
 
   // =========================================================================
-  // Section G: ApolloClient-level integration with MockLink
+  // Section G: pageInfo preservation on background refetch
+  //
+  // Verifies that when cache has accumulated pages 1+2 (hasNextPage:false),
+  // a background refetch returning page 1 only (hasNextPage:true) does NOT
+  // overwrite the accumulated pageInfo.
+  // =========================================================================
+
+  describe('pageInfo preservation on background refetch', () => {
+    const QUERY = gql`
+      query GetPantry($id: ID!, $after: String) {
+        pantry(id: $id) {
+          id
+          itemsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+
+    const piEdge = (id: string, name: string) =>
+      buildEdge('PantryItem', 'PantryItemEdge', { id, name });
+
+    const writeConn = (
+      cache: ReturnType<typeof makeCache>,
+      edges: ReturnType<typeof buildEdge>[],
+      pageInfo: { hasNextPage: boolean; endCursor: string | null },
+      vars?: Record<string, unknown>,
+      totalCount?: number,
+    ) => {
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'p-1', ...vars },
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: 'p-1',
+            itemsConnection: buildConnection(
+              'PantryItemConnection',
+              edges,
+              pageInfo,
+              totalCount,
+            ),
+          },
+        },
+      });
+    };
+
+    const readConnection = (cache: ReturnType<typeof makeCache>) => {
+      const result: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'p-1' },
+      });
+      return result?.pantry?.itemsConnection;
+    };
+
+    it('preserves hasNextPage:false after background refetch returns hasNextPage:true', () => {
+      const cache = makeCache();
+
+      // Page 1 (3 items, hasNextPage:true)
+      writeConn(
+        cache,
+        [piEdge('pi-1', 'A'), piEdge('pi-2', 'B'), piEdge('pi-3', 'C')],
+        { hasNextPage: true, endCursor: 'c3' },
+        undefined,
+        5,
+      );
+
+      // Page 2 (2 items, hasNextPage:false — all loaded)
+      writeConn(
+        cache,
+        [piEdge('pi-4', 'D'), piEdge('pi-5', 'E')],
+        { hasNextPage: false, endCursor: 'c5' },
+        { after: 'c3' },
+        5,
+      );
+
+      let conn = readConnection(cache);
+      expect(conn.edges).toHaveLength(5);
+      expect(conn.pageInfo.hasNextPage).toBe(false);
+      expect(conn.pageInfo.endCursor).toBe('c5');
+
+      // Background refetch: page 1 only (hasNextPage:true)
+      // This simulates cache-and-network re-fetching the initial query
+      writeConn(
+        cache,
+        [piEdge('pi-1', 'A'), piEdge('pi-2', 'B'), piEdge('pi-3', 'C')],
+        { hasNextPage: true, endCursor: 'c3' },
+        undefined,
+        5,
+      );
+
+      conn = readConnection(cache);
+      // Edges must be preserved
+      expect(conn.edges).toHaveLength(5);
+      // pageInfo must NOT be overwritten — hasNextPage should remain false
+      expect(conn.pageInfo.hasNextPage).toBe(false);
+      expect(conn.pageInfo.endCursor).toBe('c5');
+    });
+
+    it('does NOT preserve pageInfo when refetch has hasNextPage:false (shrinkage)', () => {
+      const cache = makeCache();
+
+      writeConn(
+        cache,
+        [piEdge('pi-1', 'A'), piEdge('pi-2', 'B')],
+        { hasNextPage: true, endCursor: 'c2' },
+        undefined,
+        3,
+      );
+      writeConn(
+        cache,
+        [piEdge('pi-3', 'C')],
+        { hasNextPage: false, endCursor: 'c3' },
+        { after: 'c2' },
+        3,
+      );
+
+      // Refetch with fewer items and hasNextPage:false — replaces entirely
+      writeConn(
+        cache,
+        [piEdge('pi-1', 'A')],
+        { hasNextPage: false, endCursor: 'c1' },
+        undefined,
+        1,
+      );
+
+      const conn = readConnection(cache);
+      expect(conn.edges).toHaveLength(1);
+      expect(conn.pageInfo.hasNextPage).toBe(false);
+      expect(conn.pageInfo.endCursor).toBe('c1');
+    });
+  });
+
+  // =========================================================================
+  // Section H: Stable reference on no-change merge
+  //
+  // Verifies that when edges, pageInfo, and totalCount are all unchanged,
+  // the merge returns the exact same object reference to prevent re-renders.
+  // =========================================================================
+
+  describe('stable reference on no-change merge', () => {
+    const QUERY = gql`
+      query GetHome($id: ID!, $after: String) {
+        home(id: $id) {
+          id
+          shoppingListsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            totalCount
+          }
+        }
+      }
+    `;
+
+    const slEdge = (id: string, name: string) =>
+      buildEdge('ShoppingList', 'ShoppingListEdge', { id, name });
+
+    it('returns same reference when refetch has identical data', () => {
+      const cache = makeCache();
+
+      // Initial write
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: buildConnection(
+              'ShoppingListConnection',
+              [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')],
+              { hasNextPage: true, endCursor: 'c2' },
+              5,
+            ),
+          },
+        },
+      });
+
+      const result1: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+      });
+      const conn1 = result1?.home?.shoppingListsConnection;
+
+      // Refetch with same edges, same pageInfo, same totalCount
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: buildConnection(
+              'ShoppingListConnection',
+              [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')],
+              { hasNextPage: true, endCursor: 'c2' },
+              5,
+            ),
+          },
+        },
+      });
+
+      const result2: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+      });
+      const conn2 = result2?.home?.shoppingListsConnection;
+
+      // Should be the exact same object reference (stable)
+      expect(conn2).toBe(conn1);
+    });
+
+    it('returns new reference when totalCount changes', () => {
+      const cache = makeCache();
+
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: buildConnection(
+              'ShoppingListConnection',
+              [slEdge('sl-1', 'A')],
+              { hasNextPage: true, endCursor: 'c1' },
+              3,
+            ),
+          },
+        },
+      });
+
+      const result1: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+      });
+      const conn1 = result1?.home?.shoppingListsConnection;
+
+      // Refetch with same edges but different totalCount
+      cache.writeQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: buildConnection(
+              'ShoppingListConnection',
+              [slEdge('sl-1', 'A')],
+              { hasNextPage: true, endCursor: 'c1' },
+              5,
+            ),
+          },
+        },
+      });
+
+      const result2: any = cache.readQuery({
+        query: QUERY,
+        variables: { id: 'home-1' },
+      });
+      const conn2 = result2?.home?.shoppingListsConnection;
+
+      // Should be a new reference since totalCount changed
+      expect(conn2).not.toBe(conn1);
+      expect(conn2.totalCount).toBe(5);
+    });
+  });
+
+  // =========================================================================
+  // Section I: ApolloClient-level integration with MockLink
   //
   // Proves merge functions work through the full Apollo Client pipeline
   // (variable normalization, field policy matching, fetchMore).

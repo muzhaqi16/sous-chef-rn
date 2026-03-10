@@ -148,14 +148,14 @@ describe('usePantryQuery', () => {
     );
   });
 
-  it('passes itemsFirst as 50', () => {
+  it('passes itemsFirst as 20 (DEFAULT_PAGE_SIZES.SMALL)', () => {
     const { useGetPantryQuery } = require('#generated');
 
     renderHook(() => usePantryQuery('pantry-1'));
 
     expect(useGetPantryQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        variables: expect.objectContaining({ itemsFirst: 50 }),
+        variables: expect.objectContaining({ itemsFirst: 20 }),
       }),
     );
   });

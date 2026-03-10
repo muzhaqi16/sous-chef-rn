@@ -20,6 +20,7 @@ import {
 import { RecipeInformation } from '#/services/recipeApi/types';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { toastService } from '#/services/toastService';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
 /**
  * Represents a recipe that has been preloaded to the backend
@@ -116,6 +117,9 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
           };
         },
       );
+
+      // Persist optimistic favorite state to survive cache-and-network refetches while offline
+      optimisticDataPersistence.save('SavedRecipe', savedRecipe.recipe.id, 'isFavorited', true);
 
       // Update SavedRecipeFolders cache if a folder was specified
       const folder = savedRecipe.folder;
@@ -324,6 +328,9 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     setSavingToFavorites(false);
 
     if (!result) return { success: false };
+
+    // Clear persisted optimistic favorite state on server confirmation
+    optimisticDataPersistence.clear('SavedRecipe', recipeId, 'isFavorited');
 
     toastService.success('Recipe saved to your collection!');
     onFavoriteSuccess?.();

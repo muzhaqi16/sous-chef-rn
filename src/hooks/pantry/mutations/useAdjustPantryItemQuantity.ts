@@ -13,6 +13,7 @@ import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
   getVersionConflictMessage } from '#/utils/errors/versionConflict';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -51,9 +52,18 @@ export function useAdjustPantryItemQuantity({
             fragment: PantryItemDisplayFragmentDoc,
             fragmentName: 'PantryItemDisplay',
             data: pantryItem });
+
+          // Persist optimistic quantity to survive cache-and-network refetches while offline
+          optimisticDataPersistence.save(
+            'PantryItem',
+            pantryItemId,
+            'quantity',
+            newQuantity,
+          );
         } });
 
       if (result.data?.adjustPantryItemQuantity?.pantryItem) {
+        optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
         onSuccess?.();
         return true;
       }

@@ -248,4 +248,42 @@ describe('usePagination', () => {
       await loadMorePromise!;
     });
   });
+
+  it('concurrent loadMore calls: ref guard prevents duplicate fetches even before state updates', async () => {
+    // executeMutation returns a slow promise so both calls overlap
+    let resolveFetch!: () => void;
+    jest.mocked(executeMutation).mockImplementation(
+      () =>
+        new Promise<void>(resolve => {
+          resolveFetch = resolve;
+        }),
+    );
+
+    const { result } = renderHook(() =>
+      usePagination({
+        pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
+        loading: false,
+        itemCount: 10,
+        fetchMore: mockFetchMore,
+      }),
+    );
+
+    // Fire two loadMore calls synchronously in the same act() — simulates
+    // two rapid onEndReached events before React can batch state updates
+    let promise1: Promise<void>;
+    let promise2: Promise<void>;
+    act(() => {
+      promise1 = result.current.loadMore();
+      promise2 = result.current.loadMore();
+    });
+
+    // Only one executeMutation call should have gone through
+    expect(executeMutation).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveFetch();
+      await promise1!;
+      await promise2!;
+    });
+  });
 });

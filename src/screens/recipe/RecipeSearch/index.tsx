@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { commonStyles } from '#/styles/commonStyles';
 import { ListTemplate } from '#components/templates/ListTemplate';
 import { SearchBar, type SearchBarAction } from '#components/molecules/SearchBar';
@@ -46,22 +47,27 @@ IngredientItem.displayName = 'IngredientItem';
 
 const ingredientKeyExtractor = (item: any) => item.id;
 
-const IngredientRenderItem = ({ item }: { item: any }) => {
+interface IngredientRenderItemProps {
+  item: any;
+  primaryColor: string;
+  textSecondary: string;
+}
+
+const IngredientRenderItem = ({ item, primaryColor, textSecondary }: IngredientRenderItemProps) => {
   const { selectedIngredients, toggleIngredient } = useIngredientSelector();
-  const { theme } = useUnistyles();
   const itemName = item.itemName || '';
   return (
     <IngredientItem
       name={itemName}
       selected={selectedIngredients.has(itemName)}
       onToggle={toggleIngredient}
-      primaryColor={theme.colors.primary}
-      textSecondary={theme.colors.textSecondary}
+      primaryColor={primaryColor}
+      textSecondary={textSecondary}
     />
   );
 };
 
-const renderIngredientItem = ({ item }: { item: any }) => <IngredientRenderItem item={item} />;
+const getIngredientItemType = () => 'item' as const;
 
 const RecipeSearchContent: React.FC<{
   items: any[];
@@ -221,9 +227,16 @@ export const RecipeSearch: React.FC = () => {
           <FlashList
             data={pantryItems}
             keyExtractor={ingredientKeyExtractor}
-            renderItem={renderIngredientItem}
+            renderItem={({ item }: { item: any }) => (
+              <IngredientRenderItem
+                item={item}
+                primaryColor={theme.colors.primary}
+                textSecondary={theme.colors.textSecondary}
+              />
+            )}
+            getItemType={getIngredientItemType}
             extraData={selectedIngredients.size}
-            drawDistance={200}
+            {...FLASHLIST_DEFAULTS.bottomSheet}
             style={styles.ingredientList}
             contentContainerStyle={styles.ingredientListContent}
             ListEmptyComponent={<Text style={styles.emptyText}>No pantry items available</Text>}

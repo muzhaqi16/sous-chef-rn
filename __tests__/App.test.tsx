@@ -38,7 +38,16 @@ jest.mock('../src/apollo/client', () => ({
   },
 }));
 jest.mock('../src/apollo/offlineQueue/queueManager', () => ({
-  queueManager: { onOnline: jest.fn(), onOffline: jest.fn(), processQueue: jest.fn() },
+  queueManager: { onOnline: jest.fn(), onOffline: jest.fn(), processQueue: jest.fn(), setFailureHandler: jest.fn() },
+}));
+jest.mock('../src/apollo/offline/OptimisticDataPersistence', () => ({
+  optimisticDataPersistence: { clearEntity: jest.fn() },
+}));
+jest.mock('../src/services/toastService', () => ({
+  toastService: { error: jest.fn() },
+}));
+jest.mock('../src/apollo/offlineQueue/queueStore', () => ({
+  queueStore: { removeMutation: jest.fn() },
 }));
 
 describe('App module', () => {

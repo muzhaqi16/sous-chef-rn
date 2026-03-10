@@ -7,6 +7,7 @@ import { Icon } from '#utils/iconUtils';
 import { BackButton } from '#components/atoms/BackButton';
 import { commonStyles } from '#/styles/commonStyles';
 import { createPropsComparator } from '#utils/memoUtils';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { PurchaseHistoryProvider, usePurchaseHistoryContext } from './PurchaseHistoryContext';
 
 const keyExtractor = (item: { id: string }) => item.id;
@@ -45,10 +46,11 @@ const formatDate = (dateString: string) => {
 
 // --- Module-scope FlashList components ---
 
-type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem>;
+type PurchaseHistoryItemProps = ListRenderItemInfo<PurchaseItem> & {
+  iconSecondaryColor: string;
+};
 
-const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({ item: purchase, index }) => {
-  const { theme } = useUnistyles();
+const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({ item: purchase, index, iconSecondaryColor }) => {
   const { totalCount } = usePurchaseHistoryContext();
 
   return (
@@ -69,7 +71,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({ item
           <Icon
             name="cube-outline"
             size={18}
-            color={theme.colors.iconSecondary}
+            color={iconSecondaryColor}
           />
           <Text style={styles.purchaseDetailLabel}>Quantity:</Text>
           <Text style={styles.purchaseDetailValue}>
@@ -82,7 +84,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({ item
             <Icon
               name="person-outline"
               size={18}
-              color={theme.colors.iconSecondary}
+              color={iconSecondaryColor}
             />
             <Text style={styles.purchaseDetailLabel}>
               Purchased by:
@@ -100,7 +102,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({ item
 
 // PERFORMANCE: Custom comparator for React.memo
 const arePurchaseItemPropsEqual = createPropsComparator<PurchaseHistoryItemProps>({
-  referenceKeys: ['index'],
+  referenceKeys: ['index', 'iconSecondaryColor'],
   nestedComparisons: {
     item: ['id', 'purchaseDate', 'quantity', 'unitSymbol'],
   },
@@ -108,9 +110,7 @@ const arePurchaseItemPropsEqual = createPropsComparator<PurchaseHistoryItemProps
 
 const PurchaseHistoryItem = React.memo(PurchaseHistoryItemComponent, arePurchaseItemPropsEqual);
 
-const renderItem = (info: ListRenderItemInfo<PurchaseItem>) => (
-  <PurchaseHistoryItem {...info} />
-);
+const getPurchaseItemType = () => 'item' as const;
 
 const PurchaseHistoryHeader: React.FC<{ totalCount: number }> = ({ totalCount }) => (
   <View style={styles.statsContainer}>
@@ -165,8 +165,11 @@ export const PurchaseHistoryScreen: React.FC<{
         <FlashList
           data={purchases}
           keyExtractor={keyExtractor}
-          drawDistance={200}
-          renderItem={renderItem}
+          renderItem={(info: ListRenderItemInfo<PurchaseItem>) => (
+            <PurchaseHistoryItem {...info} iconSecondaryColor={theme.colors.iconSecondary} />
+          )}
+          getItemType={getPurchaseItemType}
+          {...FLASHLIST_DEFAULTS.fullScreen}
           ListHeaderComponent={purchases.length > 0 ? <PurchaseHistoryHeader totalCount={purchases.length} /> : null}
           ListEmptyComponent={PurchaseHistoryEmpty}
           contentContainerStyle={styles.content}

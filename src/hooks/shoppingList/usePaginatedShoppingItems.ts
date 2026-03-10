@@ -57,7 +57,13 @@ let _prevPurchasedEdgesRef: unknown = null;
  */
 const extractItemsCache = new WeakMap<readonly ItemEdge[], ShoppingListItemDisplayFragment[]>();
 
-function extractItems(edges: readonly ItemEdge[] | null | undefined): ShoppingListItemDisplayFragment[] {
+// Structural fingerprint: track the last result to return stable references
+// when edge array identity changes but content (node IDs + order) is the same.
+let _lastFingerprint = '';
+let _lastResult: ShoppingListItemDisplayFragment[] = EMPTY_ITEMS;
+
+/** @visibleForTesting */
+export function extractItems(edges: readonly ItemEdge[] | null | undefined): ShoppingListItemDisplayFragment[] {
   if (!edges || edges.length === 0) return EMPTY_ITEMS;
   const cached = extractItemsCache.get(edges);
   if (cached) return cached;
@@ -67,6 +73,17 @@ function extractItems(edges: readonly ItemEdge[] | null | undefined): ShoppingLi
       return node && node.id && node.itemName;
     })
     .map(edge => edge.node);
+
+  // Structural stability: if node IDs in the same order match the last result,
+  // reuse the previous array reference to prevent unnecessary FlashList diffing.
+  const fingerprint = result.map(n => n.id).join(',');
+  if (fingerprint === _lastFingerprint && _lastResult.length === result.length) {
+    extractItemsCache.set(edges, _lastResult);
+    return _lastResult;
+  }
+
+  _lastFingerprint = fingerprint;
+  _lastResult = result;
   extractItemsCache.set(edges, result);
   return result;
 }

@@ -46,6 +46,7 @@ import {
   type MealPlanItemFragment,
   type MealTemplateDisplayFragment } from '#generated';
 import { toastService } from '#/services/toastService';
+import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 
 async function executeMealPlanRefresh(
   refetchFn: () => Promise<unknown>,
@@ -84,6 +85,8 @@ export const MealPlanMain: React.FC = () => (
 const MealPlanMainInner: React.FC = () => {
   const { theme } = useUnistyles();
   const { navigate } = useAppNavigation();
+  // Restore persisted optimistic field values (e.g. isCompleted) from offline storage
+  useOptimisticDataRestorationMultiple(['MealPlan', 'MealPlanItem']);
   const { setOverlayOpen } = useTabBarSetters();
 
   // Plan selector state

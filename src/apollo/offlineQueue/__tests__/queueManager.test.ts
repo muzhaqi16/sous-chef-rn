@@ -1105,6 +1105,265 @@ describe('QueueManager', () => {
   });
 
   // -------------------------------------------------------------------------
+  // setFailureHandler / invokeFailureHandler / extractEntityInfo
+  // -------------------------------------------------------------------------
+  describe('setFailureHandler and failure invocation', () => {
+    let invokeFailureHandler: (mutation: QueuedMutation, error: any) => void;
+    let extractEntityInfo: (mutation: QueuedMutation) => { entityType: string | null; entityId: string | null };
+
+    beforeEach(() => {
+      invokeFailureHandler = (manager as any).invokeFailureHandler.bind(manager);
+      extractEntityInfo = (manager as any).extractEntityInfo.bind(manager);
+    });
+
+    it('stores the failure handler via setFailureHandler', () => {
+      const handler = jest.fn();
+      manager.setFailureHandler(handler);
+
+      const mutation = makeMutation({ id: 'fail-h-1', operationName: 'UpdatePantryItem', variables: { input: { id: 'item-1' } } });
+      invokeFailureHandler(mutation, { type: 'unknown', message: 'fail', timestamp: Date.now(), retryable: false });
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mutationId: 'fail-h-1',
+          operationName: 'UpdatePantryItem',
+          entityType: 'PantryItem',
+          entityId: 'item-1',
+        }),
+      );
+    });
+
+    it('replaces previous handler when called again', () => {
+      const handler1 = jest.fn();
+      const handler2 = jest.fn();
+      manager.setFailureHandler(handler1);
+      manager.setFailureHandler(handler2);
+
+      const mutation = makeMutation({ id: 'replace-1', operationName: 'TestMutation' });
+      invokeFailureHandler(mutation, { type: 'unknown', message: 'fail', timestamp: Date.now(), retryable: false });
+
+      expect(handler1).not.toHaveBeenCalled();
+      expect(handler2).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not crash when no failure handler is registered', () => {
+      // Manager has no handler set (fresh instance)
+      const mutation = makeMutation({ id: 'no-handler-1' });
+      expect(() => {
+        invokeFailureHandler(mutation, { type: 'unknown', message: 'fail', timestamp: Date.now(), retryable: false });
+      }).not.toThrow();
+    });
+
+    it('catches and logs handler errors without crashing', () => {
+      const { logger } = require('#/utils/environment');
+      const throwingHandler = jest.fn(() => { throw new Error('handler boom'); });
+      manager.setFailureHandler(throwingHandler);
+
+      const mutation = makeMutation({ id: 'throw-1' });
+      expect(() => {
+        invokeFailureHandler(mutation, { type: 'unknown', message: 'fail', timestamp: Date.now(), retryable: false });
+      }).not.toThrow();
+
+      expect(logger.error).toHaveBeenCalledWith(
+        'Queue: Failure handler threw an error:',
+        expect.any(Error),
+      );
+    });
+
+    it('passes error object in FailedMutationInfo', () => {
+      const handler = jest.fn();
+      manager.setFailureHandler(handler);
+
+      const error = { type: 'network', message: 'timeout', code: 'TIMEOUT', timestamp: 123, retryable: true };
+      const mutation = makeMutation({ id: 'err-pass-1', operationName: 'CreatePantryItem', variables: { input: { id: 'p1' } } });
+      invokeFailureHandler(mutation, error);
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ error }),
+      );
+    });
+
+    // --- extractEntityInfo ---
+    describe('extractEntityInfo', () => {
+      it('extracts PantryItem from pantry operations', () => {
+        const mutation = makeMutation({ operationName: 'UpdatePantryItem', variables: { input: { id: 'pi-1' } } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItem', entityId: 'pi-1' });
+      });
+
+      it('extracts PantryItem from Pantry-prefixed operations', () => {
+        const mutation = makeMutation({ operationName: 'CreatePantry', variables: { input: { id: 'p-1' } } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItem', entityId: 'p-1' });
+      });
+
+      it('extracts PantryItemBatch from batch operations', () => {
+        const mutation = makeMutation({ operationName: 'OpenPantryItemBatch', variables: { input: { batchId: 'b-1' } } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItemBatch', entityId: 'b-1' });
+      });
+
+      it('extracts ShoppingListItem from shopping list operations', () => {
+        const mutation = makeMutation({ operationName: 'ToggleShoppingListItemPurchased', variables: { id: 'sli-1' } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'ShoppingListItem', entityId: 'sli-1' });
+      });
+
+      it('extracts ShoppingListItem from ShoppingList-prefixed operations', () => {
+        const mutation = makeMutation({ operationName: 'AddItemToShoppingList', variables: { input: { id: 'sli-2' } } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'ShoppingListItem', entityId: 'sli-2' });
+      });
+
+      it('extracts MealPlanItem from meal plan item operations', () => {
+        const mutation = makeMutation({ operationName: 'UpdateMealPlanItem', variables: { input: { id: 'mpi-1' } } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'MealPlanItem', entityId: 'mpi-1' });
+      });
+
+      it('extracts MealPlan from meal plan operations (non-item)', () => {
+        const mutation = makeMutation({ operationName: 'CreateMealPlan', variables: { input: { id: 'mp-1' } } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'MealPlan', entityId: 'mp-1' });
+      });
+
+      it('extracts SavedRecipe from recipe operations', () => {
+        const mutation = makeMutation({ operationName: 'FavoriteRecipe', variables: { input: { recipeId: 'r-1' } } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'SavedRecipe', entityId: 'r-1' });
+      });
+
+      it('extracts SavedRecipe from Favorite-prefixed operations', () => {
+        const mutation = makeMutation({ operationName: 'UnfavoriteRecipe', variables: { input: { recipeId: 'r-2' } } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'SavedRecipe', entityId: 'r-2' });
+      });
+
+      it('extracts entityId from top-level id variable', () => {
+        const mutation = makeMutation({ operationName: 'DeletePantryItem', variables: { id: 'top-1' } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItem', entityId: 'top-1' });
+      });
+
+      it('extracts entityId from input.pantryItemId', () => {
+        const mutation = makeMutation({ operationName: 'UpdatePantryItem', variables: { input: { pantryItemId: 'pid-1' } } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItem', entityId: 'pid-1' });
+      });
+
+      it('extracts entityId from input.itemId', () => {
+        const mutation = makeMutation({ operationName: 'MoveShoppingListItem', variables: { input: { itemId: 'iid-1' } } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'ShoppingListItem', entityId: 'iid-1' });
+      });
+
+      it('extracts entityId from clientId', () => {
+        const mutation = makeMutation({ operationName: 'CreatePantryItem', variables: { clientId: 'cid-1' } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItem', entityId: 'cid-1' });
+      });
+
+      it('returns null entityType for unknown operation names', () => {
+        const mutation = makeMutation({ operationName: 'DoSomethingRandom', variables: { id: 'x' } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: null, entityId: 'x' });
+      });
+
+      it('returns null entityId when no recognizable variables exist', () => {
+        const mutation = makeMutation({ operationName: 'UpdatePantryItem', variables: { foo: 'bar' } });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItem', entityId: null });
+      });
+
+      it('returns nulls when variables are undefined', () => {
+        const mutation = makeMutation({ operationName: 'UnknownOp', variables: undefined as any });
+        expect(extractEntityInfo(mutation)).toEqual({ entityType: null, entityId: null });
+      });
+    });
+
+    // --- Integration: handleMutationError invokes failure handler ---
+    describe('handleMutationError invokes failure handler', () => {
+      let handleMutationError: (mutation: QueuedMutation, error: any) => Promise<any>;
+
+      beforeEach(() => {
+        handleMutationError = (manager as any).handleMutationError.bind(manager);
+        mockedGetState.mockReturnValue({
+          user: { id: 'user-1' },
+          accessToken: 'token',
+          isOnline: true,
+        });
+      });
+
+      it('invokes failure handler for non-retryable errors', async () => {
+        const handler = jest.fn();
+        manager.setFailureHandler(handler);
+
+        const mutation = makeMutation({ id: 'non-retry-1', operationName: 'UpdatePantryItem', variables: { input: { id: 'item-x' } } });
+        const error = { message: 'Validation error: invalid' };
+
+        await handleMutationError(mutation, error);
+
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mutationId: 'non-retry-1',
+            operationName: 'UpdatePantryItem',
+            entityType: 'PantryItem',
+            entityId: 'item-x',
+          }),
+        );
+      });
+
+      it('invokes failure handler when max retries exceeded', async () => {
+        const handler = jest.fn();
+        manager.setFailureHandler(handler);
+
+        const mutation = makeMutation({
+          id: 'max-retry-1',
+          operationName: 'ToggleShoppingListItemPurchased',
+          variables: { id: 'sli-99' },
+          retryCount: 3,
+          maxRetries: 3,
+        });
+        const error = { message: 'Network error' };
+
+        await handleMutationError(mutation, error);
+
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mutationId: 'max-retry-1',
+            entityType: 'ShoppingListItem',
+            entityId: 'sli-99',
+          }),
+        );
+      });
+    });
+
+    // --- Integration: handleAuthError invokes failure handler ---
+    describe('handleAuthError invokes failure handler on token refresh failure', () => {
+      let handleAuthError: (mutation: QueuedMutation, error: any) => Promise<any>;
+
+      beforeEach(() => {
+        handleAuthError = (manager as any).handleAuthError.bind(manager);
+        // Token refresh will fail (no accessToken)
+        mockedGetState.mockReturnValue({
+          user: { id: 'user-1' },
+          accessToken: null,
+          isOnline: true,
+        });
+      });
+
+      it('invokes failure handler when token refresh fails', async () => {
+        const handler = jest.fn();
+        manager.setFailureHandler(handler);
+
+        jest.useRealTimers();
+        const mutation = makeMutation({ id: 'auth-fail-h', operationName: 'FavoriteRecipe', variables: { input: { recipeId: 'r-10' } } });
+        const error = { type: 'auth', message: 'Unauthorized', timestamp: Date.now(), retryable: true };
+        await handleAuthError(mutation, error);
+        jest.useFakeTimers();
+
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mutationId: 'auth-fail-h',
+            operationName: 'FavoriteRecipe',
+            entityType: 'SavedRecipe',
+            entityId: 'r-10',
+          }),
+        );
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // mergeMoveItemMutations - ReorderShoppingListItems legacy
   // -------------------------------------------------------------------------
   describe('mergeMoveItemMutations - legacy operations', () => {

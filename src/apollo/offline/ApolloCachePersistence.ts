@@ -3,8 +3,31 @@ import { storage } from '#storage/mmkv';
 import { Telemetry } from '#/services/telemetry';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
+const CRITICAL_CACHE_KEY = 'apollo-cache-v1-critical';
+const DEFERRED_CACHE_KEY = 'apollo-cache-v1-deferred';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
 const CURRENT_CACHE_VERSION = '1.1.4'; // Purge stale convertQuantity cache entries
+
+/**
+ * Typenames restored synchronously at startup (~30 entities, ~5KB).
+ * Everything else is deferred to requestIdleCallback.
+ */
+const CRITICAL_TYPENAMES = new Set([
+  'User',
+  'Home',
+  'NotificationPreferences',
+  'UserProfile',
+  'UserSettings',
+  'DietaryProfile',
+]);
+
+/** Special Apollo root keys that must always be in the critical partition */
+const CRITICAL_ROOT_KEYS = new Set([
+  'ROOT_QUERY',
+  'ROOT_MUTATION',
+  'ROOT_SUBSCRIPTION',
+  '__META',
+]);
 
 /**
  * Custom Apollo cache persistence using MMKV
@@ -38,6 +61,10 @@ class ApolloCachePersistence {
   private paused = false;
   private pendingWhilePaused = false;
   private pausedExtractor: (() => NormalizedCacheObject) | null = null;
+
+  // Dirty-key tracking: skip serialization when nothing actually changed
+  private dirtyKeys = new Set<string>();
+  private lastPersistedSnapshot: NormalizedCacheObject | null = null;
 
   /**
    * Load persisted cache from MMKV storage
@@ -79,6 +106,93 @@ class ApolloCachePersistence {
       this.clear();
       return null;
     }
+  }
+
+  /**
+   * Load only critical entities (ROOT_QUERY, User, Home, settings) from storage.
+   * Returns null if no split-key cache exists (triggers migration fallback).
+   */
+  loadCritical(): NormalizedCacheObject | null {
+    try {
+      const storedVersion = storage.getString(CACHE_VERSION_KEY);
+      if (storedVersion !== CURRENT_CACHE_VERSION) {
+        return null; // Caller falls back to load() for migration
+      }
+
+      const cacheString = storage.getString(CRITICAL_CACHE_KEY);
+      if (!cacheString) return null;
+
+      const cache = JSON.parse(cacheString) as NormalizedCacheObject;
+
+      if (__DEV__) {
+        console.log(
+          `📦 Cache: Loaded ${Object.keys(cache).length} critical entities from storage`,
+        );
+      }
+      return cache;
+    } catch (error) {
+      console.error('📦 Cache: Failed to load critical cache:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Load deferred (bulk) entities from storage.
+   * Called from requestIdleCallback after critical restore.
+   */
+  loadDeferred(): NormalizedCacheObject | null {
+    try {
+      const cacheString = storage.getString(DEFERRED_CACHE_KEY);
+      if (!cacheString) return null;
+
+      const t0 = performance.now();
+      const cache = JSON.parse(cacheString) as NormalizedCacheObject;
+      const elapsed = performance.now() - t0;
+
+      if (__DEV__) {
+        console.log(
+          `📦 Cache: Deferred restore ${Object.keys(cache).length} entities in ${elapsed.toFixed(1)}ms`,
+        );
+      }
+      return cache;
+    } catch (error) {
+      console.error('📦 Cache: Failed to load deferred cache:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Partition a normalized cache into critical and deferred buckets.
+   * Single-pass classification by cache key / __typename.
+   */
+  partitionCache(cache: NormalizedCacheObject): {
+    critical: NormalizedCacheObject;
+    deferred: NormalizedCacheObject;
+  } {
+    const critical: NormalizedCacheObject = {};
+    const deferred: NormalizedCacheObject = {};
+
+    for (const key in cache) {
+      if (this.isCriticalKey(key)) {
+        critical[key] = cache[key];
+      } else {
+        deferred[key] = cache[key];
+      }
+    }
+    return { critical, deferred };
+  }
+
+  /**
+   * Determine if a cache key belongs to the critical partition.
+   * Checks root keys first, then extracts typename from the "Type:id" format.
+   */
+  private isCriticalKey(key: string): boolean {
+    if (CRITICAL_ROOT_KEYS.has(key)) return true;
+    // Apollo cache keys follow the pattern "TypeName:id"
+    const colonIndex = key.indexOf(':');
+    if (colonIndex === -1) return false;
+    const typename = key.substring(0, colonIndex);
+    return CRITICAL_TYPENAMES.has(typename);
   }
 
   /**
@@ -126,6 +240,17 @@ class ApolloCachePersistence {
   }
 
   /**
+   * Mark cache keys as potentially dirty.
+   * Used by cache wrapper hooks to flag which entities may have changed,
+   * enabling the persist path to skip serialization when nothing changed.
+   */
+  markDirty(keys: string[]): void {
+    for (const key of keys) {
+      this.dirtyKeys.add(key);
+    }
+  }
+
+  /**
    * Schedule a lazy cache extraction and save (debounced)
    *
    * Unlike save(), this defers cache.extract() until after the debounce period,
@@ -155,19 +280,53 @@ class ApolloCachePersistence {
           // Extract cache data lazily - only runs once after debounce
           const cache = extractor();
           const tExtract = performance.now();
-          const cacheString = JSON.stringify(cache);
-          const tStringify = performance.now();
-          const sizeKB = Math.round(cacheString.length / 1024);
 
-          storage.set(CACHE_STORAGE_KEY, cacheString);
+          // Skip serialization if dirty keys haven't actually changed
+          if (this.lastPersistedSnapshot && this.dirtyKeys.size > 0) {
+            let hasChanges = false;
+            for (const key of this.dirtyKeys) {
+              if (cache[key] !== this.lastPersistedSnapshot[key]) {
+                hasChanges = true;
+                break;
+              }
+            }
+            // Also check if keys were added or removed
+            if (!hasChanges) {
+              const cacheKeys = Object.keys(cache).length;
+              const snapshotKeys = Object.keys(this.lastPersistedSnapshot).length;
+              hasChanges = cacheKeys !== snapshotKeys;
+            }
+            if (!hasChanges) {
+              this.dirtyKeys.clear();
+              if (__DEV__) {
+                console.log('💾 [CachePersist] skipped — no changes in dirty keys');
+              }
+              return;
+            }
+          }
+
+          const { critical, deferred } = this.partitionCache(cache);
+          const criticalString = JSON.stringify(critical);
+          const deferredString = JSON.stringify(deferred);
+          const tStringify = performance.now();
+          const sizeKB = Math.round(
+            (criticalString.length + deferredString.length) / 1024,
+          );
+
+          storage.set(CRITICAL_CACHE_KEY, criticalString);
+          storage.set(DEFERRED_CACHE_KEY, deferredString);
           storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
+          // Migration cleanup: remove old single-key format
+          storage.remove(CACHE_STORAGE_KEY);
+          this.lastPersistedSnapshot = cache;
+          this.dirtyKeys.clear();
 
           if (__DEV__) {
             const extractMs = (tExtract - t0).toFixed(2);
             const stringifyMs = (tStringify - tExtract).toFixed(2);
             const totalMs = (tStringify - t0).toFixed(2);
             console.log(
-              `💾 [CachePersist] extract=${extractMs}ms stringify=${stringifyMs}ms total=${totalMs}ms size=${sizeKB}KB entities=${Object.keys(cache).length}`
+              `💾 [CachePersist] extract=${extractMs}ms stringify=${stringifyMs}ms total=${totalMs}ms size=${sizeKB}KB critical=${Object.keys(critical).length} deferred=${Object.keys(deferred).length}`
             );
             Telemetry.histogram('cache_persist_extract_ms', tExtract - t0);
             Telemetry.histogram('cache_persist_stringify_ms', tStringify - tExtract);
@@ -212,11 +371,18 @@ class ApolloCachePersistence {
     }
 
     try {
-      const cacheString = JSON.stringify(cache);
-      const sizeKB = Math.round(cacheString.length / 1024);
+      const { critical, deferred } = this.partitionCache(cache);
+      const criticalString = JSON.stringify(critical);
+      const deferredString = JSON.stringify(deferred);
+      const sizeKB = Math.round(
+        (criticalString.length + deferredString.length) / 1024,
+      );
 
-      storage.set(CACHE_STORAGE_KEY, cacheString);
+      storage.set(CRITICAL_CACHE_KEY, criticalString);
+      storage.set(DEFERRED_CACHE_KEY, deferredString);
       storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
+      // Migration cleanup: remove old single-key format
+      storage.remove(CACHE_STORAGE_KEY);
 
       if (__DEV__) {
         console.log(`💾 Cache: Persisted cache immediately (${sizeKB} KB)`);
@@ -239,7 +405,11 @@ class ApolloCachePersistence {
       }
 
       storage.remove(CACHE_STORAGE_KEY);
+      storage.remove(CRITICAL_CACHE_KEY);
+      storage.remove(DEFERRED_CACHE_KEY);
       storage.remove(CACHE_VERSION_KEY);
+      this.lastPersistedSnapshot = null;
+      this.dirtyKeys.clear();
       if (__DEV__) {
         console.log('🧹 Cache: Cleared persisted cache');
       }
@@ -259,9 +429,32 @@ class ApolloCachePersistence {
     entityCount: number | null;
   } {
     try {
-      const cacheString = storage.getString(CACHE_STORAGE_KEY);
       const version = storage.getString(CACHE_VERSION_KEY);
 
+      // Try new split-key format first
+      const criticalString = storage.getString(CRITICAL_CACHE_KEY);
+      const deferredString = storage.getString(DEFERRED_CACHE_KEY);
+
+      if (criticalString || deferredString) {
+        const critical = criticalString
+          ? (JSON.parse(criticalString) as NormalizedCacheObject)
+          : {};
+        const deferred = deferredString
+          ? (JSON.parse(deferredString) as NormalizedCacheObject)
+          : {};
+        const totalSize =
+          (criticalString?.length ?? 0) + (deferredString?.length ?? 0);
+        return {
+          exists: true,
+          version: version || null,
+          sizeKB: Math.round(totalSize / 1024),
+          entityCount:
+            Object.keys(critical).length + Object.keys(deferred).length,
+        };
+      }
+
+      // Fallback to old single-key format
+      const cacheString = storage.getString(CACHE_STORAGE_KEY);
       if (!cacheString) {
         return {
           exists: false,
@@ -295,15 +488,15 @@ class ApolloCachePersistence {
    */
   isValid(): boolean {
     try {
-      // PERFORMANCE: Read both version and cache in single pass
       const storedVersion = storage.getString(CACHE_VERSION_KEY);
-      const cacheString = storage.getString(CACHE_STORAGE_KEY);
+      if (storedVersion !== CURRENT_CACHE_VERSION) return false;
 
-      return (
-        storedVersion === CURRENT_CACHE_VERSION &&
-        cacheString !== undefined &&
-        cacheString !== null
-      );
+      // Check new split-key format first, then old single-key
+      const hasCritical = storage.getString(CRITICAL_CACHE_KEY) != null;
+      if (hasCritical) return true;
+
+      const hasLegacy = storage.getString(CACHE_STORAGE_KEY) != null;
+      return hasLegacy;
     } catch {
       return false;
     }

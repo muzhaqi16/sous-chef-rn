@@ -10,6 +10,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
 interface ShoppingListItem {
   id: string;
@@ -219,6 +220,9 @@ export function useItemReordering<T extends ShoppingListItem>(
       },
     });
 
+    // Persist optimistic sortOrder to survive cache-and-network refetches while offline
+    optimisticDataPersistence.save('ShoppingListItem', itemId, 'sortOrder', newSortOrder);
+
     // Execute mutation (NO optimisticResponse - cache already updated above)
     const moveAfterItemId = afterItemId ?? undefined;
     const moveBeforeItemId = beforeItemId ?? undefined;
@@ -264,6 +268,9 @@ export function useItemReordering<T extends ShoppingListItem>(
     const serverVersion = serverItem?.version;
     const serverSortOrder = serverItem?.sortOrder;
     const originalVersion = currentItem.version;
+
+    // Server confirmed — clear persisted optimistic sortOrder
+    optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
 
     if (serverVersion === originalVersion) {
       // No-op move - item was already in correct position

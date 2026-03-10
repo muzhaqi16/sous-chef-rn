@@ -83,6 +83,14 @@ jest.mock('#generated', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
+jest.mock('#/hooks/offline/useOptimisticDataRestoration', () => ({
+  useOptimisticDataRestorationMultiple: jest.fn(),
+}));
+
+jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
+  optimisticDataPersistence: { save: jest.fn(), clear: jest.fn(), clearEntity: jest.fn() },
+}));
+
 // Top-level capturing mocks.
 // Using module-level handler variables avoids the jest.mock()-inside-test-body
 // antipattern: jest.mock() calls are hoisted, so only the last factory per

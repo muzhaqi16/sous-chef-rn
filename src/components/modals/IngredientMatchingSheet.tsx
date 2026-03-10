@@ -6,6 +6,8 @@ import {
   BottomSheetView } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
+import { createPropsComparator } from '#utils/memoUtils';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { IngredientMatchRow } from '#components/recipe/IngredientMatchRow';
 import {
@@ -18,14 +20,28 @@ import type {
 
 const keyExtractor = (item: EditableMatch) => item.match.ingredient.id;
 
-const IngredientMatchRenderItem = ({ item, index }: { item: EditableMatch; index: number }) => {
+const IngredientMatchRenderItemComponent = ({ item, index }: { item: EditableMatch; index: number }) => {
   const { onUpdate } = useIngredientMatchingActions();
   return <IngredientMatchRow editableMatch={item} index={index} onUpdate={onUpdate} />;
 };
 
+const areMatchPropsEqual = createPropsComparator<{ item: EditableMatch; index: number }>({
+  referenceKeys: ['index'],
+  nestedComparisons: {
+    item: ['adjustedQuantity', 'isIncluded'],
+    'item.match': [],
+    'item.match.ingredient': ['id', 'name'],
+  },
+});
+
+const IngredientMatchRenderItem = React.memo(IngredientMatchRenderItemComponent, areMatchPropsEqual);
+
 const renderItem = ({ item, index }: ListRenderItemInfo<EditableMatch>) => (
   <IngredientMatchRenderItem item={item} index={index} />
 );
+
+const getMatchItemType = (item: EditableMatch) =>
+  item.match.matchedPantryItem ? 'matched' : 'unmatched';
 
 interface IngredientMatchingSheetProps {
   visible: boolean;
@@ -98,7 +114,8 @@ export const IngredientMatchingSheet: React.FC<IngredientMatchingSheetProps> =
               data={editableMatches}
               renderItem={renderItem}
               keyExtractor={keyExtractor}
-              drawDistance={200}
+              getItemType={getMatchItemType}
+              {...FLASHLIST_DEFAULTS.bottomSheet}
               style={styles.list}
               showsVerticalScrollIndicator={false}
             />
