@@ -264,7 +264,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     onChangeText={setUnitValue}
                     placeholder="pcs, kg"
                     required
-                    onUnitSelected={(id, _name) => {
+                    onUnitSelected={(id) => {
                       setUnitId(id);
                     }}
                   />

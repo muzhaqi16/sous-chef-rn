@@ -88,8 +88,6 @@ export function useItemReordering<T extends ShoppingListItem>(
     itemId: string,
     afterItemId: string | null,
     beforeItemId: string | null,
-    _afterSortOrder: string | null,
-    _beforeSortOrder: string | null,
   ) => {
     if (!listId) return;
 

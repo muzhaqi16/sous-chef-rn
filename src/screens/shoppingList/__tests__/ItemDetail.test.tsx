@@ -30,7 +30,7 @@ jest.mock('#/styles/commonStyles', () => ({
 }));
 
 jest.mock('#components/templates/DetailTemplate', () => ({
-  DetailTemplate: ({ title, sections, headerActions: _headerActions }: any) => {
+  DetailTemplate: ({ title, sections }: any) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="detail-template">

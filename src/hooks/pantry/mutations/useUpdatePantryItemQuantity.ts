@@ -98,7 +98,6 @@ export function useUpdatePantryItemQuantity({
     quantityInput,
     quantityValue,
     unitId,
-    unitSymbol: _unitSymbol,
     trackingUnit,
     currentItem,
   }: UpdateQuantityParams): void => {

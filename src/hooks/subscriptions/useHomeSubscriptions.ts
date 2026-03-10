@@ -51,7 +51,7 @@ export function useHomeSubscriptions(userId?: string) {
     cacheUpdateStrategy: CacheStrategy.NONE,
     enableLogging: true,
     entityId: selectedHomeId,
-    customOnData: (payload: any, _client: any) => {
+    customOnData: (payload: any) => {
       if (!payload) return;
 
       const changeType = payload.changeType;

@@ -35,7 +35,6 @@ export const showLocalNotification = async ({
   id,
   title,
   body,
-  priority: _priority = 'default',
 }: LocalNotificationParams) => {
   try {
     // Create channel for Android (cached, only runs once per session)

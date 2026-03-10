@@ -53,7 +53,7 @@ jest.mock('#components/molecules/ItemSuggestionsList', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    ItemSuggestionsList: (_props: any) =>
+    ItemSuggestionsList: () =>
       R.createElement(RN.View, { testID: 'item-suggestions-list' }),
   };
 });

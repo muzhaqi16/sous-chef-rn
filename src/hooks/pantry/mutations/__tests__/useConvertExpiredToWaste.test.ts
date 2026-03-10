@@ -13,7 +13,7 @@ jest.mock('#generated', () => ({
 
 jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
-    handleApolloError: jest.fn((_error, _opts) => ({ message: 'Test error message' })),
+    handleApolloError: jest.fn(() => ({ message: 'Test error message' })),
   }),
 }));
 

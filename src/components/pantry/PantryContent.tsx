@@ -200,7 +200,6 @@ function computeItemDisplay(
     ),
     quantityBreakdownText: formatQuantityBreakdown(
       item.quantityBreakdown,
-      item.unit?.symbol,
     ),
     activeBatchCount: item.activeBatchCount,
   };

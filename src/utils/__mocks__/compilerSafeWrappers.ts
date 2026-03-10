@@ -29,7 +29,6 @@ export const executeCacheUpdate = jest.fn(
 export const executeQuery = jest.fn(
   async <T>(
     queryFn: () => Promise<T>,
-    _errorMsg: string,
   ): Promise<T | null> => {
     try {
       return await queryFn();
@@ -42,7 +41,6 @@ export const executeQuery = jest.fn(
 export const executeRefetch = jest.fn(
   async (
     refetchFn: () => Promise<unknown>,
-    _errorMsg: string,
   ): Promise<void> => {
     try {
       await refetchFn();

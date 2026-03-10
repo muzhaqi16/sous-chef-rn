@@ -327,16 +327,12 @@ export async function clearTempRegistrationPassword(): Promise<void> {
 }
 
 // Legacy support functions for the existing codebase
-export async function hasCredentialsForAccount(
-  _email: string,
-): Promise<boolean> {
+export async function hasCredentialsForAccount(): Promise<boolean> {
   // For the new simplified implementation, we just check if any credentials exist
   return hasCredentials();
 }
 
-export async function loadCredentialsForAccount(
-  _email: string,
-): Promise<{ username: string; password: string } | null> {
+export async function loadCredentialsForAccount(): Promise<{ username: string; password: string } | null> {
   // For the new simplified implementation, we just load the default credentials
   return loadCredentials();
 }

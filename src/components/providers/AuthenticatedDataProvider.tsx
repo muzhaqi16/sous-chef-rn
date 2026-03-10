@@ -18,9 +18,7 @@ interface AuthenticatedDataProviderProps {
  *
  * @param userId - The authenticated user's ID (required)
  */
-export const AuthenticatedDataProvider: React.FC<AuthenticatedDataProviderProps> = ({
-  userId: _userId,
-}) => {
+export const AuthenticatedDataProvider: React.FC<AuthenticatedDataProviderProps> = () => {
   // Initialize home defaults when user is authenticated
   // This runs ONCE on app start, not on every tab switch
   // The userId prop ensures this only runs for authenticated users

@@ -351,13 +351,13 @@ describe('keychain storage', () => {
 
   describe('legacy support functions', () => {
     it('hasCredentialsForAccount delegates to hasCredentials', async () => {
-      const result = await hasCredentialsForAccount('user@test.com');
+      const result = await hasCredentialsForAccount();
       expect(typeof result).toBe('boolean');
     });
 
     it('loadCredentialsForAccount delegates to loadCredentials', async () => {
       mockGetGenericPassword.mockResolvedValue(false);
-      const result = await loadCredentialsForAccount('user@test.com');
+      const result = await loadCredentialsForAccount();
       expect(result).toBeNull();
     });
 

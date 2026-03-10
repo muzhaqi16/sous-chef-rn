@@ -33,7 +33,7 @@ jest.mock('#/hooks/offline/useOptimisticDataRestoration', () => ({
 }));
 
 jest.mock('../ShoppingListMainContent', () => ({
-  ShoppingListMainContent: ({ screenData: _screenData }: any) => {
+  ShoppingListMainContent: () => {
     const { View, Text } = require('react-native');
     return (
       <View testID="shopping-list-main-content">

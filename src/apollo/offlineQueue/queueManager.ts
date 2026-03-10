@@ -279,7 +279,7 @@ export class QueueManager {
    * Uses sync mutations for offline-queued items to handle temp-IDs
    */
   private async executeMutation(mutation: QueuedMutation): Promise<any> {
-    const useSyncMutation = this.shouldUseSync(mutation);
+    const useSyncMutation = this.shouldUseSync();
 
     if (useSyncMutation) {
       return await this.executeSyncMutation(mutation);
@@ -511,7 +511,7 @@ export class QueueManager {
   /**
    * Determine if mutation should use sync endpoint
    */
-  private shouldUseSync(_mutation: QueuedMutation): boolean {
+  private shouldUseSync(): boolean {
     // Always use sync for offline-queued mutations
     // The sync mutations handle temp-IDs, version conflicts, and idempotency
     return true;

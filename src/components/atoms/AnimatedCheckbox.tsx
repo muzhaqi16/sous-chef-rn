@@ -16,7 +16,6 @@ type AnimatedCheckboxProps = {
   onPress?: () => void;
   size?: number;
   disabled?: boolean;
-  animationDuration?: number; // Duration for checkbox visual animation
   testID?: string;
 };
 
@@ -26,7 +25,6 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   onPress,
   size = 24,
   disabled = false,
-  animationDuration: _animationDuration = 400,
   testID }) => {
   const { theme } = useUnistyles();
   const isPressed = useSharedValue(false);
@@ -122,7 +120,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   );
 };
 
-const styles = StyleSheet.create(_theme => ({
+const styles = StyleSheet.create(() => ({
   container: {
     borderWidth: 2,
     justifyContent: 'center',

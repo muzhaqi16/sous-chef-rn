@@ -165,7 +165,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             onTogglePurchase(item.id);
           });
         }}
-        animationDuration={200}
         size={28}
         testID={`shopping-item-checkbox-${item.id}`}
       />

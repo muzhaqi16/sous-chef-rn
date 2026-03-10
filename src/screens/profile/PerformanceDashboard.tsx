@@ -30,7 +30,7 @@ export const PerformanceDashboard: React.FC = () => {
     state => state.clearPerformanceData,
   );
 
-  const [_clearCounter, setClearCounter] = useState(0);
+  const [, setClearCounter] = useState(0);
 
   // Derive sorted metrics from raw data
   const slowestComponents = [...componentMetrics.values()]
@@ -338,7 +338,7 @@ export const PerformanceDashboard: React.FC = () => {
               Last 5 memory measurements
             </Text>
             <View style={styles.memoryList}>
-              {recentMemorySnapshots.map((snapshot, _index) => (
+              {recentMemorySnapshots.map((snapshot) => (
                 <View key={snapshot.timestamp} style={styles.memoryItem}>
                   <View style={styles.memoryItemHeader}>
                     <Text style={styles.memoryTime}>

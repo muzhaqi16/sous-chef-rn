@@ -9,7 +9,6 @@ import { formatQuantity } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
 import { UsagePurpose, PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
-import type { SelectedUnitInfo } from '#hooks/pantry/useCompatibleUnits';
 import { PantryActionModal, type PantryActionSharedState } from './PantryActionModal';
 
 interface ConsumePantryItemModalProps {
@@ -42,7 +41,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   const [quantityInput, setQuantityInput] = useState('1');
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
 
-  const handleReset = (item: PantryItemFragment, _defaultUnit: SelectedUnitInfo | null) => {
+  const handleReset = (item: PantryItemFragment) => {
     const defaultIncrement = item.item?.defaultConsumeIncrement;
     setQuantityInput(defaultIncrement ? defaultIncrement.toString() : '1');
     setPurpose(UsagePurpose.General);

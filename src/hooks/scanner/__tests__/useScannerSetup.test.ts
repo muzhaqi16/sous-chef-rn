@@ -7,7 +7,7 @@ type ScannerOptions = Parameters<typeof useScannerSetup>[0];
 // Capture the handler passed to setScannerProps
 let capturedHandler: (() => void) | undefined;
 const mockSetScannerProps = jest.fn(
-  (handler?: () => void, _enabled?: boolean) => {
+  (handler?: () => void) => {
     capturedHandler = handler;
   },
 );

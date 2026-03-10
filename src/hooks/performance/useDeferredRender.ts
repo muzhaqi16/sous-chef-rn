@@ -10,7 +10,6 @@ import { useDeferredValue } from 'react';
  * React's concurrent scheduler is interruptible and cross-platform,
  * making it more reliable than manual idle detection.
  *
- * @param _delay - Unused, kept for backward compatibility
  * @returns boolean - true when it's safe to render heavy content
  *
  * @example
@@ -26,6 +25,6 @@ import { useDeferredValue } from 'react';
  * };
  * ```
  */
-export function useDeferredRender(_delay = 50): boolean {
+export function useDeferredRender(): boolean {
   return useDeferredValue(true, false);
 }

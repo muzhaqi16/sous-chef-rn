@@ -9,8 +9,8 @@ const mockCancelAllNotifications = jest.fn().mockResolvedValue(undefined);
 const mockGetBadgeCount = jest.fn().mockResolvedValue(5);
 const mockSetBadgeCount = jest.fn().mockResolvedValue(undefined);
 const mockCreateChannel = jest.fn().mockResolvedValue('default');
-const mockOnForegroundEvent = jest.fn((_cb: (event: any) => void) => jest.fn()); // returns unsubscribe fn
-const mockOnBackgroundEvent = jest.fn((_cb: (event: any) => Promise<void>) => {});
+const mockOnForegroundEvent = jest.fn<jest.Mock, [(event: any) => void]>(() => jest.fn()); // returns unsubscribe fn
+const mockOnBackgroundEvent = jest.fn<void, [(event: any) => Promise<void>]>(() => {});
 
 jest.mock('@notifee/react-native', () => ({
   __esModule: true,

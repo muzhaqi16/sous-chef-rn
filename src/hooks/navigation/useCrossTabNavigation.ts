@@ -18,10 +18,8 @@ export interface CrossTabSource {
  * For modal-to-tab navigation (e.g., Barcode modal → Pantry tab), uses navigate to dismiss modal.
  *
  * Note: Tab stack reset on tab press is handled by FloatingTabBar.
- *
- * @param _currentMainScreen - Deprecated: no longer used but kept for API compatibility
  */
-export function useCrossTabNavigation(_currentMainScreen: string) {
+export function useCrossTabNavigation() {
   const { goBack, navigation } = useAppNavigation();
 
   /**

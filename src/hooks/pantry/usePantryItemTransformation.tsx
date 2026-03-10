@@ -209,7 +209,6 @@ export const formatQuantityBreakdown = (
     remainingWeight?: number | null;
     remainingWeightUnit?: { symbol?: string | null } | null;
   } | null | undefined,
-  _trackingUnitSymbol?: string | null,
 ): string | null => {
   if (!breakdown) return null;
   const total = Math.floor(breakdown.totalContentUnits);
@@ -359,7 +358,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
       const packageBreakdownText = formatPackageBreakdown(item.packageBreakdown);
       const netWeightText = formatNetWeight(item.netWeight, item.netWeightUnit);
       const remainingNetWeightText = formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit);
-      const quantityBreakdownText = formatQuantityBreakdown(item.quantityBreakdown, item.unit?.symbol);
+      const quantityBreakdownText = formatQuantityBreakdown(item.quantityBreakdown);
 
       return {
         id: item.id,

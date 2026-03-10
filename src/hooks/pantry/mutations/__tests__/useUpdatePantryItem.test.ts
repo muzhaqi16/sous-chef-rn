@@ -41,7 +41,7 @@ jest.mock('#/apollo/utils/optimisticTypes', () => ({
 
 jest.mock('../utils', () => ({
   buildDirtyUpdateInput: jest.fn(
-    (data: any, dirtyFields: any, _locationId: any, _brandId: any) => {
+    (data: any, dirtyFields: any) => {
       const input: Record<string, any> = {};
       if (dirtyFields.itemName) input.itemName = data.itemName;
       if (dirtyFields.notes) input.storageNotes = data.notes;

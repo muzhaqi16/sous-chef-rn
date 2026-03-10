@@ -994,8 +994,14 @@ describe('PantryItemDetail – helper functions', () => {
   describe('getDaysInPantry / formatDaysInPantry branches', () => {
     const { useGetPantryItemQuery } = require('#generated');
     const route = { params: { itemId: 'pi1' } };
+    const FIXED_NOW = new Date('2025-06-15T12:00:00Z');
+
+    beforeEach(() => {
+      jest.useFakeTimers({ now: FIXED_NOW });
+    });
 
     afterEach(() => {
+      jest.useRealTimers();
       useGetPantryItemQuery.mockReturnValue({
         data: mockItemData,
         loading: false,
@@ -1008,7 +1014,7 @@ describe('PantryItemDetail – helper functions', () => {
         data: {
           pantryItem: {
             ...mockItemData.pantryItem,
-            createdAt: new Date().toISOString(),
+            createdAt: FIXED_NOW.toISOString(),
           },
         },
         loading: false,
@@ -1019,14 +1025,11 @@ describe('PantryItemDetail – helper functions', () => {
     });
 
     it('shows "1 day" when item was added yesterday', () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(0, 0, 0, 0);
       useGetPantryItemQuery.mockReturnValue({
         data: {
           pantryItem: {
             ...mockItemData.pantryItem,
-            createdAt: yesterday.toISOString(),
+            createdAt: new Date('2025-06-14T12:00:00Z').toISOString(),
           },
         },
         loading: false,
@@ -1052,14 +1055,11 @@ describe('PantryItemDetail – helper functions', () => {
     });
 
     it('shows "N days" for items several days old', () => {
-      const fiveDaysAgo = new Date();
-      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-      fiveDaysAgo.setHours(0, 0, 0, 0);
       useGetPantryItemQuery.mockReturnValue({
         data: {
           pantryItem: {
             ...mockItemData.pantryItem,
-            createdAt: fiveDaysAgo.toISOString(),
+            createdAt: new Date('2025-06-10T12:00:00Z').toISOString(),
           },
         },
         loading: false,

@@ -491,7 +491,6 @@ export const PantryItemDetail: React.FC<
   );
   const quantityBreakdownText = formatQuantityBreakdown(
     item?.quantityBreakdown,
-    item?.unit?.symbol,
   );
 
   if (!item) {

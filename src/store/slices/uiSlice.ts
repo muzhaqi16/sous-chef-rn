@@ -95,7 +95,7 @@ export const createUISlice: StateCreator<
   [['zustand/immer', never]],
   [],
   UIState
-> = (set, _get) => ({
+> = (set) => ({
   ...initialUIState,
 
   setLoading: loading => {

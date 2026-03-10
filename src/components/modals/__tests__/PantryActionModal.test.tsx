@@ -113,7 +113,7 @@ const makePantryItem = (overrides?: Partial<PantryItemFragment>) =>
   }) as unknown as PantryItemFragment;
 
 describe('PantryActionModal', () => {
-  const mockRenderActionFields = jest.fn((_shared) => {
+  const mockRenderActionFields = jest.fn<any, [any]>(() => {
     const RN = require('react-native');
     return require('react').createElement(
       RN.Text,

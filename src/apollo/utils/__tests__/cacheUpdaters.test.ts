@@ -118,7 +118,7 @@ describe('createAddToQueryFieldUpdater', () => {
     addToHomes(cache, newItem);
 
     const helpers = createFieldHelpers();
-    helpers.readField.mockImplementation((field: string, _ref: any) => {
+    helpers.readField.mockImplementation((field: string) => {
       if (field === 'id') return '1';
       return undefined;
     });
@@ -471,7 +471,7 @@ describe('createAddToQueryConnectionUpdater', () => {
     addToLists(cache, { id: 'l-1', __typename: 'List' } as any);
 
     const helpers = createFieldHelpers();
-    helpers.readField.mockImplementation((field: string, _ref: any) => {
+    helpers.readField.mockImplementation((field: string) => {
       if (field === 'id') return 'l-1';
       return undefined;
     });

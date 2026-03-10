@@ -380,7 +380,7 @@ describe('refreshToken', () => {
 
       const observable = attemptTokenRefresh(mockOperation, mockForward);
       observable.subscribe({
-        error: (_err: any) => {
+        error: () => {
           expect(mockTokenRefreshFailed).toHaveBeenCalledWith('auth_rejected');
           done();
         },

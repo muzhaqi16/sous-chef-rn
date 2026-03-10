@@ -131,7 +131,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 export const NavigationErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
   <ErrorBoundary
     context="Navigation"
-    onError={(error, _errorInfo) => {
+    onError={(error) => {
       console.error('Navigation error:', error);
       Telemetry.increment('navigation_errors_total', 1);
     }}
@@ -150,7 +150,7 @@ export const NavigationErrorBoundary: React.FC<{ children: ReactNode }> = ({ chi
 export const AuthErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
   <ErrorBoundary
     context="Authentication"
-    onError={(error, _errorInfo) => {
+    onError={(error) => {
       console.error('Auth error:', error);
       Telemetry.increment('auth_errors_total', 1);
     }}
@@ -169,7 +169,7 @@ export const AuthErrorBoundary: React.FC<{ children: ReactNode }> = ({ children 
 export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
   <ErrorBoundary
     context="Application"
-    onError={(error, _errorInfo) => {
+    onError={(error) => {
       console.error('App-level error:', error);
       Telemetry.increment('app_level_errors_total', 1);
     }}

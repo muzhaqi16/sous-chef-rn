@@ -189,7 +189,7 @@ jest.mock('#components/pantry/PantryContent', () => {
 jest.mock('#components/organisms/AnimatedItemSelector/AnimatedItemSelector', () => {
   const { forwardRef } = require('react');
   const { View } = require('react-native');
-  return { AnimatedItemSelector: forwardRef((_: any, __: any) => <View testID="item-selector" />) };
+  return { AnimatedItemSelector: forwardRef(() => <View testID="item-selector" />) };
 });
 jest.mock('#components/modals/ConsumePantryItemModal', () => ({ ConsumePantryItemModal: () => null }));
 jest.mock('#components/modals/RecordWastePantryItemModal', () => ({ RecordWastePantryItemModal: () => null }));

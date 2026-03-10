@@ -85,7 +85,7 @@ describe('useCredentialStorage', () => {
     const hasCreds = await result.current.checkStoredCredentials('test@test.com');
 
     expect(hasCreds).toBe(true);
-    expect(mockHasCredentialsForAccount).toHaveBeenCalledWith('test@test.com');
+    expect(mockHasCredentialsForAccount).toHaveBeenCalledWith();
   });
 
   it('checkStoredCredentials returns false on error', async () => {
@@ -131,7 +131,7 @@ describe('useCredentialStorage', () => {
     });
 
     expect(credentials).toEqual({ email: 'specific@test.com', password: 'pw' });
-    expect(mockLoadCredentialsForAccount).toHaveBeenCalledWith('specific@test.com');
+    expect(mockLoadCredentialsForAccount).toHaveBeenCalledWith();
   });
 
   it('storeCredentials calls saveCredentials and returns true on success', async () => {

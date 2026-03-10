@@ -123,7 +123,7 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         afterItemId: string | null,
         beforeItemId: string | null,
       ) => {
-        reorderItem(itemId, afterItemId, beforeItemId, null, null);
+        reorderItem(itemId, afterItemId, beforeItemId);
       };
 
     // --- Selector Hook ---
