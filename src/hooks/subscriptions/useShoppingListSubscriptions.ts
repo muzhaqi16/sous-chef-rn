@@ -29,6 +29,7 @@ import {
   addNewItemToShoppingListCache,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { Telemetry } from '#/services/telemetry';
 import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
@@ -45,6 +46,8 @@ import {
 function resortEdges(cache: ApolloCache, shoppingListId: string): void {
   executeCacheUpdate(
     () => {
+      const t0 = __DEV__ ? performance.now() : 0;
+
       const parentCacheId = cache.identify({
         __typename: 'ShoppingList',
         id: shoppingListId,
@@ -56,6 +59,10 @@ function resortEdges(cache: ApolloCache, shoppingListId: string): void {
         fields: {
           itemsConnection(existing: any, { readField }: any) {
             if (!existing?.edges?.length) return existing;
+
+            if (__DEV__) {
+              console.log(`📊 [resortEdges] variant edge count: ${existing.edges.length}`);
+            }
 
             const sortedEdges = [...existing.edges].sort((a: any, b: any) => {
               const nodeA = readField('node', a);
@@ -71,6 +78,12 @@ function resortEdges(cache: ApolloCache, shoppingListId: string): void {
           },
         },
       });
+
+      if (__DEV__) {
+        const duration = performance.now() - t0;
+        console.log(`📊 [resortEdges] duration=${duration.toFixed(2)}ms listId=${shoppingListId}`);
+        Telemetry.histogram('resort_edges_duration_ms', duration);
+      }
     },
     'Failed to re-sort edges after subscription update:',
   );
@@ -129,6 +142,10 @@ export function useShoppingListSubscriptions(
     enableLogging: true,
     entityId: selectedShoppingListId,
     customOnData: (payload: any, client: any) => {
+      if (__DEV__) {
+        console.log(`📊 [Subscription] ShoppingListChanges event: changeType=${payload?.changeType} mutation=${payload?.mutation}`);
+      }
+
       if (!payload || !selectedShoppingListId) return;
 
       // Skip processing if the parent list is being deleted

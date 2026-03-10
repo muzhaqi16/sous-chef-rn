@@ -13,6 +13,8 @@ jest.mock('#hooks/shoppingList/useShoppingListScreen', () => ({
   useShoppingListScreen: () => ({
     currentListId: 'sl1',
     items: [],
+    rawUnpurchasedItems: [],
+    rawPurchasedItems: [],
     searchQuery: '',
     setSearchQuery: jest.fn(),
     lists: [],

@@ -9,7 +9,7 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
-import { enableScreens } from 'react-native-screens';
+import { enableScreens, enableFreeze } from 'react-native-screens';
 import { useAppStore, selectHydrated } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { client } from '#/apollo/client';
@@ -26,6 +26,7 @@ import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#hooks/useNetworkStatus';
 import { useTheme } from '#hooks/useTheme';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
+import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
 import { NotificationProvider } from '#/components/notifications/NotificationProvider';
 import { DataProvider } from '#/components/providers/DataProvider';
 import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
@@ -44,6 +45,9 @@ setupGlobalErrorHandler();
 
 // Enable native screens for better performance
 enableScreens();
+// Freeze all inactive screens globally — prevents background re-renders
+// across all navigators (tabs + stacks), not just the tab navigator
+enableFreeze(true);
 
 
 /** Module-level helper: Detox launch argument injection (DEV-only) */
@@ -92,9 +96,26 @@ const App = () => {
   useNetworkStatus();
 
   // Handle network status changes - trigger queue processing when online
+  // When coming back online, attempt deferred token refresh before replaying queued mutations
   useEffect(() => {
     if (isOnline) {
-      queueManager.onOnline();
+      const state = useStore.getState();
+      if (state.needsTokenRefresh && state.refreshToken) {
+        proactiveTokenRefresh()
+          .then(newToken => {
+            if (newToken) {
+              useStore.getState().setNeedsTokenRefresh(false);
+            }
+            // Process queue regardless — if refresh failed, queue will handle it
+            queueManager.onOnline();
+          })
+          .catch(() => {
+            // needsTokenRefresh stays true for next online transition
+            queueManager.onOnline();
+          });
+      } else {
+        queueManager.onOnline();
+      }
     } else {
       queueManager.onOffline();
     }

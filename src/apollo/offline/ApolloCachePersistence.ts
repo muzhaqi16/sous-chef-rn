@@ -1,5 +1,6 @@
 import { NormalizedCacheObject } from '@apollo/client';
 import { storage } from '#storage/mmkv';
+import { Telemetry } from '#/services/telemetry';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
@@ -111,6 +112,9 @@ class ApolloCachePersistence {
     if (!this.paused) return;
     this.paused = false;
     if (this.pendingWhilePaused && this.pausedExtractor) {
+      if (__DEV__) {
+        console.log('💾 [CachePersist] Resuming with pending save');
+      }
       this.pendingWhilePaused = false;
       const extractor = this.pausedExtractor;
       this.pausedExtractor = null;
@@ -147,16 +151,27 @@ class ApolloCachePersistence {
       // This prevents blocking UI interactions and list rendering
       const serialize = () => {
         try {
+          const t0 = performance.now();
           // Extract cache data lazily - only runs once after debounce
           const cache = extractor();
+          const tExtract = performance.now();
           const cacheString = JSON.stringify(cache);
+          const tStringify = performance.now();
           const sizeKB = Math.round(cacheString.length / 1024);
 
           storage.set(CACHE_STORAGE_KEY, cacheString);
           storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
 
           if (__DEV__) {
-            console.log(`💾 Cache: Persisted cache (${sizeKB} KB)`);
+            const extractMs = (tExtract - t0).toFixed(2);
+            const stringifyMs = (tStringify - tExtract).toFixed(2);
+            const totalMs = (tStringify - t0).toFixed(2);
+            console.log(
+              `💾 [CachePersist] extract=${extractMs}ms stringify=${stringifyMs}ms total=${totalMs}ms size=${sizeKB}KB entities=${Object.keys(cache).length}`
+            );
+            Telemetry.histogram('cache_persist_extract_ms', tExtract - t0);
+            Telemetry.histogram('cache_persist_stringify_ms', tStringify - tExtract);
+            Telemetry.gauge('cache_persist_size_kb', sizeKB);
           }
         } catch (error) {
           console.error('💾 Cache: Failed to persist cache:', error);

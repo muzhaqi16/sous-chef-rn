@@ -3,7 +3,8 @@ import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
-  BottomSheetView } from '@gorhom/bottom-sheet';
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
@@ -17,7 +18,6 @@ interface TextEditBottomSheetProps {
   placeholder?: string;
   initialValue: string;
   fieldKey: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   validationSchema?: AnyObjectSchema;
   onSave: (value: string) => void;
   onClose: () => void;
@@ -52,20 +52,23 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   onClose,
   multiline = false,
   maxLength,
-  keyboardType = 'default' }) => {
+  keyboardType = 'default',
+}) => {
   const { ref, modalProps, contentContainerStyle, theme } =
     useStandardBottomSheet({
       visible,
       onDismiss: onClose,
       snapPoints: ['30%'],
-      keyboardBehavior: 'interactive' });
+      keyboardBehavior: 'interactive',
+    });
 
   // Default schema if none provided
   const schema = validationSchema || object({ [fieldKey]: string() });
 
   const form = useForm({
     resolver: yupResolver(schema),
-    defaultValues: { [fieldKey]: initialValue } });
+    defaultValues: { [fieldKey]: initialValue },
+  });
 
   // Reset form when sheet opens with new value
   useEffect(() => {
@@ -75,9 +78,9 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   }, [visible, initialValue, fieldKey, form]);
 
   const handleSave = (data: any) => {
-      onSave(data[fieldKey]);
-      onClose();
-    };
+    onSave(data[fieldKey]);
+    onClose();
+  };
 
   const handleCancel = () => {
     form.reset();
@@ -151,7 +154,8 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
                       backgroundColor: theme.colors.surfaceVariant,
                       borderColor: fieldState.error
                         ? theme.colors.error
-                        : theme.colors.border },
+                        : theme.colors.border,
+                    },
                   ]}
                   value={field.value}
                   onChangeText={field.onChange}
@@ -182,49 +186,63 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.lg },
+    paddingHorizontal: theme.spacing.lg,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm },
+    paddingVertical: theme.spacing.sm,
+  },
   headerButton: {
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.xs,
-    minWidth: 60 },
+    minWidth: 60,
+  },
   title: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
-    flex: 1 },
+    flex: 1,
+  },
   cancelText: {
-    fontSize: theme.typography.fontSize.md },
+    fontSize: theme.typography.fontSize.md,
+  },
   saveText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'right' },
+    textAlign: 'right',
+  },
   divider: {
     height: 1,
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   inputContainer: {
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   label: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.medium,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   input: {
     fontSize: theme.typography.fontSize.md,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
-    borderWidth: 1 },
+    borderWidth: 1,
+  },
   inputMultiline: {
     minHeight: 100,
-    paddingTop: theme.spacing.md },
+    paddingTop: theme.spacing.md,
+  },
   errorText: {
     fontSize: theme.typography.fontSize.sm,
-    marginTop: theme.spacing.xs },
+    marginTop: theme.spacing.xs,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));
 
 export default TextEditBottomSheet;

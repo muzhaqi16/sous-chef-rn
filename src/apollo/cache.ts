@@ -2,6 +2,7 @@ import { InMemoryCache } from '@apollo/client';
 import { relayStylePagination } from '@apollo/client/utilities';
 // Import generated fragment matcher for proper interface/union type handling
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
+import { Telemetry } from '#/services/telemetry';
 
 /**
  * Version-aware merge function that handles optimistic updates and conflict resolution
@@ -139,14 +140,21 @@ function mergeConnectionByNodeId() {
         return incoming;
 
       const edgeMap = new Map();
-      (existing.edges || []).forEach((edge: any) => {
+      const existingEdges = existing.edges || [];
+      existingEdges.forEach((edge: any) => {
         const id = readField('id', edge?.node);
         if (id) edgeMap.set(id, edge);
       });
+      const existingCount = edgeMap.size;
       (incoming.edges || []).forEach((edge: any) => {
         const id = readField('id', edge?.node);
         if (id) edgeMap.set(id, edge);
       });
+
+      // If no new edges were added, preserve existing reference to avoid unnecessary re-renders
+      if (edgeMap.size === existingCount) {
+        return { ...incoming, edges: existingEdges };
+      }
 
       return {
         ...incoming,
@@ -186,9 +194,35 @@ function itemsConnectionFieldPolicy() {
         return id && !existingIds.has(id);
       });
 
+      // When no new edges, preserve existing reference to prevent cascade:
+      // stable edges ref → stable extractItems → stable FlashList data prop → no blank cells
+      if (newEdges.length === 0) {
+        if (__DEV__) {
+          const existingCount = existing?.edges?.length ?? 0;
+          const incomingCount = incoming?.edges?.length ?? 0;
+          const hasCursor = !!args?.after;
+          console.log(
+            `📊 [Cache] itemsConnection merge (stable): existing=${existingCount} incoming=${incomingCount} merged=${existingCount} cursor=${hasCursor}`
+          );
+        }
+        return { ...incoming, edges: existing.edges };
+      }
+
+      const mergedEdges = [...(existing.edges || []), ...newEdges];
+
+      if (__DEV__) {
+        const existingCount = existing?.edges?.length ?? 0;
+        const incomingCount = incoming?.edges?.length ?? 0;
+        const hasCursor = !!args?.after;
+        console.log(
+          `📊 [Cache] itemsConnection merge: existing=${existingCount} incoming=${incomingCount} merged=${mergedEdges.length} cursor=${hasCursor}`
+        );
+        Telemetry.gauge('apollo_cache_edge_count', mergedEdges.length, { field: 'itemsConnection' });
+      }
+
       return {
         ...incoming,
-        edges: [...(existing.edges || []), ...newEdges],
+        edges: mergedEdges,
       };
     },
   };
@@ -292,14 +326,21 @@ export function makeCache(): InMemoryCache {
 
               // Pagination: merge edges with deduplication by node ID
               const edgeMap = new Map();
-              (existing.edges || []).forEach((edge: any) => {
+              const existingEdges = existing.edges || [];
+              existingEdges.forEach((edge: any) => {
                 const id = readField('id', edge?.node);
                 if (id) edgeMap.set(id, edge);
               });
+              const existingCount = edgeMap.size;
               (incoming.edges || []).forEach((edge: any) => {
                 const id = readField('id', edge?.node);
                 if (id) edgeMap.set(id, edge);
               });
+
+              // If no new edges were added, preserve existing reference to avoid unnecessary re-renders
+              if (edgeMap.size === existingCount) {
+                return { ...incoming, edges: existingEdges };
+              }
 
               return {
                 ...incoming,
@@ -323,7 +364,13 @@ export function makeCache(): InMemoryCache {
           unit: {
             merge: false, // Always replace unit with incoming data, never merge
           },
+          batches: {
+            merge: false, // Always replace batches array with incoming data
+          },
         },
+      },
+      PantryItemBatch: {
+        keyFields: ['id'],
       },
       Unit: {
         keyFields: ['id'],
@@ -579,6 +626,15 @@ export function makeCache(): InMemoryCache {
       } else if (__DEV__) {
         console.log(
           `📊 Apollo Cache: ${(usageRatio * 100).toFixed(1)}% used (~${(estimatedSize / 1024 / 1024).toFixed(2)}MB / ${MAX_CACHE_SIZE_MB}MB)`
+        );
+      }
+
+      if (__DEV__) {
+        const allKeys = Object.keys(cacheData);
+        const shoppingItemCount = allKeys.filter(k => k.startsWith('ShoppingListItem:')).length;
+        const pantryItemCount = allKeys.filter(k => k.startsWith('PantryItem:')).length;
+        console.log(
+          `📊 [Cache] Entities: total=${allKeys.length} ShoppingListItem=${shoppingItemCount} PantryItem=${pantryItemCount}`
         );
       }
     } catch (_error) {

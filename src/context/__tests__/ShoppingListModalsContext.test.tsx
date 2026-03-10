@@ -4,9 +4,7 @@ import { renderHook } from '@testing-library/react-native';
 
 // Mock the deep dependency chain that causes import errors
 jest.mock('@gorhom/bottom-sheet', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const RN = require('react-native');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const R = require('react');
   return {
     __esModule: true,

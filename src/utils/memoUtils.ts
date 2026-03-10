@@ -122,7 +122,6 @@ function getNestedValue(
   obj: object,
   path: string,
 ): Record<string, unknown> | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let current: any = obj;
 
   for (const key of path.split('.')) {

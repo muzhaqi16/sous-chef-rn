@@ -24,7 +24,8 @@ import {
 
 interface UseClearShoppingListItemsOptions {
   listId: string | null | undefined;
-  items: ShoppingListItemDisplayFragment[];
+  unpurchasedItems: ShoppingListItemDisplayFragment[];
+  purchasedItems: ShoppingListItemDisplayFragment[];
   refetch: () => Promise<any>;
 }
 
@@ -88,7 +89,8 @@ async function executeClearItems(
  */
 export function useClearShoppingListItems({
   listId,
-  items,
+  unpurchasedItems,
+  purchasedItems,
   refetch,
 }: UseClearShoppingListItemsOptions) {
   const client = useApolloClient();
@@ -101,9 +103,7 @@ export function useClearShoppingListItems({
   const clearItems = async (purchased: boolean) => {
     if (!listId || isClearingRef.current) return;
 
-    const targetItems = items.filter(i =>
-      purchased ? i.purchaseInfo?.isPurchased : !i.purchaseInfo?.isPurchased,
-    );
+    const targetItems = purchased ? purchasedItems : unpurchasedItems;
     if (targetItems.length === 0) return;
 
     isClearingRef.current = true;

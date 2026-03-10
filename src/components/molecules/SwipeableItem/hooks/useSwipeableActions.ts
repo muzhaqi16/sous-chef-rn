@@ -1,4 +1,4 @@
-import { useRef, ComponentRef } from 'react';
+import { useRef, useState, ComponentRef } from 'react';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useRecyclingState } from '@shopify/flash-list';
 
@@ -20,10 +20,12 @@ export const useSwipeableActions = ({
   onSwipeableClose,
 }: UseSwipeableActionsProps) => {
   const swipeableRef = useRef<ComponentRef<typeof Swipeable>>(null);
+  const [hasSwipeStarted, setHasSwipeStarted] = useState(false);
 
   // Synchronous reset on cell recycling — fires during render (before paint)
   useRecyclingState(undefined, [itemId], () => {
     swipeableRef.current?.close();
+    setHasSwipeStarted(false);
   });
 
   const handleActionPress = (action: 'edit' | 'delete') => {
@@ -45,6 +47,11 @@ export const useSwipeableActions = ({
   const handleSwipeableClose = () => {
     // Notify parent that this swipeable has closed
     onSwipeableClose?.();
+    setHasSwipeStarted(false);
+  };
+
+  const handleSwipeOpenStartDrag = () => {
+    setHasSwipeStarted(true);
   };
 
   return {
@@ -52,5 +59,7 @@ export const useSwipeableActions = ({
     handleActionPress,
     handleSwipeableWillOpen,
     handleSwipeableClose,
+    hasSwipeStarted,
+    handleSwipeOpenStartDrag,
   };
 };

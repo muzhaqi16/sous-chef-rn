@@ -99,6 +99,9 @@ jest.mock('#hooks/pantry/mutations/useAdjustPantryItemQuantity', () => ({
 jest.mock('#hooks/pantry/mutations/useCorrectPantryItemWeight', () => ({
   useCorrectPantryItemWeight: () => ({ correctWeight: jest.fn() }),
 }));
+jest.mock('#hooks/pantry/mutations/useConvertExpiredBatchesToWaste', () => ({
+  useConvertExpiredBatchesToWaste: () => ({ convertExpiredBatches: jest.fn(), loading: false }),
+}));
 
 // --- Utils ---
 jest.mock('#utils/imageUtils', () => ({
@@ -129,6 +132,7 @@ jest.mock('#/services/recipeApi/SpoonacularService', () => ({
 }));
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
+  useErrorService: () => ({ handleApolloError: jest.fn(() => ({ message: 'Error' })) }),
 }));
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeWithLoadingState: jest.fn(),

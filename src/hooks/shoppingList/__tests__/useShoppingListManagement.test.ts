@@ -105,10 +105,10 @@ describe('useShoppingListManagement', () => {
     );
 
     // Data
-    expect(result.current.items).toBeDefined();
-    expect(result.current.allItems).toBeDefined();
     expect(result.current.unpurchasedItems).toBeDefined();
     expect(result.current.purchasedItems).toBeDefined();
+    expect(result.current.rawUnpurchasedItems).toBeDefined();
+    expect(result.current.rawPurchasedItems).toBeDefined();
     expect(result.current.shoppingList).toBe(mockShoppingList);
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeFalsy();
@@ -136,19 +136,6 @@ describe('useShoppingListManagement', () => {
     expect(result.current.hasMorePurchased).toBe(false);
   });
 
-  it('combines unpurchased and purchased items into allItems', () => {
-    const { result } = renderHook(() =>
-      useShoppingListManagement('list-1'),
-    );
-
-    expect(result.current.allItems).toHaveLength(3);
-    expect(result.current.allItems.map((i: any) => i.id)).toEqual([
-      'item-1',
-      'item-2',
-      'item-3',
-    ]);
-  });
-
   it('returns unpurchasedItems and purchasedItems separately', () => {
     const { result } = renderHook(() =>
       useShoppingListManagement('list-1'),
@@ -158,60 +145,12 @@ describe('useShoppingListManagement', () => {
     expect(result.current.purchasedItems).toHaveLength(1);
   });
 
-  describe('helper functions', () => {
-    it('getItemById finds item by id', () => {
-      const { result } = renderHook(() =>
-        useShoppingListManagement('list-1'),
-      );
+  it('returns raw (unfiltered) arrays', () => {
+    const { result } = renderHook(() =>
+      useShoppingListManagement('list-1'),
+    );
 
-      const found = result.current.getItemById('item-2');
-      expect(found?.itemName).toBe('Bread');
-    });
-
-    it('getItemById returns undefined for non-existent id', () => {
-      const { result } = renderHook(() =>
-        useShoppingListManagement('list-1'),
-      );
-
-      const found = result.current.getItemById('non-existent');
-      expect(found).toBeUndefined();
-    });
-
-    it('getCompletedItems returns purchased items', () => {
-      const { result } = renderHook(() =>
-        useShoppingListManagement('list-1'),
-      );
-
-      const completed = result.current.getCompletedItems();
-      expect(completed).toHaveLength(1);
-      expect(completed[0].id).toBe('item-3');
-    });
-
-    it('getPendingItems returns unpurchased items', () => {
-      const { result } = renderHook(() =>
-        useShoppingListManagement('list-1'),
-      );
-
-      const pending = result.current.getPendingItems();
-      expect(pending).toHaveLength(2);
-    });
-
-    it('getItemsByCategory filters by category', () => {
-      const { result } = renderHook(() =>
-        useShoppingListManagement('list-1'),
-      );
-
-      const dairyItems = result.current.getItemsByCategory('Dairy');
-      expect(dairyItems).toHaveLength(2); // Milk and Eggs
-    });
-
-    it('getItemsByCategory returns empty for non-existent category', () => {
-      const { result } = renderHook(() =>
-        useShoppingListManagement('list-1'),
-      );
-
-      const items = result.current.getItemsByCategory('Produce');
-      expect(items).toHaveLength(0);
-    });
+    expect(result.current.rawUnpurchasedItems).toHaveLength(2);
+    expect(result.current.rawPurchasedItems).toHaveLength(1);
   });
 });

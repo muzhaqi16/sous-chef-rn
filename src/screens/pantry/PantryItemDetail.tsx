@@ -4,6 +4,7 @@ import {
   Text,
   Alert,
   ScrollView,
+  RefreshControl,
   Pressable,
   ActivityIndicator,
 } from 'react-native';
@@ -38,6 +39,8 @@ import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useConvertExpiredToWaste } from '#hooks/pantry/mutations/useConvertExpiredToWaste';
+import { useConvertExpiredBatchesToWaste } from '#hooks/pantry/mutations/useConvertExpiredBatchesToWaste';
+import { BatchSection } from '#components/pantry/BatchSection';
 import { useAdjustPantryItemQuantity } from '#hooks/pantry/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPantryItemWeight } from '#hooks/pantry/mutations/useCorrectPantryItemWeight';
 import { AdjustQuantityModal } from '#components/modals/AdjustQuantityModal';
@@ -46,8 +49,20 @@ import { errorService } from '#/services/errorService';
 import {
   executeWithLoadingState,
   executeMutation,
+  executeRefreshWithFinally,
 } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
+
+const usagePurposeLabels: Record<string, string> = {
+  [UsagePurpose.General]: 'Consumed',
+  [UsagePurpose.Cooking]: 'Cooking',
+  [UsagePurpose.Snack]: 'Snack',
+  [UsagePurpose.MealPrep]: 'Meal prep',
+  [UsagePurpose.Restock]: 'Restocked',
+  [UsagePurpose.Waste]: 'Wasted',
+  [UsagePurpose.Gift]: 'Gift',
+  [UsagePurpose.Transfer]: 'Transfer',
+};
 
 // Helper function to calculate expiry info
 const getExpiryInfo = (expiresAt: string | null | undefined) => {
@@ -188,11 +203,16 @@ export const PantryItemDetail: React.FC<
     [],
   );
   const [loadingRecipes, setLoadingRecipes] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const { data } = useGetPantryItemQuery({
+  const { data, refetch } = useGetPantryItemQuery({
     variables: { id: itemId },
     fetchPolicy: 'cache-and-network',
   });
+
+  const handleRefresh = () => {
+    executeRefreshWithFinally(() => refetch(), setRefreshing);
+  };
 
   const [deleteItem] = useDeletePantryItemMutation();
   const [addToShoppingList] = useAddItemToShoppingListMutation({
@@ -218,10 +238,17 @@ export const PantryItemDetail: React.FC<
   // Correct weight modal state
   const [correctWeightVisible, setCorrectWeightVisible] = useState(false);
 
-  // Expired to waste mutation
+  // Expired to waste mutation (item-level)
   const { convertExpiredToWaste } = useConvertExpiredToWaste({
     onSuccess: () => {
       Alert.alert('Done', 'Expired item has been discarded.');
+    },
+  });
+
+  // Expired batches to waste mutation (batch-level)
+  const { convertExpiredBatches } = useConvertExpiredBatchesToWaste({
+    onSuccess: () => {
+      Alert.alert('Done', 'Expired batches have been discarded.');
     },
   });
 
@@ -373,20 +400,38 @@ export const PantryItemDetail: React.FC<
 
   const handleDiscardExpired = () => {
     if (!item) return;
-    Alert.alert(
-      'Discard Expired Item',
-      `This will mark the remaining ${item.quantity} ${
-        item.unit?.name || ''
-      } as wasted due to expiration.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Discard',
-          style: 'destructive',
-          onPress: () => convertExpiredToWaste(item.id),
-        },
-      ],
-    );
+
+    const hasBatches = (item.activeBatchCount ?? 0) > 0;
+
+    if (hasBatches) {
+      Alert.alert(
+        'Discard Expired Batches',
+        'This will mark all expired batches as wasted.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => convertExpiredBatches(item.id),
+          },
+        ],
+      );
+    } else {
+      Alert.alert(
+        'Discard Expired Item',
+        `This will mark the remaining ${item.quantity} ${
+          item.unit?.name || ''
+        } as wasted due to expiration.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => convertExpiredToWaste(item.id),
+          },
+        ],
+      );
+    }
   };
 
   const handleConfirmAdjust = (
@@ -475,7 +520,13 @@ export const PantryItemDetail: React.FC<
             loading: addToListStatus === 'loading',
             testID: 'pantry-item-add-to-list-button',
           },
-          ...(item.condition === 'EXPIRED' && item.quantity > 0
+          ...((item.condition === 'EXPIRED' && item.quantity > 0) ||
+          (item.batches?.some(
+            b =>
+              b.status === 'ACTIVE' &&
+              b.expiresAt &&
+              new Date(b.expiresAt) < new Date(),
+          ))
             ? [
                 {
                   icon: 'close-circle-outline' as const,
@@ -508,6 +559,9 @@ export const PantryItemDetail: React.FC<
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       >
         {/* Image Gallery - show if images or fallback URL exists */}
         {!!showImages && (
@@ -802,6 +856,15 @@ export const PantryItemDetail: React.FC<
           icon="calendar-outline"
         />
 
+        {/* Batch Section - only show when item has active batches */}
+        {!!item.batches && item.activeBatchCount > 0 && (
+          <BatchSection
+            batches={item.batches}
+            pantryItemId={item.id}
+            unitSymbol={item.unit?.symbol ?? undefined}
+          />
+        )}
+
         {/* Usage Records Section - only show if there are usage records */}
         {!!item.usageRecords && item.usageRecords.edges.length > 0 && (
           <>
@@ -829,14 +892,19 @@ export const PantryItemDetail: React.FC<
                 {item.usageRecords.edges.slice(0, 5).map(({ node: usage }) => {
                   const isAdjustment =
                     usage.purpose === UsagePurpose.Adjustment;
+                  const isRestock =
+                    usage.purpose === UsagePurpose.Restock;
                   const purposeLabel = isAdjustment
                     ? 'Inventory adjusted'
-                    : usage.purpose;
-                  const quantityPrefix = isAdjustment
-                    ? usage.quantityUsed >= 0
-                      ? '+'
-                      : ''
-                    : '-';
+                    : usagePurposeLabels[usage.purpose] ?? usage.purpose;
+                  const quantityPrefix =
+                    isAdjustment
+                      ? usage.quantityUsed >= 0
+                        ? '+'
+                        : ''
+                      : isRestock
+                        ? '+'
+                        : '-';
                   return (
                     <View key={usage.id} style={styles.purchaseRow}>
                       <View style={styles.purchaseDateStore}>

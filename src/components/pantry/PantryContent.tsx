@@ -31,13 +31,14 @@ import {
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { StorageState, type PantryStats } from '#generated';
 import { PantryAlertBar } from '#components/pantry/PantryAlertBar';
-import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { EmptyState } from '#components/base/EmptyState';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
 import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
+import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { differenceInCalendarDays } from 'date-fns';
 import { PantryItem } from '#generated';
 
@@ -201,6 +202,7 @@ function computeItemDisplay(
       item.quantityBreakdown,
       item.unit?.symbol,
     ),
+    activeBatchCount: item.activeBatchCount,
   };
 }
 
@@ -255,6 +257,7 @@ const PantryRenderItem: React.FC<{ item: PantryItem }> = ({ item }) => {
       packageBreakdownText={display.packageBreakdownText}
       remainingNetWeightText={display.remainingNetWeightText}
       quantityBreakdownText={display.quantityBreakdownText}
+      activeBatchCount={display.activeBatchCount}
     />
   );
 };
@@ -419,6 +422,12 @@ export const PantryContent = React.forwardRef<
     const { theme } = useUnistyles();
     const flashListRef = useRef<FlashListRef<PantryItem>>(null);
 
+    const perfCallbacks = useFlashListPerformance(flashListRef, {
+      componentName: 'PantryContent',
+      reportInterval: 10000,
+    });
+    useDataReferenceTracker(items, 'PantryContent.items', perfCallbacks.onDataReferenceChange);
+
     useImperativeHandle(ref, () => ({
       scrollToTop() {
         // Defer to next frame to avoid FlashList v2 blank-cell regression (#1784)
@@ -429,13 +438,10 @@ export const PantryContent = React.forwardRef<
       },
     }));
 
-    // PERFORMANCE: Defer heavy list render until after navigation animation
-    const isReady = useDeferredRender(500);
-
     // Derive latch from module-level flag + current conditions — no setState needed.
     // Once true, hasEverShownContent persists across unmount/remount (module scope).
     const hasShownContent =
-      hasEverShownContent || (!loading && isReady && items.length > 0);
+      hasEverShownContent || (!loading && items.length > 0);
 
     // Sync the module-level flag so it persists across unmount/remount.
     useEffect(() => {
@@ -450,7 +456,7 @@ export const PantryContent = React.forwardRef<
     const awaitingDeferredItems =
       items.length === 0 && (totalCount ?? 0) > 0 && !loading;
     const showSkeletons =
-      !hasShownContent && (!isReady || loading || awaitingDeferredItems);
+      !hasShownContent && (loading || awaitingDeferredItems);
 
     // Use sorting hook for sort state and logic
     const {
@@ -680,6 +686,8 @@ export const PantryContent = React.forwardRef<
                   }
                   onEndReached={onEndReached}
                   onEndReachedThreshold={0.5}
+                  onLoad={perfCallbacks.onLoad}
+                  onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
                   maintainVisibleContentPosition={{ disabled: true }}
                 />
               </PantryThemeProvider>

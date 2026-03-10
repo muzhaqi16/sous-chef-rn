@@ -42,6 +42,10 @@ type ItemEdge = NonNullable<
 const EMPTY_EDGES: readonly ItemEdge[] = [];
 const EMPTY_ITEMS: ShoppingListItemDisplayFragment[] = [];
 
+// DEV-only: track edge reference changes across renders
+let _prevUnpurchasedEdgesRef: unknown = null;
+let _prevPurchasedEdgesRef: unknown = null;
+
 /**
  * Extract items from connection edges in cache insertion order.
  * Filters out incomplete nodes (missing id/itemName) to guard against
@@ -51,14 +55,20 @@ const EMPTY_ITEMS: ShoppingListItemDisplayFragment[] = [];
  * the cache merge appends pages in order, and drag-reorder re-sorts
  * edges directly in the cache via useItemReordering's cache.modify.
  */
+const extractItemsCache = new WeakMap<readonly ItemEdge[], ShoppingListItemDisplayFragment[]>();
+
 function extractItems(edges: readonly ItemEdge[] | null | undefined): ShoppingListItemDisplayFragment[] {
   if (!edges || edges.length === 0) return EMPTY_ITEMS;
-  return edges
+  const cached = extractItemsCache.get(edges);
+  if (cached) return cached;
+  const result = edges
     .filter(edge => {
       const node = edge?.node;
       return node && node.id && node.itemName;
     })
     .map(edge => edge.node);
+  extractItemsCache.set(edges, result);
+  return result;
 }
 
 /** Resolve edges: prefer current data, fall back to previous data (same list only) */
@@ -146,11 +156,27 @@ export function usePaginatedShoppingItems({
   useApolloErrorLogger('GetShoppingListItemsFiltered[purchased]', pError);
 
   // --- Extract items ---
+  // Compiler can memoize these — stable reference when edges don't change
   const unpurchasedEdges = resolveEdges(unpurchasedData, unpurchasedPrevData, listIdChanged);
   const unpurchasedItems = extractItems(unpurchasedEdges);
 
   const purchasedEdges = resolveEdges(purchasedData, purchasedPrevData, listIdChanged);
   const purchasedItems = extractItems(purchasedEdges);
+
+  // DEV-only profiling in useEffect (post-render, doesn't affect memoization)
+  useEffect(() => {
+    if (!__DEV__) return;
+    const uRefChanged = unpurchasedEdges !== _prevUnpurchasedEdgesRef;
+    _prevUnpurchasedEdgesRef = unpurchasedEdges;
+    console.log(
+      `📊 [extractItems] unpurchased: ${unpurchasedEdges.length} edges, refChanged=${uRefChanged}`
+    );
+    const pRefChanged = purchasedEdges !== _prevPurchasedEdgesRef;
+    _prevPurchasedEdgesRef = purchasedEdges;
+    console.log(
+      `📊 [extractItems] purchased: ${purchasedEdges.length} edges, refChanged=${pRefChanged}`
+    );
+  });
 
   // --- Pagination via reusable usePagination hook ---
   const unpurchasedPagination = usePagination({

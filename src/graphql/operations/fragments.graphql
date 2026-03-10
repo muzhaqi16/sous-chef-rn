@@ -364,7 +364,7 @@ fragment ItemFragment on Item {
 # PANTRY ITEM FRAGMENTS (3-tier pattern)
 # ============================================
 
-# CORE: Essential fields for mutations and cache normalization (15 fields)
+# CORE: Essential fields for mutations and cache normalization (17 fields)
 # Contains only the minimum fields needed for optimistic updates and version control
 fragment PantryItemCore on PantryItem {
   id
@@ -382,6 +382,8 @@ fragment PantryItemCore on PantryItem {
   lastUsedAt
   netWeight
   remainingNetWeight
+  activeBatchCount
+  earliestBatchExpiration
 }
 
 # DISPLAY: List views - Pantry screen cards
@@ -524,6 +526,29 @@ fragment PantryItemFragment on PantryItem {
       }
     }
   }
+  batches {
+    ...PantryItemBatchFragment
+  }
+}
+
+fragment PantryItemBatchFragment on PantryItemBatch {
+  id
+  batchNumber
+  quantity
+  status
+  expiresAt
+  costPerUnit
+  totalCost
+  store { id name }
+  notes
+  isOpened
+  openedAt
+  depletedAt
+  remainingNetWeight
+  createdAt
+  updatedAt
+  wasteReason
+  pantryItemId
 }
 
 fragment HomeInviteFragment on HomeInvite {

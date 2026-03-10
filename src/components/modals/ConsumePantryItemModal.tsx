@@ -68,6 +68,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
     onClose();
   };
 
+  const showFifoHint = (pantryItem?.activeBatchCount ?? 0) > 1;
+
   return (
     <PantryActionModal
       visible={visible}
@@ -86,6 +88,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
           purpose={purpose}
           setPurpose={setPurpose}
           shared={shared}
+          showFifoHint={showFifoHint}
         />
       )}
     />
@@ -99,7 +102,8 @@ const ConsumeActionFields: React.FC<{
   purpose: UsagePurpose;
   setPurpose: (v: UsagePurpose) => void;
   shared: PantryActionSharedState;
-}> = ({ quantityInput, setQuantityInput, purpose, setPurpose, shared }) => {
+  showFifoHint?: boolean;
+}> = ({ quantityInput, setQuantityInput, purpose, setPurpose, shared, showFifoHint }) => {
   const consumeAmount = parseFractionalInput(quantityInput);
 
   const conversion = useConversionPreview({
@@ -151,6 +155,11 @@ const ConsumeActionFields: React.FC<{
           >
             Remaining: {remaining >= 0 ? formatQuantity(remaining) : 'Invalid'}{' '}
             {shared.activeUnitSymbol}
+          </Text>
+        ) : null}
+        {showFifoHint ? (
+          <Text style={commonStyles.bottomSheetHelperText}>
+            Items are consumed oldest-first by expiration date
           </Text>
         ) : null}
       </View>

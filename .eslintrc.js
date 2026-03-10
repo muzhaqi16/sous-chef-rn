@@ -80,7 +80,7 @@ module.exports = {
     'react-hooks/exhaustive-deps': 'warn',
 
     // Warn on unused variables (underscore prefix indicates intentionally unused)
-    '@typescript-eslint/no-unused-vars': 'warn',
+    '@typescript-eslint/no-unused-vars': ['warn', { ignoreRestSiblings: true }],
 
     // Disable rules not relevant for React Native
     'no-bitwise': 'off', // Allow bitwise operations for hash functions

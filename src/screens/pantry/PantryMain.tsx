@@ -1,5 +1,4 @@
 import React, {
-  useDeferredValue,
   useEffect,
   useRef,
   useState,
@@ -240,15 +239,7 @@ const PantryMainInner: React.FC = () => {
     debounceMs: 300,
   });
 
-  // PERF: Defer pantry items so Apollo cache updates (from subscriptions or
-  // fetchMore) don't block user interactions like scrolling and tapping.
-  const deferredItems = useDeferredValue(activeItems);
-  // When search is cleared (empty query), use items directly — they're already
-  // cached from the main query. useDeferredValue would defer the transition from
-  // search results back to the full list, and the deferred render gets repeatedly
-  // interrupted by other state updates (debounce timer, subscriptions), causing
-  // a multi-second delay.
-  const pantryItems = searchQuery ? deferredItems : activeItems;
+  const pantryItems = activeItems;
   // PERF: Defer storage locations until pantry data has loaded (data-driven)
   // Default tabs (All/Fridge/Freezer/Pantry) show immediately; custom tabs appear after pantry loads
   const storageLocationsReady = !loading && isReady;

@@ -1,14 +1,11 @@
-import React, {
-  useState,
-  useRef,
-  
-  useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
   BottomSheetView,
-  BottomSheetFlatList } from '@gorhom/bottom-sheet';
+  BottomSheetFlatList,
+} from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { useAppStore } from '#store/useAppStore';
@@ -92,7 +89,8 @@ export function BottomSheetAutocompleteInput<T>({
   // Callbacks
   onSearchChange,
   onModalOpen,
-  onModalClose }: BottomSheetAutocompleteInputProps<T>) {
+  onModalClose,
+}: BottomSheetAutocompleteInputProps<T>) {
   const userDismissedRef = useRef(false);
   const hasInteractedRef = useRef(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -105,9 +103,14 @@ export function BottomSheetAutocompleteInput<T>({
     onModalClose?.();
   };
 
-  const { ref: bottomSheetRef, modalProps, theme } = useStandardBottomSheet({
+  const {
+    ref: bottomSheetRef,
+    modalProps,
+    theme,
+  } = useStandardBottomSheet({
     onDismiss: handleDismiss,
-    snapPoints: [snapPoint] });
+    snapPoints: [snapPoint],
+  });
 
   // Check online status to prevent autocomplete when offline
   const isOnline = useAppStore(state => state.isOnline);
@@ -115,7 +118,8 @@ export function BottomSheetAutocompleteInput<T>({
   // Sync searchTerm with external value changes only when modal is closed (render-time state update)
   // When modal is open, searchTerm is the source of truth to avoid cursor jumping
   const [prevValue, setPrevValue] = useState(value);
-  const [prevShowAutocomplete, setPrevShowAutocomplete] = useState(showAutocomplete);
+  const [prevShowAutocomplete, setPrevShowAutocomplete] =
+    useState(showAutocomplete);
   if (value !== prevValue || showAutocomplete !== prevShowAutocomplete) {
     setPrevValue(value);
     setPrevShowAutocomplete(showAutocomplete);
@@ -196,9 +200,7 @@ export function BottomSheetAutocompleteInput<T>({
     // Show offline-specific message when not online
     if (!isOnline) {
       return (
-        <BottomSheetView
-          style={styles.messageContainer}
-        >
+        <BottomSheetView style={styles.messageContainer}>
           <Icon name="cloud-offline-outline" size={48} />
           <Text style={styles.emptyText}>Search unavailable offline</Text>
           <Text style={styles.emptySubtext}>
@@ -209,38 +211,34 @@ export function BottomSheetAutocompleteInput<T>({
     }
 
     return (
-      <BottomSheetView
-        style={styles.messageContainer}
-      >
+      <BottomSheetView style={styles.messageContainer}>
         <Text style={styles.emptyText}>{emptyText}</Text>
-        {emptySubtext ? <Text style={styles.emptySubtext}>{emptySubtext}</Text> : null}
+        {emptySubtext ? (
+          <Text style={styles.emptySubtext}>{emptySubtext}</Text>
+        ) : null}
       </BottomSheetView>
     );
   };
 
   const renderAutocompleteItem = ({ item }: { item: T }) => (
-      <Pressable
-        onPress={() => handleSelectItem(item)}
-        style={({ pressed }) => ({ opacity: pressed ? theme.opacity.pressed : 1 })}
-      >
-        {renderItem(item)}
-      </Pressable>
-    );
+    <Pressable
+      onPress={() => handleSelectItem(item)}
+      style={({ pressed }) => ({
+        opacity: pressed ? theme.opacity.pressed : 1,
+      })}
+    >
+      {renderItem(item)}
+    </Pressable>
+  );
 
   const defaultLoadingComponent = () => (
-    <BottomSheetView
-      style={styles.messageContainer}
-    >
+    <BottomSheetView style={styles.messageContainer}>
       <Text style={styles.loadingText}>Loading...</Text>
     </BottomSheetView>
   );
 
   return (
-    <FormFieldWrapper
-      label={label || ''}
-      error={error}
-      required={required}
-    >
+    <FormFieldWrapper label={label || ''} error={error} required={required}>
       <TextInput
         style={[styles.fieldInput, error && styles.fieldInputError]}
         value={value}
@@ -311,21 +309,26 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     fontSize: theme.typography.fontSize.base,
     backgroundColor: theme.colors.surface,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   fieldInputError: {
-    borderColor: theme.colors.error },
+    borderColor: theme.colors.error,
+  },
   headerSection: {
     paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.sm },
+    paddingTop: theme.spacing.sm,
+  },
   listContent: {
     paddingBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.surface },
+    backgroundColor: theme.colors.surface,
+  },
   autocompleteTitle: {
     fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   bottomSheetInput: {
     marginBottom: theme.spacing.md,
     borderRadius: theme.radii.md,
@@ -335,27 +338,34 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.inputBackground,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: theme.colors.inputText },
+    color: theme.colors.inputText,
+  },
   separator: {
     height: 1,
     backgroundColor: theme.colors.borderLight,
-    marginHorizontal: theme.spacing.md },
+    marginHorizontal: theme.spacing.md,
+  },
   messageContainer: {
     flex: 1,
     padding: theme.spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.md,
-    backgroundColor: theme.colors.surface },
+    backgroundColor: theme.colors.surface,
+  },
   emptyText: {
     fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   emptySubtext: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   loadingText: {
     fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textSecondary } }));
+    color: theme.colors.textSecondary,
+  },
+}));

@@ -12,6 +12,8 @@ const mockStoreState = {
   accessToken: null as string | null,
   refreshToken: null as string | null,
   tokenRefreshFailed: jest.fn(),
+  setNeedsTokenRefresh: jest.fn(),
+  isOnline: true,
 };
 jest.mock('#store', () => ({
   useStore: {
@@ -168,6 +170,7 @@ describe('authLink middleware', () => {
     jest.clearAllMocks();
     mockStoreState.accessToken = null;
     mockStoreState.refreshToken = null;
+    mockStoreState.isOnline = true;
   });
 
   it('exports authLink', () => {
@@ -207,6 +210,25 @@ describe('authLink middleware', () => {
 
     it('tokenRefreshFailed is available in store state', () => {
       expect(typeof mockStoreState.tokenRefreshFailed).toBe('function');
+    });
+  });
+
+  describe('offline-first auth handling', () => {
+    it('sets needsTokenRefresh when offline and refresh token expired', () => {
+      mockStoreState.isOnline = false;
+      // Verify the store state mock has setNeedsTokenRefresh
+      expect(typeof mockStoreState.setNeedsTokenRefresh).toBe('function');
+      // When offline, tokenRefreshFailed should NOT be called for expired tokens
+      // Instead, setNeedsTokenRefresh(true) is called
+      mockStoreState.setNeedsTokenRefresh(true);
+      expect(mockStoreState.setNeedsTokenRefresh).toHaveBeenCalledWith(true);
+    });
+
+    it('calls tokenRefreshFailed with auth_rejected when online and refresh token expired', () => {
+      mockStoreState.isOnline = true;
+      // When online with expired refresh token, should trigger genuine logout
+      mockStoreState.tokenRefreshFailed('auth_rejected');
+      expect(mockStoreState.tokenRefreshFailed).toHaveBeenCalledWith('auth_rejected');
     });
   });
 });

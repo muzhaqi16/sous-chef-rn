@@ -32,7 +32,6 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { Telemetry } from '#/services/telemetry';
 import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
-import { preloadImages } from '#components/atoms/CachedImage';
 
 /**
  * Inner content component that uses modal context.
@@ -53,11 +52,10 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       currentList,
       currentListDetails,
       currentListId,
-      items,
-      sortableItems,
       unpurchasedItems,
       purchasedItems,
       rawUnpurchasedItems,
+      rawPurchasedItems,
       isLoadingInitial,
       searchQuery,
       setSearchQuery,
@@ -102,7 +100,8 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       handleClearAllPurchased,
       handleClearAllShopping } = useShoppingListActions({
       currentListId,
-      items,
+      unpurchasedItems: rawUnpurchasedItems,
+      purchasedItems: rawPurchasedItems,
       addItem,
       toggleItem,
       removeItem,
@@ -146,27 +145,13 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
 
     // Show swipe hint after items load
     useEffect(() => {
-      if (items.length > 0 && !swipeHint.hasBeenShown) {
-        const unpurchasedForHint = items.filter(
-          (item: any) => !item.purchaseInfo?.isPurchased,
-        );
-        if (unpurchasedForHint.length > 0) {
-          const timer = setTimeout(() => {
-            swipeHint.actions.show();
-          }, 1500);
-          return () => clearTimeout(timer);
-        }
+      if (unpurchasedItems.length > 0 && !swipeHint.hasBeenShown) {
+        const timer = setTimeout(() => {
+          swipeHint.actions.show();
+        }, 1500);
+        return () => clearTimeout(timer);
       }
-    }, [items, swipeHint.hasBeenShown, swipeHint.actions]);
-
-    // Preload item images so they're cached before scrolling into view
-    useEffect(() => {
-      const urls: string[] = [];
-      for (const item of sortableItems) {
-        if (item.leftElementConfig?.url) urls.push(item.leftElementConfig.url);
-      }
-      if (urls.length > 0) preloadImages(urls);
-    }, [sortableItems]);
+    }, [unpurchasedItems, swipeHint.hasBeenShown, swipeHint.actions]);
 
     // Handle refresh
     const handleRefresh = () => {
@@ -357,7 +342,7 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           headerRight={headerRight}
         />
         <ListTemplate
-          items={sortableItems}
+          items={[]}
           loading={isLoadingInitial}
           onItemPress={id =>
             navigate('ItemDetail', { listId: currentListId, itemId: id })

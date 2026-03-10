@@ -85,15 +85,25 @@ function transformItem(
 /**
  * Transform an array of items, filtering out invalid ones.
  */
+const transformItemsCache = new WeakMap<
+  ShoppingListItemDisplayFragment[],
+  { key: string; result: SortableShoppingListItem[] }
+>();
+
 function transformItems(
   items: ShoppingListItemDisplayFragment[],
   forcePurchasedState?: boolean,
   showImages: boolean = true,
 ): SortableShoppingListItem[] {
   if (items.length === 0) return EMPTY_SORTABLE_ITEMS;
-  return items
+  const key = `${forcePurchasedState}-${showImages}`;
+  const cached = transformItemsCache.get(items);
+  if (cached && cached.key === key) return cached.result;
+  const result = items
     .map(item => transformItem(item, forcePurchasedState, showImages))
     .filter((item): item is SortableShoppingListItem => item !== null);
+  transformItemsCache.set(items, { key, result });
+  return result;
 }
 
 /**

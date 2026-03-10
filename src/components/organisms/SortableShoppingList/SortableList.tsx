@@ -20,6 +20,9 @@ import {
   SortableListThemeContext,
   type SortableListThemeColors } from './SortableListThemeContext';
 import { getTabBarBottomPadding } from '#constants/layout';
+import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
+import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 
 // Module-scope functions — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: SortableShoppingListItem) => item.id;
@@ -53,7 +56,14 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onEndReachedThreshold = 0.5,
   ListEmptyComponent,
 }) => {
+  useRenderTime('SortableShoppingList', { slowThreshold: 1000 });
   const flashListRef = useRef<FlashListRef<SortableShoppingListItem>>(null);
+
+  const perfCallbacks = useFlashListPerformance(flashListRef, {
+    componentName: 'SortableShoppingList',
+    reportInterval: 10000,
+  });
+  useDataReferenceTracker(items, 'SortableList.items', perfCallbacks.onDataReferenceChange);
 
   // PERFORMANCE: Single useUnistyles call for entire list
   const { theme } = useUnistyles();
@@ -129,7 +139,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             keyExtractor={keyExtractor}
             renderItem={renderItem}
             getItemType={getItemType}
-            drawDistance={200}
+
             showsVerticalScrollIndicator={false}
             contentContainerStyle={contentContainerStyle}
             ListHeaderComponent={ListHeaderComponent ?? undefined}
@@ -137,6 +147,10 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             ListEmptyComponent={ListEmptyComponent ?? undefined}
             onEndReached={onEndReached}
             onEndReachedThreshold={onEndReachedThreshold}
+            onLoad={perfCallbacks.onLoad}
+            onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+            drawDistance={250}
+            maxItemsInRecyclePool={20}
             onRefresh={onRefresh}
             refreshing={refreshing}
             maintainVisibleContentPosition={{ disabled: true }}

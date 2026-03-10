@@ -27,7 +27,6 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   clearAllUnpurchasedItemsFromCache: jest.fn(),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
   clearAllPurchasedItemsFromCache: mockClearAllPurchased,
   clearAllUnpurchasedItemsFromCache: mockClearAllUnpurchased,
@@ -53,7 +52,8 @@ describe('useClearShoppingListItems', () => {
     const { result } = renderHook(() =>
       useClearShoppingListItems({
         listId: 'list-1',
-        items: [],
+        unpurchasedItems: [],
+        purchasedItems: [],
         refetch: mockRefetch,
       }),
     );
@@ -62,12 +62,11 @@ describe('useClearShoppingListItems', () => {
   });
 
   it('does nothing when listId is null', async () => {
-    const items = [createItem({ purchaseInfo: { isPurchased: true } })];
-
     const { result } = renderHook(() =>
       useClearShoppingListItems({
         listId: null,
-        items,
+        unpurchasedItems: [],
+        purchasedItems: [createItem({ purchaseInfo: { isPurchased: true } })],
         refetch: mockRefetch,
       }),
     );
@@ -81,12 +80,11 @@ describe('useClearShoppingListItems', () => {
   });
 
   it('does nothing when no target items exist (purchased=true but none purchased)', async () => {
-    const items = [createItem({ purchaseInfo: { isPurchased: false } })];
-
     const { result } = renderHook(() =>
       useClearShoppingListItems({
         listId: 'list-1',
-        items,
+        unpurchasedItems: [createItem({ purchaseInfo: { isPurchased: false } })],
+        purchasedItems: [],
         refetch: mockRefetch,
       }),
     );
@@ -100,18 +98,20 @@ describe('useClearShoppingListItems', () => {
   });
 
   it('clears purchased items from cache and fires mutation', async () => {
-    mockClearMutation.mockResolvedValue({ data: { clearShoppingListItems: true } });
-
-    const items = [
-      createItem({ id: 'item-1', purchaseInfo: { isPurchased: true } }),
-      createItem({ id: 'item-2', purchaseInfo: { isPurchased: false } }),
-      createItem({ id: 'item-3', purchaseInfo: { isPurchased: true } }),
-    ];
+    mockClearMutation.mockResolvedValue({
+      data: { clearShoppingListItems: true },
+    });
 
     const { result } = renderHook(() =>
       useClearShoppingListItems({
         listId: 'list-1',
-        items,
+        unpurchasedItems: [
+          createItem({ id: 'item-2', purchaseInfo: { isPurchased: false } }),
+        ],
+        purchasedItems: [
+          createItem({ id: 'item-1', purchaseInfo: { isPurchased: true } }),
+          createItem({ id: 'item-3', purchaseInfo: { isPurchased: true } }),
+        ],
         refetch: mockRefetch,
       }),
     );
@@ -135,18 +135,20 @@ describe('useClearShoppingListItems', () => {
   });
 
   it('clears unpurchased items from cache and fires mutation', async () => {
-    mockClearMutation.mockResolvedValue({ data: { clearShoppingListItems: true } });
-
-    const items = [
-      createItem({ id: 'item-1', purchaseInfo: { isPurchased: false } }),
-      createItem({ id: 'item-2', purchaseInfo: { isPurchased: true } }),
-      createItem({ id: 'item-3', purchaseInfo: { isPurchased: false } }),
-    ];
+    mockClearMutation.mockResolvedValue({
+      data: { clearShoppingListItems: true },
+    });
 
     const { result } = renderHook(() =>
       useClearShoppingListItems({
         listId: 'list-1',
-        items,
+        unpurchasedItems: [
+          createItem({ id: 'item-1', purchaseInfo: { isPurchased: false } }),
+          createItem({ id: 'item-3', purchaseInfo: { isPurchased: false } }),
+        ],
+        purchasedItems: [
+          createItem({ id: 'item-2', purchaseInfo: { isPurchased: true } }),
+        ],
         refetch: mockRefetch,
       }),
     );
@@ -173,17 +175,19 @@ describe('useClearShoppingListItems', () => {
     // First mutation never resolves (simulating slow mutation)
     let resolveFirst: ((value: any) => void) | undefined;
     mockClearMutation.mockImplementationOnce(
-      () => new Promise(resolve => { resolveFirst = resolve; }),
+      () =>
+        new Promise(resolve => {
+          resolveFirst = resolve;
+        }),
     );
-
-    const items = [
-      createItem({ id: 'item-1', purchaseInfo: { isPurchased: true } }),
-    ];
 
     const { result } = renderHook(() =>
       useClearShoppingListItems({
         listId: 'list-1',
-        items,
+        unpurchasedItems: [],
+        purchasedItems: [
+          createItem({ id: 'item-1', purchaseInfo: { isPurchased: true } }),
+        ],
         refetch: mockRefetch,
       }),
     );

@@ -33,7 +33,6 @@ import {
  * Configuration for create operation
  */
 export interface CreateOperationConfig<TInput, TResult> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- wraps diverse Apollo mutation signatures
   mutation: (
     ...args: any[]
   ) => Promise<{ data?: TResult; errors?: readonly { message: string }[] }>;
@@ -49,7 +48,6 @@ export interface CreateOperationConfig<TInput, TResult> {
  * Configuration for update operation
  */
 export interface UpdateOperationConfig<TInput, TResult> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- wraps diverse Apollo mutation signatures
   mutation: (...args: any[]) => Promise<{ data?: TResult }>;
   parentId?: string | null | (() => string | null | undefined);
   itemId: string;
@@ -71,7 +69,6 @@ export interface UpdateOperationConfig<TInput, TResult> {
  * Configuration for remove operation
  */
 export interface RemoveOperationConfig<TResult> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- wraps diverse Apollo mutation signatures
   mutation: (...args: any[]) => Promise<{ data?: TResult }>;
   parentId?: string | null | (() => string | null | undefined);
   itemId: string;
@@ -255,7 +252,6 @@ function createUpdateOperationImpl<TInput, TResult>(
 }
 
 async function executeRemoveImpl<TResult>(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- wraps diverse Apollo mutation signatures
   mutation: (...args: any[]) => Promise<{ data?: TResult }>,
   itemId: string,
   operationName: string,

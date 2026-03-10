@@ -33,7 +33,6 @@ export const HomeTabs = createBottomTabNavigator({
     headerShown: false,
     tabBarHideOnKeyboard: true,
     lazy: true,
-    freezeOnBlur: true,
     animation: 'none',
   },
   screens: {

@@ -1,5 +1,7 @@
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
+import type { ModifierDetails } from '@apollo/client/cache';
+import type { Reference } from '@apollo/client/utilities';
 import { useMoveShoppingListItemMutation } from '#generated';
 import { generatePosition } from '#/utils/fractionalIndexing';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -179,22 +181,19 @@ export function useItemReordering<T extends ShoppingListItem>(
         });
 
         // Helper to sort edges by sortOrder with secondary sort by id
-        // justified: Apollo readField returns opaque cache references — no public type for edge/node access
-        const sortEdges = (edges: readonly any[], readField: any) => {
+        const sortEdges = (edges: readonly Reference[], readField: ModifierDetails['readField']) => {
           return [...edges].sort((a, b) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const nodeA = readField('node', a) as any;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const nodeB = readField('node', b) as any;
+            const nodeA = readField<Reference>('node', a);
+            const nodeB = readField<Reference>('node', b);
             const sortA =
-              ((nodeA ? readField('sortOrder', nodeA) : '') as string) || '';
+              (nodeA ? readField<string>('sortOrder', nodeA) : '') ?? '';
             const sortB =
-              ((nodeB ? readField('sortOrder', nodeB) : '') as string) || '';
+              (nodeB ? readField<string>('sortOrder', nodeB) : '') ?? '';
             if (sortA < sortB) return -1;
             if (sortA > sortB) return 1;
             // Secondary sort by id for deterministic ordering when sortOrder matches
-            const idA = ((nodeA ? readField('id', nodeA) : '') as string) || '';
-            const idB = ((nodeB ? readField('id', nodeB) : '') as string) || '';
+            const idA = (nodeA ? readField<string>('id', nodeA) : '') ?? '';
+            const idB = (nodeB ? readField<string>('id', nodeB) : '') ?? '';
             return idA.localeCompare(idB);
           });
         };

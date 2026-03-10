@@ -27,8 +27,14 @@ interface ListTemplateProps {
   emptyState?: EmptyStateConfig;
 
   // List composition
-  ListHeaderComponent?: React.ComponentType<unknown> | React.ReactElement | null;
-  ListFooterComponent?: React.ComponentType<unknown> | React.ReactElement | null;
+  ListHeaderComponent?:
+    | React.ComponentType<unknown>
+    | React.ReactElement
+    | null;
+  ListFooterComponent?:
+    | React.ComponentType<unknown>
+    | React.ReactElement
+    | null;
 
   // State management
   loading?: boolean;
@@ -36,9 +42,6 @@ interface ListTemplateProps {
   // Test IDs
   testIDPrefix?: string;
 
-  // Custom list component — intentionally loosely typed because each consumer
-  // passes a different component (ShoppingListTabs, SortablePantryList, etc.)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   customListComponent?: React.ComponentType<any>;
   customListProps?: Record<string, unknown>;
 }
@@ -98,7 +101,9 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           ListHeaderComponent={ListHeaderComponent}
           ListFooterComponent={ListFooterComponent}
           testIDPrefix={testIDPrefix}
-          emptyState={effectiveEmptyState as Parameters<typeof ItemList>[0]['emptyState']}
+          emptyState={
+            effectiveEmptyState as Parameters<typeof ItemList>[0]['emptyState']
+          }
         />
       )}
     </View>

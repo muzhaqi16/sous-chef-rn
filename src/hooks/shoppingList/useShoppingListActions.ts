@@ -17,7 +17,8 @@ import { useClearShoppingListItems } from './mutations/useClearShoppingListItems
 
 interface UseShoppingListActionsOptions {
   currentListId: string | undefined;
-  items: any[];
+  unpurchasedItems: any[];
+  purchasedItems: any[];
   addItem: (input: { itemName: string; quantity?: number }) => Promise<any>;
   toggleItem: (itemId: string) => Promise<any>;
   removeItem: (itemId: string) => Promise<any>;
@@ -170,7 +171,8 @@ async function executeAddItemFromSearch(
  */
 export function useShoppingListActions({
   currentListId,
-  items,
+  unpurchasedItems,
+  purchasedItems,
   addItem,
   toggleItem,
   removeItem,
@@ -355,28 +357,19 @@ export function useShoppingListActions({
   // Clear items handler - uses optimistic cache clearing for instant UI
   const { clearItems } = useClearShoppingListItems({
     listId: currentListId,
-    items,
+    unpurchasedItems,
+    purchasedItems,
     refetch: refetchItems,
   });
 
   const handleClearAllPurchased = async () => {
-    const purchasedItems = items.filter(
-      (item: any) => item.purchaseInfo?.isPurchased,
-    );
-
     if (purchasedItems.length === 0) return;
-
     await executeClearItems(haptic, clearItems, true);
   };
 
   // Clear all shopping (unpurchased) items handler
   const handleClearAllShopping = async () => {
-    const unpurchasedItems = items.filter(
-      (item: any) => !item.purchaseInfo?.isPurchased,
-    );
-
     if (unpurchasedItems.length === 0) return;
-
     await executeClearItems(haptic, clearItems, false);
   };
 

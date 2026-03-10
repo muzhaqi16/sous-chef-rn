@@ -605,7 +605,21 @@ export class QueueManager {
       return false;
     }
 
-    // Token exists - assume valid
+    // Check if a deferred token refresh is pending
+    if (state.needsTokenRefresh) {
+      logger.info('🔄 Queue: Deferred token refresh pending, attempting refresh before replay');
+      const { proactiveTokenRefresh } = await import('../links/refreshToken');
+      const newToken = await proactiveTokenRefresh();
+      if (newToken) {
+        useStore.getState().setNeedsTokenRefresh(false);
+        return true;
+      }
+      // Refresh failed — cannot safely replay queue
+      logger.error('❌ Queue: Deferred token refresh failed, aborting queue processing');
+      return false;
+    }
+
+    // Token exists and no deferred refresh — assume valid
     // The Apollo auth link will handle expired tokens automatically via attemptTokenRefresh
     return true;
   }

@@ -225,6 +225,22 @@ export function usePantryItemActions({
       optimisticUpdateQuantity(item.id, originalQty + quantity);
     }
 
+    // Optimistically increment activeBatchCount for instant UI feedback
+    const cacheIdForBatch = client.cache.identify({
+      __typename: 'PantryItem',
+      id: item.id,
+    });
+    if (cacheIdForBatch) {
+      client.cache.modify({
+        id: cacheIdForBatch,
+        fields: {
+          activeBatchCount(existing: number) {
+            return existing + 1;
+          },
+        },
+      });
+    }
+
     const restockNotes = notes || undefined;
     const expiresAtValue = expiresAt ? expiresAt.toISOString() : null;
     const restockResult = await executeMutation(

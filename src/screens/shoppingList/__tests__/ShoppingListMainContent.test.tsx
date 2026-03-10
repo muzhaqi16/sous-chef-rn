@@ -140,11 +140,10 @@ const makeScreenData = (overrides: any = {}) => ({
   currentList: { id: 'list-1', name: 'Groceries' },
   currentListDetails: null,
   currentListId: 'list-1',
-  items: [],
-  sortableItems: [],
   unpurchasedItems: [],
   purchasedItems: [],
   rawUnpurchasedItems: [],
+  rawPurchasedItems: [],
   isLoadingInitial: false,
   searchQuery: '',
   setSearchQuery: jest.fn(),
@@ -188,8 +187,7 @@ describe('ShoppingListMainContent', () => {
     const { getByTestId } = render(
       <ShoppingListMainContent
         screenData={makeScreenData({
-          items: [{ id: 'item-1', name: 'Milk', purchaseInfo: null }],
-          sortableItems: [{ id: 'item-1', title: 'Milk' }],
+          unpurchasedItems: [{ id: 'item-1', name: 'Milk', purchaseInfo: null }],
         })}
       />,
     );

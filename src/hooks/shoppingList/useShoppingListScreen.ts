@@ -43,10 +43,10 @@ export function useShoppingListScreen() {
   // PERF: Use optimisticListId so queries fire immediately with the persisted
   // Zustand ID, breaking the waterfall that previously waited for lists to load.
   const {
-    items,
-    allItems,
-    unpurchasedItems: rawUnpurchasedItems,
-    purchasedItems: rawPurchasedItems,
+    unpurchasedItems: filteredUnpurchasedItems,
+    purchasedItems: filteredPurchasedItems,
+    rawUnpurchasedItems,
+    rawPurchasedItems,
     shoppingList: currentListDetails,
     loading: itemsLoading,
     error,
@@ -66,17 +66,13 @@ export function useShoppingListScreen() {
     removeItem,
     toggleItem,
     refetch,
-    getItemById,
-    getCompletedItems,
-    getPendingItems,
-    getItemsByCategory,
   } = useShoppingListManagement(optimisticListId);
 
   // 4. Transform: Convert raw items to UI format (single consolidated call)
   const { unpurchasedItems: transformedUnpurchasedItems, purchasedItems: transformedPurchasedItems } =
     useShoppingListTransformMulti({
-      rawUnpurchasedItems,
-      rawPurchasedItems,
+      rawUnpurchasedItems: filteredUnpurchasedItems,
+      rawPurchasedItems: filteredPurchasedItems,
     });
 
   // Defer Apollo cache/subscription updates so scroll events aren't blocked.
@@ -84,8 +80,12 @@ export function useShoppingListScreen() {
   const deferredUnpurchased = useDeferredValue(transformedUnpurchasedItems);
   const deferredPurchased = useDeferredValue(transformedPurchasedItems);
 
-  // Derive sortableItems from deferred values
-  const sortableItems = [...deferredUnpurchased, ...deferredPurchased];
+  // Bypass deferred rendering when not searching — matches PantryMain pattern.
+  // Deferred rendering only benefits rapid search-typing updates.
+  // Without search, data updates (subscriptions, pagination) render normally,
+  // avoiding the delayed batch re-render that causes large frame gaps.
+  const unpurchasedItems = searchQuery ? deferredUnpurchased : transformedUnpurchasedItems;
+  const purchasedItems = searchQuery ? deferredPurchased : transformedPurchasedItems;
 
   // 5. Ownership: Enrich lists with ownership info
   const listDataWithOwnership = lists.map(list => ({
@@ -96,8 +96,8 @@ export function useShoppingListScreen() {
   // Preload shopping list item images into disk cache for instant display
   // PERF: Defer to idle to avoid competing with in-flight queries during critical load
   useEffect(() => {
-    if (items.length > 0) {
-      const urls = items
+    if (rawUnpurchasedItems.length > 0 || rawPurchasedItems.length > 0) {
+      const urls = [...rawUnpurchasedItems, ...rawPurchasedItems]
         .map(item => resolveImageUrl(item))
         .filter((url): url is string => !!url);
       if (urls.length > 0) {
@@ -107,10 +107,10 @@ export function useShoppingListScreen() {
         return () => cancelIdleCallback(handle);
       }
     }
-  }, [items]);
+  }, [rawUnpurchasedItems, rawPurchasedItems]);
 
   // Derived: Initial loading state (loading with no data)
-  const isLoadingInitial = (listsLoading || itemsLoading) && items.length === 0;
+  const isLoadingInitial = (listsLoading || itemsLoading) && rawUnpurchasedItems.length === 0 && rawPurchasedItems.length === 0;
   const loading = listsLoading || itemsLoading;
 
   return {
@@ -127,11 +127,10 @@ export function useShoppingListScreen() {
     setSelectedShoppingListId,
 
     // Items (transformed for UI)
-    items,
-    sortableItems,
-    unpurchasedItems: deferredUnpurchased,
-    purchasedItems: deferredPurchased,
+    unpurchasedItems,
+    purchasedItems,
     rawUnpurchasedItems,
+    rawPurchasedItems,
 
     // Loading states
     loading,
@@ -161,12 +160,5 @@ export function useShoppingListScreen() {
     removeItem,
     toggleItem,
     refetch,
-
-    // Helpers
-    allItems,
-    getItemById,
-    getCompletedItems,
-    getPendingItems,
-    getItemsByCategory,
   };
 }

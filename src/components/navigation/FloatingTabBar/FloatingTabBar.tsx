@@ -131,17 +131,17 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
           // update — the current screen stays visible while the target mounts,
           // allowing skeleton fallbacks to paint instead of freezing the UI.
           startTransition(() => {
-            if (mainScreen) {
-              // Navigate to tab AND reset stack to main screen
+            if (!isFocused) {
+              // Switching tabs: just focus the tab, preserve frozen stack state.
+              // With enableFreeze(true), the frozen tree unfreezes instantly
+              // instead of unmounting/remounting the entire screen.
+              navigation.navigate(route.name);
+            } else if (mainScreen) {
+              // Re-tapping the active tab: reset stack to root (standard iOS/Android pattern)
               navigation.navigate(route.name, {
                 screen: mainScreen,
-                initial: false, // Forces stack reset
+                initial: false,
               });
-            } else {
-              // Profile or other tabs without nested stacks
-              if (!isFocused) {
-                navigation.navigate(route.name, route.params);
-              }
             }
           });
         }

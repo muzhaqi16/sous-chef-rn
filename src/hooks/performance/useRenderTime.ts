@@ -1,9 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { Telemetry } from '#/services/telemetry';
 import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
 import { usePerformanceStore } from '#/store/performanceStore';
-
-/* eslint-disable react-compiler/react-compiler, react-hooks/purity -- Render-time measurement is inherently impure (performance.now, Math.random during render). Compiler optimization is not applicable. */
 
 /**
  * Hook to track component render time and count
@@ -36,21 +34,21 @@ export function useRenderTime(
   const renderStartTime = useRef<number>(0);
   const renderCount = useRef<number>(0);
   const totalRenderTime = useRef<number>(0);
-
-  if (__DEV__) {
-    renderStartTime.current = performance.now();
-  }
+  const shouldTrackRef = useRef<boolean>(false);
 
   const enabled = options?.enabled ?? DEFAULT_PERFORMANCE_CONFIG.enabled;
-  const sampleRate = options?.sampleRate ?? DEFAULT_PERFORMANCE_CONFIG.sampleRate;
-  const slowThreshold = options?.slowThreshold ?? DEFAULT_PERFORMANCE_CONFIG.slowRenderThreshold;
+  const sampleRate =
+    options?.sampleRate ?? DEFAULT_PERFORMANCE_CONFIG.sampleRate;
+  const slowThreshold =
+    options?.slowThreshold ?? DEFAULT_PERFORMANCE_CONFIG.slowRenderThreshold;
 
-  if (__DEV__) {
+  // Capture render start time and increment count synchronously after commit
+  // useLayoutEffect fires before useEffect, so the start time is available for measurement
+  useLayoutEffect(() => {
+    if (!__DEV__) return;
+    renderStartTime.current = performance.now();
     renderCount.current += 1;
-  }
-
-  // Apply sampling - only track a percentage of renders
-  const shouldTrack = __DEV__ ? Math.random() < sampleRate : false;
+  });
 
   // Measure render time after paint
   // Intentionally omitting deps — this effect must run after every render to capture timing.
@@ -62,8 +60,11 @@ export function useRenderTime(
       return;
     }
 
+    // Apply sampling decision inside effect to avoid impure Math.random() during render
+    shouldTrackRef.current = Math.random() < sampleRate;
+
     // Skip if not tracking this render (except first render)
-    if (!shouldTrack && renderCount.current > 1) {
+    if (!shouldTrackRef.current && renderCount.current > 1) {
       return;
     }
     const renderEndTime = performance.now();
@@ -83,7 +84,9 @@ export function useRenderTime(
     });
 
     // Record metrics in performance store for dashboard (isolated from main store)
-    usePerformanceStore.getState().recordComponentRender(componentName, renderDuration);
+    usePerformanceStore
+      .getState()
+      .recordComponentRender(componentName, renderDuration);
 
     // Track slow renders
     if (renderDuration > slowThreshold) {
@@ -93,19 +96,25 @@ export function useRenderTime(
       });
 
       console.warn(
-        `[Performance] Slow render detected: ${componentName} took ${renderDuration.toFixed(2)}ms`,
+        `[Performance] Slow render detected: ${componentName} took ${renderDuration.toFixed(
+          2,
+        )}ms`,
       );
     }
 
     // Log render metrics in dev
     if (renderCount.current === 1) {
       console.log(
-        `[Performance] ${componentName} first render: ${renderDuration.toFixed(2)}ms`,
+        `[Performance] ${componentName} first render: ${renderDuration.toFixed(
+          2,
+        )}ms`,
       );
     } else if (renderCount.current <= 10) {
       // Log first 10 renders to track unnecessary re-renders
       console.log(
-        `[Performance] ${componentName} render #${renderCount.current}: ${renderDuration.toFixed(2)}ms (avg: ${avgRenderTime.toFixed(2)}ms)`,
+        `[Performance] ${componentName} render #${
+          renderCount.current
+        }: ${renderDuration.toFixed(2)}ms (avg: ${avgRenderTime.toFixed(2)}ms)`,
       );
     }
   });

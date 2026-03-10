@@ -72,19 +72,26 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
   if (token && isTokenExpiringSoon(token, REFRESH_BUFFER_MS)) {
     // Check if refresh token is also expired
     if (refreshToken && isRefreshTokenExpired(refreshToken)) {
-      // Both tokens expired - trigger logout
-      console.warn('[AuthLink] Both tokens expired, redirecting to login');
-      useStore.getState().tokenRefreshFailed(true);
-      throw new Error('Session expired - please log in again');
+      const state = useStore.getState();
+      if (state.isOnline) {
+        // Online + both tokens expired → genuine logout
+        console.warn('[AuthLink] Both tokens expired while online, redirecting to login');
+        state.tokenRefreshFailed('auth_rejected');
+        throw new Error('Session expired - please log in again');
+      } else {
+        // Offline + expired refresh token → defer, let request hit cache or fail at network layer
+        console.warn('[AuthLink] Both tokens expired while offline, deferring refresh');
+        state.setNeedsTokenRefresh(true);
+      }
+    } else {
+      // Attempt proactive refresh before the request
+      console.log('[AuthLink] Token expiring soon, refreshing before request');
+      const newToken = await proactiveTokenRefresh();
+      if (newToken) {
+        token = newToken;
+      }
+      // If refresh fails, use existing token - reactive refresh will handle 401
     }
-
-    // Attempt proactive refresh before the request
-    console.log('[AuthLink] Token expiring soon, refreshing before request');
-    const newToken = await proactiveTokenRefresh();
-    if (newToken) {
-      token = newToken;
-    }
-    // If refresh fails, use existing token - reactive refresh will handle 401
   }
 
   if (!token) {

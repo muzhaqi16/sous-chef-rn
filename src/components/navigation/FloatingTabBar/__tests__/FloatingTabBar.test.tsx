@@ -286,9 +286,31 @@ describe('FloatingTabBar', () => {
     });
   });
 
-  it('navigates with screen reset for known tabs', () => {
+  it('navigates without stack reset when switching to unfocused tab', () => {
     const nav = createNavigation();
     const state = createNavigationState();
+    render(
+      <FloatingTabBar
+        state={state}
+        descriptors={createDescriptors()}
+        navigation={nav as any}
+        insets={{ top: 0, bottom: 0, left: 0, right: 0 }}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId('tab-Recipe'));
+
+    // Switching tabs should just navigate without resetting the stack
+    expect(nav.navigate).toHaveBeenCalledWith('Recipe');
+  });
+
+  it('resets stack to root when re-tapping focused tab', () => {
+    const nav = createNavigation();
+    // Recipe is focused (index 2)
+    const state = createNavigationState(
+      ['Pantry', 'ShoppingList', 'Recipe', 'MealPlan'],
+      2,
+    );
     render(
       <FloatingTabBar
         state={state}

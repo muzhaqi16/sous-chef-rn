@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useApolloClient } from '@apollo/client/react';
 import { useGetHomesLazyQuery, useSetDefaultHomeMutation } from '#generated';
@@ -27,9 +27,6 @@ export const useDefaultHome = () => {
     setSelectedPantryId,
   } = useAppStore(useShallow(selectPantryState));
   const { canAttemptQueries } = useAuth();
-
-  // Track if we're currently clearing stale IDs to prevent race condition
-  const [isClearingStaleIds, setIsClearingStaleIds] = useState(false);
 
   // Track if we've already initialized defaults to prevent cascading re-renders
   const hasInitializedRef = useRef(false);
@@ -96,7 +93,10 @@ export const useDefaultHome = () => {
   // PERF: Read hasInitializedHomeData non-reactively to avoid triggering a full
   // re-render of PantryMainScreen when this flag changes (false→true)
   useEffect(() => {
-    const { hasInitializedHomeData: hasInitialized, setHasInitializedHomeData } = useStore.getState();
+    const {
+      hasInitializedHomeData: hasInitialized,
+      setHasInitializedHomeData,
+    } = useStore.getState();
     if (canAttemptQueries && !hasInitialized) {
       setHasInitializedHomeData(true);
       // Pass network-only override to bypass cache on login
@@ -125,8 +125,9 @@ export const useDefaultHome = () => {
     const defaultHome = homesList?.find(h => h.isDefault);
     if (!defaultHome?.pantries?.length) return null;
     const defaultPantry =
-      defaultHome.pantries.find((p: { isDefault?: boolean; id?: string }) => p.isDefault) ||
-      defaultHome.pantries[0];
+      defaultHome.pantries.find(
+        (p: { isDefault?: boolean; id?: string }) => p.isDefault,
+      ) || defaultHome.pantries[0];
     return defaultPantry?.id || null;
   })();
 
@@ -136,20 +137,21 @@ export const useDefaultHome = () => {
     return homesList.some(h => h.id === selectedHomeId);
   })();
 
+  // Derived boolean: true when selected home no longer exists and needs clearing
+  const needsClearing = !!(
+    selectedHomeId &&
+    homesList &&
+    homesList.length > 0 &&
+    !isSelectedHomeValid
+  );
+
   // Clear stale selectedHomeId if home was deleted while app was in background
   // Also reset ready state to force re-initialization
   useEffect(() => {
-    if (
-      selectedHomeId &&
-      homesList &&
-      homesList.length > 0 &&
-      !isSelectedHomeValid
-    ) {
+    if (needsClearing) {
       console.warn(
         '[HomeSelector] Selected home no longer exists, clearing selection',
       );
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- coordinating with cache eviction side effect
-      setIsClearingStaleIds(true);
 
       // Evict stale Home and Pantry entities from Apollo cache
       // This prevents cache-only queries from returning deleted entities
@@ -178,23 +180,14 @@ export const useDefaultHome = () => {
       hasAutoSelectedRef.current = false;
     }
   }, [
+    needsClearing,
     selectedHomeId,
     selectedPantryId,
-    homesList,
-    isSelectedHomeValid,
     setSelectedHomeId,
     setSelectedPantryId,
     setIsHomeSelectionReady,
     client,
   ]);
-
-  // Reset clearing flag after state updates propagate
-  useEffect(() => {
-    if (isClearingStaleIds && !selectedHomeId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting flag after cache eviction propagates
-      setIsClearingStaleIds(false);
-    }
-  }, [isClearingStaleIds, selectedHomeId]);
 
   // Sync remote defaults to local store (one-time initialization)
   // CONSOLIDATED: Both home and pantry are set in a single effect to prevent
@@ -268,8 +261,9 @@ export const useDefaultHome = () => {
 
     // Set pantry immediately from local data (mutation will confirm/update later)
     const localDefaultPantry =
-      firstHome.pantries?.find((p: { isDefault?: boolean; id?: string }) => p.isDefault) ||
-      firstHome.pantries?.[0];
+      firstHome.pantries?.find(
+        (p: { isDefault?: boolean; id?: string }) => p.isDefault,
+      ) || firstHome.pantries?.[0];
     if (localDefaultPantry?.id && !selectedPantryId) {
       setSelectedPantryId(localDefaultPantry.id);
     }
@@ -291,8 +285,9 @@ export const useDefaultHome = () => {
         } else if (!selectedPantryId) {
           // Fallback: Get default pantry from first home data if mutation didn't return one
           const firstHomePantry =
-            firstHome.pantries?.find((p: { isDefault?: boolean; id?: string }) => p.isDefault) ||
-            firstHome.pantries?.[0];
+            firstHome.pantries?.find(
+              (p: { isDefault?: boolean; id?: string }) => p.isDefault,
+            ) || firstHome.pantries?.[0];
           if (firstHomePantry?.id) {
             setSelectedPantryId(firstHomePantry.id);
             console.log(
@@ -307,8 +302,9 @@ export const useDefaultHome = () => {
         // Fallback on error: try to set pantry from home data
         if (!selectedPantryId) {
           const firstHomePantry =
-            firstHome.pantries?.find((p: { isDefault?: boolean; id?: string }) => p.isDefault) ||
-            firstHome.pantries?.[0];
+            firstHome.pantries?.find(
+              (p: { isDefault?: boolean; id?: string }) => p.isDefault,
+            ) || firstHome.pantries?.[0];
           if (firstHomePantry?.id) {
             setSelectedPantryId(firstHomePantry.id);
             console.log(
@@ -382,7 +378,7 @@ export const useDefaultHome = () => {
     if (loading) return;
 
     // Don't update while clearing stale IDs (wait for state to propagate)
-    if (isClearingStaleIds) return;
+    if (needsClearing) return;
 
     // Case 1: No homes exist - ready with no selection
     if (!homesList || homesList.length === 0) {
@@ -410,7 +406,7 @@ export const useDefaultHome = () => {
     homesList,
     selectedHomeId,
     isHomeSelectionReady,
-    isClearingStaleIds,
+    needsClearing,
     setIsHomeSelectionReady,
   ]);
 
@@ -422,15 +418,20 @@ export const useDefaultHome = () => {
       homesList &&
       homesList.length > 0 &&
       !remoteDefaultHomeId &&
-      !isClearingStaleIds
+      !needsClearing
     ) {
       hasAutoSelectedRef.current = false;
     }
-  }, [isHomeSelectionReady, selectedHomeId, homesList, remoteDefaultHomeId, isClearingStaleIds]);
+  }, [
+    isHomeSelectionReady,
+    selectedHomeId,
+    homesList,
+    remoteDefaultHomeId,
+    needsClearing,
+  ]);
 
   // Helper function to get the default pantry from a home
   // Handle both normalized homes (with pantries array) and raw homes (with pantriesConnection)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- homeData shape varies between raw and normalized homes
   const getDefaultPantry = (homeData: any) => {
     const home = homeData?.home ?? homeData;
     const pantries = home?.pantries ?? normalizeHome(home)?.pantries ?? [];
@@ -439,7 +440,11 @@ export const useDefaultHome = () => {
       return null;
     }
     return (
-      pantries.find((pantry: { isDefault?: boolean; id?: string }) => pantry.isDefault) || pantries[0] || null
+      pantries.find(
+        (pantry: { isDefault?: boolean; id?: string }) => pantry.isDefault,
+      ) ||
+      pantries[0] ||
+      null
     );
   };
 

@@ -48,7 +48,7 @@ const ShoppingListMainInner: React.FC = () => {
   return (
     <ShoppingListModalsProvider
       currentListId={screenData.currentListId}
-      items={screenData.items}
+      items={[...screenData.rawUnpurchasedItems, ...screenData.rawPurchasedItems]}
       searchQuery={screenData.searchQuery}
       onSearchQueryClear={() => screenData.setSearchQuery('')}
       onNavigateToListSettings={() => navigate('ListSettings')}

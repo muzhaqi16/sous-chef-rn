@@ -175,7 +175,7 @@ export class SubscriptionService {
    * @param config - Subscription configuration
    * @returns Configured handlers (onData, onError, onComplete)
    */
-  register<TData = any>(config: SubscriptionConfig<TData>): SubscriptionHandlers<TData> {
+  register<TData = any>(config: SubscriptionConfig<TData>): SubscriptionHandlers {
     // Set defaults - use Partial for optional fields
     const finalConfig = {
       subscriptionName: config.subscriptionName,

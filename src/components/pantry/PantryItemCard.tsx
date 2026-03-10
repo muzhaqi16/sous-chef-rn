@@ -38,6 +38,7 @@ interface PantryItemCardProps {
   packageBreakdownText?: string | null;
   remainingNetWeightText?: string | null;
   quantityBreakdownText?: string | null;
+  activeBatchCount?: number;
 }
 
 /**
@@ -137,7 +138,8 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
   isOutOfStock,
   packageBreakdownText,
   remainingNetWeightText,
-  quantityBreakdownText }) => {
+  quantityBreakdownText,
+  activeBatchCount }) => {
   const { actions, swipeable } = usePantryActions();
 
   // PERFORMANCE: Single object for all item action callbacks
@@ -202,12 +204,16 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
             quantityBreakdownText ||
             packageBreakdownText ||
             remainingNetWeightText ||
+            (activeBatchCount && activeBatchCount > 1
+              ? `${activeBatchCount} batches`
+              : undefined) ||
             location
           }
           tertiary={
             quantityBreakdownText ||
             packageBreakdownText ||
-            remainingNetWeightText
+            remainingNetWeightText ||
+            (activeBatchCount && activeBatchCount > 1)
               ? location
               : undefined
           }
@@ -254,7 +260,8 @@ export const PantryItemCard = React.memo(
     prev.isOutOfStock === next.isOutOfStock &&
     prev.packageBreakdownText === next.packageBreakdownText &&
     prev.remainingNetWeightText === next.remainingNetWeightText &&
-    prev.quantityBreakdownText === next.quantityBreakdownText,
+    prev.quantityBreakdownText === next.quantityBreakdownText &&
+    prev.activeBatchCount === next.activeBatchCount,
 );
 
 // PantryItemVariant alias for backwards compatibility

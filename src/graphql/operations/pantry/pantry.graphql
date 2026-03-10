@@ -582,6 +582,49 @@ mutation ConvertExpiredToWaste($pantryItemId: ID!) {
 }
 
 # ============================================
+# BATCH OPERATIONS
+# ============================================
+
+query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
+  pantryItemBatches(pantryItemId: $pantryItemId, status: $status) {
+    ...PantryItemBatchFragment
+  }
+}
+
+mutation OpenPantryItemBatch($input: OpenBatchInput!) {
+  openPantryItemBatch(input: $input) {
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemDisplay
+    }
+  }
+}
+
+mutation WastePantryItemBatch($input: WasteBatchInput!) {
+  wastePantryItemBatch(input: $input) {
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemDisplay
+    }
+  }
+}
+
+mutation ConvertExpiredBatchesToWaste($pantryItemId: ID!) {
+  convertExpiredBatchesToWaste(pantryItemId: $pantryItemId) {
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemDisplay
+    }
+  }
+}
+
+# ============================================
 # OFFLINE SYNC MUTATIONS
 # ============================================
 
