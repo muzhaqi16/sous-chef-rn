@@ -107,6 +107,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
       visible={visible}
       onRequestClose={handleClose}
       statusBarTranslucent={true}
+      navigationBarTranslucent={true}
       presentationStyle="overFullScreen"
     >
       <KeyboardAvoidingView

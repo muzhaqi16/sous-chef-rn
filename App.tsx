@@ -9,7 +9,6 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
-import { enableScreens, enableFreeze } from 'react-native-screens';
 import { useAppStore, selectHydrated } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { client } from '#/apollo/client';
@@ -46,12 +45,6 @@ import { setupGlobalErrorHandler } from '#/utils/globalErrorHandler';
 
 // Install global JS exception and promise rejection handlers before any component renders
 setupGlobalErrorHandler();
-
-// Enable native screens for better performance
-enableScreens();
-// Freeze all inactive screens globally — prevents background re-renders
-// across all navigators (tabs + stacks), not just the tab navigator
-enableFreeze(true);
 
 /**
  * Module-level handler for permanently failed queued mutations.

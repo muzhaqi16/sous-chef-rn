@@ -1,4 +1,9 @@
-import React, { useState, useLayoutEffect, forwardRef, useImperativeHandle } from 'react';
+import React, {
+  useState,
+  useLayoutEffect,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
 import {
   View,
   Text,
@@ -82,391 +87,431 @@ interface StorageLocationFormProps {
   hideActions?: boolean;
 }
 
-export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLocationFormProps>(({
-  initialData,
-  onSubmit,
-  onCancel,
-  isSubmitting,
-  availableLocations = [],
-  hideActions = false,
-}, ref) => {
-  const { theme } = useUnistyles();
-  const [advancedExpanded, setAdvancedExpanded] = useState(false);
-  const chevronRotation = useSharedValue(0);
+export const StorageLocationForm = forwardRef<
+  StorageLocationFormRef,
+  StorageLocationFormProps
+>(
+  (
+    {
+      initialData,
+      onSubmit,
+      onCancel,
+      isSubmitting,
+      availableLocations = [],
+      hideActions = false,
+    },
+    ref,
+  ) => {
+    const { theme } = useUnistyles();
+    const [advancedExpanded, setAdvancedExpanded] = useState(false);
+    const chevronRotation = useSharedValue(0);
 
-  const [formData, setFormData] = useState({
-    name: initialData?.name || '',
-    type: initialData?.type || 'PANTRY_SHELF',
-    icon: initialData?.icon || '',
-    parentLocationId: initialData?.parentLocationId || undefined,
-    description: initialData?.description || '',
-    temperature: initialData?.temperature || StorageState.None,
-    color: initialData?.color || null as string | null,
-    isClimateControlled: initialData?.isClimateControlled || false,
-    capacity: initialData?.capacity != null ? String(initialData.capacity) : '',
-    capacityUnit: initialData?.capacityUnit || '',
-    isDefault: initialData?.isDefault || false,
-  });
+    const [formData, setFormData] = useState({
+      name: initialData?.name || '',
+      type: initialData?.type || 'PANTRY_SHELF',
+      icon: initialData?.icon || '',
+      parentLocationId: initialData?.parentLocationId || undefined,
+      description: initialData?.description || '',
+      temperature: initialData?.temperature || StorageState.None,
+      color: initialData?.color || (null as string | null),
+      isClimateControlled: initialData?.isClimateControlled || false,
+      capacity:
+        initialData?.capacity != null ? String(initialData.capacity) : '',
+      capacityUnit: initialData?.capacityUnit || '',
+      isDefault: initialData?.isDefault || false,
+    });
 
-  // Sync form data when initialData changes (render-time state update)
-  const [prevInitialData, setPrevInitialData] = useState(initialData);
-  if (initialData !== prevInitialData) {
-    setPrevInitialData(initialData);
-    if (initialData) {
-      setFormData({
-        name: initialData.name || '',
-        type: initialData.type || 'PANTRY_SHELF',
-        icon: initialData.icon || '',
-        parentLocationId: initialData.parentLocationId || undefined,
-        description: initialData.description || '',
-        temperature: initialData.temperature || StorageState.None,
-        color: initialData.color || null,
-        isClimateControlled: initialData.isClimateControlled || false,
-        capacity: initialData.capacity != null ? String(initialData.capacity) : '',
-        capacityUnit: initialData.capacityUnit || '',
-        isDefault: initialData.isDefault || false,
-      });
-    }
-  }
-
-  useLayoutEffect(() => {
-    chevronRotation.set(withSpring(advancedExpanded ? 180 : 0, SPRING.EXPAND));
-  }, [advancedExpanded, chevronRotation]);
-
-  const animatedChevronStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${chevronRotation.value}deg` }],
-  }));
-
-  // Filter out current location from parent options (can't be its own parent)
-  const parentOptions = availableLocations.filter(
-    loc => loc.id !== initialData?.id,
-  );
-
-  const handleSubmit = () => {
-    if (!formData.name.trim()) {
-      return;
+    // Sync form data when initialData changes (render-time state update)
+    const [prevInitialData, setPrevInitialData] = useState(initialData);
+    if (initialData !== prevInitialData) {
+      setPrevInitialData(initialData);
+      if (initialData) {
+        setFormData({
+          name: initialData.name || '',
+          type: initialData.type || 'PANTRY_SHELF',
+          icon: initialData.icon || '',
+          parentLocationId: initialData.parentLocationId || undefined,
+          description: initialData.description || '',
+          temperature: initialData.temperature || StorageState.None,
+          color: initialData.color || null,
+          isClimateControlled: initialData.isClimateControlled || false,
+          capacity:
+            initialData.capacity != null ? String(initialData.capacity) : '',
+          capacityUnit: initialData.capacityUnit || '',
+          isDefault: initialData.isDefault || false,
+        });
+      }
     }
 
-    const capacityFloat = formData.capacity ? parseFloat(formData.capacity) : null;
+    useLayoutEffect(() => {
+      chevronRotation.set(
+        withSpring(advancedExpanded ? 180 : 0, SPRING.EXPAND),
+      );
+    }, [advancedExpanded, chevronRotation]);
 
-    const finalData = {
-      name: formData.name.trim(),
-      type: formData.type,
-      icon: formData.icon || null,
-      parentLocationId: formData.parentLocationId || null,
-      description: formData.description.trim() || null,
-      temperature: formData.temperature !== StorageState.None ? formData.temperature : null,
-      color: formData.color || null,
-      isClimateControlled: formData.isClimateControlled || null,
-      capacity: capacityFloat && !isNaN(capacityFloat) ? capacityFloat : null,
-      capacityUnit: formData.capacityUnit || null,
-      isDefault: formData.isDefault || null,
+    const animatedChevronStyle = useAnimatedStyle(() => ({
+      transform: [{ rotate: `${chevronRotation.value}deg` }],
+    }));
+
+    // Filter out current location from parent options (can't be its own parent)
+    const parentOptions = availableLocations.filter(
+      loc => loc.id !== initialData?.id,
+    );
+
+    const handleSubmit = () => {
+      if (!formData.name.trim()) {
+        return;
+      }
+
+      const capacityFloat = formData.capacity
+        ? parseFloat(formData.capacity)
+        : null;
+
+      const finalData = {
+        name: formData.name.trim(),
+        type: formData.type,
+        icon: formData.icon || null,
+        parentLocationId: formData.parentLocationId || null,
+        description: formData.description.trim() || null,
+        temperature:
+          formData.temperature !== StorageState.None
+            ? formData.temperature
+            : null,
+        color: formData.color || null,
+        isClimateControlled: formData.isClimateControlled || null,
+        capacity: capacityFloat && !isNaN(capacityFloat) ? capacityFloat : null,
+        capacityUnit: formData.capacityUnit || null,
+        isDefault: formData.isDefault || null,
+      };
+
+      onSubmit(finalData);
     };
 
-    onSubmit(finalData);
-  };
+    const isValid = () => formData.name.trim().length > 0;
 
-  const isValid = () => formData.name.trim().length > 0;
+    useImperativeHandle(ref, () => ({
+      submit: handleSubmit,
+      isValid,
+    }));
 
-  useImperativeHandle(ref, () => ({
-    submit: handleSubmit,
-    isValid,
-  }));
-
-  return (
-    <View style={styles.container}>
-      {/* Name */}
-      <View style={commonStyles.inputGroup}>
-        <Text style={commonStyles.label}>Name</Text>
-        <TextInput
-          style={commonStyles.input}
-          value={formData.name}
-          onChangeText={name => setFormData({ ...formData, name })}
-          placeholder="e.g., Main Refrigerator"
-          autoFocus
-        />
-      </View>
-
-      {/* Type Carousel */}
-      <View style={commonStyles.inputGroup}>
-        <Text style={commonStyles.label}>Type</Text>
-        <View style={styles.carouselContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.typeScroll}
-            contentContainerStyle={styles.typeScrollContent}
-          >
-            {STORAGE_TYPES.map(type => (
-              <Pressable
-                key={type.value}
-                style={({pressed}) => [
-                  styles.typeButton,
-                  formData.type === type.value && styles.typeButtonSelected,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => setFormData({ ...formData, type: type.value, icon: type.icon })}
-              >
-                <Text style={styles.typeIcon}>{type.icon}</Text>
-                <Text
-                  style={[
-                    styles.typeLabel,
-                    formData.type === type.value && styles.typeLabelSelected,
-                  ]}
-                >
-                  {type.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-          <View
-            style={[
-              styles.fadeLeft,
-              { backgroundColor: theme.colors.surface },
-            ]}
-            pointerEvents="none"
-          />
-          <View
-            style={[
-              styles.fadeRight,
-              { backgroundColor: theme.colors.surface },
-            ]}
-            pointerEvents="none"
+    return (
+      <View style={styles.container}>
+        {/* Name */}
+        <View style={commonStyles.inputGroup}>
+          <Text style={commonStyles.label}>Name</Text>
+          <TextInput
+            style={commonStyles.input}
+            value={formData.name}
+            onChangeText={name => setFormData({ ...formData, name })}
+            placeholder="e.g., Main Refrigerator"
+            autoFocus
           />
         </View>
-      </View>
 
-      {/* Icon */}
-      <View style={commonStyles.inputGroup}>
-        <Text style={commonStyles.label}>Icon (Optional)</Text>
-        <TextInput
-          style={commonStyles.input}
-          value={formData.icon}
-          onChangeText={icon => setFormData({ ...formData, icon })}
-          placeholder="Enter emoji (e.g., 🧊)"
-          maxLength={2}
-        />
-        <Text style={styles.hint}>
-          Leave empty for no icon
-        </Text>
-      </View>
-
-      {/* Parent Location Selector */}
-      {parentOptions.length > 0 && (
+        {/* Type Carousel */}
         <View style={commonStyles.inputGroup}>
-          <Text style={commonStyles.label}>Parent Location (Optional)</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.parentScroll}
-          >
-            <Pressable
-              style={({pressed}) => [
-                styles.parentButton,
-                !formData.parentLocationId && styles.parentButtonSelected,
-                pressed && styles.pressed,
-              ]}
-              onPress={() =>
-                setFormData({ ...formData, parentLocationId: undefined })
-              }
+          <Text style={commonStyles.label}>Type</Text>
+          <View style={styles.carouselContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.typeScroll}
+              contentContainerStyle={styles.typeScrollContent}
             >
-              <Text
-                style={[
-                  styles.parentLabel,
-                  !formData.parentLocationId && styles.parentLabelSelected,
-                ]}
-              >
-                None
-              </Text>
-            </Pressable>
-            {parentOptions.map(location => (
+              {STORAGE_TYPES.map(type => (
+                <Pressable
+                  key={type.value}
+                  style={({ pressed }) => [
+                    styles.typeButton,
+                    formData.type === type.value && styles.typeButtonSelected,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() =>
+                    setFormData({
+                      ...formData,
+                      type: type.value,
+                      icon: type.icon,
+                    })
+                  }
+                >
+                  <Text style={styles.typeIcon}>{type.icon}</Text>
+                  <Text
+                    style={[
+                      styles.typeLabel,
+                      formData.type === type.value && styles.typeLabelSelected,
+                    ]}
+                  >
+                    {type.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <View style={styles.fadeLeft} pointerEvents="none" />
+            <View style={styles.fadeRight} pointerEvents="none" />
+          </View>
+        </View>
+
+        {/* Icon */}
+        <View style={commonStyles.inputGroup}>
+          <Text style={commonStyles.label}>Icon (Optional)</Text>
+          <TextInput
+            style={commonStyles.input}
+            value={formData.icon}
+            onChangeText={icon => setFormData({ ...formData, icon })}
+            placeholder="Enter emoji (e.g., 🧊)"
+            maxLength={2}
+          />
+          <Text style={styles.hint}>Leave empty for no icon</Text>
+        </View>
+
+        {/* Parent Location Selector */}
+        {parentOptions.length > 0 && (
+          <View style={commonStyles.inputGroup}>
+            <Text style={commonStyles.label}>Parent Location (Optional)</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.parentScroll}
+            >
               <Pressable
-                key={location.id}
-                style={({pressed}) => [
+                style={({ pressed }) => [
                   styles.parentButton,
-                  formData.parentLocationId === location.id &&
-                    styles.parentButtonSelected,
+                  !formData.parentLocationId && styles.parentButtonSelected,
                   pressed && styles.pressed,
                 ]}
                 onPress={() =>
-                  setFormData({ ...formData, parentLocationId: location.id })
+                  setFormData({ ...formData, parentLocationId: undefined })
                 }
               >
                 <Text
                   style={[
                     styles.parentLabel,
+                    !formData.parentLocationId && styles.parentLabelSelected,
+                  ]}
+                >
+                  None
+                </Text>
+              </Pressable>
+              {parentOptions.map(location => (
+                <Pressable
+                  key={location.id}
+                  style={({ pressed }) => [
+                    styles.parentButton,
                     formData.parentLocationId === location.id &&
+                      styles.parentButtonSelected,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() =>
+                    setFormData({ ...formData, parentLocationId: location.id })
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.parentLabel,
+                      formData.parentLocationId === location.id &&
+                        styles.parentLabelSelected,
+                    ]}
+                  >
+                    {location.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <Text style={styles.hint}>
+              Organize locations hierarchically (e.g., drawer inside fridge)
+            </Text>
+          </View>
+        )}
+
+        {/* Description */}
+        <FormTextArea
+          label="Description (Optional)"
+          value={formData.description}
+          onChangeText={description =>
+            setFormData({ ...formData, description })
+          }
+          placeholder="Notes about this location..."
+          numberOfLines={2}
+        />
+
+        {/* Temperature */}
+        <View style={commonStyles.inputGroup}>
+          <Text style={commonStyles.label}>Temperature</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.parentScroll}
+          >
+            {TEMPERATURE_OPTIONS.map(option => (
+              <Pressable
+                key={option.value}
+                style={({ pressed }) => [
+                  styles.parentButton,
+                  formData.temperature === option.value &&
+                    styles.parentButtonSelected,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() =>
+                  setFormData({ ...formData, temperature: option.value })
+                }
+              >
+                <Text
+                  style={[
+                    styles.parentLabel,
+                    formData.temperature === option.value &&
                       styles.parentLabelSelected,
                   ]}
                 >
-                  {location.name}
+                  {option.label}
                 </Text>
               </Pressable>
             ))}
           </ScrollView>
-          <Text style={styles.hint}>
-            Organize locations hierarchically (e.g., drawer inside fridge)
-          </Text>
         </View>
-      )}
 
-      {/* Description */}
-      <FormTextArea
-        label="Description (Optional)"
-        value={formData.description}
-        onChangeText={description => setFormData({ ...formData, description })}
-        placeholder="Notes about this location..."
-        numberOfLines={2}
-      />
-
-      {/* Temperature */}
-      <View style={commonStyles.inputGroup}>
-        <Text style={commonStyles.label}>Temperature</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.parentScroll}
-        >
-          {TEMPERATURE_OPTIONS.map(option => (
-            <Pressable
-              key={option.value}
-              style={({pressed}) => [
-                styles.parentButton,
-                formData.temperature === option.value && styles.parentButtonSelected,
-                pressed && styles.pressed,
-              ]}
-              onPress={() => setFormData({ ...formData, temperature: option.value })}
-            >
-              <Text
-                style={[
-                  styles.parentLabel,
-                  formData.temperature === option.value && styles.parentLabelSelected,
-                ]}
-              >
-                {option.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Color */}
-      <View style={commonStyles.inputGroup}>
-        <Text style={commonStyles.label}>Color (Optional)</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.colorScroll}
-        >
-          <Pressable
-            style={({pressed}) => [
-              styles.colorSwatch,
-              styles.colorSwatchNone,
-              !formData.color && styles.colorSwatchSelected,
-              pressed && styles.pressed,
-            ]}
-            onPress={() => setFormData({ ...formData, color: null })}
+        {/* Color */}
+        <View style={commonStyles.inputGroup}>
+          <Text style={commonStyles.label}>Color (Optional)</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.colorScroll}
           >
-            <Text style={styles.colorNoneText}>-</Text>
-          </Pressable>
-          {COLOR_PRESETS.map(preset => (
             <Pressable
-              key={preset.value}
-              style={({pressed}) => [
+              style={({ pressed }) => [
                 styles.colorSwatch,
-                { backgroundColor: preset.value },
-                formData.color === preset.value && styles.colorSwatchSelected,
+                styles.colorSwatchNone,
+                !formData.color && styles.colorSwatchSelected,
                 pressed && styles.pressed,
               ]}
-              onPress={() => setFormData({ ...formData, color: preset.value })}
-              accessibilityLabel={preset.label}
-            />
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Advanced Settings Collapsible */}
-      <Pressable
-        style={({pressed}) => [styles.advancedHeader, pressed && styles.pressed]}
-        onPress={() => setAdvancedExpanded(!advancedExpanded)}
-      >
-        <Text style={styles.advancedHeaderText}>Advanced Settings</Text>
-        <Animated.View style={animatedChevronStyle}>
-          <Icon name="chevron-down" size={20} color={theme.colors.textSecondary} />
-        </Animated.View>
-      </Pressable>
-
-      {advancedExpanded ? (
-        <Animated.View
-          entering={FadeIn.duration(TIMING.STANDARD)}
-          exiting={FadeOut.duration(TIMING.FAST)}
-        >
-          <FormCheckbox
-            label="Climate Controlled"
-            checked={formData.isClimateControlled}
-            onPress={() => setFormData({ ...formData, isClimateControlled: !formData.isClimateControlled })}
-          />
-
-          <View style={styles.capacityRow}>
-            <FormNumberInput
-              label="Capacity"
-              value={formData.capacity}
-              onChangeText={capacity => setFormData({ ...formData, capacity })}
-              placeholder="e.g., 100"
-              keyboardType="decimal-pad"
-              containerStyle={styles.capacityInput}
-            />
-            <FormSelect
-              label="Unit"
-              value={formData.capacityUnit}
-              onValueChange={capacityUnit => setFormData({ ...formData, capacityUnit })}
-              options={CAPACITY_UNIT_OPTIONS}
-              placeholder="Select unit"
-              containerStyle={styles.capacityUnit}
-            />
-          </View>
-
-          <FormCheckbox
-            label="Set as Default Location"
-            checked={formData.isDefault}
-            onPress={() => setFormData({ ...formData, isDefault: !formData.isDefault })}
-          />
-        </Animated.View>
-      ) : null}
-
-      {!hideActions && (
-        <View style={styles.formActions}>
-          <Pressable
-            style={({pressed}) => [commonStyles.button, commonStyles.buttonSecondary, pressed && styles.pressed]}
-            onPress={onCancel}
-            disabled={isSubmitting}
-          >
-            <Text style={commonStyles.buttonTextSecondary}>Cancel</Text>
-          </Pressable>
-          <Pressable
-            style={({pressed}) => [commonStyles.button, commonStyles.buttonPrimary, pressed && styles.pressed]}
-            onPress={handleSubmit}
-            disabled={isSubmitting || !formData.name.trim()}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Text style={commonStyles.buttonTextPrimary}>
-                {initialData ? 'Update' : 'Create'}
-              </Text>
-            )}
-          </Pressable>
+              onPress={() => setFormData({ ...formData, color: null })}
+            >
+              <Text style={styles.colorNoneText}>-</Text>
+            </Pressable>
+            {COLOR_PRESETS.map(preset => (
+              <Pressable
+                key={preset.value}
+                style={({ pressed }) => [
+                  styles.colorSwatch,
+                  { backgroundColor: preset.value },
+                  formData.color === preset.value && styles.colorSwatchSelected,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() =>
+                  setFormData({ ...formData, color: preset.value })
+                }
+                accessibilityLabel={preset.label}
+              />
+            ))}
+          </ScrollView>
         </View>
-      )}
-    </View>
-  );
-});
+
+        {/* Advanced Settings Collapsible */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.advancedHeader,
+            pressed && styles.pressed,
+          ]}
+          onPress={() => setAdvancedExpanded(!advancedExpanded)}
+        >
+          <Text style={styles.advancedHeaderText}>Advanced Settings</Text>
+          <Animated.View style={animatedChevronStyle}>
+            <Icon
+              name="chevron-down"
+              size={20}
+              color={theme.colors.textSecondary}
+            />
+          </Animated.View>
+        </Pressable>
+
+        {advancedExpanded ? (
+          <Animated.View
+            entering={FadeIn.duration(TIMING.STANDARD)}
+            exiting={FadeOut.duration(TIMING.FAST)}
+          >
+            <FormCheckbox
+              label="Climate Controlled"
+              checked={formData.isClimateControlled}
+              onPress={() =>
+                setFormData({
+                  ...formData,
+                  isClimateControlled: !formData.isClimateControlled,
+                })
+              }
+            />
+
+            <View style={styles.capacityRow}>
+              <FormNumberInput
+                label="Capacity"
+                value={formData.capacity}
+                onChangeText={capacity =>
+                  setFormData({ ...formData, capacity })
+                }
+                placeholder="e.g., 100"
+                keyboardType="decimal-pad"
+                containerStyle={styles.capacityInput}
+              />
+              <FormSelect
+                label="Unit"
+                value={formData.capacityUnit}
+                onValueChange={capacityUnit =>
+                  setFormData({ ...formData, capacityUnit })
+                }
+                options={CAPACITY_UNIT_OPTIONS}
+                placeholder="Select unit"
+                containerStyle={styles.capacityUnit}
+              />
+            </View>
+
+            <FormCheckbox
+              label="Set as Default Location"
+              checked={formData.isDefault}
+              onPress={() =>
+                setFormData({ ...formData, isDefault: !formData.isDefault })
+              }
+            />
+          </Animated.View>
+        ) : null}
+
+        {!hideActions && (
+          <View style={styles.formActions}>
+            <Pressable
+              style={({ pressed }) => [
+                commonStyles.button,
+                commonStyles.buttonSecondary,
+                pressed && styles.pressed,
+              ]}
+              onPress={onCancel}
+              disabled={isSubmitting}
+            >
+              <Text style={commonStyles.buttonTextSecondary}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                commonStyles.button,
+                commonStyles.buttonPrimary,
+                pressed && styles.pressed,
+              ]}
+              onPress={handleSubmit}
+              disabled={isSubmitting || !formData.name.trim()}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={commonStyles.buttonTextPrimary}>
+                  {initialData ? 'Update' : 'Create'}
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        )}
+      </View>
+    );
+  },
+);
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-  },
+  container: {},
   carouselContainer: {
     marginHorizontal: -theme.spacing.lg,
     marginTop: theme.spacing.xs,

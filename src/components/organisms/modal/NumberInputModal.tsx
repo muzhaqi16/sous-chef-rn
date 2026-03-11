@@ -272,6 +272,8 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
       transparent
       animationType="slide"
       onRequestClose={handleCancel}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={localStyles.modalOverlay}>
         <View style={[commonStyles.card, localStyles.modalContent]}>

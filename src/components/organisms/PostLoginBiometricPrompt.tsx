@@ -91,6 +91,7 @@ export const PostLoginBiometricPrompt = ({
       transparent
       animationType="fade"
       statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.overlay} testID="post-login-biometric-prompt">
         <View style={styles.container} testID="post-login-biometric-prompt-container">

@@ -16,7 +16,9 @@ export const RememberMeModal: React.FC<{
       visible={visible}
       transparent={true}
       animationType="fade"
-      onRequestClose={onDecline}>
+      onRequestClose={onDecline}
+      statusBarTranslucent
+      navigationBarTranslucent>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <Icon name="lock-closed-outline" size={48} color={theme.colors.primary} />

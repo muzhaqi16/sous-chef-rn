@@ -132,8 +132,8 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
           // allowing skeleton fallbacks to paint instead of freezing the UI.
           startTransition(() => {
             if (!isFocused) {
-              // Switching tabs: just focus the tab, preserve frozen stack state.
-              // With enableFreeze(true), the frozen tree unfreezes instantly
+              // Switching tabs: just focus the tab, preserve paused stack state.
+              // With inactiveBehavior: 'pause', the paused tree resumes instantly
               // instead of unmounting/remounting the entire screen.
               navigation.navigate(route.name);
             } else if (mainScreen) {

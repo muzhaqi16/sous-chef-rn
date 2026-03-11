@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { StatusBar } from 'react-native';
+import { SystemBars } from 'react-native-edge-to-edge';
 import { UnistylesRuntime, useUnistyles } from 'react-native-unistyles';
 import { useAppStore, selectHydrated } from '#store/useAppStore';
 import { Telemetry } from '#services/telemetry';
@@ -24,8 +24,7 @@ export const ThemedStatusBar = () => {
           ? 'dark'
           : 'light';
 
-  const barStyle =
-    resolvedTheme === 'dark' ? 'light-content' : 'dark-content';
+  const barStyle = resolvedTheme === 'dark' ? 'light' : 'dark';
 
   const bgColor =
     resolvedTheme === 'dark'
@@ -56,5 +55,5 @@ export const ThemedStatusBar = () => {
   // Before hydration, render nothing — AppDelegate's native setup persists.
   if (!isHydrated) return null;
 
-  return <StatusBar barStyle={barStyle} />;
+  return <SystemBars style={barStyle} />;
 };

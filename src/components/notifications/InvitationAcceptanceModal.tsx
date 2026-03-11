@@ -296,6 +296,8 @@ export const InvitationAcceptanceModal: React.FC<
       transparent
       animationType="slide"
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.overlay}>
         <View style={styles.modal}>

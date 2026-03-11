@@ -267,6 +267,8 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
         transparent
         animationType="slide"
         onRequestClose={handleCancel}
+        statusBarTranslucent
+        navigationBarTranslucent
       >
         <View style={styles.modalOverlay}>
           <View style={[commonStyles.card, styles.modalContent]}>

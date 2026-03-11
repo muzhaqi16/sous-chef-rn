@@ -100,6 +100,8 @@ export const Loading: React.FC<LoadingProps> = ({
       transparent
       visible={visible}
       animationType="fade"
+      statusBarTranslucent
+      navigationBarTranslucent
       onRequestClose={() => {
         if (cancelable && onCancel) {
           onCancel();

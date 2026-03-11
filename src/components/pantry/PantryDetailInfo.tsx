@@ -43,6 +43,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         value={`${item.quantity} ${getUnitDisplayText(item.unit)}`}
         icon="apps-outline"
         showColon={false}
+        labelStyle={styles.labelText}
+        valueStyle={styles.valueText}
         containerStyle={styles.rowContainer}
       />
 
@@ -53,6 +55,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={netWeightText}
           icon="scale-outline"
           showColon={false}
+          labelStyle={styles.labelText}
           containerStyle={styles.rowContainer}
         >
           <Text style={styles.valueText}>{netWeightText}</Text>
@@ -82,6 +85,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={remainingNetWeightText}
           icon="scale-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -93,6 +98,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={quantityBreakdownText}
           icon="layers-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -104,6 +111,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={packageBreakdownText}
           icon="layers-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -115,6 +124,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={brandName}
           icon="pricetag-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -130,6 +141,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           }
           icon="cube-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -141,6 +154,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={item.store.name}
           icon="storefront-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -162,6 +177,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
             item.condition === 'FAIR' && styles.valueWarning,
           ]}
           showColon={false}
+          labelStyle={styles.labelText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -173,6 +189,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={formatAcquisitionMethod(item.acquisitionMethod)}
           icon="bag-handle-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -184,6 +202,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={formatCurrency(item.costPerUnit)}
           icon="cash-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -195,6 +215,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={formatCurrency(item.totalCost)}
           icon="wallet-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -206,6 +228,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={`${item.minQuantity} ${item.unit?.name ?? ''}`}
           icon="alert-circle-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -217,6 +241,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={`${item.restockQuantity} ${item.unit?.name ?? ''}`}
           icon="refresh-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -232,6 +258,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           }`}
           icon="receipt-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -243,6 +271,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           value={formatDate(item.lastUsedAt)}
           icon="time-outline"
           showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
           containerStyle={styles.rowContainer}
         />
       )}
@@ -282,6 +312,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         value={formatDate(item.createdAt)}
         icon="calendar-outline"
         showColon={false}
+        labelStyle={styles.labelText}
+        valueStyle={styles.valueText}
         containerStyle={styles.rowContainer}
       />
     </>
@@ -294,6 +326,9 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+  },
+  labelText: {
+    color: theme.colors.textSecondary,
   },
   valueText: {
     fontSize: theme.fonts.size.base,

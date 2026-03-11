@@ -214,6 +214,7 @@ export const BiometricSetupModal = ({
       transparent
       animationType="slide"
       statusBarTranslucent
+      navigationBarTranslucent
     >
       <View style={styles.overlay} />
       <KeyboardAvoidingView

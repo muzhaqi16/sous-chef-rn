@@ -171,7 +171,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   value: {
-    flex: 1,
     textAlign: 'right',
   },
   valueWithIcon: {

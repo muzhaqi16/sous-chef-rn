@@ -150,6 +150,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
       visible={visible}
       onRequestClose={handleClose}
       statusBarTranslucent={true}
+      navigationBarTranslucent={true}
       presentationStyle="overFullScreen"
     >
       <View style={styles.centeredView}>
