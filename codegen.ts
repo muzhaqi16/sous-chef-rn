@@ -93,6 +93,9 @@ const config: CodegenConfig = {
 
         // NEW for v6 - strict scalars
         strictScalars: true,
+
+        // Tree-shaking: annotate generated code with /*#__PURE__*/ for Metro/Hermes
+        pureMagicComment: true,
       },
     },
 
@@ -103,19 +106,7 @@ const config: CodegenConfig = {
         apolloClientVersion: 4,
       },
     },
-
-    // Schema file
-    'src/graphql/generated/schema.graphql': {
-      plugins: ['schema-ast'],
-      config: {
-        includeDirectives: true,
-        includeIntrospectionTypes: false,
-      },
-    },
   },
-
-  // Watch mode - moved outside config in v6
-  watch: process.env.NODE_ENV === 'development',
 
   // Hooks
   hooks: {
