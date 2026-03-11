@@ -15,19 +15,11 @@ let mockCategoryData: any = null;
 let mockCategoryLoading = false;
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useAutocompleteCategoriesLazyQuery: () => [
     mockSearchCategories,
     { data: mockCategoryData, loading: mockCategoryLoading },
   ],
-  CategoryType: {
-    Cuisine: 'CUISINE',
-    Custom: 'CUSTOM',
-    Dietary: 'DIETARY',
-    General: 'GENERAL',
-    MealType: 'MEAL_TYPE',
-    Storage: 'STORAGE',
-    System: 'SYSTEM',
-  },
 }));
 
 beforeEach(() => {

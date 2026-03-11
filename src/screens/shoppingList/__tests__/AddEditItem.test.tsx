@@ -30,11 +30,10 @@ jest.mock('#/hooks/shoppingList/useShoppingListItemForm', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useAddItemToShoppingListMutation: jest.fn(() => [jest.fn(() => Promise.resolve({ data: null })), { loading: false }]),
   useUpdateShoppingListItemMutation: jest.fn(() => [jest.fn(() => Promise.resolve({ data: null })), { loading: false }]),
   useGetShoppingListItemQuery: jest.fn(() => ({ data: null, loading: false })),
-  ShoppingListItemDisplayFragmentDoc: {},
-  CategoryType: { General: 'GENERAL' },
 }));
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({

@@ -5,12 +5,6 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { RecipeTagsSection } from '../RecipeTagsSection';
 import { Diet, HealthGoal, Intolerance } from '#generated';
 
-jest.mock('#generated', () => ({
-  Diet: { Vegan: 'VEGAN', Vegetarian: 'VEGETARIAN', Keto: 'KETO' },
-  HealthGoal: { WeightLoss: 'WEIGHT_LOSS', MuscleGain: 'MUSCLE_GAIN' },
-  Intolerance: { GlutenFree: 'GLUTEN_FREE', LactoseIntolerant: 'LACTOSE_INTOLERANT' },
-}));
-
 jest.mock('#components/molecules/MultiSelectChipSheet/MultiSelectChipSheet', () => ({
   MultiSelectChipSheet: ({ visible, title, onSelect, onClose, onDone }: any) => {
     const { View, Text, Pressable } = require('react-native');

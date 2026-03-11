@@ -6,6 +6,7 @@ const mockCreateMutation = jest.fn();
 const mockRestockMutation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreatePantryItemMutation: jest.fn(() => [mockCreateMutation]),
   useRestockPantryItemMutation: jest.fn(() => [mockRestockMutation]),
 }));

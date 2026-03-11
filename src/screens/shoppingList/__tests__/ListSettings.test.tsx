@@ -48,6 +48,7 @@ jest.mock('#hooks/shoppingList/useShoppingListsQuery', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useUpdateShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useDeleteShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useCreateShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),

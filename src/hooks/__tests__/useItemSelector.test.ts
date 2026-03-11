@@ -3,6 +3,7 @@ import { useItemSelector } from '../useItemSelector';
 
 // Mock GraphQL queries — all skipped for 'custom' type tests
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetShoppingListsLiteQuery: jest.fn(() => ({
     data: undefined,
     loading: false,

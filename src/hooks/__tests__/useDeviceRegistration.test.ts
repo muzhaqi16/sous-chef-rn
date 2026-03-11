@@ -7,6 +7,7 @@ const mockCollectDeviceInformation = jest.fn();
 const mockValidateDeviceInformation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useRegisterDeviceMutation: jest.fn(() => [mockRegisterDeviceMutation]),
 }));
 

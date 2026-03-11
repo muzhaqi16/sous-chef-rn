@@ -1,17 +1,6 @@
 import { renderHook } from '@testing-library/react-native';
 import { useDailyMeals } from '../useDailyMeals';
 
-jest.mock('#generated', () => ({
-  MealType: {
-    Breakfast: 'BREAKFAST',
-    Brunch: 'BRUNCH',
-    Lunch: 'LUNCH',
-    Snack: 'SNACK',
-    Dinner: 'DINNER',
-    Dessert: 'DESSERT',
-  },
-}));
-
 const today = new Date(2025, 5, 15); // June 15, 2025
 const todayISO = '2025-06-15T12:00:00Z';
 const otherDayISO = '2025-06-16T12:00:00Z';

@@ -7,9 +7,10 @@ jest.mock('#/apollo/links/refreshToken');
 
 const mockUseGetMealPlansQuery = jest.fn();
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetMealPlansQuery: (...args: any[]) => mockUseGetMealPlansQuery(...args),
-  SortOrder: { Desc: 'DESC', Asc: 'ASC' },
 }));
+
 jest.mock('#hooks/auth/useAuth', () => ({
   useAuth: () => ({ isLoggedOut: false }),
 }));

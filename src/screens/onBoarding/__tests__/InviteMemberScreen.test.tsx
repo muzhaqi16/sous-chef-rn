@@ -33,10 +33,9 @@ jest.mock('#store/useAppStore', () => {
 });
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useInviteToHomeMutation: jest.fn(() => [jest.fn(() => Promise.resolve()), { loading: false }]),
   useAddCollaboratorMutation: jest.fn(() => [jest.fn(() => Promise.resolve()), { loading: false }]),
-  CollaboratorRole: { Contributor: 'CONTRIBUTOR' },
-  MembershipRole: { Member: 'MEMBER' },
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');

@@ -40,13 +40,13 @@ const mockPreferencesData = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetNotificationPreferencesQuery: jest.fn(() => ({
     data: { me: { notificationPreferences: mockPreferencesData } },
     loading: false,
     error: undefined,
   })),
   useUpdateNotificationPreferencesMutation: () => [mockUpdatePreferences, {}],
-  ExpirationFrequency: { DailyMorning: 'DAILY_MORNING', Weekly: 'WEEKLY' },
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');

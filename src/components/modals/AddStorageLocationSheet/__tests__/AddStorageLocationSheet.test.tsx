@@ -22,10 +22,6 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
   })),
 }));
 
-jest.mock('#generated', () => ({
-  StorageType: { Custom: 'CUSTOM' },
-}));
-
 // requestIdleCallback is not available in the test environment
 global.requestIdleCallback = ((cb: any) => setTimeout(cb, 0)) as any;
 

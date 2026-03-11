@@ -1,0 +1,20 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Roof -->
+  <path d="M8 30 L32 10 L56 30" stroke="#D47B4A" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+  <!-- Body -->
+  <rect x="8" y="30" width="48" height="26" rx="2" fill="#D47B4A" fill-opacity="0.1"/>
+  <rect x="8" y="30" width="48" height="26" rx="2" stroke="#D47B4A" stroke-width="2"/>
+  <!-- Garage door panels -->
+  <line x1="8" y1="37" x2="56" y2="37" stroke="#D47B4A" stroke-width="1.5" stroke-opacity="0.35"/>
+  <line x1="8" y1="44" x2="56" y2="44" stroke="#D47B4A" stroke-width="1.5" stroke-opacity="0.35"/>
+  <line x1="32" y1="30" x2="32" y2="56" stroke="#D47B4A" stroke-width="1.5" stroke-opacity="0.2"/>
+  <!-- Door handle -->
+  <rect x="28" y="52" width="8" height="3" rx="1.5" fill="#D47B4A" fill-opacity="0.5"/>
+  <!-- Roof base line -->
+  <line x1="8" y1="30" x2="56" y2="30" stroke="#D47B4A" stroke-width="2.5" stroke-opacity="0.5"/>
+  <!-- Small window in gable -->
+  <rect x="25" y="15" width="14" height="10" rx="2" fill="#D47B4A" fill-opacity="0.2"/>
+  <rect x="25" y="15" width="14" height="10" rx="2" stroke="#D47B4A" stroke-width="1.2" stroke-opacity="0.5"/>
+  <line x1="32" y1="15" x2="32" y2="25" stroke="#D47B4A" stroke-width="1" stroke-opacity="0.4"/>
+  <line x1="25" y1="20" x2="39" y2="20" stroke="#D47B4A" stroke-width="1" stroke-opacity="0.4"/>
+</svg>

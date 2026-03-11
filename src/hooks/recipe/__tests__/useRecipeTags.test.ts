@@ -4,6 +4,7 @@ import { useRecipeTags } from '../useRecipeTags';
 const mockRefetch = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useMySavedRecipesQuery: jest.fn(() => ({
     data: {
       me: {

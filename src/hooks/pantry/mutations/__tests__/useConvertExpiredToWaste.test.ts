@@ -5,6 +5,7 @@ import { useConvertExpiredToWaste } from '../useConvertExpiredToWaste';
 const mockConvertMutation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useConvertExpiredToWasteMutation: jest.fn(() => [
     mockConvertMutation,
     { loading: false },

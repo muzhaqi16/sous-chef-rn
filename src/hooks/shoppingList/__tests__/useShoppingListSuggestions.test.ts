@@ -12,6 +12,7 @@ let mockQueryResult: any = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetShoppingListSuggestionsQuery: (options: any) => {
     // Store the skip state for test assertions
     if (options.skip) {
@@ -23,11 +24,6 @@ jest.mock('#generated', () => ({
       };
     }
     return mockQueryResult;
-  },
-  SuggestionSource: {
-    RecentlyDeleted: 'RECENTLY_DELETED',
-    FrequentlyAdded: 'FREQUENTLY_ADDED',
-    Popular: 'POPULAR',
   },
 }));
 

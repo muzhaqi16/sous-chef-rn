@@ -30,6 +30,7 @@ let mockPurchasedReturn: Record<string, any> = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetShoppingListItemsFilteredQuery: jest.fn((options: any) => {
     if (options?.variables?.isPurchased === false) return mockUnpurchasedReturn;
     return mockPurchasedReturn;

@@ -152,7 +152,7 @@ mutation UpdateRecipe($id: ID!, $input: UpdateRecipeInput!) {
     message
     code
     recipe {
-      ...BasicRecipeFragment
+      ...RecipeFragment
     }
   }
 }

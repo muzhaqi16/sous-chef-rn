@@ -4,7 +4,6 @@ import { PantryMain } from '#screens/pantry/PantryMain';
 import { PantryItemScreen } from '#screens/pantry/PantryItemScreen';
 import { PantryItemDetail } from '#screens/pantry/PantryItemDetail';
 import { LowStockItems } from '#screens/pantry/LowStockItems';
-import { CategoryManagement } from '#screens/pantry/CategoryManagement';
 import { PantrySettings } from '#screens/pantry/PantrySettings';
 import { NutritionScreen } from '#screens/pantry/NutritionScreen';
 import { RecipeDetail } from '#screens/recipe/RecipeDetail';
@@ -36,7 +35,6 @@ export const PantryStack = createNativeStackNavigator({
       linking: 'pantry/detail/:itemId',
     },
     LowStockItems: LowStockItems,
-    CategoryManagement: CategoryManagement,
     PantrySettings: PantrySettings,
     PantryAnalytics: PantryAnalytics,
     NutritionScreen: NutritionScreen,

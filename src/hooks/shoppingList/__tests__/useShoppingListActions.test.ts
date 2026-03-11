@@ -22,7 +22,7 @@ jest.mock('@apollo/client/react', () => ({
 }));
 
 jest.mock('#generated', () => ({
-  ShoppingListItemDisplayFragmentDoc: 'MOCK_FRAGMENT_DOC',
+  ...jest.requireActual('#generated'),
   useUpdateShoppingListItemQuantityMutation: () => [mockUpdateQuantity],
 }));
 

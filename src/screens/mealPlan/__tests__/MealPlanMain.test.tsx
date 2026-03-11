@@ -128,10 +128,8 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useDeleteMealPlanMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  GetMealPlansDocument: {},
-  SortOrder: { Desc: 'DESC' },
-  MealType: { Breakfast: 'BREAKFAST', Lunch: 'LUNCH', Dinner: 'DINNER' },
 }));
 
 jest.mock('#/services/toastService', () => ({

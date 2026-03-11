@@ -76,6 +76,7 @@ const mockItemData = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetPantryItemQuery: jest.fn(() => ({
     data: mockItemData,
     loading: false,
@@ -86,7 +87,6 @@ jest.mock('#generated', () => ({
     jest.fn(),
     { loading: false },
   ]),
-  UsagePurpose: { Adjustment: 'ADJUSTMENT' },
 }));
 
 // --- Mutation hooks ---
@@ -1683,7 +1683,7 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
     render(<PantryItemDetail route={route} />);
     const header = screen.getByText('Usage History (1)');
     require('@testing-library/react-native').fireEvent.press(header);
-    expect(screen.getByText('COOKING')).toBeTruthy();
+    expect(screen.getByText('Cooking')).toBeTruthy();
   });
 
   it('shows "+N more entries" when more than 5 usage records', () => {

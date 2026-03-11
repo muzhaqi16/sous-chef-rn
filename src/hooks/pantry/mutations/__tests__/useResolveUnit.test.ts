@@ -4,6 +4,7 @@ import { useResolveUnit } from '../useResolveUnit';
 const mockUnitQuery = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetUnitBySymbolLazyQuery: jest.fn(() => [mockUnitQuery]),
 }));
 

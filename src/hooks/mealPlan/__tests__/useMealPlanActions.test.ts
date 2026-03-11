@@ -6,11 +6,10 @@ const mockUpdateMutation = jest.fn();
 const mockDeleteMutation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreateMealPlanMutation: jest.fn(() => [mockCreateMutation, { loading: false }]),
   useUpdateMealPlanMutation: jest.fn(() => [mockUpdateMutation, { loading: false }]),
   useDeleteMealPlanMutation: jest.fn(() => [mockDeleteMutation, { loading: false }]),
-  GetMealPlansDocument: 'GetMealPlansDocument',
-  SortOrder: { Desc: 'DESC', Asc: 'ASC' },
 }));
 
 // Break circular dependency

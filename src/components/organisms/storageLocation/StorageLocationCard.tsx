@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import { commonStyles } from '#/styles/commonStyles';
 import { Badge } from '#components/base/Badge';
 
@@ -54,7 +55,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             disabled={!onPress}
           >
             <View style={commonStyles.row}>
-              {location.icon ? <Text style={styles.icon}>{location.icon}</Text> : null}
+              <StorageLocationIcon type={location.type} size={20} />
               <View style={styles.info}>
                 <View style={commonStyles.rowSpaceBetween}>
                   <Text style={commonStyles.title}>{location.name}</Text>
@@ -137,7 +138,6 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.sm,
   },
   icon: {
-    fontSize: theme.fonts.size.lg,
     marginRight: theme.spacing.sm,
   },
   info: {

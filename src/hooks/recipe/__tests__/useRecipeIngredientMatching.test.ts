@@ -9,6 +9,7 @@ const mockLoadMatchesQuery = jest.fn();
 const mockConfirmMutation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useMatchRecipeIngredientsToPantryLazyQuery: jest.fn(() => [
     mockLoadMatchesQuery,
     { loading: false },

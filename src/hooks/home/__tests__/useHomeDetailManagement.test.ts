@@ -21,6 +21,7 @@ const mockLeaveClient = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetHomeQuery: jest.fn(() => mockGetHomeQuery),
   useUpdateHomeMutation: jest.fn(() => [mockUpdateHomeMutation, { loading: false }]),
   useUpdateMembershipMutation: jest.fn(() => [mockUpdateMembershipMutation]),
@@ -31,13 +32,6 @@ jest.mock('#generated', () => ({
     { loading: false, client: mockLeaveClient },
   ]),
   useSetDefaultHomeMutation: jest.fn(() => [mockSetDefaultHomeMutation]),
-  GetHomesDocument: {},
-  MembershipRole: {
-    Owner: 'OWNER',
-    Admin: 'ADMIN',
-    Member: 'MEMBER',
-    Guest: 'GUEST',
-  },
 }));
 
 const mockStoreState = {

@@ -89,10 +89,9 @@ jest.mock('#/services/recipeApi/SpoonacularService', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useUnfavoriteRecipeMutation: jest.fn(() => [jest.fn()]),
   useDeleteRecipeMutation: jest.fn(() => [jest.fn()]),
-  MySavedRecipesDocument: {},
-  MyRecipesDocument: {},
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');

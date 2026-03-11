@@ -36,10 +36,6 @@ jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(() => 'home-1'),
 }));
 
-jest.mock('#generated', () => ({
-  MealPlanType: { Weekly: 'WEEKLY', Monthly: 'MONTHLY' },
-}));
-
 jest.mock('#components/organisms/FormModal', () => ({
   FormModal: ({ children, testID }: any) => {
     const { View } = require('react-native');

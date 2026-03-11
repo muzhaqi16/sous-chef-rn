@@ -72,17 +72,6 @@ jest.mock('#/services/toastService', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.mock('#generated', () => ({
-  MealType: {
-    Breakfast: 'BREAKFAST',
-    Lunch: 'LUNCH',
-    Dinner: 'DINNER',
-    Snack: 'SNACK',
-    Brunch: 'BRUNCH',
-    Dessert: 'DESSERT',
-  },
-}));
-
 const defaultProps = {
   visible: true,
   onClose: jest.fn(),

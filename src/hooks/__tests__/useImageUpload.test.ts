@@ -14,12 +14,12 @@ const mockUpdateProfile = jest.fn();
 const mockUpdateItemImage = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreateImageUploadUrlMutation: () => [mockCreateUploadUrl],
   useConfirmProfileImageUploadMutation: () => [mockConfirmProfileUpload],
   useConfirmItemImageUploadMutation: () => [mockConfirmItemUpload],
   useUpdateUserProfileMutation: () => [mockUpdateProfile],
   useUpdateItemImageMutation: () => [mockUpdateItemImage],
-  ImageUploadPurpose: { ProfileAvatar: 'PROFILE_AVATAR', ItemImage: 'ITEM_IMAGE' },
 }));
 
 jest.mock('#utils/imageValidation', () => ({

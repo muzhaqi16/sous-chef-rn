@@ -9,13 +9,12 @@ const mockToggleHelpful = jest.fn();
 const mockUseGetRecipeReviewsQuery = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreateRecipeReviewMutation: jest.fn(() => [mockCreateReview, { loading: false }]),
   useUpdateRecipeReviewMutation: jest.fn(() => [mockUpdateReview, { loading: false }]),
   useDeleteRecipeReviewMutation: jest.fn(() => [mockDeleteReview, { loading: false }]),
   useToggleReviewHelpfulMutation: jest.fn(() => [mockToggleHelpful, { loading: false }]),
   useGetRecipeReviewsQuery: (...args: any[]) => mockUseGetRecipeReviewsQuery(...args),
-  GetRecipeDocument: 'GetRecipeDocument',
-  GetRecipeReviewsDocument: 'GetRecipeReviewsDocument',
 }));
 
 jest.mock('#hooks/auth/useAuthUser', () => ({

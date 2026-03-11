@@ -1365,7 +1365,6 @@ input CreateRecipeInput {
   ingredients: [RecipeIngredientInput!]!
   instructions: JSON!
   intolerances: [Intolerance!]
-  isPublished: Boolean
   media: MediaAssetsInput
   metadata: RecipeMetadataInput
   name: String!
@@ -1379,7 +1378,6 @@ input CreateRecipeInput {
   tags: [String!]
   timing: TimeEstimatesInput
   tips: String
-  visibility: Visibility
 }
 
 input CreateRecipeReviewInput {
@@ -6401,7 +6399,6 @@ type Recipe {
   updatedAt: DateTime!
   version: Int!
   videoUrl: String
-  visibility: Visibility!
 }
 
 """Sub-input for recipe attribution"""
@@ -6605,9 +6602,7 @@ type RecipeSourceMapping {
 }
 
 enum RecipeStatus {
-  ARCHIVED
   DRAFT
-  PRIVATE
   PUBLISHED
 }
 
@@ -8506,7 +8501,6 @@ input UpdateRecipeInput {
   difficulty: Difficulty
   imageUrl: String
   instructions: JSON
-  isPublished: Boolean
   media: MediaAssetsInput
   metadata: RecipeMetadataInput
   name: String
@@ -8519,7 +8513,6 @@ input UpdateRecipeInput {
   tags: [String!]
   timing: TimeEstimatesInput
   tips: String
-  visibility: Visibility
 }
 
 input UpdateRecipeReviewInput {

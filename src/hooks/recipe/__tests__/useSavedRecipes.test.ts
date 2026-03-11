@@ -5,6 +5,7 @@ const mockRefetch = jest.fn();
 const mockFetchMore = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useMySavedRecipesQuery: jest.fn(() => ({
     data: {
       me: {

@@ -6,10 +6,10 @@ const mockUpdateItemMutation = jest.fn();
 const mockDeleteItemMutation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreateMealPlanItemMutation: jest.fn(() => [mockCreateItemMutation, { loading: false }]),
   useUpdateMealPlanItemMutation: jest.fn(() => [mockUpdateItemMutation, { loading: false }]),
   useDeleteMealPlanItemMutation: jest.fn(() => [mockDeleteItemMutation, { loading: false }]),
-  GetMealPlanDocument: 'GetMealPlanDocument',
 }));
 
 const mockToastSuccess = jest.fn();

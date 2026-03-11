@@ -6,6 +6,7 @@ import { useClearShoppingListItems } from '../useClearShoppingListItems';
 const mockClearMutation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useClearShoppingListItemsMutation: () => [mockClearMutation],
 }));
 

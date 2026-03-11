@@ -49,6 +49,7 @@ jest.mock('#/hooks/navigation/useUserPreferences', () => ({
 const mockLoginMutationFn = jest.fn();
 const mockRegisterMutationFn = jest.fn();
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useLoginMutation: () => [mockLoginMutationFn],
   useRegisterMutation: () => [mockRegisterMutationFn],
 }));

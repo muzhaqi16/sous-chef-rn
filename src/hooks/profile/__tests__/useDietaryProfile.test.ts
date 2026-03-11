@@ -40,6 +40,7 @@ const mockProfileData = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetDietaryProfileQuery: jest.fn(() => ({
     data: { me: { dietaryProfile: mockProfileData } },
     loading: false,
@@ -49,10 +50,6 @@ jest.mock('#generated', () => ({
   useAddDietaryRestrictionMutation: () => [mockAddRestriction, {}],
   useUpdateDietaryRestrictionMutation: () => [mockUpdateRestriction, {}],
   useRemoveDietaryRestrictionMutation: () => [mockRemoveRestriction, {}],
-  Diet: { Vegan: 'VEGAN' },
-  Intolerance: { GlutenFree: 'GLUTEN_FREE' },
-  HealthGoal: { WeightLoss: 'WEIGHT_LOSS' },
-  RestrictionSeverity: { Strict: 'STRICT', Moderate: 'MODERATE' },
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({

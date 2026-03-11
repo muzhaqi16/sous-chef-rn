@@ -63,8 +63,8 @@ jest.mock('@gorhom/bottom-sheet', () => ({
 jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetHomeQuery: jest.fn(() => ({ data: null })),
-  ReligiousDiet: { Halal: 'HALAL', Kosher: 'KOSHER' },
 }));
 
 jest.mock('#/utils/recipeTransform', () => ({

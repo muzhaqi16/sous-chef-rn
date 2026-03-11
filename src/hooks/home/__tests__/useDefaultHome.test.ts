@@ -27,6 +27,7 @@ const mockHomesQueryResult = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useSetDefaultHomeMutation: jest.fn(() => [mockSetDefaultHomeMutation]),
   useGetHomesLazyQuery: jest.fn(() => [mockGetHomes, mockHomesQueryResult]),
 }));

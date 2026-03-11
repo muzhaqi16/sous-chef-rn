@@ -70,6 +70,9 @@ export function usePantryItemActions({
         updatedAt() {
           return new Date().toISOString();
         },
+        lastUsedAt() {
+          return new Date().toISOString();
+        },
       },
     });
   };

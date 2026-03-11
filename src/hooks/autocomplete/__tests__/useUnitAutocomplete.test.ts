@@ -25,6 +25,7 @@ const mockUseSearchUnitsQuery = jest.fn<any, [any]>(() => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useSearchUnitsQuery: (options: any) => mockUseSearchUnitsQuery(options),
 }));
 

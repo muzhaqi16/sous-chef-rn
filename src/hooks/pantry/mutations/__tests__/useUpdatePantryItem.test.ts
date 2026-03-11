@@ -5,8 +5,8 @@ import { useUpdatePantryItem } from '../useUpdatePantryItem';
 const mockUpdateMutation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useUpdatePantryItemMutation: jest.fn(() => [mockUpdateMutation]),
-  PantryItemFragment: {},
 }));
 
 jest.mock('#/services/errorService', () => ({

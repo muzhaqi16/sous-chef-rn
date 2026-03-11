@@ -14,6 +14,8 @@ export interface FilterTabConfig<T extends string = string> {
   label: string;
   /** Optional emoji or icon name */
   icon?: string;
+  /** Custom React element to render as icon (takes precedence over string icon) */
+  iconElement?: React.ReactNode;
   /** Icon library if using Icon component */
   iconLibrary?: string;
   /** Custom press handler (overrides onTabChange for modal triggers) */

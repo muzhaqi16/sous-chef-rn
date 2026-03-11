@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 import { useAuthUser } from '#/hooks/auth/useAuthUser';
 import { useCurrentPantry } from '#/hooks/pantry/useCurrentPantry';
@@ -20,6 +20,7 @@ import {
 import { PAGE_SIZE } from '#/constants/pagination';
 import { pantryItemSearch } from '#/utils/searchUtils';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
+import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import type { PantrySortOption, PantrySortDirection } from '#store/slices/preferencesSlice';
 
 /**
@@ -150,11 +151,12 @@ export function usePantryScreen() {
   const { createLocation, creating: creatingLocation } =
     useCreateStorageLocation(selectedHomeId ?? undefined, pantry?.id);
 
+  const tabIconSize = 16;
   const defaultTabs: FilterTabConfig<LocationFilter>[] = [
     { id: 'all', label: 'All' },
-    { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline' },
-    { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
-    { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
+    { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline', iconElement: React.createElement(StorageLocationIcon, { type: 'REFRIGERATOR', size: tabIconSize }) },
+    { id: 'freezer', label: 'Freezer', icon: 'snow-outline', iconElement: React.createElement(StorageLocationIcon, { type: 'FREEZER', size: tabIconSize }) },
+    { id: 'pantry', label: 'Pantry', icon: 'cube-outline', iconElement: React.createElement(StorageLocationIcon, { type: 'PANTRY_SHELF', size: tabIconSize }) },
   ];
 
   const customTabs: FilterTabConfig<LocationFilter>[] =
@@ -162,7 +164,7 @@ export function usePantryScreen() {
       (location: (typeof pantryStorageLocations)[number]) => ({
         id: location.id,
         label: location.name,
-        icon: location.icon ?? undefined,
+        iconElement: React.createElement(StorageLocationIcon, { type: location.type, size: tabIconSize }),
       }),
     );
 

@@ -44,6 +44,7 @@ jest.mock('zustand/shallow', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useItemByUpcFilterQuery: jest.fn(() => ({
     data: undefined,
     loading: true,
@@ -55,12 +56,6 @@ jest.mock('#generated', () => ({
     error: undefined,
   })),
   useCreateItemMutation: jest.fn(() => [mockCreateItemMutation, { loading: false }]),
-  UpcFormat: {
-    Ean_13: 'EAN_13',
-    Ean_8: 'EAN_8',
-    UpcA: 'UPC_A',
-    UpcE: 'UPC_E',
-  },
 }));
 
 jest.mock('../useImageUpload', () => ({

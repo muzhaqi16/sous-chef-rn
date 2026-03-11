@@ -86,6 +86,7 @@ const mockDeleteList = jest.fn().mockResolvedValue({
   data: { deleteShoppingList: { shoppingList: { id: 'list-1' } } },
 });
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useDeleteShoppingListMutation: jest.fn(() => [mockDeleteList, { loading: false }]),
 }));
 

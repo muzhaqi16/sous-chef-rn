@@ -68,6 +68,7 @@ jest.mock('#components/molecules/FormInput', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetShoppingListsLiteQuery: jest.fn(() => ({
     data: {
       shoppingLists: {

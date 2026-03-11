@@ -38,6 +38,7 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useVerifyEmailMutation: () => [mockVerifyEmail],
 }));
 

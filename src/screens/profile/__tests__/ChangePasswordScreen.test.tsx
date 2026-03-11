@@ -14,6 +14,7 @@ jest.mock('#hooks/navigation/useAppNavigation');
 const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useChangePasswordMutation: () => [mockChangePassword],
 }));
 

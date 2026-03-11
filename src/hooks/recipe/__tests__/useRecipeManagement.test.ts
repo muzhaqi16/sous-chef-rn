@@ -5,6 +5,7 @@ const mockRefetch = jest.fn();
 const mockFetchMore = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useMyRecipesQuery: jest.fn(() => ({
     data: {
       recipes: {
@@ -43,15 +44,6 @@ jest.mock('#generated', () => ({
     refetch: mockRefetch,
     fetchMore: mockFetchMore,
   })),
-  RecipeCategory: {
-    MAIN_COURSE: 'MAIN_COURSE',
-    APPETIZER: 'APPETIZER',
-    DESSERT: 'DESSERT',
-  },
-  Difficulty: {
-    EASY: 'EASY',
-    HARD: 'HARD',
-  },
 }));
 
 jest.mock('#hooks/auth/useAuth', () => ({

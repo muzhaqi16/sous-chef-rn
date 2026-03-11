@@ -35,11 +35,6 @@ jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
 
-// Mock generated types
-jest.mock('#generated', () => ({
-  RefreshTokenDocument: { kind: 'Document' },
-}));
-
 // Mock wsLink
 jest.mock('../wsLink', () => ({
   reconnectWebSocket: jest.fn(),

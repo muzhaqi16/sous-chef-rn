@@ -11,7 +11,6 @@ import {
 interface StorageLocationData {
   name: string;
   type: string;
-  icon?: string | null;
   parentLocationId?: string;
   description?: string | null;
   temperature?: string | null;
@@ -137,13 +136,13 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
 const styles = StyleSheet.create(theme => ({
   content: {
     flex: 1,
-    paddingHorizontal: theme.spacing.lg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
   },
   headerButton: {
     paddingVertical: theme.spacing.xs,

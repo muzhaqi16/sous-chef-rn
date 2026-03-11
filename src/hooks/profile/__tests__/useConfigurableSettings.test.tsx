@@ -70,9 +70,9 @@ const mockUpdateProfileMutation = jest.fn().mockResolvedValue({ data: {} });
 const mockUpdateSettingsMutation = jest.fn().mockResolvedValue({ data: {} });
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useUpdateUserProfileMutation: jest.fn(() => [mockUpdateProfileMutation]),
   useUpdateUserPreferencesMutation: jest.fn(() => [mockUpdateSettingsMutation]),
-  ProfileVisibility: { Public: 'PUBLIC', Friends: 'FRIENDS', Private: 'PRIVATE' },
 }));
 
 jest.mock('#/config/settingsConfig', () => ({

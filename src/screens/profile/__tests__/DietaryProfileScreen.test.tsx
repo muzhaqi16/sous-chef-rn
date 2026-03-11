@@ -34,14 +34,6 @@ jest.mock('#hooks/profile/useDietaryProfile', () => ({
   }),
 }));
 
-jest.mock('#generated', () => ({
-  Diet: { Vegetarian: 'VEGETARIAN', Vegan: 'VEGAN' },
-  Intolerance: { Gluten: 'GLUTEN', Dairy: 'DAIRY' },
-  HealthGoal: { WeightLoss: 'WEIGHT_LOSS' },
-  Cuisine: { Italian: 'ITALIAN', Mexican: 'MEXICAN' },
-  RestrictionSeverity: { Strict: 'STRICT', Moderate: 'MODERATE' },
-}));
-
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: {
     loadingContainer: {},

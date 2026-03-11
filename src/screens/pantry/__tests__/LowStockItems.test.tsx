@@ -47,6 +47,7 @@ jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useAddItemToShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
 }));
 

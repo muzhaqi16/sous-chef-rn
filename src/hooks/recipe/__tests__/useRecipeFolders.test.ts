@@ -4,6 +4,7 @@ import { useRecipeFolders } from '../useRecipeFolders';
 const mockRefetch = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useSavedRecipeFoldersQuery: jest.fn(() => ({
     data: { savedRecipeFolders: ['Weeknight', 'Holiday', 'Quick'] },
     loading: false,

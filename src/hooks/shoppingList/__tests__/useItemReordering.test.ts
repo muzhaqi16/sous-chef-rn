@@ -46,6 +46,7 @@ jest.mock('@apollo/client/react', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useMoveShoppingListItemMutation: () => [mockMoveItem],
 }));
 

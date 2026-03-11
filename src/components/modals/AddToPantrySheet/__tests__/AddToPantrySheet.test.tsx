@@ -18,10 +18,9 @@ jest.mock('#hooks/pantry/usePantryItemSuggestions', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreatePantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useRestockPantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  GetPantryDocument: {},
-  GetPantryItemSuggestionsDocument: {},
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({

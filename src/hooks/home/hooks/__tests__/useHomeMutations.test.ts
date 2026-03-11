@@ -12,6 +12,7 @@ const mockApolloClient = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreateHomeMutation: jest.fn(() => [
     mockCreateHomeMutation,
     { loading: false, client: mockApolloClient },
@@ -21,7 +22,6 @@ jest.mock('#generated', () => ({
     mockDeleteHomeMutation,
     { loading: false, client: mockApolloClient },
   ]),
-  GetHomesDocument: {},
 }));
 
 const mockStoreState = {

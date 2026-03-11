@@ -27,6 +27,7 @@ import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { FormNumberInput } from '#components/molecules/FormNumberInput';
 import { FormSelect } from '#components/molecules/FormSelect';
 import { Icon } from '#utils/iconUtils';
+import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import { SPRING, TIMING } from '#/constants/animations';
 
 export interface StorageLocationFormRef {
@@ -35,19 +36,19 @@ export interface StorageLocationFormRef {
 }
 
 const STORAGE_TYPES = [
-  { label: 'Refrigerator', value: 'REFRIGERATOR', icon: '🧊' },
-  { label: 'Freezer', value: 'FREEZER', icon: '❄️' },
-  { label: 'Pantry Shelf', value: 'PANTRY_SHELF', icon: '🏺' },
-  { label: 'Cabinet', value: 'CABINET', icon: '🗄️' },
-  { label: 'Drawer', value: 'DRAWER', icon: '🗃️' },
-  { label: 'Counter', value: 'COUNTER', icon: '🍴' },
-  { label: 'Basement', value: 'BASEMENT', icon: '🏠' },
-  { label: 'Garage', value: 'GARAGE', icon: '🚗' },
-  { label: 'Closet', value: 'CLOSET', icon: '🚪' },
-  { label: 'Outdoor', value: 'OUTDOOR', icon: '🌳' },
-  { label: 'Boat Storage', value: 'BOAT_STORAGE', icon: '⛵' },
-  { label: 'RV Storage', value: 'RV_STORAGE', icon: '🚐' },
-  { label: 'Custom', value: 'CUSTOM', icon: '📦' },
+  { label: 'Refrigerator', value: 'REFRIGERATOR' },
+  { label: 'Freezer', value: 'FREEZER' },
+  { label: 'Pantry Shelf', value: 'PANTRY_SHELF' },
+  { label: 'Cabinet', value: 'CABINET' },
+  { label: 'Drawer', value: 'DRAWER' },
+  { label: 'Counter', value: 'COUNTER' },
+  { label: 'Basement', value: 'BASEMENT' },
+  { label: 'Garage', value: 'GARAGE' },
+  { label: 'Closet', value: 'CLOSET' },
+  { label: 'Outdoor', value: 'OUTDOOR' },
+  { label: 'Boat Storage', value: 'BOAT_STORAGE' },
+  { label: 'RV Storage', value: 'RV_STORAGE' },
+  { label: 'Custom', value: 'CUSTOM' },
 ];
 
 const TEMPERATURE_OPTIONS: Array<{ label: string; value: StorageState }> = [
@@ -109,7 +110,6 @@ export const StorageLocationForm = forwardRef<
     const [formData, setFormData] = useState({
       name: initialData?.name || '',
       type: initialData?.type || 'PANTRY_SHELF',
-      icon: initialData?.icon || '',
       parentLocationId: initialData?.parentLocationId || undefined,
       description: initialData?.description || '',
       temperature: initialData?.temperature || StorageState.None,
@@ -129,7 +129,6 @@ export const StorageLocationForm = forwardRef<
         setFormData({
           name: initialData.name || '',
           type: initialData.type || 'PANTRY_SHELF',
-          icon: initialData.icon || '',
           parentLocationId: initialData.parentLocationId || undefined,
           description: initialData.description || '',
           temperature: initialData.temperature || StorageState.None,
@@ -170,7 +169,7 @@ export const StorageLocationForm = forwardRef<
       const finalData = {
         name: formData.name.trim(),
         type: formData.type,
-        icon: formData.icon || null,
+        icon: null,
         parentLocationId: formData.parentLocationId || null,
         description: formData.description.trim() || null,
         temperature:
@@ -209,7 +208,7 @@ export const StorageLocationForm = forwardRef<
         </View>
 
         {/* Type Carousel */}
-        <View style={commonStyles.inputGroup}>
+        <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
           <Text style={commonStyles.label}>Type</Text>
           <View style={styles.carouselContainer}>
             <ScrollView
@@ -230,11 +229,10 @@ export const StorageLocationForm = forwardRef<
                     setFormData({
                       ...formData,
                       type: type.value,
-                      icon: type.icon,
                     })
                   }
                 >
-                  <Text style={styles.typeIcon}>{type.icon}</Text>
+                  <StorageLocationIcon type={type.value} size={28} />
                   <Text
                     style={[
                       styles.typeLabel,
@@ -246,22 +244,7 @@ export const StorageLocationForm = forwardRef<
                 </Pressable>
               ))}
             </ScrollView>
-            <View style={styles.fadeLeft} pointerEvents="none" />
-            <View style={styles.fadeRight} pointerEvents="none" />
           </View>
-        </View>
-
-        {/* Icon */}
-        <View style={commonStyles.inputGroup}>
-          <Text style={commonStyles.label}>Icon (Optional)</Text>
-          <TextInput
-            style={commonStyles.input}
-            value={formData.icon}
-            onChangeText={icon => setFormData({ ...formData, icon })}
-            placeholder="Enter emoji (e.g., 🧊)"
-            maxLength={2}
-          />
-          <Text style={styles.hint}>Leave empty for no icon</Text>
         </View>
 
         {/* Parent Location Selector */}
@@ -511,7 +494,12 @@ export const StorageLocationForm = forwardRef<
 );
 
 const styles = StyleSheet.create(theme => ({
-  container: {},
+  container: {
+    paddingHorizontal: theme.spacing.lg,
+  },
+  carouselInputGroup: {
+    overflow: 'visible',
+  },
   carouselContainer: {
     marginHorizontal: -theme.spacing.lg,
     marginTop: theme.spacing.xs,
@@ -521,24 +509,6 @@ const styles = StyleSheet.create(theme => ({
   },
   typeScrollContent: {
     paddingHorizontal: theme.spacing.lg,
-  },
-  fadeLeft: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 24,
-    backgroundColor: theme.colors.background,
-    opacity: 0.9,
-  },
-  fadeRight: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 24,
-    backgroundColor: theme.colors.background,
-    opacity: 0.9,
   },
   parentScroll: {
     marginTop: theme.spacing.xs,
@@ -573,7 +543,6 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
   },
   typeIcon: {
-    fontSize: theme.typography.fontSize.xl,
     marginBottom: theme.spacing.xs,
   },
   typeLabel: {

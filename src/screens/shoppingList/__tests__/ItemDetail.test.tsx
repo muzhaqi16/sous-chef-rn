@@ -12,6 +12,7 @@ jest.mock('#hooks/navigation/useAppNavigation');
 const mockUseGetShoppingListItemQuery = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetShoppingListItemQuery: (...args: any[]) => mockUseGetShoppingListItemQuery(...args),
 }));
 

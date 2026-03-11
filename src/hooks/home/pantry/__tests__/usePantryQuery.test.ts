@@ -10,6 +10,7 @@ const mockRefetch = jest.fn().mockResolvedValue({});
 const mockFetchMore = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetPantryQuery: jest.fn(() => ({
     data: null,
     loading: false,
@@ -17,10 +18,6 @@ jest.mock('#generated', () => ({
     refetch: mockRefetch,
     fetchMore: mockFetchMore,
   })),
-  SortOrder: {
-    Asc: 'ASC',
-    Desc: 'DESC',
-  },
 }));
 
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
@@ -58,7 +55,6 @@ jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
   usePreservedArrayData: (data: any) => data || [],
   usePreservedQueryData: (data: any, initial: any) => data !== undefined ? data : initial,
 }));
-
 
 const mockSetIsPantryQueryComplete = jest.fn();
 jest.mock('#store/useAppStore', () => ({

@@ -9,8 +9,8 @@ const mockReadFragment = jest.fn();
 const mockIdentify = jest.fn((obj: any) => `${obj.__typename}:${obj.id}`);
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useUpdateShoppingListItemMutation: () => [mockUpdateItemMutation],
-  ShoppingListItemDisplayFragmentDoc: {},
 }));
 
 jest.mock('@apollo/client/react', () => ({

@@ -40,10 +40,11 @@ jest.mock('#hooks/shoppingList/useShoppingListDetails', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useRemoveCollaboratorMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useAddCollaboratorMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  CollaboratorRole: { Contributor: 'CONTRIBUTOR', Owner: 'OWNER' },
 }));
+
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),

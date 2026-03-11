@@ -1,0 +1,17 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Body -->
+  <rect x="8" y="10" width="48" height="46" rx="4" fill="#8B6BAE" fill-opacity="0.1"/>
+  <rect x="8" y="10" width="48" height="46" rx="4" stroke="#8B6BAE" stroke-width="2.5"/>
+  <!-- Drawer 1 -->
+  <rect x="10" y="12" width="44" height="12" rx="3" fill="#8B6BAE" fill-opacity="0.18"/>
+  <rect x="10" y="12" width="44" height="12" rx="3" stroke="#8B6BAE" stroke-width="1.5"/>
+  <rect x="26" y="17" width="12" height="4" rx="2" fill="#8B6BAE" fill-opacity="0.6"/>
+  <!-- Drawer 2 -->
+  <rect x="10" y="26" width="44" height="12" rx="3" fill="#8B6BAE" fill-opacity="0.18"/>
+  <rect x="10" y="26" width="44" height="12" rx="3" stroke="#8B6BAE" stroke-width="1.5"/>
+  <rect x="26" y="31" width="12" height="4" rx="2" fill="#8B6BAE" fill-opacity="0.6"/>
+  <!-- Drawer 3 -->
+  <rect x="10" y="40" width="44" height="13" rx="3" fill="#8B6BAE" fill-opacity="0.18"/>
+  <rect x="10" y="40" width="44" height="13" rx="3" stroke="#8B6BAE" stroke-width="1.5"/>
+  <rect x="26" y="45.5" width="12" height="4" rx="2" fill="#8B6BAE" fill-opacity="0.6"/>
+</svg>

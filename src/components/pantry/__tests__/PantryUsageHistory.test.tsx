@@ -7,20 +7,6 @@ jest.mock('#hooks/pantry/usePantryItemTransformation', () => ({
   formatDate: jest.fn((d: string) => `formatted:${d}`),
 }));
 
-jest.mock('#generated', () => ({
-  UsagePurpose: {
-    General: 'GENERAL',
-    Cooking: 'COOKING',
-    Snack: 'SNACK',
-    MealPrep: 'MEAL_PREP',
-    Restock: 'RESTOCK',
-    Waste: 'WASTE',
-    Gift: 'GIFT',
-    Transfer: 'TRANSFER',
-    Adjustment: 'ADJUSTMENT',
-  },
-}));
-
 const makeRecord = (id: string, overrides: Record<string, any> = {}) => ({
   node: {
     id,

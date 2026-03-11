@@ -9,6 +9,7 @@ const mockToastError = jest.fn();
 const mockToastInfo = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useMovePurchasedItemsToPantryMutation: () => [
     mockMovePurchasedMutation,
     { loading: false },

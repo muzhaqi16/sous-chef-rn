@@ -19,6 +19,7 @@ jest.mock('#hooks/auth/useAuth', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useDeleteAccountMutation: (options: any) => {
     return [
       async () => {

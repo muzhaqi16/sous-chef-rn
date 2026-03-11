@@ -1,19 +1,3 @@
-jest.mock('#generated', () => ({
-  MutationType: {
-    Created: 'CREATED',
-    Updated: 'UPDATED',
-    Deleted: 'DELETED',
-    ItemAdded: 'ITEM_ADDED',
-    ItemRemoved: 'ITEM_REMOVED',
-    ItemUpdated: 'ITEM_UPDATED',
-    ItemCompleted: 'ITEM_COMPLETED',
-    CollaboratorAdded: 'COLLABORATOR_ADDED',
-    CollaboratorRemoved: 'COLLABORATOR_REMOVED',
-    StatusChanged: 'STATUS_CHANGED',
-    Completed: 'COMPLETED',
-  },
-}));
-
 jest.mock('#/utils/errorSerialization', () => ({
   serializeError: jest.fn((e) => ({ message: String(e) })),
   isCircularStructureError: jest.fn(() => false),

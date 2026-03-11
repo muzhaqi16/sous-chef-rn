@@ -57,7 +57,6 @@ let hasEverShownContent = false;
 export type SortOption = 'name' | 'expiry' | 'quantity' | 'recent';
 export type SortDirection = 'asc' | 'desc';
 
-
 interface PantryContentProps {
   // User info
   userName: string;
@@ -165,6 +164,19 @@ interface ItemDisplayData {
   activeBatchCount: number | undefined;
 }
 
+/** Returns true when at least one usage has been recorded for the item. */
+function hasConsumptionStarted(item: PantryItem): boolean {
+  if (item.lastUsedAt != null) return true;
+  // Fallback: weight differs from original means consumption occurred
+  if (
+    item.netWeight != null &&
+    item.remainingNetWeight != null &&
+    item.remainingNetWeight !== item.netWeight
+  )
+    return true;
+  return false;
+}
+
 /**
  * Pre-compute display data for all pantry items at list level.
  * Module-level so the React Compiler doesn't flag Date usage as impure in render.
@@ -216,10 +228,9 @@ function computeDisplayMap(
         item.packageBreakdown,
         item.quantityBreakdown?.totalContentUnits,
       ),
-      remainingNetWeightText: formatRemainingNetWeight(
-        item.remainingNetWeight,
-        item.netWeightUnit,
-      ),
+      remainingNetWeightText: hasConsumptionStarted(item)
+        ? formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit)
+        : null,
       quantityBreakdownText: formatQuantityBreakdown(
         item.quantityBreakdown,
       ),

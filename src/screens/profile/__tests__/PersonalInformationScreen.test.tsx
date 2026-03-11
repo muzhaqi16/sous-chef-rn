@@ -38,9 +38,8 @@ jest.mock('@apollo/client/react', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useUpdateUserProfileMutation: () => [mockUpdateProfileMutation],
-  ProfileVisibility: { Public: 'PUBLIC', Private: 'PRIVATE', FriendsOnly: 'FRIENDS_ONLY' },
-  GetUserProfileDocument: 'GET_USER_PROFILE_DOCUMENT',
 }));
 
 jest.mock('#/services/errorService', () => ({

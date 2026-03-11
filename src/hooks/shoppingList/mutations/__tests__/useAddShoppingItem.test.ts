@@ -9,6 +9,7 @@ const mockCreateAddOperation = jest.fn();
 
 // Mock generated Apollo hook
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useAddItemToShoppingListMutation: () => [mockAddItemMutation],
 }));
 

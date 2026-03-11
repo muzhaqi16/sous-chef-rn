@@ -15,6 +15,7 @@ let mockItemData: any = null;
 let mockItemLoading = false;
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useAutocompleteItemsLazyQuery: () => [
     mockFetchItems,
     { data: mockItemData, loading: mockItemLoading },

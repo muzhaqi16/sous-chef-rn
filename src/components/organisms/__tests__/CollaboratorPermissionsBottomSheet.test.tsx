@@ -26,14 +26,7 @@ jest.mock('#components/atoms/GlobalBottomSheetBackdrop', () => ({
 }));
 
 jest.mock('#generated', () => ({
-  CollaboratorRole: {
-    Viewer: 'VIEWER',
-    Shopper: 'SHOPPER',
-    Contributor: 'CONTRIBUTOR',
-    Editor: 'EDITOR',
-    Admin: 'ADMIN',
-    Owner: 'OWNER',
-  },
+  ...jest.requireActual('#generated'),
   useUpdateCollaboratorRoleMutation: jest.fn(() => [jest.fn(), { loading: false }]),
 }));
 

@@ -1,9 +1,7 @@
 import React from 'react';
-import { View, Switch, Text } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import { Difficulty, Visibility } from '#generated';
+import { Difficulty, RecipeStatus } from '#generated';
 import type { RecipeFormState } from '../useRecipeForm';
 
 interface RecipeCategoryFieldsProps {
@@ -12,7 +10,7 @@ interface RecipeCategoryFieldsProps {
 }
 
 const DIFFICULTIES = [Difficulty.VeryEasy, Difficulty.Easy, Difficulty.Medium, Difficulty.Hard, Difficulty.Expert] as const;
-const VISIBILITIES = [Visibility.Private, Visibility.Public] as const;
+const STATUSES = [RecipeStatus.Draft, RecipeStatus.Published] as const;
 
 function formatEnum(value: string): string {
   return value
@@ -53,46 +51,13 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
         placeholder="e.g., Italian, Mexican, Thai..."
       />
 
-      {!!state.visibility && (
-        <SegmentedControl
-          label="Visibility"
-          options={VISIBILITIES}
-          value={state.visibility}
-          onChange={v => updateField('visibility', v)}
-          formatLabel={formatEnum}
-        />
-      )}
-      {!state.visibility && (
-        <SegmentedControl
-          label="Visibility"
-          options={VISIBILITIES}
-          value={Visibility.Private}
-          onChange={v => updateField('visibility', v)}
-          formatLabel={formatEnum}
-        />
-      )}
-
-      <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>Published</Text>
-        <Switch
-          value={state.isPublished}
-          onValueChange={v => updateField('isPublished', v)}
-        />
-      </View>
+      <SegmentedControl
+        label="Status"
+        options={STATUSES}
+        value={state.status}
+        onChange={v => updateField('status', v)}
+        formatLabel={formatEnum}
+      />
     </>
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
-  },
-  switchLabel: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textPrimary,
-  },
-}));

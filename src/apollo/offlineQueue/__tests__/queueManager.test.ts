@@ -48,15 +48,6 @@ jest.mock('../queueStore', () => ({
   },
 }));
 
-// Mock generated document nodes
-jest.mock('#generated', () => ({
-  SyncPantryItemDocument: { kind: 'Document', definitions: [] },
-  SyncDeletePantryItemDocument: { kind: 'Document', definitions: [] },
-  SyncShoppingListItemDocument: { kind: 'Document', definitions: [] },
-  SyncDeleteShoppingListItemDocument: { kind: 'Document', definitions: [] },
-  SyncMoveShoppingListItemDocument: { kind: 'Document', definitions: [] },
-}));
-
 // Mock generateId
 jest.mock('#/utils/generateId', () => ({
   generateId: jest.fn(() => 'gen-id'),

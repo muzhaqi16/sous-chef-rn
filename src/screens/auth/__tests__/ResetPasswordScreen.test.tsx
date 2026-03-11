@@ -41,6 +41,7 @@ jest.mock('#hooks/navigation/useAuthNavigation', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useResetPasswordMutation: () => [mockResetPassword],
 }));
 

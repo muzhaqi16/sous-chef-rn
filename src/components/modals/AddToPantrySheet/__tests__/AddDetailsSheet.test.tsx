@@ -81,14 +81,6 @@ jest.mock('../StockSettingsPage', () => ({
   },
 }));
 
-jest.mock('#generated', () => ({
-  StorageState: {
-    Ambient: 'AMBIENT',
-    Refrigerated: 'REFRIGERATED',
-    Frozen: 'FROZEN',
-  },
-}));
-
 const defaultProps = {
   visible: true,
   pantryId: 'pantry-1',

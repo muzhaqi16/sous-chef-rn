@@ -33,7 +33,7 @@ jest.mock('#store/useAppStore', () => {
 });
 
 jest.mock('#generated', () => ({
-  HomeType: { Household: 'HOUSEHOLD' },
+  ...jest.requireActual('#generated'),
   useCreateHomeMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useCreatePantryMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useGetHomesQuery: jest.fn(() => ({

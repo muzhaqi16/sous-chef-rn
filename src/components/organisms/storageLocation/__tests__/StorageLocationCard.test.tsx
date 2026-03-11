@@ -50,9 +50,11 @@ describe('StorageLocationCard', () => {
     expect(screen.getByText('Kitchen Fridge')).toBeTruthy();
   });
 
-  it('renders location icon', () => {
-    render(<StorageLocationCard {...defaultProps} />);
-    expect(screen.getByText('🧊')).toBeTruthy();
+  it('renders SVG icon for storage type', () => {
+    const { UNSAFE_queryByType } = render(<StorageLocationCard {...defaultProps} />);
+    // SvgXml from react-native-svg renders an RNSVGSvgView
+    const { SvgXml } = require('react-native-svg');
+    expect(UNSAFE_queryByType(SvgXml)).toBeTruthy();
   });
 
   it('renders item count with correct pluralization', () => {

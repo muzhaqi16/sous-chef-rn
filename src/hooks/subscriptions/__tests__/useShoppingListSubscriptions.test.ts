@@ -23,27 +23,10 @@ const mockUseShoppingListChangesSubscription = jest.fn();
 const mockUseMyShoppingListsChangesSubscription = jest.fn();
 const mockUseCollaborationChangesSubscription = jest.fn();
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useShoppingListChangesSubscription: (...args: any[]) => mockUseShoppingListChangesSubscription(...args),
   useMyShoppingListsChangesSubscription: (...args: any[]) => mockUseMyShoppingListsChangesSubscription(...args),
   useCollaborationChangesSubscription: (...args: any[]) => mockUseCollaborationChangesSubscription(...args),
-  CollaborationChangeType: {
-    MemberAdded: 'MEMBER_ADDED',
-    MemberRemoved: 'MEMBER_REMOVED',
-    InviteAccepted: 'INVITE_ACCEPTED',
-    InviteSent: 'INVITE_SENT',
-  },
-  ShoppingListItemDisplayFragmentDoc: {},
-  GetShoppingListDocument: {},
-  GetShoppingListQuery: {},
-  MutationType: {
-    Created: 'CREATED',
-    Deleted: 'DELETED',
-    ItemAdded: 'ITEM_ADDED',
-    ItemRemoved: 'ITEM_REMOVED',
-    ItemUpdated: 'ITEM_UPDATED',
-    ItemCompleted: 'ITEM_COMPLETED',
-    ItemUncompleted: 'ITEM_UNCOMPLETED',
-  },
 }));
 
 jest.mock('#store/useAppStore', () => ({

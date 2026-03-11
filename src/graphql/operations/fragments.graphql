@@ -1035,7 +1035,6 @@ fragment RecipeFragment on Recipe {
   source
 
   # Metadata
-  visibility
   isPublished
   averageRating
   totalReviews

@@ -12,6 +12,7 @@ let mockQueryResult: any = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetShoppingListQuery: () => mockQueryResult,
 }));
 

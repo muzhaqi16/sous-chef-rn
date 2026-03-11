@@ -428,7 +428,14 @@ export function usePantryItemTransformation<T extends PantryItem>(
       const expirationStatus = getExpirationStatus(expiresIn);
       const packageBreakdownText = formatPackageBreakdown(item.packageBreakdown);
       const netWeightText = formatNetWeight(item.netWeight, item.netWeightUnit);
-      const remainingNetWeightText = formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit);
+      const consumptionStarted =
+        item.lastUsedAt != null ||
+        (item.netWeight != null &&
+          item.remainingNetWeight != null &&
+          item.remainingNetWeight !== item.netWeight);
+      const remainingNetWeightText = consumptionStarted
+        ? formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit)
+        : null;
       const quantityBreakdownText = formatQuantityBreakdown(item.quantityBreakdown);
 
       return {

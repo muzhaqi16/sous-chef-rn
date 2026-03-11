@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshControl } from 'react-native';
+import { RefreshControl, ScrollView } from 'react-native';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../base/EmptyState';
@@ -154,14 +154,21 @@ export const ItemList: React.FC<ItemListProps> = ({
 
   if (items.length === 0 && emptyState) {
     return (
-      <>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: contentStyle.paddingBottom }}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          ) : undefined
+        }
+      >
         {!!ListHeaderComponent && (typeof ListHeaderComponent === 'function' ? (
             <ListHeaderComponent />
           ) : (
             ListHeaderComponent
           ))}
         <EmptyState {...emptyState} />
-      </>
+      </ScrollView>
     );
   }
 

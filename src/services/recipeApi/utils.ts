@@ -51,7 +51,6 @@ export const transformSpoonacularToRecipeInput = (
     sourceName: spoonacularRecipe.sourceName,
     spoonacularData: spoonacularRecipe, // Cache full response
 
-    visibility: 'PUBLIC',
     status: 'PUBLISHED',
 
     // Nutrition
