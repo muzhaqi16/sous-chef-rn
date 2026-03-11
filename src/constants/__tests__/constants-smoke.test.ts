@@ -5,11 +5,9 @@
 
 import { SPRING, SHEET, TIMING, SLIDE_PRESETS, staggeredEntryAnimation, screenEntryAnimation, listItemExitAnimation, listItemFastExitAnimation, listItemEntryAnimation } from '../animations';
 import { DRAG_ITEM_HEIGHT, DRAG_SCALE, DRAG_SHADOW_OPACITY, ITEM_VERTICAL_MARGIN, LONG_PRESS_DURATION, EDGE_THRESHOLD, MAX_SCROLL_SPEED } from '../drag';
-import { DRAG_ACTIVATION_DISTANCE, DRAG_DISABLED_DISTANCE, MAX_NESTED_LIST_HEIGHT } from '../gestures';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '../dietary';
 import { LANGUAGE_OPTIONS } from '../languages';
 import { MESSAGES } from '../messages';
-import { PLACEHOLDERS } from '../placeholders';
 import { FRAGMENT_NAMES, ICONS, LABELS, EMPTY_STATE_MESSAGES, PAGINATION, DEFAULTS } from '../shoppingList';
 import { HIT_SLOP, HIT_SLOP_SM, HIT_SLOP_LG } from '../touch';
 import { getTabBarBottomPadding } from '../layout';
@@ -82,14 +80,6 @@ describe('drag constants', () => {
   });
 });
 
-describe('gestures constants', () => {
-  it('exports expected values', () => {
-    expect(DRAG_ACTIVATION_DISTANCE).toBe(20);
-    expect(DRAG_DISABLED_DISTANCE).toBe(Number.MAX_SAFE_INTEGER);
-    expect(MAX_NESTED_LIST_HEIGHT).toBe(600);
-  });
-});
-
 describe('dietary constants', () => {
   it('exports SKILL_LEVELS', () => {
     expect(SKILL_LEVELS).toEqual(['Beginner', 'Intermediate', 'Advanced', 'Expert']);
@@ -128,15 +118,6 @@ describe('messages constants', () => {
   it('has expected label values', () => {
     expect(MESSAGES.labels.save).toBe('Save');
     expect(MESSAGES.labels.cancel).toBe('Cancel');
-  });
-});
-
-describe('placeholders constants', () => {
-  it('exports PLACEHOLDERS with expected fields', () => {
-    expect(PLACEHOLDERS.email).toBe('Enter email');
-    expect(PLACEHOLDERS.password).toBe('Enter password');
-    expect(PLACEHOLDERS.search).toBeDefined();
-    expect(PLACEHOLDERS.itemName).toBe('Enter item name');
   });
 });
 

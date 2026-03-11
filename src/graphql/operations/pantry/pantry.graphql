@@ -11,9 +11,6 @@ query GetPantries($homeId: ID!, $first: Int, $after: String) {
         name
         isDefault
         createdAt
-        updatedAt
-        version
-        tags
       }
     }
   }
@@ -35,8 +32,6 @@ query GetPantry(
     description
     isDefault
     version
-    createdAt
-    updatedAt
     stats {
       totalItems
       expiringCount
@@ -97,18 +92,6 @@ query GetPantry(
 query GetPantryItem($id: ID!) {
   pantryItem(id: $id) {
     ...PantryItemFragment
-  }
-}
-
-query GetDefaultPantry($homeId: ID!) {
-  pantries(homeId: $homeId, filters: { isDefault: true }, first: 1) {
-    edges {
-      node {
-        id
-        name
-        isDefault
-      }
-    }
   }
 }
 
@@ -308,10 +291,6 @@ mutation CreatePantry($input: CreatePantryInput!) {
       name
       description
       isDefault
-      location
-      temperature
-      tags
-      metadata
       version
       createdAt
       updatedAt
@@ -330,10 +309,6 @@ mutation UpdatePantry($id: ID!, $input: UpdatePantryInput!) {
       name
       description
       isDefault
-      location
-      temperature
-      tags
-      metadata
       version
       createdAt
       updatedAt
@@ -512,20 +487,6 @@ mutation AddLowStockItemsToShoppingList($homeId: ID!, $shoppingListId: ID) {
   }
 }
 
-mutation AddPantryItemToShoppingList(
-  $pantryItemId: ID!
-  $shoppingListId: ID!
-  $quantity: Float
-) {
-  addPantryItemToShoppingList(
-    pantryItemId: $pantryItemId
-    shoppingListId: $shoppingListId
-    quantity: $quantity
-  ) {
-    shoppingListItemId
-  }
-}
-
 mutation MovePurchasedItemsToPantry($shoppingListId: ID!) {
   movePurchasedItemsToPantry(shoppingListId: $shoppingListId) {
     movedCount
@@ -548,17 +509,6 @@ mutation MovePurchasedItemsToPantry($shoppingListId: ID!) {
 
 mutation OpenPantryItem($id: ID!, $version: Int) {
   openPantryItem(id: $id, version: $version) {
-    success
-    message
-    code
-    pantryItem {
-      ...PantryItemDisplay
-    }
-  }
-}
-
-mutation MarkPantryItemExpired($id: ID!, $version: Int) {
-  markPantryItemExpired(id: $id, version: $version) {
     success
     message
     code

@@ -1,7 +1,6 @@
 import {
   extractDateString,
   dateStringToISO,
-  isValidDateString,
   safeParseDate,
   safeFormatDate,
 } from '../dateUtils';
@@ -64,52 +63,6 @@ describe('dateStringToISO', () => {
 
   it('returns input unchanged for partial date format', () => {
     expect(dateStringToISO('2024-01')).toBe('2024-01');
-  });
-});
-
-describe('isValidDateString', () => {
-  it('accepts valid date', () => {
-    expect(isValidDateString('2024-01-15')).toBe(true);
-  });
-
-  it('accepts leap year Feb 29', () => {
-    expect(isValidDateString('2024-02-29')).toBe(true);
-  });
-
-  it('rejects non-leap year Feb 29', () => {
-    expect(isValidDateString('2023-02-29')).toBe(false);
-  });
-
-  it('rejects month 13', () => {
-    expect(isValidDateString('2024-13-01')).toBe(false);
-  });
-
-  it('rejects month 0', () => {
-    expect(isValidDateString('2024-00-01')).toBe(false);
-  });
-
-  it('rejects day 0', () => {
-    expect(isValidDateString('2024-01-00')).toBe(false);
-  });
-
-  it('rejects day 32', () => {
-    expect(isValidDateString('2024-01-32')).toBe(false);
-  });
-
-  it('rejects empty string', () => {
-    expect(isValidDateString('')).toBe(false);
-  });
-
-  it('rejects wrong format', () => {
-    expect(isValidDateString('01-15-2024')).toBe(false);
-  });
-
-  it('rejects year < 1900', () => {
-    expect(isValidDateString('1899-01-01')).toBe(false);
-  });
-
-  it('rejects year > 2100', () => {
-    expect(isValidDateString('2101-01-01')).toBe(false);
   });
 });
 

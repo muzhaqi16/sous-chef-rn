@@ -463,10 +463,6 @@ export const PantrySettings: React.FC<
               value={`${pantry?.items?.length || 0} items`}
             />
 
-            <InfoRow
-              label="Created"
-              value={new Date(pantry.createdAt).toLocaleDateString()}
-            />
           </View>
         )}
 

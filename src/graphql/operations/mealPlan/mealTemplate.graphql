@@ -41,34 +41,6 @@ query GetMealTemplate($id: ID!) {
 # MUTATIONS
 # ============================================
 
-mutation CreateMealTemplate($input: CreateMealTemplateInput!) {
-  createMealTemplate(input: $input) {
-    success
-    message
-    code
-    mealTemplate {
-      ...MealTemplateDisplay
-      items {
-        ...MealTemplateItemFragment
-      }
-    }
-  }
-}
-
-mutation UpdateMealTemplate($id: ID!, $input: UpdateMealTemplateInput!) {
-  updateMealTemplate(id: $id, input: $input) {
-    success
-    message
-    code
-    mealTemplate {
-      ...MealTemplateDisplay
-      items {
-        ...MealTemplateItemFragment
-      }
-    }
-  }
-}
-
 mutation DeleteMealTemplate($id: ID!) {
   deleteMealTemplate(id: $id) {
     success
@@ -91,39 +63,6 @@ mutation DuplicateTemplate($id: ID!, $newName: String!) {
       items {
         ...MealTemplateItemFragment
       }
-    }
-  }
-}
-
-mutation AddTemplateItem($input: AddTemplateItemInput!) {
-  addTemplateItem(input: $input) {
-    success
-    message
-    code
-    mealTemplateItem {
-      ...MealTemplateItemFragment
-    }
-  }
-}
-
-mutation UpdateTemplateItem($id: ID!, $input: UpdateTemplateItemInput!) {
-  updateTemplateItem(id: $id, input: $input) {
-    success
-    message
-    code
-    mealTemplateItem {
-      ...MealTemplateItemFragment
-    }
-  }
-}
-
-mutation RemoveTemplateItem($id: ID!) {
-  removeTemplateItem(id: $id) {
-    success
-    message
-    code
-    mealTemplateItem {
-      id
     }
   }
 }

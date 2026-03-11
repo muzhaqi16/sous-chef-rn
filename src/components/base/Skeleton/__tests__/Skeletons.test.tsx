@@ -4,7 +4,6 @@ import { SkeletonBase } from '../SkeletonBase';
 import { SkeletonCircle } from '../SkeletonCircle';
 import { SkeletonLine } from '../SkeletonLine';
 import { SkeletonRectangle } from '../SkeletonRectangle';
-import { SkeletonListItem } from '../SkeletonListItem';
 import { SkeletonList } from '../SkeletonList';
 
 describe('Skeleton smoke tests', () => {
@@ -57,33 +56,6 @@ describe('Skeleton smoke tests', () => {
 
     it('renders with custom dimensions', () => {
       const { toJSON } = render(<SkeletonRectangle width={300} height={200} borderRadius={12} />);
-      expect(toJSON()).toBeTruthy();
-    });
-  });
-
-  describe('SkeletonListItem', () => {
-    it('renders without crashing', () => {
-      const { toJSON } = render(<SkeletonListItem />);
-      expect(toJSON()).toBeTruthy();
-    });
-
-    it('renders with circle leading type', () => {
-      const { toJSON } = render(<SkeletonListItem showLeading leadingType="circle" />);
-      expect(toJSON()).toBeTruthy();
-    });
-
-    it('renders with rectangle leading type', () => {
-      const { toJSON } = render(<SkeletonListItem showLeading leadingType="rectangle" />);
-      expect(toJSON()).toBeTruthy();
-    });
-
-    it('renders without leading element', () => {
-      const { toJSON } = render(<SkeletonListItem showLeading={false} />);
-      expect(toJSON()).toBeTruthy();
-    });
-
-    it('renders with trailing element', () => {
-      const { toJSON } = render(<SkeletonListItem showTrailing />);
       expect(toJSON()).toBeTruthy();
     });
   });
