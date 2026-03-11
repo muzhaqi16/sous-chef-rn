@@ -5,7 +5,6 @@ import {
   getShoppingListRole,
   getHomeOwnerInfo,
   isHomeOwner,
-  getHomeRole,
   getInitials,
   formatRoleDisplay,
 } from '../ownershipHelpers';
@@ -190,22 +189,6 @@ describe('ownershipHelpers', () => {
     it('returns false without currentUserId', () => {
       const home = { members: [makeMember('u1', 'OWNER')] };
       expect(isHomeOwner(home)).toBe(false);
-    });
-  });
-
-  describe('getHomeRole', () => {
-    it('returns the role for a matching member', () => {
-      const home = { members: [makeMember('u1', 'ADMIN')] };
-      expect(getHomeRole(home, 'u1')).toBe('ADMIN');
-    });
-
-    it('returns null when member not found', () => {
-      const home = { members: [makeMember('u2', 'ADMIN')] };
-      expect(getHomeRole(home, 'u1')).toBeNull();
-    });
-
-    it('returns null without currentUserId', () => {
-      expect(getHomeRole({ members: [] })).toBeNull();
     });
   });
 

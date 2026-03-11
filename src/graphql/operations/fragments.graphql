@@ -72,10 +72,6 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     estimated
     lastKnown
   }
-  # Purchase status
-  purchaseInfo {
-    isPurchased
-  }
   # Source fields
   source {
     isAutoAdded
@@ -203,21 +199,16 @@ fragment PartialUser on User {
   role
   onBoarded
   timezone
-  preferredCurrency
-  language
   defaultShoppingListId
   defaultHomeId
   createdAt
   updatedAt
-  lastActiveAt
   profile {
     id
     firstName
     lastName
     displayName
-    bio
     avatar
-    phone
   }
   settings {
     id
@@ -316,28 +307,10 @@ fragment ItemFragment on Item {
   status
   visibility
   tags
-  healthBenefits {
-    benefit
-    category
-    description
-  }
-  allergens {
-    name
-    contains
-    severity
-  }
   nutritions
-  metadata
   ingredients
   createdAt
   density
-  preferredTrackingUnitId
-  preferredTrackingUnit {
-    id
-    name
-    symbol
-  }
-  baseDimension
   defaultConsumeUnit {
     id
     name
@@ -630,10 +603,6 @@ fragment BasicPantryFragment on Pantry {
 fragment HomeDisplay on Home {
   id
   name
-  type
-  description
-  currency
-  timezone
   version
   updatedAt
   isDefault

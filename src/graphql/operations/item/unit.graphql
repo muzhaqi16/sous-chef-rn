@@ -2,28 +2,6 @@
 # QUERIES
 # ============================================
 
-query GetUnits($isCommon: Boolean, $type: UnitType, $limit: Int) {
-  units(isCommon: $isCommon, type: $type, limit: $limit) {
-    id
-    name
-    symbol
-    type
-    conversionFactor
-    notes
-  }
-}
-
-query GetUnit($id: ID!) {
-  unit(id: $id) {
-    id
-    name
-    symbol
-    type
-    conversionFactor
-    notes
-  }
-}
-
 query GetUnitBySymbol($symbol: String!) {
   unitBySymbol(symbol: $symbol) {
     id
@@ -76,19 +54,5 @@ query GetCommonUnits($type: UnitType, $limit: Int) {
     minPrecision
     conversionFactor
     baseUnitId
-  }
-}
-
-query GetConvertibleUnits($unitId: ID!) {
-  convertibleUnits(unitId: $unitId) {
-    id
-    name
-    symbol
-    type
-    isMetric
-    isCommon
-    displayAsFraction
-    minPrecision
-    conversionFactor
   }
 }

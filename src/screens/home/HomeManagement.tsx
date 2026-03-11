@@ -297,11 +297,6 @@ export const HomeManagement: React.FC = () => {
                     <Text style={styles.previewSubtitle}>
                       {previewHome.members?.length || 0} member(s)
                     </Text>
-                    {!!previewHome.description && (
-                      <Text style={styles.previewDescription}>
-                        {previewHome.description}
-                      </Text>
-                    )}
                   </View>
                 )}
 
