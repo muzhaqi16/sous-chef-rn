@@ -22,7 +22,7 @@ export interface SwipeableItemProps {
   onWaste?: () => void;
   onRestock?: () => void;
   isPurchased?: boolean;
-  enableSwipeToDelete?: boolean;
+
   leftThreshold?: number;
   rightThreshold?: number;
   friction?: number;

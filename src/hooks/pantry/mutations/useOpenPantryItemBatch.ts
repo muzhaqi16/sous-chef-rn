@@ -6,6 +6,7 @@ import { Alert } from 'react-native';
 import { useOpenPantryItemBatchMutation } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 
 interface UseOpenPantryItemBatchOptions {
   onSuccess?: () => void;
@@ -25,7 +26,12 @@ export function useOpenPantryItemBatch({
 
     const result = await openMutation({
       variables: { input: { batchId } },
-      optimisticResponse: undefined,
+      optimisticResponse: buildOptimisticMutationResponse(
+        'openPantryItemBatch',
+        'PantryItemPayload',
+        'pantryItem',
+        null,
+      ),
       update: (cache) => {
         // Optimistically update the batch in cache
         cache.modify({

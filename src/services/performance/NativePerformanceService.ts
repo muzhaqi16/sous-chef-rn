@@ -90,6 +90,15 @@ function handleMeasure(entry: PerformanceEntry) {
     return;
   }
 
+  // component:<name>:render → route to component render histogram
+  if (name.startsWith('component:')) {
+    const component = name.split(':')[1];
+    Telemetry.histogram('component_render_duration_ms', duration, {
+      component,
+    });
+    return;
+  }
+
   // gql:* measures are skipped — telemetryLink reports directly with full labels
 }
 

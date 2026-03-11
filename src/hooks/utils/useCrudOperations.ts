@@ -100,7 +100,7 @@ function createAddOperationImpl<TInput, TResult>(
       typeof parentId === 'function' ? parentId() : parentId;
     if (
       parentId !== undefined &&
-      (resolvedParentId === null || resolvedParentId === '')
+      (resolvedParentId == null || resolvedParentId === '')
     ) {
       Alert.alert('Error', 'Parent context is required');
       return false;
@@ -178,7 +178,7 @@ function createUpdateOperationImpl<TInput, TResult>(
       typeof parentId === 'function' ? parentId() : parentId;
     if (
       resolvedParentId !== undefined &&
-      (resolvedParentId === null || resolvedParentId === '')
+      (resolvedParentId == null || resolvedParentId === '')
     ) {
       Alert.alert('Error', 'Parent context is required');
       return false;
@@ -298,7 +298,7 @@ function createRemoveOperationImpl<TResult>(
       typeof parentId === 'function' ? parentId() : parentId;
     if (
       resolvedParentId !== undefined &&
-      (resolvedParentId === null || resolvedParentId === '')
+      (resolvedParentId == null || resolvedParentId === '')
     ) {
       Alert.alert('Error', 'Parent context is required');
       return false;

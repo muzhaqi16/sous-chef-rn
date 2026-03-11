@@ -122,6 +122,23 @@ describe('useCrudOperations', () => {
       expect(Alert.alert).toHaveBeenCalledWith('Error', 'Parent context is required');
     });
 
+    it('returns false when parentId function resolves to undefined', async () => {
+      const mockMutation = jest.fn();
+
+      const { result } = renderHook(() => useCrudOperations());
+
+      const addOp = result.current.createAddOperation({
+        mutation: mockMutation,
+        parentId: () => undefined as unknown as string,
+      });
+
+      const data = await addOp({ name: 'test' });
+
+      expect(data).toBe(false);
+      expect(mockMutation).not.toHaveBeenCalled();
+      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Parent context is required');
+    });
+
     it('resolves parentId from function', async () => {
       const mockMutation = jest.fn().mockResolvedValue({ data: { id: '1' } });
 

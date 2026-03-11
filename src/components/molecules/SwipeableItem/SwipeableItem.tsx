@@ -21,7 +21,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   onWaste,
   onRestock,
   isPurchased,
-  enableSwipeToDelete = true,
+
   leftThreshold = 120,
   rightThreshold = 120,
   friction = 1.5,
@@ -51,7 +51,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     itemId,
     onEdit,
     onDelete,
-    enableSwipeToDelete,
+
     onSwipeableWillOpen,
     onSwipeableClose });
 

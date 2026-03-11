@@ -96,8 +96,9 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
       cache.modify({
         id: cache.identify({ __typename: 'RecipeReview', id: reviewId }),
         fields: {
-          helpful(existing: number) {
-            return isHelpful ? existing + 1 : Math.max(0, existing - 1);
+          helpful(existing: number = 0) {
+            const current = existing ?? 0;
+            return isHelpful ? current + 1 : Math.max(0, current - 1);
           } } });
     },
     onError: err => {

@@ -2,6 +2,19 @@ import { renderHook } from '@testing-library/react-native';
 import { useRenderTime, useAutoRenderTime } from '../useRenderTime';
 import { Telemetry } from '#/services/telemetry';
 
+const mockMeasure = jest.fn();
+const mockNow = jest.fn();
+const mockClearMeasures = jest.fn();
+
+jest.mock('react-native-performance', () => ({
+  __esModule: true,
+  default: {
+    now: (...args: any[]) => mockNow(...args),
+    measure: (...args: any[]) => mockMeasure(...args),
+    clearMeasures: (...args: any[]) => mockClearMeasures(...args),
+  },
+}));
+
 jest.mock('#/services/telemetry', () => ({
   Telemetry: {
     histogram: jest.fn(),
@@ -22,24 +35,30 @@ describe('useRenderTime', () => {
     jest.clearAllMocks();
     // Ensure Math.random always returns a value below 1.0 (default sample rate in __DEV__)
     jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    // Default: render-phase now() returns 100, measure returns 10ms duration
+    mockNow.mockReturnValue(100);
+    mockMeasure.mockReturnValue({ duration: 10 });
   });
 
-  it('records render metrics to Telemetry on first render', () => {
-    // Use a sequence: render reads start time (100), effect reads end time (110)
-    let callCount = 0;
-    jest.spyOn(performance, 'now').mockImplementation(() => {
-      callCount += 1;
-      // Odd calls are render-phase (start), even calls are effect-phase (end)
-      return callCount % 2 === 1 ? 100 : 110;
-    });
+  it('calls performance.measure with correct name and start option in layout effect', () => {
+    mockNow.mockReturnValue(42);
+    mockMeasure.mockReturnValue({ duration: 8 });
 
     renderHook(() => useRenderTime('TestComponent'));
 
-    expect(Telemetry.histogram).toHaveBeenCalledWith(
-      'component_render_duration_ms',
-      expect.any(Number),
-      { component: 'TestComponent' },
+    expect(mockMeasure).toHaveBeenCalledWith(
+      'component:TestComponent:render',
+      { start: 42 },
     );
+  });
+
+  it('records render metrics to Telemetry on first render', () => {
+    mockMeasure.mockReturnValue({ duration: 10 });
+
+    renderHook(() => useRenderTime('TestComponent'));
+
+    // Histogram is now routed by NativePerformanceService observer, not called directly
+    expect(Telemetry.histogram).not.toHaveBeenCalled();
 
     expect(Telemetry.increment).toHaveBeenCalledWith(
       'component_render_count',
@@ -50,17 +69,7 @@ describe('useRenderTime', () => {
 
   it('tracks slow renders when duration exceeds threshold', () => {
     const slowThreshold = 10;
-
-    // Use increasing timestamps: render reads start, effect reads end
-    // renderHook may cause multiple render calls, so use an increasing sequence
-    // where the end time is always significantly ahead of the start time
-    let tick = 0;
-    jest.spyOn(performance, 'now').mockImplementation(() => {
-      tick += 1;
-      // First call (render) = 0, second call (effect) = 50
-      // If there are additional render cycles they'll get 100, 150, etc.
-      return tick * 50 - 50;
-    });
+    mockMeasure.mockReturnValue({ duration: 50 });
 
     renderHook(() => useRenderTime('SlowComponent', { slowThreshold }));
 
@@ -74,23 +83,14 @@ describe('useRenderTime', () => {
   });
 
   it('does not track when enabled is false', () => {
-    jest.spyOn(performance, 'now').mockReturnValue(100);
-
     renderHook(() => useRenderTime('DisabledComponent', { enabled: false }));
 
-    expect(Telemetry.histogram).not.toHaveBeenCalled();
     expect(Telemetry.increment).not.toHaveBeenCalled();
   });
 
   it('does not report slow render when duration is below threshold', () => {
     const slowThreshold = 100;
-
-    // Duration = 5ms, well below 100ms threshold
-    let callCount = 0;
-    jest.spyOn(performance, 'now').mockImplementation(() => {
-      callCount += 1;
-      return callCount % 2 === 1 ? 0 : 5;
-    });
+    mockMeasure.mockReturnValue({ duration: 5 });
 
     renderHook(() => useRenderTime('FastComponent', { slowThreshold }));
 
@@ -100,42 +100,50 @@ describe('useRenderTime', () => {
       expect.anything(),
     );
   });
+
+  it('cleans up measures via performance.clearMeasures', () => {
+    renderHook(() => useRenderTime('TestComponent'));
+
+    expect(mockClearMeasures).toHaveBeenCalledWith(
+      'component:TestComponent:render',
+    );
+  });
 });
 
 describe('useAutoRenderTime', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    mockNow.mockReturnValue(100);
+    mockMeasure.mockReturnValue({ duration: 5 });
   });
 
   it('uses the provided displayName as the component name', () => {
-    let callCount = 0;
-    jest.spyOn(performance, 'now').mockImplementation(() => {
-      callCount += 1;
-      return callCount % 2 === 1 ? 0 : 5;
-    });
-
     renderHook(() => useAutoRenderTime('MyScreen'));
 
-    expect(Telemetry.histogram).toHaveBeenCalledWith(
-      'component_render_duration_ms',
-      expect.any(Number),
+    expect(mockMeasure).toHaveBeenCalledWith(
+      'component:MyScreen:render',
+      { start: 100 },
+    );
+
+    expect(Telemetry.increment).toHaveBeenCalledWith(
+      'component_render_count',
+      1,
       { component: 'MyScreen' },
     );
   });
 
   it('falls back to "Component" when no displayName is provided', () => {
-    let callCount = 0;
-    jest.spyOn(performance, 'now').mockImplementation(() => {
-      callCount += 1;
-      return callCount % 2 === 1 ? 0 : 5;
-    });
-
     renderHook(() => useAutoRenderTime());
 
-    expect(Telemetry.histogram).toHaveBeenCalledWith(
-      'component_render_duration_ms',
-      expect.any(Number),
+    expect(mockMeasure).toHaveBeenCalledWith(
+      'component:Component:render',
+      { start: 100 },
+    );
+
+    expect(Telemetry.increment).toHaveBeenCalledWith(
+      'component_render_count',
+      1,
       { component: 'Component' },
     );
   });

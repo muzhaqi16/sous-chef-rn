@@ -234,8 +234,8 @@ export function usePantryItemActions({
       client.cache.modify({
         id: cacheIdForBatch,
         fields: {
-          activeBatchCount(existing: number) {
-            return existing + 1;
+          activeBatchCount(existing: number = 0) {
+            return (existing ?? 0) + 1;
           },
         },
       });
