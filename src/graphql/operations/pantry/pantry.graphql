@@ -29,6 +29,7 @@ query GetPantry(
     id
     homeId
     name
+    description
     isDefault
     version
     stats {
