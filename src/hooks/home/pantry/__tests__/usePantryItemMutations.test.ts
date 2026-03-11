@@ -12,6 +12,7 @@ const mockUpdatePantryItem = jest.fn();
 const mockDeletePantryItem = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreatePantryItemMutation: () => [mockCreatePantryItem, {}],
   useUpdatePantryItemMutation: () => [mockUpdatePantryItem, {}],
   useDeletePantryItemMutation: () => [mockDeletePantryItem, {}],

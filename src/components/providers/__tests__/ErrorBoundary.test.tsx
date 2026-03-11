@@ -66,7 +66,7 @@ describe('ErrorBoundary', () => {
   it('renders custom fallback when provided', () => {
     render(
       <ErrorBoundary
-        fallback={(error, _retry) => <Text>Custom: {error.message}</Text>}
+        fallback={(error) => <Text>Custom: {error.message}</Text>}
       >
         <ThrowingComponent message="oops" />
       </ErrorBoundary>,

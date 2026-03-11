@@ -14,16 +14,11 @@ const mockCreateRecipe = jest.fn().mockResolvedValue({ data: { createRecipe: { s
 const mockUpdateRecipe = jest.fn().mockResolvedValue({ data: { updateRecipe: { success: true } } });
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetRecipeQuery: jest.fn(() => ({ data: null })),
   useCreateRecipeMutation: () => [mockCreateRecipe, { loading: false }],
   useUpdateRecipeMutation: () => [mockUpdateRecipe, { loading: false }],
   useUpdateRecipeIngredientsMutation: () => [jest.fn(), { loading: false }],
-  Difficulty: { Easy: 'EASY' },
-  RecipeCategory: { MainCourse: 'MAIN_COURSE' },
-  Visibility: { Public: 'PUBLIC' },
-  Diet: { Vegan: 'VEGAN' },
-  HealthGoal: { WeightLoss: 'WEIGHT_LOSS' },
-  Intolerance: { GlutenFree: 'GLUTEN_FREE' },
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');

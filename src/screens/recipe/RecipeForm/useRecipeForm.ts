@@ -5,11 +5,11 @@ import {
   type RecipeIngredientInput,
   type Difficulty,
   type RecipeCategory,
-  type Visibility,
   type Diet,
   type HealthGoal,
   type Intolerance,
-  type RecipeFragment } from '#generated';
+  type RecipeFragment,
+  RecipeStatus } from '#generated';
 
 export interface IngredientFormState {
   id: string; // local temp id
@@ -43,8 +43,7 @@ export interface RecipeFormState {
   difficulty: Difficulty | null;
   category: RecipeCategory | null;
   cuisine: string;
-  visibility: Visibility | null;
-  isPublished: boolean;
+  status: RecipeStatus;
   // Tags
   diets: Diet[];
   healthGoals: HealthGoal[];
@@ -73,8 +72,7 @@ export function useRecipeForm() {
     difficulty: null,
     category: null,
     cuisine: '',
-    visibility: null,
-    isPublished: false,
+    status: RecipeStatus.Draft,
     diets: [],
     healthGoals: [],
     intolerances: [],
@@ -222,8 +220,7 @@ export function useRecipeForm() {
       difficulty: state.difficulty ?? undefined,
       category: state.category ?? undefined,
       cuisine: state.cuisine.trim() || undefined,
-      visibility: state.visibility ?? undefined,
-      isPublished: state.isPublished,
+      status: state.status,
       diets: state.diets.length > 0 ? state.diets : undefined,
       healthGoals: state.healthGoals.length > 0 ? state.healthGoals : undefined,
       intolerances: state.intolerances.length > 0 ? state.intolerances : undefined,
@@ -244,8 +241,7 @@ export function useRecipeForm() {
       difficulty: state.difficulty ?? undefined,
       category: state.category ?? undefined,
       cuisine: state.cuisine.trim() || undefined,
-      visibility: state.visibility ?? undefined,
-      isPublished: state.isPublished,
+      status: state.status,
       instructions: state.steps.map((step, index) => ({
         step: index + 1,
         text: step.instruction.trim() })),
@@ -265,8 +261,7 @@ export function useRecipeForm() {
       difficulty: recipe.difficulty ?? null,
       category: recipe.category ?? null,
       cuisine: recipe.cuisine ?? '',
-      visibility: recipe.visibility ?? null,
-      isPublished: recipe.isPublished ?? false,
+      status: recipe.status ?? RecipeStatus.Draft,
       diets: [],
       healthGoals: [],
       intolerances: [],

@@ -24,17 +24,20 @@ const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { use
 
 jest.mock('#hooks/home/useDefaultHome', () => ({
   useDefaultHome: jest.fn(() => ({
-    selectedHomeId: 'home-1',
-    getDefaultPantry: jest.fn(() => ({ id: 'pantry-1' })),
+    state: { selectedHomeId: 'home-1' },
+    actions: { getDefaultPantry: jest.fn(() => ({ id: 'pantry-1' })) },
   })),
 }));
 
 jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
   usePantryManagement: jest.fn(() => ({
-    items: [
-      { id: '1', itemName: 'Chicken' },
-      { id: '2', itemName: 'Rice' },
-    ],
+    state: {
+      items: [
+        { id: '1', itemName: 'Chicken' },
+        { id: '2', itemName: 'Rice' },
+      ],
+    },
+    actions: {},
   })),
 }));
 
@@ -60,8 +63,8 @@ jest.mock('@gorhom/bottom-sheet', () => ({
 jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetHomeQuery: jest.fn(() => ({ data: null })),
-  ReligiousDiet: { Halal: 'HALAL', Kosher: 'KOSHER' },
 }));
 
 jest.mock('#/utils/recipeTransform', () => ({
@@ -346,7 +349,7 @@ describe('useRecipeSearch', () => {
 
   it('handleTextSearch shows alert when no query and no pantry items', async () => {
     const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
-    usePantryManagement.mockReturnValue({ items: [] });
+    usePantryManagement.mockReturnValue({ state: { items: [] }, actions: {} });
 
     const { result } = renderHook(() => useRecipeSearch());
 
@@ -361,21 +364,27 @@ describe('useRecipeSearch', () => {
 
     // Restore
     usePantryManagement.mockReturnValue({
-      items: [
-        { id: '1', itemName: 'Chicken' },
-        { id: '2', itemName: 'Rice' },
-      ],
+      state: {
+        items: [
+          { id: '1', itemName: 'Chicken' },
+          { id: '2', itemName: 'Rice' },
+        ],
+      },
+      actions: {},
     });
   });
 
   it('handleTextSearch with empty query and pantry items with empty names filters them', async () => {
     const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
     usePantryManagement.mockReturnValue({
-      items: [
-        { id: '1', itemName: '' },
-        { id: '2', itemName: null },
-        { id: '3', itemName: 'Tomato' },
-      ],
+      state: {
+        items: [
+          { id: '1', itemName: '' },
+          { id: '2', itemName: null },
+          { id: '3', itemName: 'Tomato' },
+        ],
+      },
+      actions: {},
     });
 
     const { result } = renderHook(() => useRecipeSearch());
@@ -394,10 +403,13 @@ describe('useRecipeSearch', () => {
 
     // Restore
     usePantryManagement.mockReturnValue({
-      items: [
-        { id: '1', itemName: 'Chicken' },
-        { id: '2', itemName: 'Rice' },
-      ],
+      state: {
+        items: [
+          { id: '1', itemName: 'Chicken' },
+          { id: '2', itemName: 'Rice' },
+        ],
+      },
+      actions: {},
     });
   });
 
@@ -510,7 +522,7 @@ describe('useRecipeSearch', () => {
 
   it('applyFilters with no query and no ingredients does nothing', async () => {
     const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
-    usePantryManagement.mockReturnValue({ items: [] });
+    usePantryManagement.mockReturnValue({ state: { items: [] }, actions: {} });
 
     mockSearchRecipes.mockClear();
     mockSearchByIngredients.mockClear();
@@ -526,10 +538,13 @@ describe('useRecipeSearch', () => {
 
     // Restore
     usePantryManagement.mockReturnValue({
-      items: [
-        { id: '1', itemName: 'Chicken' },
-        { id: '2', itemName: 'Rice' },
-      ],
+      state: {
+        items: [
+          { id: '1', itemName: 'Chicken' },
+          { id: '2', itemName: 'Rice' },
+        ],
+      },
+      actions: {},
     });
   });
 
@@ -597,33 +612,39 @@ describe('useRecipeSearch', () => {
 
   it('hasPantryItems is false when pantry is empty', () => {
     const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
-    usePantryManagement.mockReturnValue({ items: [] });
+    usePantryManagement.mockReturnValue({ state: { items: [] }, actions: {} });
 
     const { result } = renderHook(() => useRecipeSearch());
     expect(result.current.hasPantryItems).toBe(false);
 
     // Restore
     usePantryManagement.mockReturnValue({
-      items: [
-        { id: '1', itemName: 'Chicken' },
-        { id: '2', itemName: 'Rice' },
-      ],
+      state: {
+        items: [
+          { id: '1', itemName: 'Chicken' },
+          { id: '2', itemName: 'Rice' },
+        ],
+      },
+      actions: {},
     });
   });
 
   it('hasPantryItems is false when items is undefined', () => {
     const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
-    usePantryManagement.mockReturnValue({ items: null });
+    usePantryManagement.mockReturnValue({ state: { items: null }, actions: {} });
 
     const { result } = renderHook(() => useRecipeSearch());
     expect(result.current.hasPantryItems).toBe(false);
 
     // Restore
     usePantryManagement.mockReturnValue({
-      items: [
-        { id: '1', itemName: 'Chicken' },
-        { id: '2', itemName: 'Rice' },
-      ],
+      state: {
+        items: [
+          { id: '1', itemName: 'Chicken' },
+          { id: '2', itemName: 'Rice' },
+        ],
+      },
+      actions: {},
     });
   });
 
@@ -904,10 +925,13 @@ describe('useRecipeSearch', () => {
   it('pantry search with all empty item names shows alert', async () => {
     const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
     usePantryManagement.mockReturnValue({
-      items: [
-        { id: '1', itemName: '' },
-        { id: '2', itemName: null },
-      ],
+      state: {
+        items: [
+          { id: '1', itemName: '' },
+          { id: '2', itemName: null },
+        ],
+      },
+      actions: {},
     });
 
     const { result } = renderHook(() => useRecipeSearch());
@@ -923,10 +947,13 @@ describe('useRecipeSearch', () => {
 
     // Restore
     usePantryManagement.mockReturnValue({
-      items: [
-        { id: '1', itemName: 'Chicken' },
-        { id: '2', itemName: 'Rice' },
-      ],
+      state: {
+        items: [
+          { id: '1', itemName: 'Chicken' },
+          { id: '2', itemName: 'Rice' },
+        ],
+      },
+      actions: {},
     });
   });
 

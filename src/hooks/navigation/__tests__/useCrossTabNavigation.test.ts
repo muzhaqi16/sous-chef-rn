@@ -35,7 +35,7 @@ beforeEach(() => {
 
 describe('useCrossTabNavigation', () => {
   it('calls goBack when no source is provided', () => {
-    const { result } = renderHook(() => useCrossTabNavigation('PantryMain'));
+    const { result } = renderHook(() => useCrossTabNavigation());
 
     act(() => {
       result.current.goBackToSource();
@@ -45,7 +45,7 @@ describe('useCrossTabNavigation', () => {
   });
 
   it('calls goBack when source has no sourceTab', () => {
-    const { result } = renderHook(() => useCrossTabNavigation('PantryMain'));
+    const { result } = renderHook(() => useCrossTabNavigation());
 
     act(() => {
       result.current.goBackToSource({});
@@ -55,7 +55,7 @@ describe('useCrossTabNavigation', () => {
   });
 
   it('calls goBack for tab-to-tab navigation (no fromModalStack)', () => {
-    const { result } = renderHook(() => useCrossTabNavigation('PantryMain'));
+    const { result } = renderHook(() => useCrossTabNavigation());
 
     act(() => {
       result.current.goBackToSource({
@@ -69,7 +69,7 @@ describe('useCrossTabNavigation', () => {
   });
 
   it('navigates via parent for modal dismissal (fromModalStack: true)', () => {
-    const { result } = renderHook(() => useCrossTabNavigation('PantryMain'));
+    const { result } = renderHook(() => useCrossTabNavigation());
 
     act(() => {
       result.current.goBackToSource({
@@ -90,7 +90,7 @@ describe('useCrossTabNavigation', () => {
   });
 
   it('navigates to correct source tab in modal dismissal', () => {
-    const { result } = renderHook(() => useCrossTabNavigation('SearchResults'));
+    const { result } = renderHook(() => useCrossTabNavigation());
 
     act(() => {
       result.current.goBackToSource({
@@ -111,7 +111,7 @@ describe('useCrossTabNavigation', () => {
 
   it('falls back to goBack when parent navigator is not available for modal dismissal', () => {
     mockGetParent.mockReturnValue(null);
-    const { result } = renderHook(() => useCrossTabNavigation('SearchResults'));
+    const { result } = renderHook(() => useCrossTabNavigation());
 
     act(() => {
       result.current.goBackToSource({
@@ -124,7 +124,7 @@ describe('useCrossTabNavigation', () => {
   });
 
   it('handles sourceTab without fromModalStack as tab-to-tab', () => {
-    const { result } = renderHook(() => useCrossTabNavigation('RecipeCreate'));
+    const { result } = renderHook(() => useCrossTabNavigation());
 
     act(() => {
       result.current.goBackToSource({

@@ -25,26 +25,40 @@ jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
 
 jest.mock('#hooks/performance/useScreenTransition');
 
+jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
+  useTabScreenLifecycle: jest.fn(),
+}));
+
 jest.mock('#hooks/performance/useRenderTime', () => ({
   useRenderTime: jest.fn(),
 }));
 
 jest.mock('#/hooks/recipe/useSavedRecipes', () => ({
   useSavedRecipes: jest.fn(() => ({
-    recipes: [],
-    loading: false,
-    refetch: jest.fn(),
+    state: {
+      recipes: [],
+      loading: false,
+    },
+    actions: {
+      refetch: jest.fn(),
+    },
   })),
 }));
 
 jest.mock('#/hooks/recipe/useRecipeManagement', () => ({
   useRecipeManagement: jest.fn(() => ({
-    recipes: [],
-    loading: false,
-    refetch: jest.fn(),
-    loadMore: jest.fn(),
-    hasMore: false,
-    totalCount: 0,
+    state: {
+      recipes: [],
+      loading: false,
+      hasMore: false,
+      totalCount: 0,
+      isLoadingMore: false,
+      error: undefined,
+    },
+    actions: {
+      refetch: jest.fn(),
+      loadMore: jest.fn(),
+    },
   })),
 }));
 
@@ -75,13 +89,20 @@ jest.mock('#/services/recipeApi/SpoonacularService', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useUnfavoriteRecipeMutation: jest.fn(() => [jest.fn()]),
   useDeleteRecipeMutation: jest.fn(() => [jest.fn()]),
-  MySavedRecipesDocument: {},
-  MyRecipesDocument: {},
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
+
+jest.mock('#/hooks/offline/useOptimisticDataRestoration', () => ({
+  useOptimisticDataRestorationMultiple: jest.fn(),
+}));
+
+jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
+  optimisticDataPersistence: { save: jest.fn(), clear: jest.fn(), clearEntity: jest.fn() },
+}));
 
 // Top-level capturing mocks.
 // Using module-level handler variables avoids the jest.mock()-inside-test-body
@@ -195,19 +216,23 @@ describe('RecipeMain', () => {
       '#/hooks/recipe/useSavedRecipes',
     );
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        {
-          recipeId: 'r-1',
-          name: 'Pasta',
-          imageUrl: null,
-          servings: 2,
-          totalTimeMinutes: 30,
-          folder: null,
-          tags: [],
-        },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'Pasta',
+            imageUrl: null,
+            servings: 2,
+            totalTimeMinutes: 30,
+            folder: null,
+            tags: [],
+          },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -235,11 +260,15 @@ describe('RecipeMain', () => {
       '#/hooks/recipe/useSavedRecipes',
     );
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'r-1', name: 'Pasta', servings: 2, folder: 'Favorites', tags: ['easy'] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'r-1', name: 'Pasta', servings: 2, folder: 'Favorites', tags: ['easy'] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -271,21 +300,25 @@ describe('RecipeMain', () => {
       '#/hooks/recipe/useSavedRecipes',
     );
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        {
-          recipeId: 'r-1',
-          name: 'Pasta',
-          servings: 2,
-          totalTimeMinutes: null,
-          readyInMinutes: null,
-          prepTimeMinutes: 10,
-          cookTimeMinutes: 20,
-          folder: null,
-          tags: [],
-        },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'Pasta',
+            servings: 2,
+            totalTimeMinutes: null,
+            readyInMinutes: null,
+            prepTimeMinutes: 10,
+            cookTimeMinutes: 20,
+            folder: null,
+            tags: [],
+          },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -301,21 +334,25 @@ describe('RecipeMain', () => {
       '#/hooks/recipe/useSavedRecipes',
     );
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        {
-          recipeId: 'r-1',
-          name: 'Salad',
-          servings: 1,
-          totalTimeMinutes: null,
-          readyInMinutes: null,
-          prepTimeMinutes: 5,
-          cookTimeMinutes: null,
-          folder: null,
-          tags: [],
-        },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'Salad',
+            servings: 1,
+            totalTimeMinutes: null,
+            readyInMinutes: null,
+            prepTimeMinutes: 5,
+            cookTimeMinutes: null,
+            folder: null,
+            tags: [],
+          },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -331,21 +368,25 @@ describe('RecipeMain', () => {
       '#/hooks/recipe/useSavedRecipes',
     );
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        {
-          recipeId: 'r-1',
-          name: 'Quick Bite',
-          servings: 1,
-          totalTimeMinutes: null,
-          readyInMinutes: null,
-          prepTimeMinutes: null,
-          cookTimeMinutes: null,
-          folder: null,
-          tags: [],
-        },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'Quick Bite',
+            servings: 1,
+            totalTimeMinutes: null,
+            readyInMinutes: null,
+            prepTimeMinutes: null,
+            cookTimeMinutes: null,
+            folder: null,
+            tags: [],
+          },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -361,19 +402,23 @@ describe('RecipeMain', () => {
       '#/hooks/recipe/useSavedRecipes',
     );
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        {
-          recipeId: 'r-1',
-          name: 'Pasta',
-          imageUrl: 'https://example.com/pasta.jpg',
-          servings: 2,
-          totalTimeMinutes: 30,
-          folder: null,
-          tags: [],
-        },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'Pasta',
+            imageUrl: 'https://example.com/pasta.jpg',
+            servings: 2,
+            totalTimeMinutes: 30,
+            folder: null,
+            tags: [],
+          },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -393,9 +438,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [{ recipeId: 'r-1', name: 'Pasta', servings: 2, folder: null, tags: [] }],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [{ recipeId: 'r-1', name: 'Pasta', servings: 2, folder: null, tags: [] }],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -409,9 +458,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [],
-      loading: true,
-      refetch: jest.fn(),
+      state: {
+        recipes: [],
+        loading: true,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -431,13 +484,17 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'r-1', name: 'Pancakes', servings: 4, totalTimeMinutes: 20, folder: 'Breakfast', tags: ['quick'] },
-        { recipeId: 'r-2', name: 'Salad', servings: 2, totalTimeMinutes: 10, folder: 'Lunch', tags: ['healthy'] },
-        { recipeId: 'r-3', name: 'Stew', servings: 6, totalTimeMinutes: 60, folder: 'Dinner', tags: ['comfort'] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'r-1', name: 'Pancakes', servings: 4, totalTimeMinutes: 20, folder: 'Breakfast', tags: ['quick'] },
+          { recipeId: 'r-2', name: 'Salad', servings: 2, totalTimeMinutes: 10, folder: 'Lunch', tags: ['healthy'] },
+          { recipeId: 'r-3', name: 'Stew', servings: 6, totalTimeMinutes: 60, folder: 'Dinner', tags: ['comfort'] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -451,21 +508,25 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        {
-          recipeId: 'r-1',
-          name: 'Quick Pasta',
-          servings: 2,
-          totalTimeMinutes: null,
-          readyInMinutes: 25,
-          prepTimeMinutes: null,
-          cookTimeMinutes: null,
-          folder: null,
-          tags: [],
-        },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'Quick Pasta',
+            servings: 2,
+            totalTimeMinutes: null,
+            readyInMinutes: 25,
+            prepTimeMinutes: null,
+            cookTimeMinutes: null,
+            folder: null,
+            tags: [],
+          },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -479,22 +540,26 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        {
-          recipeId: 'r-1',
-          name: 'Steak',
-          servings: 2,
-          totalTimeMinutes: 45,
-          readyInMinutes: null,
-          prepTimeMinutes: null,
-          cookTimeMinutes: null,
-          folder: null,
-          tags: [],
-          imageUrl: 'https://example.com/steak.jpg',
-        },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'Steak',
+            servings: 2,
+            totalTimeMinutes: 45,
+            readyInMinutes: null,
+            prepTimeMinutes: null,
+            cookTimeMinutes: null,
+            folder: null,
+            tags: [],
+            imageUrl: 'https://example.com/steak.jpg',
+          },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -508,21 +573,25 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        {
-          recipeId: 'r-1',
-          name: 'Baked Fish',
-          servings: 2,
-          totalTimeMinutes: null,
-          readyInMinutes: null,
-          prepTimeMinutes: null,
-          cookTimeMinutes: 35,
-          folder: null,
-          tags: [],
-        },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'Baked Fish',
+            servings: 2,
+            totalTimeMinutes: null,
+            readyInMinutes: null,
+            prepTimeMinutes: null,
+            cookTimeMinutes: 35,
+            folder: null,
+            tags: [],
+          },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -544,9 +613,13 @@ describe('RecipeMain', () => {
       tags: i % 3 === 0 ? ['easy'] : [],
     }));
     useSavedRecipes.mockReturnValue({
-      recipes,
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes,
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -569,9 +642,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     render(<RecipeMain />);
@@ -598,9 +675,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -666,9 +747,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -702,9 +787,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     render(<RecipeMain />);
@@ -732,9 +821,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     render(<RecipeMain />);
@@ -764,9 +857,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const tree = render(<RecipeMain />);
@@ -809,9 +906,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     // Capture onItemPress via the top-level mock
@@ -852,11 +953,15 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'abc-123', name: 'Saved Recipe', servings: 2, totalTimeMinutes: 30, folder: null, tags: [] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'abc-123', name: 'Saved Recipe', servings: 2, totalTimeMinutes: 30, folder: null, tags: [] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedOnItemPress: ((id: string | number) => void) | undefined;
@@ -887,11 +992,15 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'del-1', name: 'Delete Me', servings: 2, totalTimeMinutes: 10, folder: null, tags: [] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'del-1', name: 'Delete Me', servings: 2, totalTimeMinutes: 10, folder: null, tags: [] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedOnItemDelete: ((id: string) => Promise<void>) | undefined;
@@ -924,11 +1033,15 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'fail-1', name: 'Fail', servings: 1, folder: null, tags: [] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'fail-1', name: 'Fail', servings: 1, folder: null, tags: [] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedOnItemDelete: ((id: string) => Promise<void>) | undefined;
@@ -958,12 +1071,16 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'r-1', name: 'Pasta Carbonara', description: 'Italian classic', servings: 2, folder: null, tags: [] },
-        { recipeId: 'r-2', name: 'Chicken Tikka', description: 'Indian curry', servings: 4, folder: null, tags: [] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'r-1', name: 'Pasta Carbonara', description: 'Italian classic', servings: 2, folder: null, tags: [] },
+          { recipeId: 'r-2', name: 'Chicken Tikka', description: 'Indian curry', servings: 4, folder: null, tags: [] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedItems: any[] | undefined;
@@ -1003,12 +1120,16 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'r-1', name: 'Dish A', description: 'Delicious curry', servings: 2, folder: null, tags: [] },
-        { recipeId: 'r-2', name: 'Dish B', description: 'Light salad', servings: 4, folder: null, tags: [] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'r-1', name: 'Dish A', description: 'Delicious curry', servings: 2, folder: null, tags: [] },
+          { recipeId: 'r-2', name: 'Dish B', description: 'Light salad', servings: 4, folder: null, tags: [] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedItems: any[] | undefined;
@@ -1049,9 +1170,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Favorites', tags: [] }],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Favorites', tags: [] }],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedTabs: any[] | undefined;
@@ -1078,9 +1203,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: ['easy'] }],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: ['easy'] }],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedTabs: any[] | undefined;
@@ -1107,9 +1236,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Fav', tags: ['easy'] }],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Fav', tags: ['easy'] }],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedOnTabChange: ((id: string) => void) | undefined;
@@ -1134,9 +1267,13 @@ describe('RecipeMain', () => {
     const mockRefetch = jest.fn().mockResolvedValue({});
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: [] }],
-      loading: false,
-      refetch: mockRefetch,
+      state: {
+        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: [] }],
+        loading: false,
+      },
+      actions: {
+        refetch: mockRefetch,
+      },
     });
 
     let capturedOnRefresh: (() => Promise<void>) | undefined;
@@ -1168,9 +1305,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedOnItemDelete: any;
@@ -1200,9 +1341,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedItems: any[] | undefined;
@@ -1228,11 +1373,15 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'r-1', name: 'My Pasta', servings: 2, totalTimeMinutes: 30, folder: null, tags: [] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'r-1', name: 'My Pasta', servings: 2, totalTimeMinutes: 30, folder: null, tags: [] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedItems: any[] | undefined;
@@ -1254,11 +1403,15 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'r-1', name: 'With Image', imageUrl: 'https://img.com/a.jpg', servings: 2, totalTimeMinutes: 30, folder: null, tags: [] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'r-1', name: 'With Image', imageUrl: 'https://img.com/a.jpg', servings: 2, totalTimeMinutes: 30, folder: null, tags: [] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedItems: any[] | undefined;
@@ -1279,11 +1432,15 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'r-1', name: 'No Image', imageUrl: null, servings: 2, totalTimeMinutes: 30, folder: null, tags: [] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'r-1', name: 'No Image', imageUrl: null, servings: 2, totalTimeMinutes: 30, folder: null, tags: [] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedItems: any[] | undefined;
@@ -1310,9 +1467,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Dinner', tags: [] }],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Dinner', tags: [] }],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedTabs: any[] | undefined;
@@ -1357,9 +1518,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: ['easy'] }],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: ['easy'] }],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedTabs: any[] | undefined;
@@ -1404,9 +1569,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: [] }],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: [] }],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedOnRename: ((oldName: string, newName: string) => Promise<boolean>) | undefined;
@@ -1440,9 +1609,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: [] }],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: [] }],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedOnDelete: ((folderName: string) => Promise<boolean>) | undefined;
@@ -1476,9 +1649,13 @@ describe('RecipeMain', () => {
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     // Start with no saved recipes
     useSavedRecipes.mockReturnValue({
-      recipes: [],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     const { rerender } = render(<RecipeMain />);
@@ -1489,9 +1666,13 @@ describe('RecipeMain', () => {
 
     // Now user has a saved recipe
     useSavedRecipes.mockReturnValue({
-      recipes: [{ recipeId: 'new-1', name: 'New', servings: 2, folder: null, tags: [] }],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [{ recipeId: 'new-1', name: 'New', servings: 2, folder: null, tags: [] }],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     rerender(<RecipeMain />);
@@ -1505,11 +1686,15 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'r-1', name: 'Quick', servings: 3, totalTimeMinutes: 20, folder: null, tags: [] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'r-1', name: 'Quick', servings: 3, totalTimeMinutes: 20, folder: null, tags: [] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedItems: any[] | undefined;
@@ -1531,11 +1716,15 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'r-1', name: 'No Time', servings: 2, totalTimeMinutes: null, readyInMinutes: null, prepTimeMinutes: null, cookTimeMinutes: null, folder: null, tags: [] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'r-1', name: 'No Time', servings: 2, totalTimeMinutes: null, readyInMinutes: null, prepTimeMinutes: null, cookTimeMinutes: null, folder: null, tags: [] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedItems: any[] | undefined;
@@ -1560,12 +1749,16 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'r-1', name: 'Dinner Recipe', servings: 2, folder: 'Dinner', tags: [] },
-        { recipeId: 'r-2', name: 'Lunch Recipe', servings: 2, folder: 'Lunch', tags: [] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'r-1', name: 'Dinner Recipe', servings: 2, folder: 'Dinner', tags: [] },
+          { recipeId: 'r-2', name: 'Lunch Recipe', servings: 2, folder: 'Lunch', tags: [] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedItems: any[] | undefined;
@@ -1604,12 +1797,16 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [
-        { recipeId: 'r-1', name: 'Easy Recipe', servings: 2, folder: null, tags: ['easy'] },
-        { recipeId: 'r-2', name: 'Hard Recipe', servings: 2, folder: null, tags: ['hard'] },
-      ],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [
+          { recipeId: 'r-1', name: 'Easy Recipe', servings: 2, folder: null, tags: ['easy'] },
+          { recipeId: 'r-2', name: 'Hard Recipe', servings: 2, folder: null, tags: ['hard'] },
+        ],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let capturedItems: any[] | undefined;
@@ -1666,14 +1863,20 @@ describe('RecipeMain', () => {
 
     const { useRecipeManagement } = jest.requireMock('#/hooks/recipe/useRecipeManagement');
     useRecipeManagement.mockReturnValue({
-      recipes: [
-        { id: 'my-1', name: 'My Pasta', description: 'Homemade', servings: 4, totalTimeMinutes: 30, imageUrl: null },
-      ],
-      loading: false,
-      refetch: jest.fn(),
-      loadMore: jest.fn(),
-      hasMore: false,
-      totalCount: 1,
+      state: {
+        recipes: [
+          { id: 'my-1', name: 'My Pasta', description: 'Homemade', servings: 4, totalTimeMinutes: 30, imageUrl: null },
+        ],
+        loading: false,
+        hasMore: false,
+        totalCount: 1,
+        isLoadingMore: false,
+        error: undefined,
+      },
+      actions: {
+        refetch: jest.fn(),
+        loadMore: jest.fn(),
+      },
     });
 
     let capturedItems: any[] | undefined;
@@ -1743,14 +1946,20 @@ describe('RecipeMain', () => {
 
     const { useRecipeManagement } = jest.requireMock('#/hooks/recipe/useRecipeManagement');
     useRecipeManagement.mockReturnValue({
-      recipes: [
-        { id: 'my-1', name: 'My Pasta', servings: 2, totalTimeMinutes: 20, imageUrl: null },
-      ],
-      loading: false,
-      refetch: jest.fn(),
-      loadMore: jest.fn(),
-      hasMore: false,
-      totalCount: 1,
+      state: {
+        recipes: [
+          { id: 'my-1', name: 'My Pasta', servings: 2, totalTimeMinutes: 20, imageUrl: null },
+        ],
+        loading: false,
+        hasMore: false,
+        totalCount: 1,
+        isLoadingMore: false,
+        error: undefined,
+      },
+      actions: {
+        refetch: jest.fn(),
+        loadMore: jest.fn(),
+      },
     });
 
     let capturedOnItemPress: ((id: string | number) => void) | undefined;
@@ -1789,14 +1998,20 @@ describe('RecipeMain', () => {
 
     const { useRecipeManagement } = jest.requireMock('#/hooks/recipe/useRecipeManagement');
     useRecipeManagement.mockReturnValue({
-      recipes: [
-        { id: 'my-1', name: 'Delete Me', servings: 2, totalTimeMinutes: 10, imageUrl: null },
-      ],
-      loading: false,
-      refetch: jest.fn(),
-      loadMore: jest.fn(),
-      hasMore: false,
-      totalCount: 1,
+      state: {
+        recipes: [
+          { id: 'my-1', name: 'Delete Me', servings: 2, totalTimeMinutes: 10, imageUrl: null },
+        ],
+        loading: false,
+        hasMore: false,
+        totalCount: 1,
+        isLoadingMore: false,
+        error: undefined,
+      },
+      actions: {
+        refetch: jest.fn(),
+        loadMore: jest.fn(),
+      },
     });
 
     let capturedOnItemDelete: ((id: string) => Promise<void>) | undefined;
@@ -1837,9 +2052,13 @@ describe('RecipeMain', () => {
 
     const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
     useSavedRecipes.mockReturnValue({
-      recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Dinner', tags: ['easy'] }],
-      loading: false,
-      refetch: jest.fn(),
+      state: {
+        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Dinner', tags: ['easy'] }],
+        loading: false,
+      },
+      actions: {
+        refetch: jest.fn(),
+      },
     });
 
     let filterTabsRendered = false;
@@ -1895,15 +2114,21 @@ describe('RecipeMain', () => {
 
     const { useRecipeManagement } = jest.requireMock('#/hooks/recipe/useRecipeManagement');
     useRecipeManagement.mockReturnValue({
-      recipes: [
-        { id: 'my-1', name: 'Pasta Carbonara', description: 'Italian', servings: 2, totalTimeMinutes: 30, imageUrl: null },
-        { id: 'my-2', name: 'Chicken Tikka', description: 'Indian', servings: 4, totalTimeMinutes: 45, imageUrl: null },
-      ],
-      loading: false,
-      refetch: jest.fn(),
-      loadMore: jest.fn(),
-      hasMore: false,
-      totalCount: 2,
+      state: {
+        recipes: [
+          { id: 'my-1', name: 'Pasta Carbonara', description: 'Italian', servings: 2, totalTimeMinutes: 30, imageUrl: null },
+          { id: 'my-2', name: 'Chicken Tikka', description: 'Indian', servings: 4, totalTimeMinutes: 45, imageUrl: null },
+        ],
+        loading: false,
+        hasMore: false,
+        totalCount: 2,
+        isLoadingMore: false,
+        error: undefined,
+      },
+      actions: {
+        refetch: jest.fn(),
+        loadMore: jest.fn(),
+      },
     });
 
     let capturedItems: any[] | undefined;

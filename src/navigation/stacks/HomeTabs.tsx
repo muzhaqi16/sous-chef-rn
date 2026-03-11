@@ -33,8 +33,8 @@ export const HomeTabs = createBottomTabNavigator({
     headerShown: false,
     tabBarHideOnKeyboard: true,
     lazy: true,
-    freezeOnBlur: true,
     animation: 'none',
+    inactiveBehavior: 'pause',
   },
   screens: {
     Pantry: {

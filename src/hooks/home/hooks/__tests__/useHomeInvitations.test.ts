@@ -7,6 +7,7 @@ const mockJoinHomeByCodeMutation = jest.fn();
 const mockGetHomeByJoinCode = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useInviteToHomeMutation: jest.fn(() => [
     mockInviteUserMutation,
     { loading: false },
@@ -19,12 +20,6 @@ jest.mock('#generated', () => ({
     mockGetHomeByJoinCode,
     { loading: false, data: undefined },
   ]),
-  MembershipRole: {
-    Owner: 'OWNER',
-    Admin: 'ADMIN',
-    Member: 'MEMBER',
-    Guest: 'GUEST',
-  },
 }));
 
 jest.mock('#/services/errorService', () => ({

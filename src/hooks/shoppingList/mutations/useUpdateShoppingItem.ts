@@ -8,7 +8,11 @@
  */
 
 import { Alert } from 'react-native';
-import { useUpdateShoppingListItemMutation } from '#generated';
+import { useApolloClient } from '@apollo/client/react';
+import {
+  useUpdateShoppingListItemMutation,
+  ShoppingListItemDisplayFragmentDoc,
+} from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
@@ -21,7 +25,6 @@ import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 interface UseUpdateShoppingItemOptions {
   listId: string | null | undefined;
-  items: ShoppingListItemDisplayFragment[];
   refetch: () => Promise<any>;
 }
 
@@ -36,10 +39,10 @@ interface UseUpdateShoppingItemOptions {
  */
 export function useUpdateShoppingItem({
   listId,
-  items,
   refetch,
 }: UseUpdateShoppingItemOptions) {
   const { handleApolloError } = useErrorService();
+  const client = useApolloClient();
 
   // Apollo auto-normalizes the server response by __typename + id
   // No manual cache update needed - Apollo merge functions handle this automatically
@@ -53,7 +56,6 @@ export function useUpdateShoppingItem({
     },
   });
 
-  // Uses items array from props instead of reading from cache
   // Apollo auto-normalizes the server response by __typename + id, so we only need a basic optimistic response
   const updateItem = async (
     itemId: string,
@@ -61,8 +63,11 @@ export function useUpdateShoppingItem({
   ) => {
     if (!listId) return false;
 
-    // Use items array (already in memory) instead of cache read
-    const item = items.find(i => i.id === itemId);
+    const item = client.cache.readFragment<ShoppingListItemDisplayFragment>({
+      id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+      fragment: ShoppingListItemDisplayFragmentDoc,
+      fragmentName: 'ShoppingListItemDisplayFragment',
+    });
 
     if (!item) {
       console.warn('Item not found, cannot update:', itemId);

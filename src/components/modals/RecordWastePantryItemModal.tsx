@@ -11,7 +11,6 @@ import { formatQuantity } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
 import { WasteReason, PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
-import type { SelectedUnitInfo } from '#hooks/pantry/useCompatibleUnits';
 import { PantryActionModal, type PantryActionSharedState } from './PantryActionModal';
 
 interface RecordWastePantryItemModalProps {
@@ -53,7 +52,7 @@ export const RecordWastePantryItemModal: React.FC<RecordWastePantryItemModalProp
   const [isComposted, setIsComposted] = useState(false);
   const [isRecycled, setIsRecycled] = useState(false);
 
-  const handleReset = (item: PantryItemFragment, _defaultUnit: SelectedUnitInfo | null) => {
+  const handleReset = (item: PantryItemFragment) => {
     setWasteAmountInput(item.quantity.toString());
     setWasteReason(WasteReason.Expired);
     setIsComposted(false);

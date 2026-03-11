@@ -22,6 +22,7 @@ jest.mock('#store/useAppStore', () => {
 });
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetPantryQuery: jest.fn(() => ({
     data: {
       pantry: {

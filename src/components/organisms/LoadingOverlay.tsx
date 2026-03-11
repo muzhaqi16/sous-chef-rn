@@ -26,6 +26,8 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
       transparent
       visible={visible}
       animationType="fade"
+      statusBarTranslucent
+      navigationBarTranslucent
       onRequestClose={() => {
         if (cancelable && onCancel) {
           onCancel();

@@ -98,30 +98,6 @@ export const dateStringToISO = (dateStr: string): string => {
 };
 
 /**
- * Validates YYYY-MM-DD format
- */
-export const isValidDateString = (dateStr: string): boolean => {
-  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    return false;
-  }
-
-  const [year, month, day] = dateStr.split('-').map(Number);
-
-  // Basic validation
-  if (year < 1900 || year > 2100) return false;
-  if (month < 1 || month > 12) return false;
-  if (day < 1 || day > 31) return false;
-
-  // Check if the date is actually valid (handles things like Feb 30)
-  const date = new Date(year, month - 1, day);
-  return (
-    date.getFullYear() === year &&
-    date.getMonth() === month - 1 &&
-    date.getDate() === day
-  );
-};
-
-/**
  * Safely creates a Date object from any value, returns null if invalid
  * Useful for handling potentially invalid date strings in notifications
  */

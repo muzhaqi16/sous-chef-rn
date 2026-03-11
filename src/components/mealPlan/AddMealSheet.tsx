@@ -76,7 +76,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
   const [selectedMealType, setSelectedMealType] = useState<MealType>(MealType.Dinner);
   const [searchQuery, setSearchQuery] = useState('');
-  const { recipes, hasNextPage, loadMore } = useSavedRecipes();
+  const { state: { recipes, hasNextPage }, actions: { loadMore } } = useSavedRecipes();
 
   // Spoonacular search state
   const [spoonacularResults, setSpoonacularResults] = useState<TransformedRecipeItem[]>([]);

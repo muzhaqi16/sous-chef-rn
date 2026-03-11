@@ -18,7 +18,6 @@ import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 
 interface UseRemoveShoppingItemOptions {
   listId: string | null | undefined;
-  items?: unknown;
   refetch: () => Promise<any>;
 }
 

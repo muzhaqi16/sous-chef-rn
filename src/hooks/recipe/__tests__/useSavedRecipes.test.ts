@@ -5,6 +5,7 @@ const mockRefetch = jest.fn();
 const mockFetchMore = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useMySavedRecipesQuery: jest.fn(() => ({
     data: {
       me: {
@@ -94,8 +95,8 @@ describe('useSavedRecipes', () => {
   it('normalizes saved recipes correctly', () => {
     const { result } = renderHook(() => useSavedRecipes());
 
-    expect(result.current.recipes).toHaveLength(2);
-    expect(result.current.recipes[0]).toEqual(
+    expect(result.current.state.recipes).toHaveLength(2);
+    expect(result.current.state.recipes[0]).toEqual(
       expect.objectContaining({
         id: 'sr-1',
         recipeId: 'r-1',
@@ -110,28 +111,28 @@ describe('useSavedRecipes', () => {
   it('handles null tags and cookedCount', () => {
     const { result } = renderHook(() => useSavedRecipes());
 
-    expect(result.current.recipes[1].tags).toEqual([]);
-    expect(result.current.recipes[1].cookedCount).toBe(0);
+    expect(result.current.state.recipes[1].tags).toEqual([]);
+    expect(result.current.state.recipes[1].cookedCount).toBe(0);
   });
 
   it('returns totalCount and hasNextPage', () => {
     const { result } = renderHook(() => useSavedRecipes());
 
-    expect(result.current.totalCount).toBe(10);
-    expect(result.current.hasNextPage).toBe(true);
+    expect(result.current.state.totalCount).toBe(10);
+    expect(result.current.state.hasNextPage).toBe(true);
   });
 
   it('getRecipeById finds by recipeId', () => {
     const { result } = renderHook(() => useSavedRecipes());
 
-    const found = result.current.getRecipeById('r-1');
+    const found = result.current.actions.getRecipeById('r-1');
     expect(found?.name).toBe('Pasta');
   });
 
   it('getRecipesByFolder filters by folder', () => {
     const { result } = renderHook(() => useSavedRecipes());
 
-    const weeknight = result.current.getRecipesByFolder('Weeknight');
+    const weeknight = result.current.actions.getRecipesByFolder('Weeknight');
     expect(weeknight).toHaveLength(1);
     expect(weeknight[0].name).toBe('Pasta');
   });
@@ -139,7 +140,7 @@ describe('useSavedRecipes', () => {
   it('getRecipesByTag filters by tag', () => {
     const { result } = renderHook(() => useSavedRecipes());
 
-    const quick = result.current.getRecipesByTag('Quick');
+    const quick = result.current.actions.getRecipesByTag('Quick');
     expect(quick).toHaveLength(1);
     expect(quick[0].name).toBe('Pasta');
   });
@@ -156,7 +157,7 @@ describe('useSavedRecipes', () => {
 
     const { result } = renderHook(() => useSavedRecipes());
 
-    expect(result.current.recipes).toEqual([]);
-    expect(result.current.loading).toBe(true);
+    expect(result.current.state.recipes).toEqual([]);
+    expect(result.current.state.loading).toBe(true);
   });
 });

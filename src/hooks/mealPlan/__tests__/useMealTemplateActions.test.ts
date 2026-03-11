@@ -10,6 +10,7 @@ const mockDeleteTemplateMutation = jest.fn();
 const mockDuplicateTemplateMutation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreateMealPlanFromTemplateMutation: jest.fn(() => [
     mockCreateFromTemplateMutation,
     { loading: false },
@@ -26,8 +27,6 @@ jest.mock('#generated', () => ({
     mockDuplicateTemplateMutation,
     { loading: false },
   ]),
-  GetMealTemplatesDocument: 'GetMealTemplatesDocument',
-  GetMealPlansDocument: 'GetMealPlansDocument',
 }));
 
 jest.mock('#/services/toastService', () => ({

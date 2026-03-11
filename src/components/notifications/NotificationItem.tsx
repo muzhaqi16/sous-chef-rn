@@ -6,6 +6,7 @@ import {formatDistanceToNow} from 'date-fns/formatDistanceToNow';
 import {NotificationItem as NotificationType} from '#store/slices/notificationSlice';
 import {getNotificationIcon} from '#utils/notifications/notificationHelpers';
 import {safeParseDate} from '#utils/dateUtils';
+import {createPropsComparator} from '#utils/memoUtils';
 
 interface NotificationItemProps {
   notification: NotificationType;
@@ -13,7 +14,7 @@ interface NotificationItemProps {
   onDismiss?: (notificationId: string) => void;
 }
 
-export const NotificationItem: React.FC<NotificationItemProps> = ({
+const NotificationItemComponent: React.FC<NotificationItemProps> = ({
   notification,
   onPress,
   onDismiss }) => {
@@ -125,3 +126,13 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center' },
   pressed: {
     opacity: theme.opacity.pressed } }));
+
+// PERFORMANCE: Custom comparator — value-equality on notification fields,
+// ignores callback reference changes (callbacks are functionally stable)
+const areNotificationItemPropsEqual = createPropsComparator<NotificationItemProps>({
+  nestedComparisons: {
+    notification: ['id', 'isRead', 'title', 'message', 'sentAt'],
+  },
+});
+
+export const NotificationItem = React.memo(NotificationItemComponent, areNotificationItemPropsEqual);

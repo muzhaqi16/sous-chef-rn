@@ -139,7 +139,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const [storageNotes, setStorageNotes] = useState('');
   const [tags, setTags] = useState('');
   const [brand, setBrand] = useState('');
-  const [_selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [, setSelectedBrandId] = useState<string | null>(null);
   const [suggestedBrands, setSuggestedBrands] = useState<
     { id: string; name: string }[]
   >([]);
@@ -240,7 +240,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   };
 
   // Handle brand selection
-  const handleBrandSelected = (brandId: string | null, _brandName: string | null) => {
+  const handleBrandSelected = (brandId: string | null) => {
       setSelectedBrandId(brandId);
     };
 

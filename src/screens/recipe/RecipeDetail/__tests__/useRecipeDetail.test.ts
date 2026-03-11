@@ -44,6 +44,7 @@ jest.mock('#/services/recipeApi/SpoonacularService', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetRecipeQuery: jest.fn(() => ({
     data: null,
     loading: false,
@@ -67,8 +68,6 @@ jest.mock('#generated', () => ({
   useMarkRecipeAsCookedMutation: jest.fn(() => [jest.fn()]),
   useUpdateFavoriteRecipeMutation: jest.fn(() => [jest.fn()]),
   useUnfavoriteRecipeMutation: jest.fn(() => [jest.fn()]),
-  MySavedRecipesDocument: {},
-  SavedRecipeFoldersDocument: {},
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({

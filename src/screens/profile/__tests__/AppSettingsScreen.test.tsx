@@ -51,10 +51,6 @@ jest.mock('#hooks/useFeatureHint', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.mock('#generated', () => ({
-  UnitSystem: { Metric: 'METRIC', Imperial: 'IMPERIAL', System: 'SYSTEM' },
-}));
-
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: {
     loadingContainer: {},

@@ -35,17 +35,23 @@ jest.mock('../cache', () => ({
   })),
 }));
 
-const mockLoad = jest.fn(() => null);
+const mockLoad = jest.fn((): Record<string, unknown> | null => null);
+const mockLoadCritical = jest.fn((): Record<string, unknown> | null => null);
+const mockLoadDeferred = jest.fn((): Record<string, unknown> | null => null);
 const mockScheduleExtractAndSave = jest.fn();
 const mockCancel = jest.fn();
 const mockClear = jest.fn();
+const mockMarkDirty = jest.fn();
 
 jest.mock('../offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: {
     load: mockLoad,
+    loadCritical: mockLoadCritical,
+    loadDeferred: mockLoadDeferred,
     scheduleExtractAndSave: mockScheduleExtractAndSave,
     cancel: mockCancel,
     clear: mockClear,
+    markDirty: mockMarkDirty,
   },
 }));
 
@@ -69,10 +75,70 @@ describe('Apollo client', () => {
     expect(client.cache).toBeDefined();
   });
 
-  it('restores persisted cache if available', () => {
-    // The client initialization calls load() at module import time.
-    // Since jest module caching may have already loaded it, just verify the function exists.
-    expect(typeof mockLoad).toBe('function');
+  describe('lazy cache hydration', () => {
+    it('restores critical cache synchronously and schedules deferred restore', () => {
+      const criticalData = { ROOT_QUERY: { __typename: 'Query' } };
+      mockLoadCritical.mockReturnValueOnce(criticalData);
+
+      const deferredData = { 'PantryItem:1': { id: '1' } };
+      mockLoadDeferred.mockReturnValueOnce(deferredData);
+
+      let idleCallback: (() => void) | undefined;
+      const mockRIC = jest
+        .spyOn(global, 'requestIdleCallback')
+        .mockImplementation((cb) => {
+          idleCallback = cb as () => void;
+          return 1;
+        });
+
+      jest.isolateModules(() => {
+        require('../client');
+      });
+
+      // Phase 1: critical restore called synchronously
+      expect(mockLoadCritical).toHaveBeenCalled();
+      expect(mockRestore).toHaveBeenCalledWith(criticalData);
+
+      // Phase 2: requestIdleCallback scheduled
+      expect(mockRIC).toHaveBeenCalled();
+
+      // Simulate idle callback firing
+      idleCallback!();
+      expect(mockLoadDeferred).toHaveBeenCalled();
+      expect(mockRestore).toHaveBeenCalledWith(deferredData);
+
+      // Migration path should NOT have been used
+      expect(mockLoad).not.toHaveBeenCalled();
+
+      mockRIC.mockRestore();
+    });
+
+    it('falls back to load() when loadCritical returns null (migration)', () => {
+      mockLoadCritical.mockReturnValueOnce(null);
+      const legacyData = { ROOT_QUERY: {}, 'PantryItem:1': { id: '1' } };
+      mockLoad.mockReturnValueOnce(legacyData);
+
+      jest.isolateModules(() => {
+        require('../client');
+      });
+
+      expect(mockLoadCritical).toHaveBeenCalled();
+      expect(mockLoad).toHaveBeenCalled();
+      expect(mockRestore).toHaveBeenCalledWith(legacyData);
+    });
+
+    it('does not restore when both loadCritical and load return null', () => {
+      mockLoadCritical.mockReturnValueOnce(null);
+      mockLoad.mockReturnValueOnce(null);
+
+      jest.isolateModules(() => {
+        require('../client');
+      });
+
+      expect(mockLoadCritical).toHaveBeenCalled();
+      expect(mockLoad).toHaveBeenCalled();
+      expect(mockRestore).not.toHaveBeenCalled();
+    });
   });
 
   it('wraps cache.write to schedule persistence', () => {

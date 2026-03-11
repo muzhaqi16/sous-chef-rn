@@ -8,6 +8,7 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreatePantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useRestockPantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useAddItemToShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),

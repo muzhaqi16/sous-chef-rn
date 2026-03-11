@@ -4,11 +4,11 @@ import { useFolderActions } from '../useFolderActions';
 const mockDeleteRecipeFolderMutation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useDeleteRecipeFolderMutation: jest.fn(() => [
     mockDeleteRecipeFolderMutation,
     { loading: false },
   ]),
-  SavedRecipeFoldersDocument: 'SavedRecipeFoldersDocument',
 }));
 
 const mockToastSuccess = jest.fn();

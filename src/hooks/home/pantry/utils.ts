@@ -16,11 +16,12 @@ export const addToPantryItemsCache = createAddToParentConnectionUpdater(
   'PantryItem',
 );
 
-export const removeFromPantryItemsCache = createRemoveFromParentConnectionUpdater(
-  'Pantry',
-  'itemsConnection',
-  'PantryItem',
-);
+export const removeFromPantryItemsCache =
+  createRemoveFromParentConnectionUpdater(
+    'Pantry',
+    'itemsConnection',
+    'PantryItem',
+  );
 
 /**
  * Batch-add multiple pantry items to the cache in a single cache.modify() call.
@@ -39,13 +40,12 @@ export function batchAddToPantryItemsCache(
   cache.modify({
     id: parentCacheId,
     fields: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Apollo's Modifier type requires `any`
-      // for field values (same pattern as createAddToParentConnectionUpdater in cacheUpdaters.ts)
       itemsConnection(
         existingConnection: any = {},
         { readField, toReference }: CacheFieldHelpers,
       ) {
-        const existingEdges: ReadonlyArray<{ node: Reference }> = existingConnection?.edges ?? [];
+        const existingEdges: ReadonlyArray<{ node: Reference }> =
+          existingConnection?.edges ?? [];
         const existingIds = new Set(
           existingEdges.map(edge => readField('id', edge.node)),
         );
@@ -57,7 +57,9 @@ export function batchAddToPantryItemsCache(
             node: toReference(item, true),
             cursor: '',
           }))
-          .filter((edge): edge is typeof edge & { node: Reference } => !!edge.node);
+          .filter(
+            (edge): edge is typeof edge & { node: Reference } => !!edge.node,
+          );
 
         if (newEdges.length === 0) return existingConnection;
 
@@ -70,7 +72,10 @@ export function batchAddToPantryItemsCache(
       ...(options?.updateStats && {
         stats(existingStats: Reference | { totalItems: number } | null) {
           if (!existingStats || '__ref' in existingStats) return existingStats;
-          return { ...existingStats, totalItems: (existingStats.totalItems || 0) + newItems.length };
+          return {
+            ...existingStats,
+            totalItems: (existingStats.totalItems || 0) + newItems.length,
+          };
         },
       }),
     },

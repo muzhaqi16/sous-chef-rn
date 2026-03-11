@@ -35,8 +35,8 @@ jest.mock('#hooks/shoppingList/useShoppingListDetails', () => ({
   }),
 }));
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({ user: { id: 'u1', email: 'test@test.com' } }),
+jest.mock('#hooks/auth/useAuthUser', () => ({
+  useAuthUser: () => ({ id: 'u1', email: 'test@test.com' }),
 }));
 
 jest.mock('#/hooks/home/useLazyHomeData', () => ({
@@ -48,6 +48,7 @@ jest.mock('#hooks/shoppingList/useShoppingListsQuery', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useUpdateShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useDeleteShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useCreateShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),

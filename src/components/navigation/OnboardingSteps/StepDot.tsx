@@ -16,7 +16,6 @@ export const StepDot: React.FC<StepDotProps> = ({
   index,
   activeIndex,
   stepSize,
-  step: _step,
   onPress,
   allowNavigation = false,
 }) => {
@@ -98,7 +97,7 @@ export const StepDot: React.FC<StepDotProps> = ({
   );
 };
 
-const styles = StyleSheet.create(_theme => ({
+const styles = StyleSheet.create(() => ({
   stepDot: {
     justifyContent: 'center',
     alignItems: 'center',

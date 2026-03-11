@@ -12,7 +12,7 @@ describe('OnboardingContext', () => {
       expect(() => {
         renderHook(() => useOnboardingContext());
       }).toThrow(
-        'useOnboardingContext must be used within an OnboardingProvider',
+        'useOnboardingActions must be used within an OnboardingProvider',
       );
     });
   });

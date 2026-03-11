@@ -186,6 +186,23 @@ describe('NativePerformanceService', () => {
         { screen: 'Home' },
       );
     });
+
+    it('routes component:MyList:render to component_render_duration_ms histogram', () => {
+      NativePerformanceService.initialize();
+      const measObserver = observers[1];
+
+      measObserver._callback({
+        getEntries: () => [
+          { name: 'component:MyList:render', duration: 15 },
+        ],
+      });
+
+      expect(Telemetry.histogram).toHaveBeenCalledWith(
+        'component_render_duration_ms',
+        15,
+        { component: 'MyList' },
+      );
+    });
   });
 
   describe('resource observer', () => {

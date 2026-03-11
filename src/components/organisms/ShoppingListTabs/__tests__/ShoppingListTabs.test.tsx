@@ -29,7 +29,7 @@ jest.mock('../ShoppingTab', () => ({
     const { items } = useShoppingListData('shopping');
     return (
       <View testID="shopping-tab">
-        {items.map((item: any) => (
+        {(items ?? []).map((item: any) => (
           <Text key={item.id}>{item.title}</Text>
         ))}
       </View>
@@ -44,7 +44,7 @@ jest.mock('../PurchasedTab', () => ({
     const { items } = useShoppingListData('purchased');
     return (
       <View testID="purchased-tab">
-        {items.map((item: any) => (
+        {(items ?? []).map((item: any) => (
           <Text key={item.id}>{item.title}</Text>
         ))}
       </View>
@@ -150,18 +150,24 @@ describe('ShoppingListTabs', () => {
     expect(screen.getByText('Purchased (10)')).toBeTruthy();
   });
 
-  it('shows skeleton when loading with empty items', () => {
+  it('shows tab view with search bar when loading with empty items', () => {
+    const { View } = require('react-native');
+    const searchBar = <View testID="search-bar" />;
     render(
       <ShoppingListTabs
         {...defaultProps}
         items={[]}
         loading={true}
+        listHeaderComponent={searchBar}
       />,
     );
-    expect(screen.getByTestId('skeleton-list')).toBeTruthy();
+    // Search bar and tabs remain visible during loading (skeletons are inside the tab)
+    expect(screen.getByTestId('search-bar')).toBeTruthy();
+    expect(screen.getByTestId('filter-tab-bar')).toBeTruthy();
+    expect(screen.getByTestId('tab-view')).toBeTruthy();
   });
 
-  it('shows empty state when no items and emptyState provided', () => {
+  it('shows empty state with tabs when no items and emptyState provided', () => {
     render(
       <ShoppingListTabs
         {...defaultProps}
@@ -172,6 +178,8 @@ describe('ShoppingListTabs', () => {
         }}
       />,
     );
+    // Empty state shows with tabs visible
+    expect(screen.getByTestId('filter-tab-bar')).toBeTruthy();
     expect(screen.getByText('Your list is empty')).toBeTruthy();
     expect(screen.getByText('Add items to get started')).toBeTruthy();
   });

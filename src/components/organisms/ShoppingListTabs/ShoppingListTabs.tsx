@@ -7,8 +7,6 @@ import type { FilterTabActionButton } from '#components/molecules/FilterTabs/typ
 import { ShoppingTab } from './ShoppingTab';
 import { PurchasedTab } from './PurchasedTab';
 import { EmptyState } from '#components/base/EmptyState';
-import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
-import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 import {
   ShoppingListTabsActionsProvider,
@@ -27,7 +25,7 @@ interface TabRoute extends Route {
 }
 
 interface ShoppingListTabsProps {
-  items: SortableShoppingListItem[];
+  items?: SortableShoppingListItem[];
   // PERFORMANCE: Pre-filtered items with stable references from useShoppingListScreen
   // When provided, skip internal filtering to prevent new array references
   unpurchasedItems?: SortableShoppingListItem[];
@@ -146,9 +144,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   // PERFORMANCE: Use pre-filtered items when provided (stable references from useShoppingListScreen)
   // Fall back to internal filtering for backwards compatibility
-  const unpurchasedItems = preFilteredUnpurchased ?? items.filter(item => !item.isPurchased);
+  const unpurchasedItems = preFilteredUnpurchased ?? (items?.filter(item => !item.isPurchased) || []);
 
-  const purchasedItems = preFilteredPurchased ?? items.filter(item => item.isPurchased);
+  const purchasedItems = preFilteredPurchased ?? (items?.filter(item => item.isPurchased) || []);
 
   // Use GraphQL totalCount for accurate counts (handles pagination)
   // Fall back to array length for backwards compatibility
@@ -314,53 +312,48 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   const tabData = { shopping: shoppingTabData, purchased: purchasedTabData };
 
-  // Handle all empty-items cases before the TabView so tabs never appear for empty lists.
-  // During transitions (list switches), items may briefly be empty — keep TabView mounted.
-  if (items.length === 0 && !isTransitioning) {
-    // Initial load (loading but not refreshing): show skeletons without tabs
-    if (loading && !refreshing) {
-      return (
-        <View style={{ flex: 1 }}>
-          <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} count={10} />
-        </View>
-      );
-    }
-
-    // After load or during refresh: show empty state (with optional RefreshControl)
-    if (emptyState) {
-      return (
-        <ScrollView
-          contentContainerStyle={{ flex: 1 }}
-          refreshControl={
-            onRefresh ? (
-              <RefreshControl
-                refreshing={refreshing || false}
-                onRefresh={onRefresh}
-              />
-            ) : undefined
-          }
-        >
-          <EmptyState {...emptyState} />
-        </ScrollView>
-      );
-    }
-  }
+  // Empty state: shown after loading completes with zero items across both tabs.
+  // During transitions (list switches), items may briefly be empty — skip empty state.
+  const showEmptyState =
+    !loading &&
+    !refreshing &&
+    !isTransitioning &&
+    unpurchasedItems.length === 0 &&
+    purchasedItems.length === 0 &&
+    !!emptyState;
 
   return (
     <ShoppingListTabsActionsProvider actions={tabActions}>
       <ShoppingListDataProvider data={tabData}>
         <View style={{ flex: 1, ...(Platform.OS === 'android' && { elevation: 0 }) }}>
           {listHeaderComponent}
-          <TabView
-            navigationState={{ index, routes: ROUTES }}
-            renderScene={renderSceneDataFree}
-            renderTabBar={renderTabBar}
-            onIndexChange={handleIndexChange}
-            initialLayout={{ width: layout.width }}
-            swipeEnabled={true}
-            lazy={true}
-            overScrollMode="never"
-          />
+          {showEmptyState ? (
+            <ScrollView
+              contentContainerStyle={{ flex: 1 }}
+              refreshControl={
+                onRefresh ? (
+                  <RefreshControl
+                    refreshing={refreshing || false}
+                    onRefresh={onRefresh}
+                  />
+                ) : undefined
+              }
+            >
+              {renderTabBar()}
+              <EmptyState {...emptyState} />
+            </ScrollView>
+          ) : (
+            <TabView
+              navigationState={{ index, routes: ROUTES }}
+              renderScene={renderSceneDataFree}
+              renderTabBar={renderTabBar}
+              onIndexChange={handleIndexChange}
+              initialLayout={{ width: layout.width }}
+              swipeEnabled={false}
+              lazy={true}
+              overScrollMode="never"
+            />
+          )}
         </View>
       </ShoppingListDataProvider>
     </ShoppingListTabsActionsProvider>

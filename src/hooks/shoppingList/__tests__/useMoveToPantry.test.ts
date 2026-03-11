@@ -6,15 +6,11 @@ import { useMoveToPantry } from '../useMoveToPantry';
 const mockMoveShoppingItemToPantry = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useMoveShoppingItemToPantryMutation: () => [
     mockMoveShoppingItemToPantry,
     { loading: false },
   ],
-  StorageState: {
-    Fresh: 'FRESH',
-    Frozen: 'FROZEN',
-    Canned: 'CANNED',
-  },
 }));
 
 jest.mock('#/services/telemetry', () => ({

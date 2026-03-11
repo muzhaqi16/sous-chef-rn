@@ -47,11 +47,10 @@ const mockLedgerResult = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetPantryUsageAnalyticsQuery: jest.fn(() => mockUsageResult),
   useGetPantryWasteAnalyticsQuery: jest.fn(() => mockWasteResult),
   useGetPantryLedgerAnalyticsQuery: jest.fn(() => mockLedgerResult),
-  PeriodGranularity: { Weekly: 'WEEKLY', Monthly: 'MONTHLY', Daily: 'DAILY' },
-  DateRange: { LastWeek: 'LAST_WEEK', LastMonth: 'LAST_MONTH', LastYear: 'LAST_YEAR' },
 }));
 
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({

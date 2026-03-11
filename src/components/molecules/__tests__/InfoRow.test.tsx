@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import { Text } from 'react-native';
 import { InfoRow } from '../InfoRow';
 
 describe('InfoRow', () => {
@@ -46,5 +47,34 @@ describe('InfoRow', () => {
       <InfoRow label="Test" value="val" showBorder={false} />,
     );
     expect(toJSON()).toBeTruthy();
+  });
+
+  it('renders label without colon when showColon is false', () => {
+    render(<InfoRow label="Quantity" value="2" showColon={false} />);
+    expect(screen.getByText('Quantity')).toBeTruthy();
+    expect(screen.queryByText('Quantity:')).toBeNull();
+  });
+
+  it('renders label with colon by default', () => {
+    render(<InfoRow label="Name" value="Test" />);
+    expect(screen.getByText('Name:')).toBeTruthy();
+  });
+
+  it('renders icon when icon prop is provided', () => {
+    const { toJSON } = render(
+      <InfoRow label="Qty" value="5" icon="apps-outline" />,
+    );
+    const tree = JSON.stringify(toJSON());
+    expect(tree).toContain('apps-outline');
+  });
+
+  it('renders children instead of value when children are provided', () => {
+    render(
+      <InfoRow label="Custom" value="ignored">
+        <Text>Custom Content</Text>
+      </InfoRow>,
+    );
+    expect(screen.getByText('Custom Content')).toBeTruthy();
+    expect(screen.queryByText('ignored')).toBeNull();
   });
 });

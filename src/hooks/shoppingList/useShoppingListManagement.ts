@@ -31,12 +31,14 @@ export function useShoppingListManagement(currentListId: string | undefined) {
 
   // 2. Single query fetches BOTH unpurchased and purchased items (no cache collision)
   const {
-    unpurchased,
-    purchased,
-    loading: itemsLoading,
-    error: itemsError,
-    refetch,
-    isTransitioning,
+    state: {
+      unpurchased,
+      purchased,
+      loading: itemsLoading,
+      error: itemsError,
+      isTransitioning,
+    },
+    actions: { refetch },
   } = usePaginatedShoppingItems({
     listId: currentListId,
   });
@@ -49,9 +51,6 @@ export function useShoppingListManagement(currentListId: string | undefined) {
   // shows immediately before the deferred purchased query completes
   const totalCountPurchased = purchased.totalCount || shoppingList?.completedItems || 0;
 
-  // Combined items for backwards compatibility
-  const items = [...unpurchasedItems, ...purchasedItems];
-
   // Combined loading/error state
   const loading = itemsLoading;
   const error = listError || itemsError;
@@ -59,16 +58,14 @@ export function useShoppingListManagement(currentListId: string | undefined) {
   // 3. Mutations: CRUD operations
   const { addItem, updateItem, removeItem, toggleItem } = useShoppingListItemMutations(
     currentListId,
-    items,
     refetch,
   );
 
-  // 4. Search: Client-side filtering
+  // 4. Search: Client-side filtering (only using query/setQuery for debounced state)
   const {
     query: searchQuery,
     setQuery: setSearchQuery,
-    filtered: filteredItems,
-  } = useSearchableList(items, shoppingListItemSearch, { debounceMs: 300 });
+  } = useSearchableList([], shoppingListItemSearch, { debounceMs: 300 });
 
   // Filter unpurchased/purchased items by search query
   const filteredUnpurchasedItems = !searchQuery.trim()
@@ -83,21 +80,13 @@ export function useShoppingListManagement(currentListId: string | undefined) {
         shoppingListItemSearch(item, searchQuery),
       );
 
-  // Helper functions
-  const getItemById = (itemId: string) => items.find(item => item.id === itemId);
-
-  const getCompletedItems = () => purchasedItems;
-
-  const getPendingItems = () => unpurchasedItems;
-
-  const getItemsByCategory = (category: string) => items.filter(item => item.category === category);
-
   return {
     // Data
-    items: filteredItems,
-    allItems: items,
     unpurchasedItems: filteredUnpurchasedItems,
     purchasedItems: filteredPurchasedItems,
+    // Raw (unfiltered) arrays for preloading/loading checks
+    rawUnpurchasedItems: unpurchasedItems,
+    rawPurchasedItems: purchasedItems,
     shoppingList, // Full shopping list details for permissions, collaborators
     loading,
     error,
@@ -127,11 +116,5 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     removeItem,
     toggleItem,
     refetch,
-
-    // Helper functions
-    getItemById,
-    getCompletedItems,
-    getPendingItems,
-    getItemsByCategory,
   };
 }

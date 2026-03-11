@@ -25,14 +25,6 @@ jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: 'CachedImage',
 }));
 
-jest.mock('#generated', () => ({
-  StorageState: {
-    Refrigerated: 'REFRIGERATED',
-    Frozen: 'FROZEN',
-    Ambient: 'AMBIENT',
-  },
-}));
-
 jest.mock('#/utils/formatQuantity', () => ({
   formatQuantityAsFraction: jest.fn((q: number) => String(q)),
 }));

@@ -15,6 +15,7 @@ let mockBrandsData: any = null;
 let mockBrandsLoading = false;
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useSearchBrandsLazyQuery: () => [
     mockSearchBrands,
     { data: mockBrandsData, loading: mockBrandsLoading },

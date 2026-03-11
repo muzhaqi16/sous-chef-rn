@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import type { PaginationState } from '#hooks/types';
 
 /**
  * Configuration for pagination from normalized data
@@ -24,17 +25,14 @@ export interface PaginationConfig {
 }
 
 /**
- * Return type for pagination hook
+ * Return type for pagination hook.
+ * Extends PaginationState with cursor and error tracking.
  */
-export interface UsePaginationReturn {
-  /** Whether there are more items to load */
-  hasMore: boolean;
-  /** Cursor for the next page */
-  endCursor: string | null | undefined;
+export interface UsePaginationReturn extends PaginationState {
   /** Function to load more items */
   loadMore: () => Promise<void>;
-  /** Whether currently loading more items (not initial load) */
-  isLoadingMore: boolean;
+  /** Cursor for the next page */
+  endCursor: string | null | undefined;
   /** Whether the last loadMore call failed */
   loadMoreError: boolean;
 }
@@ -91,19 +89,35 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     }
   });
 
+  // Ref guard prevents duplicate fetches when two rapid onEndReached calls
+  // both read isFetchingMore as false before React batches the state update
+  const isFetchingMoreRef = useRef(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
+
+  // Clear the ref guard only after React re-renders with updated hasMore/endCursor.
+  // This prevents stale closures in onEndReached from firing loadMore with old values
+  // during the window between fetchMore completion and re-render.
+  useEffect(() => {
+    if (!isFetchingMore) {
+      isFetchingMoreRef.current = false;
+    }
+  });
 
   const loadMore = async () => {
     // Don't load if:
     // - No more items to load
     // - Already loading
     // - No cursor available
-    // - Already fetching more
-    if (!hasMore || loading || !endCursor || isFetchingMore) {
+    // - Already fetching more (ref checked synchronously)
+    if (!hasMore || loading || !endCursor || isFetchingMoreRef.current) {
+      if (__DEV__) {
+        console.log(`📊 [Pagination] loadMore guarded: hasMore=${hasMore} loading=${loading} cursor=${!!endCursor} fetching=${isFetchingMoreRef.current}`);
+      }
       return;
     }
 
+    isFetchingMoreRef.current = true;
     setIsFetchingMore(true);
     setLoadMoreError(false);
 

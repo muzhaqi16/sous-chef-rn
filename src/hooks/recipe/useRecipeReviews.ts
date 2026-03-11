@@ -1,4 +1,3 @@
-;
 import {
   useCreateRecipeReviewMutation,
   useUpdateRecipeReviewMutation,
@@ -9,7 +8,7 @@ import {
   GetRecipeReviewsDocument,
   type RecipeFragment,
   type RecipeReviewFragment } from '#generated';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useAuthUser } from '#hooks/auth/useAuthUser';
 import { toastService } from '#/services/toastService';
 
 interface UseRecipeReviewsOptions {
@@ -17,8 +16,15 @@ interface UseRecipeReviewsOptions {
   backendRecipe: RecipeFragment | null | undefined;
 }
 
+/**
+ * Manages recipe reviews — fetching, creating, updating, deleting, and helpfulness voting.
+ *
+ * @param options.recipeId - The recipe ID to fetch/manage reviews for
+ * @param options.backendRecipe - The recipe fragment for ownership checks
+ * @returns `{ state, actions }` — review data/stats in state, mutation functions in actions
+ */
 export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOptions) {
-  const { user } = useAuth();
+  const user = useAuthUser();
   const userId = user?.id;
 
   // Fetch reviews separately to avoid exceeding query depth limit
@@ -90,8 +96,9 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
       cache.modify({
         id: cache.identify({ __typename: 'RecipeReview', id: reviewId }),
         fields: {
-          helpful(existing: number) {
-            return isHelpful ? existing + 1 : Math.max(0, existing - 1);
+          helpful(existing: number = 0) {
+            const current = existing ?? 0;
+            return isHelpful ? current + 1 : Math.max(0, current - 1);
           } } });
     },
     onError: err => {
@@ -135,21 +142,26 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
     };
 
   return {
-    reviews,
-    totalReviews,
-    averageRating,
-    rating1Count,
-    rating2Count,
-    rating3Count,
-    rating4Count,
-    rating5Count,
-    userReview,
-    hasReviewed,
-    isOwnRecipe,
-    createReview,
-    updateReview,
-    deleteReview,
-    toggleHelpful,
-    hasVotedHelpful,
-    submitting };
+    state: {
+      reviews,
+      totalReviews,
+      averageRating,
+      rating1Count,
+      rating2Count,
+      rating3Count,
+      rating4Count,
+      rating5Count,
+      userReview,
+      hasReviewed,
+      isOwnRecipe,
+      submitting,
+    },
+    actions: {
+      createReview,
+      updateReview,
+      deleteReview,
+      toggleHelpful,
+      hasVotedHelpful,
+    },
+  };
 }

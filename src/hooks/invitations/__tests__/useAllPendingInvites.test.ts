@@ -8,6 +8,7 @@ jest.mock('#/apollo/links/refreshToken');
 const mockFetchShoppingList = jest.fn();
 const mockFetchHome = jest.fn();
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useMyShoppingListInvitesLazyQuery: () => [
     mockFetchShoppingList,
     { data: null, error: undefined },
@@ -16,11 +17,8 @@ jest.mock('#generated', () => ({
     mockFetchHome,
     { data: null, error: undefined },
   ],
-  NotificationType: {
-    CollaborationInvite: 'COLLABORATION_INVITE',
-    HomeInvitation: 'HOME_INVITATION',
-  },
 }));
+
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: any) =>
     selector({ addMultipleNotifications: jest.fn() }),

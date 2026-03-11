@@ -25,10 +25,8 @@ jest.mock('#hooks/profile/useProfileData', () => ({
   }),
 }));
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({
-    user: { email: 'john@example.com' },
-  }),
+jest.mock('#hooks/auth/useAuthUser', () => ({
+  useAuthUser: () => ({ email: 'john@example.com' }),
 }));
 
 jest.mock('@apollo/client/react', () => ({
@@ -40,9 +38,8 @@ jest.mock('@apollo/client/react', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useUpdateUserProfileMutation: () => [mockUpdateProfileMutation],
-  ProfileVisibility: { Public: 'PUBLIC', Private: 'PRIVATE', FriendsOnly: 'FRIENDS_ONLY' },
-  GetUserProfileDocument: 'GET_USER_PROFILE_DOCUMENT',
 }));
 
 jest.mock('#/services/errorService', () => ({

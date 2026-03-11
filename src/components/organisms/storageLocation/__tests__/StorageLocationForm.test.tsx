@@ -25,17 +25,6 @@ describe('StorageLocationForm', () => {
     expect(screen.getByText('Type')).toBeTruthy();
   });
 
-  it('renders Icon optional field', () => {
-    render(<StorageLocationForm {...defaultProps} />);
-    expect(screen.getByText('Icon (Optional)')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Enter emoji (e.g., \uD83E\uDDCA)')).toBeTruthy();
-  });
-
-  it('renders hint text for icon field', () => {
-    render(<StorageLocationForm {...defaultProps} />);
-    expect(screen.getByText('Leave empty for no icon')).toBeTruthy();
-  });
-
   it('renders storage type buttons', () => {
     render(<StorageLocationForm {...defaultProps} />);
     expect(screen.getByText('Refrigerator')).toBeTruthy();

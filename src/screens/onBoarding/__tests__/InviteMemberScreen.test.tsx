@@ -14,8 +14,8 @@ jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
   }),
 }));
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({ user: { id: 'u1', email: 'me@test.com' } }),
+jest.mock('#hooks/auth/useAuthUser', () => ({
+  useAuthUser: () => ({ id: 'u1', email: 'me@test.com' }),
 }));
 
 let mockSelectedHomeId: string | null = 'h1';
@@ -33,10 +33,9 @@ jest.mock('#store/useAppStore', () => {
 });
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useInviteToHomeMutation: jest.fn(() => [jest.fn(() => Promise.resolve()), { loading: false }]),
   useAddCollaboratorMutation: jest.fn(() => [jest.fn(() => Promise.resolve()), { loading: false }]),
-  CollaboratorRole: { Contributor: 'CONTRIBUTOR' },
-  MembershipRole: { Member: 'MEMBER' },
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');

@@ -19,6 +19,7 @@ import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#hooks/pantry/useAddLowStockToShoppingList';
 import { commonStyles } from '#/styles/commonStyles';
 import { createPropsComparator } from '#utils/memoUtils';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { LowStockActionsProvider, useLowStockActions } from './LowStockActionsContext';
 
 const keyExtractor = (item: { id: string }) => item.id;
@@ -35,10 +36,10 @@ interface LowStockItem {
 
 interface LowStockRenderItemProps {
   item: LowStockItem;
+  primaryColor: string;
 }
 
-const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({ item }) => {
-  const { theme } = useUnistyles();
+const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({ item, primaryColor }) => {
   const { navigateTo, handleAddToList } = useLowStockActions();
 
   return (
@@ -59,7 +60,7 @@ const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({ item }
           <Icon
             name="cart-outline"
             size={20}
-            color={theme.colors.primary}
+            color={primaryColor}
           />
         </Pressable>
       </View>
@@ -68,6 +69,7 @@ const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({ item }
 };
 
 const arePropsEqual = createPropsComparator<LowStockRenderItemProps>({
+  referenceKeys: ['primaryColor'],
   nestedComparisons: {
     item: ['id', 'itemName', 'quantity'],
     'item.unit': ['symbol'],
@@ -76,7 +78,7 @@ const arePropsEqual = createPropsComparator<LowStockRenderItemProps>({
 
 const LowStockRenderItem = React.memo(LowStockRenderItemComponent, arePropsEqual);
 
-const renderItem = ({ item }: { item: LowStockItem }) => <LowStockRenderItem item={item} />;
+const getLowStockItemType = () => 'item' as const;
 
 // --- Module-scope LowStockEmpty ---
 
@@ -124,7 +126,7 @@ export const LowStockItems: React.FC = () => {
   const { addLowStockToShoppingList, loading: addAllLoading } =
     useAddLowStockToShoppingList({ homeId: selectedHomeId ?? undefined });
 
-  const { items: allItems, loading, refetch, loadMore, hasMore, isLoadingMore } = usePantryManagement(pantry?.id);
+  const { state: { items: allItems, loading, hasMore, isLoadingMore }, actions: { refetch, loadMore } } = usePantryManagement(pantry?.id);
   const [addToShoppingList] = useAddItemToShoppingListMutation();
 
   // Progressively load all pages so the isLowStock filter sees every item
@@ -181,7 +183,8 @@ export const LowStockItems: React.FC = () => {
           contentContainerStyle={styles.scrollContent}
           data={lowStockItems}
           keyExtractor={keyExtractor}
-          drawDistance={200}
+          {...FLASHLIST_DEFAULTS.fullScreen}
+          getItemType={getLowStockItemType}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -193,7 +196,9 @@ export const LowStockItems: React.FC = () => {
           ListEmptyComponent={
             <LowStockEmpty loading={loading} hasItems={!!allItems} />
           }
-          renderItem={renderItem}
+          renderItem={({ item }: { item: LowStockItem }) => (
+            <LowStockRenderItem item={item} primaryColor={theme.colors.primary} />
+          )}
         />
       </LowStockActionsProvider>
     </View>

@@ -72,10 +72,6 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     estimated
     lastKnown
   }
-  # Purchase status
-  purchaseInfo {
-    isPurchased
-  }
   # Source fields
   source {
     isAutoAdded
@@ -203,21 +199,16 @@ fragment PartialUser on User {
   role
   onBoarded
   timezone
-  preferredCurrency
-  language
   defaultShoppingListId
   defaultHomeId
   createdAt
   updatedAt
-  lastActiveAt
   profile {
     id
     firstName
     lastName
     displayName
-    bio
     avatar
-    phone
   }
   settings {
     id
@@ -316,28 +307,10 @@ fragment ItemFragment on Item {
   status
   visibility
   tags
-  healthBenefits {
-    benefit
-    category
-    description
-  }
-  allergens {
-    name
-    contains
-    severity
-  }
   nutritions
-  metadata
   ingredients
   createdAt
   density
-  preferredTrackingUnitId
-  preferredTrackingUnit {
-    id
-    name
-    symbol
-  }
-  baseDimension
   defaultConsumeUnit {
     id
     name
@@ -364,7 +337,7 @@ fragment ItemFragment on Item {
 # PANTRY ITEM FRAGMENTS (3-tier pattern)
 # ============================================
 
-# CORE: Essential fields for mutations and cache normalization (15 fields)
+# CORE: Essential fields for mutations and cache normalization (17 fields)
 # Contains only the minimum fields needed for optimistic updates and version control
 fragment PantryItemCore on PantryItem {
   id
@@ -382,6 +355,8 @@ fragment PantryItemCore on PantryItem {
   lastUsedAt
   netWeight
   remainingNetWeight
+  activeBatchCount
+  earliestBatchExpiration
 }
 
 # DISPLAY: List views - Pantry screen cards
@@ -524,6 +499,29 @@ fragment PantryItemFragment on PantryItem {
       }
     }
   }
+  batches {
+    ...PantryItemBatchFragment
+  }
+}
+
+fragment PantryItemBatchFragment on PantryItemBatch {
+  id
+  batchNumber
+  quantity
+  status
+  expiresAt
+  costPerUnit
+  totalCost
+  store { id name }
+  notes
+  isOpened
+  openedAt
+  depletedAt
+  remainingNetWeight
+  createdAt
+  updatedAt
+  wasteReason
+  pantryItemId
 }
 
 fragment HomeInviteFragment on HomeInvite {
@@ -605,10 +603,6 @@ fragment BasicPantryFragment on Pantry {
 fragment HomeDisplay on Home {
   id
   name
-  type
-  description
-  currency
-  timezone
   version
   updatedAt
   isDefault
@@ -1041,7 +1035,6 @@ fragment RecipeFragment on Recipe {
   source
 
   # Metadata
-  visibility
   isPublished
   averageRating
   totalReviews

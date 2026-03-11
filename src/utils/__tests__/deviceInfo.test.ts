@@ -62,26 +62,6 @@ jest.mock('#/utils/environment', () => ({
   },
 }));
 
-// Mock generated enums
-jest.mock('#generated', () => ({
-  DeviceType: {
-    Mobile: 'MOBILE',
-    Tablet: 'TABLET',
-    Tv: 'TV',
-    Desktop: 'DESKTOP',
-    Watch: 'WATCH',
-    Unknown: 'UNKNOWN',
-  },
-  MobilePlatform: {
-    Ios: 'IOS',
-    Android: 'ANDROID',
-    Windows: 'WINDOWS',
-    Macos: 'MACOS',
-    Linux: 'LINUX',
-    Other: 'OTHER',
-  },
-}));
-
 import DeviceInfo from 'react-native-device-info';
 import {
   generateDeviceFingerprint,

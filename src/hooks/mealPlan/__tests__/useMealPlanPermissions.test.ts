@@ -9,15 +9,6 @@ jest.mock('#hooks/auth/useAuth', () => ({
   })),
 }));
 
-jest.mock('#generated', () => ({
-  MembershipRole: {
-    Owner: 'OWNER',
-    Admin: 'ADMIN',
-    Member: 'MEMBER',
-    Guest: 'GUEST',
-  },
-}));
-
 jest.mock('#utils/permissions/mealPlanPermissions', () => ({
   getMealPlanPermissions: jest.fn((mealPlan: any, userId: string | undefined) => {
     // Simplified permission logic for testing

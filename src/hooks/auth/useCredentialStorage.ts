@@ -21,7 +21,7 @@ export interface Credentials {
 const checkStoredCredentials = async (email?: string): Promise<boolean> => {
   try {
     if (email) {
-      return await hasCredentialsForAccount(email);
+      return await hasCredentialsForAccount();
     }
     return await hasCredentials();
   } catch (error) {
@@ -83,7 +83,7 @@ export const useCredentialStorage = () => {
     const credentials = await executeQuery(
       async () => {
         if (email) {
-          return loadCredentialsForAccount(email);
+          return loadCredentialsForAccount();
         }
         return loadCredentials();
       },

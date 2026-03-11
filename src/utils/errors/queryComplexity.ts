@@ -170,35 +170,3 @@ export function handleQueryComplexityError(
   return true;
 }
 
-/**
- * Validate pagination parameters before making request
- *
- * @param params - Pagination parameters to validate
- * @returns Validated pagination parameters (capped at max)
- *
- * @example
- * ```typescript
- * const { first } = validatePaginationParams({ first: 500 });
- * // Returns: { first: 100 }
- * ```
- */
-export function validatePaginationParams(params: {
-  first?: number;
-  last?: number;
-  limit?: number;
-  take?: number;
-}): {
-  first?: number;
-  last?: number;
-  limit?: number;
-  take?: number;
-} {
-  const MAX_PAGINATION = 100;
-
-  return {
-    first: params.first ? Math.min(params.first, MAX_PAGINATION) : params.first,
-    last: params.last ? Math.min(params.last, MAX_PAGINATION) : params.last,
-    limit: params.limit ? Math.min(params.limit, MAX_PAGINATION) : params.limit,
-    take: params.take ? Math.min(params.take, MAX_PAGINATION) : params.take,
-  };
-}

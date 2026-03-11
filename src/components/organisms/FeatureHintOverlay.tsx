@@ -47,6 +47,7 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
       transparent
       animationType="fade"
       statusBarTranslucent
+      navigationBarTranslucent
       onRequestClose={onDismiss}
     >
       <Animated.View

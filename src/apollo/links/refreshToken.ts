@@ -83,7 +83,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
   if (!refreshToken) {
     logger.error('Token refresh failed: No refresh token available');
-    state.tokenRefreshFailed(false); // No refresh token = don't clear cache (might be temporary state)
+    state.setNeedsTokenRefresh(true);
     throw new Error('No refresh token available');
   }
 
@@ -162,13 +162,13 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
     if (isTokenExpiredError) {
       logger.info('Refresh token expired (genuine auth error), triggering logout with cache clear');
-      state.tokenRefreshFailed(true); // Clear cache for auth failures
+      state.tokenRefreshFailed('auth_rejected');
       throw new Error('Refresh token expired');
     }
 
-    // Unknown error after max retries - trigger logout without clearing cache
-    logger.error('Max token refresh retries exceeded for unknown error, triggering session expiry');
-    state.tokenRefreshFailed(false); // Don't clear cache for unknown errors
+    // Unknown error after max retries — preserve auth state, defer refresh
+    logger.error('Max token refresh retries exceeded for unknown error, deferring token refresh');
+    state.tokenRefreshFailed('unknown');
     throw error;
   }
 };

@@ -34,6 +34,7 @@ let mockLoading = false;
 let mockQueryError: any = null;
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetOnboardingItemsQuery: jest.fn(() => ({
     data: {
       items: {
@@ -50,12 +51,6 @@ jest.mock('#generated', () => ({
   })),
   useCreatePantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useDeletePantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  StorageState: { Ambient: 'AMBIENT' },
-  ItemCondition: { Good: 'GOOD' },
-  AcquisitionMethod: { Purchased: 'PURCHASED' },
-  ItemSortField: { Popularity: 'POPULARITY' },
-  SortOrder: { Asc: 'ASC' },
-  ItemType: { Food: 'FOOD', Foundation: 'FOUNDATION' },
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({

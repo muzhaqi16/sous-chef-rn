@@ -8,6 +8,9 @@ import { SortableShoppingList } from '../../../../src/components/organisms/Sorta
 jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
 
+jest.mock('../../../../src/hooks/performance/useRenderTime', () => ({
+  useRenderTime: jest.fn(),
+}));
 jest.mock('../../../../src/hooks/ui/useSwipeableCoordinator', () => ({
   useSwipeableCoordinator: () => ({
     handleSwipeableWillOpen: jest.fn(),

@@ -9,19 +9,16 @@ const mockToggleHelpful = jest.fn();
 const mockUseGetRecipeReviewsQuery = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreateRecipeReviewMutation: jest.fn(() => [mockCreateReview, { loading: false }]),
   useUpdateRecipeReviewMutation: jest.fn(() => [mockUpdateReview, { loading: false }]),
   useDeleteRecipeReviewMutation: jest.fn(() => [mockDeleteReview, { loading: false }]),
   useToggleReviewHelpfulMutation: jest.fn(() => [mockToggleHelpful, { loading: false }]),
   useGetRecipeReviewsQuery: (...args: any[]) => mockUseGetRecipeReviewsQuery(...args),
-  GetRecipeDocument: 'GetRecipeDocument',
-  GetRecipeReviewsDocument: 'GetRecipeReviewsDocument',
 }));
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: jest.fn(() => ({
-    user: { id: 'user-1' },
-  })),
+jest.mock('#hooks/auth/useAuthUser', () => ({
+  useAuthUser: jest.fn(() => ({ id: 'user-1' })),
 }));
 
 const mockToastSuccess = jest.fn();
@@ -97,9 +94,9 @@ describe('useRecipeReviews', () => {
       }),
     );
 
-    expect(result.current.totalReviews).toBe(3);
-    expect(result.current.averageRating).toBe(4.2);
-    expect(result.current.rating5Count).toBe(1);
+    expect(result.current.state.totalReviews).toBe(3);
+    expect(result.current.state.averageRating).toBe(4.2);
+    expect(result.current.state.rating5Count).toBe(1);
   });
 
   it('sorts reviews by helpful count desc, then by date desc', () => {
@@ -111,8 +108,8 @@ describe('useRecipeReviews', () => {
     );
 
     // rev-1 has helpful=3, rev-2 has helpful=1
-    expect(result.current.reviews[0].id).toBe('rev-1');
-    expect(result.current.reviews[1].id).toBe('rev-2');
+    expect(result.current.state.reviews[0].id).toBe('rev-1');
+    expect(result.current.state.reviews[1].id).toBe('rev-2');
   });
 
   it('identifies current user review', () => {
@@ -123,8 +120,8 @@ describe('useRecipeReviews', () => {
       }),
     );
 
-    expect(result.current.userReview?.id).toBe('rev-2');
-    expect(result.current.hasReviewed).toBe(true);
+    expect(result.current.state.userReview?.id).toBe('rev-2');
+    expect(result.current.state.hasReviewed).toBe(true);
   });
 
   it('identifies if user is recipe owner', () => {
@@ -135,7 +132,7 @@ describe('useRecipeReviews', () => {
       }),
     );
 
-    expect(result.current.isOwnRecipe).toBe(true);
+    expect(result.current.state.isOwnRecipe).toBe(true);
   });
 
   it('isOwnRecipe is false for non-owner', () => {
@@ -146,7 +143,7 @@ describe('useRecipeReviews', () => {
       }),
     );
 
-    expect(result.current.isOwnRecipe).toBe(false);
+    expect(result.current.state.isOwnRecipe).toBe(false);
   });
 
   it('hasVotedHelpful returns true when user voted on a review', () => {
@@ -158,9 +155,9 @@ describe('useRecipeReviews', () => {
     );
 
     // rev-1 has helpfulVotes containing user-1
-    expect(result.current.hasVotedHelpful(result.current.reviews[0])).toBe(true);
+    expect(result.current.actions.hasVotedHelpful(result.current.state.reviews[0])).toBe(true);
     // rev-2 has no helpful votes
-    expect(result.current.hasVotedHelpful(result.current.reviews[1])).toBe(false);
+    expect(result.current.actions.hasVotedHelpful(result.current.state.reviews[1])).toBe(false);
   });
 
   it('createReview calls mutation and shows toast', async () => {
@@ -174,7 +171,7 @@ describe('useRecipeReviews', () => {
     );
 
     await act(async () => {
-      await result.current.createReview(5, 'Amazing!');
+      await result.current.actions.createReview(5, 'Amazing!');
     });
 
     expect(mockCreateReview).toHaveBeenCalledWith({
@@ -196,7 +193,7 @@ describe('useRecipeReviews', () => {
     );
 
     await act(async () => {
-      await result.current.deleteReview('rev-2');
+      await result.current.actions.deleteReview('rev-2');
     });
 
     expect(mockDeleteReview).toHaveBeenCalledWith({ variables: { id: 'rev-2' } });
@@ -209,11 +206,11 @@ describe('useRecipeReviews', () => {
       useRecipeReviews({ recipeId: 'recipe-1', backendRecipe: null }),
     );
 
-    expect(result.current.totalReviews).toBe(0);
-    expect(result.current.averageRating).toBe(0);
-    expect(result.current.reviews).toEqual([]);
-    expect(result.current.userReview).toBeNull();
-    expect(result.current.hasReviewed).toBe(false);
-    expect(result.current.isOwnRecipe).toBe(false);
+    expect(result.current.state.totalReviews).toBe(0);
+    expect(result.current.state.averageRating).toBe(0);
+    expect(result.current.state.reviews).toEqual([]);
+    expect(result.current.state.userReview).toBeNull();
+    expect(result.current.state.hasReviewed).toBe(false);
+    expect(result.current.state.isOwnRecipe).toBe(false);
   });
 });

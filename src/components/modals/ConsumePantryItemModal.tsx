@@ -9,7 +9,6 @@ import { formatQuantity } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
 import { UsagePurpose, PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
-import type { SelectedUnitInfo } from '#hooks/pantry/useCompatibleUnits';
 import { PantryActionModal, type PantryActionSharedState } from './PantryActionModal';
 
 interface ConsumePantryItemModalProps {
@@ -42,7 +41,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   const [quantityInput, setQuantityInput] = useState('1');
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
 
-  const handleReset = (item: PantryItemFragment, _defaultUnit: SelectedUnitInfo | null) => {
+  const handleReset = (item: PantryItemFragment) => {
     const defaultIncrement = item.item?.defaultConsumeIncrement;
     setQuantityInput(defaultIncrement ? defaultIncrement.toString() : '1');
     setPurpose(UsagePurpose.General);
@@ -68,6 +67,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
     onClose();
   };
 
+  const showFifoHint = (pantryItem?.activeBatchCount ?? 0) > 1;
+
   return (
     <PantryActionModal
       visible={visible}
@@ -86,6 +87,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
           purpose={purpose}
           setPurpose={setPurpose}
           shared={shared}
+          showFifoHint={showFifoHint}
         />
       )}
     />
@@ -99,7 +101,8 @@ const ConsumeActionFields: React.FC<{
   purpose: UsagePurpose;
   setPurpose: (v: UsagePurpose) => void;
   shared: PantryActionSharedState;
-}> = ({ quantityInput, setQuantityInput, purpose, setPurpose, shared }) => {
+  showFifoHint?: boolean;
+}> = ({ quantityInput, setQuantityInput, purpose, setPurpose, shared, showFifoHint }) => {
   const consumeAmount = parseFractionalInput(quantityInput);
 
   const conversion = useConversionPreview({
@@ -151,6 +154,11 @@ const ConsumeActionFields: React.FC<{
           >
             Remaining: {remaining >= 0 ? formatQuantity(remaining) : 'Invalid'}{' '}
             {shared.activeUnitSymbol}
+          </Text>
+        ) : null}
+        {showFifoHint ? (
+          <Text style={commonStyles.bottomSheetHelperText}>
+            Items are consumed oldest-first by expiration date
           </Text>
         ) : null}
       </View>

@@ -13,6 +13,7 @@ jest.mock('#store', () => ({
       refreshToken: 'mock-refresh-token',
       tokenRefreshFailed: jest.fn(),
       setTokens: jest.fn(),
+      setNeedsTokenRefresh: jest.fn(),
     })),
   },
 }));
@@ -32,11 +33,6 @@ jest.mock('#/utils/environment', () => ({
 // Mock isNetworkError
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
-}));
-
-// Mock generated types
-jest.mock('#generated', () => ({
-  RefreshTokenDocument: { kind: 'Document' },
 }));
 
 // Mock wsLink
@@ -201,6 +197,7 @@ describe('refreshToken', () => {
         refreshToken: 'mock-refresh-token',
         tokenRefreshFailed: mockTokenRefreshFailed,
         setTokens: mockSetTokens,
+        setNeedsTokenRefresh: jest.fn(),
       });
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {
@@ -234,6 +231,7 @@ describe('refreshToken', () => {
         refreshToken: 'mock-refresh-token',
         tokenRefreshFailed: jest.fn(),
         setTokens: mockSetTokens,
+        setNeedsTokenRefresh: jest.fn(),
       });
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {
@@ -261,12 +259,13 @@ describe('refreshToken', () => {
       });
     });
 
-    it('errors when no refresh token available', (done) => {
-      const mockTokenRefreshFailed = jest.fn();
+    it('errors when no refresh token available and sets needsTokenRefresh flag', (done) => {
+      const mockSetNeedsTokenRefresh = jest.fn();
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
         refreshToken: null,
-        tokenRefreshFailed: mockTokenRefreshFailed,
+        tokenRefreshFailed: jest.fn(),
         setTokens: jest.fn(),
+        setNeedsTokenRefresh: mockSetNeedsTokenRefresh,
       });
       const mockForward = createMockForward();
 
@@ -274,7 +273,7 @@ describe('refreshToken', () => {
       observable.subscribe({
         error: (err: any) => {
           expect(err).toBeDefined();
-          expect(mockTokenRefreshFailed).toHaveBeenCalledWith(false);
+          expect(mockSetNeedsTokenRefresh).toHaveBeenCalledWith(true);
           done();
         },
       });
@@ -286,6 +285,7 @@ describe('refreshToken', () => {
         refreshToken: 'mock-refresh-token',
         tokenRefreshFailed: mockTokenRefreshFailed,
         setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
       });
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: { refresh: { accessToken: null, refreshToken: null } },
@@ -307,6 +307,7 @@ describe('refreshToken', () => {
         refreshToken: 'mock-refresh-token',
         tokenRefreshFailed: jest.fn(),
         setTokens: mockSetTokens,
+        setNeedsTokenRefresh: jest.fn(),
       });
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {
@@ -335,6 +336,7 @@ describe('refreshToken', () => {
         refreshToken: 'mock-refresh-token',
         tokenRefreshFailed: jest.fn(),
         setTokens: mockSetTokens,
+        setNeedsTokenRefresh: jest.fn(),
       });
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {
@@ -357,12 +359,13 @@ describe('refreshToken', () => {
       });
     });
 
-    it('handles token expired error by triggering logout with cache clear', (done) => {
+    it('handles token expired error by triggering logout with auth_rejected', (done) => {
       const mockTokenRefreshFailed = jest.fn();
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
         refreshToken: 'mock-refresh-token',
         tokenRefreshFailed: mockTokenRefreshFailed,
         setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
       });
       (mockedClient.mutate as jest.Mock).mockRejectedValue({
         graphQLErrors: [{ extensions: { code: 'UNAUTHENTICATED' }, message: 'Token expired' }],
@@ -372,19 +375,20 @@ describe('refreshToken', () => {
 
       const observable = attemptTokenRefresh(mockOperation, mockForward);
       observable.subscribe({
-        error: (_err: any) => {
-          expect(mockTokenRefreshFailed).toHaveBeenCalledWith(true);
+        error: () => {
+          expect(mockTokenRefreshFailed).toHaveBeenCalledWith('auth_rejected');
           done();
         },
       });
     });
 
-    it('handles network error by not triggering cache clear', (done) => {
+    it('handles network error without calling tokenRefreshFailed', (done) => {
       const mockTokenRefreshFailed = jest.fn();
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
         refreshToken: 'mock-refresh-token',
         tokenRefreshFailed: mockTokenRefreshFailed,
         setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
       });
       const networkErr = new Error('Network request failed');
       (mockedClient.mutate as jest.Mock).mockRejectedValue(networkErr);
@@ -394,11 +398,8 @@ describe('refreshToken', () => {
       const observable = attemptTokenRefresh(mockOperation, mockForward);
       observable.subscribe({
         error: () => {
-          // Network error - should NOT call tokenRefreshFailed with true (cache clear)
-          // It should either not call it at all or call with false
-          const calls = mockTokenRefreshFailed.mock.calls;
-          const calledWithCacheClear = calls.some((args: any[]) => args[0] === true);
-          expect(calledWithCacheClear).toBe(false);
+          // Network error — should NOT call tokenRefreshFailed at all
+          expect(mockTokenRefreshFailed).not.toHaveBeenCalled();
           done();
         },
       });
@@ -416,6 +417,7 @@ describe('refreshToken', () => {
         refreshToken: 'mock-refresh-token',
         tokenRefreshFailed: jest.fn(),
         setTokens: mockSetTokens,
+        setNeedsTokenRefresh: jest.fn(),
       });
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {
@@ -439,6 +441,7 @@ describe('refreshToken', () => {
         refreshToken: null,
         tokenRefreshFailed: jest.fn(),
         setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
       });
 
       const result = await proactiveTokenRefresh();
@@ -450,6 +453,7 @@ describe('refreshToken', () => {
         refreshToken: 'mock-refresh-token',
         tokenRefreshFailed: jest.fn(),
         setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
       });
       (mockedClient.mutate as jest.Mock).mockRejectedValue(new Error('Network error'));
       (mockedIsNetworkError as jest.Mock).mockReturnValue(true);
@@ -463,6 +467,7 @@ describe('refreshToken', () => {
         refreshToken: 'mock-refresh-token',
         tokenRefreshFailed: jest.fn(),
         setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
       });
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {

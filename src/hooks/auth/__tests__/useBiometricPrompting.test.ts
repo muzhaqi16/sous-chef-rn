@@ -106,7 +106,7 @@ describe('useBiometricPrompting', () => {
 
     expect(decision.shouldShow).toBe(true);
     expect(mockGetUserNavigationState).toHaveBeenCalledWith('u2');
-    expect(mockHasCredentialsForAccount).toHaveBeenCalledWith('other@test.com');
+    expect(mockHasCredentialsForAccount).toHaveBeenCalledWith();
   });
 
   it('recordBiometricPromptResponse records enabled state', () => {

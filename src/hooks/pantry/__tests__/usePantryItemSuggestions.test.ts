@@ -28,14 +28,8 @@ const mockQueryResult = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetPantryItemSuggestionsQuery: jest.fn(() => mockQueryResult),
-  PantrySuggestionSource: {
-    LowStock: 'LOW_STOCK',
-    ExpiringSoon: 'EXPIRING_SOON',
-    RecentlyDeleted: 'RECENTLY_DELETED',
-    FrequentlyAdded: 'FREQUENTLY_ADDED',
-    Popular: 'POPULAR',
-  },
 }));
 
 const { PantrySuggestionSource } = jest.requireMock('#generated');

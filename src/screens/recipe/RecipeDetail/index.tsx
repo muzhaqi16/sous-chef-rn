@@ -32,12 +32,13 @@ import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
 import { useRecipeReviews } from '#/hooks/recipe/useRecipeReviews';
 import { ReviewSection } from '#/components/recipe/ReviewSection';
 import { createPropsComparator } from '#utils/memoUtils';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useRecipeDetail } from './useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
 import { SelectableIngredientProvider, useSelectableIngredients } from './SelectableIngredientContext';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useAuthUser } from '#hooks/auth/useAuthUser';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
@@ -58,12 +59,15 @@ interface SelectableIngredientItemProps {
 // Module-scope keyExtractor — zero runtime overhead
 const ingredientKeyExtractor = (item: { id: string }) => item.id;
 
-// Bridge component — reads selection state from context, theme from unistyles
-const SelectableIngredientItemComponent: React.FC<ListRenderItemInfo<SelectableIngredientItemProps['item']>> = ({
+// Bridge component — reads selection state from context, receives theme colors via props
+const SelectableIngredientItemComponent: React.FC<
+  ListRenderItemInfo<SelectableIngredientItemProps['item']> & { primaryColor: string; textSecondary: string }
+> = ({
   item,
+  primaryColor,
+  textSecondary,
 }) => {
   const { selectedIngredients, toggleIngredient } = useSelectableIngredients();
-  const { theme } = useUnistyles();
   const isSelected = selectedIngredients.has(item.id);
 
   return (
@@ -76,8 +80,8 @@ const SelectableIngredientItemComponent: React.FC<ListRenderItemInfo<SelectableI
         size={24}
         color={
           isSelected
-            ? theme.colors.primary
-            : theme.colors.textSecondary
+            ? primaryColor
+            : textSecondary
         }
       />
       <View style={styles.ingredientInfo}>
@@ -91,7 +95,13 @@ const SelectableIngredientItemComponent: React.FC<ListRenderItemInfo<SelectableI
 };
 
 // PERFORMANCE: Custom comparator for React.memo — value-equality on nested item fields
-const areIngredientPropsEqual = createPropsComparator<ListRenderItemInfo<SelectableIngredientItemProps['item']>>({
+type SelectableItemRenderInfo = ListRenderItemInfo<SelectableIngredientItemProps['item']> & {
+  primaryColor: string;
+  textSecondary: string;
+};
+
+const areIngredientPropsEqual = createPropsComparator<SelectableItemRenderInfo>({
+  referenceKeys: ['primaryColor', 'textSecondary'],
   nestedComparisons: {
     item: ['id', 'name', 'quantity'],
   },
@@ -99,10 +109,7 @@ const areIngredientPropsEqual = createPropsComparator<ListRenderItemInfo<Selecta
 
 const SelectableIngredientItem = React.memo(SelectableIngredientItemComponent, areIngredientPropsEqual);
 
-// Module-scope renderItem — zero runtime overhead (no compiler tracking/comparison)
-const renderSelectableIngredientItem = (info: ListRenderItemInfo<SelectableIngredientItemProps['item']>) => (
-  <SelectableIngredientItem {...info} />
-);
+const getSelectableIngredientItemType = () => 'item' as const;
 
 // --- End module-scope FlashList infrastructure ---
 
@@ -111,7 +118,7 @@ const RecipeDetailScreen: React.FC = () => {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const { navigate } = useAppNavigation();
-  const { user } = useAuth();
+  const user = useAuthUser();
   const {
     goBack,
     recipeId,
@@ -165,7 +172,7 @@ const RecipeDetailScreen: React.FC = () => {
   const { tags: availableTags } = useRecipeTags();
 
   // Recipe reviews
-  const recipeReviews = useRecipeReviews({
+  const { state: reviewState, actions: reviewActions } = useRecipeReviews({
     recipeId: recipeId ?? '',
     backendRecipe: backendRecipe ?? null });
 
@@ -727,7 +734,7 @@ const RecipeDetailScreen: React.FC = () => {
           })()}
 
           {/* Reviews Section */}
-          {!!isBackendRecipe && !!recipeId && <ReviewSection {...recipeReviews} />}
+          {!!isBackendRecipe && !!recipeId && <ReviewSection {...reviewState} {...reviewActions} />}
 
           {/* Source Attribution */}
           {!!(displayData.sourceName || displayData.sourceUrl) && (
@@ -815,9 +822,16 @@ const RecipeDetailScreen: React.FC = () => {
           <FlashList
             data={backendRecipe?.ingredients || []}
             keyExtractor={ingredientKeyExtractor}
-            renderItem={renderSelectableIngredientItem}
+            renderItem={(info: ListRenderItemInfo<SelectableIngredientItemProps['item']>) => (
+              <SelectableIngredientItem
+                {...info}
+                primaryColor={theme.colors.primary}
+                textSecondary={theme.colors.textSecondary}
+              />
+            )}
+            getItemType={getSelectableIngredientItemType}
             extraData={selectedIngredients.size}
-            drawDistance={200}
+            {...FLASHLIST_DEFAULTS.fullScreen}
             ListEmptyComponent={
               <Text style={styles.emptyText}>No ingredients available</Text>
             }

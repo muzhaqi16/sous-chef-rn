@@ -19,6 +19,7 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useMyShoppingListInvitesQuery: jest.fn(() => ({
     data: null,
     loading: false,

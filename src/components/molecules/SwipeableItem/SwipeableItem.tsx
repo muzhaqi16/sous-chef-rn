@@ -21,7 +21,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   onWaste,
   onRestock,
   isPurchased,
-  enableSwipeToDelete = true,
+
   leftThreshold = 120,
   rightThreshold = 120,
   friction = 1.5,
@@ -45,15 +45,32 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     swipeableRef,
     handleActionPress,
     handleSwipeableWillOpen,
-    handleSwipeableClose } = useSwipeableActions({
+    handleSwipeableClose,
+    hasSwipeStarted,
+    handleSwipeOpenStartDrag } = useSwipeableActions({
     itemId,
     onEdit,
     onDelete,
-    enableSwipeToDelete,
+
     onSwipeableWillOpen,
     onSwipeableClose });
 
+  // Placeholder width must match actual action container width so Swipeable
+  // measures correctly in pan.onStart (before onSwipeableOpenStartDrag fires).
+  // In shopping mode, LeftActions renders only edit (1 btn) and RightActions
+  // renders only delete (1 btn), regardless of how many callbacks are provided.
+  const getActionWidth = (count: number): number => {
+    if (count <= 1) return 80;
+    if (count === 2) return 120;
+    return 180;
+  };
+  const leftButtonCount = swipeMode === 'shopping' ? (onEdit ? 1 : 0) : leftActionCount;
+  const rightButtonCount = swipeMode === 'shopping' ? (onDelete ? 1 : 0) : rightActionCount;
+
   const renderRightActions = (progress: SharedValue<number>) => {
+      if (!hasSwipeStarted && rightButtonCount > 0) {
+        return <View style={{ width: getActionWidth(rightButtonCount) }} />;
+      }
       return (
         <RightActions
           onEdit={onEdit}
@@ -67,6 +84,9 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     };
 
   const renderLeftActions = (progress: SharedValue<number>) => {
+      if (!hasSwipeStarted && leftButtonCount > 0) {
+        return <View style={{ width: getActionWidth(leftButtonCount) }} />;
+      }
       return (
         <LeftActions
           onTogglePurchase={onTogglePurchase}
@@ -118,12 +138,11 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
         friction={friction}
         leftThreshold={computedLeftThreshold}
         rightThreshold={computedRightThreshold}
-        dragOffsetFromLeftEdge={5}
-        dragOffsetFromRightEdge={5}
         renderLeftActions={renderLeftActions}
         renderRightActions={renderRightActions}
         onSwipeableWillOpen={handleSwipeableWillOpen}
         onSwipeableClose={handleSwipeableClose}
+        onSwipeableOpenStartDrag={handleSwipeOpenStartDrag}
         overshootFriction={8}
         containerStyle={styles.swipeableContainer}
         childrenContainerStyle={styles.childrenContainer}

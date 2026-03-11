@@ -24,17 +24,6 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
   },
 }));
 
-jest.mock('#generated', () => ({
-  MealType: {
-    Breakfast: 'BREAKFAST',
-    Brunch: 'BRUNCH',
-    Lunch: 'LUNCH',
-    Snack: 'SNACK',
-    Dinner: 'DINNER',
-    Dessert: 'DESSERT',
-  },
-}));
-
 jest.mock('#hooks/mealPlan/useAddRecipeToMealPlan', () => ({
   useAddRecipeToMealPlan: jest.fn(() => ({
     addRecipeToMealPlan: jest.fn(() => Promise.resolve(true)),

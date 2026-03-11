@@ -3,8 +3,6 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useRecipeForm } from '../useRecipeForm';
 
-jest.mock('#generated', () => ({}));
-
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -238,8 +236,7 @@ describe('useRecipeForm', () => {
       difficulty: 'EASY',
       category: 'MAIN_COURSE',
       cuisine: 'Italian',
-      visibility: 'PUBLIC',
-      isPublished: true,
+      status: 'PUBLISHED',
       ingredients: [{ name: 'Salt', quantity: 1, unit: null, item: null, preparation: null, section: null, notes: null, isOptional: false, sortOrder: 0 }],
       instructions: [{ text: 'Add salt' }],
       notes: 'A note',

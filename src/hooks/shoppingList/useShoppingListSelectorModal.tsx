@@ -58,7 +58,6 @@ type ListItemOrHeader = ShoppingListSelectorItem | SectionHeader;
 export function useShoppingListSelectorModal({
   listDataWithOwnership,
   currentListId,
-  setSelectedShoppingListId: _setSelectedShoppingListId,
 }: UseShoppingListSelectorOptions) {
   const { navigate } = useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
@@ -415,7 +414,7 @@ export function useShoppingListSelectorModal({
   const selectorExtraData = { isDeleteMode, selectedForDeletion };
 
   // PERFORMANCE: Stable onSelect — reads volatile state from refs + store
-  const onSelect = (id: string, _item: ListItemOrHeader) => {
+  const onSelect = (id: string) => {
     if (isDeleteModeRef.current) return;
     // Skip selection for section headers
     if (id.startsWith('header-')) return;

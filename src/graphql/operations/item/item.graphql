@@ -2,26 +2,6 @@
 # QUERIES
 # ============================================
 
-query SearchItems($query: String!, $filters: ItemFilters, $sort: ItemSortInput, $first: Int, $after: String) {
-  searchItems(query: $query, filters: $filters, sort: $sort, first: $first, after: $after) {
-    edges {
-      cursor
-      node {
-        id
-        name
-        imageUrl
-      }
-    }
-    pageInfo {
-      hasNextPage
-      hasPreviousPage
-      startCursor
-      endCursor
-    }
-    totalCount
-  }
-}
-
 query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
   items(filters: { lookup: { upc: $upc, upcFormat: $upcFormat } }, first: 1) {
     edges {
@@ -32,7 +12,6 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
         name
         netWeight
         primaryUpc
-        alternateUpcs
         displayUnit {
           id
           name
@@ -81,8 +60,6 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: String) {
         imageUrl
         name
         netWeight
-        description
-        primaryUpc
         displayUnit {
           id
           name
@@ -216,61 +193,6 @@ query GetPopularItems($first: Int = 10) {
           }
         }
       }
-    }
-    totalCount
-  }
-}
-
-query GetRecommendedItems($limit: Int, $userId: String) {
-  recommendedItems(limit: $limit, userId: $userId) {
-    id
-    name
-    type
-    imageUrl
-    netWeight
-    displayUnit
-    defaultUnit {
-      id
-      name
-      symbol
-      type
-      isDefault
-      isPreferred
-    }
-    brands {
-      id
-      name
-    }
-    category {
-      id
-      name
-      type
-      isPrimary
-    }
-  }
-}
-
-query GetPurchases(
-  $filters: PurchaseFilters
-  $first: Int
-  $after: String
-  $orderBy: PurchaseOrderBy
-) {
-  purchases(
-    filters: $filters
-    first: $first
-    after: $after
-    orderBy: $orderBy
-  ) {
-    edges {
-      node {
-        ...PurchaseFragment
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
     }
     totalCount
   }

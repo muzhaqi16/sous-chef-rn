@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useStorageLocationAutocomplete } from '#hooks/autocomplete/useStorageLocationAutocomplete';
 import type { StorageLocation } from '#generated';
+import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import { AutocompleteField } from './AutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
 
@@ -66,7 +67,7 @@ export const StorageLocationAutocompleteField: React.FC<StorageLocationAutocompl
 
   const renderItem = (item: StorageLocation) => (
       <AutocompleteRow
-        icon={item.icon ?? undefined}
+        iconElement={<StorageLocationIcon type={item.type} size={24} />}
         title={item.name}
         subtitle={item.parentLocation ? `Inside ${item.parentLocation.name}` : undefined}
         badge={item.isDefault ? 'Default' : undefined}

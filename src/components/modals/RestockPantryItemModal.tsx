@@ -10,7 +10,6 @@ import { formatQuantity } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
 import type { PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
-import type { SelectedUnitInfo } from '#hooks/pantry/useCompatibleUnits';
 import { PantryActionModal, type PantryActionSharedState } from './PantryActionModal';
 
 interface RestockPantryItemModalProps {
@@ -38,7 +37,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const [totalCostInput, setTotalCostInput] = useState('');
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
 
-  const handleReset = (_item: PantryItemFragment, _defaultUnit: SelectedUnitInfo | null) => {
+  const handleReset = () => {
     setQuantityInput('1');
     setCostPerUnitInput('');
     setTotalCostInput('');

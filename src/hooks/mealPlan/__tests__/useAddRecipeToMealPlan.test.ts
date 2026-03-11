@@ -27,14 +27,6 @@ jest.mock('../useMealPlanItemActions', () => ({
   })),
 }));
 
-jest.mock('#generated', () => ({
-  MealType: {
-    Breakfast: 'BREAKFAST',
-    Lunch: 'LUNCH',
-    Dinner: 'DINNER',
-  },
-}));
-
 const mockToastSuccess = jest.fn();
 const mockToastError = jest.fn();
 jest.mock('#/services/toastService', () => ({

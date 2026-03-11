@@ -27,14 +27,18 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({
-    user: { id: '1', email: 'test@example.com', onBoarded: true },
+jest.mock('#hooks/auth/useAuthUser', () => ({
+  useAuthUser: () => ({ id: '1', email: 'test@example.com', onBoarded: true }),
+}));
+
+jest.mock('#store/useAppStore', () => ({
+  useAppStore: (selector: any) => selector({
     updateUser: mockUpdateUser,
   }),
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useVerifyEmailMutation: () => [mockVerifyEmail],
 }));
 

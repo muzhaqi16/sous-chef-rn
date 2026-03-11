@@ -40,15 +40,3 @@ mutation UpdateItemImage($id: ID!, $imageUrl: String!) {
     }
   }
 }
-
-mutation RemoveItemImage($id: ID!) {
-  removeItemImage(id: $id) {
-    success
-    message
-    code
-    item {
-      id
-      imageUrl
-    }
-  }
-}

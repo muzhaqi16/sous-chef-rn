@@ -26,6 +26,7 @@ jest.mock('#/hooks/useToast', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useVerifyEmailMutation: () => [mockVerifyEmail],
   useResendVerificationEmailMutation: () => [mockResendVerificationEmail],
 }));

@@ -97,14 +97,6 @@ jest.mock('@react-native-community/datetimepicker', () => {
   };
 });
 
-jest.mock('#generated', () => ({
-  StorageState: {
-    Ambient: 'AMBIENT',
-    Refrigerated: 'REFRIGERATED',
-    Frozen: 'FROZEN',
-  },
-}));
-
 const mockShoppingListItem = {
   id: 'sli-1',
   itemName: 'Milk',

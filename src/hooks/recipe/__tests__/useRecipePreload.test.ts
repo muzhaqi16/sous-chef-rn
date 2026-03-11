@@ -5,6 +5,7 @@ const mockFavoriteRecipe = jest.fn();
 const mockUpsertRecipe = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useFavoriteRecipeMutation: jest.fn(() => [
     mockFavoriteRecipe,
     { loading: false },
@@ -13,9 +14,6 @@ jest.mock('#generated', () => ({
     mockUpsertRecipe,
     { loading: false },
   ]),
-  ExternalSource: { Spoonacular: 'SPOONACULAR' },
-  MySavedRecipesDocument: 'MySavedRecipesDocument',
-  SavedRecipeFoldersDocument: 'SavedRecipeFoldersDocument',
 }));
 
 const mockToastSuccess = jest.fn();

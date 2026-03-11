@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useGetCommonUnitsLazyQuery } from '#generated';
-import { useAppStore, selectAuthState, selectIsPantryQueryComplete } from '#store/useAppStore';
+import {
+  useAppStore,
+  selectAuthState,
+  selectIsPantryQueryComplete,
+} from '#store/useAppStore';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 /** 24 hours in milliseconds — matches backend refresh cadence for common units */
 const UNITS_CACHE_TTL = 24 * 60 * 60 * 1000;
@@ -34,7 +39,9 @@ export function useDataPreloading() {
   const cachedUnits = useAppStore(state => state.cachedUnits);
   const setCachedUnits = useAppStore(state => state.setCachedUnits);
   const lastUnitsFetchedAt = useAppStore(state => state.lastUnitsFetchedAt);
-  const setLastUnitsFetchedAt = useAppStore(state => state.setLastUnitsFetchedAt);
+  const setLastUnitsFetchedAt = useAppStore(
+    state => state.setLastUnitsFetchedAt,
+  );
   const isOnline = useAppStore(state => state.isOnline);
   const isPantryQueryComplete = useAppStore(selectIsPantryQueryComplete);
 
@@ -70,28 +77,40 @@ export function useDataPreloading() {
 
     if (isCacheFresh) {
       if (__DEV__) {
-        console.log('📦 [useDataPreloading] Units cache still fresh — skipping fetch');
+        console.log(
+          '📦 [useDataPreloading] Units cache still fresh — skipping fetch',
+        );
       }
       return;
     }
 
     if (__DEV__) {
-      console.log('📦 [useDataPreloading] GetPantry settled — fetching GetCommonUnits');
+      console.log(
+        '📦 [useDataPreloading] GetPantry settled — fetching GetCommonUnits',
+      );
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag before async fetch is intentional
-    setUnitsLoading(true);
-    fetchCommonUnits()
-      .then(() => {
+    executeWithLoadingState(
+      async () => {
+        await fetchCommonUnits();
         setLastUnitsFetchedAt(Date.now());
-      })
-      .catch(err => {
-        setUnitsError(err instanceof Error ? err : new Error('Failed to fetch units'));
-      })
-      .finally(() => {
-        setUnitsLoading(false);
-      });
-  }, [isAuthenticated, isOnline, isPantryQueryComplete, fetchCommonUnits, cachedUnits.length, lastUnitsFetchedAt, setLastUnitsFetchedAt]);
+      },
+      setUnitsLoading,
+      (err) => {
+        setUnitsError(
+          err instanceof Error ? err : new Error('Failed to fetch units'),
+        );
+      },
+    );
+  }, [
+    isAuthenticated,
+    isOnline,
+    isPantryQueryComplete,
+    fetchCommonUnits,
+    cachedUnits.length,
+    lastUnitsFetchedAt,
+    setLastUnitsFetchedAt,
+  ]);
 
   // Store units in Zustand for fast access (avoids Apollo cache reads)
   // PERFORMANCE: Use ref to prevent feedback loop (cachedUnits.length triggering re-render)

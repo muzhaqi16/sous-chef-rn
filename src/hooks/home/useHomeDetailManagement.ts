@@ -68,9 +68,7 @@ export function useHomeDetailManagement(homeId: string) {
 
   // Mutations
   const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
-    // No refetchQueries or update function needed!
-    // Mutation returns full HomeFragment, so Apollo automatically normalizes
-    // and updates the cache based on __typename + id
+    // Mutation returns updated scalar fields; Apollo auto-merges by __typename + id
     errorPolicy: 'all',
     onError: error => {
       Alert.alert(

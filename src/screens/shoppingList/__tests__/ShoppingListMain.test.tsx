@@ -11,14 +11,20 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#hooks/shoppingList/useShoppingListScreen', () => ({
   useShoppingListScreen: () => ({
-    currentListId: 'sl1',
-    items: [],
-    searchQuery: '',
-    setSearchQuery: jest.fn(),
-    lists: [],
-    selectedListId: 'sl1',
-    loading: false,
-    error: null,
+    state: {
+      currentListId: 'sl1',
+      items: [],
+      rawUnpurchasedItems: [],
+      rawPurchasedItems: [],
+      searchQuery: '',
+      lists: [],
+      selectedListId: 'sl1',
+      loading: false,
+      error: null,
+    },
+    actions: {
+      setSearchQuery: jest.fn(),
+    },
   }),
 }));
 
@@ -26,12 +32,12 @@ jest.mock('#/context/ShoppingListModalsContext', () => ({
   ShoppingListModalsProvider: ({ children }: any) => children,
 }));
 
-jest.mock('#/hooks/offline/useOptimisticDataRestoration', () => ({
-  useOptimisticDataRestorationMultiple: jest.fn(),
+jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
+  useTabScreenLifecycle: jest.fn(),
 }));
 
 jest.mock('../ShoppingListMainContent', () => ({
-  ShoppingListMainContent: ({ screenData: _screenData }: any) => {
+  ShoppingListMainContent: () => {
     const { View, Text } = require('react-native');
     return (
       <View testID="shopping-list-main-content">

@@ -3,14 +3,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { NutritionGoalProgress } from '../NutritionGoalProgress';
 
-jest.mock('#generated', () => ({
-  GoalStatus: {
-    OnTarget: 'ON_TARGET',
-    UnderTarget: 'UNDER_TARGET',
-    OverTarget: 'OVER_TARGET',
-  },
-}));
-
 const makeProgress = (current: number, target: number, percentage: number, status: string) => ({
   current,
   target,

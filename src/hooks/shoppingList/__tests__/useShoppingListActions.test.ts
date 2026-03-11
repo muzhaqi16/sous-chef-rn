@@ -22,7 +22,7 @@ jest.mock('@apollo/client/react', () => ({
 }));
 
 jest.mock('#generated', () => ({
-  ShoppingListItemDisplayFragmentDoc: 'MOCK_FRAGMENT_DOC',
+  ...jest.requireActual('#generated'),
   useUpdateShoppingListItemQuantityMutation: () => [mockUpdateQuantity],
 }));
 
@@ -91,7 +91,8 @@ function createItem(overrides: Record<string, unknown> = {}) {
 describe('useShoppingListActions', () => {
   const defaultProps = {
     currentListId: 'list-1',
-    items: [createItem()],
+    unpurchasedItems: [createItem()],
+    purchasedItems: [] as any[],
     addItem: jest.fn().mockResolvedValue(true),
     toggleItem: jest.fn().mockResolvedValue(true),
     removeItem: jest.fn().mockResolvedValue(true),
@@ -169,7 +170,7 @@ describe('useShoppingListActions', () => {
       const { result } = renderHook(() =>
         useShoppingListActions({
           ...defaultProps,
-          items: [createItem({ purchaseInfo: { isPurchased: false } })],
+          purchasedItems: [],
         }),
       );
 
@@ -184,7 +185,7 @@ describe('useShoppingListActions', () => {
       const { result } = renderHook(() =>
         useShoppingListActions({
           ...defaultProps,
-          items: [
+          purchasedItems: [
             createItem({
               id: 'item-1',
               purchaseInfo: { isPurchased: true },
@@ -206,12 +207,7 @@ describe('useShoppingListActions', () => {
       const { result } = renderHook(() =>
         useShoppingListActions({
           ...defaultProps,
-          items: [
-            createItem({
-              id: 'item-1',
-              purchaseInfo: { isPurchased: true },
-            }),
-          ],
+          unpurchasedItems: [],
         }),
       );
 
@@ -226,7 +222,7 @@ describe('useShoppingListActions', () => {
       const { result } = renderHook(() =>
         useShoppingListActions({
           ...defaultProps,
-          items: [
+          unpurchasedItems: [
             createItem({
               id: 'item-1',
               purchaseInfo: { isPurchased: false },
@@ -722,7 +718,7 @@ describe('useShoppingListActions', () => {
       const { result } = renderHook(() =>
         useShoppingListActions({
           ...defaultProps,
-          items: [createItem({ purchaseInfo: { isPurchased: true } })],
+          purchasedItems: [createItem({ purchaseInfo: { isPurchased: true } })],
         }),
       );
 
@@ -749,7 +745,7 @@ describe('useShoppingListActions', () => {
       const { result } = renderHook(() =>
         useShoppingListActions({
           ...defaultProps,
-          items: [createItem({ purchaseInfo: { isPurchased: false } })],
+          unpurchasedItems: [createItem({ purchaseInfo: { isPurchased: false } })],
         }),
       );
 

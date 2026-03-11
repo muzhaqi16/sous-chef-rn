@@ -8,6 +8,7 @@ export interface NetworkState {
   networkType: string | null;
   lastOnlineTime: number | null;
   lastOfflineTime: number | null;
+  needsTokenRefresh: boolean;
 
   // Actions
   setNetworkStatus: (status: {
@@ -17,6 +18,7 @@ export interface NetworkState {
   }) => void;
   setOnline: () => void;
   setOffline: () => void;
+  setNeedsTokenRefresh: (value: boolean) => void;
 }
 
 const initialNetworkState = {
@@ -25,6 +27,7 @@ const initialNetworkState = {
   networkType: null,
   lastOnlineTime: null,
   lastOfflineTime: null,
+  needsTokenRefresh: false,
 };
 
 export const createNetworkSlice: StateCreator<
@@ -69,5 +72,11 @@ export const createNetworkSlice: StateCreator<
         draft.lastOfflineTime = Date.now();
       });
     }
+  },
+
+  setNeedsTokenRefresh: (value: boolean) => {
+    set(draft => {
+      draft.needsTokenRefresh = value;
+    });
   },
 });

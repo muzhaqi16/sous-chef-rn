@@ -5,11 +5,11 @@ import { useCorrectPantryItemWeight } from '../useCorrectPantryItemWeight';
 const mockCorrectMutation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCorrectPantryItemWeightMutation: jest.fn(() => [
     mockCorrectMutation,
     { loading: false },
   ]),
-  PantryItemDisplayFragmentDoc: {},
 }));
 
 jest.mock('#/services/errorService', () => ({

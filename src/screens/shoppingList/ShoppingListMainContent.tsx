@@ -23,16 +23,13 @@ import { useItemReordering } from '#hooks/shoppingList/useItemReordering';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useShoppingListModals } from '#/context/ShoppingListModalsContext';
-import { useAuth } from '#/hooks/auth/useAuth';
-import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
+import { useAuthUser } from '#/hooks/auth/useAuthUser';
 
 // Utils
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { Telemetry } from '#/services/telemetry';
 import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
-import { preloadImages } from '#components/atoms/CachedImage';
 
 /**
  * Inner content component that uses modal context.
@@ -48,33 +45,37 @@ export interface ShoppingListMainContentProps {
 export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
   ({ screenData }) => {
     const {
-      lists,
-      listDataWithOwnership,
-      currentList,
-      currentListDetails,
-      currentListId,
-      items,
-      sortableItems,
-      unpurchasedItems,
-      purchasedItems,
-      rawUnpurchasedItems,
-      isLoadingInitial,
-      searchQuery,
-      setSearchQuery,
-      addItem,
-      toggleItem,
-      removeItem,
-      refetch: refetchItems,
-      totalCountUnpurchased,
-      totalCountPurchased,
-      loadMoreUnpurchased,
-      hasMoreUnpurchased,
-      isLoadingMoreUnpurchased,
-      loadMorePurchased,
-      hasMorePurchased,
-      isLoadingMorePurchased,
-      setSelectedShoppingListId,
-      isTransitioning } = screenData;
+      state: {
+        lists,
+        listDataWithOwnership,
+        currentList,
+        currentListDetails,
+        currentListId,
+        unpurchasedItems,
+        purchasedItems,
+        rawUnpurchasedItems,
+        rawPurchasedItems,
+        isLoadingInitial,
+        searchQuery,
+        totalCountUnpurchased,
+        totalCountPurchased,
+        hasMoreUnpurchased,
+        isLoadingMoreUnpurchased,
+        hasMorePurchased,
+        isLoadingMorePurchased,
+        isTransitioning,
+      },
+      actions: {
+        setSearchQuery,
+        addItem,
+        toggleItem,
+        removeItem,
+        refetch: refetchItems,
+        loadMoreUnpurchased,
+        loadMorePurchased,
+        setSelectedShoppingListId,
+      },
+    } = screenData;
 
     // Get modal actions from context (provided by ShoppingListModalsProvider)
     const { addItemSheet, quantityEdit, moveToPantry } =
@@ -90,10 +91,7 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     const { theme } = useUnistyles();
 
     // Get current user for permission calculations
-    const { user } = useAuth();
-
-    // Track screen performance
-    useScreenTransition('ShoppingListMain');
+    const user = useAuthUser();
 
     // --- Actions Hook ---
     const {
@@ -102,7 +100,8 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       handleClearAllPurchased,
       handleClearAllShopping } = useShoppingListActions({
       currentListId,
-      items,
+      unpurchasedItems: rawUnpurchasedItems,
+      purchasedItems: rawPurchasedItems,
       addItem,
       toggleItem,
       removeItem,
@@ -124,7 +123,7 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         afterItemId: string | null,
         beforeItemId: string | null,
       ) => {
-        reorderItem(itemId, afterItemId, beforeItemId, null, null);
+        reorderItem(itemId, afterItemId, beforeItemId);
       };
 
     // --- Selector Hook ---
@@ -146,27 +145,13 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
 
     // Show swipe hint after items load
     useEffect(() => {
-      if (items.length > 0 && !swipeHint.hasBeenShown) {
-        const unpurchasedForHint = items.filter(
-          (item: any) => !item.purchaseInfo?.isPurchased,
-        );
-        if (unpurchasedForHint.length > 0) {
-          const timer = setTimeout(() => {
-            swipeHint.actions.show();
-          }, 1500);
-          return () => clearTimeout(timer);
-        }
+      if (unpurchasedItems.length > 0 && !swipeHint.hasBeenShown) {
+        const timer = setTimeout(() => {
+          swipeHint.actions.show();
+        }, 1500);
+        return () => clearTimeout(timer);
       }
-    }, [items, swipeHint.hasBeenShown, swipeHint.actions]);
-
-    // Preload item images so they're cached before scrolling into view
-    useEffect(() => {
-      const urls: string[] = [];
-      for (const item of sortableItems) {
-        if (item.leftElementConfig?.url) urls.push(item.leftElementConfig.url);
-      }
-      if (urls.length > 0) preloadImages(urls);
-    }, [sortableItems]);
+    }, [unpurchasedItems, swipeHint.hasBeenShown, swipeHint.actions]);
 
     // Handle refresh
     const handleRefresh = () => {
@@ -227,9 +212,8 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         </View>
       );
 
-    // PERFORMANCE: Split customListProps into stable groups so each group is independently
-    // memoized. When only one group changes (e.g. refreshing), the others retain references.
-    const listActions = ({
+    const customListProps = ({
+      // Actions
       onTogglePurchase: handleTogglePurchase,
       onMoveToPantry: moveToPantry.openForItem,
       onQuantityPress: quantityEdit.openForItem,
@@ -240,50 +224,33 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       onSwipeableWillOpen: handleSwipeableWillOpen,
       onSwipeableClose: handleSwipeableClose,
       onCloseAllSwipeables: closeAll,
-      onBatchMoveToPantry: batchMoveToPantry });
-
-    const listState = ({
+      onBatchMoveToPantry: batchMoveToPantry,
+      // State
       loading: isLoadingInitial,
       refreshing,
       disabled: !!searchQuery.trim(),
       isTransitioning,
-      batchMoveToPantryLoading });
-
-    const listData = ({
+      batchMoveToPantryLoading,
+      // Data
       unpurchasedItems,
       purchasedItems,
       totalCountUnpurchased,
-      totalCountPurchased });
-
-    const paginationState = ({
+      totalCountPurchased,
+      // Pagination
       onEndReachedUnpurchased: loadMoreUnpurchased,
       hasMoreUnpurchased,
       isLoadingMoreUnpurchased,
       onEndReachedPurchased: loadMorePurchased,
       hasMorePurchased,
-      isLoadingMorePurchased });
-
-    const permissionsState = ({
+      isLoadingMorePurchased,
+      // Permissions
       canAddItems: permissions.canAddItems,
       canRemoveItems: permissions.canRemoveItems,
       canEditItems: permissions.canEditItems,
       canMarkPurchased: permissions.canMarkPurchased,
-      canReorderItems: permissions.canEditItems });
-
-    const customListProps = ({
-      ...listActions,
-      ...listState,
-      ...listData,
-      ...paginationState,
-      ...permissionsState,
+      canReorderItems: permissions.canEditItems,
+      // Header
       listHeaderComponent: searchBarHeader });
-
-    // Track screen view once on mount (avoid re-firing on every item/list change)
-    useScreenTelemetry('ShoppingListMain', () => ({
-      list_id: currentListId,
-      item_count: (totalCountUnpurchased ?? 0) + (totalCountPurchased ?? 0),
-      purchased_count: totalCountPurchased ?? 0,
-      has_lists: lists.length > 0 }));
 
     // Set up scanner button
     useEffect(() => {
@@ -357,7 +324,7 @@ export const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           headerRight={headerRight}
         />
         <ListTemplate
-          items={sortableItems}
+          items={[]}
           loading={isLoadingInitial}
           onItemPress={id =>
             navigate('ItemDetail', { listId: currentListId, itemId: id })

@@ -30,6 +30,7 @@ let mockPurchasedReturn: Record<string, any> = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetShoppingListItemsFilteredQuery: jest.fn((options: any) => {
     if (options?.variables?.isPurchased === false) return mockUnpurchasedReturn;
     return mockPurchasedReturn;
@@ -113,9 +114,9 @@ describe('usePaginatedShoppingItems', () => {
       usePaginatedShoppingItems({ listId: 'list-1' }),
     );
 
-    expect(result.current.unpurchased.items).toEqual([]);
-    expect(result.current.purchased.items).toEqual([]);
-    expect(result.current.loading).toBe(false);
+    expect(result.current.state.unpurchased.items).toEqual([]);
+    expect(result.current.state.purchased.items).toEqual([]);
+    expect(result.current.state.loading).toBe(false);
   });
 
   it('skips queries when listId is null', () => {
@@ -167,10 +168,10 @@ describe('usePaginatedShoppingItems', () => {
       usePaginatedShoppingItems({ listId: 'list-1' }),
     );
 
-    expect(result.current.unpurchased.items).toHaveLength(2);
+    expect(result.current.state.unpurchased.items).toHaveLength(2);
     // Items preserved in edge order (cache insertion order), not sorted by sortOrder
-    expect(result.current.unpurchased.items[0].id).toBe('2');
-    expect(result.current.unpurchased.items[1].id).toBe('1');
+    expect(result.current.state.unpurchased.items[0].id).toBe('2');
+    expect(result.current.state.unpurchased.items[1].id).toBe('1');
   });
 
   it('filters out items with missing id or itemName', () => {
@@ -184,8 +185,8 @@ describe('usePaginatedShoppingItems', () => {
       usePaginatedShoppingItems({ listId: 'list-1' }),
     );
 
-    expect(result.current.unpurchased.items).toHaveLength(1);
-    expect(result.current.unpurchased.items[0].id).toBe('1');
+    expect(result.current.state.unpurchased.items).toHaveLength(1);
+    expect(result.current.state.unpurchased.items[0].id).toBe('1');
   });
 
   it('exposes hasMore and totalCount for unpurchased', () => {
@@ -208,8 +209,8 @@ describe('usePaginatedShoppingItems', () => {
       usePaginatedShoppingItems({ listId: 'list-1' }),
     );
 
-    expect(result.current.unpurchased.hasMore).toBe(true);
-    expect(result.current.unpurchased.totalCount).toBe(50);
+    expect(result.current.state.unpurchased.hasMore).toBe(true);
+    expect(result.current.state.unpurchased.totalCount).toBe(50);
   });
 
   it('delegates loadMore to usePagination', () => {
@@ -233,7 +234,7 @@ describe('usePaginatedShoppingItems', () => {
       usePaginatedShoppingItems({ listId: 'list-1' }),
     );
 
-    result.current.unpurchased.loadMore();
+    result.current.state.unpurchased.loadMore();
     expect(mockLoadMore).toHaveBeenCalled();
   });
 
@@ -246,7 +247,7 @@ describe('usePaginatedShoppingItems', () => {
     );
 
     await act(async () => {
-      await result.current.refetch();
+      await result.current.actions.refetch();
     });
 
     expect(mockUnpurchasedRefetch).toHaveBeenCalled();
@@ -262,7 +263,7 @@ describe('usePaginatedShoppingItems', () => {
       { initialProps: { listId: 'list-1' } },
     );
 
-    expect(result.current.isTransitioning).toBe(false);
+    expect(result.current.state.isTransitioning).toBe(false);
   });
 
   it('combines errors from both queries', () => {
@@ -273,7 +274,7 @@ describe('usePaginatedShoppingItems', () => {
       usePaginatedShoppingItems({ listId: 'list-1' }),
     );
 
-    expect(result.current.error).toBe(testError);
+    expect(result.current.state.error).toBe(testError);
   });
 
   it('returns purchased items independently from unpurchased', () => {
@@ -286,7 +287,7 @@ describe('usePaginatedShoppingItems', () => {
       usePaginatedShoppingItems({ listId: 'list-1' }),
     );
 
-    expect(result.current.purchased.items).toHaveLength(2);
-    expect(result.current.unpurchased.items).toHaveLength(0);
+    expect(result.current.state.purchased.items).toHaveLength(2);
+    expect(result.current.state.unpurchased.items).toHaveLength(0);
   });
 });

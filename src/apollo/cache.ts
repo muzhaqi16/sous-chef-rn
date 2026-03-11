@@ -2,6 +2,14 @@ import { InMemoryCache } from '@apollo/client';
 import { relayStylePagination } from '@apollo/client/utilities';
 // Import generated fragment matcher for proper interface/union type handling
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
+import { Telemetry } from '#/services/telemetry';
+
+/**
+ * Maximum number of edges to retain in an itemsConnection cache entry.
+ * When a merge would exceed this limit, the oldest edges are evicted.
+ * 150 = 3 pages of 50 (pantry) or ~7 pages of 20 (shopping list).
+ */
+const MAX_WINDOW_EDGES = 150;
 
 /**
  * Version-aware merge function that handles optimistic updates and conflict resolution
@@ -139,17 +147,47 @@ function mergeConnectionByNodeId() {
         return incoming;
 
       const edgeMap = new Map();
-      (existing.edges || []).forEach((edge: any) => {
+      const existingEdges = existing.edges || [];
+      existingEdges.forEach((edge: any) => {
         const id = readField('id', edge?.node);
         if (id) edgeMap.set(id, edge);
       });
+      const existingCount = edgeMap.size;
       (incoming.edges || []).forEach((edge: any) => {
         const id = readField('id', edge?.node);
         if (id) edgeMap.set(id, edge);
       });
 
+      // Preserve existing pageInfo when a background refetch (no cursor) returns
+      // fewer edges than already accumulated (e.g., page-1-only refetch when
+      // cache has pages 1+2 with hasNextPage:false)
+      const isBackgroundRefetch = !args?.after;
+      const existingHasMoreData = existingEdges.length > (incoming.edges || []).length;
+      const preservePageInfo = isBackgroundRefetch && existingHasMoreData && !!existing.pageInfo;
+
+      if (__DEV__ && preservePageInfo) {
+        console.log(`📊 [Cache] preserved existing pageInfo (existing=${existingEdges.length} incoming=${(incoming.edges || []).length})`);
+      }
+
+      // If no new edges were added, return stable reference when possible
+      if (edgeMap.size === existingCount) {
+        const pageInfoUnchanged =
+          preservePageInfo ||
+          (incoming.pageInfo?.hasNextPage === existing.pageInfo?.hasNextPage &&
+           incoming.pageInfo?.endCursor === existing.pageInfo?.endCursor);
+        const totalCountUnchanged =
+          incoming.totalCount === undefined ||
+          incoming.totalCount === existing.totalCount;
+
+        if (pageInfoUnchanged && totalCountUnchanged) {
+          return existing;
+        }
+        return { ...incoming, ...(preservePageInfo ? { pageInfo: existing.pageInfo } : {}), edges: existingEdges };
+      }
+
       return {
         ...incoming,
+        ...(preservePageInfo ? { pageInfo: existing.pageInfo } : {}),
         edges: Array.from(edgeMap.values()),
       };
     },
@@ -164,9 +202,9 @@ function mergeConnectionByNodeId() {
  * uses 'filters' as keyArgs for separate cache entries, and handles
  * initial load vs. pagination (cursor-based) correctly.
  */
-function itemsConnectionFieldPolicy() {
+function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
   return {
-    keyArgs: ['filters'],
+    keyArgs,
     merge(existing: any, incoming: any, { args, readField }: any) {
       if (!incoming) return existing;
       if (!existing) return incoming;
@@ -186,10 +224,71 @@ function itemsConnectionFieldPolicy() {
         return id && !existingIds.has(id);
       });
 
-      return {
-        ...incoming,
-        edges: [...(existing.edges || []), ...newEdges],
-      };
+      // Determine authoritative pageInfo once.
+      // Existing pageInfo wins when:
+      //   1. Background refetch (no cursor) returned fewer edges than cache has
+      //   2. Cursor-based request returned all duplicates — we already advanced past that cursor
+      const isBackgroundRefetch = !args?.after;
+      const existingHasMoreData = (existing.edges || []).length > (incoming.edges || []).length;
+      const keepExistingPageInfo =
+        (isBackgroundRefetch && existingHasMoreData && !!existing.pageInfo) ||
+        (!!args?.after && newEdges.length === 0);
+      const pageInfo = keepExistingPageInfo ? existing.pageInfo : incoming.pageInfo;
+
+      if (__DEV__ && keepExistingPageInfo) {
+        console.log(`📊 [Cache] preserved existing pageInfo (existing=${(existing.edges || []).length} incoming=${(incoming.edges || []).length})`);
+      }
+
+      // When no new edges, return stable reference when possible
+      if (newEdges.length === 0) {
+        const pageInfoUnchanged =
+          pageInfo === existing.pageInfo &&
+          incoming.pageInfo?.hasNextPage === existing.pageInfo?.hasNextPage &&
+          incoming.pageInfo?.endCursor === existing.pageInfo?.endCursor;
+        const totalCountUnchanged =
+          incoming.totalCount === undefined ||
+          incoming.totalCount === existing.totalCount;
+
+        if ((keepExistingPageInfo || pageInfoUnchanged) && totalCountUnchanged) {
+          return existing;
+        }
+
+        if (__DEV__) {
+          const existingCount = existing?.edges?.length ?? 0;
+          const incomingCount = incoming?.edges?.length ?? 0;
+          const hasCursor = !!args?.after;
+          console.log(
+            `📊 [Cache] itemsConnection merge (stable): existing=${existingCount} incoming=${incomingCount} merged=${existingCount} cursor=${hasCursor}`
+          );
+        }
+        return { ...incoming, pageInfo, edges: existing.edges };
+      }
+
+      let mergedEdges = [...(existing.edges || []), ...newEdges];
+
+      // Evict oldest edges when exceeding the window limit
+      if (mergedEdges.length > MAX_WINDOW_EDGES) {
+        const evictCount = mergedEdges.length - MAX_WINDOW_EDGES;
+        mergedEdges = mergedEdges.slice(evictCount);
+
+        if (__DEV__) {
+          console.log(
+            `📊 [Cache] itemsConnection evicted ${evictCount} oldest edges, remaining=${mergedEdges.length}`
+          );
+        }
+      }
+
+      if (__DEV__) {
+        const existingCount = existing?.edges?.length ?? 0;
+        const incomingCount = incoming?.edges?.length ?? 0;
+        const hasCursor = !!args?.after;
+        console.log(
+          `📊 [Cache] itemsConnection merge: existing=${existingCount} incoming=${incomingCount} merged=${mergedEdges.length} cursor=${hasCursor}`
+        );
+        Telemetry.gauge('apollo_cache_edge_count', mergedEdges.length, { field: 'itemsConnection' });
+      }
+
+      return { ...incoming, pageInfo, edges: mergedEdges };
     },
   };
 }
@@ -282,31 +381,7 @@ export function makeCache(): InMemoryCache {
               });
             },
           },
-          itemsConnection: {
-            keyArgs: ['filters', 'orderBy'],
-            merge(existing: any, incoming: any, { args, readField }: any) {
-              if (!incoming) return existing;
-              if (!existing) return incoming;
-              if (!args?.after && !incoming.pageInfo?.hasNextPage)
-                return incoming;
-
-              // Pagination: merge edges with deduplication by node ID
-              const edgeMap = new Map();
-              (existing.edges || []).forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) edgeMap.set(id, edge);
-              });
-              (incoming.edges || []).forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) edgeMap.set(id, edge);
-              });
-
-              return {
-                ...incoming,
-                edges: Array.from(edgeMap.values()),
-              };
-            },
-          },
+          itemsConnection: itemsConnectionFieldPolicy(['filters', 'orderBy']),
           storageLocationsConnection: mergeConnectionByNodeId(),
           suggestions: {
             merge(existing = [], incoming) {
@@ -323,7 +398,13 @@ export function makeCache(): InMemoryCache {
           unit: {
             merge: false, // Always replace unit with incoming data, never merge
           },
+          batches: {
+            merge: false, // Always replace batches array with incoming data
+          },
         },
+      },
+      PantryItemBatch: {
+        keyFields: ['id'],
       },
       Unit: {
         keyFields: ['id'],
@@ -579,6 +660,15 @@ export function makeCache(): InMemoryCache {
       } else if (__DEV__) {
         console.log(
           `📊 Apollo Cache: ${(usageRatio * 100).toFixed(1)}% used (~${(estimatedSize / 1024 / 1024).toFixed(2)}MB / ${MAX_CACHE_SIZE_MB}MB)`
+        );
+      }
+
+      if (__DEV__) {
+        const allKeys = Object.keys(cacheData);
+        const shoppingItemCount = allKeys.filter(k => k.startsWith('ShoppingListItem:')).length;
+        const pantryItemCount = allKeys.filter(k => k.startsWith('PantryItem:')).length;
+        console.log(
+          `📊 [Cache] Entities: total=${allKeys.length} ShoppingListItem=${shoppingItemCount} PantryItem=${pantryItemCount}`
         );
       }
     } catch (_error) {

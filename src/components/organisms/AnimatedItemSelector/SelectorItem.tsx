@@ -9,8 +9,7 @@ const SelectorItemComponent = <T extends SelectableItem>({
   isSelected,
   onSelect,
   displayProperty,
-  renderCustomItem,
-  extraData: _extraData }: SelectorItemProps<T>) => {
+  renderCustomItem }: SelectorItemProps<T>) => {
   const { theme } = useUnistyles();
 
   const handlePress = () => onSelect(item.id, item);

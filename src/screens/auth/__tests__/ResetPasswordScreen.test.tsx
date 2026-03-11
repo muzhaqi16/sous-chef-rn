@@ -28,8 +28,8 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({
+jest.mock('#store/useAppStore', () => ({
+  useAppStore: (selector: any) => selector({
     clearAuth: mockClearAuth,
   }),
 }));
@@ -41,6 +41,7 @@ jest.mock('#hooks/navigation/useAuthNavigation', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useResetPasswordMutation: () => [mockResetPassword],
 }));
 

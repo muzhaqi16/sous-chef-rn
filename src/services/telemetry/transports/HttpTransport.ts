@@ -84,7 +84,7 @@ export class HttpTransport implements TelemetryTransport {
           platform: this.config.platform,
           ...metric.labels,
         })
-          .filter(([_, v]) => v !== undefined && v !== null)
+          .filter(([, v]) => v !== undefined && v !== null)
           .sort() // Sort for consistent key
           .map(([k, v]) => `${k}="${v}"`)
           .join(',');

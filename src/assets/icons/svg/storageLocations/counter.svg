@@ -1,0 +1,20 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Counter surface -->
+  <rect x="6" y="28" width="52" height="8" rx="3" fill="#6BAA7A" fill-opacity="0.5"/>
+  <rect x="6" y="28" width="52" height="8" rx="3" stroke="#6BAA7A" stroke-width="2"/>
+  <!-- Under-counter cabinet -->
+  <rect x="8" y="36" width="48" height="20" rx="3" fill="#6BAA7A" fill-opacity="0.1"/>
+  <rect x="8" y="36" width="48" height="20" rx="3" stroke="#6BAA7A" stroke-width="1.5"/>
+  <line x1="32" y1="36" x2="32" y2="56" stroke="#6BAA7A" stroke-width="1.5" stroke-opacity="0.4"/>
+  <circle cx="27" cy="46" r="2.5" fill="#6BAA7A" fill-opacity="0.5"/>
+  <circle cx="37" cy="46" r="2.5" fill="#6BAA7A" fill-opacity="0.5"/>
+  <!-- Jar on counter -->
+  <rect x="12" y="18" width="9" height="10" rx="3" fill="#6BAA7A" fill-opacity="0.45"/>
+  <rect x="13" y="16" width="7" height="3" rx="1.5" fill="#6BAA7A" fill-opacity="0.35"/>
+  <!-- Canister -->
+  <rect x="26" y="16" width="8" height="12" rx="2.5" fill="#6BAA7A" fill-opacity="0.5"/>
+  <rect x="26" y="14" width="8" height="3" rx="1.5" fill="#6BAA7A" fill-opacity="0.35"/>
+  <!-- Bowl -->
+  <path d="M39 26 Q43.5 19 48 26" stroke="#6BAA7A" stroke-width="2" fill="none" stroke-opacity="0.5"/>
+  <line x1="38" y1="26" x2="49" y2="26" stroke="#6BAA7A" stroke-width="2" stroke-opacity="0.4"/>
+</svg>

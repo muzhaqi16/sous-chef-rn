@@ -16,7 +16,8 @@ import {
   selectUser,
   selectPostLoginState,
 } from '#store/useAppStore';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useBiometricPrompting } from '#hooks/auth/useBiometricPrompting';
+import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 import { SplashScreen } from '#screens/SplashScreen';
 import { NotFoundScreen } from '#screens/NotFoundScreen';
 import { AuthStack } from './stacks/AuthStack';
@@ -245,8 +246,26 @@ export function Navigation() {
     showBiometricSetup,
     postLoginCredentials,
     setNavigationState,
+    setShowBiometricSetup,
+    setPostLoginCredentials,
   } = useAppStore(useShallow(selectPostLoginState));
-  const { handlePostLoginBiometricComplete } = useAuth();
+  const { recordBiometricPromptResponse } = useBiometricPrompting();
+  const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
+
+  const handlePostLoginBiometricComplete = (enabled: boolean, declined?: boolean) => {
+    setShowBiometricSetup(false);
+
+    recordBiometricPromptResponse(enabled, declined);
+
+    if (enabled) {
+      markBiometricEnabled();
+    } else if (declined) {
+      markBiometricDeclined();
+    }
+
+    setNavigationState('main_app');
+    setPostLoginCredentials(null);
+  };
 
   // Track initialization
   const hasInitialized = useRef(false);

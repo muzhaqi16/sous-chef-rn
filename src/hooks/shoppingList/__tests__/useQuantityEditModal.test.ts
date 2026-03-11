@@ -6,6 +6,7 @@ import { useQuantityEditModal } from '../useQuantityEditModal';
 const mockUpdateQuantity = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useUpdateShoppingListItemQuantityMutation: () => [mockUpdateQuantity],
 }));
 

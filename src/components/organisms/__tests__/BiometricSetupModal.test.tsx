@@ -21,21 +21,48 @@ jest.mock('#components/atoms/PasswordInput', () => ({
   },
 }));
 
-const mockGetBiometricInfo = jest.fn();
-const mockStoreCredentials = jest.fn();
-const mockLoadStoredCredentials = jest.fn();
-const mockCheckStoredCredentials = jest.fn();
-
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: () => ({
-    getBiometricInfo: mockGetBiometricInfo,
-    storeCredentials: mockStoreCredentials,
-    loadStoredCredentials: mockLoadStoredCredentials,
-    checkStoredCredentials: mockCheckStoredCredentials,
-  }),
+jest.mock('#/services/authService', () => ({
+  authService: {
+    getBiometricInfo: jest.fn(),
+    storeCredentials: jest.fn(),
+    loadStoredCredentials: jest.fn(),
+    checkStoredCredentials: jest.fn(),
+  },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+// Get references to mock functions after the module mock is created
+const { authService: mockAuthService } = jest.requireMock('#/services/authService') as {
+  authService: {
+    getBiometricInfo: jest.Mock;
+    storeCredentials: jest.Mock;
+    loadStoredCredentials: jest.Mock;
+    checkStoredCredentials: jest.Mock;
+  };
+};
+const mockGetBiometricInfo = mockAuthService.getBiometricInfo;
+const mockStoreCredentials = mockAuthService.storeCredentials;
+const mockCheckStoredCredentials = mockAuthService.checkStoredCredentials;
+
+jest.mock('#/utils/compilerSafeWrappers', () => ({
+  executeMutation: async (fn: () => Promise<any>, onError?: any) => {
+    try {
+      return await fn();
+    } catch (error) {
+      if (typeof onError === 'function') onError(error);
+      return false;
+    }
+  },
+  executeWithLoadingState: async (fn: () => Promise<void>, setLoading: (v: boolean) => void, onError?: (e: unknown) => void) => {
+    setLoading(true);
+    try {
+      await fn();
+    } catch (error) {
+      if (onError) onError(error);
+    } finally {
+      setLoading(false);
+    }
+  },
+}));
 
 const defaultProps = {
   visible: true,

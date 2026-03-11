@@ -246,7 +246,6 @@ export class BiometricManager {
    */
   static async loadCredentialsWithFallback(
     service: string,
-    _options: BiometricOptions = {},
   ): Promise<{
     success: boolean;
     credentials?: { username: string; password: string };

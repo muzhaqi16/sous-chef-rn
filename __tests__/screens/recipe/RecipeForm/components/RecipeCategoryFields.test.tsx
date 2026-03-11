@@ -3,7 +3,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { RecipeCategoryFields } from '../../../../../src/screens/recipe/RecipeForm/components/RecipeCategoryFields';
-import { Difficulty, Visibility } from '../../../../../src/graphql/generated';
+import { Difficulty, RecipeStatus } from '../../../../../src/graphql/generated';
 
 jest.mock('../../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../../src/apollo/links/refreshToken');
@@ -27,8 +27,7 @@ describe('RecipeCategoryFields', () => {
     description: '',
     cuisine: 'Italian',
     difficulty: Difficulty.Medium,
-    visibility: Visibility.Private,
-    isPublished: false,
+    status: RecipeStatus.Draft,
     prepTimeMinutes: 10,
     cookTimeMinutes: 20,
     servings: 4,
@@ -61,17 +60,10 @@ describe('RecipeCategoryFields', () => {
     expect(getByText('Cuisine')).toBeTruthy();
   });
 
-  it('renders Visibility segmented control', () => {
+  it('renders Status segmented control', () => {
     const { getByText } = render(
       <RecipeCategoryFields state={defaultState as any} updateField={updateField} />,
     );
-    expect(getByText('Visibility')).toBeTruthy();
-  });
-
-  it('renders Published switch', () => {
-    const { getByText } = render(
-      <RecipeCategoryFields state={defaultState as any} updateField={updateField} />,
-    );
-    expect(getByText('Published')).toBeTruthy();
+    expect(getByText('Status')).toBeTruthy();
   });
 });

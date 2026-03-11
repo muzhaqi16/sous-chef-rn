@@ -38,9 +38,6 @@ jest.mock('#/storage/mmkv', () => ({
     remove: jest.fn(),
   },
 }));
-jest.mock('#generated', () => ({
-  ImageUploadPurpose: { ProfileAvatar: 'PROFILE_AVATAR' },
-}));
 jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#utils/imageValidation', () => ({
   validateImageFile: jest.fn(),

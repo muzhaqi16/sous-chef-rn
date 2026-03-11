@@ -11,9 +11,9 @@ const mockCreatePantryItem = jest.fn();
 const mockRestockPantryItem = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreatePantryItemMutation: () => [mockCreatePantryItem, { loading: false }],
   useRestockPantryItemMutation: () => [mockRestockPantryItem, {}],
-  StorageState: { Fresh: 'FRESH', Frozen: 'FROZEN', Pantry: 'PANTRY' },
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({

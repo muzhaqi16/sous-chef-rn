@@ -13,9 +13,6 @@ jest.mock('#/utils/fractionUtils', () => ({
   }),
 }));
 
-// Mock generated types
-jest.mock('#generated', () => ({}));
-
 describe('useShoppingListItemForm', () => {
   describe('initial state', () => {
     it('returns default form state', () => {

@@ -2,7 +2,7 @@ import { useEffect, startTransition } from 'react';
 import { gql } from '@apollo/client';
 import { client } from '#/apollo/client';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { useAuth } from '#/hooks/auth/useAuth';
+import { useAuthUser } from '#/hooks/auth/useAuthUser';
 
 /** Minimal fragment for reading entity version from cache */
 const VERSION_FRAGMENT = gql`
@@ -43,7 +43,7 @@ export function useOptimisticDataRestoration(
   entityType: string,
   enabled = true
 ) {
-  const { user } = useAuth();
+  const user = useAuthUser();
 
   useEffect(() => {
     if (!user?.id || !enabled) return;
@@ -104,7 +104,7 @@ export function useOptimisticDataRestorationMultiple(
   entityTypes: string[],
   enabled = true
 ) {
-  const { user } = useAuth();
+  const user = useAuthUser();
 
   // Serialize array for stable dependency comparison
   // This allows consumers to pass inline arrays without causing infinite loops

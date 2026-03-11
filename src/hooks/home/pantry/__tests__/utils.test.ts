@@ -6,11 +6,11 @@ jest.mock('../../../../apollo/links/refreshToken');
 
 jest.mock('../../../../apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(
-    (_parentTypename: string, _connectionField: string, _itemTypename: string) =>
+    () =>
       jest.fn(),
   ),
   createRemoveFromParentConnectionUpdater: jest.fn(
-    (_parentTypename: string, _connectionField: string, _itemTypename: string) =>
+    () =>
       jest.fn(),
   ),
 }));

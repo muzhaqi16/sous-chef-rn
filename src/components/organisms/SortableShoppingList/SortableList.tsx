@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, useWindowDimensions } from 'react-native';
+import { View, Dimensions, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -20,6 +20,13 @@ import {
   SortableListThemeContext,
   type SortableListThemeColors } from './SortableListThemeContext';
 import { getTabBarBottomPadding } from '#constants/layout';
+import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
+import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
+
+// Screen-relative draw distance: scales with viewport so buffer stays ~7-10 items
+// regardless of device size (vs fixed 250 which is ~3.7 items on most devices)
+const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 0.75);
 
 // Module-scope functions — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: SortableShoppingListItem) => item.id;
@@ -53,7 +60,14 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onEndReachedThreshold = 0.5,
   ListEmptyComponent,
 }) => {
+  useRenderTime('SortableShoppingList', { slowThreshold: 1000 });
   const flashListRef = useRef<FlashListRef<SortableShoppingListItem>>(null);
+
+  const perfCallbacks = useFlashListPerformance(flashListRef, {
+    componentName: 'SortableShoppingList',
+    reportInterval: 10000,
+  });
+  useDataReferenceTracker(items, 'SortableList.items', perfCallbacks.onDataReferenceChange);
 
   // PERFORMANCE: Single useUnistyles call for entire list
   const { theme } = useUnistyles();
@@ -129,7 +143,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             keyExtractor={keyExtractor}
             renderItem={renderItem}
             getItemType={getItemType}
-            drawDistance={200}
+
             showsVerticalScrollIndicator={false}
             contentContainerStyle={contentContainerStyle}
             ListHeaderComponent={ListHeaderComponent ?? undefined}
@@ -137,6 +151,10 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             ListEmptyComponent={ListEmptyComponent ?? undefined}
             onEndReached={onEndReached}
             onEndReachedThreshold={onEndReachedThreshold}
+            onLoad={perfCallbacks.onLoad}
+            onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+            drawDistance={DRAW_DISTANCE}
+            maxItemsInRecyclePool={15}
             onRefresh={onRefresh}
             refreshing={refreshing}
             maintainVisibleContentPosition={{ disabled: true }}

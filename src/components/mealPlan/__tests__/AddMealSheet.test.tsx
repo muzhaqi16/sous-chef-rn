@@ -21,24 +21,28 @@ jest.mock('#components/atoms/CachedImage', () => ({
 
 jest.mock('#hooks/recipe/useSavedRecipes', () => ({
   useSavedRecipes: jest.fn(() => ({
-    recipes: [
-      {
-        recipeId: 'r1',
-        name: 'Pasta Carbonara',
-        servings: 4,
-        totalTimeMinutes: 30,
-        imageUrl: null,
-      },
-      {
-        recipeId: 'r2',
-        name: 'Chicken Salad',
-        servings: 2,
-        totalTimeMinutes: 15,
-        imageUrl: null,
-      },
-    ],
-    hasNextPage: false,
-    loadMore: jest.fn(),
+    state: {
+      recipes: [
+        {
+          recipeId: 'r1',
+          name: 'Pasta Carbonara',
+          servings: 4,
+          totalTimeMinutes: 30,
+          imageUrl: null,
+        },
+        {
+          recipeId: 'r2',
+          name: 'Chicken Salad',
+          servings: 2,
+          totalTimeMinutes: 15,
+          imageUrl: null,
+        },
+      ],
+      hasNextPage: false,
+    },
+    actions: {
+      loadMore: jest.fn(),
+    },
   })),
 }));
 
@@ -67,17 +71,6 @@ jest.mock('#/services/toastService', () => ({
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
-
-jest.mock('#generated', () => ({
-  MealType: {
-    Breakfast: 'BREAKFAST',
-    Lunch: 'LUNCH',
-    Dinner: 'DINNER',
-    Snack: 'SNACK',
-    Brunch: 'BRUNCH',
-    Dessert: 'DESSERT',
-  },
-}));
 
 const defaultProps = {
   visible: true,

@@ -111,6 +111,57 @@ export interface MemoryWarning {
   message: string;
 }
 
+/** Single scroll frame measurement */
+export interface ScrollFrameMetric {
+  timestamp: number;
+  visibleStart: number;
+  visibleEnd: number;
+  viewableCount: number;
+  expectedCount: number;
+  blankDetected: boolean;
+  /** ms between rAF callbacks */
+  frameGap: number;
+  /** viewableCount / expectedCount (0.0 - 1.0) */
+  coverageRatio: number;
+  /** Estimated scroll speed in items/second */
+  scrollVelocity: number;
+}
+
+/** Per-mount session metrics */
+export interface FlashListSessionMetrics {
+  initialLoadTime: number | null;
+  dataReferenceChanges: number;
+  blankFrameCount: number;
+  totalScrollFrames: number;
+  longestBlankStreak: number;
+  /** frames with >32ms gap */
+  longFrameCount: number;
+  peakFrameGap: number;
+  viewabilityChangeCount: number;
+  sessionStart: number;
+  /** Number of predictive warnings emitted */
+  predictiveWarnings: number;
+  /** Fastest observed scroll speed in items/second */
+  peakScrollVelocity: number;
+}
+
+/** Full diagnostic report */
+export interface FlashListDiagnosticReport {
+  session: FlashListSessionMetrics;
+  recentFrames: ScrollFrameMetric[];
+  dataChangeTimestamps: number[];
+  dataChangeBlankCorrelations: number;
+}
+
+export type BlankRiskLevel = 'none' | 'low' | 'medium' | 'high';
+
+export interface BlankRiskAssessment {
+  level: BlankRiskLevel;
+  factors: string[];
+  coverageRatio: number;
+  scrollVelocity: number;
+}
+
 /**
  * Default performance configuration
  */

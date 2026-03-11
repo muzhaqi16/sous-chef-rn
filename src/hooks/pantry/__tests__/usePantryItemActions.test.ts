@@ -18,21 +18,9 @@ const mockCreatePantryItemUsage = jest.fn();
 const mockRestockPantryItem = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreatePantryItemUsageMutation: jest.fn(() => [mockCreatePantryItemUsage]),
   useRestockPantryItemMutation: jest.fn(() => [mockRestockPantryItem]),
-  UsagePurpose: {
-    Cook: 'COOK',
-    Eat: 'EAT',
-    Waste: 'WASTE',
-    Give: 'GIVE',
-    Other: 'OTHER',
-  },
-  WasteReason: {
-    Expired: 'EXPIRED',
-    Spoiled: 'SPOILED',
-    Leftover: 'LEFTOVER',
-    Other: 'OTHER',
-  },
 }));
 
 jest.mock('#/utils/isNetworkError', () => ({

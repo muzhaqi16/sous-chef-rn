@@ -1,0 +1,21 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Back wall -->
+  <rect x="8" y="8" width="48" height="50" rx="3" fill="#C47F3A" fill-opacity="0.08"/>
+  <rect x="8" y="8" width="48" height="50" rx="3" stroke="#C47F3A" stroke-width="2"/>
+  <!-- Shelves -->
+  <rect x="8" y="22" width="48" height="3.5" rx="1.5" fill="#C47F3A" fill-opacity="0.35"/>
+  <rect x="8" y="37" width="48" height="3.5" rx="1.5" fill="#C47F3A" fill-opacity="0.35"/>
+  <!-- Top shelf items -->
+  <rect x="14" y="13" width="7" height="9" rx="2" fill="#C47F3A" fill-opacity="0.5"/>
+  <circle cx="32" cy="17.5" r="4.5" fill="#C47F3A" fill-opacity="0.5"/>
+  <rect x="40" y="14" width="9" height="8" rx="1.5" fill="#C47F3A" fill-opacity="0.4"/>
+  <!-- Middle shelf items -->
+  <rect x="13" y="27.5" width="6" height="9.5" rx="1.5" fill="#C47F3A" fill-opacity="0.45"/>
+  <rect x="23" y="29" width="8" height="8" rx="2" fill="#C47F3A" fill-opacity="0.4"/>
+  <rect x="35" y="27.5" width="5" height="9.5" rx="1.5" fill="#C47F3A" fill-opacity="0.5"/>
+  <rect x="43" y="28" width="7" height="9" rx="1.5" fill="#C47F3A" fill-opacity="0.35"/>
+  <!-- Bottom shelf items -->
+  <rect x="12" y="43.5" width="9" height="12.5" rx="2" fill="#C47F3A" fill-opacity="0.4"/>
+  <rect x="26" y="44.5" width="7" height="11.5" rx="2" fill="#C47F3A" fill-opacity="0.5"/>
+  <rect x="38" y="43.5" width="8" height="12.5" rx="1.5" fill="#C47F3A" fill-opacity="0.4"/>
+</svg>

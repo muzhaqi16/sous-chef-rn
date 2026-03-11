@@ -5,11 +5,11 @@ import { useAdjustPantryItemQuantity } from '../useAdjustPantryItemQuantity';
 const mockAdjustMutation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useAdjustPantryItemQuantityMutation: jest.fn(() => [
     mockAdjustMutation,
     { loading: false },
   ]),
-  PantryItemDisplayFragmentDoc: {},
 }));
 
 jest.mock('#/services/errorService', () => ({

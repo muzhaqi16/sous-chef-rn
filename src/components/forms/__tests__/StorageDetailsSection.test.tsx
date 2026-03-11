@@ -45,14 +45,6 @@ jest.mock('#components/molecules/DatePickerField', () => {
   };
 });
 
-jest.mock('#generated', () => ({
-  StorageState: {
-    Ambient: 'AMBIENT',
-    Refrigerated: 'REFRIGERATED',
-    Frozen: 'FROZEN',
-  },
-}));
-
 function Wrapper(overrides: any) {
   const { control, formState: { errors } } = useForm({
     defaultValues: {

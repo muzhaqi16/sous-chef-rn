@@ -30,7 +30,7 @@ import {
 } from '#/apollo/utils/cacheUpdaters';
 import { useAppStore } from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
-import { useAuth } from '#/hooks/auth/useAuth';
+import { useAuthUser } from '#/hooks/auth/useAuthUser';
 import { toastService } from '#/services/toastService';
 import {
   executeWithLoadingState,
@@ -87,7 +87,7 @@ export const ListSettings: React.FC<
 
   const { shoppingList, isShared, collaborators } =
     useShoppingListDetails(listId);
-  const { user } = useAuth();
+  const user = useAuthUser();
   // Use lazy loading for homes data to avoid triggering Zustand store updates
   // that would cause ShoppingListMain to re-render
   const { homes, fetchHomeData, isLoaded: homesLoaded } = useLazyHomeData();

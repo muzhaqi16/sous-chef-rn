@@ -4,6 +4,8 @@ import { storage } from '#storage/mmkv';
 import { apolloCachePersistence } from '../ApolloCachePersistence';
 
 const CACHE_KEY = 'apollo-cache-v1';
+const CRITICAL_KEY = 'apollo-cache-v1-critical';
+const DEFERRED_KEY = 'apollo-cache-v1-deferred';
 const VERSION_KEY = 'apollo-cache-version';
 const CURRENT_VERSION = '1.1.4';
 
@@ -72,8 +74,11 @@ describe('ApolloCachePersistence', () => {
       expect(storage.getString(CACHE_KEY)).toBeUndefined();
     });
 
-    it('saves after debounce period elapses', () => {
-      const cache = { ROOT_QUERY: { __typename: 'Query' } };
+    it('saves after debounce period elapses (split keys)', () => {
+      const cache = {
+        ROOT_QUERY: { __typename: 'Query' },
+        'PantryItem:1': { id: '1', __typename: 'PantryItem' },
+      };
       apolloCachePersistence.save(cache);
 
       // Advance past debounce (3000ms)
@@ -81,8 +86,19 @@ describe('ApolloCachePersistence', () => {
       // The serialize runs via requestIdleCallback/requestAnimationFrame fallback
       jest.runAllTimers();
 
-      expect(storage.getString(CACHE_KEY)).toBe(JSON.stringify(cache));
+      // Critical key should have ROOT_QUERY
+      const critical = JSON.parse(storage.getString(CRITICAL_KEY)!);
+      expect(critical).toEqual({ ROOT_QUERY: { __typename: 'Query' } });
+
+      // Deferred key should have PantryItem
+      const deferred = JSON.parse(storage.getString(DEFERRED_KEY)!);
+      expect(deferred).toEqual({
+        'PantryItem:1': { id: '1', __typename: 'PantryItem' },
+      });
+
       expect(storage.getString(VERSION_KEY)).toBe(CURRENT_VERSION);
+      // Old single key should be removed
+      expect(storage.getString(CACHE_KEY)).toBeUndefined();
     });
 
     it('debounces multiple rapid saves', () => {
@@ -96,18 +112,29 @@ describe('ApolloCachePersistence', () => {
       jest.advanceTimersByTime(3000);
       jest.runAllTimers();
 
-      // Only the last cache should be saved
-      expect(storage.getString(CACHE_KEY)).toBe(JSON.stringify({ c: 3 }));
+      // Only the last cache should be saved (all deferred since no critical typenames)
+      const deferred = JSON.parse(storage.getString(DEFERRED_KEY)!);
+      expect(deferred).toEqual({ c: 3 });
     });
   });
 
   describe('saveImmediate', () => {
-    it('persists immediately without debounce', () => {
-      const cache = { ROOT_QUERY: { __typename: 'Query' } };
+    it('persists immediately without debounce (split keys)', () => {
+      const cache = {
+        ROOT_QUERY: { __typename: 'Query' },
+        'Recipe:1': { id: '1' },
+      };
       apolloCachePersistence.saveImmediate(cache);
 
-      expect(storage.getString(CACHE_KEY)).toBe(JSON.stringify(cache));
+      const critical = JSON.parse(storage.getString(CRITICAL_KEY)!);
+      expect(critical).toEqual({ ROOT_QUERY: { __typename: 'Query' } });
+
+      const deferred = JSON.parse(storage.getString(DEFERRED_KEY)!);
+      expect(deferred).toEqual({ 'Recipe:1': { id: '1' } });
+
       expect(storage.getString(VERSION_KEY)).toBe(CURRENT_VERSION);
+      // Old key removed
+      expect(storage.getString(CACHE_KEY)).toBeUndefined();
     });
 
     it('cancels any pending debounced save', () => {
@@ -117,9 +144,8 @@ describe('ApolloCachePersistence', () => {
       // Advance timers to ensure debounced save does not fire
       jest.runAllTimers();
 
-      expect(storage.getString(CACHE_KEY)).toBe(
-        JSON.stringify({ immediate: true }),
-      );
+      const deferred = JSON.parse(storage.getString(DEFERRED_KEY)!);
+      expect(deferred).toEqual({ immediate: true });
     });
 
     it('handles serialization errors gracefully', () => {
@@ -143,15 +169,14 @@ describe('ApolloCachePersistence', () => {
 
     it('flushes pending save on resume', () => {
       apolloCachePersistence.pause();
-      apolloCachePersistence.save({ deferred: true } as any);
+      apolloCachePersistence.save({ pausedData: true } as any);
       apolloCachePersistence.resume();
 
       jest.advanceTimersByTime(3000);
       jest.runAllTimers();
 
-      expect(storage.getString(CACHE_KEY)).toBe(
-        JSON.stringify({ deferred: true }),
-      );
+      const deferred = JSON.parse(storage.getString(DEFERRED_KEY)!);
+      expect(deferred).toEqual({ pausedData: true });
     });
 
     it('does nothing on resume if nothing was queued while paused', () => {
@@ -188,9 +213,8 @@ describe('ApolloCachePersistence', () => {
       jest.runAllTimers();
 
       // The last extractor should win
-      expect(storage.getString(CACHE_KEY)).toBe(
-        JSON.stringify({ second: true }),
-      );
+      const deferred = JSON.parse(storage.getString(DEFERRED_KEY)!);
+      expect(deferred).toEqual({ second: true });
     });
   });
 
@@ -205,13 +229,17 @@ describe('ApolloCachePersistence', () => {
   });
 
   describe('clear', () => {
-    it('removes cache data and version from storage', () => {
+    it('removes all cache keys from storage', () => {
       storage.set(CACHE_KEY, '{"data":"old"}');
+      storage.set(CRITICAL_KEY, '{"ROOT_QUERY":{}}');
+      storage.set(DEFERRED_KEY, '{"PantryItem:1":{}}');
       storage.set(VERSION_KEY, CURRENT_VERSION);
 
       apolloCachePersistence.clear();
 
       expect(storage.getString(CACHE_KEY)).toBeUndefined();
+      expect(storage.getString(CRITICAL_KEY)).toBeUndefined();
+      expect(storage.getString(DEFERRED_KEY)).toBeUndefined();
       expect(storage.getString(VERSION_KEY)).toBeUndefined();
     });
 
@@ -236,7 +264,25 @@ describe('ApolloCachePersistence', () => {
       });
     });
 
-    it('returns stats when cache exists', () => {
+    it('returns stats from split keys', () => {
+      const critical = { ROOT_QUERY: {} };
+      const deferred = { 'PantryItem:1': {}, 'PantryItem:2': {} };
+      const criticalStr = JSON.stringify(critical);
+      const deferredStr = JSON.stringify(deferred);
+      storage.set(CRITICAL_KEY, criticalStr);
+      storage.set(DEFERRED_KEY, deferredStr);
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+
+      const stats = apolloCachePersistence.getStats();
+      expect(stats.exists).toBe(true);
+      expect(stats.version).toBe(CURRENT_VERSION);
+      expect(stats.entityCount).toBe(3);
+      expect(stats.sizeKB).toBe(
+        Math.round((criticalStr.length + deferredStr.length) / 1024),
+      );
+    });
+
+    it('falls back to old single key for stats', () => {
       const cacheData = { 'User:1': { id: '1' }, 'User:2': { id: '2' } };
       const cacheString = JSON.stringify(cacheData);
       storage.set(CACHE_KEY, cacheString);
@@ -250,7 +296,7 @@ describe('ApolloCachePersistence', () => {
     });
 
     it('returns version null when version key missing', () => {
-      storage.set(CACHE_KEY, '{"a":1}');
+      storage.set(CRITICAL_KEY, '{"a":1}');
 
       const stats = apolloCachePersistence.getStats();
       expect(stats.exists).toBe(true);
@@ -258,7 +304,7 @@ describe('ApolloCachePersistence', () => {
     });
 
     it('returns exists: false on corrupted JSON', () => {
-      storage.set(CACHE_KEY, 'invalid-json');
+      storage.set(CRITICAL_KEY, 'invalid-json');
       storage.set(VERSION_KEY, CURRENT_VERSION);
 
       const stats = apolloCachePersistence.getStats();
@@ -267,7 +313,14 @@ describe('ApolloCachePersistence', () => {
   });
 
   describe('isValid', () => {
-    it('returns true when version matches and cache data exists', () => {
+    it('returns true when version matches and critical key exists', () => {
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(CRITICAL_KEY, '{"some":"data"}');
+
+      expect(apolloCachePersistence.isValid()).toBe(true);
+    });
+
+    it('returns true when version matches and legacy key exists', () => {
       storage.set(VERSION_KEY, CURRENT_VERSION);
       storage.set(CACHE_KEY, '{"some":"data"}');
 
@@ -276,7 +329,7 @@ describe('ApolloCachePersistence', () => {
 
     it('returns false when version mismatch', () => {
       storage.set(VERSION_KEY, '0.0.0');
-      storage.set(CACHE_KEY, '{"some":"data"}');
+      storage.set(CRITICAL_KEY, '{"some":"data"}');
 
       expect(apolloCachePersistence.isValid()).toBe(false);
     });
@@ -296,6 +349,146 @@ describe('ApolloCachePersistence', () => {
       expect(apolloCachePersistence.isValid()).toBe(false);
 
       (storage as any).getString = originalGetString;
+    });
+  });
+
+  describe('partitionCache', () => {
+    it('classifies ROOT_QUERY as critical', () => {
+      const cache = {
+        ROOT_QUERY: { __typename: 'Query' },
+        'PantryItem:1': { id: '1' },
+      };
+      const { critical, deferred } = apolloCachePersistence.partitionCache(cache);
+      expect(critical).toHaveProperty('ROOT_QUERY');
+      expect(deferred).not.toHaveProperty('ROOT_QUERY');
+    });
+
+    it('classifies ROOT_MUTATION and __META as critical', () => {
+      const cache = {
+        ROOT_MUTATION: {},
+        ROOT_SUBSCRIPTION: {},
+        __META: { extraRootIds: [] },
+        'Recipe:1': { id: '1' },
+      };
+      const { critical, deferred } = apolloCachePersistence.partitionCache(cache);
+      expect(Object.keys(critical)).toEqual(
+        expect.arrayContaining(['ROOT_MUTATION', 'ROOT_SUBSCRIPTION', '__META']),
+      );
+      expect(deferred).toEqual({ 'Recipe:1': { id: '1' } });
+    });
+
+    it('classifies User and Home typenames as critical', () => {
+      const cache = {
+        'User:1': { id: '1', __typename: 'User' },
+        'Home:1': { id: '1', __typename: 'Home' },
+        'UserSettings:1': { __typename: 'UserSettings' },
+        'DietaryProfile:1': { __typename: 'DietaryProfile' },
+        'ShoppingListItem:5': { id: '5' },
+      };
+      const { critical, deferred } = apolloCachePersistence.partitionCache(cache);
+      expect(Object.keys(critical).sort()).toEqual([
+        'DietaryProfile:1',
+        'Home:1',
+        'User:1',
+        'UserSettings:1',
+      ]);
+      expect(deferred).toEqual({ 'ShoppingListItem:5': { id: '5' } });
+    });
+
+    it('classifies PantryItem, ShoppingListItem, Recipe as deferred', () => {
+      const cache = {
+        'PantryItem:1': { id: '1' },
+        'ShoppingListItem:2': { id: '2' },
+        'Recipe:3': { id: '3' },
+        'Brand:4': { id: '4' },
+        'Category:5': { id: '5' },
+      };
+      const { critical, deferred } = apolloCachePersistence.partitionCache(cache);
+      expect(Object.keys(critical)).toHaveLength(0);
+      expect(Object.keys(deferred)).toHaveLength(5);
+    });
+
+    it('defaults unknown typenames to deferred', () => {
+      const cache = {
+        'SomeNewType:1': { id: '1' },
+        ROOT_QUERY: {},
+      };
+      const { critical, deferred } = apolloCachePersistence.partitionCache(cache);
+      expect(critical).toEqual({ ROOT_QUERY: {} });
+      expect(deferred).toEqual({ 'SomeNewType:1': { id: '1' } });
+    });
+  });
+
+  describe('loadCritical', () => {
+    it('returns null when no critical key exists', () => {
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      expect(apolloCachePersistence.loadCritical()).toBeNull();
+    });
+
+    it('returns null on version mismatch', () => {
+      storage.set(VERSION_KEY, '0.0.0');
+      storage.set(CRITICAL_KEY, '{"ROOT_QUERY":{}}');
+      expect(apolloCachePersistence.loadCritical()).toBeNull();
+    });
+
+    it('returns critical entities when available', () => {
+      const criticalData = { ROOT_QUERY: {}, 'User:1': { id: '1' } };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(CRITICAL_KEY, JSON.stringify(criticalData));
+
+      expect(apolloCachePersistence.loadCritical()).toEqual(criticalData);
+    });
+
+    it('returns null on corrupted JSON', () => {
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(CRITICAL_KEY, 'bad-json{{{');
+      expect(apolloCachePersistence.loadCritical()).toBeNull();
+    });
+  });
+
+  describe('loadDeferred', () => {
+    it('returns null when no deferred key exists', () => {
+      expect(apolloCachePersistence.loadDeferred()).toBeNull();
+    });
+
+    it('returns deferred entities when available', () => {
+      const deferredData = {
+        'PantryItem:1': { id: '1' },
+        'Recipe:2': { id: '2' },
+      };
+      storage.set(DEFERRED_KEY, JSON.stringify(deferredData));
+
+      expect(apolloCachePersistence.loadDeferred()).toEqual(deferredData);
+    });
+
+    it('returns null on corrupted JSON', () => {
+      storage.set(DEFERRED_KEY, 'bad-json');
+      expect(apolloCachePersistence.loadDeferred()).toBeNull();
+    });
+  });
+
+  describe('migration: old single-key format', () => {
+    it('load() still reads old single-key format', () => {
+      const cacheData = { ROOT_QUERY: {}, 'PantryItem:1': { id: '1' } };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(CACHE_KEY, JSON.stringify(cacheData));
+
+      expect(apolloCachePersistence.load()).toEqual(cacheData);
+    });
+
+    it('save migrates away from old key by deleting it', () => {
+      // Pre-populate old key
+      storage.set(CACHE_KEY, '{"old":"data"}');
+
+      apolloCachePersistence.save({ ROOT_QUERY: {}, 'Item:1': {} } as any);
+      jest.advanceTimersByTime(3000);
+      jest.runAllTimers();
+
+      // Old key should be removed after save
+      expect(storage.getString(CACHE_KEY)).toBeUndefined();
+      // New keys should exist
+      expect(storage.getString(CRITICAL_KEY)).toBeDefined();
+      expect(storage.getString(DEFERRED_KEY)).toBeDefined();
     });
   });
 });

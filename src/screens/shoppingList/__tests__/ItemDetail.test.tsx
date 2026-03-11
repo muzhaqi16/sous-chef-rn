@@ -12,6 +12,7 @@ jest.mock('#hooks/navigation/useAppNavigation');
 const mockUseGetShoppingListItemQuery = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetShoppingListItemQuery: (...args: any[]) => mockUseGetShoppingListItemQuery(...args),
 }));
 
@@ -30,7 +31,7 @@ jest.mock('#/styles/commonStyles', () => ({
 }));
 
 jest.mock('#components/templates/DetailTemplate', () => ({
-  DetailTemplate: ({ title, sections, headerActions: _headerActions }: any) => {
+  DetailTemplate: ({ title, sections }: any) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="detail-template">

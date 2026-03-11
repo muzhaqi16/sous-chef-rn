@@ -111,6 +111,10 @@ export interface AuthState {
   // Auto-login state
   isAutoLoggingIn: boolean;
 
+  // Transient loading state for authService (not persisted)
+  authIsLoading: boolean;
+  authIsLoadingCredentials: boolean;
+
   // Computed property
   getIsAuthenticated: () => boolean;
 
@@ -123,6 +127,8 @@ export interface AuthState {
   clearAuth: () => void;
   setHasStoredCredentials: (has: boolean | null) => void;
   setIsAutoLoggingIn: (loading: boolean) => void;
+  setAuthIsLoading: (v: boolean) => void;
+  setAuthIsLoadingCredentials: (v: boolean) => void;
 }
 
 const initialAuthState = {
@@ -131,6 +137,8 @@ const initialAuthState = {
   refreshToken: null,
   hasStoredCredentials: null,
   isAutoLoggingIn: false,
+  authIsLoading: false,
+  authIsLoadingCredentials: false,
 };
 
 export const createAuthSlice: StateCreator<
@@ -253,6 +261,18 @@ export const createAuthSlice: StateCreator<
   setIsAutoLoggingIn: loading => {
     set(state => {
       state.isAutoLoggingIn = loading;
+    });
+  },
+
+  setAuthIsLoading: v => {
+    set(state => {
+      state.authIsLoading = v;
+    });
+  },
+
+  setAuthIsLoadingCredentials: v => {
+    set(state => {
+      state.authIsLoadingCredentials = v;
     });
   },
 });

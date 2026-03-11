@@ -34,6 +34,7 @@ let mockListsData: any = { shoppingLists: { edges: [] } };
 let mockListsLoading = false;
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCreateShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useGetShoppingListsLiteQuery: jest.fn(() => ({
     data: mockListsData,

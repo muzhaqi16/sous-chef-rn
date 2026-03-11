@@ -69,6 +69,8 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({ visible, sortO
         transparent
         animationType="fade"
         onRequestClose={onClose}
+        statusBarTranslucent
+        navigationBarTranslucent
       >
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.modalOverlay}>

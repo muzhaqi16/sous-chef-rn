@@ -58,16 +58,6 @@ jest.mock('#hooks/notifications/useNotificationPermissions', () => ({
   })),
 }));
 
-jest.mock('#generated', () => ({
-  ExpirationFrequency: {
-    RealTime: 'REAL_TIME',
-    DailyMorning: 'DAILY_MORNING',
-    DailyEvening: 'DAILY_EVENING',
-    WeeklyDigest: 'WEEKLY_DIGEST',
-    Never: 'NEVER',
-  },
-}));
-
 jest.mock('#components/settings/SettingSwitch', () => ({
   SettingSwitch: ({ title }: any) => title,
 }));

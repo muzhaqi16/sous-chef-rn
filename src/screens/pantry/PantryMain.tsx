@@ -1,47 +1,28 @@
-import React, {
-  useDeferredValue,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { usePantrySelectorConfig } from '#hooks/pantry/usePantrySelectorConfig';
-import { usePantryItemActions } from '#hooks/pantry/usePantryItemActions';
-import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
-import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useScannerSetup } from '#hooks/scanner/useScannerSetup';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
-import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
-import { useAppStore, selectIsOnline } from '#store/useAppStore';
-import { useShallow } from 'zustand/shallow';
-import { GetStorageLocationsQuery, GetPantryDocument, type GetPantryQuery } from '#generated';
-import { normalizePantry } from '#/utils/connectionUtils';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useFeatureHint, getLoginCount } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
-import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 import { Telemetry } from '#services/telemetry';
-import { useAuth } from '#hooks/auth/useAuth';
-import { type LocationFilter, locationFilterToQueryFilter, sortOptionToOrderBy } from '#/utils/pantryFilters';
-import { DEFAULT_PAGE_SIZES } from '#/constants/pagination';
-import { pantryItemSearch } from '#/utils/searchUtils';
-import { useHybridSearch } from '#hooks/search/useHybridSearch';
+import { useStore } from '#store';
+import { usePantryScreen } from '#hooks/pantry/usePantryScreen';
+import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
+import { PantryModalsProvider, usePantryModals } from '#/context/PantryModalsContext';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
-import { PantryContent, type PantryContentRef } from '#components/pantry/PantryContent';
-import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
-import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
-import { RestockPantryItemModal } from '#components/modals/RestockPantryItemModal';
-import { AddToPantrySheet } from '#components/modals/AddToPantrySheet/AddToPantrySheet';
-import { AddStorageLocationSheet } from '#components/modals/AddStorageLocationSheet/AddStorageLocationSheet';
+import {
+  PantryContent,
+  type PantryContentRef,
+} from '#components/pantry/PantryContent';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
+import type { LocationFilter } from '#/utils/pantryFilters';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
-import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
-import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
@@ -49,14 +30,6 @@ import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import { SectionHeader } from '#components/molecules/SectionHeader';
-// Module-scope focus callback — pauses cache persistence on blur, resumes on focus.
-// Defined outside component body so the reference is stable (no useCallback needed).
-const onScreenFocus = () => {
-  apolloCachePersistence.resume();
-  return () => {
-    apolloCachePersistence.pause();
-  };
-};
 
 /**
  * Inner component that runs all heavy hooks.
@@ -66,440 +39,255 @@ const PantryMainInner: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
   useUnistyles();
   const { setOverlayOpen } = useTabBarSetters();
-  // User name/avatar come from the auth store (populated during login)
-  // so the greeting renders immediately without a separate GetUserProfile query
-  const { user: authUser } = useAuth();
-  const loginCount = getLoginCount(authUser?.id ?? '');
-  // Track screen performance
-  useScreenTransition('PantryMain');
-  // Feature hint for home switch button
+
+  // ── Facade hook: all data-fetching & state ──
+  const screen = usePantryScreen();
+
+  // ── Lifecycle: optimistic restoration, cache persistence, perf tracking ──
+  useTabScreenLifecycle({
+    screenName: 'PantryMain',
+    optimisticTypes: ['Pantry', 'PantryItem'],
+    telemetryProperties: () => ({
+      home_id: screen.selectedHomeId,
+      pantry_id: screen.pantry?.id,
+      item_count: screen.pantryItems.length,
+      has_pantries: screen.pantries.length > 0,
+    }),
+  });
+
+  // ── Feature hint for home switch button ──
+  const loginCount = getLoginCount(screen.authUser?.id ?? '');
   const homeSwitchHint = useFeatureHint({
     featureId: 'pantry_home_switch',
-    showOnMount: false, // We'll manually trigger when appropriate
+    showOnMount: false,
   });
-  // PERF: Single consolidated selector reduces from 8 store subscriptions to 1.
-  // On every Zustand store update, only 1 subscriber callback fires (with shallow
-  // comparison) instead of 8 separate callbacks each running Object.is.
-  const {
-    showBiometricSetup,
-    unreadCount,
-    pantrySortOption,
-    pantrySortDirection,
-    setPantrySortOption,
-    setPantrySortDirection,
-    pendingPantryScrollToTop,
-    setPendingPantryScrollToTop,
-  } = useAppStore(useShallow(s => ({
-    showBiometricSetup: s.showBiometricSetup,
-    unreadCount: s.unreadCount,
-    pantrySortOption: s.pantrySortOption ?? 'recent',
-    pantrySortDirection: s.pantrySortDirection ?? 'desc',
-    setPantrySortOption: s.setPantrySortOption,
-    setPantrySortDirection: s.setPantrySortDirection,
-    pendingPantryScrollToTop: s.pendingPantryScrollToTop,
-    setPendingPantryScrollToTop: s.setPendingPantryScrollToTop,
-  })));
-  // Callback to persist sort changes to store (defensive - check functions exist)
-  const handleSortChange = 
-    (
-      option: 'name' | 'expiry' | 'quantity' | 'recent',
-      direction: 'asc' | 'desc',
-    ) => {
-      setPantrySortOption?.(option);
-      setPantrySortDirection?.(direction);
-    };
+
+  // ── Refs ──
   const selectorRef = useRef<ItemSelectorRef>(null);
   const pantryContentRef = useRef<PantryContentRef>(null);
-  const pendingPantryScrollToTopRef = useRef(pendingPantryScrollToTop);
-  const itemsAddedRef = useRef(false);
-  const handleItemAdded = () => {
-    itemsAddedRef.current = true;
-  };
-  const handleAddSheetClose = () => {
-    const shouldScroll = itemsAddedRef.current;
-    itemsAddedRef.current = false;
-    setAddSheetVisible(false);
-    if (shouldScroll) {
-      pantryContentRef.current?.scrollToTop();
-    }
-  };
-  useEffect(() => {
-    pendingPantryScrollToTopRef.current = pendingPantryScrollToTop;
-  }, [pendingPantryScrollToTop]);
 
+  // ── Scroll-to-top on focus (from barcode scanner returning) ──
+  // Read pendingPantryScrollToTop from Zustand getState() to avoid stale closure + refs
   const [onPantryFocus] = useState(() => () => {
-    if (pendingPantryScrollToTopRef.current) {
+    const store = useStore.getState();
+    if (store.pendingPantryScrollToTop) {
       pantryContentRef.current?.scrollToTop();
-      setPendingPantryScrollToTop(false);
+      store.setPendingPantryScrollToTop(false);
     }
   });
-
-  // PERF: Pause cache persistence on blur so heavy serialization doesn't
-  // fire during the next screen's scroll. Resume on focus to flush pending saves.
-  useFocusEffect(onScreenFocus);
-
-  // Scroll to top when returning from barcode scanner after adding an item
   useFocusEffect(onPantryFocus);
-  // Location filter for redesigned tabs
-  const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
-  // Network status for offline fallback
-  const isOnline = useAppStore(selectIsOnline);
-  // Add to pantry sheet state
-  const [addSheetVisible, setAddSheetVisible] = useState(false);
-  // Add storage location sheet state
-  const [addLocationSheetVisible, setAddLocationSheetVisible] = useState(false);
-  // Manage selector with overlay coordination
+
+  // ── Selector management ──
   const { handleOpenSelector, handleOverlayOpen, handleOverlayClose } =
-    useSelectorManagement({
-      selectorRef,
-      setOverlayOpen,
-    });
-  // Coordinate swipeable items so only one is open at a time
-  const { handleSwipeableWillOpen, handleSwipeableClose } = useSwipeableCoordinator();
-  // Centralized pantry selection with fallback chain
-  const {
-    pantry,
-    pantries,
-    currentHome,
-    selectedHomeId,
-    setSelectedPantryId,
-    homeCount,
-    isReady,
-  } = useCurrentPantry();
-  // Set up scanner button
+    useSelectorManagement({ selectorRef, setOverlayOpen });
+
+  // ── Scanner setup ──
   useScannerSetup({
     enabled: true,
-    homeId: selectedHomeId,
-    context: {
-      source: 'pantry',
-      pantryId: pantry?.id,
-    },
-  });
-  // Derive no-home states for differentiated empty states
-  const noHomeSelected = isReady && !selectedHomeId && homeCount > 0;
-  const noHomes = isReady && !selectedHomeId && homeCount === 0;
-  const handleSelectHome = () => navigate('HomeManagement', {});
-  // Register add button action - open add to pantry sheet (disabled when no home)
-  useTabBarAddButton(noHomeSelected || noHomes ? undefined : () => {
-    Telemetry.trackEvent('add_pantry_item_clicked');
-    setAddSheetVisible(true);
-  });
-  // Convert location filter to server-side query filter
-  const locationQueryFilter = locationFilterToQueryFilter(locationFilter);
-
-  // Main query never includes search — keeps cache stable on clear
-  const queryFilter = locationQueryFilter;
-
-  // Always pass orderBy to server — harmless when all items fit in one page,
-  // and ensures data arrives pre-sorted when server sort is active.
-  const orderBy = sortOptionToOrderBy(pantrySortOption, pantrySortDirection);
-
-  const {
-    items: rawPantryItems,
-    stats,
-    totalCount,
-    removeItem,
-    refetch,
-    loading,
-    isRefreshing,
-    error: pantryError,
-    loadMore,
-    hasMore,
-    isLoadingMore,
-    locationCounts,
-  } = usePantryManagement(pantry?.id, queryFilter, orderBy);
-
-  // Hybrid search: server when partial data, local when all loaded
-  const {
-    searchQuery,
-    setSearchQuery,
-    searchActive,
-    useServerSort,
-    activeItems,
-    removeFromResults,
-  } = useHybridSearch<GetPantryQuery, typeof rawPantryItems[number]>({
-    items: rawPantryItems,
-    totalCount,
-    hasMore,
-    loading,
-    pageSize: DEFAULT_PAGE_SIZES.MEDIUM,
-    isOnline,
-    searchDocument: GetPantryDocument,
-    buildSearchVariables: (search) => {
-      if (!pantry?.id?.trim()) return null;
-      return {
-        id: pantry.id,
-        itemsFirst: 50,
-        itemsFilter: { ...(locationQueryFilter ?? {}), search },
-        itemsOrderBy: orderBy,
-        storageLocationsFirst: 0,
-      };
-    },
-    extractItems: (data) => normalizePantry(data.pantry)?.items ?? [],
-    searchPredicate: pantryItemSearch,
-    debounceMs: 300,
+    homeId: screen.selectedHomeId,
+    context: { source: 'pantry', pantryId: screen.pantry?.id },
   });
 
-  // PERF: Defer pantry items so Apollo cache updates (from subscriptions or
-  // fetchMore) don't block user interactions like scrolling and tapping.
-  const deferredItems = useDeferredValue(activeItems);
-  // When search is cleared (empty query), use items directly — they're already
-  // cached from the main query. useDeferredValue would defer the transition from
-  // search results back to the full list, and the deferred render gets repeatedly
-  // interrupted by other state updates (debounce timer, subscriptions), causing
-  // a multi-second delay.
-  const pantryItems = searchQuery ? deferredItems : activeItems;
-  // PERF: Defer storage locations until pantry data has loaded (data-driven)
-  // Default tabs (All/Fridge/Freezer/Pantry) show immediately; custom tabs appear after pantry loads
-  const storageLocationsReady = !loading && isReady;
-  const {
-    locations: storageLocations,
-    createLocation,
-    creating: creatingLocation,
-  } = useStorageLocationManagement(storageLocationsReady ? selectedHomeId ?? undefined : undefined);
-  // Wrap removeItem to also clear the item from server search results
-  const handleRemoveItem = async (id: string) => {
-    removeFromResults(id);
-    await removeItem(id);
-  };
-  // Stable navigateTo wrapper for usePantryItemActions
-  const stableNavigateTo = ({ pantryItem: (params: { itemId: string }) => navigateTo.pantryItem(params) });
-  // Extract item actions (modal state + mutations + handlers) to separate hook
-  const {
-    consumeModal,
-    wasteModal,
-    restockModal,
-    handleConfirmConsume,
-    handleConfirmWaste,
-    handleConfirmRestock,
-    handleConsumeItem,
-    handleWasteItem,
-    handleRestockItem,
-    handleEditItem,
-    handleDeleteItem,
-  } = usePantryItemActions({
-    pantryItems,
-    removeItem: handleRemoveItem,
-    navigateTo: stableNavigateTo,
-  });
-  // Refetch pantry items when switching between pantries
-  const prevPantryIdRef = useRef<string | undefined>(pantry?.id);
-  useEffect(() => {
-    const currentPantryId = pantry?.id;
-    const prevPantryId = prevPantryIdRef.current;
-    // Only refetch if pantry actually changed (skip initial mount)
-    if (prevPantryId && currentPantryId && prevPantryId !== currentPantryId) {
-      refetch();
-    }
-    // Update ref for next comparison
-    prevPantryIdRef.current = currentPantryId;
-  });
-  // Create selector configuration for pantries
+  // ── Pantry selector config ──
   const pantryConfig = usePantrySelectorConfig({
-    pantries,
-    selectedPantryId: pantry?.id,
-    loading,
-    setSelectedPantryId,
+    pantries: screen.pantries,
+    selectedPantryId: screen.pantry?.id,
+    loading: screen.loading,
+    setSelectedPantryId: screen.setSelectedPantryId,
     selectorRef,
     navigate,
   });
-  // Handle location filter change — avoid startTransition to prevent
-  // Apollo cache-and-network from firing on each concurrent render pass
-  const handleLocationFilterChange = (filter: LocationFilter) => {
-    setLocationFilter(filter);
-  };
-  // Build combined tabs: default temperature tabs + custom storage locations
-  const defaultTabs: FilterTabConfig<LocationFilter>[] = [
-    { id: 'all', label: 'All' },
-    { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline' },
-    { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
-    { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
-  ];
-  // Add custom storage locations as tabs
-  type StorageLocation = GetStorageLocationsQuery['storageLocations']['edges'][number]['node'];
-  const customTabs: FilterTabConfig<LocationFilter>[] = storageLocations.map(
-    (location: StorageLocation) => ({
-      id: location.id,
-      label: location.name,
-      icon: location.icon ?? undefined,
-    }),
-  );
-  const combinedTabs: FilterTabConfig<LocationFilter>[] = [...defaultTabs, ...customTabs];
 
-  // Ensure every custom location has a count entry (default 0) so badges always render
-  const completeCounts = { ...locationCounts } as typeof locationCounts;
-  for (const loc of storageLocations) {
-    if (completeCounts[loc.id] === undefined) {
-      completeCounts[loc.id] = 0;
-    }
-  }
-
-  // Handle add storage location
-  const handleAddLocationPress = () => {
-    setAddLocationSheetVisible(true);
-  };
-  // Handle add item from empty state
-  const handleAddItem = () => {
-    setAddSheetVisible(true);
-  };
-  // Track screen view once on mount
-  useScreenTelemetry('PantryMain', () => ({
-    home_id: selectedHomeId,
-    pantry_id: pantry?.id,
-    item_count: pantryItems.length,
-    has_pantries: pantries.length > 0,
-  }));
-  // Show home switch hint when user has items and home is selected
-  // BUT only if biometric setup modal is not showing (prevent modal overlap)
+  // ── Feature hint effect ──
   useEffect(() => {
-    // loginCount is incremented in handleLogin before PantryMain mounts,
-    // so count=1 on 1st login (skip hint) and count=2+ on subsequent logins (show hint).
-    // This prevents FeatureHint from competing with biometric/RememberMe modals on 1st login.
     if (
       loginCount >= 2 &&
-      selectedHomeId &&
-      pantryItems.length > 0 &&
+      screen.selectedHomeId &&
+      screen.pantryItems.length > 0 &&
       !homeSwitchHint.hasBeenShown &&
-      !showBiometricSetup
+      !screen.showBiometricSetup
     ) {
-      // Show hint after a delay to let UI settle
       const timer = setTimeout(() => {
         homeSwitchHint.actions.show();
-      }, 2000); // 2 seconds delay
+      }, 2000);
       return () => clearTimeout(timer);
     }
   }, [
     loginCount,
-    pantryItems.length,
-    selectedHomeId,
+    screen.pantryItems.length,
+    screen.selectedHomeId,
     homeSwitchHint.hasBeenShown,
     homeSwitchHint.actions,
-    showBiometricSetup,
+    screen.showBiometricSetup,
   ]);
-  const handleItemPress = (id: string) => navigateTo.pantryItemDetail({ itemId: id });
+
+  // ── Navigation callbacks ──
+  const handleItemPress = (id: string) =>
+    navigateTo.pantryItemDetail({ itemId: id });
   const handleAvatarPress = () => navigate('Profile');
   const handleNotificationPress = () => navigate('Notifications');
-  const handleHomePress = () => navigate('HomeManagement', { homeId: selectedHomeId });
+  const handleHomePress = () =>
+    navigate('HomeManagement', { homeId: screen.selectedHomeId });
   const handleAnalyticsPress = () => {
-      if (pantry?.id) {
-        navigate('PantryAnalytics', { pantryId: pantry.id });
-      }
-    };
-  const handleLowStockNavigate = () => navigate('LowStockItems');
-  const handleRefresh = async () => {
-    await refetch();
+    if (screen.pantry?.id) {
+      navigate('PantryAnalytics', { pantryId: screen.pantry.id });
+    }
   };
-  // Determine loading state - only show loading if we have no data at all and no error
-  // If there's an error, stop showing loading state to prevent infinite spinner
-  // Also show loading while home selection is initializing
-  const isLoadingInitial =
-    (!isReady || loading) &&
-    !pantryError &&
-    pantryItems.length === 0;
-  // isRefreshing comes from usePantryManagement (manual tracking in usePantryQuery)
-  // Get user display name and avatar from auth store (populated at login)
-  const userName =
-    authUser?.name || authUser?.firstName || authUser?.lastName || 'there';
-  const householdName = noHomeSelected
-    ? 'Tap to select a home'
-    : noHomes
-      ? 'No homes yet'
-      : currentHome?.name || 'Your Home';
+  const handleLowStockNavigate = () => navigate('LowStockItems');
+  const handleSelectHome = () => navigate('HomeManagement', {});
+  const stableNavigateTo = {
+    pantryItem: (params: { itemId: string }) => navigateTo.pantryItem(params),
+  };
+
   return (
-    <View style={styles.container} testID="pantry-screen">
-      <PantryContent
-        ref={pantryContentRef}
-        userName={userName}
-        householdName={householdName}
-        avatarUrl={authUser?.profilePicture}
-        notificationCount={unreadCount}
-        stats={stats}
-        items={pantryItems}
-        locationFilter={locationFilter}
-        onLocationFilterChange={handleLocationFilterChange}
-        locationCounts={completeCounts}
-        tabs={combinedTabs}
-        onAddLocation={handleAddLocationPress}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        initialSortOption={pantrySortOption}
-        initialSortDirection={pantrySortDirection}
-        onSortChange={handleSortChange}
-        useServerSort={useServerSort}
+    <PantryModalsProvider
+      pantryId={screen.pantry?.id}
+      pantryItems={screen.pantryItems}
+      removeItem={screen.handleRemoveItem}
+      navigateTo={stableNavigateTo}
+      createLocation={screen.createLocation}
+      creatingLocation={screen.creatingLocation}
+      onScrollToTop={() => pantryContentRef.current?.scrollToTop()}
+    >
+      <PantryMainContent
+        screen={screen}
+        pantryContentRef={pantryContentRef}
+        selectorRef={selectorRef}
+        pantryConfig={pantryConfig}
         onItemPress={handleItemPress}
-        onItemEdit={handleEditItem}
-        onItemDelete={handleDeleteItem}
-        onItemConsume={handleConsumeItem}
-        onItemWaste={handleWasteItem}
-        onItemRestock={handleRestockItem}
         onAvatarPress={handleAvatarPress}
         onNotificationPress={handleNotificationPress}
         onHomePress={handleHomePress}
         onSettingsPress={handleOpenSelector}
         onAnalyticsPress={handleAnalyticsPress}
         onLowStockNavigate={handleLowStockNavigate}
-        totalCount={totalCount}
-        noHomeSelected={noHomeSelected}
-        noHomes={noHomes}
         onSelectHome={handleSelectHome}
+        onOverlayOpen={handleOverlayOpen}
+        onOverlayClose={handleOverlayClose}
+        homeSwitchHint={homeSwitchHint}
+      />
+    </PantryModalsProvider>
+  );
+};
+
+/**
+ * Inner content component that has access to PantryModalsContext.
+ * Separated from PantryMainInner so usePantryModals() works (it must be within the provider).
+ */
+interface PantryMainContentProps {
+  screen: ReturnType<typeof usePantryScreen>;
+  pantryContentRef: React.RefObject<PantryContentRef | null>;
+  selectorRef: React.RefObject<ItemSelectorRef | null>;
+  pantryConfig: ReturnType<typeof usePantrySelectorConfig>;
+  onItemPress: (id: string) => void;
+  onAvatarPress: () => void;
+  onNotificationPress: () => void;
+  onHomePress: () => void;
+  onSettingsPress: () => void;
+  onAnalyticsPress: () => void;
+  onLowStockNavigate: () => void;
+  onSelectHome: () => void;
+  onOverlayOpen: () => void;
+  onOverlayClose: () => void;
+  homeSwitchHint: ReturnType<typeof useFeatureHint>;
+}
+
+function PantryMainContent({
+  screen,
+  pantryContentRef,
+  selectorRef,
+  pantryConfig,
+  onItemPress,
+  onAvatarPress,
+  onNotificationPress,
+  onHomePress,
+  onSettingsPress,
+  onAnalyticsPress,
+  onLowStockNavigate,
+  onSelectHome,
+  onOverlayOpen,
+  onOverlayClose,
+  homeSwitchHint,
+}: PantryMainContentProps) {
+  const {
+    handleConsumeItem,
+    handleWasteItem,
+    handleRestockItem,
+    handleEditItem,
+    handleDeleteItem,
+    setAddSheetVisible,
+    setAddLocationSheetVisible,
+  } = usePantryModals();
+
+  // Register add button action via tab bar
+  useTabBarAddButton(
+    screen.noHomeSelected || screen.noHomes
+      ? undefined
+      : () => {
+          Telemetry.trackEvent('add_pantry_item_clicked');
+          setAddSheetVisible(true);
+        },
+  );
+
+  const handleAddItem = () => {
+    setAddSheetVisible(true);
+  };
+
+  const handleAddLocationPress = () => {
+    setAddLocationSheetVisible(true);
+  };
+
+  return (
+    <View style={styles.container} testID="pantry-screen">
+      <PantryContent
+        ref={pantryContentRef}
+        userName={screen.userName}
+        householdName={screen.householdName}
+        avatarUrl={screen.authUser?.profilePicture}
+        notificationCount={screen.unreadCount}
+        stats={screen.stats}
+        items={screen.pantryItems}
+        locationFilter={screen.locationFilter}
+        onLocationFilterChange={screen.handleLocationFilterChange}
+        locationCounts={screen.completeCounts}
+        tabs={screen.combinedTabs}
+        onAddLocation={handleAddLocationPress}
+        searchQuery={screen.searchQuery}
+        onSearchChange={screen.setSearchQuery}
+        initialSortOption={screen.pantrySortOption}
+        initialSortDirection={screen.pantrySortDirection}
+        onSortChange={screen.handleSortChange}
+        useServerSort={screen.useServerSort}
+        onItemPress={onItemPress}
+        onItemEdit={handleEditItem}
+        onItemDelete={handleDeleteItem}
+        onItemConsume={handleConsumeItem}
+        onItemWaste={handleWasteItem}
+        onItemRestock={handleRestockItem}
+        onAvatarPress={onAvatarPress}
+        onNotificationPress={onNotificationPress}
+        onHomePress={onHomePress}
+        onSettingsPress={onSettingsPress}
+        onAnalyticsPress={onAnalyticsPress}
+        onLowStockNavigate={onLowStockNavigate}
+        totalCount={screen.totalCount}
+        noHomeSelected={screen.noHomeSelected}
+        noHomes={screen.noHomes}
+        onSelectHome={onSelectHome}
         onAddItem={handleAddItem}
-        onRefresh={handleRefresh}
-        onEndReached={loadMore}
-        isLoadingMore={searchActive ? false : isLoadingMore}
-        hasMore={searchActive ? false : hasMore}
-        refreshing={isRefreshing}
-        loading={isLoadingInitial}
-        onSwipeableWillOpen={handleSwipeableWillOpen}
-        onSwipeableClose={handleSwipeableClose}
+        onRefresh={screen.handleRefresh}
+        onEndReached={screen.loadMore}
+        isLoadingMore={screen.searchActive ? false : screen.isLoadingMore}
+        hasMore={screen.searchActive ? false : screen.hasMore}
+        refreshing={screen.isRefreshing}
+        loading={screen.isLoadingInitial}
       />
       <AnimatedItemSelector
         ref={selectorRef}
         config={pantryConfig}
-        onOpen={handleOverlayOpen}
-        onClose={handleOverlayClose}
+        onOpen={onOverlayOpen}
+        onClose={onOverlayClose}
       />
-      {!!consumeModal.visible && (
-        <ConsumePantryItemModal
-          visible={consumeModal.visible}
-          pantryItem={consumeModal.item}
-          onClose={consumeModal.close}
-          onConfirm={handleConfirmConsume}
-        />
-      )}
-      {!!wasteModal.visible && (
-        <RecordWastePantryItemModal
-          visible={wasteModal.visible}
-          pantryItem={wasteModal.item}
-          onClose={wasteModal.close}
-          onConfirm={handleConfirmWaste}
-        />
-      )}
-      {!!restockModal.visible && (
-        <RestockPantryItemModal
-          visible={restockModal.visible}
-          pantryItem={restockModal.item}
-          onClose={restockModal.close}
-          onConfirm={handleConfirmRestock}
-        />
-      )}
-      {/* Add to Pantry Sheet */}
-      {!!addSheetVisible && (
-        <AddToPantrySheet
-          visible={addSheetVisible}
-          pantryId={pantry?.id}
-          onClose={handleAddSheetClose}
-          onItemAdded={handleItemAdded}
-        />
-      )}
-      {/* Add Storage Location Sheet */}
-      {!!addLocationSheetVisible && (
-        <AddStorageLocationSheet
-          visible={addLocationSheetVisible}
-          onClose={() => setAddLocationSheetVisible(false)}
-          onCreateLocation={createLocation}
-          creating={creatingLocation}
-        />
-      )}
       {/* Home switch hint overlay */}
       {!!homeSwitchHint.isVisible && (
         <FeatureHintOverlay
@@ -507,17 +295,15 @@ const PantryMainInner: React.FC = () => {
             title: 'Tap to manage homes',
             subtitle:
               'Click the home icon to switch between homes or manage home settings',
-            icon: {
-              name: 'swap-horizontal-outline',
-              size: 40,
-            },
+            icon: { name: 'swap-horizontal-outline', size: 40 },
             onDismiss: homeSwitchHint.actions.dismiss,
           }}
         />
       )}
     </View>
   );
-};
+}
+
 const SKELETON_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'all', label: 'All' },
   { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline' },

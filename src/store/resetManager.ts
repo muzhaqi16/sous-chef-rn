@@ -156,12 +156,10 @@ export const createResetManager = (
     await resetManager.resetStore('ONBOARDING_RESET');
   },
 
-  tokenRefreshFailed: async (clearCache: boolean = false) => {
-    const resetManager = createResetManager(set, get);
-
-    // If cache clearing is requested (e.g., for actual token expiration),
-    // use a custom reset config that clears the cache
-    if (clearCache) {
+  tokenRefreshFailed: async (reason: 'auth_rejected' | 'network' | 'unknown') => {
+    if (reason === 'auth_rejected') {
+      // Server confirmed invalid refresh token — genuine logout
+      const resetManager = createResetManager(set, get);
       await resetManager.resetStore({
         auth: true,
         ui: false,
@@ -169,8 +167,8 @@ export const createResetManager = (
         clearApolloCache: true,
       });
     } else {
-      // Otherwise, preserve cache for offline usage
-      await resetManager.resetStore('SESSION_EXPIRED');
+      // Network or unknown error — preserve auth state, defer refresh
+      set({ needsTokenRefresh: true } as Partial<RootState>);
     }
   },
 });

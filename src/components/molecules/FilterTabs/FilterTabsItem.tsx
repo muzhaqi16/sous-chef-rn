@@ -53,7 +53,9 @@ function FilterTabsItemComponent<T extends string>({
         isCompact && styles.tabCompact,
       ]}
     >
-      {!!tab.icon && (
+      {tab.iconElement != null ? (
+        tab.iconElement
+      ) : !!tab.icon && (
         isEmoji(tab.icon) ? (
           <Text style={isCompact ? styles.tabIconCompact : styles.tabIcon}>
             {tab.icon}

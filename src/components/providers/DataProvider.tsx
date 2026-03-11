@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useDataPreloading } from '#/hooks/useDataPreloading';
 import { useAllPendingInvites } from '#/hooks/invitations/useAllPendingInvites';
-import { useAuth } from '#/hooks/auth/useAuth';
+import { useAuthUser } from '#/hooks/auth/useAuthUser';
 import { useGetUserProfileQuery } from '#/graphql/generated';
 import { useAppStore } from '#store/useAppStore';
 
@@ -30,7 +30,7 @@ interface DataProviderProps {
  * the main navigation to ensure data is loaded early in the app lifecycle.
  */
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
-  const { user } = useAuth();
+  const user = useAuthUser();
   const isLoggingOut = useAppStore(state => state.isLoggingOut);
   const updateUser = useAppStore(state => state.updateUser);
   const hasName = !!(user?.name || user?.firstName);

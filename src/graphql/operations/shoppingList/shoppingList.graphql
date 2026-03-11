@@ -110,14 +110,9 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
       node {
         id
         name
-        description
         isDefault
         totalItems
         completedItems
-        status
-        isCompleted
-        createdAt
-        updatedAt
         homeId
         home {
           id
@@ -143,55 +138,6 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
       endCursor
     }
     totalCount
-  }
-}
-
-query GetDefaultShoppingList {
-  shoppingLists(filters: { isDefault: true }, first: 1) {
-    edges {
-      node {
-        id
-        name
-        description
-        isDefault
-        totalItems
-        completedItems
-        itemsConnection(first: 50, orderBy: { sortOrder: ASC }) {
-          edges {
-            node {
-              ...ShoppingListItemCore
-              item {
-                id
-                name
-                imageUrl
-              }
-            }
-            cursor
-          }
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
-          totalCount
-        }
-        ownerships {
-          ...ShoppingListOwnershipFragment
-        }
-        collaboratorsConnection(first: 20) {
-          edges {
-            cursor
-            node {
-              ...ShoppingListCollaboratorFragment
-            }
-          }
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
-          totalCount
-        }
-      }
-    }
   }
 }
 
@@ -276,18 +222,9 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
     shoppingList {
       id
       name
-      description
       isDefault
-      isPublic
-      tags
       totalItems
       completedItems
-      estimatedTotal
-      currency
-      status
-      isCompleted
-      priority
-      metadata
       createdAt
       updatedAt
       homeId
@@ -310,17 +247,9 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
     shoppingList {
       id
       name
-      description
       isDefault
-      isPublic
-      tags
       totalItems
       completedItems
-      estimatedTotal
-      currency
-      status
-      isCompleted
-      priority
       createdAt
       updatedAt
       ownerships {
@@ -338,33 +267,6 @@ mutation DeleteShoppingList($id: ID!) {
     shoppingList {
       id
       name
-    }
-  }
-}
-
-mutation SetDefaultShoppingList($id: ID!) {
-  setDefaultShoppingList(id: $id) {
-    success
-    message
-    code
-    shoppingList {
-      id
-      name
-      isDefault
-    }
-  }
-}
-
-mutation ShareShoppingList($id: ID!, $input: ShareShoppingListInput!) {
-  shareShoppingList(id: $id, input: $input) {
-    success
-    message
-    code
-    shoppingList {
-      name
-      id
-      isPublic
-      isDefault
     }
   }
 }
@@ -466,35 +368,6 @@ mutation UpdateShoppingListItemQuantity(
     quantity: $quantity
     unitId: $unitId
     version: $version
-  ) {
-    success
-    message
-    code
-    shoppingListItem {
-      ...ShoppingListItemDisplayFragment
-    }
-  }
-}
-
-mutation UpdateShoppingListItemNotes($id: ID!, $notes: String, $version: Int) {
-  updateShoppingListItem(id: $id, input: { notes: $notes, version: $version }) {
-    success
-    message
-    code
-    shoppingListItem {
-      ...ShoppingListItemDisplayFragment
-    }
-  }
-}
-
-mutation UpdateShoppingListItemPriority(
-  $id: ID!
-  $priority: Int!
-  $version: Int
-) {
-  updateShoppingListItem(
-    id: $id
-    input: { priority: $priority, version: $version }
   ) {
     success
     message
@@ -654,12 +527,6 @@ subscription ShoppingListChanges($listId: ID!) {
       name
       totalItems
       completedItems
-      estimatedTotal
-      status
-      isCompleted
-      completedAt
-      budgetAmount
-      totalCost
     }
     collaborator {
       ...ShoppingListCollaboratorFragment
@@ -685,9 +552,6 @@ subscription MyShoppingListsChanges {
       name
       totalItems
       completedItems
-      estimatedTotal
-      status
-      isCompleted
     }
     mutation
     updatedFields

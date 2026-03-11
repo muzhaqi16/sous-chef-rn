@@ -76,6 +76,7 @@ const mockItemData = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetPantryItemQuery: jest.fn(() => ({
     data: mockItemData,
     loading: false,
@@ -86,7 +87,6 @@ jest.mock('#generated', () => ({
     jest.fn(),
     { loading: false },
   ]),
-  UsagePurpose: { Adjustment: 'ADJUSTMENT' },
 }));
 
 // --- Mutation hooks ---
@@ -99,6 +99,9 @@ jest.mock('#hooks/pantry/mutations/useAdjustPantryItemQuantity', () => ({
 jest.mock('#hooks/pantry/mutations/useCorrectPantryItemWeight', () => ({
   useCorrectPantryItemWeight: () => ({ correctWeight: jest.fn() }),
 }));
+jest.mock('#hooks/pantry/mutations/useConvertExpiredBatchesToWaste', () => ({
+  useConvertExpiredBatchesToWaste: () => ({ convertExpiredBatches: jest.fn(), loading: false }),
+}));
 
 // --- Utils ---
 jest.mock('#utils/imageUtils', () => ({
@@ -110,12 +113,16 @@ jest.mock('#utils/nutritionUtils', () => ({
   parseNutritions: jest.fn(() => []),
   hasNutritionData: jest.fn(() => false),
 }));
-jest.mock('#hooks/pantry/usePantryItemTransformation', () => ({
-  formatPackageBreakdownFull: jest.fn(() => null),
-  formatNetWeightDisplay: jest.fn(() => null),
-  formatQuantityBreakdown: jest.fn(() => null),
-  formatStorageState: jest.fn(() => 'Fridge'),
-}));
+jest.mock('#hooks/pantry/usePantryItemTransformation', () => {
+  const actual = jest.requireActual('#hooks/pantry/usePantryItemTransformation');
+  return {
+    ...actual,
+    formatPackageBreakdownFull: jest.fn(() => null),
+    formatNetWeightDisplay: jest.fn(() => null),
+    formatQuantityBreakdown: jest.fn(() => null),
+    formatStorageState: jest.fn(() => 'Fridge'),
+  };
+});
 jest.mock('#utils/formatQuantity', () => ({
   getUnitDisplayText: jest.fn(unit => unit?.symbol || ''),
 }));
@@ -129,6 +136,7 @@ jest.mock('#/services/recipeApi/SpoonacularService', () => ({
 }));
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
+  useErrorService: () => ({ handleApolloError: jest.fn(() => ({ message: 'Error' })) }),
 }));
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeWithLoadingState: jest.fn(),
@@ -990,8 +998,14 @@ describe('PantryItemDetail – helper functions', () => {
   describe('getDaysInPantry / formatDaysInPantry branches', () => {
     const { useGetPantryItemQuery } = require('#generated');
     const route = { params: { itemId: 'pi1' } };
+    const FIXED_NOW = new Date('2025-06-15T12:00:00Z');
+
+    beforeEach(() => {
+      jest.useFakeTimers({ now: FIXED_NOW });
+    });
 
     afterEach(() => {
+      jest.useRealTimers();
       useGetPantryItemQuery.mockReturnValue({
         data: mockItemData,
         loading: false,
@@ -1004,7 +1018,7 @@ describe('PantryItemDetail – helper functions', () => {
         data: {
           pantryItem: {
             ...mockItemData.pantryItem,
-            createdAt: new Date().toISOString(),
+            createdAt: FIXED_NOW.toISOString(),
           },
         },
         loading: false,
@@ -1015,14 +1029,11 @@ describe('PantryItemDetail – helper functions', () => {
     });
 
     it('shows "1 day" when item was added yesterday', () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(0, 0, 0, 0);
       useGetPantryItemQuery.mockReturnValue({
         data: {
           pantryItem: {
             ...mockItemData.pantryItem,
-            createdAt: yesterday.toISOString(),
+            createdAt: new Date('2025-06-14T12:00:00Z').toISOString(),
           },
         },
         loading: false,
@@ -1048,14 +1059,11 @@ describe('PantryItemDetail – helper functions', () => {
     });
 
     it('shows "N days" for items several days old', () => {
-      const fiveDaysAgo = new Date();
-      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-      fiveDaysAgo.setHours(0, 0, 0, 0);
       useGetPantryItemQuery.mockReturnValue({
         data: {
           pantryItem: {
             ...mockItemData.pantryItem,
-            createdAt: fiveDaysAgo.toISOString(),
+            createdAt: new Date('2025-06-10T12:00:00Z').toISOString(),
           },
         },
         loading: false,
@@ -1675,7 +1683,7 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
     render(<PantryItemDetail route={route} />);
     const header = screen.getByText('Usage History (1)');
     require('@testing-library/react-native').fireEvent.press(header);
-    expect(screen.getByText('COOKING')).toBeTruthy();
+    expect(screen.getByText('Cooking')).toBeTruthy();
   });
 
   it('shows "+N more entries" when more than 5 usage records', () => {

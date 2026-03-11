@@ -27,12 +27,13 @@ import { useFolderActions } from '#/hooks/recipe/useFolderActions';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils/iconUtils';
-import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { RecipeSkeleton } from '#components/base/Skeleton/RecipeSkeleton';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
 const viewOptions = ['saved', 'myRecipes'] as const;
 
@@ -54,7 +55,6 @@ function clearRandomRecipesIfNeeded(
  * Only mounts after isReady is true, so the skeleton paints instantly.
  */
 const RecipeMainInner: React.FC = () => {
-  useScreenTransition('RecipeMain');
   useRenderTime('RecipeMain');
   const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
@@ -85,12 +85,22 @@ const RecipeMainInner: React.FC = () => {
   const hasFetchedRandom = useRef(false);
 
   // Fetch user's saved/favorited recipes from backend
-  const { recipes, loading, refetch } = useSavedRecipes();
+  const { state: { recipes, loading }, actions: { refetch } } = useSavedRecipes();
+
+  // Lifecycle: optimistic restoration, cache persistence, perf tracking
+  useTabScreenLifecycle({
+    screenName: 'RecipeMain',
+    optimisticTypes: ['Recipe', 'SavedRecipe'],
+    telemetryProperties: () => ({
+      recipe_count: recipes.length,
+      view: activeView,
+    }),
+  });
 
   // Fetch user-created recipes
   const {
-    recipes: myRecipes,
-    refetch: myRecipesRefetch,
+    state: { recipes: myRecipes },
+    actions: { refetch: myRecipesRefetch },
   } = useRecipeManagement();
 
   // Fetch random recipes ONLY ONCE when user has no saved recipes
@@ -221,6 +231,9 @@ const RecipeMainInner: React.FC = () => {
                 totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) - 1 } } };
         },
       );
+
+      // Persist optimistic unfavorite state to survive cache-and-network refetches while offline
+      optimisticDataPersistence.save('SavedRecipe', variables.recipeId, 'isFavorited', false);
     } });
 
   // Delete recipe mutation (for user-created recipes)
@@ -334,6 +347,8 @@ const RecipeMainInner: React.FC = () => {
       try {
         await unfavoriteRecipeMutation({
           variables: { recipeId } });
+        // Clear persisted optimistic favorite state on server confirmation
+        optimisticDataPersistence.clear('SavedRecipe', recipeId, 'isFavorited');
       } catch (error) {
         console.error('Failed to remove recipe:', error);
         Alert.alert('Error', 'Failed to remove recipe. Please try again.');

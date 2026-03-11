@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGetShoppingListDetailsQuery, GetShoppingListDetailsQuery } from '#generated';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 // Export the shopping list detail type
@@ -18,7 +18,7 @@ export type ShoppingListDetail = NonNullable<GetShoppingListDetailsQuery['shoppi
  * This hook is consumed by useShoppingListManagement for data orchestration.
  */
 export function useShoppingListItemsQuery(listId: string | null | undefined) {
-  const { isLoggedOut } = useAuth();
+  const isLoggedOut = useIsLoggedOut();
 
   // Explicit validation - only execute query when listId is genuinely valid
   const hasValidListId = !!listId && !isLoggedOut;

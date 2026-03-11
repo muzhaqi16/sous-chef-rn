@@ -54,8 +54,6 @@ query MyRecipes(
     }
     pageInfo {
       hasNextPage
-      hasPreviousPage
-      startCursor
       endCursor
     }
     totalCount
@@ -154,7 +152,7 @@ mutation UpdateRecipe($id: ID!, $input: UpdateRecipeInput!) {
     message
     code
     recipe {
-      ...BasicRecipeFragment
+      ...RecipeFragment
     }
   }
 }
@@ -318,21 +316,6 @@ mutation CreateShoppingListItemFromRecipeIngredient(
   }
 }
 
-mutation AddRecipeToShoppingList(
-  $input: AddRecipeToShoppingListInput!
-) {
-  addRecipeToShoppingList(input: $input) {
-    success
-    message
-    code
-    shoppingList {
-      id
-      totalItems
-      completedItems
-    }
-  }
-}
-
 query MatchRecipeIngredientsToPantry(
   $pantryId: ID!
   $recipeId: ID!
@@ -383,29 +366,6 @@ query CompatibleUnitsForItem($itemId: ID!, $currentUnitId: ID) {
     conversionConfidence
     source
     usageContexts
-  }
-}
-
-query GetRecipeCookingLogs($recipeId: ID!, $first: Int, $after: String) {
-  recipeCookingLogs(recipeId: $recipeId, first: $first, after: $after) {
-    edges {
-      node {
-        id
-        servingsMade
-        notes
-        cookedAt
-        recipe {
-          id
-          name
-        }
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
   }
 }
 

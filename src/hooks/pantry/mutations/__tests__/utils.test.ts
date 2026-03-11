@@ -2,14 +2,6 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
-jest.mock('#generated', () => ({
-  UnitType: {
-    Count: 'COUNT',
-    Weight: 'WEIGHT',
-    Volume: 'VOLUME',
-  },
-}));
-
 import { buildOptimisticUnit, buildDirtyUpdateInput, addToPantryItemsCache } from '../utils';
 import type { UnitSelection, FormDataInput } from '../types';
 

@@ -5,9 +5,21 @@ import { useUpdateShoppingItem } from '../useUpdateShoppingItem';
 
 const mockUpdateItemMutation = jest.fn();
 const mockHandleApolloError = jest.fn(() => ({ message: 'Update error' }));
+const mockReadFragment = jest.fn();
+const mockIdentify = jest.fn((obj: any) => `${obj.__typename}:${obj.id}`);
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useUpdateShoppingListItemMutation: () => [mockUpdateItemMutation],
+}));
+
+jest.mock('@apollo/client/react', () => ({
+  useApolloClient: () => ({
+    cache: {
+      readFragment: mockReadFragment,
+      identify: mockIdentify,
+    },
+  }),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -61,11 +73,15 @@ function createItem(overrides: Record<string, unknown> = {}) {
 
 describe('useUpdateShoppingItem', () => {
   const mockRefetch = jest.fn().mockResolvedValue(undefined);
-  const items = [createItem()];
+  const defaultItem = createItem();
+
+  beforeEach(() => {
+    mockReadFragment.mockReturnValue(defaultItem);
+  });
 
   it('returns updateItem function', () => {
     const { result } = renderHook(() =>
-      useUpdateShoppingItem({ listId: 'list-1', items, refetch: mockRefetch }),
+      useUpdateShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
     expect(typeof result.current.updateItem).toBe('function');
@@ -73,7 +89,7 @@ describe('useUpdateShoppingItem', () => {
 
   it('returns false when listId is null', async () => {
     const { result } = renderHook(() =>
-      useUpdateShoppingItem({ listId: null, items, refetch: mockRefetch }),
+      useUpdateShoppingItem({ listId: null, refetch: mockRefetch }),
     );
 
     let updateResult: any;
@@ -85,9 +101,11 @@ describe('useUpdateShoppingItem', () => {
     expect(mockUpdateItemMutation).not.toHaveBeenCalled();
   });
 
-  it('returns false when item not found in items array', async () => {
+  it('returns false when item not found in cache', async () => {
+    mockReadFragment.mockReturnValue(null);
+
     const { result } = renderHook(() =>
-      useUpdateShoppingItem({ listId: 'list-1', items, refetch: mockRefetch }),
+      useUpdateShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
     let updateResult: any;
@@ -107,7 +125,7 @@ describe('useUpdateShoppingItem', () => {
     });
 
     const { result } = renderHook(() =>
-      useUpdateShoppingItem({ listId: 'list-1', items, refetch: mockRefetch }),
+      useUpdateShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
     await act(async () => {
@@ -132,7 +150,7 @@ describe('useUpdateShoppingItem', () => {
     });
 
     const { result } = renderHook(() =>
-      useUpdateShoppingItem({ listId: 'list-1', items, refetch: mockRefetch }),
+      useUpdateShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
     let updateResult: any;
@@ -149,7 +167,7 @@ describe('useUpdateShoppingItem', () => {
     });
 
     const { result } = renderHook(() =>
-      useUpdateShoppingItem({ listId: 'list-1', items, refetch: mockRefetch }),
+      useUpdateShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
     let updateResult: any;
@@ -168,7 +186,7 @@ describe('useUpdateShoppingItem', () => {
     });
 
     const { result } = renderHook(() =>
-      useUpdateShoppingItem({ listId: 'list-1', items, refetch: mockRefetch }),
+      useUpdateShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
     await act(async () => {
@@ -193,7 +211,7 @@ describe('useUpdateShoppingItem', () => {
     });
 
     const { result } = renderHook(() =>
-      useUpdateShoppingItem({ listId: 'list-1', items, refetch: mockRefetch }),
+      useUpdateShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
     );
 
     await act(async () => {

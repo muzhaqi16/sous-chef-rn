@@ -23,26 +23,19 @@
  * ```
  */
 
-import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useAddShoppingItem } from './useAddShoppingItem';
 import { useUpdateShoppingItem } from './useUpdateShoppingItem';
 import { useRemoveShoppingItem } from './useRemoveShoppingItem';
 import { useToggleShoppingItem } from './useToggleShoppingItem';
 
-// Types are available from './types' directly
-// import type { ShoppingListItemInput, ShoppingListItemUpdate } from '#hooks/shoppingList/mutations/types';
-// isNetworkError is available from './utils' directly
-// import { isNetworkError } from '#hooks/shoppingList/mutations/utils';
-
 export function useShoppingListItemMutations(
   listId: string | null | undefined,
-  items: ShoppingListItemDisplayFragment[],
   refetch: () => Promise<any>,
 ) {
   const { addItem } = useAddShoppingItem({ listId, refetch });
-  const { updateItem } = useUpdateShoppingItem({ listId, items, refetch });
-  const { removeItem } = useRemoveShoppingItem({ listId, items, refetch });
-  const { toggleItem } = useToggleShoppingItem({ listId, items, refetch });
+  const { updateItem } = useUpdateShoppingItem({ listId, refetch });
+  const { removeItem } = useRemoveShoppingItem({ listId, refetch });
+  const { toggleItem } = useToggleShoppingItem({ listId, refetch });
 
   return {
     addItem,

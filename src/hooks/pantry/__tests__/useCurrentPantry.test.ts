@@ -6,6 +6,7 @@ const mockHomesQueryResult = {
 };
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetHomesQuery: jest.fn(() => mockHomesQueryResult),
 }));
 

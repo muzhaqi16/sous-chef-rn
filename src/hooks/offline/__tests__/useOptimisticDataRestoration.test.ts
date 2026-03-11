@@ -22,8 +22,8 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
     getAllForType: (...args: any[]) => (mockGetAllForType as any)(...args),
   },
 }));
-jest.mock('#/hooks/auth/useAuth', () => ({
-  useAuth: () => ({ user: { id: 'user-1' } }),
+jest.mock('#/hooks/auth/useAuthUser', () => ({
+  useAuthUser: () => ({ id: 'user-1' }),
 }));
 
 // Mock startTransition to execute synchronously

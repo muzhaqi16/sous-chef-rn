@@ -60,7 +60,12 @@ mutation UpdateHome($id: ID!, $input: UpdateHomeInput!) {
     message
     code
     home {
-      ...HomeDisplay
+      id
+      name
+      allowJoinCode
+      joinCode
+      version
+      updatedAt
     }
   }
 }

@@ -18,6 +18,7 @@ jest.mock('zustand/shallow', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetCommonUnitsLazyQuery: jest.fn(() => [
     mockFetchCommonUnits,
     { data: null },

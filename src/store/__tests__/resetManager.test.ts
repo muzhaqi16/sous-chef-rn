@@ -212,8 +212,8 @@ describe('resetManager', () => {
         expect(mockSet).toHaveBeenCalled();
       });
 
-      it('tokenRefreshFailed with clearCache=true resets auth with clearApolloCache', async () => {
-        await resetManager.tokenRefreshFailed(true);
+      it('tokenRefreshFailed with auth_rejected resets auth with clearApolloCache', async () => {
+        await resetManager.tokenRefreshFailed('auth_rejected');
         // Should reset auth state
         const authCall = mockSet.mock.calls.find(
           (call: any[]) => call[0]?.user === null && call[0]?.accessToken === null,
@@ -225,15 +225,32 @@ describe('resetManager', () => {
         );
       });
 
-      it('tokenRefreshFailed with clearCache=false uses SESSION_EXPIRED', async () => {
-        await resetManager.tokenRefreshFailed(false);
-        // Should still call set (auth reset from SESSION_EXPIRED)
-        expect(mockSet).toHaveBeenCalled();
+      it('tokenRefreshFailed with network does NOT clear auth, sets needsTokenRefresh', async () => {
+        await resetManager.tokenRefreshFailed('network');
+        // Should NOT reset auth state
+        const authCall = mockSet.mock.calls.find(
+          (call: any[]) => call[0]?.user === null && call[0]?.accessToken === null,
+        );
+        expect(authCall).toBeUndefined();
+        // Should set needsTokenRefresh flag
+        const flagCall = mockSet.mock.calls.find(
+          (call: any[]) => call[0]?.needsTokenRefresh === true,
+        );
+        expect(flagCall).toBeDefined();
       });
 
-      it('tokenRefreshFailed defaults to not clearing cache', async () => {
-        await resetManager.tokenRefreshFailed();
-        expect(mockSet).toHaveBeenCalled();
+      it('tokenRefreshFailed with unknown does NOT clear auth, sets needsTokenRefresh', async () => {
+        await resetManager.tokenRefreshFailed('unknown');
+        // Should NOT reset auth state
+        const authCall = mockSet.mock.calls.find(
+          (call: any[]) => call[0]?.user === null && call[0]?.accessToken === null,
+        );
+        expect(authCall).toBeUndefined();
+        // Should set needsTokenRefresh flag
+        const flagCall = mockSet.mock.calls.find(
+          (call: any[]) => call[0]?.needsTokenRefresh === true,
+        );
+        expect(flagCall).toBeDefined();
       });
     });
   });

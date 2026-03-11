@@ -56,10 +56,6 @@ jest.mock('#/storage/mmkv', () => ({
   },
 }));
 
-jest.mock('#generated', () => ({
-  ImageUploadPurpose: { ProfileAvatar: 'PROFILE_AVATAR' },
-}));
-
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));

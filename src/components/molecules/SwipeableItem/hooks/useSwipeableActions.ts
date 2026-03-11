@@ -7,7 +7,7 @@ interface UseSwipeableActionsProps {
   itemId?: string;
   onEdit?: () => void;
   onDelete?: () => void;
-  enableSwipeToDelete?: boolean;
+
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
 }
@@ -21,10 +21,16 @@ export const useSwipeableActions = ({
 }: UseSwipeableActionsProps) => {
   const swipeableRef = useRef<ComponentRef<typeof Swipeable>>(null);
 
-  // Synchronous reset on cell recycling — fires during render (before paint)
-  useRecyclingState(undefined, [itemId], () => {
-    swipeableRef.current?.close();
-  });
+  // useRecyclingState resets hasSwipeStarted to `false` via internal ref write
+  // on cell recycling (no setState during render). The onReset callback closes
+  // any open swipeable synchronously before paint.
+  const [hasSwipeStarted, setHasSwipeStarted] = useRecyclingState(
+    false,
+    [itemId],
+    () => {
+      swipeableRef.current?.close();
+    },
+  );
 
   const handleActionPress = (action: 'edit' | 'delete') => {
     swipeableRef.current?.close();
@@ -45,6 +51,11 @@ export const useSwipeableActions = ({
   const handleSwipeableClose = () => {
     // Notify parent that this swipeable has closed
     onSwipeableClose?.();
+    setHasSwipeStarted(false);
+  };
+
+  const handleSwipeOpenStartDrag = () => {
+    setHasSwipeStarted(true);
   };
 
   return {
@@ -52,5 +63,7 @@ export const useSwipeableActions = ({
     handleActionPress,
     handleSwipeableWillOpen,
     handleSwipeableClose,
+    hasSwipeStarted,
+    handleSwipeOpenStartDrag,
   };
 };

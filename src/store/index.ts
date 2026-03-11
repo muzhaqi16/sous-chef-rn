@@ -73,7 +73,7 @@ interface ResetManagerState {
   fullReset: () => Promise<void>;
   sessionExpired: () => Promise<void>;
   resetOnboarding: () => Promise<void>;
-  tokenRefreshFailed: (clearCache?: boolean) => Promise<void>;
+  tokenRefreshFailed: (reason: 'auth_rejected' | 'network' | 'unknown') => Promise<void>;
 }
 
 // Add navigation state machine interface
@@ -195,7 +195,6 @@ export const useStore = create<RootState>()(
           // Filter out non-persisted state slices here
           // Split state into persistent and transient parts
 
-          /* eslint-disable @typescript-eslint/no-unused-vars */
           const {
             // ========== TRANSIENT STATE (do not persist) ==========
 
@@ -205,6 +204,7 @@ export const useStore = create<RootState>()(
             networkType,
             lastOnlineTime,
             lastOfflineTime,
+            needsTokenRefresh,
 
             // UI state (temporary, session-only)
             bottomSheetVisible,
@@ -238,6 +238,10 @@ export const useStore = create<RootState>()(
             // Passwords (must not persist to MMKV — keychain only)
             registrationPassword,
             postLoginCredentials,
+
+            // Auth service transient loading state
+            authIsLoading,
+            authIsLoadingCredentials,
 
             ...persistedState
           } = state;

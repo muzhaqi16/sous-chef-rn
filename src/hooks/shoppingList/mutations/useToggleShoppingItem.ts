@@ -8,7 +8,11 @@
  */
 
 import { Alert } from 'react-native';
-import { useToggleShoppingListItemPurchasedMutation } from '#generated';
+import { useApolloClient } from '@apollo/client/react';
+import {
+  useToggleShoppingListItemPurchasedMutation,
+  ShoppingListItemDisplayFragmentDoc,
+} from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
@@ -20,7 +24,6 @@ import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
-  items: ShoppingListItemDisplayFragment[];
   refetch: () => Promise<any>;
 }
 
@@ -39,14 +42,19 @@ interface UseToggleShoppingItemOptions {
  * await toggleItem('item-123');
  * ```
  */
-export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShoppingItemOptions) {
+export function useToggleShoppingItem({ listId, refetch }: UseToggleShoppingItemOptions) {
   const { handleApolloError } = useErrorService();
+  const client = useApolloClient();
 
   const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
     errorPolicy: 'all',
     // Optimistic response ensures update() runs immediately (not after network response)
     optimisticResponse: (variables, { IGNORE }) => {
-      const item = items?.find(i => i.id === variables.input.id);
+      const item = client.cache.readFragment<ShoppingListItemDisplayFragment>({
+        id: client.cache.identify({ __typename: 'ShoppingListItem', id: variables.input.id }),
+        fragment: ShoppingListItemDisplayFragmentDoc,
+        fragmentName: 'ShoppingListItemDisplayFragment',
+      });
       if (!item) return IGNORE;
       return {
         __typename: 'Mutation',
@@ -124,11 +132,14 @@ export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShopp
       refetch();
     } });
 
-  // Simplified toggleItem - uses items ref instead of cache read
   const toggleItem = async (itemId: string) => {
       if (!listId) return false;
 
-      const item = items?.find(i => i.id === itemId);
+      const item = client.cache.readFragment<ShoppingListItemDisplayFragment>({
+        id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+        fragment: ShoppingListItemDisplayFragmentDoc,
+        fragmentName: 'ShoppingListItemDisplayFragment',
+      });
       if (!item) return false;
 
       const newStatus = !item.purchaseInfo?.isPurchased;

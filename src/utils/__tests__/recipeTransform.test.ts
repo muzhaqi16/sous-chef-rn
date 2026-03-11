@@ -16,11 +16,15 @@ describe('transformRecipeForDisplay', () => {
     };
 
     it('returns the correct id format', () => {
-      expect(transformRecipeForDisplay(ingredientRecipe).id).toBe('spoonacular-42');
+      expect(transformRecipeForDisplay(ingredientRecipe).id).toBe(
+        'spoonacular-42',
+      );
     });
 
     it('preserves title', () => {
-      expect(transformRecipeForDisplay(ingredientRecipe).title).toBe('Pasta Primavera');
+      expect(transformRecipeForDisplay(ingredientRecipe).title).toBe(
+        'Pasta Primavera',
+      );
     });
 
     it('shows ingredient count subtitle', () => {
@@ -35,12 +39,14 @@ describe('transformRecipeForDisplay', () => {
     });
 
     it('omits badge when likes is 0', () => {
-      const result = transformRecipeForDisplay({ ...ingredientRecipe, likes: 0 });
+      const result = transformRecipeForDisplay({
+        ...ingredientRecipe,
+        likes: 0,
+      });
       expect(result.badge).toBeUndefined();
     });
 
     it('omits badge when likes is missing', () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { likes, ...noLikes } = ingredientRecipe;
       const result = transformRecipeForDisplay(noLikes as any);
       expect(result.badge).toBeUndefined();
@@ -53,7 +59,9 @@ describe('transformRecipeForDisplay', () => {
     });
 
     it('preserves spoonacularId', () => {
-      expect(transformRecipeForDisplay(ingredientRecipe).spoonacularId).toBe(42);
+      expect(transformRecipeForDisplay(ingredientRecipe).spoonacularId).toBe(
+        42,
+      );
     });
   });
 
@@ -75,15 +83,17 @@ describe('transformRecipeForDisplay', () => {
     });
 
     it('shows only time when servings is missing', () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { servings, ...noServings } = textRecipe;
-      expect(transformRecipeForDisplay(noServings as any).subtitle).toBe('⏱ 30 min');
+      expect(transformRecipeForDisplay(noServings as any).subtitle).toBe(
+        '⏱ 30 min',
+      );
     });
 
     it('shows only servings when time is missing', () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { readyInMinutes, ...noTime } = textRecipe;
-      expect(transformRecipeForDisplay(noTime as any).subtitle).toBe('4 servings');
+      expect(transformRecipeForDisplay(noTime as any).subtitle).toBe(
+        '4 servings',
+      );
     });
 
     it('includes aggregateLikes badge', () => {
@@ -92,7 +102,10 @@ describe('transformRecipeForDisplay', () => {
     });
 
     it('omits badge when aggregateLikes is 0', () => {
-      const result = transformRecipeForDisplay({ ...textRecipe, aggregateLikes: 0 });
+      const result = transformRecipeForDisplay({
+        ...textRecipe,
+        aggregateLikes: 0,
+      });
       expect(result.badge).toBeUndefined();
     });
   });

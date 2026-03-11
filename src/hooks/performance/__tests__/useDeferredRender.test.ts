@@ -14,8 +14,8 @@ describe('useDeferredRender', () => {
     expect(result.current).toBe(true);
   });
 
-  it('ignores the delay parameter and still returns true', () => {
-    const { result } = renderHook(() => useDeferredRender(5000));
+  it('returns true with no parameters', () => {
+    const { result } = renderHook(() => useDeferredRender());
 
     expect(result.current).toBe(true);
   });

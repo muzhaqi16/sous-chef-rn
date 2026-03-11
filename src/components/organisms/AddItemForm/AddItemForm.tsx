@@ -132,7 +132,7 @@ const getFormSections = (
         component: 'unitAutocomplete',
         props: {
           componentType: 'autocomplete',
-          onUnitSelected: (_unitId: string | null) => {},
+          onUnitSelected: () => {},
         },
       },
     ],

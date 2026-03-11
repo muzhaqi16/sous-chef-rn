@@ -9,7 +9,6 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
-import { enableScreens } from 'react-native-screens';
 import { useAppStore, selectHydrated } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { client } from '#/apollo/client';
@@ -26,6 +25,11 @@ import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#hooks/useNetworkStatus';
 import { useTheme } from '#hooks/useTheme';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
+import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
+import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { toastService } from '#/services/toastService';
+import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { NotificationProvider } from '#/components/notifications/NotificationProvider';
 import { DataProvider } from '#/components/providers/DataProvider';
 import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
@@ -42,8 +46,41 @@ import { setupGlobalErrorHandler } from '#/utils/globalErrorHandler';
 // Install global JS exception and promise rejection handlers before any component renders
 setupGlobalErrorHandler();
 
-// Enable native screens for better performance
-enableScreens();
+/**
+ * Module-level handler for permanently failed queued mutations.
+ * Evicts stale optimistic data from cache, clears persistence, shows toast, and removes from queue.
+ * Defined at module scope (not inside a hook) so try-catch is safe — React Compiler doesn't apply.
+ */
+function handleFailedMutation(info: FailedMutationInfo): void {
+  const { mutationId, entityType, entityId } = info;
+
+  try {
+    // 1. Evict stale optimistic entity from Apollo cache
+    if (entityType && entityId) {
+      const cacheId = client.cache.identify({ __typename: entityType, id: entityId });
+      if (cacheId) {
+        client.cache.evict({ id: cacheId });
+        client.cache.gc();
+      }
+    }
+
+    // 2. Clear persisted optimistic fields for this entity
+    if (entityType && entityId) {
+      optimisticDataPersistence.clearEntity(entityType, entityId);
+    }
+
+    // 3. Notify user via toast
+    toastService.error("Couldn't sync changes. Pull to refresh.");
+
+    // 4. Remove permanently failed mutation from queue
+    queueStore.removeMutation(mutationId);
+  } catch (error) {
+    console.error('Failed to handle mutation failure cleanup:', error);
+  }
+}
+
+// Register the failure handler on the singleton queue manager
+queueManager.setFailureHandler(handleFailedMutation);
 
 
 /** Module-level helper: Detox launch argument injection (DEV-only) */
@@ -92,9 +129,26 @@ const App = () => {
   useNetworkStatus();
 
   // Handle network status changes - trigger queue processing when online
+  // When coming back online, attempt deferred token refresh before replaying queued mutations
   useEffect(() => {
     if (isOnline) {
-      queueManager.onOnline();
+      const state = useStore.getState();
+      if (state.needsTokenRefresh && state.refreshToken) {
+        proactiveTokenRefresh()
+          .then(newToken => {
+            if (newToken) {
+              useStore.getState().setNeedsTokenRefresh(false);
+            }
+            // Process queue regardless — if refresh failed, queue will handle it
+            queueManager.onOnline();
+          })
+          .catch(() => {
+            // needsTokenRefresh stays true for next online transition
+            queueManager.onOnline();
+          });
+      } else {
+        queueManager.onOnline();
+      }
     } else {
       queueManager.onOffline();
     }

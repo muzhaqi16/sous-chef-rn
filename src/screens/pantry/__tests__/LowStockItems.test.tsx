@@ -33,16 +33,21 @@ let mockLoading = false;
 
 jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
   usePantryManagement: () => ({
-    items: mockAllItems,
-    loading: mockLoading,
-    refetch: jest.fn(() => Promise.resolve()),
-    loadMore: jest.fn(),
-    hasMore: false,
-    isLoadingMore: false,
+    state: {
+      items: mockAllItems,
+      loading: mockLoading,
+      hasMore: false,
+      isLoadingMore: false,
+    },
+    actions: {
+      refetch: jest.fn(() => Promise.resolve()),
+      loadMore: jest.fn(),
+    },
   }),
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useAddItemToShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
 }));
 

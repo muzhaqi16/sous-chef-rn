@@ -19,7 +19,16 @@ interface OverlayBackdropContextType {
   hideBackdrop: () => void;
 }
 
+// Internal context for GlobalBackdrop — separated so public consumers
+// (useOverlayBackdrop) don't re-render when isVisible changes.
+interface OverlayBackdropInternalContextType {
+  opacity: SharedValue<number>;
+  isVisible: boolean;
+  onPressCallbackRef: React.RefObject<(() => void) | null>;
+}
+
 const OverlayBackdropContext = createContext<OverlayBackdropContextType | null>(null);
+const OverlayBackdropInternalContext = createContext<OverlayBackdropInternalContextType | null>(null);
 
 export const useOverlayBackdrop = (): OverlayBackdropContextType => {
   const context = useContext(OverlayBackdropContext);
@@ -35,7 +44,9 @@ interface OverlayBackdropProviderProps {
 
 /**
  * Context provider for the global overlay backdrop.
- * This only provides the context - the actual backdrop is rendered by GlobalBackdrop.
+ * Split into public (callbacks) and internal (animation state) contexts
+ * so consumers using only showBackdrop/hideBackdrop don't re-render
+ * when backdrop visibility changes.
  */
 export const OverlayBackdropProvider: React.FC<OverlayBackdropProviderProps> = ({
   children }) => {
@@ -67,30 +78,25 @@ export const OverlayBackdropProvider: React.FC<OverlayBackdropProviderProps> = (
     }
   };
 
-  const contextValue = ({
-      showBackdrop,
-      hideBackdrop,
-      // Internal: expose state for GlobalBackdrop component
-      _internal: {
-        opacity,
-        isVisible,
-        onPressCallbackRef } });
+  const publicValue: OverlayBackdropContextType = {
+    showBackdrop,
+    hideBackdrop,
+  };
+
+  const internalValue: OverlayBackdropInternalContextType = {
+    opacity,
+    isVisible,
+    onPressCallbackRef,
+  };
 
   return (
-    <OverlayBackdropContext.Provider value={contextValue as OverlayBackdropContextType}>
-      {children}
+    <OverlayBackdropContext.Provider value={publicValue}>
+      <OverlayBackdropInternalContext.Provider value={internalValue}>
+        {children}
+      </OverlayBackdropInternalContext.Provider>
     </OverlayBackdropContext.Provider>
   );
 };
-
-// Internal context type with private state
-interface OverlayBackdropInternalContextType extends OverlayBackdropContextType {
-  _internal: {
-    opacity: SharedValue<number>;
-    isVisible: boolean;
-    onPressCallbackRef: React.RefObject<(() => void) | null>;
-  };
-}
 
 /**
  * Global backdrop component that should be rendered inside BottomSheetModalProvider.
@@ -98,12 +104,12 @@ interface OverlayBackdropInternalContextType extends OverlayBackdropContextType 
  * ensuring modals render on top of the backdrop.
  */
 export const GlobalBackdrop: React.FC = () => {
-  const context = useContext(OverlayBackdropContext) as OverlayBackdropInternalContextType | null;
+  const internal = useContext(OverlayBackdropInternalContext);
 
   // Get values from context (may be undefined if no provider)
-  const opacity = context?._internal?.opacity;
-  const isVisible = context?._internal?.isVisible ?? false;
-  const onPressCallbackRef = context?._internal?.onPressCallbackRef;
+  const opacity = internal?.opacity;
+  const isVisible = internal?.isVisible ?? false;
+  const onPressCallbackRef = internal?.onPressCallbackRef;
 
   const handlePress = () => {
     onPressCallbackRef?.current?.();
@@ -113,7 +119,7 @@ export const GlobalBackdrop: React.FC = () => {
     opacity: opacity?.value ?? 0 }));
 
   // If used outside provider, render nothing
-  if (!context) {
+  if (!internal) {
     return null;
   }
 

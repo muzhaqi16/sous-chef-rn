@@ -4,28 +4,36 @@ import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigati
 import type { OnboardingStep } from '#components/navigation/OnboardingSteps/types';
 import type { SharedValue } from 'react-native-reanimated';
 
-interface OnboardingContextType {
-  // Step management
-  steps: OnboardingStep[];
-  activeStepIndex: SharedValue<number>;
-  currentStep: OnboardingStep | null;
+/**
+ * Split into Actions + State contexts (TabBarActionsContext pattern).
+ * Consumers that only need callbacks (goToNextStep, etc.) subscribe to
+ * OnboardingActionsContext and won't re-render when step index changes.
+ */
 
-  // Navigation methods
+interface OnboardingActionsContextType {
   goToNextStep: () => void;
   goToPreviousStep: () => void;
   goToStep: (stepIndex: number) => void;
   skipToStep: (stepName: string) => void;
-  canGoBack: boolean;
-  canGoNext: boolean;
-  isFirstStep: boolean;
-  isLastStep: boolean;
-
-  // Step utilities
   getStepByIndex: (index: number) => OnboardingStep | null;
   getStepProgress: () => number;
 }
 
-const OnboardingContext = createContext<OnboardingContextType | null>(null);
+interface OnboardingStateContextType {
+  steps: OnboardingStep[];
+  activeStepIndex: SharedValue<number>;
+  currentStep: OnboardingStep | null;
+  canGoBack: boolean;
+  canGoNext: boolean;
+  isFirstStep: boolean;
+  isLastStep: boolean;
+}
+
+// Combined type for backwards compatibility
+type OnboardingContextType = OnboardingActionsContextType & OnboardingStateContextType;
+
+const OnboardingActionsContext = createContext<OnboardingActionsContextType | null>(null);
+const OnboardingStateContext = createContext<OnboardingStateContextType | null>(null);
 
 interface OnboardingProviderProps {
   children: React.ReactNode;
@@ -135,39 +143,72 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
     return Math.round(((currentIndex + 1) / ONBOARDING_STEPS.length) * 100);
   };
 
-  const contextValue: OnboardingContextType = {
-    steps: ONBOARDING_STEPS,
-    activeStepIndex,
-    currentStep,
+  const actionsValue: OnboardingActionsContextType = {
     goToNextStep,
     goToPreviousStep,
     goToStep,
     skipToStep,
-    canGoBack,
-    canGoNext,
-    isFirstStep,
-    isLastStep,
     getStepByIndex,
     getStepProgress,
   };
 
+  const stateValue: OnboardingStateContextType = {
+    steps: ONBOARDING_STEPS,
+    activeStepIndex,
+    currentStep,
+    canGoBack,
+    canGoNext,
+    isFirstStep,
+    isLastStep,
+  };
+
   return (
-    <OnboardingContext.Provider value={contextValue}>
-      {children}
-    </OnboardingContext.Provider>
+    <OnboardingActionsContext.Provider value={actionsValue}>
+      <OnboardingStateContext.Provider value={stateValue}>
+        {children}
+      </OnboardingStateContext.Provider>
+    </OnboardingActionsContext.Provider>
   );
 };
 
-export const useOnboardingContext = (): OnboardingContextType => {
-  const context = useContext(OnboardingContext);
+/**
+ * Hook to access only onboarding action callbacks.
+ * Consumers won't re-render when step state changes.
+ */
+export const useOnboardingActions = (): OnboardingActionsContextType => {
+  const context = useContext(OnboardingActionsContext);
   if (!context) {
-    throw new Error('useOnboardingContext must be used within an OnboardingProvider');
+    throw new Error('useOnboardingActions must be used within an OnboardingProvider');
   }
   return context;
 };
 
+/**
+ * Hook to access onboarding step state (currentStep, canGoBack, etc.).
+ * Re-renders when step state changes.
+ */
+export const useOnboardingState = (): OnboardingStateContextType => {
+  const context = useContext(OnboardingStateContext);
+  if (!context) {
+    throw new Error('useOnboardingState must be used within an OnboardingProvider');
+  }
+  return context;
+};
+
+/**
+ * Combined hook — backwards compatible.
+ * Prefer useOnboardingActions or useOnboardingState for better performance.
+ */
+export const useOnboardingContext = (): OnboardingContextType => {
+  const actions = useOnboardingActions();
+  const state = useOnboardingState();
+  return { ...actions, ...state };
+};
+
 // Safe version that returns null instead of throwing
 export const useOnboardingContextSafe = (): OnboardingContextType | null => {
-  const context = useContext(OnboardingContext);
-  return context;
+  const actions = useContext(OnboardingActionsContext);
+  const state = useContext(OnboardingStateContext);
+  if (!actions || !state) return null;
+  return { ...actions, ...state };
 };

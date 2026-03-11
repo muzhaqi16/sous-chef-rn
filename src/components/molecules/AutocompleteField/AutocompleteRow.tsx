@@ -5,6 +5,7 @@ import { CachedImage } from '#components/atoms/CachedImage';
 
 interface AutocompleteRowProps {
   icon?: string;
+  iconElement?: React.ReactNode;
   image?: string | null;
   symbolText?: string;
   title: string;
@@ -14,9 +15,9 @@ interface AutocompleteRowProps {
   highlighted?: boolean;
 }
 
-
 export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
   icon,
+  iconElement,
   image,
   symbolText,
   title,
@@ -26,7 +27,11 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
   highlighted,
 }) => (
   <View style={[styles.row, highlighted && styles.highlighted]}>
-    {icon != null && <Text style={styles.icon}>{icon}</Text>}
+    {iconElement != null ? (
+      <View style={styles.iconContainer}>{iconElement}</View>
+    ) : icon != null ? (
+      <Text style={styles.icon}>{icon}</Text>
+    ) : null}
     {image !== undefined &&
       (image ? (
         <CachedImage
@@ -69,6 +74,11 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.xl,
     width: 32,
     textAlign: 'center',
+  },
+  iconContainer: {
+    width: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   image: {
     width: 44,

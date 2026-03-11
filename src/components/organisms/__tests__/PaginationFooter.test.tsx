@@ -8,7 +8,6 @@ describe('PaginationFooter', () => {
       <PaginationFooter
         isLoadingMore={true}
         hasMore={true}
-        loading={false}
         itemCount={10}
       />,
     );
@@ -20,7 +19,6 @@ describe('PaginationFooter', () => {
       <PaginationFooter
         isLoadingMore={true}
         hasMore={true}
-        loading={false}
         itemCount={10}
         loadingText="Fetching recipes..."
       />,
@@ -28,12 +26,11 @@ describe('PaginationFooter', () => {
     expect(screen.getByText('Fetching recipes...')).toBeTruthy();
   });
 
-  it('shows hint text when hasMore is true and not loading', () => {
+  it('shows hint text when hasMore is true and not loading more', () => {
     render(
       <PaginationFooter
         isLoadingMore={false}
         hasMore={true}
-        loading={false}
         itemCount={10}
       />,
     );
@@ -45,7 +42,6 @@ describe('PaginationFooter', () => {
       <PaginationFooter
         isLoadingMore={false}
         hasMore={true}
-        loading={false}
         itemCount={10}
         hintText="Pull to load more"
       />,
@@ -58,31 +54,17 @@ describe('PaginationFooter', () => {
       <PaginationFooter
         isLoadingMore={false}
         hasMore={false}
-        loading={false}
         itemCount={10}
       />,
     );
     expect(toJSON()).toBeNull();
   });
 
-  it('renders nothing during initial loading', () => {
+  it('renders nothing when hasMore but no items yet', () => {
     const { toJSON } = render(
       <PaginationFooter
         isLoadingMore={false}
         hasMore={true}
-        loading={true}
-        itemCount={0}
-      />,
-    );
-    expect(toJSON()).toBeNull();
-  });
-
-  it('renders nothing when hasMore but no items', () => {
-    const { toJSON } = render(
-      <PaginationFooter
-        isLoadingMore={false}
-        hasMore={true}
-        loading={false}
         itemCount={0}
       />,
     );

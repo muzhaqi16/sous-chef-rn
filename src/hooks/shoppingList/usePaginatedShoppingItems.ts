@@ -4,11 +4,12 @@ import {
   ShoppingListItemDisplayFragment,
   GetShoppingListItemsFilteredQuery,
 } from '#generated';
-import { useAuth } from '#hooks/auth/useAuth';
+import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { PAGINATION } from '#/constants/shoppingList';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { usePagination } from '#hooks/utils/usePagination';
 import { executeRefetch } from '#/utils/compilerSafeWrappers';
+import type { HookReturn } from '#hooks/types';
 
 interface UsePaginatedShoppingItemsOptions {
   listId: string | null | undefined;
@@ -24,14 +25,19 @@ interface ConnectionData {
   loadMoreError: boolean;
 }
 
-interface UsePaginatedShoppingItemsResult {
+interface PaginatedShoppingItemsState {
   unpurchased: ConnectionData;
   purchased: ConnectionData;
   loading: boolean;
   error: Error | undefined;
-  refetch: () => Promise<void>;
   isTransitioning: boolean;
 }
+
+interface PaginatedShoppingItemsActions {
+  refetch: () => Promise<void>;
+}
+
+type UsePaginatedShoppingItemsResult = HookReturn<PaginatedShoppingItemsState, PaginatedShoppingItemsActions>;
 
 // --- Helpers (module-level for stability) ---
 
@@ -42,6 +48,10 @@ type ItemEdge = NonNullable<
 const EMPTY_EDGES: readonly ItemEdge[] = [];
 const EMPTY_ITEMS: ShoppingListItemDisplayFragment[] = [];
 
+// DEV-only: track edge reference changes across renders
+let _prevUnpurchasedEdgesRef: unknown = null;
+let _prevPurchasedEdgesRef: unknown = null;
+
 /**
  * Extract items from connection edges in cache insertion order.
  * Filters out incomplete nodes (missing id/itemName) to guard against
@@ -51,14 +61,37 @@ const EMPTY_ITEMS: ShoppingListItemDisplayFragment[] = [];
  * the cache merge appends pages in order, and drag-reorder re-sorts
  * edges directly in the cache via useItemReordering's cache.modify.
  */
-function extractItems(edges: readonly ItemEdge[] | null | undefined): ShoppingListItemDisplayFragment[] {
+const extractItemsCache = new WeakMap<readonly ItemEdge[], ShoppingListItemDisplayFragment[]>();
+
+// Structural fingerprint: track the last result to return stable references
+// when edge array identity changes but content (node IDs + order) is the same.
+let _lastFingerprint = '';
+let _lastResult: ShoppingListItemDisplayFragment[] = EMPTY_ITEMS;
+
+/** @visibleForTesting */
+export function extractItems(edges: readonly ItemEdge[] | null | undefined): ShoppingListItemDisplayFragment[] {
   if (!edges || edges.length === 0) return EMPTY_ITEMS;
-  return edges
+  const cached = extractItemsCache.get(edges);
+  if (cached) return cached;
+  const result = edges
     .filter(edge => {
       const node = edge?.node;
       return node && node.id && node.itemName;
     })
     .map(edge => edge.node);
+
+  // Structural stability: if node IDs in the same order match the last result,
+  // reuse the previous array reference to prevent unnecessary FlashList diffing.
+  const fingerprint = result.map(n => n.id).join(',');
+  if (fingerprint === _lastFingerprint && _lastResult.length === result.length) {
+    extractItemsCache.set(edges, _lastResult);
+    return _lastResult;
+  }
+
+  _lastFingerprint = fingerprint;
+  _lastResult = result;
+  extractItemsCache.set(edges, result);
+  return result;
 }
 
 /** Resolve edges: prefer current data, fall back to previous data (same list only) */
@@ -78,20 +111,21 @@ function resolveEdges(
 }
 
 /**
- * usePaginatedShoppingItems — Two independent queries for shopping list tabs
+ * Fetches paginated shopping list items via two independent queries (unpurchased + purchased).
  *
- * Uses two calls to GetShoppingListItemsFiltered (one per tab) so each tab
- * has its own cursor, cache entry, and fetchMore — eliminating the alias-based
- * cross-contamination and ordering bugs from the previous single-query approach.
+ * Each tab gets its own cursor, cache entry, and fetchMore to avoid alias-based
+ * cross-contamination. Apollo's `keyArgs: ['filters']` on `itemsConnection` ensures
+ * separate cache entries per `isPurchased` filter value.
  *
- * Apollo's `keyArgs: ['filters']` on `itemsConnection` ensures separate cache
- * entries per `isPurchased` filter value.
+ * @param options - Configuration with `listId` and optional `skip` flag
+ * @returns `{ state, actions }` — state contains unpurchased/purchased connection data,
+ *   loading, error, and transition flags; actions contains refetch
  */
 export function usePaginatedShoppingItems({
   listId,
   skip = false,
 }: UsePaginatedShoppingItemsOptions): UsePaginatedShoppingItemsResult {
-  const { isLoggedOut } = useAuth();
+  const isLoggedOut = useIsLoggedOut();
 
   const hasValidListId = !!listId && !isLoggedOut;
   const shouldSkip = skip || !hasValidListId;
@@ -146,11 +180,27 @@ export function usePaginatedShoppingItems({
   useApolloErrorLogger('GetShoppingListItemsFiltered[purchased]', pError);
 
   // --- Extract items ---
+  // Compiler can memoize these — stable reference when edges don't change
   const unpurchasedEdges = resolveEdges(unpurchasedData, unpurchasedPrevData, listIdChanged);
   const unpurchasedItems = extractItems(unpurchasedEdges);
 
   const purchasedEdges = resolveEdges(purchasedData, purchasedPrevData, listIdChanged);
   const purchasedItems = extractItems(purchasedEdges);
+
+  // DEV-only profiling in useEffect (post-render, doesn't affect memoization)
+  useEffect(() => {
+    if (!__DEV__) return;
+    const uRefChanged = unpurchasedEdges !== _prevUnpurchasedEdgesRef;
+    _prevUnpurchasedEdgesRef = unpurchasedEdges;
+    console.log(
+      `📊 [extractItems] unpurchased: ${unpurchasedEdges.length} edges, refChanged=${uRefChanged}`
+    );
+    const pRefChanged = purchasedEdges !== _prevPurchasedEdgesRef;
+    _prevPurchasedEdgesRef = purchasedEdges;
+    console.log(
+      `📊 [extractItems] purchased: ${purchasedEdges.length} edges, refChanged=${pRefChanged}`
+    );
+  });
 
   // --- Pagination via reusable usePagination hook ---
   const unpurchasedPagination = usePagination({
@@ -222,25 +272,29 @@ export function usePaginatedShoppingItems({
   const loading = uLoading && unpurchasedItems.length === 0;
 
   return {
-    unpurchased: {
-      items: unpurchasedItems,
-      totalCount: unpurchasedTotalCount,
-      hasMore: unpurchasedPagination.hasMore,
-      isLoadingMore: unpurchasedPagination.isLoadingMore,
-      loadMore: unpurchasedPagination.loadMore,
-      loadMoreError: unpurchasedPagination.loadMoreError,
+    state: {
+      unpurchased: {
+        items: unpurchasedItems,
+        totalCount: unpurchasedTotalCount,
+        hasMore: unpurchasedPagination.hasMore,
+        isLoadingMore: unpurchasedPagination.isLoadingMore,
+        loadMore: unpurchasedPagination.loadMore,
+        loadMoreError: unpurchasedPagination.loadMoreError,
+      },
+      purchased: {
+        items: purchasedItems,
+        totalCount: purchasedTotalCount,
+        hasMore: purchasedPagination.hasMore,
+        isLoadingMore: purchasedPagination.isLoadingMore,
+        loadMore: purchasedPagination.loadMore,
+        loadMoreError: purchasedPagination.loadMoreError,
+      },
+      loading,
+      error: (uError ?? pError) as Error | undefined,
+      isTransitioning: listIdChanged && (uLoading || pLoading),
     },
-    purchased: {
-      items: purchasedItems,
-      totalCount: purchasedTotalCount,
-      hasMore: purchasedPagination.hasMore,
-      isLoadingMore: purchasedPagination.isLoadingMore,
-      loadMore: purchasedPagination.loadMore,
-      loadMoreError: purchasedPagination.loadMoreError,
+    actions: {
+      refetch: handleRefetch,
     },
-    loading,
-    error: (uError ?? pError) as Error | undefined,
-    refetch: handleRefetch,
-    isTransitioning: listIdChanged && (uLoading || pLoading),
   };
 }

@@ -90,7 +90,7 @@ const mockHandleRememberMeAccept = jest.fn();
 const mockHandleRememberMeDecline = jest.fn();
 
 jest.mock('../useRememberMe', () => ({
-  useRememberMe: ({ onAccept: _onAccept, onDecline: _onDecline }: any) => ({
+  useRememberMe: () => ({
     showRememberMeModal: false,
     pendingCredentials: null,
     handleRememberMeAccept: mockHandleRememberMeAccept,

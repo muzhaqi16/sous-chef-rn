@@ -46,6 +46,7 @@ import {
   type MealPlanItemFragment,
   type MealTemplateDisplayFragment } from '#generated';
 import { toastService } from '#/services/toastService';
+import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 
 async function executeMealPlanRefresh(
   refetchFn: () => Promise<unknown>,
@@ -131,6 +132,17 @@ const MealPlanMainInner: React.FC = () => {
 
   // Fetch the active plan with items
   const { mealPlan: activeMealPlan, items, nutritionSummary, refetch } = useMealPlan(activePlanId);
+
+  // Lifecycle: optimistic restoration, cache persistence, perf tracking
+  useTabScreenLifecycle({
+    screenName: 'MealPlanMain',
+    optimisticTypes: ['MealPlan', 'MealPlanItem'],
+    telemetryProperties: () => ({
+      plan_id: activePlanId,
+      item_count: items.length,
+      has_plans: mealPlans.length > 0,
+    }),
+  });
 
   // Pull-to-refresh
   const [refreshing, setRefreshing] = useState(false);

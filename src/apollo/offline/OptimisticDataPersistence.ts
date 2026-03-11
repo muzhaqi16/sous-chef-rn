@@ -128,7 +128,7 @@ class OptimisticDataPersistence {
     const all = this.loadAll();
     const updates: Record<string, any> = {};
 
-    Object.entries(all).forEach(([_key, data]) => {
+    Object.entries(all).forEach(([, data]) => {
       if (data.entityType === entityType && data.entityId === entityId) {
         updates[data.field] = data.value;
       }
@@ -157,7 +157,7 @@ class OptimisticDataPersistence {
     const all = this.loadAll();
     const byEntity = new Map<string, Record<string, any>>();
 
-    Object.entries(all).forEach(([_key, data]) => {
+    Object.entries(all).forEach(([, data]) => {
       if (data.entityType === entityType) {
         if (!byEntity.has(data.entityId)) {
           byEntity.set(data.entityId, {});
@@ -277,6 +277,13 @@ class OptimisticDataPersistence {
    */
   clearAll(): void {
     try {
+      // Cancel any pending batch flush
+      if (this.batchTimeout) {
+        clearTimeout(this.batchTimeout);
+        this.batchTimeout = null;
+      }
+      this.pendingUpdates = {};
+
       storage.remove(OPTIMISTIC_DATA_KEY);
       this.cache = null; // Invalidate cache
       if (__DEV__) {

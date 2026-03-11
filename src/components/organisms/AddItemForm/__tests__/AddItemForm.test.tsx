@@ -122,24 +122,6 @@ jest.mock('#utils/validation/item', () => ({
   CreateItemFormData: {},
 }));
 
-jest.mock('#generated', () => ({
-  StorageState: {
-    Ambient: 'AMBIENT',
-    Refrigerated: 'REFRIGERATED',
-    Frozen: 'FROZEN',
-  },
-  ItemType: {
-    Foundation: 'FOUNDATION',
-    Prepared: 'PREPARED',
-    Composite: 'COMPOSITE',
-  },
-  BaseDimension: {
-    Volume: 'VOLUME',
-    Mass: 'MASS',
-    Count: 'COUNT',
-  },
-}));
-
 const defaultProps = {
   onSubmit: jest.fn(),
   onClose: jest.fn(),

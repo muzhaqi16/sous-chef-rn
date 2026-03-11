@@ -43,20 +43,11 @@ jest.mock('#store', () => ({
 
 const mockSubscriptionOnData = jest.fn();
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useNotificationChangedSubscription: jest.fn((opts: any) => {
     mockSubscriptionOnData.mockImplementation(opts.onData);
     return {};
   }),
-  NotificationType: {
-    ExpiryReminder: 'EXPIRY_REMINDER',
-    LowStock: 'LOW_STOCK',
-    ItemUpdated: 'ITEM_UPDATED',
-    ListUpdated: 'LIST_UPDATED',
-    CollaborationInvite: 'COLLABORATION_INVITE',
-    MembershipInvite: 'MEMBERSHIP_INVITE',
-    HomeInvitation: 'HOME_INVITATION',
-    HomeJoined: 'HOME_JOINED',
-  },
 }));
 
 jest.mock('#utils/notifications/localNotificationHelper', () => ({

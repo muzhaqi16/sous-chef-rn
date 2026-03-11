@@ -27,6 +27,7 @@ const mockSetDefaultMutation = jest.fn().mockResolvedValue({
 const mockFetchTree = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useGetStorageLocationsQuery: jest.fn(() => ({
     data: {
       storageLocations: {

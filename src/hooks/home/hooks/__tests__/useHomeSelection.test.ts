@@ -5,6 +5,7 @@ import { useHomeSelection } from '../useHomeSelection';
 const mockSetDefaultHomeMutation = jest.fn();
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useSetDefaultHomeMutation: jest.fn(() => [mockSetDefaultHomeMutation]),
 }));
 

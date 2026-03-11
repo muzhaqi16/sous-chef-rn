@@ -202,21 +202,6 @@ export function isHomeOwner(
 }
 
 /**
- * Get current user's role in a home
- */
-export function getHomeRole(
-  home: HomeWithMembers,
-  currentUserId?: string,
-): string | null {
-  if (!currentUserId) return null;
-
-  const member = resolveHomeMembers(home).find(
-    m => m.userId === currentUserId,
-  );
-  return member?.role || null;
-}
-
-/**
  * Extract initials from a display name for avatar fallback
  * Returns first letter capitalized
  *

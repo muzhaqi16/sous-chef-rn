@@ -49,8 +49,8 @@ const mockGetBiometricInfo = jest.fn().mockResolvedValue({
 });
 const mockRemoveCredentials = jest.fn();
 
-jest.mock('#hooks/auth/useAuth', () => ({
-  useAuth: jest.fn(() => ({
+jest.mock('#hooks/auth/useCredentialStorage', () => ({
+  useCredentialStorage: jest.fn(() => ({
     checkStoredCredentials: mockCheckStoredCredentials,
     getBiometricInfo: mockGetBiometricInfo,
     removeCredentials: mockRemoveCredentials,
@@ -70,9 +70,9 @@ const mockUpdateProfileMutation = jest.fn().mockResolvedValue({ data: {} });
 const mockUpdateSettingsMutation = jest.fn().mockResolvedValue({ data: {} });
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useUpdateUserProfileMutation: jest.fn(() => [mockUpdateProfileMutation]),
   useUpdateUserPreferencesMutation: jest.fn(() => [mockUpdateSettingsMutation]),
-  ProfileVisibility: { Public: 'PUBLIC', Friends: 'FRIENDS', Private: 'PRIVATE' },
 }));
 
 jest.mock('#/config/settingsConfig', () => ({

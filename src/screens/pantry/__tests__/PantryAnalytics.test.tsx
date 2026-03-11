@@ -58,10 +58,6 @@ jest.mock('#hooks/pantry/usePantryAnalytics', () => ({
   }),
 }));
 
-jest.mock('#generated', () => ({
-  PeriodGranularity: { Daily: 'DAILY', Weekly: 'WEEKLY', Monthly: 'MONTHLY' },
-}));
-
 jest.mock('#components/molecules/Header', () => ({
   Header: ({ title }: any) => {
     const { View, Text } = require('react-native');

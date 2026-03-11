@@ -3,6 +3,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { RecipeBasicFields } from '../RecipeBasicFields';
+import { RecipeStatus } from '#generated';
 
 jest.mock('#components/molecules/FormInput', () => ({
   FormInput: ({ label, value, onChangeText, placeholder, testID }: any) => {
@@ -67,8 +68,7 @@ const defaultState = {
   difficulty: null,
   category: null,
   cuisine: '',
-  visibility: null,
-  isPublished: false,
+  status: RecipeStatus.Draft,
   diets: [],
   healthGoals: [],
   intolerances: [],

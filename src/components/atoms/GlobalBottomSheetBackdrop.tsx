@@ -21,7 +21,6 @@ interface GlobalBottomSheetBackdropProps extends BottomSheetBackdropProps {
 
 export const GlobalBottomSheetBackdrop: React.FC<GlobalBottomSheetBackdropProps> = ({
   animatedIndex,
-  appearsOnIndex: _appearsOnIndex = 0,
   disappearsOnIndex = -1,
   opacity = 0.5,
   pressBehavior = 'close',

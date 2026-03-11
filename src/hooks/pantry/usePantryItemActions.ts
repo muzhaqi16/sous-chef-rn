@@ -70,6 +70,9 @@ export function usePantryItemActions({
         updatedAt() {
           return new Date().toISOString();
         },
+        lastUsedAt() {
+          return new Date().toISOString();
+        },
       },
     });
   };
@@ -223,6 +226,22 @@ export function usePantryItemActions({
     const canOptimistic = !unitId || unitId === item.unit?.id;
     if (canOptimistic) {
       optimisticUpdateQuantity(item.id, originalQty + quantity);
+    }
+
+    // Optimistically increment activeBatchCount for instant UI feedback
+    const cacheIdForBatch = client.cache.identify({
+      __typename: 'PantryItem',
+      id: item.id,
+    });
+    if (cacheIdForBatch) {
+      client.cache.modify({
+        id: cacheIdForBatch,
+        fields: {
+          activeBatchCount(existing: number = 0) {
+            return (existing ?? 0) + 1;
+          },
+        },
+      });
     }
 
     const restockNotes = notes || undefined;

@@ -33,7 +33,7 @@ describe('useShoppingListItemMutations', () => {
 
   it('returns all four mutation functions', () => {
     const { result } = renderHook(() =>
-      useShoppingListItemMutations('list-1', [], mockRefetch),
+      useShoppingListItemMutations('list-1', mockRefetch),
     );
 
     expect(result.current.addItem).toBe(mockAddItem);
@@ -43,9 +43,8 @@ describe('useShoppingListItemMutations', () => {
   });
 
   it('composes individual hooks together', () => {
-    const items = [{ id: 'item-1' }] as any;
     const { result } = renderHook(() =>
-      useShoppingListItemMutations('list-1', items, mockRefetch),
+      useShoppingListItemMutations('list-1', mockRefetch),
     );
 
     expect(result.current).toEqual({

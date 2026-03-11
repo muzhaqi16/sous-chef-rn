@@ -80,7 +80,9 @@ export const FormSelect: React.FC<FormSelectProps> = ({
           visible
           transparent
           animationType="fade"
-          onRequestClose={() => setModalVisible(false)}>
+          onRequestClose={() => setModalVisible(false)}
+          statusBarTranslucent
+          navigationBarTranslucent>
           <View style={styles.modal}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>{label}</Text>

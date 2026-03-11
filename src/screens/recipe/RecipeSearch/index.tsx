@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { commonStyles } from '#/styles/commonStyles';
 import { ListTemplate } from '#components/templates/ListTemplate';
 import { SearchBar, type SearchBarAction } from '#components/molecules/SearchBar';
@@ -11,24 +12,25 @@ import { ItemList } from '#components/organisms/ItemList';
 import { RecipeCardSkeleton } from '#components/base/Skeleton/RecipeCardSkeleton';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { createPropsComparator } from '#utils/memoUtils';
 import { useRecipeSearch } from './useRecipeSearch';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { IngredientSelectorProvider, useIngredientSelector } from './IngredientSelectorContext';
 
-const IngredientItem = React.memo(({
-    name,
-    selected,
-    onToggle,
-    primaryColor,
-    textSecondary }: {
+const IngredientItemComponent: React.FC<{
     name: string;
     selected: boolean;
     onToggle: (name: string) => void;
     primaryColor: string;
     textSecondary: string;
-  }) => {
+  }> = ({
+    name,
+    selected,
+    onToggle,
+    primaryColor,
+    textSecondary }) => {
     const handlePress = () => onToggle(name);
 
     return (
@@ -41,11 +43,23 @@ const IngredientItem = React.memo(({
         <Text style={styles.ingredientText}>{name}</Text>
       </Pressable>
     );
-  });
-IngredientItem.displayName = 'IngredientItem';
+  };
+
+const areIngredientItemPropsEqual = createPropsComparator<{
+  name: string;
+  selected: boolean;
+  onToggle: (name: string) => void;
+  primaryColor: string;
+  textSecondary: string;
+}>({
+  referenceKeys: ['name', 'selected', 'primaryColor', 'textSecondary'],
+});
+
+const IngredientItem = React.memo(IngredientItemComponent, areIngredientItemPropsEqual);
 
 const ingredientKeyExtractor = (item: any) => item.id;
 
+// Module-scope renderItem — reads theme from useUnistyles to avoid closure over parent scope
 const IngredientRenderItem = ({ item }: { item: any }) => {
   const { selectedIngredients, toggleIngredient } = useIngredientSelector();
   const { theme } = useUnistyles();
@@ -61,7 +75,12 @@ const IngredientRenderItem = ({ item }: { item: any }) => {
   );
 };
 
-const renderIngredientItem = ({ item }: { item: any }) => <IngredientRenderItem item={item} />;
+const getIngredientItemType = () => 'item' as const;
+
+// Module-scope renderItem — stable reference for FlashList
+const renderIngredientItem = ({ item }: { item: any }) => (
+  <IngredientRenderItem item={item} />
+);
 
 const RecipeSearchContent: React.FC<{
   items: any[];
@@ -222,8 +241,9 @@ export const RecipeSearch: React.FC = () => {
             data={pantryItems}
             keyExtractor={ingredientKeyExtractor}
             renderItem={renderIngredientItem}
+            getItemType={getIngredientItemType}
             extraData={selectedIngredients.size}
-            drawDistance={200}
+            {...FLASHLIST_DEFAULTS.bottomSheet}
             style={styles.ingredientList}
             contentContainerStyle={styles.ingredientListContent}
             ListEmptyComponent={<Text style={styles.emptyText}>No pantry items available</Text>}

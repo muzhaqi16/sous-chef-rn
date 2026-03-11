@@ -29,11 +29,7 @@ jest.mock('#/utils/connectionUtils', () => ({
 }));
 
 jest.mock('#generated', () => ({
-  StorageState: {
-    Ambient: 'AMBIENT',
-    Refrigerated: 'REFRIGERATED',
-    Frozen: 'FROZEN',
-  },
+  ...jest.requireActual('#generated'),
   useGetPantryItemQuery: jest.fn(() => ({
     data: null,
     loading: false,
@@ -547,7 +543,6 @@ describe('PantryItemForm – additional branch coverage', () => {
   const { useAppStore } = require('#store/useAppStore');
   const { normalizeHome, normalizePantry } = require('#/utils/connectionUtils');
   const { parseFractionalInput } = require('#/utils/fractionUtils');
-
 
   const baseEditItem = {
     id: 'item-1',

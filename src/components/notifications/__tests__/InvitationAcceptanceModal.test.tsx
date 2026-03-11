@@ -22,11 +22,11 @@ jest.mock('#/services/toastService', () => ({
 jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useAcceptHomeInviteMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useAcceptShoppingListInviteMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useDeclineHomeInviteMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useDeclineShoppingListInviteMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  MyShoppingListInvitesDocument: {},
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({

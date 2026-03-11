@@ -20,6 +20,7 @@ jest.mock('#store/useAppStore', () => {
 
 const mockCompleteOnboarding = jest.fn(() => Promise.resolve({ data: {} }));
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useCompleteOnboardingMutation: jest.fn(() => [mockCompleteOnboarding, { loading: false }]),
 }));
 

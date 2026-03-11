@@ -27,14 +27,33 @@ function initializeClient() {
   // Create cache instance
   const cache = makeCache();
 
-  // PERFORMANCE: Restore cache synchronously (~50ms for 131 entities).
-  // This is critical because cache-first queries (GetNotificationPreferences,
-  // GetUserProfile) will miss and hit the network if cache is empty at query time,
-  // adding 600-2000ms per query. The ~50ms sync cost saves seconds of network time.
-  const persistedCache = apolloCachePersistence.load();
-  if (persistedCache) {
-    logger.info('📦 Apollo: Restoring cache from storage');
-    cache.restore(persistedCache);
+  // PERFORMANCE: Two-phase cache restore.
+  // Phase 1: Sync restore of critical entities (~30 entities, ~5ms).
+  //   ROOT_QUERY, User, Home, settings — needed by cache-first queries.
+  // Phase 2: Deferred restore of bulk entities via requestIdleCallback.
+  //   PantryItem, ShoppingListItem, Recipe, etc. — loaded when JS thread is idle.
+  // This reduces JS blocking at startup. If the deferred phase hasn't fired when
+  // PantryMain mounts, the cache miss means network returns only 20 items (fast render).
+  const criticalCache = apolloCachePersistence.loadCritical();
+  if (criticalCache) {
+    logger.info('📦 Apollo: Restoring critical cache from storage');
+    cache.restore(criticalCache);
+
+    // Phase 2: Deferred bulk restore
+    requestIdleCallback(() => {
+      const deferred = apolloCachePersistence.loadDeferred();
+      if (deferred) {
+        cache.restore(deferred);
+        logger.info('📦 Apollo: Deferred cache restore complete');
+      }
+    });
+  } else {
+    // Migration fallback: read old single-key format
+    const persistedCache = apolloCachePersistence.load();
+    if (persistedCache) {
+      logger.info('📦 Apollo: Restoring cache from legacy storage');
+      cache.restore(persistedCache);
+    }
   }
 
   // Create link chain
@@ -124,18 +143,31 @@ function setupCachePersistence(client: ApolloClient) {
   // justified: wrapping Apollo cache methods requires `any` — internal method signatures are not public API
   cache.write = function (...args: any) {
     const result = (originalWrite as any)(...args);
+    // Mark the written entity's cache ID as dirty for incremental persistence
+    const dataId = args[0]?.dataId;
+    if (dataId) {
+      apolloCachePersistence.markDirty([dataId]);
+    }
     schedulePersistence();
     return result;
   };
 
   cache.evict = function (...args: any) {
     const result = (originalEvict as any)(...args);
+    const id = args[0]?.id;
+    if (id) {
+      apolloCachePersistence.markDirty([id]);
+    }
     schedulePersistence();
     return result;
   };
 
   cache.modify = function (...args: any) {
     const result = (originalModify as any)(...args);
+    const id = args[0]?.id;
+    if (id) {
+      apolloCachePersistence.markDirty([id]);
+    }
     schedulePersistence();
     return result;
   };

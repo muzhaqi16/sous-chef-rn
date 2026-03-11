@@ -46,6 +46,7 @@ jest.mock('@apollo/client/react', () => ({
 }));
 
 jest.mock('#generated', () => ({
+  ...jest.requireActual('#generated'),
   useMoveShoppingListItemMutation: () => [mockMoveItem],
 }));
 
@@ -95,7 +96,7 @@ describe('useItemReordering', () => {
 
     await act(async () => {
       await result.current.handleSortOrderUpdate(
-        'item-2', 'item-1', 'item-3', 'aaa', 'eee',
+        'item-2', 'item-1', 'item-3',
       );
     });
 
@@ -109,7 +110,7 @@ describe('useItemReordering', () => {
 
     await act(async () => {
       await result.current.handleSortOrderUpdate(
-        'non-existent', 'item-1', 'item-3', 'aaa', 'eee',
+        'non-existent', 'item-1', 'item-3',
       );
     });
 
@@ -123,7 +124,7 @@ describe('useItemReordering', () => {
 
     await act(async () => {
       await result.current.handleSortOrderUpdate(
-        'item-2', 'item-1', 'item-3', 'aaa', 'eee',
+        'item-2', 'item-1', 'item-3',
       );
     });
 
@@ -167,7 +168,7 @@ describe('useItemReordering', () => {
 
     await act(async () => {
       await result.current.handleSortOrderUpdate(
-        'item-2', 'item-1', 'item-3', 'aaa', 'eee',
+        'item-2', 'item-1', 'item-3',
       );
     });
 
@@ -181,7 +182,7 @@ describe('useItemReordering', () => {
 
     await act(async () => {
       await result.current.handleSortOrderUpdate(
-        'item-2', null, 'item-1', null, 'aaa',
+        'item-2', null, 'item-1',
       );
     });
 
@@ -204,7 +205,7 @@ describe('useItemReordering', () => {
 
     await act(async () => {
       await result.current.handleSortOrderUpdate(
-        'item-2', 'item-3', null, 'eee', null,
+        'item-2', 'item-3', null,
       );
     });
 
@@ -225,7 +226,7 @@ describe('useItemReordering', () => {
 
     await act(async () => {
       await result.current.handleSortOrderUpdate(
-        'item-2', 'item-1', 'item-3', 'zzz', 'aaa',
+        'item-2', 'item-1', 'item-3',
       );
     });
 
@@ -247,7 +248,7 @@ describe('useItemReordering', () => {
 
     await act(async () => {
       await result.current.handleSortOrderUpdate(
-        'item-2', 'item-1', 'item-3', 'aaa', 'eee',
+        'item-2', 'item-1', 'item-3',
       );
     });
 

@@ -25,16 +25,18 @@ export function usePantryManagement(
 ) {
   // Query hook - fetches pantry data
   const {
-    pantryItems,
-    stats,
-    totalCount,
-    loading,
-    isRefreshing,
-    error,
-    refetch,
-    hasMore,
-    loadMore,
-    isLoadingMore,
+    state: {
+      pantryItems,
+      pantryStorageLocations,
+      stats,
+      totalCount,
+      loading,
+      isRefreshing,
+      error,
+      hasMore,
+      isLoadingMore,
+    },
+    actions: { refetch, loadMore },
   } = usePantryQuery(pantryId, itemsFilter, itemsOrderBy);
 
   // Stats hook - computes location counts
@@ -56,26 +58,24 @@ export function usePantryManagement(
   });
 
   return {
-    // Data
-    items: pantryItems,
-    stats,
-    totalCount,
-    loading,
-    isRefreshing,
-    error,
-
-    // Redesign data
-    locationCounts,
-
-    // Pagination
-    loadMore,
-    hasMore,
-    isLoadingMore,
-
-    // Actions
-    addItem,
-    updateItem,
-    removeItem,
-    refetch,
+    state: {
+      items: pantryItems,
+      pantryStorageLocations,
+      stats,
+      totalCount,
+      loading,
+      isRefreshing,
+      error,
+      locationCounts,
+      hasMore,
+      isLoadingMore,
+    },
+    actions: {
+      loadMore,
+      addItem,
+      updateItem,
+      removeItem,
+      refetch,
+    },
   };
 }

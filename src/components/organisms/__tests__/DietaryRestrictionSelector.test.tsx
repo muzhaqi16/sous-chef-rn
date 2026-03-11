@@ -46,50 +46,6 @@ jest.mock('#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet', ()
   };
 });
 
-jest.mock('#generated', () => ({
-  Diet: {
-    Vegetarian: 'VEGETARIAN',
-    Vegan: 'VEGAN',
-    GlutenFree: 'GLUTEN_FREE',
-    Keto: 'KETO',
-    Paleo: 'PALEO',
-    Pescetarian: 'PESCETARIAN',
-    LactoVegetarian: 'LACTO_VEGETARIAN',
-    OvoVegetarian: 'OVO_VEGETARIAN',
-    Primal: 'PRIMAL',
-    LowFodmap: 'LOW_FODMAP',
-    Whole30: 'WHOLE30',
-  },
-  Intolerance: {
-    Dairy: 'DAIRY',
-    Egg: 'EGG',
-    Gluten: 'GLUTEN',
-    Grain: 'GRAIN',
-    Peanut: 'PEANUT',
-    Seafood: 'SEAFOOD',
-    Sesame: 'SESAME',
-    Shellfish: 'SHELLFISH',
-    Soy: 'SOY',
-    Sulfite: 'SULFITE',
-    TreeNut: 'TREE_NUT',
-    Wheat: 'WHEAT',
-    Fish: 'FISH',
-  },
-  HealthGoal: {
-    LowCarb: 'LOW_CARB',
-    HighProtein: 'HIGH_PROTEIN',
-    LowSodium: 'LOW_SODIUM',
-    SugarFree: 'SUGAR_FREE',
-    DiabeticFriendly: 'DIABETIC_FRIENDLY',
-    HeartHealthy: 'HEART_HEALTHY',
-  },
-  RestrictionSeverity: {
-    Preference: 'PREFERENCE',
-    Intolerance: 'INTOLERANCE',
-    Goal: 'GOAL',
-  },
-}));
-
 const defaultProps = {
   existingRestrictions: [],
   onAdd: jest.fn().mockResolvedValue(true),

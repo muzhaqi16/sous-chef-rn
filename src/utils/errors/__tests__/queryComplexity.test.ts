@@ -3,7 +3,6 @@ import {
   getQueryComplexityDetails,
   getQueryComplexityMessage,
   handleQueryComplexityError,
-  validatePaginationParams,
   QueryComplexityErrorType,
 } from '../queryComplexity';
 
@@ -199,55 +198,3 @@ describe('handleQueryComplexityError', () => {
   });
 });
 
-describe('validatePaginationParams', () => {
-  it('caps first at 100', () => {
-    expect(validatePaginationParams({ first: 500 })).toEqual({
-      first: 100,
-      last: undefined,
-      limit: undefined,
-      take: undefined,
-    });
-  });
-
-  it('caps last at 100', () => {
-    expect(validatePaginationParams({ last: 200 })).toEqual({
-      first: undefined,
-      last: 100,
-      limit: undefined,
-      take: undefined,
-    });
-  });
-
-  it('caps limit at 100', () => {
-    expect(validatePaginationParams({ limit: 300 })).toEqual({
-      first: undefined,
-      last: undefined,
-      limit: 100,
-      take: undefined,
-    });
-  });
-
-  it('caps take at 100', () => {
-    expect(validatePaginationParams({ take: 150 })).toEqual({
-      first: undefined,
-      last: undefined,
-      limit: undefined,
-      take: 100,
-    });
-  });
-
-  it('preserves values under 100', () => {
-    expect(validatePaginationParams({ first: 50 })).toEqual({
-      first: 50,
-      last: undefined,
-      limit: undefined,
-      take: undefined,
-    });
-  });
-
-  it('handles multiple params', () => {
-    const result = validatePaginationParams({ first: 200, limit: 50 });
-    expect(result.first).toBe(100);
-    expect(result.limit).toBe(50);
-  });
-});

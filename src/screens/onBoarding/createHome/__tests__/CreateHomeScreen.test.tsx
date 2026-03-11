@@ -42,7 +42,7 @@ const mockAcceptHomeInvite = jest.fn();
 const mockDeclineHomeInvite = jest.fn();
 
 jest.mock('#generated', () => ({
-  HomeType: { Household: 'HOUSEHOLD' },
+  ...jest.requireActual('#generated'),
   useCreateHomeMutation: () => [mockCreateHome],
   useCreatePantryMutation: () => [mockCreatePantry, {}],
   useGetHomesQuery: jest.fn(() => ({

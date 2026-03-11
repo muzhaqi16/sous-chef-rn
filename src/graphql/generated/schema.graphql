@@ -462,6 +462,18 @@ type BatchOperationSummary {
   updated: Int!
 }
 
+"""Lifecycle status of a pantry item batch"""
+enum BatchStatus {
+  """Batch has remaining quantity available for consumption"""
+  ACTIVE
+  """Batch has been fully consumed"""
+  DEPLETED
+  """Batch was merged into another batch"""
+  MERGED
+  """Batch was discarded as waste"""
+  WASTED
+}
+
 input BatchUpsertItemInput {
   externalId: String!
   externalType: String
@@ -1353,7 +1365,6 @@ input CreateRecipeInput {
   ingredients: [RecipeIngredientInput!]!
   instructions: JSON!
   intolerances: [Intolerance!]
-  isPublished: Boolean
   media: MediaAssetsInput
   metadata: RecipeMetadataInput
   name: String!
@@ -1367,7 +1378,6 @@ input CreateRecipeInput {
   tags: [String!]
   timing: TimeEstimatesInput
   tips: String
-  visibility: Visibility
 }
 
 input CreateRecipeReviewInput {
@@ -4336,6 +4346,11 @@ type Mutation {
   confirmProfileImageUpload(key: String!): UploadPayload!
   confirmRecipeConsumption(input: ConfirmRecipeConsumptionInput!): RecipeConsumptionResult!
   """
+  Convert only expired batches to waste within a pantry item.
+  Non-expired batches remain active. Aggregate is recalculated.
+  """
+  convertExpiredBatchesToWaste(pantryItemId: ID!): PantryItemPayload!
+  """
   Convert an expired pantry item to waste in one step.
   Sets condition to SPOILED, creates a WASTE usage record with wasteReason=EXPIRED,
   and sets quantity to 0. Use after expiration job marks item as EXPIRED.
@@ -4556,6 +4571,11 @@ type Mutation {
   moveShoppingListItem(input: MoveShoppingListItemInput!): ShoppingListItemPayload!
   """Mark a pantry item as opened."""
   openPantryItem(id: ID!, version: Int): PantryItemPayload!
+  """
+  Mark a specific batch as opened.
+  Sets isOpened=true and openedAt to current time on the targeted batch.
+  """
+  openPantryItemBatch(input: OpenBatchInput!): PantryItemPayload!
   """
   Record a login event. Consolidates recordLoginAttempt and createLoginHistory.
   Use for all login recording — both high-level attempts and direct history creation.
@@ -4787,6 +4807,11 @@ type Mutation {
   verifyItemUnitConversion(confidence: Float, conversionId: ID!, notes: String): ItemUnitConversionPayload!
   """Manually verify a user's email address (admin use)."""
   verifyUserEmail(id: ID!): UserPayload!
+  """
+  Waste a specific batch within a pantry item.
+  Only the targeted batch is zeroed out; other batches remain active.
+  """
+  wastePantryItemBatch(input: WasteBatchInput!): PantryItemPayload!
 }
 
 """
@@ -5157,6 +5182,11 @@ type OfferSummary {
   type: String!
 }
 
+"""Input for opening a specific batch"""
+input OpenBatchInput {
+  batchId: ID!
+}
+
 type OperatingSystemStat {
   count: Int!
   osName: String!
@@ -5338,14 +5368,17 @@ input PantryFilters {
 """Real-time collaborative type - never cache"""
 type PantryItem {
   acquisitionMethod: AcquisitionMethod!
+  activeBatchCount: Int!
   addedAt: DateTime!
   addedBy: User
+  batches: [PantryItemBatch!]!
   brand: Brand
   brandId: ID
   changeHistory(after: String, before: String, first: Int, last: Int): PantryItemChangeConnection!
   condition: ItemCondition!
   costPerUnit: Float
   createdAt: DateTime!
+  earliestBatchExpiration: DateTime
   expirationAlert: Boolean!
   expiresAt: DateTime
   id: ID!
@@ -5387,6 +5420,32 @@ type PantryItem {
   usageRecords(after: String, first: Int, orderBy: PantryItemUsageOrderBy): PantryItemUsageConnection!
   version: Int!
   wasteDate: DateTime
+  wasteReason: WasteReason
+}
+
+"""
+A batch within a pantry item, representing a specific restock event.
+Each batch tracks its own expiration, cost, and remaining quantity.
+Consumed FIFO by expiration date.
+"""
+type PantryItemBatch {
+  addedBy: User
+  batchNumber: Int!
+  costPerUnit: Float
+  createdAt: DateTime!
+  depletedAt: DateTime
+  expiresAt: DateTime
+  id: ID!
+  isOpened: Boolean!
+  notes: String
+  openedAt: DateTime
+  pantryItemId: ID!
+  quantity: Float!
+  remainingNetWeight: Float
+  status: BatchStatus!
+  store: Store
+  totalCost: Float
+  updatedAt: DateTime
   wasteReason: WasteReason
 }
 
@@ -6164,6 +6223,8 @@ type Query {
   pantry(id: ID!): Pantry
   """Fetch a single pantry item by its ID."""
   pantryItem(id: ID!): PantryItem
+  """Get batches for a pantry item, optionally filtered by status"""
+  pantryItemBatches(pantryItemId: ID!, status: BatchStatus): [PantryItemBatch!]!
   """
   Parse fractional input string to decimal
   Handles "1/4", "1 1/4", "0.25" formats
@@ -6338,7 +6399,6 @@ type Recipe {
   updatedAt: DateTime!
   version: Int!
   videoUrl: String
-  visibility: Visibility!
 }
 
 """Sub-input for recipe attribution"""
@@ -6542,9 +6602,7 @@ type RecipeSourceMapping {
 }
 
 enum RecipeStatus {
-  ARCHIVED
   DRAFT
-  PRIVATE
   PUBLISHED
 }
 
@@ -6586,6 +6644,7 @@ input RecordPantryItemUsageInput {
   purpose: UsagePurpose!
   quantityUsed: Float!
   recipeId: ID
+  targetBatchId: ID
   usageUnitId: ID
   wasteReason: WasteReason
 }
@@ -8442,7 +8501,6 @@ input UpdateRecipeInput {
   difficulty: Difficulty
   imageUrl: String
   instructions: JSON
-  isPublished: Boolean
   media: MediaAssetsInput
   metadata: RecipeMetadataInput
   name: String
@@ -8455,7 +8513,6 @@ input UpdateRecipeInput {
   tags: [String!]
   timing: TimeEstimatesInput
   tips: String
-  visibility: Visibility
 }
 
 input UpdateRecipeReviewInput {
@@ -9165,6 +9222,15 @@ type WasteAnalytics {
   wasteByReason: [WasteByReason!]!
   wasteRate: Float!
   wasteTrend: [TimeSeriesDataPoint!]!
+}
+
+"""Input for wasting a specific batch"""
+input WasteBatchInput {
+  batchId: ID!
+  isComposted: Boolean
+  isRecycled: Boolean
+  notes: String
+  wasteReason: WasteReason
 }
 
 """Waste breakdown by item - most wasted items"""

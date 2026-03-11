@@ -36,20 +36,16 @@ const PurchasedTabComponent: React.FC = () => {
   // This ensures smooth screen transitions by showing skeletons during navigation animation
   const isReady = useDeferredRender();
 
-  // Derive whether content has been shown — no state needed.
-  // Module-level flag covers remount; items.length > 0 covers cached data on first mount.
-  const hasShownContent = hasPurchasedTabShownContent || items.length > 0;
-
-  // Sync the module-level flag so it persists across unmount/remount.
+  // Sync the module-level flag when content is truly rendered (ready, loaded, not transitioning).
   useEffect(() => {
-    if (hasShownContent) {
+    if (isReady && !loading && !isTransitioning) {
       hasPurchasedTabShownContent = true;
     }
-  }, [hasShownContent]);
+  }, [isReady, loading, isTransitioning]);
 
   // Show skeletons only on the very first data load, before content is ready.
   const showSkeletons =
-    !hasShownContent && (!isReady || isTransitioning || !!loading);
+    !hasPurchasedTabShownContent && (!isReady || isTransitioning || !!loading);
 
   const emptyComponent = (
     <EmptyState

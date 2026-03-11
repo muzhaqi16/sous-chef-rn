@@ -6,6 +6,8 @@ import {
   BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { createPropsComparator } from '#utils/memoUtils';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { TemplateCard } from './TemplateCard';
 import { TemplateBrowserProvider, useTemplateBrowserActions } from './TemplateBrowserContext';
 import { ChipScrollRow, type ChipOption } from '#components/atoms/ChipScrollRow';
@@ -27,14 +29,24 @@ const CATEGORIES: ChipOption<TemplateCategory | undefined>[] = [
 
 const keyExtractor = (item: MealTemplateDisplayFragment) => item.id;
 
-const TemplateBrowserRenderItem: React.FC<{ item: MealTemplateDisplayFragment }> = ({ item }) => {
+const TemplateBrowserRenderItemComponent: React.FC<{ item: MealTemplateDisplayFragment }> = ({ item }) => {
   const { onSelectTemplate } = useTemplateBrowserActions();
   return <TemplateCard template={item} onPress={onSelectTemplate} />;
 };
 
+const areTemplatePropsEqual = createPropsComparator<{ item: MealTemplateDisplayFragment }>({
+  nestedComparisons: {
+    item: ['id', 'name', 'description'],
+  },
+});
+
+const TemplateBrowserRenderItem = React.memo(TemplateBrowserRenderItemComponent, areTemplatePropsEqual);
+
 const renderTemplate = ({ item }: { item: MealTemplateDisplayFragment }) => (
   <TemplateBrowserRenderItem item={item} />
 );
+
+const getTemplateItemType = () => 'item' as const;
 
 interface TemplateBrowserSheetProps {
   visible: boolean;
@@ -115,11 +127,12 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
               data={templates}
               renderItem={renderTemplate}
               keyExtractor={keyExtractor}
+              getItemType={getTemplateItemType}
+              {...FLASHLIST_DEFAULTS.bottomSheet}
               style={styles.list}
               showsVerticalScrollIndicator={false}
               onEndReached={hasMore ? loadMore : undefined}
               onEndReachedThreshold={0.5}
-              drawDistance={200}
             />
           </TemplateBrowserProvider>
         )}
