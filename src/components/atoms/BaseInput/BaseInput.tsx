@@ -64,7 +64,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
       <View style={styles.inputContainer}>
         {leftIcon != null && <View style={styles.iconWrapper}>{leftIcon}</View>}
         <TextInput
-          style={[styles.input, style]}
+          style={[styles.input, rightIcon != null && styles.inputWithRightIcon, style]}
           placeholderTextColor={theme.colors.inputPlaceholder}
           onFocus={handleFocus}
           onBlur={handleBlur}
@@ -84,7 +84,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
         )}
         {rightIcon != null && (
           <View
-            style={[styles.iconWrapper, { paddingRight: theme.spacing.sm }]}
+            style={[styles.iconWrapper, styles.rightIconOverlay]}
           >
             {rightIcon}
           </View>

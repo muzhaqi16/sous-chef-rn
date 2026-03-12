@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import type { BarcodeSource } from '#/types/navigation';
 
-interface ScannerContext {
-  source: 'pantry' | 'shoppingList';
+export interface ScannerContext {
+  source: BarcodeSource;
   pantryId?: string;
   listId?: string;
   shoppingListId?: string;

@@ -5,7 +5,7 @@ type FlashListPerformanceProps = Pick<
   'drawDistance' | 'maxItemsInRecyclePool'
 >;
 
-export const FLASHLIST_DEFAULTS = {
+export const FLASHLIST_DEFAULTS: Record<string, FlashListPerformanceProps> = {
   fullScreen: {
     drawDistance: 250,
     maxItemsInRecyclePool: 15,
@@ -14,4 +14,4 @@ export const FLASHLIST_DEFAULTS = {
     drawDistance: 150,
     maxItemsInRecyclePool: 10,
   },
-} as const satisfies Record<string, FlashListPerformanceProps>;
+};

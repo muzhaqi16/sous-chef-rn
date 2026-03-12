@@ -6,11 +6,20 @@ import type { RecipeFormState } from '../useRecipeForm';
 
 interface RecipeCategoryFieldsProps {
   state: RecipeFormState;
-  updateField: <K extends keyof RecipeFormState>(field: K, value: RecipeFormState[K]) => void;
+  updateField: <K extends keyof RecipeFormState>(
+    field: K,
+    value: RecipeFormState[K],
+  ) => void;
 }
 
-const DIFFICULTIES = [Difficulty.VeryEasy, Difficulty.Easy, Difficulty.Medium, Difficulty.Hard, Difficulty.Expert] as const;
-const STATUSES = [RecipeStatus.Draft, RecipeStatus.Published] as const;
+const DIFFICULTIES = [
+  Difficulty.VeryEasy,
+  Difficulty.Easy,
+  Difficulty.Medium,
+  Difficulty.Hard,
+  Difficulty.Expert,
+];
+const STATUSES = [RecipeStatus.Draft, RecipeStatus.Published];
 
 function formatEnum(value: string): string {
   return value

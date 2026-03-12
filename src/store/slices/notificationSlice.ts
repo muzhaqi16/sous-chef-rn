@@ -23,6 +23,7 @@ export enum NotificationCategory {
   PANTRY = 'PANTRY',
   COLLABORATION = 'COLLABORATION',
   MEMBERSHIP = 'MEMBERSHIP',
+  RECIPE = 'RECIPE',
   SECURITY = 'SECURITY',
   ACCOUNT = 'ACCOUNT',
   SYSTEM = 'SYSTEM',
@@ -178,7 +179,7 @@ export const createNotificationSlice: StateCreator<
       const newNotification = {
         ...notification,
         isRead: false,
-        source: notification.source || ('local' as const), // Mark as local by default
+        source: notification.source || 'local', // Mark as local by default
         // Ensure sentAt is always a valid ISO string
         sentAt:
           safeParseDate(notification.sentAt)?.toISOString() ||
@@ -241,7 +242,7 @@ export const createNotificationSlice: StateCreator<
         .map(n => ({
           ...n,
           isRead: false,
-          source: n.source || ('local' as const), // Mark as local by default
+          source: n.source || 'local', // Mark as local by default
           // Ensure sentAt is always a valid ISO string
           sentAt:
             safeParseDate(n.sentAt)?.toISOString() || new Date().toISOString(),
@@ -394,14 +395,12 @@ export const createNotificationSlice: StateCreator<
   },
 
   markAsReadWithSync: (notificationId, callback) => {
-    // First mark as read locally for immediate UI feedback
+    // Mark as read locally for immediate UI feedback.
+    // Server sync is handled by useNotificationSync hook (syncMarkAsRead).
     get().markAsRead(notificationId);
 
-    // TODO: Add server sync call here when GraphQL mutation is available
-    // This would call a mutation like `markNotificationAsRead(id: $id)`
-    // For now, we'll just mark locally and rely on periodic sync
     if (callback) {
-      callback(true); // Assume success for now
+      callback(true);
     }
   },
 

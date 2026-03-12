@@ -698,3 +698,29 @@ subscription PantryAlerts($pantryId: ID!) {
     userId
   }
 }
+
+subscription ExpirationNotificationChanged($pantryId: ID!) {
+  expirationNotificationChanged(pantryId: $pantryId) {
+    changeType
+    notification {
+      id
+      pantryItemId
+      notificationType
+      daysUntilExpiry
+      expiresAt
+      status
+      sentAt
+      dismissedAt
+      pantryItem {
+        id
+        item {
+          id
+          name
+          imageUrl
+        }
+      }
+    }
+    pantryId
+    timestamp
+  }
+}

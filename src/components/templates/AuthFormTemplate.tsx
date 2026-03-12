@@ -77,6 +77,7 @@ export function AuthFormTemplate<T extends FieldValues>({
           title={submitText}
           onPress={onSubmit}
           disabled={isLoading}
+          loading={isLoading}
           testID={submitButtonTestID}
         />
       </View>

@@ -12,7 +12,7 @@ jest.mock('#services/haptic/HapticService', () => ({
 
 describe('NavigationRow', () => {
   const defaultProps = {
-    icon: 'settings' as const,
+    icon: 'settings',
     title: 'Settings',
     onPress: jest.fn(),
   };

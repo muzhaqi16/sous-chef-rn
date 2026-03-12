@@ -70,132 +70,79 @@ describe('notificationParser', () => {
 
   describe('getNotificationCategory', () => {
     it.each([
-      ['ShoppingListUpdated', NotificationCategory.SHOPPING_LIST],
-      ['ListItemAdded', NotificationCategory.SHOPPING_LIST],
-      ['PantryItemExpiring', NotificationCategory.PANTRY],
-      ['ExpiryWarning', NotificationCategory.PANTRY],
-      ['LowStockAlert', NotificationCategory.PANTRY],
-      ['CollaborationInvite', NotificationCategory.COLLABORATION],
-      ['CollaboratorAdded', NotificationCategory.COLLABORATION],
-      ['MembershipInvite', NotificationCategory.MEMBERSHIP],
-      ['MemberJoined', NotificationCategory.MEMBERSHIP],
-      ['HomeCreated', NotificationCategory.MEMBERSHIP],
-    ])('categorizes "%s" correctly', (type, expected) => {
+      [NotificationType.ListUpdated, NotificationCategory.SHOPPING_LIST],
+      [NotificationType.ExpiryReminder, NotificationCategory.PANTRY],
+      [NotificationType.LowStock, NotificationCategory.PANTRY],
+      [NotificationType.NewItemAdded, NotificationCategory.PANTRY],
+      [NotificationType.ItemUpdated, NotificationCategory.PANTRY],
+      [NotificationType.ItemDeleted, NotificationCategory.PANTRY],
+      [NotificationType.CollaborationInvite, NotificationCategory.COLLABORATION],
+      [NotificationType.CollaborationAccepted, NotificationCategory.COLLABORATION],
+      [NotificationType.CollaborationDeclined, NotificationCategory.COLLABORATION],
+      [NotificationType.CollaboratorRemoved, NotificationCategory.COLLABORATION],
+      [NotificationType.CollaboratorRoleChanged, NotificationCategory.COLLABORATION],
+      [NotificationType.CollaboratorPermissionsUpdated, NotificationCategory.COLLABORATION],
+      [NotificationType.MembershipInvite, NotificationCategory.MEMBERSHIP],
+      [NotificationType.HomeInvitation, NotificationCategory.MEMBERSHIP],
+      [NotificationType.HomeJoined, NotificationCategory.MEMBERSHIP],
+    ])('categorizes %s correctly', (type, expected) => {
       expect(getNotificationCategory(type)).toBe(expected);
     });
 
-    it('returns SYSTEM for unknown types', () => {
-      expect(getNotificationCategory('UNKNOWN_TYPE')).toBe(NotificationCategory.SYSTEM);
-    });
-
-    it('handles Security type', () => {
-      expect(getNotificationCategory('SecurityAlert')).toBe(
-        NotificationCategory.SECURITY,
+    it('categorizes RecipeCooked as RECIPE', () => {
+      expect(getNotificationCategory(NotificationType.RecipeCooked)).toBe(
+        NotificationCategory.RECIPE,
       );
     });
 
-    it('handles Login type', () => {
-      expect(getNotificationCategory('LoginAttempt')).toBe(
-        NotificationCategory.SECURITY,
-      );
-    });
-
-    it('handles Device type', () => {
-      expect(getNotificationCategory('DeviceRegistered')).toBe(
-        NotificationCategory.SECURITY,
-      );
-    });
-
-    it('handles Account type', () => {
-      expect(getNotificationCategory('AccountUpdated')).toBe(
-        NotificationCategory.ACCOUNT,
-      );
-    });
-
-    it('handles User type', () => {
-      expect(getNotificationCategory('UserProfileChanged')).toBe(
-        NotificationCategory.ACCOUNT,
+    it('categorizes RecipeSaved as RECIPE', () => {
+      expect(getNotificationCategory(NotificationType.RecipeSaved)).toBe(
+        NotificationCategory.RECIPE,
       );
     });
   });
 
   describe('getNotificationPriority', () => {
-    it('returns URGENT for expiry-related types', () => {
-      expect(getNotificationPriority('ExpiryReminder')).toBe(
+    it('returns URGENT for ExpiryReminder', () => {
+      expect(getNotificationPriority(NotificationType.ExpiryReminder)).toBe(
         NotificationPriority.URGENT,
       );
     });
 
-    it('returns URGENT for security', () => {
-      expect(getNotificationPriority('SecurityBreach')).toBe(
-        NotificationPriority.URGENT,
-      );
+    it.each([
+      [NotificationType.LowStock],
+      [NotificationType.CollaboratorRemoved],
+    ])('returns HIGH for %s', (type) => {
+      expect(getNotificationPriority(type)).toBe(NotificationPriority.HIGH);
     });
 
-    it('returns URGENT for suspicious activity', () => {
-      expect(getNotificationPriority('SuspiciousLogin')).toBe(
-        NotificationPriority.URGENT,
-      );
+    it.each([
+      [NotificationType.NewItemAdded],
+      [NotificationType.ItemUpdated],
+      [NotificationType.ItemDeleted],
+      [NotificationType.CollaborationAccepted],
+      [NotificationType.CollaborationDeclined],
+    ])('returns LOW for %s', (type) => {
+      expect(getNotificationPriority(type)).toBe(NotificationPriority.LOW);
     });
 
-    it('returns URGENT for banned', () => {
-      expect(getNotificationPriority('UserBanned')).toBe(
-        NotificationPriority.URGENT,
-      );
+    it.each([
+      [NotificationType.MembershipInvite],
+      [NotificationType.HomeInvitation],
+      [NotificationType.HomeJoined],
+      [NotificationType.CollaborationInvite],
+      [NotificationType.CollaboratorRoleChanged],
+      [NotificationType.CollaboratorPermissionsUpdated],
+      [NotificationType.ListUpdated],
+    ])('returns MEDIUM for %s', (type) => {
+      expect(getNotificationPriority(type)).toBe(NotificationPriority.MEDIUM);
     });
 
-    it('returns URGENT for suspended', () => {
-      expect(getNotificationPriority('AccountSuspended')).toBe(
-        NotificationPriority.URGENT,
-      );
-    });
-
-    it('returns HIGH for low stock', () => {
-      expect(getNotificationPriority('LowStockAlert')).toBe(
-        NotificationPriority.HIGH,
-      );
-    });
-
-    it('returns HIGH for invites', () => {
-      expect(getNotificationPriority('InviteReceived')).toBe(
-        NotificationPriority.HIGH,
-      );
-    });
-
-    it('returns HIGH for failed operations', () => {
-      expect(getNotificationPriority('SyncFailed')).toBe(
-        NotificationPriority.HIGH,
-      );
-    });
-
-    it('returns HIGH for warnings', () => {
-      expect(getNotificationPriority('StorageWarning')).toBe(
-        NotificationPriority.HIGH,
-      );
-    });
-
-    it('returns LOW for item added', () => {
-      expect(getNotificationPriority('ItemAdded')).toBe(
-        NotificationPriority.LOW,
-      );
-    });
-
-    it('returns LOW for item updated', () => {
-      expect(getNotificationPriority('ItemUpdated')).toBe(
-        NotificationPriority.LOW,
-      );
-    });
-
-    it('returns LOW for settings changes', () => {
-      expect(getNotificationPriority('SettingsChanged')).toBe(
-        NotificationPriority.LOW,
-      );
-    });
-
-    it('returns MEDIUM as default', () => {
-      expect(getNotificationPriority('SomeOtherType')).toBe(
-        NotificationPriority.MEDIUM,
-      );
+    it.each([
+      [NotificationType.RecipeCooked],
+      [NotificationType.RecipeSaved],
+    ])('returns LOW for recipe type %s', (type) => {
+      expect(getNotificationPriority(type)).toBe(NotificationPriority.LOW);
     });
   });
 
@@ -240,14 +187,32 @@ describe('notificationParser', () => {
       expect(getNotificationTitle(NotificationType.HomeJoined)).toContain('Member');
     });
 
-    it('falls back to payload title', () => {
-      expect(
-        getNotificationTitle(NotificationType.RecipeCooked, { title: 'Recipe Done' }),
-      ).toBe('Recipe Done');
+    it('returns title for CollaborationAccepted', () => {
+      expect(getNotificationTitle(NotificationType.CollaborationAccepted)).toBe('Invitation Accepted');
     });
 
-    it('falls back to Notification', () => {
-      expect(getNotificationTitle(NotificationType.RecipeCooked)).toBe('Notification');
+    it('returns title for CollaborationDeclined', () => {
+      expect(getNotificationTitle(NotificationType.CollaborationDeclined)).toBe('Invitation Declined');
+    });
+
+    it('returns title for CollaboratorRemoved', () => {
+      expect(getNotificationTitle(NotificationType.CollaboratorRemoved)).toBe('Removed from List');
+    });
+
+    it('returns title for CollaboratorRoleChanged', () => {
+      expect(getNotificationTitle(NotificationType.CollaboratorRoleChanged)).toBe('Role Changed');
+    });
+
+    it('returns title for CollaboratorPermissionsUpdated', () => {
+      expect(getNotificationTitle(NotificationType.CollaboratorPermissionsUpdated)).toBe('Permissions Updated');
+    });
+
+    it('returns title for RecipeCooked', () => {
+      expect(getNotificationTitle(NotificationType.RecipeCooked)).toBe('Recipe Cooked');
+    });
+
+    it('returns title for RecipeSaved', () => {
+      expect(getNotificationTitle(NotificationType.RecipeSaved)).toBe('Recipe Saved');
     });
   });
 
@@ -300,16 +265,78 @@ describe('notificationParser', () => {
       expect(msg).toContain('Weekly Groceries');
     });
 
-    it('returns default message for unknown type', () => {
-      const msg = getNotificationMessage(NotificationType.RecipeCooked);
-      expect(msg).toBe('You have a new notification');
+    it('returns message for CollaborationAccepted', () => {
+      const msg = getNotificationMessage(NotificationType.CollaborationAccepted, {
+        collaboratorName: 'Bob',
+        listName: 'Groceries',
+      });
+      expect(msg).toContain('Bob');
+      expect(msg).toContain('accepted');
+      expect(msg).toContain('Groceries');
     });
 
-    it('uses payload message when available', () => {
-      const msg = getNotificationMessage(NotificationType.RecipeCooked, {
-        message: 'Custom message',
+    it('returns message for CollaborationDeclined', () => {
+      const msg = getNotificationMessage(NotificationType.CollaborationDeclined, {
+        collaboratorName: 'Eve',
+        listName: 'Party List',
       });
-      expect(msg).toBe('Custom message');
+      expect(msg).toContain('Eve');
+      expect(msg).toContain('declined');
+      expect(msg).toContain('Party List');
+    });
+
+    it('returns message for CollaboratorRemoved', () => {
+      const msg = getNotificationMessage(NotificationType.CollaboratorRemoved, {
+        listName: 'Work List',
+      });
+      expect(msg).toContain('removed');
+      expect(msg).toContain('Work List');
+    });
+
+    it('returns message for CollaboratorRoleChanged', () => {
+      const msg = getNotificationMessage(NotificationType.CollaboratorRoleChanged, {
+        listName: 'Shared List',
+        newRole: 'EDITOR',
+      });
+      expect(msg).toContain('role');
+      expect(msg).toContain('EDITOR');
+    });
+
+    it('returns message for CollaboratorPermissionsUpdated', () => {
+      const msg = getNotificationMessage(NotificationType.CollaboratorPermissionsUpdated, {
+        listName: 'Family List',
+      });
+      expect(msg).toContain('permissions');
+      expect(msg).toContain('Family List');
+    });
+
+    it('handles missing payload for new collaboration types', () => {
+      expect(getNotificationMessage(NotificationType.CollaborationAccepted)).toContain('Someone');
+      expect(getNotificationMessage(NotificationType.CollaboratorRemoved)).toContain('a shopping list');
+    });
+
+    it('returns message for RecipeCooked', () => {
+      const msg = getNotificationMessage(NotificationType.RecipeCooked, {
+        recipeName: 'Pasta Carbonara',
+      });
+      expect(msg).toBe('Pasta Carbonara was marked as cooked');
+    });
+
+    it('returns message for RecipeSaved', () => {
+      const msg = getNotificationMessage(NotificationType.RecipeSaved, {
+        recipeName: 'Chicken Tikka',
+      });
+      expect(msg).toBe('Chicken Tikka was saved to your collection');
+    });
+
+    it('handles missing recipeName for RecipeCooked', () => {
+      const msg = getNotificationMessage(NotificationType.RecipeCooked);
+      expect(msg).toBe('A recipe was marked as cooked');
+    });
+
+    it('handles missing recipeName for RecipeSaved', () => {
+      const msg = getNotificationMessage(NotificationType.RecipeSaved);
+      expect(msg).toBe('A recipe was saved to your collection');
     });
   });
 });

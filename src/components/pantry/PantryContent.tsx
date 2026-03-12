@@ -28,7 +28,7 @@ import {
   formatQuantityBreakdown,
 } from '#hooks/pantry/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
-import { StorageState, type PantryStats } from '#generated';
+import { type PantryStats } from '#generated';
 import { PantryAlertBar } from '#components/pantry/PantryAlertBar';
 import { EmptyState } from '#components/base/EmptyState';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
@@ -156,7 +156,7 @@ interface ItemDisplayData {
   expirationColor: string | undefined;
   variant: ItemVariant;
   quantityDisplay: string;
-  location: string;
+  location: string | null;
   isOutOfStock: boolean;
   packageBreakdownText: string | null | undefined;
   remainingNetWeightText: string | null | undefined;
@@ -188,7 +188,7 @@ function computeDisplayMap(
   getLocation: (
     storageState?: string | null,
     storageLocation?: { name: string } | null,
-  ) => string,
+  ) => string | null,
 ): Map<string, ItemDisplayData> {
   const map = new Map<string, ItemDisplayData>();
   for (const item of items) {
@@ -243,20 +243,14 @@ function computeDisplayMap(
 // Context for passing pre-computed display map to module-scope renderItem
 const DisplayMapContext = createContext<Map<string, ItemDisplayData>>(new Map());
 
-// Get location string from storage state (pure function — no component state dependency)
+// Get location string — only returns custom storage location names.
+// Default storage states (Fridge/Freezer/Pantry) are already represented by filter tabs.
 const getLocationString = (
-  storageState?: string | null,
+  _storageState?: string | null,
   storageLocation?: { name: string } | null,
-): string => {
+): string | null => {
   if (storageLocation?.name) return storageLocation.name;
-  switch (storageState) {
-    case StorageState.Refrigerated:
-      return 'Fridge';
-    case StorageState.Frozen:
-      return 'Freezer';
-    default:
-      return 'Pantry';
-  }
+  return null;
 };
 
 // Module-scope getItemType — separate recycling pools by layout shape

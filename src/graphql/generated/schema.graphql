@@ -866,18 +866,11 @@ type ClearItemsResponse {
 }
 
 type CollaborationChangeEvent {
-  changeType: CollaborationChangeType!
   collaborator: ShoppingListCollaborator!
-  shoppingListId: ID!
+  listId: ID!
+  mutation: MutationType!
   timestamp: DateTime!
   userId: ID!
-}
-
-enum CollaborationChangeType {
-  INVITE_ACCEPTED
-  INVITE_SENT
-  MEMBER_ADDED
-  MEMBER_REMOVED
 }
 
 """Order by options for collaborators"""
@@ -5086,8 +5079,18 @@ type NotificationSubscriptionPayload {
 
 """Identifies the category of a notification sent to a user"""
 enum NotificationType {
+  """A collaborator accepted a shopping list invitation"""
+  COLLABORATION_ACCEPTED
+  """A collaborator declined a shopping list invitation"""
+  COLLABORATION_DECLINED
   """Invitation to collaborate on a shopping list"""
   COLLABORATION_INVITE
+  """A collaborator's granular permissions were updated on a shopping list"""
+  COLLABORATOR_PERMISSIONS_UPDATED
+  """A collaborator was removed from a shopping list"""
+  COLLABORATOR_REMOVED
+  """A collaborator's role was changed on a shopping list"""
+  COLLABORATOR_ROLE_CHANGED
   """
   Alerts that a pantry item is approaching or has passed its expiration date
   """
@@ -7037,8 +7040,6 @@ type ShoppingListChangeEvent {
   clearedCount: Int
   """Populated for ITEMS_BATCH_CLEARED events"""
   clearedItemIds: [ID!]
-  """Populated for COLLABORATORS_CHANGED events"""
-  collaborator: ShoppingListCollaborator
   """Populated for ITEMS_CHANGED events"""
   item: ShoppingListItem
   listId: ID!
@@ -7051,7 +7052,6 @@ type ShoppingListChangeEvent {
 }
 
 enum ShoppingListChangeType {
-  COLLABORATORS_CHANGED
   ITEMS_BATCH_CLEARED
   ITEMS_CHANGED
   LIST_UPDATED
@@ -7795,8 +7795,10 @@ input SubmitAppealInput {
 }
 
 type Subscription {
-  """Subscribe to collaboration changes for a shopping list"""
-  collaborationChanged(shoppingListId: ID!): CollaborationChangeEvent!
+  """
+  Subscribe to collaborator changes for a shopping list (invites, removals, role/permission updates)
+  """
+  collaborationChanged(listId: ID!): CollaborationChangeEvent!
   """Subscribe to all device changes for a user"""
   deviceChanged(userId: ID!): DeviceChangeEvent!
   """Subscribe to expiration notification changes for a pantry"""

@@ -14,9 +14,11 @@ import { Header } from '#components/molecules/Header';
 import { LoadingInline } from '#components/base/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {
   useRemoveCollaboratorMutation,
   useAddCollaboratorMutation,
+  useShareShoppingListMutation,
   CollaboratorRole } from '#generated';
 import {
   createAddToParentConnectionUpdater,
@@ -30,6 +32,7 @@ import { OfflineGate } from '#components/atoms/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
 
 const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingList',
@@ -83,8 +86,11 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
   const { listId } = route.params;
 
   const [email, setEmail] = useState('');
+  const [selectedRole, setSelectedRole] = useState<CollaboratorRole>(CollaboratorRole.Contributor);
   const [sharing, setSharing] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [togglingShareCode, setTogglingShareCode] = useState(false);
+  const [copied, setCopied] = useState(false);
   const permissionsBottomSheetRef =
     useRef<CollaboratorPermissionsBottomSheetRef>(null);
 
@@ -103,6 +109,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
 
   const [shareList] = useAddCollaboratorMutation();
   const [removeMember] = useRemoveCollaboratorMutation();
+  const [shareShoppingList] = useShareShoppingListMutation();
 
   // Check if current user is owner
   const currentUserCollaborator = collaborators.find(
@@ -113,6 +120,34 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
   const activeCollaborators = collaborators.filter(c =>
     ['ACCEPTED', 'ACTIVE', 'PENDING'].includes(c.status?.toUpperCase()),
   );
+
+  const isPublic = !!shoppingList?.isPublic;
+  const shareCode = shoppingList?.shareCode;
+
+  const handleToggleShareCode = () => {
+    executeWithLoadingState(
+      async () => {
+        await shareShoppingList({
+          variables: {
+            id: listId,
+            input: { isPublic: !isPublic },
+          },
+        });
+        refetch();
+      },
+      setTogglingShareCode,
+      () => {
+        Alert.alert('Error', 'Failed to update share settings');
+      },
+    );
+  };
+
+  const handleCopyShareCode = () => {
+    if (shareCode) {
+      Clipboard.setString(shareCode);
+      setCopied(true);
+    }
+  };
 
   const handleShare = () => {
     if (!email.trim()) {
@@ -127,7 +162,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
             input: {
               shoppingListId: listId,
               email: email.trim(),
-              role: CollaboratorRole.Contributor, // Assuming a role is required
+              role: selectedRole,
             } },
           update(cache, { data }) {
             const collaborator = data?.inviteToShoppingList?.collaborator;
@@ -275,6 +310,88 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                   )}
                 </Pressable>
               </View>
+              <Text style={styles.roleLabel}>Role</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.roleRow}
+              >
+                {INVITE_ROLES.map(role => {
+                  const info = ROLE_PERMISSIONS[role];
+                  const isSelected = selectedRole === role;
+                  return (
+                    <Pressable
+                      key={role}
+                      style={({pressed}) => [
+                        styles.roleChip,
+                        isSelected && styles.roleChipSelected,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => setSelectedRole(role)}
+                    >
+                      <Text style={styles.roleChipIcon}>{info.icon}</Text>
+                      <Text
+                        style={[
+                          styles.roleChipText,
+                          isSelected && styles.roleChipTextSelected,
+                        ]}
+                      >
+                        {info.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+
+          {!isHomeLinked && (
+            <View style={styles.shareCodeSection}>
+              <Text style={styles.sectionTitle}>Share via Code</Text>
+              <Text style={styles.shareCodeDescription}>
+                Enable public sharing to generate a code anyone can use to join this list.
+              </Text>
+              <Pressable
+                style={({pressed}) => [styles.shareCodeToggle, pressed && styles.pressed]}
+                onPress={handleToggleShareCode}
+                disabled={togglingShareCode}
+              >
+                <View style={styles.shareCodeToggleContent}>
+                  <Icon
+                    name={isPublic ? 'link-outline' : 'lock-closed-outline'}
+                    size={20}
+                    color={isPublic ? theme.colors.primary : theme.colors.textSecondary}
+                  />
+                  <Text style={styles.shareCodeToggleText}>
+                    {isPublic ? 'Public sharing enabled' : 'Public sharing disabled'}
+                  </Text>
+                </View>
+                {togglingShareCode ? (
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                ) : (
+                  <View style={[styles.toggleTrack, isPublic && styles.toggleTrackActive]}>
+                    <View style={[styles.toggleThumb, isPublic && styles.toggleThumbActive]} />
+                  </View>
+                )}
+              </Pressable>
+              {isPublic && shareCode ? (
+                <Pressable
+                  style={({pressed}) => [styles.shareCodeDisplay, pressed && styles.pressed]}
+                  onPress={handleCopyShareCode}
+                >
+                  <Text style={styles.shareCodeValue}>{shareCode}</Text>
+                  <View style={styles.copyButton}>
+                    <Icon
+                      name={copied ? 'checkmark' : 'copy-outline'}
+                      size={18}
+                      color={copied ? theme.colors.success : theme.colors.primary}
+                    />
+                    <Text style={[styles.copyText, copied && { color: theme.colors.success }]}>
+                      {copied ? 'Copied' : 'Copy'}
+                    </Text>
+                  </View>
+                </Pressable>
+              ) : null}
             </View>
           )}
 
@@ -407,6 +524,100 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
     justifyContent: 'center',
     alignItems: 'center' },
+  roleLabel: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm },
+  roleRow: {
+    gap: theme.spacing.sm },
+  roleChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing['3'],
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.pill,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    gap: theme.spacing.xs },
+  roleChipSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary + '15' },
+  roleChipIcon: {
+    fontSize: theme.typography.fontSize.sm },
+  roleChipText: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+    fontWeight: theme.fonts.weight.medium },
+  roleChipTextSelected: {
+    color: theme.colors.primary,
+    fontWeight: theme.fonts.weight.semibold },
+  shareCodeSection: {
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border },
+  shareCodeDescription: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md,
+    lineHeight: theme.typography.fontSize.sm * 1.5 },
+  shareCodeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: theme.spacing['3'],
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.sm },
+  shareCodeToggleContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm },
+  shareCodeToggleText: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.textPrimary,
+    fontWeight: theme.fonts.weight.medium },
+  toggleTrack: {
+    width: 44,
+    height: 24,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.border,
+    justifyContent: 'center',
+    paddingHorizontal: 2 },
+  toggleTrackActive: {
+    backgroundColor: theme.colors.primary },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.white },
+  toggleThumbActive: {
+    alignSelf: 'flex-end' },
+  shareCodeDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: theme.spacing.md,
+    padding: theme.spacing['3'],
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderStyle: 'dashed' },
+  shareCodeValue: {
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.textPrimary,
+    letterSpacing: 2 },
+  copyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs },
+  copyText: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.primary,
+    fontWeight: theme.fonts.weight.medium },
   membersSection: {
     padding: theme.spacing.md },
   memberCard: {

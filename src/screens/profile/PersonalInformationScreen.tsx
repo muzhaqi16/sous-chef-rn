@@ -28,7 +28,7 @@ async function performProfileUpdate(
     client.writeQuery<GetUserProfileQuery>({
       query: GetUserProfileDocument,
       data: {
-        __typename: 'Query' as const,
+        __typename: 'Query',
         me: {
           ...cache.me,
           profile: {

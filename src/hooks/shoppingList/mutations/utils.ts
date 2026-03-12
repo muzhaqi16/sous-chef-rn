@@ -20,7 +20,9 @@ interface OptimisticShoppingListItemFields {
  * Creates an optimistic ShoppingListItem entity with sensible defaults.
  * Returns the temp ID so callers can track it for eviction on server response.
  */
-export function createOptimisticShoppingListItem(fields: OptimisticShoppingListItemFields) {
+export function createOptimisticShoppingListItem(
+  fields: OptimisticShoppingListItemFields,
+) {
   const tempId = `temp-${generateId()}`;
   const entity = createOptimisticEntity('ShoppingListItem', tempId, {
     itemName: fields.itemName,
@@ -32,14 +34,14 @@ export function createOptimisticShoppingListItem(fields: OptimisticShoppingListI
     notes: null,
     sortOrder: '',
     purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo' as const,
+      __typename: 'ShoppingListItemPurchaseInfo',
       isPurchased: false,
     },
     item: fields.itemId
-      ? { __typename: 'Item' as const, id: fields.itemId, imageUrl: null, images: [] }
+      ? { __typename: 'Item', id: fields.itemId, imageUrl: null, images: [] }
       : null,
     unit: fields.unitId
-      ? { __typename: 'Unit' as const, id: fields.unitId, name: '', symbol: '' }
+      ? { __typename: 'Unit', id: fields.unitId, name: '', symbol: '' }
       : null,
   });
   return { tempId, entity };

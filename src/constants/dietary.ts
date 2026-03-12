@@ -1,11 +1,11 @@
-export const SKILL_LEVELS = [
+export type SkillLevel = 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
+
+export const SKILL_LEVELS: SkillLevel[] = [
   'Beginner',
   'Intermediate',
   'Advanced',
   'Expert',
-] as const;
-
-export type SkillLevel = (typeof SKILL_LEVELS)[number];
+];
 
 export const DIETARY_LIMITS = {
   prepTime: { min: 0, max: 480 },

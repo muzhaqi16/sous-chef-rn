@@ -31,7 +31,7 @@ describe('home hooks utils', () => {
     it('passes arguments through to the updater', () => {
       const mockCache = { modify: jest.fn() } as any;
       const mockItem = { id: 'home-1' };
-      const options = { position: 'end' as const };
+      const options: { position: 'end' } = { position: 'end' };
 
       addToHomesCache(mockCache, mockItem, options);
 

@@ -1,4 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
+import type { NavigationState } from '../appSlice';
 
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
@@ -38,14 +39,18 @@ describe('appSlice', () => {
   });
 
   describe('setNavigationState', () => {
-    it.each(['loading', 'auth', 'verification', 'biometric_setup', 'onboarding', 'main_app'] as const)(
-      'sets navigation state to %s',
-      (navState) => {
-        const store = createTestStore();
-        store.getState().setNavigationState(navState);
-        expect(store.getState().navigationState).toBe(navState);
-      },
-    );
+    it.each<NavigationState>([
+      'loading',
+      'auth',
+      'verification',
+      'biometric_setup',
+      'onboarding',
+      'main_app',
+    ])('sets navigation state to %s', navState => {
+      const store = createTestStore();
+      store.getState().setNavigationState(navState);
+      expect(store.getState().navigationState).toBe(navState);
+    });
   });
 
   describe('setShowBiometricSetup', () => {

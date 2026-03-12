@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Pressable, Text, ActivityIndicator } from 'react-native';
+import { View, Pressable, Text } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -226,11 +226,6 @@ export function LoginScreen(): React.JSX.Element {
         }}
         isLoading={isLoggingIn}
       />
-
-      {/* Loading indicator */}
-      {!!(isLoggingIn || isBiometricLoading) && (
-        <ActivityIndicator testID="login-loading" size="small" />
-      )}
 
       {/* Biometric Authentication Section */}
       {!!shouldShowBiometricButton && (

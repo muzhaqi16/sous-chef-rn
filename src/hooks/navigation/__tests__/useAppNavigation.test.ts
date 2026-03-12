@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { CommonActions, StackActions } from '@react-navigation/native';
 import { useAppNavigation } from '../useAppNavigation';
+import type { BarcodeSource } from '#/types/navigation';
 
 const mockDispatch = jest.fn();
 const mockGoBack = jest.fn();
@@ -468,7 +469,7 @@ describe('useAppNavigation', () => {
 
     it('searchResults navigates to nested Barcode > SearchResults', () => {
       const { result } = renderHook(() => useAppNavigation());
-      const params = { barcode: '12345', format: 'EAN13', source: 'pantry' as const };
+      const params: { barcode: string; format: string; source: BarcodeSource } = { barcode: '12345', format: 'EAN13', source: 'pantry' };
       act(() => { result.current.navigateTo.searchResults(params); });
       expect(mockDispatch).toHaveBeenCalledWith(
         CommonActions.navigate('Barcode', {
@@ -488,7 +489,7 @@ describe('useAppNavigation', () => {
 
     it('barcode navigates to root Barcode with source params', () => {
       const { result } = renderHook(() => useAppNavigation());
-      const params = { source: 'shoppingList' as const, shoppingListId: 'sl1' };
+      const params: { source: BarcodeSource; shoppingListId: string } = { source: 'shoppingList', shoppingListId: 'sl1' };
       act(() => { result.current.navigateTo.barcode(params); });
       expect(mockDispatch).toHaveBeenCalledWith(
         CommonActions.navigate('Barcode', {

@@ -1,5 +1,6 @@
 import React, { Suspense, useEffect, useRef } from 'react';
 import { View } from 'react-native';
+import type { ViewStyle } from 'react-native';
 import {
   createStaticNavigation,
   DefaultTheme,
@@ -33,6 +34,7 @@ import { CodeVerificationScreen } from '#screens/auth/CodeVerificationScreen';
 import { EmailVerificationDeepLinkScreen } from '#screens/auth/EmailVerificationDeepLinkScreen';
 import { ResetPasswordScreen } from '#screens/auth/ResetPasswordScreen';
 import { AcceptInvite } from '#screens/shoppingList/AcceptInvite';
+import { JoinByShareCodeScreen } from '#screens/shoppingList/JoinByShareCodeScreen';
 
 // Lazy-loaded screens (infrequently visited, reduces cold start JS parsing)
 const ProfilePhotoUploadScreen = React.lazy(
@@ -213,6 +215,10 @@ const RootStack = createNativeStackNavigator({
           screen: AcceptInvite,
           linking: 'accept-invitation',
         },
+        JoinByShareCode: {
+          screen: JoinByShareCodeScreen,
+          linking: 'join-list/:shareCode',
+        },
         NotFound: {
           screen: NotFoundScreen,
           linking: '*',
@@ -312,11 +318,11 @@ export function Navigation() {
   }, [user, isHydrated, setNavigationState]);
 
   // Stable style object for Suspense fallback
-  const suspenseFallbackStyle = {
+  const suspenseFallbackStyle: ViewStyle = {
     flex: 1,
     backgroundColor: theme.colors.background,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
+    justifyContent: 'center',
+    alignItems: 'center',
   };
 
   // Create navigation theme based on current Unistyles theme

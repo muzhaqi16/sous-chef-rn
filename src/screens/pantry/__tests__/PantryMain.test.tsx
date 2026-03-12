@@ -38,7 +38,12 @@ jest.mock('#store', () => {
 // --- Facade hook: usePantryScreen ---
 const defaultPantryScreen = {
   // User
-  authUser: { id: 'u1', name: 'Test', email: 'test@t.com', profilePicture: null },
+  authUser: {
+    id: 'u1',
+    name: 'Test',
+    email: 'test@t.com',
+    profilePicture: null,
+  },
   userName: 'Test',
   householdName: 'My Home',
 
@@ -56,15 +61,23 @@ const defaultPantryScreen = {
   // Store state
   showBiometricSetup: false,
   unreadCount: 0,
-  pantrySortOption: 'recent' as const,
-  pantrySortDirection: 'desc' as const,
+  pantrySortOption: 'recent',
+  pantrySortDirection: 'desc',
   pendingPantryScrollToTop: false,
   setPendingPantryScrollToTop: jest.fn(),
 
   // Pantry data
   pantryItems: [] as Array<{ id: string; itemName: string; quantity: number }>,
-  rawPantryItems: [] as Array<{ id: string; itemName: string; quantity: number }>,
-  pantryStorageLocations: [] as Array<{ id: string; name: string; icon: string | null }>,
+  rawPantryItems: [] as Array<{
+    id: string;
+    itemName: string;
+    quantity: number;
+  }>,
+  pantryStorageLocations: [] as Array<{
+    id: string;
+    name: string;
+    icon: string | null;
+  }>,
   stats: { totalItems: 0, expiringCount: 0, lowStockCount: 0 } as {
     totalItems: number;
     expiringCount: number;
@@ -90,7 +103,7 @@ const defaultPantryScreen = {
   isLoadingMore: false,
 
   // Location filter
-  locationFilter: 'all' as const,
+  locationFilter: 'all',
   handleLocationFilterChange: jest.fn(),
   combinedTabs: [
     { id: 'all', label: 'All' },
@@ -140,7 +153,9 @@ const mockPantryModals = {
   handleItemAdded: jest.fn(),
 };
 jest.mock('#/context/PantryModalsContext', () => ({
-  PantryModalsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  PantryModalsProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
   usePantryModals: () => mockPantryModals,
 }));
 
@@ -174,10 +189,17 @@ jest.mock('#services/telemetry', () => ({
 
 // --- Error boundary & performance ---
 jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
-  PantryErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  PantryErrorBoundary: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 jest.mock('#components/performance/DeferredScreen', () => ({
-  DeferredScreen: ({ component: Component }: { component: React.FC; fallback: any }) => <Component />,
+  DeferredScreen: ({
+    component: Component,
+  }: {
+    component: React.FC;
+    fallback: any;
+  }) => <Component />,
 }));
 
 // --- Heavy child components (shallow render) ---
@@ -197,7 +219,9 @@ jest.mock('#components/pantry/PantryContent', () => {
           <Text testID="prop-stats">{JSON.stringify(props.stats)}</Text>
           <Text testID="prop-totalCount">{String(props.totalCount)}</Text>
           <Text testID="prop-loading">{String(props.loading)}</Text>
-          <Text testID="prop-itemCount">{String(props.items?.length ?? 0)}</Text>
+          <Text testID="prop-itemCount">
+            {String(props.items?.length ?? 0)}
+          </Text>
           <Text testID="prop-hasMore">{String(props.hasMore)}</Text>
           <Text testID="prop-isLoadingMore">{String(props.isLoadingMore)}</Text>
         </View>
@@ -205,17 +229,32 @@ jest.mock('#components/pantry/PantryContent', () => {
     }),
   };
 });
-jest.mock('#components/organisms/AnimatedItemSelector/AnimatedItemSelector', () => {
-  const { forwardRef } = require('react');
-  const { View } = require('react-native');
-  return { AnimatedItemSelector: forwardRef(() => <View testID="item-selector" />) };
-});
-jest.mock('#/components/organisms/FeatureHintOverlay', () => ({ FeatureHintOverlay: () => null }));
-jest.mock('#components/base/Skeleton/PantryScreenSkeleton', () => ({ PantryScreenSkeleton: () => null }));
-jest.mock('#components/molecules/TabScreenHeader', () => ({ TabScreenHeader: () => null }));
+jest.mock(
+  '#components/organisms/AnimatedItemSelector/AnimatedItemSelector',
+  () => {
+    const { forwardRef } = require('react');
+    const { View } = require('react-native');
+    return {
+      AnimatedItemSelector: forwardRef(() => <View testID="item-selector" />),
+    };
+  },
+);
+jest.mock('#/components/organisms/FeatureHintOverlay', () => ({
+  FeatureHintOverlay: () => null,
+}));
+jest.mock('#components/base/Skeleton/PantryScreenSkeleton', () => ({
+  PantryScreenSkeleton: () => null,
+}));
+jest.mock('#components/molecules/TabScreenHeader', () => ({
+  TabScreenHeader: () => null,
+}));
 jest.mock('#components/molecules/SearchBar', () => ({ SearchBar: () => null }));
-jest.mock('#components/molecules/FilterTabs/FilterTabs', () => ({ FilterTabs: () => null }));
-jest.mock('#components/molecules/SectionHeader', () => ({ SectionHeader: () => null }));
+jest.mock('#components/molecules/FilterTabs/FilterTabs', () => ({
+  FilterTabs: () => null,
+}));
+jest.mock('#components/molecules/SectionHeader', () => ({
+  SectionHeader: () => null,
+}));
 
 // --- Per-test mock override helper ---
 function mockPantryScreen(overrides: Partial<typeof defaultPantryScreen> = {}) {
@@ -325,7 +364,9 @@ describe('PantryMain', () => {
       render(<PantryMain />);
       expect(capturedPantryContentProps.noHomeSelected).toBe(true);
       expect(capturedPantryContentProps.noHomes).toBe(false);
-      expect(capturedPantryContentProps.householdName).toBe('Tap to select a home');
+      expect(capturedPantryContentProps.householdName).toBe(
+        'Tap to select a home',
+      );
     });
 
     it('passes noHomes=true when ready, no home selected, and no homes exist', () => {
@@ -371,13 +412,23 @@ describe('PantryMain', () => {
 
   describe('hybrid search integration', () => {
     it('passes useServerSort from hook to PantryContent', () => {
-      mockPantryScreen({ useServerSort: true, searchActive: true, hasMore: true, totalCount: 55 });
+      mockPantryScreen({
+        useServerSort: true,
+        searchActive: true,
+        hasMore: true,
+        totalCount: 55,
+      });
       render(<PantryMain />);
       expect(capturedPantryContentProps.useServerSort).toBe(true);
     });
 
     it('suppresses pagination indicators when search is active', () => {
-      mockPantryScreen({ searchActive: true, useServerSort: true, hasMore: true, isLoadingMore: true });
+      mockPantryScreen({
+        searchActive: true,
+        useServerSort: true,
+        hasMore: true,
+        isLoadingMore: true,
+      });
       render(<PantryMain />);
       // PantryMainContent passes searchActive ? false : screen.isLoadingMore
       expect(capturedPantryContentProps.hasMore).toBe(false);
@@ -396,7 +447,11 @@ describe('PantryMain', () => {
     });
 
     it('uses local search when useServerSort is false', () => {
-      mockPantryScreen({ useServerSort: false, totalCount: 55, hasMore: false });
+      mockPantryScreen({
+        useServerSort: false,
+        totalCount: 55,
+        hasMore: false,
+      });
       render(<PantryMain />);
       expect(capturedPantryContentProps.useServerSort).toBe(false);
     });

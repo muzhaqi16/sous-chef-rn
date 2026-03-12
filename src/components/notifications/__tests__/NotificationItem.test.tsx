@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { NotificationItem } from '../NotificationItem';
 import { NotificationCategory, NotificationPriority } from '#store/slices/notificationSlice';
+import { NotificationType } from '#generated';
 
 jest.mock('#utils/iconUtils', () => {
   const R = require('react');
@@ -26,7 +27,7 @@ jest.mock('date-fns/formatDistanceToNow', () => ({
 
 const makeNotification = (overrides?: any) => ({
   id: 'notif-1',
-  type: 'HOME_INVITATION',
+  type: NotificationType.HomeInvitation,
   category: NotificationCategory.COLLABORATION,
   priority: NotificationPriority.MEDIUM,
   title: 'New Invitation',

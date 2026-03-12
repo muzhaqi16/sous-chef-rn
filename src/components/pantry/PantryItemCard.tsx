@@ -31,7 +31,7 @@ interface PantryItemCardProps {
   expirationVariant?: ExpirationVariant;
   expirationColor?: string;
   quantity: string;
-  location: string;
+  location?: string | null;
   variant?: ItemVariant;
   imageUrl?: string | null;
   isOutOfStock?: boolean;
@@ -207,14 +207,15 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
             (activeBatchCount && activeBatchCount > 1
               ? `${activeBatchCount} batches`
               : undefined) ||
-            location
+            location ||
+            undefined
           }
           tertiary={
             quantityBreakdownText ||
             packageBreakdownText ||
             remainingNetWeightText ||
             (activeBatchCount && activeBatchCount > 1)
-              ? location
+              ? location || undefined
               : undefined
           }
         />

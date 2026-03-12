@@ -150,5 +150,5 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
     setFromItem,
     parseQuantityInput,
     buildUnitInput,
-    buildDirtyInput } as const;
+    buildDirtyInput };
 }

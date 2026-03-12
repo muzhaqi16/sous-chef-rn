@@ -7,13 +7,11 @@ describe('FilterTabs', () => {
     { id: 'all', label: 'All' },
     { id: 'fridge', label: 'Fridge' },
     { id: 'freezer', label: 'Freezer' },
-  ] as const;
-
-  type TabId = (typeof tabs)[number]['id'];
+  ];
 
   const defaultProps: any = {
     tabs,
-    activeTabId: 'all' as TabId,
+    activeTabId: 'all',
     onTabChange: jest.fn(),
   };
 
@@ -102,7 +100,7 @@ describe('FilterTabs', () => {
     const tabsWithAction = [
       { id: 'all', label: 'All' },
       { id: 'custom', label: 'Custom', onPress: customPress },
-    ] as const;
+    ];
 
     render(
       <FilterTabs

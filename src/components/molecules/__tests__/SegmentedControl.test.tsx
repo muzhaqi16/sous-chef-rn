@@ -3,12 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import { SegmentedControl } from '../SegmentedControl';
 
 describe('SegmentedControl', () => {
-  const options = ['daily', 'weekly', 'monthly'] as const;
-  type Option = (typeof options)[number];
+  const options = ['daily', 'weekly', 'monthly'];
 
   const defaultProps = {
     options,
-    value: 'daily' as Option,
+    value: 'daily',
     onChange: jest.fn(),
   };
 

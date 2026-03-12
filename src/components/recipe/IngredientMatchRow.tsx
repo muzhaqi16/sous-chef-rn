@@ -16,98 +16,107 @@ interface IngredientMatchRowProps {
   ) => void;
 }
 
-const BADGE_CONFIG = {
-  available: { label: 'Available', color: 'success' as const },
-  partial: { label: 'Partial', color: 'warning' as const },
-  missing: { label: 'Missing', color: 'error' as const },
-} as const;
+const BADGE_CONFIG: Record<string, { label: string; color: 'success' | 'warning' | 'error' }> = {
+  available: { label: 'Available', color: 'success' },
+  partial: { label: 'Partial', color: 'warning' },
+  missing: { label: 'Missing', color: 'error' },
+};
 
-const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> =
-  ({ editableMatch, index, onUpdate }) => {
-    const { theme } = useUnistyles();
-    const { match, adjustedQuantity, isIncluded } = editableMatch;
-    const status = getAvailabilityStatus(match);
-    const badge = BADGE_CONFIG[status];
-    const isOptional = match.ingredient.isOptional;
+const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
+  editableMatch,
+  index,
+  onUpdate,
+}) => {
+  const { theme } = useUnistyles();
+  const { match, adjustedQuantity, isIncluded } = editableMatch;
+  const status = getAvailabilityStatus(match);
+  const badge = BADGE_CONFIG[status];
+  const isOptional = match.ingredient.isOptional;
 
-    return (
-      <View style={[styles.row, !isIncluded && styles.rowExcluded]}>
-        <View style={styles.content}>
-          <View style={styles.topRow}>
+  return (
+    <View style={[styles.row, !isIncluded && styles.rowExcluded]}>
+      <View style={styles.content}>
+        <View style={styles.topRow}>
+          <Text
+            style={[styles.name, !isIncluded && styles.textExcluded]}
+            numberOfLines={1}
+          >
+            {match.ingredient.name}
+          </Text>
+          <View
+            style={[
+              styles.badge,
+              { backgroundColor: theme.colors[badge.color] + '20' },
+            ]}
+          >
             <Text
-              style={[styles.name, !isIncluded && styles.textExcluded]}
-              numberOfLines={1}
+              style={[styles.badgeText, { color: theme.colors[badge.color] }]}
             >
-              {match.ingredient.name}
+              {isOptional ? 'Optional' : badge.label}
             </Text>
-            <View
-              style={[
-                styles.badge,
-                { backgroundColor: theme.colors[badge.color] + '20' },
-              ]}
-            >
-              <Text
-                style={[styles.badgeText, { color: theme.colors[badge.color] }]}
-              >
-                {isOptional ? 'Optional' : badge.label}
-              </Text>
-            </View>
-          </View>
-
-          {!!match.matchedPantryItem && (
-            <Text style={styles.matchInfo} numberOfLines={1}>
-              Matched: {match.matchedPantryItem.itemName} (
-              {match.matchedPantryItem.quantity}
-              {match.matchedPantryItem.unit?.symbol
-                ? ` ${match.matchedPantryItem.unit.symbol}`
-                : ''}{' '}
-              available)
-            </Text>
-          )}
-
-          <View style={styles.bottomRow}>
-            <View style={styles.quantityRow}>
-              <Text style={styles.quantityLabel}>Qty:</Text>
-              <TextInput
-                style={styles.quantityInput}
-                value={String(adjustedQuantity)}
-                onChangeText={text => {
-                  const num = parseFloat(text);
-                  if (!isNaN(num) && num >= 0) {
-                    onUpdate(index, { adjustedQuantity: num });
-                  }
-                }}
-                keyboardType="decimal-pad"
-                editable={isIncluded}
-              />
-              {!!match.suggestedUnit?.symbol && <Text style={styles.unitText}>{match.suggestedUnit.symbol}</Text>}
-            </View>
-            <Switch
-              value={isIncluded}
-              onValueChange={value => onUpdate(index, { isIncluded: value })}
-              trackColor={{
-                false: theme.colors.border,
-                true: theme.colors.primary,
-              }}
-              thumbColor={theme.colors.white}
-            />
           </View>
         </View>
+
+        {!!match.matchedPantryItem && (
+          <Text style={styles.matchInfo} numberOfLines={1}>
+            Matched: {match.matchedPantryItem.itemName} (
+            {match.matchedPantryItem.quantity}
+            {match.matchedPantryItem.unit?.symbol
+              ? ` ${match.matchedPantryItem.unit.symbol}`
+              : ''}{' '}
+            available)
+          </Text>
+        )}
+
+        <View style={styles.bottomRow}>
+          <View style={styles.quantityRow}>
+            <Text style={styles.quantityLabel}>Qty:</Text>
+            <TextInput
+              style={styles.quantityInput}
+              value={String(adjustedQuantity)}
+              onChangeText={text => {
+                const num = parseFloat(text);
+                if (!isNaN(num) && num >= 0) {
+                  onUpdate(index, { adjustedQuantity: num });
+                }
+              }}
+              keyboardType="decimal-pad"
+              editable={isIncluded}
+            />
+            {!!match.suggestedUnit?.symbol && (
+              <Text style={styles.unitText}>{match.suggestedUnit.symbol}</Text>
+            )}
+          </View>
+          <Switch
+            value={isIncluded}
+            onValueChange={value => onUpdate(index, { isIncluded: value })}
+            trackColor={{
+              false: theme.colors.border,
+              true: theme.colors.primary,
+            }}
+            thumbColor={theme.colors.white}
+          />
+        </View>
       </View>
-    );
-  };
+    </View>
+  );
+};
 
 IngredientMatchRowComponent.displayName = 'IngredientMatchRow';
 
-const areIngredientMatchRowPropsEqual = createPropsComparator<IngredientMatchRowProps>({
-  referenceKeys: ['index'],
-  nestedComparisons: {
-    editableMatch: ['adjustedQuantity', 'isIncluded'],
-    'editableMatch.match.ingredient': ['id'],
-  },
-});
+const areIngredientMatchRowPropsEqual =
+  createPropsComparator<IngredientMatchRowProps>({
+    referenceKeys: ['index'],
+    nestedComparisons: {
+      editableMatch: ['adjustedQuantity', 'isIncluded'],
+      'editableMatch.match.ingredient': ['id'],
+    },
+  });
 
-export const IngredientMatchRow = React.memo(IngredientMatchRowComponent, areIngredientMatchRowPropsEqual);
+export const IngredientMatchRow = React.memo(
+  IngredientMatchRowComponent,
+  areIngredientMatchRowPropsEqual,
+);
 
 const styles = StyleSheet.create(theme => ({
   row: {

@@ -195,21 +195,20 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
           originalImageSize.height - finalCropY,
         );
 
-        const cropData = {
-          offset: {
-            x: finalCropX,
-            y: finalCropY },
-          size: {
-            width: finalCropSize,
-            height: finalCropSize },
-          displaySize: {
-            width: CROP_SIZE,
-            height: CROP_SIZE },
-          resizeMode: 'contain' as const };
-
         const { uri: croppedUri } = await ImageEditor.cropImage(
           imageFile.uri,
-          cropData,
+          {
+            offset: {
+              x: finalCropX,
+              y: finalCropY },
+            size: {
+              width: finalCropSize,
+              height: finalCropSize },
+            displaySize: {
+              width: CROP_SIZE,
+              height: CROP_SIZE },
+            resizeMode: 'contain',
+          },
         );
 
         // Estimate file size for logging purposes only

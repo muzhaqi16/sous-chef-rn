@@ -83,8 +83,8 @@ export const CachedImage = ({ uri, style, cachePolicy = 'dataCache', resizeMode 
     const innerRadius = borderRadius > 0
       ? Math.max(borderRadius - (flat?.borderWidth ?? 0), 0)
       : 0;
-    const radiusOverride = innerRadius > 0
-      ? { borderRadius: innerRadius, overflow: 'hidden' as const }
+    const radiusOverride: ViewStyle | undefined = innerRadius > 0
+      ? { borderRadius: innerRadius, overflow: 'hidden' }
       : undefined;
 
     return (

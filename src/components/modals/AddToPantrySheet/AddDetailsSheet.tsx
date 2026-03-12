@@ -12,7 +12,7 @@ import { DetailsPage } from './DetailsPage';
 import { StoragePage } from './StoragePage';
 import { StockSettingsPage } from './StockSettingsPage';
 
-const PAGES = ['Main', 'Details', 'Storage', 'Stock'] as const;
+const PAGES = ['Main', 'Details', 'Storage', 'Stock'];
 
 interface AddDetailsSheetProps {
   visible: boolean;

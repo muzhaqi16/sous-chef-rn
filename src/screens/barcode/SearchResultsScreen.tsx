@@ -16,11 +16,12 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { useAppStore, selectBottomSheetState } from '#store/useAppStore';
 import { useSearchResults } from '#hooks/useSearchResults';
 import { useShallow } from 'zustand/react/shallow';
+import type { BarcodeSource } from '#/types/navigation';
 
 export const SearchResultsScreen: React.FC<StaticScreenProps<{
   barcode: string;
   format: string;
-  source?: 'pantry' | 'shoppingList';
+  source?: BarcodeSource;
   pantryId?: string;
   shoppingListId?: string;
 }>> = ({ route }) => {

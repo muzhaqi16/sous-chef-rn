@@ -35,81 +35,64 @@ export const parseNotificationPayload = (
 };
 
 export const getNotificationCategory = (
-  type: string | NotificationType,
+  type: NotificationType,
 ): NotificationCategory => {
-  const typeStr = type.toString();
+  switch (type) {
+    case NotificationType.ListUpdated:
+      return NotificationCategory.SHOPPING_LIST;
 
-  if (typeStr.includes('ShoppingList') || typeStr.includes('List')) {
-    return NotificationCategory.SHOPPING_LIST;
-  }
-  if (
-    typeStr.includes('Pantry') ||
-    typeStr.includes('Expir') ||
-    typeStr.includes('Stock')
-  ) {
-    return NotificationCategory.PANTRY;
-  }
-  if (typeStr.includes('Collaboration') || typeStr.includes('Collaborator')) {
-    return NotificationCategory.COLLABORATION;
-  }
-  if (
-    typeStr.includes('Membership') ||
-    typeStr.includes('Member') ||
-    typeStr.includes('Home')
-  ) {
-    return NotificationCategory.MEMBERSHIP;
-  }
-  if (
-    typeStr.includes('Login') ||
-    typeStr.includes('Security') ||
-    typeStr.includes('Device')
-  ) {
-    return NotificationCategory.SECURITY;
-  }
-  if (typeStr.includes('User') || typeStr.includes('Account')) {
-    return NotificationCategory.ACCOUNT;
-  }
+    case NotificationType.ExpiryReminder:
+    case NotificationType.LowStock:
+    case NotificationType.NewItemAdded:
+    case NotificationType.ItemUpdated:
+    case NotificationType.ItemDeleted:
+      return NotificationCategory.PANTRY;
 
-  return NotificationCategory.SYSTEM;
+    case NotificationType.CollaborationInvite:
+    case NotificationType.CollaborationAccepted:
+    case NotificationType.CollaborationDeclined:
+    case NotificationType.CollaboratorRemoved:
+    case NotificationType.CollaboratorRoleChanged:
+    case NotificationType.CollaboratorPermissionsUpdated:
+      return NotificationCategory.COLLABORATION;
+
+    case NotificationType.MembershipInvite:
+    case NotificationType.HomeInvitation:
+    case NotificationType.HomeJoined:
+      return NotificationCategory.MEMBERSHIP;
+
+    case NotificationType.RecipeCooked:
+    case NotificationType.RecipeSaved:
+      return NotificationCategory.RECIPE;
+
+    default:
+      return NotificationCategory.SYSTEM;
+  }
 };
 
 export const getNotificationPriority = (
-  type: string | NotificationType,
+  type: NotificationType,
 ): NotificationPriority => {
-  const typeStr = type.toString();
+  switch (type) {
+    case NotificationType.ExpiryReminder:
+      return NotificationPriority.URGENT;
 
-  // Urgent priorities
-  if (
-    typeStr.includes('Expir') ||
-    typeStr.includes('Security') ||
-    typeStr.includes('Suspicious') ||
-    typeStr.includes('Banned') ||
-    typeStr.includes('Suspended')
-  ) {
-    return NotificationPriority.URGENT;
+    case NotificationType.LowStock:
+    case NotificationType.CollaboratorRemoved:
+      return NotificationPriority.HIGH;
+
+    case NotificationType.NewItemAdded:
+    case NotificationType.ItemUpdated:
+    case NotificationType.ItemDeleted:
+    case NotificationType.CollaborationAccepted:
+    case NotificationType.CollaborationDeclined:
+    case NotificationType.RecipeCooked:
+    case NotificationType.RecipeSaved:
+      return NotificationPriority.LOW;
+
+    default:
+      return NotificationPriority.MEDIUM;
   }
-
-  // High priorities
-  if (
-    typeStr.includes('LowStock') ||
-    typeStr.includes('Invite') ||
-    typeStr.includes('Failed') ||
-    typeStr.includes('Warning')
-  ) {
-    return NotificationPriority.HIGH;
-  }
-
-  // Low priorities
-  if (
-    typeStr.includes('ItemAdded') ||
-    typeStr.includes('ItemUpdated') ||
-    typeStr.includes('Settings')
-  ) {
-    return NotificationPriority.LOW;
-  }
-
-  // Default to medium
-  return NotificationPriority.MEDIUM;
 };
 
 export const getNotificationTitle = (
@@ -132,10 +115,24 @@ export const getNotificationTitle = (
       return '🏠 Home Invitation';
     case NotificationType.CollaborationInvite:
       return '👥 List Invitation';
+    case NotificationType.CollaborationAccepted:
+      return 'Invitation Accepted';
+    case NotificationType.CollaborationDeclined:
+      return 'Invitation Declined';
+    case NotificationType.CollaboratorRemoved:
+      return 'Removed from List';
+    case NotificationType.CollaboratorRoleChanged:
+      return 'Role Changed';
+    case NotificationType.CollaboratorPermissionsUpdated:
+      return 'Permissions Updated';
     case NotificationType.ListUpdated:
       return '🛒 Shopping List Updated';
     case NotificationType.HomeJoined:
       return '👋 New Member Joined';
+    case NotificationType.RecipeCooked:
+      return 'Recipe Cooked';
+    case NotificationType.RecipeSaved:
+      return 'Recipe Saved';
     default:
       return payload?.title || 'Notification';
   }
@@ -157,6 +154,20 @@ export const getNotificationMessage = (
       return `${payload?.inviterName || 'Someone'} invited you to join "${payload?.homeName || 'a home'}"`;
     case NotificationType.CollaborationInvite:
       return `You've been added to ${payload?.listName || 'a shopping list'}`;
+    case NotificationType.CollaborationAccepted:
+      return `${payload?.collaboratorName || 'Someone'} accepted your invitation to "${payload?.listName || 'a shopping list'}"`;
+    case NotificationType.CollaborationDeclined:
+      return `${payload?.collaboratorName || 'Someone'} declined your invitation to "${payload?.listName || 'a shopping list'}"`;
+    case NotificationType.CollaboratorRemoved:
+      return `You have been removed from "${payload?.listName || 'a shopping list'}"`;
+    case NotificationType.CollaboratorRoleChanged:
+      return `Your role on "${payload?.listName || 'a shopping list'}" was changed to ${payload?.newRole || 'a new role'}`;
+    case NotificationType.CollaboratorPermissionsUpdated:
+      return `Your permissions on "${payload?.listName || 'a shopping list'}" were updated`;
+    case NotificationType.RecipeCooked:
+      return `${payload?.recipeName || 'A recipe'} was marked as cooked`;
+    case NotificationType.RecipeSaved:
+      return `${payload?.recipeName || 'A recipe'} was saved to your collection`;
     default:
       return payload?.message || 'You have a new notification';
   }

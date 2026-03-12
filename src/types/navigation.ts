@@ -1,4 +1,7 @@
 // Navigation related types
+
+/** Source context for barcode scanner navigation */
+export type BarcodeSource = 'pantry' | 'shoppingList';
 import { NavigationProp, RouteProp } from '@react-navigation/native';
 
 export interface ModalProps {

@@ -110,7 +110,7 @@ const arePurchaseItemPropsEqual = createPropsComparator<PurchaseHistoryItemProps
 
 const PurchaseHistoryItem = React.memo(PurchaseHistoryItemComponent, arePurchaseItemPropsEqual);
 
-const getPurchaseItemType = () => 'item' as const;
+const getPurchaseItemType = () => 'item';
 
 const PurchaseHistoryHeader: React.FC<{ totalCount: number }> = ({ totalCount }) => (
   <View style={styles.statsContainer}>

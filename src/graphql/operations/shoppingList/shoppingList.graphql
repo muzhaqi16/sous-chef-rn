@@ -10,6 +10,8 @@ query GetShoppingList($id: ID!) {
     totalItems
     completedItems
     homeId
+    shareCode
+    isPublic
     home {
       id
       name
@@ -433,6 +435,31 @@ mutation AddItemsToShoppingList(
   }
 }
 
+mutation ShareShoppingList($id: ID!, $input: ShareShoppingListInput!) {
+  shareShoppingList(id: $id, input: $input) {
+    success
+    message
+    code
+    shoppingList {
+      id
+      shareCode
+      isPublic
+    }
+  }
+}
+
+mutation JoinShoppingListByShareCode($shareCode: String!) {
+  joinShoppingListByShareCode(shareCode: $shareCode) {
+    success
+    message
+    code
+    shoppingList {
+      id
+      name
+    }
+  }
+}
+
 # ============================================
 # OFFLINE SYNC MUTATIONS
 # ============================================
@@ -527,12 +554,6 @@ subscription ShoppingListChanges($listId: ID!) {
       name
       totalItems
       completedItems
-    }
-    collaborator {
-      ...ShoppingListCollaboratorFragment
-      canEdit
-      invitedAt
-      lastViewedAt
     }
     clearedItemIds
     clearedCount

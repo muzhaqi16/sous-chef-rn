@@ -1,5 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
-import { OnBoardingSteps } from '../navigationSlice';
+import { OnBoardingSteps, type DeepLinkAction } from '../navigationSlice';
 
 // Mock authSlice dependencies
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -125,8 +125,8 @@ describe('navigationSlice', () => {
 
   describe('deep link actions', () => {
     it('sets pending deep link action', () => {
-      const action = {
-        type: 'email_verification' as const,
+      const action: DeepLinkAction = {
+        type: 'email_verification',
         token: 'abc',
         timestamp: Date.now(),
       };

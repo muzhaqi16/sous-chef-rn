@@ -11,7 +11,11 @@ import { formatQuantityAsFraction } from '#/utils/formatQuantity';
 export type PantryLocation = 'fridge' | 'freezer' | 'pantry';
 
 // Expiration status type for styling
-export type ExpirationStatusType = 'expired' | 'critical' | 'warning' | 'normal';
+export type ExpirationStatusType =
+  | 'expired'
+  | 'critical'
+  | 'warning'
+  | 'normal';
 
 export interface ExpirationStatus {
   text: string;
@@ -19,12 +23,16 @@ export interface ExpirationStatus {
 }
 
 // Helper to get URGENT time-based info for list display (expiring/expired only)
-const getUrgentTimeInfo = (item: PantryItem): { text: string; color: string } | null => {
+const getUrgentTimeInfo = (
+  item: PantryItem,
+): { text: string; color: string } | null => {
   if (!item.expiresAt) return null;
 
   const now = new Date();
   const expiry = new Date(item.expiresAt);
-  const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.ceil(
+    (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+  );
 
   if (diffDays < 0) {
     return { text: `Expired ${Math.abs(diffDays)}d ago!`, color: 'error' };
@@ -54,7 +62,9 @@ export const formatStorageState = (state?: string | null): string => {
 };
 
 // Helper to calculate days until expiry (negative if expired)
-export const calculateExpiresIn = (expiresAt?: string | null): number | null => {
+export const calculateExpiresIn = (
+  expiresAt?: string | null,
+): number | null => {
   if (!expiresAt) return null;
   const now = new Date();
   const expiry = new Date(expiresAt);
@@ -74,7 +84,9 @@ export const getLocation = (storageState?: string | null): PantryLocation => {
 };
 
 // Helper to get expiration status
-export const getExpirationStatus = (expiresIn: number | null): ExpirationStatus => {
+export const getExpirationStatus = (
+  expiresIn: number | null,
+): ExpirationStatus => {
   if (expiresIn === null) {
     return { text: 'No expiry date', type: 'normal' };
   }
@@ -120,18 +132,22 @@ export const getCategoryEmoji = (categoryName?: string | null): string => {
 
 // Helper to format package breakdown for display
 export const formatPackageBreakdown = (
-  breakdown: {
-    count: number;
-    contentUnit: { name: string; symbol?: string | null };
-    perUnitNetWeight?: number | null;
-    perUnitNetWeightUnit?: { symbol?: string | null } | null;
-    totalNetWeight?: number | null;
-  } | null | undefined,
+  breakdown:
+    | {
+        count: number;
+        contentUnit: { name: string; symbol?: string | null };
+        perUnitNetWeight?: number | null;
+        perUnitNetWeightUnit?: { symbol?: string | null } | null;
+        totalNetWeight?: number | null;
+      }
+    | null
+    | undefined,
   remainingContentUnits?: number | null,
 ): string | null => {
   if (!breakdown) return null;
   const displayCount = remainingContentUnits ?? breakdown.count;
-  const contentDisplay = breakdown.contentUnit.symbol || breakdown.contentUnit.name;
+  const contentDisplay =
+    breakdown.contentUnit.symbol || breakdown.contentUnit.name;
   if (breakdown.perUnitNetWeight && breakdown.perUnitNetWeightUnit?.symbol) {
     return `${displayCount} x ${breakdown.perUnitNetWeight} ${breakdown.perUnitNetWeightUnit.symbol} ${contentDisplay}`;
   }
@@ -140,13 +156,16 @@ export const formatPackageBreakdown = (
 
 // Helper to format full package breakdown with total for detail views
 export const formatPackageBreakdownFull = (
-  breakdown: {
-    count: number;
-    contentUnit: { name: string; symbol?: string | null };
-    perUnitNetWeight?: number | null;
-    perUnitNetWeightUnit?: { symbol?: string | null } | null;
-    totalNetWeight?: number | null;
-  } | null | undefined,
+  breakdown:
+    | {
+        count: number;
+        contentUnit: { name: string; symbol?: string | null };
+        perUnitNetWeight?: number | null;
+        perUnitNetWeightUnit?: { symbol?: string | null } | null;
+        totalNetWeight?: number | null;
+      }
+    | null
+    | undefined,
 ): string | null => {
   if (!breakdown) return null;
   const short = formatPackageBreakdown(breakdown);
@@ -195,25 +214,31 @@ export const formatRemainingNetWeight = (
   const unitStr = netWeightUnit?.symbol || netWeightUnit?.name || '';
   const formatted = Number.isInteger(remainingNetWeight)
     ? remainingNetWeight.toString()
-    : remainingNetWeight.toFixed(remainingNetWeight < 10 ? 2 : 1).replace(/\.?0+$/, '');
+    : remainingNetWeight
+        .toFixed(remainingNetWeight < 10 ? 2 : 1)
+        .replace(/\.?0+$/, '');
   return `${formatted} ${unitStr} remaining`.trim();
 };
 
 // Helper to format live quantity breakdown (e.g., "1 full case + 9 loose cans")
 export const formatQuantityBreakdown = (
-  breakdown: {
-    fullPackages: number;
-    looseContentUnits: number;
-    contentUnit?: { name?: string; symbol?: string | null } | null;
-    totalContentUnits: number;
-    remainingWeight?: number | null;
-    remainingWeightUnit?: { symbol?: string | null } | null;
-  } | null | undefined,
+  breakdown:
+    | {
+        fullPackages: number;
+        looseContentUnits: number;
+        contentUnit?: { name?: string; symbol?: string | null } | null;
+        totalContentUnits: number;
+        remainingWeight?: number | null;
+        remainingWeightUnit?: { symbol?: string | null } | null;
+      }
+    | null
+    | undefined,
 ): string | null => {
   if (!breakdown) return null;
   const total = Math.floor(breakdown.totalContentUnits);
   if (total <= 0) return null;
-  const contentLabel = breakdown.contentUnit?.symbol || breakdown.contentUnit?.name || 'unit';
+  const contentLabel =
+    breakdown.contentUnit?.symbol || breakdown.contentUnit?.name || 'unit';
   return `${total} ${contentLabel}${total !== 1 ? 's' : ''}`;
 };
 
@@ -274,7 +299,9 @@ export const formatCondition = (condition?: string | null): string | null => {
 };
 
 // Format acquisition method enum for display
-export const formatAcquisitionMethod = (method?: string | null): string | null => {
+export const formatAcquisitionMethod = (
+  method?: string | null,
+): string | null => {
   if (!method) return null;
   return method
     .split('_')
@@ -364,10 +391,11 @@ export function usePantryItemTransformation<T extends PantryItem>(
 
   // Filter out items with missing or invalid IDs to prevent key warnings
   // This can happen during cache updates when items are being removed
-  return items.filter(item => item.id).map(item => {
+  return items
+    .filter(item => item.id)
+    .map(item => {
       // Calculate expired status for badge
-      const isExpired =
-        item.expiresAt && new Date(item.expiresAt) < new Date();
+      const isExpired = item.expiresAt && new Date(item.expiresAt) < new Date();
 
       // Get urgent expiry info (only if expiring within 7 days or expired)
       const urgentTimeInfo = getUrgentTimeInfo(item);
@@ -393,7 +421,10 @@ export function usePantryItemTransformation<T extends PantryItem>(
           lines.push(
             <Text
               key="location"
-              style={{ color: theme.colors.textSecondary, fontSize: fonts.size.sm }}
+              style={{
+                color: theme.colors.textSecondary,
+                fontSize: fonts.size.sm,
+              }}
             >
               {storageLocationName}
             </Text>,
@@ -409,7 +440,11 @@ export function usePantryItemTransformation<T extends PantryItem>(
           lines.push(
             <Text
               key="expiry"
-              style={{ color: expiryColor, fontSize: 13, fontWeight: fonts.weight.medium }}
+              style={{
+                color: expiryColor,
+                fontSize: 13,
+                fontWeight: fonts.weight.medium,
+              }}
             >
               {urgentTimeInfo.text}
             </Text>,
@@ -426,7 +461,9 @@ export function usePantryItemTransformation<T extends PantryItem>(
       const location = getLocation(item.storageState);
       const emoji = getCategoryEmoji((item as any).item?.category?.name);
       const expirationStatus = getExpirationStatus(expiresIn);
-      const packageBreakdownText = formatPackageBreakdown(item.packageBreakdown);
+      const packageBreakdownText = formatPackageBreakdown(
+        item.packageBreakdown,
+      );
       const netWeightText = formatNetWeight(item.netWeight, item.netWeightUnit);
       const consumptionStarted =
         item.lastUsedAt != null ||
@@ -436,7 +473,9 @@ export function usePantryItemTransformation<T extends PantryItem>(
       const remainingNetWeightText = consumptionStarted
         ? formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit)
         : null;
-      const quantityBreakdownText = formatQuantityBreakdown(item.quantityBreakdown);
+      const quantityBreakdownText = formatQuantityBreakdown(
+        item.quantityBreakdown,
+      );
 
       return {
         id: item.id,
@@ -470,9 +509,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
         ),
         // Only show badge for expired items - low stock and expiring info
         // is already shown in subtitle text with appropriate colors
-        badge: isExpired
-          ? { text: 'Expired', variant: 'danger' as const }
-          : undefined,
+        badge: isExpired ? { text: 'Expired', variant: 'danger' } : undefined,
         leftElement: imageUrl ? (
           <View
             style={[
@@ -500,6 +537,6 @@ export function usePantryItemTransformation<T extends PantryItem>(
         netWeightText,
         remainingNetWeightText,
         quantityBreakdownText,
-    };
-  });
+      };
+    });
 }

@@ -1,0 +1,33 @@
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation MarkNotificationAsRead($id: ID!) {
+  markNotificationAsRead(id: $id) {
+    success
+    message
+    code
+    notification {
+      ...NotificationFragment
+    }
+  }
+}
+
+mutation MarkNotificationUnread($id: ID!) {
+  markNotificationUnread(id: $id) {
+    success
+    message
+    code
+    notification {
+      ...NotificationFragment
+    }
+  }
+}
+
+mutation DeleteNotification($id: ID!) {
+  deleteNotification(id: $id) {
+    success
+    message
+    code
+  }
+}

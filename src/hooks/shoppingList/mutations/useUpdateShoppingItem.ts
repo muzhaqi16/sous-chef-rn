@@ -84,7 +84,7 @@ export function useUpdateShoppingItem({
       'ShoppingListItemPayload',
       'shoppingListItem',
       {
-        __typename: 'ShoppingListItem' as const,
+        __typename: 'ShoppingListItem',
         id: item.id,
         itemName: optimisticItemName,
         quantity: optimisticQuantity,

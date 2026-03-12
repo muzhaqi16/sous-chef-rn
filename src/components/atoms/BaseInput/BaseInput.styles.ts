@@ -25,6 +25,7 @@ export default StyleSheet.create(theme => ({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
@@ -46,6 +47,8 @@ export default StyleSheet.create(theme => ({
 
   input: {
     flex: 1,
+    alignSelf: 'stretch',
+    textAlignVertical: 'center',
     fontSize: {
       xs: theme.fonts.size.sm,
       md: theme.fonts.size.md,
@@ -60,6 +63,13 @@ export default StyleSheet.create(theme => ({
     paddingVertical: 0,
   },
 
+  inputWithRightIcon: {
+    paddingRight: {
+      xs: 44,
+      md: 48,
+    },
+  },
+
   iconWrapper: {
     marginLeft: {
       xs: theme.spacing.sm,
@@ -71,6 +81,18 @@ export default StyleSheet.create(theme => ({
     },
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  rightIconOverlay: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    marginLeft: 0,
+    paddingHorizontal: {
+      xs: theme.spacing.sm,
+      md: theme.spacing.md,
+    },
   },
 
   errorText: {

@@ -19,7 +19,7 @@ describe('SelectorContent', () => {
     title: 'Select Item',
     data: [],
     onSelect: jest.fn(),
-    displayProperty: 'name' as const,
+    displayProperty: 'name',
     actions: [],
   };
 

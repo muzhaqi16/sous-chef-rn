@@ -17,11 +17,14 @@ import { useEffect, useRef } from 'react';
 import {
   useMyShoppingListInvitesLazyQuery,
   useGetMyPendingInvitesLazyQuery,
-  NotificationType } from '#generated';
+  NotificationType,
+} from '#generated';
 import { useAppStore } from '#store/useAppStore';
 import {
   NotificationCategory,
-  NotificationPriority } from '#store/slices/notificationSlice';
+  NotificationPriority,
+  type NotificationItem,
+} from '#store/slices/notificationSlice';
 import { useDeferredCallback } from '#hooks/performance/useDeferredCallback';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
@@ -48,11 +51,13 @@ export function useAllPendingInvites(userId?: string) {
   const hasFetchedRef = useRef(false);
 
   // PERFORMANCE: Use lazy queries to defer execution until after screen-critical queries complete
-  const [fetchShoppingListInvites, { data: shoppingListData, error: shoppingListError }] =
-    useMyShoppingListInvitesLazyQuery({
-      fetchPolicy: 'cache-and-network',
-      errorPolicy: 'all', // Return partial data on errors
-    });
+  const [
+    fetchShoppingListInvites,
+    { data: shoppingListData, error: shoppingListError },
+  ] = useMyShoppingListInvitesLazyQuery({
+    fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all', // Return partial data on errors
+  });
 
   const [fetchHomeInvites, { data: homeData, error: homeError }] =
     useGetMyPendingInvitesLazyQuery({
@@ -70,7 +75,9 @@ export function useAllPendingInvites(userId?: string) {
     fetchHomeInvites();
 
     if (__DEV__) {
-      console.log('📬 [useAllPendingInvites] Deferred invitation queries started');
+      console.log(
+        '📬 [useAllPendingInvites] Deferred invitation queries started',
+      );
     }
   };
 
@@ -96,82 +103,97 @@ export function useAllPendingInvites(userId?: string) {
     if (processedRef.current || (!shoppingListData && !homeData)) {
       return;
     }
-    const allInviteNotifications = [];
+    const allInviteNotifications: Omit<NotificationItem, 'isRead'>[] = [];
 
     // Process Shopping List Invites
     if (
       shoppingListData?.me?.pendingCollaborationInvites &&
       shoppingListData.me.pendingCollaborationInvites.length > 0
     ) {
-      const shoppingListInvites = shoppingListData.me.pendingCollaborationInvites
-        .filter(invite => invite?.status === 'PENDING')
-        .map(invite => ({
-          id: `shopping-list-invite-${invite.id}`,
-          type: NotificationType.CollaborationInvite,
-          category: NotificationCategory.COLLABORATION,
-          priority: NotificationPriority.HIGH,
-          title: 'Shopping List Invitation',
-          message: `${
-            invite.invitedBy?.profile?.displayName ||
-            invite.invitedBy?.email ||
-            'Someone'
-          } invited you to "${invite.shoppingList?.name || 'a shopping list'}"`,
-          payload: {
-            inviteId: invite.id,
-            token: invite.token,
-            listId: invite.shoppingListId,
-            listName: invite.shoppingList?.name,
-            inviterName:
-              invite.invitedBy?.profile?.displayName || invite.invitedBy?.email,
-            inviterEmail: invite.invitedBy?.email,
-            role: invite.role },
-          sentAt: invite.invitedAt,
-          isRead: false,
-          requiresAction: true,
-          actionType: 'ACCEPT_SHOPPING_LIST_INVITE' as const,
-          actionData: {
-            inviteId: invite.id,
-            token: invite.token,
-            listId: invite.shoppingListId },
-          expiresAt: invite.expiresAt,
-          source: 'server' as const }));
+      const shoppingListInvites =
+        shoppingListData.me.pendingCollaborationInvites
+          .filter(invite => invite?.status === 'PENDING')
+          .map(
+            (invite): Omit<NotificationItem, 'isRead'> => ({
+              id: `shopping-list-invite-${invite.id}`,
+              type: NotificationType.CollaborationInvite,
+              category: NotificationCategory.COLLABORATION,
+              priority: NotificationPriority.HIGH,
+              title: 'Shopping List Invitation',
+              message: `${
+                invite.invitedBy?.profile?.displayName ||
+                invite.invitedBy?.email ||
+                'Someone'
+              } invited you to "${
+                invite.shoppingList?.name || 'a shopping list'
+              }"`,
+              payload: {
+                inviteId: invite.id,
+                token: invite.token,
+                listId: invite.shoppingListId,
+                listName: invite.shoppingList?.name,
+                inviterName:
+                  invite.invitedBy?.profile?.displayName ||
+                  invite.invitedBy?.email,
+                inviterEmail: invite.invitedBy?.email,
+                role: invite.role,
+              },
+              sentAt: invite.invitedAt,
+              requiresAction: true,
+              actionType: 'ACCEPT_SHOPPING_LIST_INVITE',
+              actionData: {
+                inviteId: invite.id,
+                token: invite.token,
+                listId: invite.shoppingListId,
+              },
+              expiresAt: invite.expiresAt,
+              source: 'server',
+            }),
+          );
 
       allInviteNotifications.push(...shoppingListInvites);
     }
 
     // Process Home Invites
-    if (homeData?.me?.pendingHomeInvites && homeData.me.pendingHomeInvites.length > 0) {
+    if (
+      homeData?.me?.pendingHomeInvites &&
+      homeData.me.pendingHomeInvites.length > 0
+    ) {
       const homeInvites = homeData.me.pendingHomeInvites
         .filter(invite => invite?.status === 'PENDING')
-        .map(invite => ({
-          id: `home-invite-${invite.id}`,
-          type: NotificationType.HomeInvitation,
-          category: NotificationCategory.MEMBERSHIP,
-          priority: NotificationPriority.HIGH,
-          title: 'Home Invitation',
-          message: `${
-            invite.inviter?.profile?.displayName ||
-            invite.inviter?.email ||
-            'Someone'
-          } invited you to join "${invite.home?.name || 'a home'}"`,
-          payload: {
-            inviteId: invite.id,
-            token: invite.token,
-            homeId: invite.homeId,
-            homeName: invite.home?.name,
-            inviterName:
-              invite.inviter?.profile?.displayName || invite.inviter?.email,
-            inviterEmail: invite.inviter?.email,
-            role: invite.role },
-          sentAt: invite.sentAt,
-          isRead: false,
-          requiresAction: true,
-          actionType: 'ACCEPT_HOME_INVITE',
-          actionData: {
-            inviteId: invite.id,
-            homeId: invite.homeId },
-          expiresAt: invite.expiresAt,
-          source: 'server' as const }));
+        .map(
+          (invite): Omit<NotificationItem, 'isRead'> => ({
+            id: `home-invite-${invite.id}`,
+            type: NotificationType.HomeInvitation,
+            category: NotificationCategory.MEMBERSHIP,
+            priority: NotificationPriority.HIGH,
+            title: 'Home Invitation',
+            message: `${
+              invite.inviter?.profile?.displayName ||
+              invite.inviter?.email ||
+              'Someone'
+            } invited you to join "${invite.home?.name || 'a home'}"`,
+            payload: {
+              inviteId: invite.id,
+              token: invite.token,
+              homeId: invite.homeId,
+              homeName: invite.home?.name,
+              inviterName:
+                invite.inviter?.profile?.displayName || invite.inviter?.email,
+              inviterEmail: invite.inviter?.email,
+              role: invite.role,
+            },
+            sentAt: invite.sentAt,
+            requiresAction: true,
+            actionType: 'ACCEPT_HOME_INVITE',
+            actionData: {
+              inviteId: invite.id,
+              homeId: invite.homeId,
+            },
+            expiresAt: invite.expiresAt,
+            source: 'server',
+          }),
+        );
 
       allInviteNotifications.push(...homeInvites);
     }
@@ -191,7 +213,8 @@ export function useAllPendingInvites(userId?: string) {
             ).length,
             homes: allInviteNotifications.filter(
               n => n.type === NotificationType.HomeInvitation,
-            ).length },
+            ).length,
+          },
         );
       }
     }

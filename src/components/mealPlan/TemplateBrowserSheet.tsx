@@ -46,7 +46,7 @@ const renderTemplate = ({ item }: { item: MealTemplateDisplayFragment }) => (
   <TemplateBrowserRenderItem item={item} />
 );
 
-const getTemplateItemType = () => 'item' as const;
+const getTemplateItemType = () => 'item';
 
 interface TemplateBrowserSheetProps {
   visible: boolean;

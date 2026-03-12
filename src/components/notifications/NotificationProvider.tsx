@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNotifications } from '#hooks/notifications/useNotifications';
-import { useNotificationSettings } from '#hooks/notifications/useNotificationSettings';
 import { useAuthUser } from '#hooks/auth/useAuthUser';
 import { useAppStore } from '#store/useAppStore';
 
@@ -16,20 +15,15 @@ interface NotificationProviderProps {
  * re-renders due to notification/auth state changes, it doesn't affect siblings
  * since it returns null (no React elements to reconcile).
  *
- * STARTUP PRIORITY: GetNotificationPreferences is deferred via requestIdleCallback
- * so it doesn't compete with critical startup queries (GetHomes, GetPantry).
- * Settings defaults cover the gap before the query returns.
+ * STARTUP PRIORITY: useNotifications defers both the GetNotificationPreferences query
+ * and the WebSocket subscription until 3s after authentication, so they don't compete
+ * with critical startup queries (GetHomes, GetPantry). Settings defaults cover the gap.
  */
 const NotificationListener: React.FC = () => {
   const user = useAuthUser();
   const isAuthenticated = useAppStore(state => !!(state.user && state.accessToken));
 
-  // Defer preferences query until JS thread is idle (after critical startup queries settle)
-  const [startupSettled, setStartupSettled] = useState(false);
-
-  const {settings} = useNotificationSettings({ skip: !startupSettled });
-
-  // Defer subscription by 3s to avoid competing with startup queries on the JS thread
+  // Defer subscription + preferences query by 3s to avoid competing with startup queries
   const [ready, setReady] = useState(false);
 
   // Render-time reset: clear ready state when user logs out
@@ -38,35 +32,17 @@ const NotificationListener: React.FC = () => {
     setPrevIsAuthenticated(isAuthenticated);
     if (!isAuthenticated) {
       setReady(false);
-      setStartupSettled(false);
     }
   }
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Defer preferences query until JS thread is idle after critical startup work
-      const idleId = requestIdleCallback(() => setStartupSettled(true));
       const timer = setTimeout(() => setReady(true), 3000);
-      return () => {
-        cancelIdleCallback(idleId);
-        clearTimeout(timer);
-      };
+      return () => clearTimeout(timer);
     }
   }, [isAuthenticated, user]);
 
-  // Initialize real-time notifications with user settings
-  // skip when not authenticated or during the startup deferral window
-  useNotifications({
-    skip: !ready,
-    enablePantryNotifications: settings.pantryChanges,
-    enableShoppingListNotifications: settings.shoppingListUpdates,
-    enableMembershipNotifications: settings.homeInvites,
-    enableLowStockAlerts: settings.lowStockAlerts,
-    enableExpirationAlerts: settings.expirationNotifications,
-    enableCollaborationNotifications: settings.collaborationInvites,
-    showInAppNotifications: settings.pushEnabled,
-    showPushNotifications: settings.pushEnabled,
-  });
+  useNotifications({ skip: !ready });
 
   // Returns null - no rendering, just side effects
   return null;

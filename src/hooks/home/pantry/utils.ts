@@ -53,7 +53,7 @@ export function batchAddToPantryItemsCache(
         const newEdges = newItems
           .filter(item => !existingIds.has(item.id))
           .map(item => ({
-            __typename: 'PantryItemEdge' as const,
+            __typename: 'PantryItemEdge',
             node: toReference(item, true),
             cursor: '',
           }))

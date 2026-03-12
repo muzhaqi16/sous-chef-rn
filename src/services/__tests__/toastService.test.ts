@@ -22,7 +22,7 @@ describe('toastService', () => {
     });
 
     it('passes options', () => {
-      const opts = { duration: 5000, position: 'top' as const };
+      const opts: { duration: number; position: 'top' } = { duration: 5000, position: 'top' };
       toastService.success('Done', opts);
       expect(showToast).toHaveBeenCalledWith('Done', 'success', opts);
     });

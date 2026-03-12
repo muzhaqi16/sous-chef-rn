@@ -25,7 +25,7 @@ export function buildOptimisticMutationResponse<TEntity, TResult = any>(
   entity: TEntity,
 ): TResult {
   return {
-    __typename: 'Mutation' as const,
+    __typename: 'Mutation',
     [mutationField]: {
       __typename: payloadTypename,
       success: true,
@@ -59,7 +59,7 @@ export function buildOptimisticDeleteResponse<TResult = any>(
   entityId: string,
 ): TResult {
   return {
-    __typename: 'Mutation' as const,
+    __typename: 'Mutation',
     [mutationField]: {
       __typename: payloadTypename,
       success: true,

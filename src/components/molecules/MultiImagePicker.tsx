@@ -26,7 +26,7 @@ const PERSPECTIVES = [
   'right',
   'nutrition_label',
   'ingredient_list',
-] as const;
+];
 
 const PERSPECTIVE_OPTIONS = PERSPECTIVES.map(p => ({
   label: getPerspectiveLabel(p),

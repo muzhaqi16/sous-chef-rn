@@ -59,8 +59,8 @@ describe('pantry mutations utils', () => {
         symbol: null,
         type: null,
       };
-      const currentUnit = {
-        __typename: 'Unit' as const,
+      const currentUnit: { __typename: 'Unit'; id: string; name: string; symbol: string; type: any; isMetric: boolean; baseUnitId: string; conversionFactor: number; isCommon: boolean; displayAsFraction: boolean; minPrecision: number; autoConvertThreshold: number } = {
+        __typename: 'Unit',
         id: 'unit-1',
         name: 'Gram',
         symbol: 'g',

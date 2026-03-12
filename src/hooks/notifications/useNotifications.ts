@@ -3,21 +3,21 @@ import { AppState } from 'react-native';
 import {
   useNotificationChangedSubscription,
   NotificationType } from '#generated';
-import { useStore } from '#store';
 import { useAppStore } from '#store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
 import {
   getNotificationTitle,
   getNotificationMessage,
-  getNotificationCategory } from '#utils/notifications/notificationParser';
+  getNotificationCategory,
+  getNotificationPriority } from '#utils/notifications/notificationParser';
 import {
-  NotificationCategory,
-  NotificationPriority } from '#store/slices/notificationSlice';
+  NotificationCategory } from '#store/slices/notificationSlice';
 import {
   handleSubscriptionError,
   clearAllRetryStates } from '#utils/subscriptionErrorHandler';
 import { useNotificationSettings } from './useNotificationSettings';
+import { useNotificationSync } from './useNotificationSync';
 
 // PERFORMANCE: Grouped selectors to reduce subscriptions from 7 to 2
 const selectNotificationState = (state: any) => ({
@@ -26,19 +26,11 @@ const selectNotificationState = (state: any) => ({
 
 const selectNotificationActions = (state: any) => ({
   addNotification: state.addNotification,
-  markAsRead: state.markAsRead,
-  removeNotification: state.removeNotification,
   clearAll: state.clearAll,
   getNotificationsByCategory: state.getNotificationsByCategory });
 
 interface NotificationConfig {
   skip?: boolean;
-  enablePantryNotifications?: boolean;
-  enableShoppingListNotifications?: boolean;
-  enableMembershipNotifications?: boolean;
-  enableLowStockAlerts?: boolean;
-  enableExpirationAlerts?: boolean;
-  enableCollaborationNotifications?: boolean;
   showInAppNotifications?: boolean;
   showPushNotifications?: boolean;
 }
@@ -52,35 +44,20 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   const { notifications, user } = useAppStore(useShallow(selectNotificationState));
   const {
     addNotification,
-    markAsRead,
-    removeNotification,
     clearAll,
     getNotificationsByCategory } = useAppStore(useShallow(selectNotificationActions));
 
-  // Fetch user notification preferences
-  const { settings: userPreferences, isQuietTime } = useNotificationSettings();
+  // Fetch user notification preferences (deferred when hook is skipped)
+  const { settings: userPreferences, isQuietTime } = useNotificationSettings({ skip: config.skip });
+
+  // Server-synced notification actions
+  const { syncMarkAsRead, syncDelete, syncMarkAllAsRead } = useNotificationSync();
 
   // Default configuration
   const finalConfig = ({
-      enablePantryNotifications: true,
-      enableShoppingListNotifications: true,
-      enableMembershipNotifications: true,
-      enableLowStockAlerts: true,
-      enableExpirationAlerts: true,
-      enableCollaborationNotifications: true,
       showInAppNotifications: true,
       showPushNotifications: true,
       ...config });
-
-  const getPriorityFromType = (type: NotificationType): NotificationPriority => {
-      switch (type) {
-        case NotificationType.ExpiryReminder:
-        case NotificationType.LowStock:
-          return NotificationPriority.MEDIUM;
-        default:
-          return NotificationPriority.LOW;
-      }
-    };
 
   // Check if notification type is enabled in user preferences
   const isNotificationTypeEnabled = (type: NotificationType): boolean => {
@@ -99,11 +76,20 @@ export const useNotifications = (config: NotificationConfig = {}) => {
             userPreferences.sharedListUpdates
           );
         case NotificationType.CollaborationInvite:
+        case NotificationType.CollaborationAccepted:
+        case NotificationType.CollaborationDeclined:
+        case NotificationType.CollaboratorRemoved:
+        case NotificationType.CollaboratorRoleChanged:
+        case NotificationType.CollaboratorPermissionsUpdated:
           return userPreferences.collaborationInvites;
         case NotificationType.MembershipInvite:
         case NotificationType.HomeInvitation:
         case NotificationType.HomeJoined:
           return userPreferences.homeInvites;
+        case NotificationType.RecipeCooked:
+          return userPreferences.cookingReminders;
+        case NotificationType.RecipeSaved:
+          return userPreferences.recipeRecommendations;
         default:
           return true; // Show unknown notification types by default
       }
@@ -163,7 +149,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
         title: notification.title || 'Notification',
         message: notification.message || '',
         category,
-        priority: getPriorityFromType(notification.type),
+        priority: getNotificationPriority(notification.type),
         payload: notification.payload || {},
         sentAt: notification.sentAt || new Date().toISOString(),
         isRead: false,
@@ -280,24 +266,14 @@ export const useNotifications = (config: NotificationConfig = {}) => {
     }
   }, [user?.id, config.skip]);
 
-  // PERFORMANCE: Use store getter instead of stale notifications array in closure
-  const handleMarkAllAsRead = async () => {
-    const currentNotifications = useStore.getState().notifications;
-    currentNotifications.forEach(notification => {
-      if (!notification.isRead) {
-        markAsRead(notification.id);
-      }
-    });
-  };
-
   // PERFORMANCE: Optimize callback references - remove unnecessary wrappers
   return {
     config: finalConfig,
     notifications,
-    handleMarkAsRead: markAsRead, // Direct reference instead of wrapper
-    handleMarkAllAsRead,
-    handleRemoveNotification: removeNotification, // Direct reference instead of wrapper
-    clearAll, // Direct reference instead of wrapper
+    handleMarkAsRead: syncMarkAsRead,
+    handleMarkAllAsRead: syncMarkAllAsRead,
+    handleRemoveNotification: syncDelete,
+    clearAll, // Local-only bulk clear (no server equivalent)
     getNotificationsByCategory, // Direct reference instead of wrapper
     updateConfig: (newConfig: Partial<NotificationConfig>) => {
       // This would typically update stored preferences

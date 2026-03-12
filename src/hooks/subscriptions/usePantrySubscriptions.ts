@@ -5,6 +5,7 @@
  * SubscriptionService. Handles real-time updates for:
  * - Pantry changes (items add/update/delete, metadata, usage)
  * - Pantry alerts (low stock, expiring items, waste)
+ * - Expiration notifications (item expiration reminders)
  *
  * These subscriptions automatically update the Apollo cache and provide
  * deduplication to prevent self-echo and duplicate updates.
@@ -14,6 +15,7 @@ import { useAppStore } from '#store/useAppStore';
 import {
   usePantryChangesSubscription,
   usePantryAlertsSubscription,
+  useExpirationNotificationChangedSubscription,
   PantryItemDisplayFragmentDoc,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -162,5 +164,26 @@ export function usePantrySubscriptions(userId?: string) {
     variables: { pantryId: selectedPantryId! },
     skip: !selectedPantryId || !isHomeSelectionReady,
     ...alertsHandlers,
+  });
+
+  //
+  // Expiration Notification Subscription
+  // Receives real-time expiration alerts for pantry items (CREATED, UPDATED).
+  // These are consumed by the notification system, not Apollo cache.
+  //
+  const expirationHandlers = subscriptionService.register({
+    subscriptionName: 'ExpirationNotificationChanged',
+    entityType: 'ExpirationNotification',
+    enableDeduplication: false, // Server-only events, no self-echo
+    userId,
+    cacheUpdateStrategy: CacheStrategy.NONE,
+    enableLogging: true,
+    entityId: selectedPantryId,
+  });
+
+  useExpirationNotificationChangedSubscription({
+    variables: { pantryId: selectedPantryId! },
+    skip: !selectedPantryId || !isHomeSelectionReady,
+    ...expirationHandlers,
   });
 }
