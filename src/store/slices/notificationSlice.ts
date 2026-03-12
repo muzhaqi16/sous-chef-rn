@@ -1,7 +1,7 @@
-import {StateCreator} from 'zustand';
-import {RootState} from '../index';
-import {NotificationType} from '#/graphql/generated';
-import {safeParseDate} from '#utils/dateUtils';
+import { StateCreator } from 'zustand';
+import { RootState } from '../index';
+import { NotificationType } from '#/graphql/generated';
+import { safeParseDate } from '#utils/dateUtils';
 
 // Helper to check if a notification is an invitation (should always show)
 // These notification types ask user to join something - they shouldn't require
@@ -64,12 +64,14 @@ export interface NotificationState {
     serverNotifications: NotificationItem[],
   ) => void;
   markAsRead: (notificationId: string) => void;
+  markAsUnread: (notificationId: string) => void;
   markAsReadWithSync: (
     notificationId: string,
     callback?: (success: boolean) => void,
   ) => void;
   markAllAsRead: () => void;
   removeNotification: (notificationId: string) => void;
+  restoreNotification: (notification: NotificationItem) => void;
   clearAll: () => void;
   clearExpired: () => void;
   updateUnreadCount: () => void;
@@ -97,9 +99,11 @@ const initialNotificationState: Omit<
   | 'addMultipleNotifications'
   | 'syncNotificationsFromServer'
   | 'markAsRead'
+  | 'markAsUnread'
   | 'markAsReadWithSync'
   | 'markAllAsRead'
   | 'removeNotification'
+  | 'restoreNotification'
   | 'clearAll'
   | 'clearExpired'
   | 'updateUnreadCount'
@@ -394,6 +398,22 @@ export const createNotificationSlice: StateCreator<
     });
   },
 
+  markAsUnread: notificationId => {
+    set(state => {
+      const notification = state.notifications.find(
+        n => n.id === notificationId,
+      );
+      if (notification && notification.isRead) {
+        notification.isRead = false;
+        notification.readAt = undefined;
+        state.unreadCount += 1;
+        if (notification.priority === NotificationPriority.URGENT) {
+          state.urgentCount += 1;
+        }
+      }
+    });
+  },
+
   markAsReadWithSync: (notificationId, callback) => {
     // Mark as read locally for immediate UI feedback.
     // Server sync is handled by useNotificationSync hook (syncMarkAsRead).
@@ -438,6 +458,29 @@ export const createNotificationSlice: StateCreator<
     });
   },
 
+  restoreNotification: notification => {
+    set(state => {
+      // Re-insert at sorted position by sentAt (newest first)
+      const insertIndex = state.notifications.findIndex(
+        n =>
+          new Date(n.sentAt).getTime() <=
+          new Date(notification.sentAt).getTime(),
+      );
+      if (insertIndex === -1) {
+        state.notifications.push(notification);
+      } else {
+        state.notifications.splice(insertIndex, 0, notification);
+      }
+
+      if (!notification.isRead) {
+        state.unreadCount += 1;
+        if (notification.priority === NotificationPriority.URGENT) {
+          state.urgentCount += 1;
+        }
+      }
+    });
+  },
+
   clearAll: () => {
     set(state => {
       state.notifications = [];
@@ -470,7 +513,7 @@ export const createNotificationSlice: StateCreator<
   },
 
   setLastFetchedAt: timestamp => {
-    set({lastFetchedAt: timestamp});
+    set({ lastFetchedAt: timestamp });
   },
 
   removeSubscribedList: listId => {

@@ -170,7 +170,7 @@ export const DEFAULT_PERFORMANCE_CONFIG: PerformanceConfig = {
   trackRenders: true, // Track component renders (sampled in production)
   trackMemory: false, // Disable - RN APIs are unreliable
   trackScreens: true, // Track screen transitions in all environments
-  sampleRate: __DEV__ ? 1.0 : 0.1, // 100% in dev, 10% in production
+  sampleRate: 1.0, // 100% — first release, small user base, capture everything
   slowRenderThreshold: __DEV__ ? 500 : 16, // Android emulator adds 5-10x overhead; 16ms = 60fps for production
   memoryWarningThreshold: 80, // Warn at 80% memory usage
   maxMemorySnapshots: 100, // Keep last 100 snapshots

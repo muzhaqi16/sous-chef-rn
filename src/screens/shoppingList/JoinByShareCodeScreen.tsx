@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TextInput, ActivityIndicator } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useNavigation } from '@react-navigation/native';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -14,6 +8,8 @@ import { Button } from '#components/base/Button';
 import { Icon } from '#utils/iconUtils';
 import { useJoinShoppingListByShareCodeMutation } from '#generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useStore } from '#store';
+import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
 export const JoinByShareCodeScreen: React.FC<
@@ -31,7 +27,7 @@ export const JoinByShareCodeScreen: React.FC<
   const handleJoin = () => {
     const trimmed = code.trim();
     if (!trimmed) {
-      Alert.alert('Error', 'Please enter a share code');
+      toastService.error('Please enter a share code');
       return;
     }
 
@@ -41,35 +37,39 @@ export const JoinByShareCodeScreen: React.FC<
           variables: { shareCode: trimmed },
         });
 
-        const listId = data?.joinShoppingListByShareCode?.shoppingList?.id;
-        const listName = data?.joinShoppingListByShareCode?.shoppingList?.name;
+        const result = data?.joinShoppingListByShareCode;
+        const listId = result?.shoppingList?.id;
+        const listName = result?.shoppingList?.name;
 
-        if (listId) {
-          Alert.alert(
-            'Joined!',
-            `You have joined "${listName || 'Shopping List'}".`,
-            [
-              {
-                text: 'View List',
-                onPress: () => {
-                  navigation.goBack();
-                  navigate('ShoppingListMain', {});
-                },
-              },
-            ],
+        if (!result?.success || !listId) {
+          toastService.error(
+            result?.message ||
+              'Failed to join list. The code may be invalid or expired.',
           );
+          return;
         }
+
+        useStore.getState().setSelectedShoppingListId(listId);
+        navigation.goBack();
+        navigate('ShoppingListMain', {});
+        toastService.success(`Joined "${listName || 'Shopping List'}"`);
       },
       setJoining,
       () => {
-        Alert.alert('Error', 'Failed to join list. The code may be invalid or expired.');
+        toastService.error(
+          'Failed to join list. The code may be invalid or expired.',
+        );
       },
     );
   };
 
   return (
     <View style={styles.container}>
-      <Header title="Join Shopping List" onBack={() => navigation.goBack()} centerTitle />
+      <Header
+        title="Join Shopping List"
+        onBack={() => navigation.goBack()}
+        centerTitle
+      />
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>

@@ -145,12 +145,8 @@ const mockPantryModals = {
   handleRestockItem: jest.fn(),
   handleEditItem: jest.fn(),
   handleDeleteItem: jest.fn(),
-  addSheetVisible: false,
   setAddSheetVisible: jest.fn(),
-  addLocationSheetVisible: false,
   setAddLocationSheetVisible: jest.fn(),
-  handleAddSheetClose: jest.fn(),
-  handleItemAdded: jest.fn(),
 };
 jest.mock('#/context/PantryModalsContext', () => ({
   PantryModalsProvider: ({ children }: { children: React.ReactNode }) => (

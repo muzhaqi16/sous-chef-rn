@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useRef, useImperativeHandle } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useImperativeHandle,
+} from 'react';
 import { View, Pressable, RefreshControl, Dimensions } from 'react-native';
 import {
   FlashList,
@@ -48,6 +54,9 @@ const EMPTY_ARRAY: PantryItem[] = [];
 // Screen-relative draw distance: scales with viewport so buffer stays ~7-10 items
 // regardless of device size (vs fixed 250 which is 37% on SE but 27% on Pro Max)
 const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 0.75);
+
+// Module-level constant — avoids creating a new object reference per render
+const MVCP_DISABLED = { disabled: true };
 
 // Module-level flag: once pantry content has been shown, skip skeletons on remount.
 // Persists across component unmount/remount (stack navigation), resets on app restart.
@@ -130,7 +139,6 @@ interface PantryContentProps {
   // State
   refreshing?: boolean;
   loading?: boolean;
-
 }
 
 export interface PantryContentRef {
@@ -181,7 +189,16 @@ function hasConsumptionStarted(item: PantryItem): boolean {
  * Pre-compute display data for all pantry items at list level.
  * Module-level so the React Compiler doesn't flag Date usage as impure in render.
  * Called once per list render (only when items/colors change), NOT per-item.
+ *
+ * PERFORMANCE: Caches the result by items + colors reference identity.
+ * When Optimization 2 stabilizes the items array reference and the cached
+ * expirationColors are stable, this returns the same Map — preventing all
+ * PantryRenderItemInner components from re-rendering via DisplayMapContext.
  */
+let _lastDisplayMapItems: unknown = null;
+let _lastDisplayMapColors: unknown = null;
+let _lastDisplayMap: Map<string, ItemDisplayData> = new Map();
+
 function computeDisplayMap(
   items: PantryItem[],
   expirationColors: { expired: string; warning: string; normal: string },
@@ -190,6 +207,14 @@ function computeDisplayMap(
     storageLocation?: { name: string } | null,
   ) => string | null,
 ): Map<string, ItemDisplayData> {
+  // Reference-identity cache: same inputs → same output
+  if (
+    items === _lastDisplayMapItems &&
+    expirationColors === _lastDisplayMapColors
+  ) {
+    return _lastDisplayMap;
+  }
+
   const map = new Map<string, ItemDisplayData>();
   for (const item of items) {
     const expiresIn = item.expiresAt
@@ -197,7 +222,8 @@ function computeDisplayMap(
       : null;
     const expStatus = getExpirationStatus(expiresIn);
     const isExpired = expiresIn !== null && expiresIn < 0;
-    const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
+    const isExpiringSoon =
+      expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
     const variant: ItemVariant = getItemVariant(isExpired, isExpiringSoon);
     const hasExpiry = item.expiresAt != null;
 
@@ -231,17 +257,21 @@ function computeDisplayMap(
       remainingNetWeightText: hasConsumptionStarted(item)
         ? formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit)
         : null,
-      quantityBreakdownText: formatQuantityBreakdown(
-        item.quantityBreakdown,
-      ),
+      quantityBreakdownText: formatQuantityBreakdown(item.quantityBreakdown),
       activeBatchCount: item.activeBatchCount,
     });
   }
+
+  _lastDisplayMapItems = items;
+  _lastDisplayMapColors = expirationColors;
+  _lastDisplayMap = map;
   return map;
 }
 
 // Context for passing pre-computed display map to module-scope renderItem
-const DisplayMapContext = createContext<Map<string, ItemDisplayData>>(new Map());
+const DisplayMapContext = createContext<Map<string, ItemDisplayData>>(
+  new Map(),
+);
 
 // Get location string — only returns custom storage location names.
 // Default storage states (Fridge/Freezer/Pantry) are already represented by filter tabs.
@@ -463,7 +493,11 @@ export const PantryContent = React.forwardRef<
       componentName: 'PantryContent',
       reportInterval: 10000,
     });
-    useDataReferenceTracker(items, 'PantryContent.items', perfCallbacks.onDataReferenceChange);
+    useDataReferenceTracker(
+      items,
+      'PantryContent.items',
+      perfCallbacks.onDataReferenceChange,
+    );
 
     useImperativeHandle(ref, () => ({
       scrollToTop() {
@@ -533,7 +567,9 @@ export const PantryContent = React.forwardRef<
       ? localFilteredItems
       : sortItems(localFilteredItems);
 
-    // Precomputed expiration colors — used by computeDisplayMap
+    // Precomputed expiration colors — used by computeDisplayMap.
+    // React Compiler auto-memoizes this object: deps are primitive strings
+    // (compared by value), so the reference stays stable across re-renders.
     const expirationColors = {
       expired: theme.colors.expiration.expiredText,
       warning: theme.colors.expiration.warningText,
@@ -548,7 +584,11 @@ export const PantryContent = React.forwardRef<
     // Pre-compute display data for ALL items at list level — eliminates per-item
     // computeItemDisplay calls during scroll/recycling. React Compiler auto-memoizes
     // this when deferredSortedItems and expirationColors are stable.
-    const displayMap = computeDisplayMap(deferredSortedItems, expirationColors, getLocationString);
+    const displayMap = computeDisplayMap(
+      deferredSortedItems,
+      expirationColors,
+      getLocationString,
+    );
 
     // Preload images for visible + upcoming items to prevent blank shimmer during fast scroll
     useEffect(() => {
@@ -701,7 +741,9 @@ export const PantryContent = React.forwardRef<
                     <SectionHeader
                       title={sectionTitle}
                       variant="default"
-                      actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
+                      actionLabel={`Sort ${
+                        sortDirection === 'asc' ? '↑' : '↓'
+                      }`}
                       onActionPress={openSortModal}
                       testID="pantry-sort-button"
                     />
@@ -730,7 +772,7 @@ export const PantryContent = React.forwardRef<
                   onEndReachedThreshold={0.5}
                   onLoad={perfCallbacks.onLoad}
                   onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
-                  maintainVisibleContentPosition={{ disabled: true }}
+                  maintainVisibleContentPosition={MVCP_DISABLED}
                 />
               </DisplayMapContext.Provider>
             </View>

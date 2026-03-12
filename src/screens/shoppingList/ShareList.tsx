@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   RefreshControl,
   Pressable,
   Alert,
-  ActivityIndicator } from 'react-native';
+  ActivityIndicator,
+} from 'react-native';
 import { Icon } from '#utils/iconUtils';
 import { useNavigation } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
@@ -19,13 +20,16 @@ import {
   useRemoveCollaboratorMutation,
   useAddCollaboratorMutation,
   useShareShoppingListMutation,
-  CollaboratorRole } from '#generated';
+  CollaboratorRole,
+} from '#generated';
 import {
   createAddToParentConnectionUpdater,
-  createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+  createRemoveFromParentConnectionUpdater,
+} from '#/apollo/utils/cacheUpdaters';
 import { useShoppingListDetails } from '#hooks/shoppingList/useShoppingListDetails';
 import CollaboratorPermissionsBottomSheet, {
-  CollaboratorPermissionsBottomSheetRef } from '#/components/organisms/CollaboratorPermissionsBottomSheet';
+  CollaboratorPermissionsBottomSheetRef,
+} from '#/components/organisms/CollaboratorPermissionsBottomSheet';
 import { useAppStore, selectUser } from '#store/useAppStore';
 import { Button } from '#components/base/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
@@ -47,7 +51,15 @@ const removeCollaboratorFromCache = createRemoveFromParentConnectionUpdater(
 );
 
 // PERFORMANCE: Helper functions moved outside component to avoid recreation on every render
-const getStatusColor = (status: string, colors: { success: string; warning: string; error: string; textTertiary: string }): string => {
+const getStatusColor = (
+  status: string,
+  colors: {
+    success: string;
+    warning: string;
+    error: string;
+    textTertiary: string;
+  },
+): string => {
   switch (status?.toUpperCase()) {
     case 'ACCEPTED':
     case 'ACTIVE':
@@ -79,14 +91,18 @@ const formatStatus = (status: string) => {
   }
 };
 
-export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ route }) => {
+export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
+  route,
+}) => {
   const { theme } = useUnistyles();
   const navigation = useNavigation();
   const { navigate } = useAppNavigation();
   const { listId } = route.params;
 
   const [email, setEmail] = useState('');
-  const [selectedRole, setSelectedRole] = useState<CollaboratorRole>(CollaboratorRole.Contributor);
+  const [selectedRole, setSelectedRole] = useState<CollaboratorRole>(
+    CollaboratorRole.Contributor,
+  );
   const [sharing, setSharing] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [togglingShareCode, setTogglingShareCode] = useState(false);
@@ -103,7 +119,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
     isRefetching,
     collaborators,
     name: listName,
-    refetch } = useShoppingListDetails(listId);
+    refetch,
+  } = useShoppingListDetails(listId);
 
   const isHomeLinked = !!shoppingList?.homeId;
 
@@ -124,20 +141,44 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
   const isPublic = !!shoppingList?.isPublic;
   const shareCode = shoppingList?.shareCode;
 
+  useEffect(() => {
+    if (copied) {
+      const timer = setTimeout(() => setCopied(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copied]);
+
+  const [prevShareCode, setPrevShareCode] = useState(shareCode);
+  if (shareCode !== prevShareCode) {
+    setPrevShareCode(shareCode);
+    setCopied(false);
+  }
+
   const handleToggleShareCode = () => {
     executeWithLoadingState(
       async () => {
-        await shareShoppingList({
+        const { data } = await shareShoppingList({
           variables: {
             id: listId,
             input: { isPublic: !isPublic },
           },
         });
-        refetch();
+        if (!data?.shareShoppingList?.success) {
+          throw new Error(
+            data?.shareShoppingList?.message ||
+              'Failed to update share settings',
+          );
+        }
+        await refetch();
       },
       setTogglingShareCode,
-      () => {
-        Alert.alert('Error', 'Failed to update share settings');
+      error => {
+        Alert.alert(
+          'Error',
+          error instanceof Error
+            ? error.message
+            : 'Failed to update share settings',
+        );
       },
     );
   };
@@ -157,53 +198,69 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
 
     executeWithLoadingState(
       async () => {
-        await shareList({
+        const { data } = await shareList({
           variables: {
             input: {
               shoppingListId: listId,
               email: email.trim(),
               role: selectedRole,
-            } },
-          update(cache, { data }) {
-            const collaborator = data?.inviteToShoppingList?.collaborator;
+            },
+          },
+          update(cache, { data: updateData }) {
+            const collaborator = updateData?.inviteToShoppingList?.collaborator;
             if (collaborator) {
-              addCollaboratorToCache(cache, listId, collaborator, { position: 'end' });
+              addCollaboratorToCache(cache, listId, collaborator, {
+                position: 'end',
+              });
             }
-          } });
+          },
+        });
+        if (!data?.inviteToShoppingList?.success) {
+          throw new Error(
+            data?.inviteToShoppingList?.message || 'Failed to send invitation',
+          );
+        }
         setEmail('');
-        refetch();
+        await refetch();
       },
       setSharing,
-      () => {
-        Alert.alert('Error', 'Failed to send invitation');
+      error => {
+        Alert.alert(
+          'Error',
+          error instanceof Error ? error.message : 'Failed to send invitation',
+        );
       },
     );
   };
 
   const handleRemoveMember = (memberId: string) => {
-      Alert.alert(
-        'Remove Member',
-        'Are you sure you want to remove this member?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await removeMember({
-                  variables: { id: memberId },
-                  update(cache) {
-                    removeCollaboratorFromCache(cache, listId, memberId, { evictItem: true });
-                  } });
-                refetch();
-              } catch {
-                Alert.alert('Error', 'Failed to remove member');
-              }
-            } },
-        ],
-      );
-    };
+    Alert.alert(
+      'Remove Member',
+      'Are you sure you want to remove this member?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeMember({
+                variables: { id: memberId },
+                update(cache) {
+                  removeCollaboratorFromCache(cache, listId, memberId, {
+                    evictItem: true,
+                  });
+                },
+              });
+              refetch();
+            } catch {
+              Alert.alert('Error', 'Failed to remove member');
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const handleLeaveList = () => {
     // Block owners from leaving
@@ -237,8 +294,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                 await removeMember({
                   variables: { id: currentUserCollaborator.id },
                   update(cache) {
-                    removeCollaboratorFromCache(cache, listId, currentUserCollaborator.id, { evictItem: true });
-                  } });
+                    removeCollaboratorFromCache(
+                      cache,
+                      listId,
+                      currentUserCollaborator.id,
+                      { evictItem: true },
+                    );
+                  },
+                });
                 navigation.goBack();
               },
               setLeaving,
@@ -246,7 +309,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                 Alert.alert('Error', 'Failed to leave list');
               },
             );
-          } },
+          },
+        },
       ],
     );
   };
@@ -257,7 +321,11 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
 
   return (
     <View style={styles.container}>
-      <Header title="Share List" onBack={() => navigation.goBack()} centerTitle />
+      <Header
+        title="Share List"
+        onBack={() => navigation.goBack()}
+        centerTitle
+      />
 
       <OfflineGate
         message="Sharing not available offline"
@@ -272,7 +340,9 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
           {isHomeLinked ? (
             <View style={styles.homeLinkedSection}>
               <AlertBanner
-                title={`This list belongs to the home "${shoppingList?.home?.name ?? 'Unknown'}". Members are managed through home settings.`}
+                title={`This list belongs to the home "${
+                  shoppingList?.home?.name ?? 'Unknown'
+                }". Members are managed through home settings.`}
                 icon="home-outline"
                 iconLibrary="Ionicons"
                 variant="warning"
@@ -280,7 +350,11 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
               <View style={styles.homeLinkedButtonWrapper}>
                 <Button
                   title="Manage Home"
-                  onPress={() => navigate('HomeDetail', { homeId: shoppingList?.homeId ?? '' })}
+                  onPress={() =>
+                    navigate('HomeDetail', {
+                      homeId: shoppingList?.homeId ?? '',
+                    })
+                  }
                   variant="secondary"
                   icon="people-outline"
                 />
@@ -299,7 +373,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                   autoCapitalize="none"
                 />
                 <Pressable
-                  style={({pressed}) => [styles.sendButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.sendButton,
+                    pressed && styles.pressed,
+                  ]}
                   onPress={handleShare}
                   disabled={sharing}
                 >
@@ -322,7 +399,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                   return (
                     <Pressable
                       key={role}
-                      style={({pressed}) => [
+                      style={({ pressed }) => [
                         styles.roleChip,
                         isSelected && styles.roleChipSelected,
                         pressed && styles.pressed,
@@ -349,10 +426,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
             <View style={styles.shareCodeSection}>
               <Text style={styles.sectionTitle}>Share via Code</Text>
               <Text style={styles.shareCodeDescription}>
-                Enable public sharing to generate a code anyone can use to join this list.
+                Enable public sharing to generate a code anyone can use to join
+                this list.
               </Text>
               <Pressable
-                style={({pressed}) => [styles.shareCodeToggle, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.shareCodeToggle,
+                  pressed && styles.pressed,
+                ]}
                 onPress={handleToggleShareCode}
                 disabled={togglingShareCode}
               >
@@ -360,23 +441,45 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                   <Icon
                     name={isPublic ? 'link-outline' : 'lock-closed-outline'}
                     size={20}
-                    color={isPublic ? theme.colors.primary : theme.colors.textSecondary}
+                    color={
+                      isPublic
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary
+                    }
                   />
                   <Text style={styles.shareCodeToggleText}>
-                    {isPublic ? 'Public sharing enabled' : 'Public sharing disabled'}
+                    {isPublic
+                      ? 'Public sharing enabled'
+                      : 'Public sharing disabled'}
                   </Text>
                 </View>
                 {togglingShareCode ? (
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.primary}
+                  />
                 ) : (
-                  <View style={[styles.toggleTrack, isPublic && styles.toggleTrackActive]}>
-                    <View style={[styles.toggleThumb, isPublic && styles.toggleThumbActive]} />
+                  <View
+                    style={[
+                      styles.toggleTrack,
+                      isPublic && styles.toggleTrackActive,
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.toggleThumb,
+                        isPublic && styles.toggleThumbActive,
+                      ]}
+                    />
                   </View>
                 )}
               </Pressable>
               {isPublic && shareCode ? (
                 <Pressable
-                  style={({pressed}) => [styles.shareCodeDisplay, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.shareCodeDisplay,
+                    pressed && styles.pressed,
+                  ]}
                   onPress={handleCopyShareCode}
                 >
                   <Text style={styles.shareCodeValue}>{shareCode}</Text>
@@ -384,9 +487,16 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                     <Icon
                       name={copied ? 'checkmark' : 'copy-outline'}
                       size={18}
-                      color={copied ? theme.colors.success : theme.colors.primary}
+                      color={
+                        copied ? theme.colors.success : theme.colors.primary
+                      }
                     />
-                    <Text style={[styles.copyText, copied && { color: theme.colors.success }]}>
+                    <Text
+                      style={[
+                        styles.copyText,
+                        copied && { color: theme.colors.success },
+                      ]}
+                    >
                       {copied ? 'Copied' : 'Copy'}
                     </Text>
                   </View>
@@ -404,8 +514,13 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                 return (
                   <Pressable
                     key={member.id}
-                    style={({pressed}) => [styles.memberCard, pressed && styles.pressed]}
-                    onPress={() => permissionsBottomSheetRef.current?.open(member)}
+                    style={({ pressed }) => [
+                      styles.memberCard,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() =>
+                      permissionsBottomSheetRef.current?.open(member)
+                    }
                   >
                     <View style={styles.memberInfo}>
                       <View style={styles.avatar}>
@@ -414,24 +529,35 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                         </Text>
                       </View>
                       <View style={styles.memberDetails}>
-                        <Text style={styles.memberName}>{member.email || 'Unknown'}</Text>
-                        <Text style={styles.memberEmail}>{member.email || ''}</Text>
+                        <Text style={styles.memberName}>
+                          {member.email || 'Unknown'}
+                        </Text>
+                        <Text style={styles.memberEmail}>
+                          {member.email || ''}
+                        </Text>
                         <View style={styles.statusContainer}>
                           <View
                             style={[
                               styles.statusBadge,
                               {
                                 backgroundColor: statusColor + '20',
-                                borderColor: statusColor },
+                                borderColor: statusColor,
+                              },
                             ]}
                           >
-                            <Text style={[styles.statusText, { color: statusColor }]}>
+                            <Text
+                              style={[
+                                styles.statusText,
+                                { color: statusColor },
+                              ]}
+                            >
                               {statusText}
                             </Text>
                           </View>
                           {!!member.invitedAt && (
                             <Text style={styles.invitedText}>
-                              Invited {new Date(member.invitedAt).toLocaleDateString()}
+                              Invited{' '}
+                              {new Date(member.invitedAt).toLocaleDateString()}
                             </Text>
                           )}
                         </View>
@@ -445,9 +571,13 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                             handleRemoveMember(member.id);
                           }
                         }}
-                        style={({pressed}) => pressed && styles.pressed}
+                        style={({ pressed }) => pressed && styles.pressed}
                       >
-                        <Icon name="close" size={20} color={theme.colors.error} />
+                        <Icon
+                          name="close"
+                          size={20}
+                          color={theme.colors.error}
+                        />
                       </Pressable>
                     )}
                   </Pressable>
@@ -486,27 +616,34 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background },
+    backgroundColor: theme.colors.background,
+  },
   scrollContent: {
-    flexGrow: 1 },
+    flexGrow: 1,
+  },
   homeLinkedSection: {
     paddingBottom: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border },
+    borderBottomColor: theme.colors.border,
+  },
   homeLinkedButtonWrapper: {
-    paddingHorizontal: theme.spacing.md },
+    paddingHorizontal: theme.spacing.md,
+  },
   inviteSection: {
     padding: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border },
+    borderBottomColor: theme.colors.border,
+  },
   sectionTitle: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing['3'] },
+    marginBottom: theme.spacing['3'],
+  },
   inputRow: {
     flexDirection: 'row',
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   input: {
     flex: 1,
     borderWidth: 1,
@@ -515,7 +652,8 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.sm,
     fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   sendButton: {
     marginLeft: theme.spacing['3'],
     backgroundColor: theme.colors.primary,
@@ -523,15 +661,18 @@ const styles = StyleSheet.create(theme => ({
     height: 44,
     borderRadius: theme.radii.full,
     justifyContent: 'center',
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   roleLabel: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   roleRow: {
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   roleChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -541,59 +682,73 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   roleChipSelected: {
     borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary + '15' },
+    backgroundColor: theme.colors.primary + '15',
+  },
   roleChipIcon: {
-    fontSize: theme.typography.fontSize.sm },
+    fontSize: theme.typography.fontSize.sm,
+  },
   roleChipText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   roleChipTextSelected: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   shareCodeSection: {
     padding: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border },
+    borderBottomColor: theme.colors.border,
+  },
   shareCodeDescription: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.md,
-    lineHeight: theme.typography.fontSize.sm * 1.5 },
+    lineHeight: theme.typography.fontSize.sm * 1.5,
+  },
   shareCodeToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: theme.spacing['3'],
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.sm },
+    borderRadius: theme.radii.sm,
+  },
   shareCodeToggleContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   shareCodeToggleText: {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   toggleTrack: {
     width: 44,
     height: 24,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.border,
     justifyContent: 'center',
-    paddingHorizontal: 2 },
+    paddingHorizontal: 2,
+  },
   toggleTrackActive: {
-    backgroundColor: theme.colors.primary },
+    backgroundColor: theme.colors.primary,
+  },
   toggleThumb: {
     width: 20,
     height: 20,
     borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.white },
+    backgroundColor: theme.colors.white,
+  },
   toggleThumbActive: {
-    alignSelf: 'flex-end' },
+    alignSelf: 'flex-end',
+  },
   shareCodeDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -604,22 +759,27 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderStyle: 'dashed' },
+    borderStyle: 'dashed',
+  },
   shareCodeValue: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
-    letterSpacing: 2 },
+    letterSpacing: 2,
+  },
   copyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   copyText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   membersSection: {
-    padding: theme.spacing.md },
+    padding: theme.spacing.md,
+  },
   memberCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -627,13 +787,16 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing['3'],
     backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.sm,
-    borderRadius: theme.radii.sm },
+    borderRadius: theme.radii.sm,
+  },
   memberInfo: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    flex: 1 },
+    flex: 1,
+  },
   memberDetails: {
-    flex: 1 },
+    flex: 1,
+  },
   avatar: {
     width: 40,
     height: 40,
@@ -641,46 +804,58 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing['3'] },
+    marginRight: theme.spacing['3'],
+  },
   avatarText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   memberName: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   memberEmail: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2 },
+    marginTop: 2,
+  },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: theme.spacing.sm,
     flexWrap: 'wrap',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   statusBadge: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.pill,
-    borderWidth: 1 },
+    borderWidth: 1,
+  },
   statusText: {
     fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   invitedText: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
-    fontStyle: 'italic' },
+    fontStyle: 'italic',
+  },
   leaveSection: {
     padding: theme.spacing.md,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     marginTop: 'auto',
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   leaveDescription: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    lineHeight: theme.typography.fontSize.sm * 1.5 },
+    lineHeight: theme.typography.fontSize.sm * 1.5,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

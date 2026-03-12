@@ -5,7 +5,6 @@ import { SkeletonCircle } from './SkeletonCircle';
 import { SkeletonLine } from './SkeletonLine';
 import { SkeletonRectangle } from './SkeletonRectangle';
 import { ListItem } from '#/components/molecules/ListItem';
-import { commonStyles } from '#/styles/commonStyles';
 
 interface ShoppingListItemSkeletonProps {
   /** Whether to show shimmer animation */
@@ -27,16 +26,26 @@ interface ShoppingListItemSkeletonProps {
  * />
  * ```
  */
-export const ShoppingListItemSkeleton: React.FC<ShoppingListItemSkeletonProps> = ({
-  animated = true,
-}) => {
+export const ShoppingListItemSkeleton: React.FC<
+  ShoppingListItemSkeletonProps
+> = ({ animated = true }) => {
   return (
-    <View style={[styles.wrapper, commonStyles.shadow]}>
+    <View style={styles.wrapper}>
       <ListItem>
         <SkeletonCircle size={24} animated={animated} />
-        <SkeletonRectangle width={44} height={44} borderRadius={8} animated={animated} />
+        <SkeletonRectangle
+          width={44}
+          height={44}
+          borderRadius={8}
+          animated={animated}
+        />
         <View style={styles.content}>
-          <SkeletonLine width="70%" height={16} style={styles.title} animated={animated} />
+          <SkeletonLine
+            width="70%"
+            height={16}
+            style={styles.title}
+            animated={animated}
+          />
           <SkeletonLine width="40%" height={14} animated={animated} />
         </View>
         <SkeletonLine width={40} height={30} animated={animated} />

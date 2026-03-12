@@ -12,7 +12,10 @@ const ITEM_COUNT = 10;
  * scrollable list, so the skeleton only covers the item rows.
  */
 export const ShoppingListSkeleton: React.FC = () => (
-  <ScrollView contentContainerStyle={styles.container}>
+  <ScrollView
+    contentContainerStyle={styles.container}
+    showsVerticalScrollIndicator={false}
+  >
     <View style={styles.itemList}>
       {Array.from({ length: ITEM_COUNT }, (_, index) => (
         <ShoppingListItemSkeleton key={index} />

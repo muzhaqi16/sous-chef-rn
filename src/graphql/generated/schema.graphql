@@ -2193,19 +2193,6 @@ type ExpirationRiskItem {
   unitName: String
 }
 
-enum ExportFormat {
-  CSV
-  EXCEL
-  JSON
-}
-
-type ExportResponse {
-  expiresAt: DateTime!
-  format: ExportFormat!
-  rowCount: Int!
-  url: String!
-}
-
 enum ExternalSource {
   ALLRECIPES
   BARCODE_LOOKUP
@@ -2698,29 +2685,6 @@ enum ImageUploadPurpose {
   PANTRY_ITEM_PHOTO
   PROFILE_AVATAR
   PROFILE_COVER
-}
-
-input ImportItemsFromProviderInput {
-  categoryUrl: String
-  dryRun: Boolean
-  filters: ProviderFilters
-  limit: Int
-  productIds: [String!]
-  provider: ProviderType!
-  searchQuery: String
-}
-
-type ImportItemsResponse implements MutationPayload {
-  code: String!
-  errors: [ItemError!]!
-  executionTime: Float
-  failed: Int!
-  imported: Int!
-  items: [Item!]!
-  message: String!
-  providerMetadata: JSON
-  success: Boolean!
-  updated: Int!
 }
 
 input IngredientInput {
@@ -4485,8 +4449,6 @@ type Mutation {
   duplicateMealPlan(input: DuplicateMealPlanInput!): MealPlanPayload!
   """Duplicate a template with a new name"""
   duplicateTemplate(id: ID!, newName: String!): MealTemplatePayload!
-  """Export items to file"""
-  exportItems(filters: ItemFilters, format: ExportFormat!): ExportResponse! @deprecated(reason: "Not yet implemented")
   """Save a recipe as a favorite."""
   favoriteRecipe(input: FavoriteRecipeInput!): SavedRecipePayload!
   """Flag an item for review"""
@@ -4500,10 +4462,6 @@ type Mutation {
   generateShoppingListFromMealPlan(input: GenerateShoppingListFromMealPlanInput!): ShoppingListPayload!
   """Hard delete a device permanently (admin only)"""
   hardDeleteDevice(id: ID!): DevicePayload!
-  """Import items from CSV file"""
-  importItemsFromCSV(file: Upload!, mappings: JSON, skipDuplicates: Boolean): ImportItemsResponse! @deprecated(reason: "Not yet implemented")
-  """Import items from external provider (USDA, Spoonacular, etc.)"""
-  importItemsFromProvider(input: ImportItemsFromProviderInput!): ImportItemsResponse! @deprecated(reason: "Not yet implemented")
   """Increment an item's popularity counter"""
   incrementItemPopularity(amount: Int, id: ID!): ItemPayload!
   """Increment the cooked count for a saved recipe."""
@@ -5873,14 +5831,6 @@ enum ProfileVisibility {
   FRIENDS
   PRIVATE
   PUBLIC
-}
-
-input ProviderFilters {
-  brand: String
-  category: String
-  hasOffers: Boolean
-  inStock: Boolean
-  priceRange: PriceRangeInput
 }
 
 enum ProviderType {

@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
 import { usePerformanceStore } from '#/store/performanceStore';
@@ -7,11 +6,15 @@ import { usePerformanceStore } from '#/store/performanceStore';
 /**
  * Hook to track component render time and count
  *
- * Measures render duration using `react-native-performance` marks/measures
- * and reports metrics to telemetry via the central observer pattern in
- * `NativePerformanceService`. Captures `performance.now()` during render,
- * then creates a `performance.measure()` in `useLayoutEffect` for accurate
- * render+commit duration.
+ * Uses `Date.now()` during render to capture a start timestamp (the React
+ * Compiler recognises `Date.now()` as impure so it won't be memoised),
+ * then computes the render-to-commit duration in `useLayoutEffect`.
+ *
+ * Includes batched-render detection: if the render function ran before
+ * the previous commit's layout effects finished (common during app startup
+ * when the entire tree renders simultaneously), the hook uses the
+ * commit-to-commit gap as a proxy duration instead of the inflated
+ * render-to-commit measurement.
  *
  * Gated behind __DEV__ so it's completely inert in production builds.
  *
@@ -39,6 +42,7 @@ export function useRenderTime(
   const renderDurationRef = useRef<number>(0);
   const renderCount = useRef<number>(0);
   const totalRenderTime = useRef<number>(0);
+  const lastCommitTimeRef = useRef<number>(0);
 
   const enabled = options?.enabled ?? DEFAULT_PERFORMANCE_CONFIG.enabled;
   const sampleRate =
@@ -47,18 +51,34 @@ export function useRenderTime(
     options?.slowThreshold ?? DEFAULT_PERFORMANCE_CONFIG.slowRenderThreshold;
 
   // Capture render start time during render phase.
-  // performance.now() is an impure call — the compiler won't memoize it.
-  const renderStart = __DEV__ ? performance.now() : 0;
+  // Date.now() is intentionally impure — the React Compiler won't memoise it,
+  // ensuring a fresh timestamp on every render. The imported performance.now()
+  // was incorrectly memoised by the compiler (treated as pure), causing stale
+  // renderStart values and inflated render-to-commit measurements.
+  // eslint-disable-next-line react-hooks/purity
+  const renderStart = __DEV__ ? Date.now() : 0;
 
-  const measureName = `component:${componentName}:render`;
-
-  // Create a performance.measure() synchronously after commit to capture
-  // accurate render+commit duration. Store duration in ref for the passive effect.
+  // Compute render-to-commit duration synchronously after commit.
+  //
+  // Batched-render detection: if renderStart < prevCommitTime, this render's
+  // function ran before the previous cycle's effects finished — the duration
+  // spans external work (other components, JS thread congestion).
+  // Use the commit-to-commit gap as a more accurate proxy in that case.
   useLayoutEffect(() => {
     if (!__DEV__) return;
 
-    const measure = performance.measure(measureName, { start: renderStart });
-    renderDurationRef.current = measure.duration;
+    const commitTime = Date.now();
+    const prevCommitTime = lastCommitTimeRef.current;
+    lastCommitTimeRef.current = commitTime;
+
+    const duration = commitTime - renderStart;
+    const wasBatched = prevCommitTime > 0 && renderStart < prevCommitTime;
+
+    if (wasBatched) {
+      renderDurationRef.current = commitTime - prevCommitTime;
+    } else {
+      renderDurationRef.current = duration;
+    }
     renderCount.current += 1;
   });
 
@@ -86,10 +106,11 @@ export function useRenderTime(
     totalRenderTime.current += renderDuration;
     const avgRenderTime = totalRenderTime.current / renderCount.current;
 
-    // Histogram is routed by the central observer in NativePerformanceService
-    // (component:*:render measures → component_render_duration_ms histogram)
-
     Telemetry.increment('component_render_count', 1, {
+      component: componentName,
+    });
+
+    Telemetry.histogram('component_render_duration_ms', renderDuration, {
       component: componentName,
     });
 
@@ -127,9 +148,6 @@ export function useRenderTime(
         }: ${renderDuration.toFixed(2)}ms (avg: ${avgRenderTime.toFixed(2)}ms)`,
       );
     }
-
-    // Clean up measures to avoid unbounded memory growth
-    performance.clearMeasures(measureName);
   });
 }
 

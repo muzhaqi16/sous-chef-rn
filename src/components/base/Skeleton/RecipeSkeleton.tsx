@@ -12,7 +12,10 @@ const ITEM_COUNT = 10;
  * so this skeleton only covers the item rows.
  */
 export const RecipeSkeleton: React.FC = () => (
-  <ScrollView contentContainerStyle={styles.container}>
+  <ScrollView
+    contentContainerStyle={styles.container}
+    showsVerticalScrollIndicator={false}
+  >
     <View style={styles.itemList}>
       {Array.from({ length: ITEM_COUNT }, (_, index) => (
         <RecipeItemSkeleton key={index} />

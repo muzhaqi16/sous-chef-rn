@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { PantryItemFragment, StorageType } from '#generated';
 import { usePantryItemActions } from '#/hooks/pantry/usePantryItemActions';
 import { ConsumePantryItemModal } from '#/components/modals/ConsumePantryItemModal';
@@ -9,7 +16,11 @@ import { AddStorageLocationSheet } from '#/components/modals/AddStorageLocationS
 
 /**
  * Context value for pantry modals.
- * Provides access to all modal state and actions.
+ *
+ * PERFORMANCE: Only contains stable references (ref-delegating functions + setState).
+ * Volatile state (modal visibility, sheet visibility) is kept out of the context
+ * because it's only consumed by the modals rendered inside the provider.
+ * This prevents the entire pantry tree from re-rendering when a modal opens/closes.
  */
 interface PantryModalsContextValue {
   /** Open consume modal for a pantry item */
@@ -22,24 +33,18 @@ interface PantryModalsContextValue {
   handleEditItem: (itemId: string) => void;
   /** Delete a pantry item */
   handleDeleteItem: (itemId: string) => Promise<void>;
-  /** Whether the add-to-pantry sheet is visible */
-  addSheetVisible: boolean;
   /** Show/hide the add-to-pantry sheet */
   setAddSheetVisible: (visible: boolean) => void;
-  /** Whether the add-storage-location sheet is visible */
-  addLocationSheetVisible: boolean;
   /** Show/hide the add-storage-location sheet */
   setAddLocationSheetVisible: (visible: boolean) => void;
-  /** Close the add sheet (scrolls to top if items were added) */
-  handleAddSheetClose: () => void;
-  /** Track that an item was added (for scroll-to-top on close) */
-  handleItemAdded: () => void;
 }
 
-const PantryModalsContext = createContext<PantryModalsContextValue | null>(null);
+const PantryModalsContext = createContext<PantryModalsContextValue | null>(
+  null,
+);
 
 /**
- * Hook to access pantry modals from context.
+ * Hook to access pantry modal actions from context.
  * Must be used within PantryModalsProvider.
  *
  * @example
@@ -72,7 +77,10 @@ interface PantryModalsProviderProps {
   /** Navigation callbacks */
   navigateTo: { pantryItem: (params: { itemId: string }) => void };
   /** Create a new storage location */
-  createLocation: (input: { name: string; type: StorageType }) => Promise<unknown>;
+  createLocation: (input: {
+    name: string;
+    type: StorageType;
+  }) => Promise<unknown>;
   /** Whether a storage location is being created */
   creatingLocation: boolean;
   /** Optional callback to scroll list to top (called when items added and sheet closes) */
@@ -82,40 +90,11 @@ interface PantryModalsProviderProps {
 /**
  * PantryModalsProvider - Consolidated provider for pantry modals
  *
- * Combines all pantry modal hooks into a single provider:
- * - ConsumePantryItemModal
- * - RecordWastePantryItemModal
- * - RestockPantryItemModal
- * - AddToPantrySheet
- * - AddStorageLocationSheet
- *
- * Benefits:
- * - Single source of truth for modal state
- * - Modals render inside provider (not in PantryMain)
- * - Prevents multiple modals opening simultaneously
- * - Reduces hook count in consuming component
- *
- * @example
- * ```tsx
- * // In PantryMain.tsx
- * return (
- *   <PantryModalsProvider
- *     pantryId={pantry?.id}
- *     pantryItems={pantryItems}
- *     removeItem={handleRemoveItem}
- *     navigateTo={stableNavigateTo}
- *     createLocation={createLocation}
- *     creatingLocation={creatingLocation}
- *   >
- *     <View>
- *       {/* Screen content - modals render inside provider *\/}
- *     </View>
- *   </PantryModalsProvider>
- * );
- *
- * // In child component
- * const { handleConsumeItem, setAddSheetVisible } = usePantryModals();
- * ```
+ * PERFORMANCE: Uses ref-based stable callbacks (same pattern as PantryActionsContext).
+ * The context value only contains stable references, so consumers never re-render
+ * from modal state changes or pantryItems prop updates. The action functions
+ * delegate to a ref that's updated via useEffect, ensuring they always access
+ * the latest props without causing context value instability.
  */
 export function PantryModalsProvider({
   children,
@@ -153,6 +132,33 @@ export function PantryModalsProvider({
     navigateTo,
   });
 
+  // --- Ref-based stable callbacks (same pattern as PantryActionsContext) ---
+  // Store latest action functions in ref so the context value stays stable.
+  const latestActions = {
+    handleConsumeItem,
+    handleWasteItem,
+    handleRestockItem,
+    handleEditItem,
+    handleDeleteItem,
+  };
+  const actionsRef = useRef(latestActions);
+  useEffect(() => {
+    actionsRef.current = latestActions;
+  });
+
+  // Context value: stable delegating functions + setState refs.
+  // Delegates only capture actionsRef (not reactive), so the compiler
+  // auto-memoizes them with empty reactive deps — context value stays stable.
+  const value: PantryModalsContextValue = {
+    handleConsumeItem: (id: string) => actionsRef.current.handleConsumeItem(id),
+    handleWasteItem: (id: string) => actionsRef.current.handleWasteItem(id),
+    handleRestockItem: (id: string) => actionsRef.current.handleRestockItem(id),
+    handleEditItem: (id: string) => actionsRef.current.handleEditItem(id),
+    handleDeleteItem: (id: string) => actionsRef.current.handleDeleteItem(id),
+    setAddSheetVisible,
+    setAddLocationSheetVisible,
+  };
+
   const handleItemAdded = () => {
     setItemsAdded(true);
   };
@@ -164,20 +170,6 @@ export function PantryModalsProvider({
     if (shouldScroll && onScrollToTop) {
       onScrollToTop();
     }
-  };
-
-  const value: PantryModalsContextValue = {
-    handleConsumeItem,
-    handleWasteItem,
-    handleRestockItem,
-    handleEditItem,
-    handleDeleteItem,
-    addSheetVisible,
-    setAddSheetVisible,
-    addLocationSheetVisible,
-    setAddLocationSheetVisible,
-    handleAddSheetClose,
-    handleItemAdded,
   };
 
   return (

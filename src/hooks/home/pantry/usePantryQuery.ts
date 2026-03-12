@@ -29,17 +29,19 @@ import {
 } from '#store/useAppStore';
 import { PAGE_SIZE } from '#/constants/pagination';
 
-// Structural fingerprint: return stable array reference when item IDs + order are unchanged.
+// Structural fingerprint: return stable array reference when item IDs + content are unchanged.
 // Prevents unnecessary FlashList diffing when normalizePantry produces a new array object
 // but the content is structurally identical.
+// Includes updatedAt in the fingerprint so subscription echoes with identical data
+// return the stable reference, but genuine field changes propagate correctly.
 let _pantryLastFingerprint = '';
 let _pantryLastItems: any[] = [];
 
-function stabilizePantryItems<T extends { id: string }>(
-  items: T[] | undefined,
-): T[] | undefined {
+function stabilizePantryItems<
+  T extends { id: string; updatedAt?: string | null },
+>(items: T[] | undefined): T[] | undefined {
   if (!items || items.length === 0) return items;
-  const fingerprint = items.map(i => i.id).join(',');
+  const fingerprint = items.map(i => `${i.id}:${i.updatedAt ?? ''}`).join(',');
   if (
     fingerprint === _pantryLastFingerprint &&
     _pantryLastItems.length === items.length

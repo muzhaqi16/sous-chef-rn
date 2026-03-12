@@ -60,7 +60,10 @@ const ShoppingTabComponent: React.FC = () => {
   return (
     <View style={tabStyles.container}>
       {/* Content layer — always mounted so FlashList recycling pool is preserved */}
-      <View style={tabStyles.contentFill} pointerEvents={showSkeletons ? 'none' : 'auto'}>
+      <View
+        style={tabStyles.contentFill}
+        pointerEvents={showSkeletons ? 'none' : 'auto'}
+      >
         <StaggeredTabContent
           items={items}
           onItemPress={actions.onItemPress}
@@ -92,14 +95,17 @@ const ShoppingTabComponent: React.FC = () => {
           style={tabStyles.absoluteFill}
           pointerEvents="none"
         >
-          <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} count={10} />
+          <SkeletonList
+            SkeletonComponent={ShoppingListItemSkeleton}
+            count={10}
+          />
         </Animated.View>
       ) : null}
     </View>
   );
 };
 
-const tabStyles = StyleSheet.create({
+const tabStyles = StyleSheet.create(theme => ({
   container: { flex: 1 },
   contentFill: { flex: 1 },
   absoluteFill: {
@@ -108,7 +114,8 @@ const tabStyles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: theme.colors.background,
   },
-});
+}));
 
 export const ShoppingTab = ShoppingTabComponent;

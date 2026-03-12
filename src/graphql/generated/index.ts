@@ -2159,20 +2159,6 @@ export type ExpirationRiskItem = {
   unitName: Maybe<Scalars['String']['output']>;
 };
 
-export enum ExportFormat {
-  Csv = 'CSV',
-  Excel = 'EXCEL',
-  Json = 'JSON'
-}
-
-export type ExportResponse = {
-  __typename: 'ExportResponse';
-  expiresAt: Scalars['DateTime']['output'];
-  format: ExportFormat;
-  rowCount: Scalars['Int']['output'];
-  url: Scalars['String']['output'];
-};
-
 export enum ExternalSource {
   Allrecipes = 'ALLRECIPES',
   BarcodeLookup = 'BARCODE_LOOKUP',
@@ -2776,30 +2762,6 @@ export enum ImageUploadPurpose {
   ProfileAvatar = 'PROFILE_AVATAR',
   ProfileCover = 'PROFILE_COVER'
 }
-
-export type ImportItemsFromProviderInput = {
-  categoryUrl?: InputMaybe<Scalars['String']['input']>;
-  dryRun?: InputMaybe<Scalars['Boolean']['input']>;
-  filters?: InputMaybe<ProviderFilters>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  productIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  provider: ProviderType;
-  searchQuery?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type ImportItemsResponse = MutationPayload & {
-  __typename: 'ImportItemsResponse';
-  code: Scalars['String']['output'];
-  errors: Array<ItemError>;
-  executionTime: Maybe<Scalars['Float']['output']>;
-  failed: Scalars['Int']['output'];
-  imported: Scalars['Int']['output'];
-  items: Array<Item>;
-  message: Scalars['String']['output'];
-  providerMetadata: Maybe<Scalars['JSON']['output']>;
-  success: Scalars['Boolean']['output'];
-  updated: Scalars['Int']['output'];
-};
 
 export type IngredientInput = {
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
@@ -4627,11 +4589,6 @@ export type Mutation = {
   duplicateMealPlan: MealPlanPayload;
   /** Duplicate a template with a new name */
   duplicateTemplate: MealTemplatePayload;
-  /**
-   * Export items to file
-   * @deprecated Not yet implemented
-   */
-  exportItems: ExportResponse;
   /** Save a recipe as a favorite. */
   favoriteRecipe: SavedRecipePayload;
   /** Flag an item for review */
@@ -4645,16 +4602,6 @@ export type Mutation = {
   generateShoppingListFromMealPlan: ShoppingListPayload;
   /** Hard delete a device permanently (admin only) */
   hardDeleteDevice: DevicePayload;
-  /**
-   * Import items from CSV file
-   * @deprecated Not yet implemented
-   */
-  importItemsFromCSV: ImportItemsResponse;
-  /**
-   * Import items from external provider (USDA, Spoonacular, etc.)
-   * @deprecated Not yet implemented
-   */
-  importItemsFromProvider: ImportItemsResponse;
   /** Increment an item's popularity counter */
   incrementItemPopularity: ItemPayload;
   /** Increment the cooked count for a saved recipe. */
@@ -5464,12 +5411,6 @@ export type MutationDuplicateTemplateArgs = {
 };
 
 
-export type MutationExportItemsArgs = {
-  filters?: InputMaybe<ItemFilters>;
-  format: ExportFormat;
-};
-
-
 export type MutationFavoriteRecipeArgs = {
   input: FavoriteRecipeInput;
 };
@@ -5503,18 +5444,6 @@ export type MutationGenerateShoppingListFromMealPlanArgs = {
 
 export type MutationHardDeleteDeviceArgs = {
   id: Scalars['ID']['input'];
-};
-
-
-export type MutationImportItemsFromCsvArgs = {
-  file: Scalars['Upload']['input'];
-  mappings?: InputMaybe<Scalars['JSON']['input']>;
-  skipDuplicates?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-
-export type MutationImportItemsFromProviderArgs = {
-  input: ImportItemsFromProviderInput;
 };
 
 
@@ -7359,14 +7288,6 @@ export enum ProfileVisibility {
   Private = 'PRIVATE',
   Public = 'PUBLIC'
 }
-
-export type ProviderFilters = {
-  brand?: InputMaybe<Scalars['String']['input']>;
-  category?: InputMaybe<Scalars['String']['input']>;
-  hasOffers?: InputMaybe<Scalars['Boolean']['input']>;
-  inStock?: InputMaybe<Scalars['Boolean']['input']>;
-  priceRange?: InputMaybe<PriceRangeInput>;
-};
 
 export enum ProviderType {
   Amazon = 'AMAZON',
@@ -13133,28 +13054,12 @@ export type CollaborationChangesSubscription = { __typename: 'Subscription', col
       & ShoppingListCollaboratorFragment
     ) } };
 
-export type GetShoppingListQueryVariables = Exact<{
-  id: Scalars['ID']['input'];
-}>;
-
-
-export type GetShoppingListQuery = { __typename: 'Query', shoppingList: { __typename: 'ShoppingList', id: string, name: string, isDefault: boolean, totalItems: number, completedItems: number, homeId: string | null, shareCode: string | null, isPublic: boolean, home: { __typename: 'Home', id: string, name: string, myMembership: { __typename: 'Membership', id: string, role: MembershipRole, canAddItems: boolean, canRemoveItems: boolean, canEditPantry: boolean } | null } | null, ownerships: Array<(
-      { __typename: 'ShoppingListOwnership' }
-      & ShoppingListOwnershipFragment
-    )>, itemsConnection: { __typename: 'ShoppingListItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ShoppingListItemEdge', cursor: string, node: (
-          { __typename: 'ShoppingListItem' }
-          & ShoppingListItemDisplayFragment
-        ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, collaboratorsConnection: { __typename: 'ShoppingListCollaboratorConnection', totalCount: number | null, edges: Array<{ __typename: 'ShoppingListCollaboratorEdge', cursor: string, node: (
-          { __typename: 'ShoppingListCollaborator', invitedAt: string }
-          & ShoppingListCollaboratorFragment
-        ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } } | null };
-
 export type GetShoppingListDetailsQueryVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
 
-export type GetShoppingListDetailsQuery = { __typename: 'Query', shoppingList: { __typename: 'ShoppingList', id: string, name: string, isDefault: boolean, totalItems: number, completedItems: number, homeId: string | null, home: { __typename: 'Home', id: string, name: string, myMembership: { __typename: 'Membership', id: string, role: MembershipRole, canAddItems: boolean, canRemoveItems: boolean, canEditPantry: boolean } | null } | null, ownerships: Array<(
+export type GetShoppingListDetailsQuery = { __typename: 'Query', shoppingList: { __typename: 'ShoppingList', id: string, name: string, isDefault: boolean, totalItems: number, completedItems: number, homeId: string | null, shareCode: string | null, isPublic: boolean, home: { __typename: 'Home', id: string, name: string, myMembership: { __typename: 'Membership', id: string, role: MembershipRole, canAddItems: boolean, canRemoveItems: boolean, canEditPantry: boolean } | null } | null, ownerships: Array<(
       { __typename: 'ShoppingListOwnership' }
       & ShoppingListOwnershipFragment
     )>, collaboratorsConnection: { __typename: 'ShoppingListCollaboratorConnection', totalCount: number | null, edges: Array<{ __typename: 'ShoppingListCollaboratorEdge', cursor: string, node: (
@@ -17595,44 +17500,7 @@ export function useCollaborationChangesSubscription(baseOptions: ApolloReactHook
       }
 export type CollaborationChangesSubscriptionHookResult = ReturnType<typeof useCollaborationChangesSubscription>;
 export type CollaborationChangesSubscriptionResult = ApolloReactCommon.SubscriptionResult<CollaborationChangesSubscription>;
-export const GetShoppingListDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetShoppingList"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"shareCode"}},{"kind":"Field","name":{"kind":"Name","value":"isPublic"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"myMembership"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"ownerships"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"itemsConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}},{"kind":"Argument","name":{"kind":"Name","value":"orderBy"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"sortOrder"},"value":{"kind":"EnumValue","value":"ASC"}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorsConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"20"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"}},{"kind":"Field","name":{"kind":"Name","value":"invitedAt"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityInput"}},{"kind":"Field","name":{"kind":"Name","value":"displayFormat"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"unitName"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"images"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListOwnership"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListCollaborator"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditItems"}},{"kind":"Field","name":{"kind":"Name","value":"canMarkPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useGetShoppingListQuery__
- *
- * To run a query within a React component, call `useGetShoppingListQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetShoppingListQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetShoppingListQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
-export function useGetShoppingListQuery(baseOptions: ApolloReactHooks.QueryHookOptions<GetShoppingListQuery, GetShoppingListQueryVariables> & ({ variables: GetShoppingListQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useQuery<GetShoppingListQuery, GetShoppingListQueryVariables>(GetShoppingListDocument, options);
-      }
-export function useGetShoppingListLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GetShoppingListQuery, GetShoppingListQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return ApolloReactHooks.useLazyQuery<GetShoppingListQuery, GetShoppingListQueryVariables>(GetShoppingListDocument, options);
-        }
-// @ts-ignore
-export function useGetShoppingListSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GetShoppingListQuery, GetShoppingListQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GetShoppingListQuery, GetShoppingListQueryVariables>;
-export function useGetShoppingListSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GetShoppingListQuery, GetShoppingListQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GetShoppingListQuery | undefined, GetShoppingListQueryVariables>;
-export function useGetShoppingListSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GetShoppingListQuery, GetShoppingListQueryVariables>) {
-          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
-          return ApolloReactHooks.useSuspenseQuery<GetShoppingListQuery, GetShoppingListQueryVariables>(GetShoppingListDocument, options);
-        }
-export type GetShoppingListQueryHookResult = ReturnType<typeof useGetShoppingListQuery>;
-export type GetShoppingListLazyQueryHookResult = ReturnType<typeof useGetShoppingListLazyQuery>;
-export type GetShoppingListSuspenseQueryHookResult = ReturnType<typeof useGetShoppingListSuspenseQuery>;
-export type GetShoppingListQueryResult = ApolloReactCommon.QueryResult<GetShoppingListQuery, GetShoppingListQueryVariables>;
-export const GetShoppingListDetailsDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetShoppingListDetails"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"myMembership"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"ownerships"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorsConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"20"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"}},{"kind":"Field","name":{"kind":"Name","value":"invitedAt"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListOwnership"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListCollaborator"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditItems"}},{"kind":"Field","name":{"kind":"Name","value":"canMarkPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const GetShoppingListDetailsDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetShoppingListDetails"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"shareCode"}},{"kind":"Field","name":{"kind":"Name","value":"isPublic"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"myMembership"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"ownerships"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorsConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"20"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"}},{"kind":"Field","name":{"kind":"Name","value":"invitedAt"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListOwnership"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListCollaborator"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditItems"}},{"kind":"Field","name":{"kind":"Name","value":"canMarkPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useGetShoppingListDetailsQuery__

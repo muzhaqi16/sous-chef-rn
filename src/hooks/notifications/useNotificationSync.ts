@@ -5,6 +5,11 @@
  * Each action performs an optimistic local update via Zustand, then fires the
  * corresponding GraphQL mutation to persist on the server.
  *
+ * On mutation failure:
+ * - All errors are reported to errorService for production telemetry.
+ * - Network errors keep the optimistic UI (transient, subscription will reconcile).
+ * - Server errors roll back the optimistic local state to prevent permanent desync.
+ *
  * Uses executeMutation from compilerSafeWrappers to avoid try-catch in the hook body.
  */
 
@@ -15,6 +20,8 @@ import {
 } from '#generated';
 import { useStore } from '#store';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
+import { isNetworkError } from '#/utils/isNetworkError';
 
 export function useNotificationSync() {
   const [markReadMutation] = useMarkNotificationAsReadMutation();
@@ -22,47 +29,87 @@ export function useNotificationSync() {
   const [deleteMutation] = useDeleteNotificationMutation();
 
   const syncMarkAsRead = (id: string) => {
+    // Skip if already read
+    const notification = useStore
+      .getState()
+      .notifications.find(n => n.id === id);
+    if (!notification || notification.isRead) return;
+
     // Optimistic local update
     useStore.getState().markAsRead(id);
 
-    // Fire-and-forget server sync — local state is already updated
     executeMutation(
       () => markReadMutation({ variables: { id } }),
-      'Failed to sync markNotificationAsRead:',
+      (error: unknown) => {
+        errorService.reportError(error, {
+          operation: 'syncMarkAsRead',
+          notificationId: id,
+        });
+        if (!isNetworkError(error)) {
+          useStore.getState().markAsUnread(id);
+        }
+      },
     );
   };
 
   const syncMarkUnread = (id: string) => {
-    // No local "markUnread" action exists yet — fire mutation only
     executeMutation(
       () => markUnreadMutation({ variables: { id } }),
-      'Failed to sync markNotificationUnread:',
+      (error: unknown) => {
+        errorService.reportError(error, {
+          operation: 'syncMarkUnread',
+          notificationId: id,
+        });
+      },
     );
   };
 
   const syncDelete = (id: string) => {
+    // Snapshot before removal for potential rollback
+    const snapshot = useStore.getState().notifications.find(n => n.id === id);
+
     // Optimistic local removal
     useStore.getState().removeNotification(id);
 
-    // Fire-and-forget server sync
     executeMutation(
       () => deleteMutation({ variables: { id } }),
-      'Failed to sync deleteNotification:',
+      (error: unknown) => {
+        errorService.reportError(error, {
+          operation: 'syncDeleteNotification',
+          notificationId: id,
+        });
+        if (!isNetworkError(error) && snapshot) {
+          useStore.getState().restoreNotification(snapshot);
+        }
+      },
     );
   };
 
   const syncMarkAllAsRead = () => {
-    const notifications = useStore.getState().notifications;
-    const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
+    const unreadIds = useStore
+      .getState()
+      .notifications.filter(n => !n.isRead)
+      .map(n => n.id);
+
+    if (unreadIds.length === 0) return;
 
     // Optimistic local update
     useStore.getState().markAllAsRead();
 
-    // Sync each to server — fire-and-forget
+    // Sync each to server — each mutation has its own error handler
+    // so only the failed ones get rolled back
     for (const id of unreadIds) {
       executeMutation(
         () => markReadMutation({ variables: { id } }),
-        'Failed to sync markNotificationAsRead:',
+        (error: unknown) => {
+          errorService.reportError(error, {
+            operation: 'syncMarkAllAsRead',
+            notificationId: id,
+          });
+          if (!isNetworkError(error)) {
+            useStore.getState().markAsUnread(id);
+          }
+        },
       );
     }
   };

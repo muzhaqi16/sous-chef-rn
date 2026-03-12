@@ -29,7 +29,10 @@ export const SkeletonList: React.FC<SkeletonListProps> = ({
   SkeletonComponent,
   containerStyle,
 }) => (
-  <ScrollView contentContainerStyle={[styles.container, containerStyle]}>
+  <ScrollView
+    contentContainerStyle={[styles.container, containerStyle]}
+    showsVerticalScrollIndicator={false}
+  >
     {Array.from({ length: count }, (_, index) => (
       <SkeletonComponent key={index} />
     ))}

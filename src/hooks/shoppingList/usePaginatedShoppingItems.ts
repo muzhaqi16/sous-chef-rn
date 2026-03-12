@@ -37,7 +37,10 @@ interface PaginatedShoppingItemsActions {
   refetch: () => Promise<void>;
 }
 
-type UsePaginatedShoppingItemsResult = HookReturn<PaginatedShoppingItemsState, PaginatedShoppingItemsActions>;
+type UsePaginatedShoppingItemsResult = HookReturn<
+  PaginatedShoppingItemsState,
+  PaginatedShoppingItemsActions
+>;
 
 // --- Helpers (module-level for stability) ---
 
@@ -61,7 +64,10 @@ let _prevPurchasedEdgesRef: unknown = null;
  * the cache merge appends pages in order, and drag-reorder re-sorts
  * edges directly in the cache via useItemReordering's cache.modify.
  */
-const extractItemsCache = new WeakMap<readonly ItemEdge[], ShoppingListItemDisplayFragment[]>();
+const extractItemsCache = new WeakMap<
+  readonly ItemEdge[],
+  ShoppingListItemDisplayFragment[]
+>();
 
 // Structural fingerprint: track the last result to return stable references
 // when edge array identity changes but content (node IDs + order) is the same.
@@ -69,7 +75,9 @@ let _lastFingerprint = '';
 let _lastResult: ShoppingListItemDisplayFragment[] = EMPTY_ITEMS;
 
 /** @visibleForTesting */
-export function extractItems(edges: readonly ItemEdge[] | null | undefined): ShoppingListItemDisplayFragment[] {
+export function extractItems(
+  edges: readonly ItemEdge[] | null | undefined,
+): ShoppingListItemDisplayFragment[] {
   if (!edges || edges.length === 0) return EMPTY_ITEMS;
   const cached = extractItemsCache.get(edges);
   if (cached) return cached;
@@ -83,7 +91,10 @@ export function extractItems(edges: readonly ItemEdge[] | null | undefined): Sho
   // Structural stability: if node IDs in the same order match the last result,
   // reuse the previous array reference to prevent unnecessary FlashList diffing.
   const fingerprint = result.map(n => n.id).join(',');
-  if (fingerprint === _lastFingerprint && _lastResult.length === result.length) {
+  if (
+    fingerprint === _lastFingerprint &&
+    _lastResult.length === result.length
+  ) {
     extractItemsCache.set(edges, _lastResult);
     return _lastResult;
   }
@@ -131,13 +142,19 @@ export function usePaginatedShoppingItems({
   const shouldSkip = skip || !hasValidListId;
 
   // Track previous listId to detect list switches (compiler-safe pattern)
-  const [previousListId, setPreviousListId] = useState<string | null | undefined>(listId);
+  const [previousListId, setPreviousListId] = useState<
+    string | null | undefined
+  >(listId);
   const listIdChanged = previousListId !== listId;
-  if (listIdChanged) { setPreviousListId(listId); }
+  if (listIdChanged) {
+    setPreviousListId(listId);
+  }
 
   // Defer purchased query until JS thread is idle — it's for the non-default tab
   const [purchasedReady, setPurchasedReady] = useState(false);
-  if (listIdChanged) { setPurchasedReady(false); }
+  if (listIdChanged) {
+    setPurchasedReady(false);
+  }
 
   useEffect(() => {
     if (shouldSkip) return;
@@ -154,7 +171,11 @@ export function usePaginatedShoppingItems({
     fetchMore: uFetchMore,
     refetch: uRefetch,
   } = useGetShoppingListItemsFilteredQuery({
-    variables: { id: listId!, first: PAGINATION.ITEMS_PAGE_SIZE, isPurchased: false },
+    variables: {
+      id: listId!,
+      first: PAGINATION.ITEMS_PAGE_SIZE,
+      isPurchased: false,
+    },
     skip: shouldSkip,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',
@@ -169,7 +190,11 @@ export function usePaginatedShoppingItems({
     fetchMore: pFetchMore,
     refetch: pRefetch,
   } = useGetShoppingListItemsFilteredQuery({
-    variables: { id: listId!, first: PAGINATION.ITEMS_PAGE_SIZE, isPurchased: true },
+    variables: {
+      id: listId!,
+      first: PAGINATION.ITEMS_PAGE_SIZE,
+      isPurchased: true,
+    },
     skip: shouldSkip || !purchasedReady,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',
@@ -181,26 +206,34 @@ export function usePaginatedShoppingItems({
 
   // --- Extract items ---
   // Compiler can memoize these — stable reference when edges don't change
-  const unpurchasedEdges = resolveEdges(unpurchasedData, unpurchasedPrevData, listIdChanged);
+  const unpurchasedEdges = resolveEdges(
+    unpurchasedData,
+    unpurchasedPrevData,
+    listIdChanged,
+  );
   const unpurchasedItems = extractItems(unpurchasedEdges);
 
-  const purchasedEdges = resolveEdges(purchasedData, purchasedPrevData, listIdChanged);
+  const purchasedEdges = resolveEdges(
+    purchasedData,
+    purchasedPrevData,
+    listIdChanged,
+  );
   const purchasedItems = extractItems(purchasedEdges);
 
-  // DEV-only profiling in useEffect (post-render, doesn't affect memoization)
+  // DEV-only profiling — only runs when edge references actually change
   useEffect(() => {
     if (!__DEV__) return;
     const uRefChanged = unpurchasedEdges !== _prevUnpurchasedEdgesRef;
     _prevUnpurchasedEdgesRef = unpurchasedEdges;
     console.log(
-      `📊 [extractItems] unpurchased: ${unpurchasedEdges.length} edges, refChanged=${uRefChanged}`
+      `📊 [extractItems] unpurchased: ${unpurchasedEdges.length} edges, refChanged=${uRefChanged}`,
     );
     const pRefChanged = purchasedEdges !== _prevPurchasedEdgesRef;
     _prevPurchasedEdgesRef = purchasedEdges;
     console.log(
-      `📊 [extractItems] purchased: ${purchasedEdges.length} edges, refChanged=${pRefChanged}`
+      `📊 [extractItems] purchased: ${purchasedEdges.length} edges, refChanged=${pRefChanged}`,
     );
-  });
+  }, [unpurchasedEdges, purchasedEdges]);
 
   // --- Pagination via reusable usePagination hook ---
   const unpurchasedPagination = usePagination({
@@ -228,8 +261,14 @@ export function usePaginatedShoppingItems({
   // --- Refetch both queries ---
   const handleRefetch = async () => {
     await Promise.all([
-      executeRefetch(uRefetch, '[usePaginatedShoppingItems] Unpurchased refetch failed:'),
-      executeRefetch(pRefetch, '[usePaginatedShoppingItems] Purchased refetch failed:'),
+      executeRefetch(
+        uRefetch,
+        '[usePaginatedShoppingItems] Unpurchased refetch failed:',
+      ),
+      executeRefetch(
+        pRefetch,
+        '[usePaginatedShoppingItems] Purchased refetch failed:',
+      ),
     ]);
   };
 
@@ -241,20 +280,31 @@ export function usePaginatedShoppingItems({
     const unpurchasedNeedsRefetch =
       unpurchasedTotalCount > 0 && unpurchasedItems.length === 0 && !uLoading;
 
-    if (!hasValidListId || (!purchasedNeedsRefetch && !unpurchasedNeedsRefetch)) {
+    if (
+      !hasValidListId ||
+      (!purchasedNeedsRefetch && !unpurchasedNeedsRefetch)
+    ) {
       return;
     }
 
     const idleId = requestIdleCallback(() => {
       if (unpurchasedNeedsRefetch) {
-        executeRefetch(uRefetch, '[usePaginatedShoppingItems] Auto-refetch unpurchased failed:');
+        executeRefetch(
+          uRefetch,
+          '[usePaginatedShoppingItems] Auto-refetch unpurchased failed:',
+        );
       }
       if (purchasedNeedsRefetch) {
-        executeRefetch(pRefetch, '[usePaginatedShoppingItems] Auto-refetch purchased failed:');
+        executeRefetch(
+          pRefetch,
+          '[usePaginatedShoppingItems] Auto-refetch purchased failed:',
+        );
       }
     });
 
-    return () => { cancelIdleCallback(idleId); };
+    return () => {
+      cancelIdleCallback(idleId);
+    };
   }, [
     purchasedTotalCount,
     purchasedItems.length,

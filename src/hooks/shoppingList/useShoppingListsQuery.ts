@@ -1,11 +1,18 @@
-import { useGetShoppingListsLiteQuery, GetShoppingListsLiteQuery } from '#generated';
+import {
+  useGetShoppingListsLiteQuery,
+  GetShoppingListsLiteQuery,
+} from '#generated';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 // Extract the shopping list type from the lite query (metadata only)
 // Uses NonNullable to extract the node type from the connection edges
-type ShoppingListEdge = NonNullable<GetShoppingListsLiteQuery['shoppingLists']['edges']>[number];
-export type ShoppingListFromQuery = NonNullable<NonNullable<ShoppingListEdge>['node']>;
+type ShoppingListEdge = NonNullable<
+  GetShoppingListsLiteQuery['shoppingLists']['edges']
+>[number];
+export type ShoppingListFromQuery = NonNullable<
+  NonNullable<ShoppingListEdge>['node']
+>;
 
 /**
  * useShoppingListsQuery - Query shopping lists with smart caching (LIGHTWEIGHT)
@@ -18,9 +25,9 @@ export type ShoppingListFromQuery = NonNullable<NonNullable<ShoppingListEdge>['n
  *
  * PERFORMANCE: Uses GetShoppingListsLite query to reduce API complexity.
  * - Only fetches list metadata (id, name, totalItems, etc.)
- * - NO itemsConnection (items fetched via GetShoppingList for current list)
- * - NO collaboratorsConnection (permissions fetched via GetShoppingList)
- * - NO home.membersConnection/myMembership (fetched via GetShoppingList)
+ * - NO itemsConnection (items fetched via GetShoppingListItemsFiltered)
+ * - NO collaboratorsConnection (fetched via GetShoppingListDetails)
+ * - NO home.membersConnection/myMembership (fetched via GetShoppingListDetails)
  *
  * Note: For detailed list data (items, permissions, collaborators), use
  * useShoppingListItemsQuery with the current list ID.
@@ -32,10 +39,11 @@ export function useShoppingListsQuery() {
   // - Fetches ALL user's lists (home-based and personal) - filtering happens in useShoppingListSelection
   const { data, previousData, loading, error, refetch } =
     useGetShoppingListsLiteQuery({
-      variables: {},
+      variables: { first: 50 },
       fetchPolicy: 'cache-and-network',
       nextFetchPolicy: 'cache-first',
-      errorPolicy: 'all' });
+      errorPolicy: 'all',
+    });
 
   useApolloErrorLogger('GetShoppingListsLite', error);
 
@@ -48,7 +56,8 @@ export function useShoppingListsQuery() {
   // Extract nodes from connection type (shoppingLists returns ShoppingListConnection)
   const currentNodes = extractNodes(data?.shoppingLists);
   const previousNodes = extractNodes(previousData?.shoppingLists);
-  const lists: ShoppingListFromQuery[] = currentNodes.length > 0 ? currentNodes : previousNodes;
+  const lists: ShoppingListFromQuery[] =
+    currentNodes.length > 0 ? currentNodes : previousNodes;
 
   return {
     lists,
