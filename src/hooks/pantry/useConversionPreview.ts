@@ -3,7 +3,7 @@ import { useConvertQuantityLazyQuery } from '#generated';
 import { executeQuery } from '#/utils/compilerSafeWrappers';
 
 interface UseConversionPreviewOptions {
-  itemId: string | undefined;
+  pantryItemId: string | undefined;
   /** Quantity the user typed (parsed as number) */
   inputQuantity: number | null;
   /** The unit the user selected */
@@ -46,7 +46,7 @@ function makePreviewKey(
 }
 
 export function useConversionPreview({
-  itemId,
+  pantryItemId,
   inputQuantity,
   selectedUnitId,
   selectedUnitSymbol,
@@ -57,15 +57,21 @@ export function useConversionPreview({
 }: UseConversionPreviewOptions): ConversionPreviewResult {
   const [previewText, setPreviewText] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [availableInSelectedUnit, setAvailableInSelectedUnit] = useState<number | null>(null);
+  const [availableInSelectedUnit, setAvailableInSelectedUnit] = useState<
+    number | null
+  >(null);
   const [availableLoading, setAvailableLoading] = useState(false);
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [convertQuantity] = useConvertQuantityLazyQuery({ fetchPolicy: 'network-only' });
+  const [convertQuantity] = useConvertQuantityLazyQuery({
+    fetchPolicy: 'network-only',
+  });
 
-  const isSameUnit = selectedUnitId === trackingUnitId || !selectedUnitId || !trackingUnitId;
-  const shouldShowPreview = !isSameUnit && inputQuantity != null && inputQuantity > 0;
+  const isSameUnit =
+    selectedUnitId === trackingUnitId || !selectedUnitId || !trackingUnitId;
+  const shouldShowPreview =
+    !isSameUnit && inputQuantity != null && inputQuantity > 0;
 
   // Convert available quantity when selected unit changes (render-time state update)
   const [prevUnitId, setPrevUnitId] = useState(selectedUnitId);
@@ -84,14 +90,15 @@ export function useConversionPreview({
       setAvailableLoading(true);
       queueMicrotask(() => {
         executeQuery(
-          () => convertQuantity({
-            variables: {
-              itemId,
-              quantity: availableInTrackingUnit,
-              fromUnitId: trackingUnitId!,
-              toUnitId: selectedUnitId!,
-            },
-          }),
+          () =>
+            convertQuantity({
+              variables: {
+                pantryItemId: pantryItemId,
+                quantity: availableInTrackingUnit,
+                fromUnitId: trackingUnitId!,
+                toUnitId: selectedUnitId!,
+              },
+            }),
           'Error converting available quantity:',
         ).then(result => {
           const value = result?.data?.convertQuantity?.value ?? null;
@@ -103,7 +110,12 @@ export function useConversionPreview({
   }
 
   // Track preview request key to detect when a new conversion is needed (render-time state update)
-  const currentKey = makePreviewKey(shouldShowPreview, inputQuantity, selectedUnitId, trackingUnitId);
+  const currentKey = makePreviewKey(
+    shouldShowPreview,
+    inputQuantity,
+    selectedUnitId,
+    trackingUnitId,
+  );
   const [prevKey, setPrevKey] = useState(currentKey);
   if (currentKey !== prevKey) {
     setPrevKey(currentKey);
@@ -137,14 +149,15 @@ export function useConversionPreview({
 
     debounceTimer.current = setTimeout(() => {
       executeQuery(
-        () => convertQuantity({
-          variables: {
-            itemId,
-            quantity: inputQuantity!,
-            fromUnitId: selectedUnitId!,
-            toUnitId: trackingUnitId!,
-          },
-        }),
+        () =>
+          convertQuantity({
+            variables: {
+              pantryItemId: pantryItemId,
+              quantity: inputQuantity!,
+              fromUnitId: selectedUnitId!,
+              toUnitId: trackingUnitId!,
+            },
+          }),
         'Error converting preview quantity:',
       ).then(result => {
         const converted = result?.data?.convertQuantity;
@@ -168,9 +181,21 @@ export function useConversionPreview({
       }
     };
   }, [
-    shouldShowPreview, inputQuantity, selectedUnitId, trackingUnitId,
-    selectedUnitSymbol, trackingUnitSymbol, itemId, convertQuantity, conversionRatio,
+    shouldShowPreview,
+    inputQuantity,
+    selectedUnitId,
+    trackingUnitId,
+    selectedUnitSymbol,
+    trackingUnitSymbol,
+    pantryItemId,
+    convertQuantity,
+    conversionRatio,
   ]);
 
-  return { previewText, availableInSelectedUnit, previewLoading, availableLoading };
+  return {
+    previewText,
+    availableInSelectedUnit,
+    previewLoading,
+    availableLoading,
+  };
 }

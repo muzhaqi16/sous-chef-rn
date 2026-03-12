@@ -53,7 +53,7 @@ const EMPTY_ARRAY: PantryItem[] = [];
 
 // Screen-relative draw distance: scales with viewport so buffer stays ~7-10 items
 // regardless of device size (vs fixed 250 which is 37% on SE but 27% on Pro Max)
-const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 0.75);
+const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 1.5);
 
 // Module-level constant — avoids creating a new object reference per render
 const MVCP_DISABLED = { disabled: true };
@@ -283,13 +283,6 @@ const getLocationString = (
   return null;
 };
 
-// Module-scope getItemType — separate recycling pools by layout shape
-const getItemType = (item: PantryItem): string => {
-  if (item.quantity === 0) return 'out-of-stock';
-  if (!item.expiresAt) return 'no-expiry';
-  return 'with-expiry';
-};
-
 // Module-scope keyExtractor — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: PantryItem) => item.id;
 
@@ -473,7 +466,6 @@ export const PantryContent = React.forwardRef<
       onLowStockNavigate,
       totalCount,
       onAddItem,
-      isLoadingMore = false,
       hasMore = false,
       onRefresh,
       onEndReached,
@@ -578,7 +570,7 @@ export const PantryContent = React.forwardRef<
 
     // Use sortedItems directly — the outer useDeferredValue in PantryMain already
     // defers Apollo cache updates. A second deferral here only desynchronizes
-    // FlashList data from itemDisplayMap, causing getItemType instability.
+    // FlashList data from itemDisplayMap.
     const deferredSortedItems = sortedItems;
 
     // Pre-compute display data for ALL items at list level — eliminates per-item
@@ -722,9 +714,7 @@ export const PantryContent = React.forwardRef<
                   data={showSkeletons ? EMPTY_ARRAY : deferredSortedItems}
                   renderItem={renderItem}
                   keyExtractor={keyExtractor}
-                  getItemType={getItemType}
                   drawDistance={DRAW_DISTANCE}
-                  maxItemsInRecyclePool={15}
                   extraData={extraData}
                   contentContainerStyle={listContentStyle}
                   showsVerticalScrollIndicator={false}
@@ -763,7 +753,6 @@ export const PantryContent = React.forwardRef<
                   }
                   ListFooterComponent={
                     <PaginationFooter
-                      isLoadingMore={isLoadingMore}
                       hasMore={hasMore}
                       itemCount={deferredSortedItems.length}
                     />

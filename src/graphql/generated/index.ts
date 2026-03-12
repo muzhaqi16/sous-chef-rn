@@ -4372,6 +4372,8 @@ export type Mutation = {
    * The delta (positive or negative) is calculated automatically.
    */
   adjustPantryItemQuantity: PantryItemPayload;
+  /** Admin: Delete multiple items (soft delete by default, permanent if specified) */
+  adminBulkDeleteItems: BulkOperationSummary;
   /**
    * Delete images from S3/MinIO storage and update related Item records.
    *
@@ -4382,8 +4384,18 @@ export type Mutation = {
    * It removes the specified images from storage and deletes the corresponding ItemImage records.
    */
   adminDeleteImages: ImageDeletionResult;
+  /** Admin: Delete an item (soft delete by default, permanent if specified) */
+  adminDeleteItem: ItemPayload;
+  /** Admin: Delete any recipe (soft delete by default, permanent if specified) */
+  adminDeleteRecipe: RecipePayload;
+  /** Admin: Delete any recipe review (bypasses ownership restrictions) */
+  adminDeleteRecipeReview: RecipeReviewPayload;
   /** Delete a user's account as an administrator. */
   adminDeleteUser: UserPayload;
+  /** Admin: Update any item (bypasses ownership restrictions) */
+  adminUpdateItem: ItemPayload;
+  /** Admin: Update any recipe (bypasses ownership restrictions) */
+  adminUpdateRecipe: RecipePayload;
   /** Approve a user-created item for public visibility */
   approveItem: ItemPayload;
   /** Archive a shopping list. */
@@ -4971,14 +4983,49 @@ export type MutationAdjustPantryItemQuantityArgs = {
 };
 
 
+export type MutationAdminBulkDeleteItemsArgs = {
+  ids: Array<Scalars['ID']['input']>;
+  permanent?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
 export type MutationAdminDeleteImagesArgs = {
   input: AdminDeleteImagesInput;
+};
+
+
+export type MutationAdminDeleteItemArgs = {
+  id: Scalars['ID']['input'];
+  permanent?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+export type MutationAdminDeleteRecipeArgs = {
+  id: Scalars['ID']['input'];
+  permanent?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+export type MutationAdminDeleteRecipeReviewArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
 export type MutationAdminDeleteUserArgs = {
   id: Scalars['ID']['input'];
   input?: InputMaybe<AdminDeleteUserInput>;
+};
+
+
+export type MutationAdminUpdateItemArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateItemInput;
+};
+
+
+export type MutationAdminUpdateRecipeArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateRecipeInput;
 };
 
 
@@ -5009,7 +5056,6 @@ export type MutationBulkCreateStoresArgs = {
 
 export type MutationBulkDeleteItemsArgs = {
   ids: Array<Scalars['ID']['input']>;
-  permanent?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 
@@ -5306,7 +5352,6 @@ export type MutationDeleteHomeArgs = {
 
 export type MutationDeleteItemArgs = {
   id: Scalars['ID']['input'];
-  permanent?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 
@@ -7816,6 +7861,7 @@ export type QueryCalculateRecipePantryDeficitArgs = {
 export type QueryCanConvertArgs = {
   fromUnitId: Scalars['ID']['input'];
   itemId?: InputMaybe<Scalars['ID']['input']>;
+  pantryItemId?: InputMaybe<Scalars['ID']['input']>;
   toUnitId: Scalars['ID']['input'];
 };
 
@@ -7860,7 +7906,7 @@ export type QueryCompatibleUnitsForItemArgs = {
 
 export type QueryConvertQuantityArgs = {
   fromUnitId: Scalars['ID']['input'];
-  itemId?: InputMaybe<Scalars['ID']['input']>;
+  pantryItemId?: InputMaybe<Scalars['ID']['input']>;
   quantity: Scalars['Float']['input'];
   toUnitId: Scalars['ID']['input'];
 };
@@ -12189,7 +12235,7 @@ export type UpdateItemImageMutationVariables = Exact<{
 export type UpdateItemImageMutation = { __typename: 'Mutation', updateItem: { __typename: 'ItemPayload', success: boolean, message: string, code: string, item: { __typename: 'Item', id: string, imageUrl: string | null } | null } };
 
 export type ConvertQuantityQueryVariables = Exact<{
-  itemId?: InputMaybe<Scalars['ID']['input']>;
+  pantryItemId?: InputMaybe<Scalars['ID']['input']>;
   quantity: Scalars['Float']['input'];
   fromUnitId: Scalars['ID']['input'];
   toUnitId: Scalars['ID']['input'];
@@ -12204,7 +12250,7 @@ export type ItemByUpcFilterQueryVariables = Exact<{
 }>;
 
 
-export type ItemByUpcFilterQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, imageUrl: string | null, name: string, netWeight: number | null, primaryUpc: string | null, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, units: Array<{ __typename: 'ItemUnit', isDefault: boolean, unitId: string }>, variationBrand: { __typename: 'Brand', id: string, name: string } | null, matchedVariation: { __typename: 'ProductVariation', netWeight: number | null, netWeightUnit: string | null, packageSize: string | null, confidence: number | null, brandInfo: { __typename: 'VariationBrandInfo', id: string | null, name: string } | null } | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
+export type ItemByUpcFilterQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, imageUrl: string | null, name: string, description: string | null, netWeight: number | null, primaryUpc: string | null, type: ItemType, storageState: StorageState, shelfLifeDays: number | null, tags: Array<string>, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, categories: Array<{ __typename: 'ItemCategory', isPrimary: boolean, category: { __typename: 'Category', id: string, name: string, type: CategoryType } }>, units: Array<{ __typename: 'ItemUnit', isDefault: boolean, unitId: string }>, variationBrand: { __typename: 'Brand', id: string, name: string } | null, matchedVariation: { __typename: 'ProductVariation', netWeight: number | null, netWeightUnit: string | null, packageSize: string | null, confidence: number | null, brandInfo: { __typename: 'VariationBrandInfo', id: string | null, name: string } | null } | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
 
 export type ItemBySkuFilterQueryVariables = Exact<{
   sku: Scalars['String']['input'];
@@ -12212,7 +12258,7 @@ export type ItemBySkuFilterQueryVariables = Exact<{
 }>;
 
 
-export type ItemBySkuFilterQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, imageUrl: string | null, name: string, netWeight: number | null, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, units: Array<{ __typename: 'ItemUnit', isDefault: boolean, unitId: string }> } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
+export type ItemBySkuFilterQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, imageUrl: string | null, name: string, description: string | null, netWeight: number | null, primaryUpc: string | null, type: ItemType, storageState: StorageState, shelfLifeDays: number | null, tags: Array<string>, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, categories: Array<{ __typename: 'ItemCategory', isPrimary: boolean, category: { __typename: 'Category', id: string, name: string, type: CategoryType } }>, units: Array<{ __typename: 'ItemUnit', isDefault: boolean, unitId: string }> } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
 
 export type GetOnboardingItemsQueryVariables = Exact<{
   filters?: InputMaybe<ItemFilters>;
@@ -12259,6 +12305,14 @@ export type CreateItemMutationVariables = Exact<{
 
 
 export type CreateItemMutation = { __typename: 'Mutation', createItem: { __typename: 'ItemPayload', success: boolean, message: string, code: string, item: { __typename: 'Item', id: string, name: string, description: string | null, netWeight: number | null, type: ItemType, storageState: StorageState, shelfLifeDays: number | null, imageUrl: string | null, tags: Array<string>, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, convertedNetWeight: { __typename: 'ConvertedValue', value: number, unit: { __typename: 'Unit', id: string, name: string, symbol: string } } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, categories: Array<{ __typename: 'ItemCategory', category: { __typename: 'Category', id: string, name: string } }>, units: Array<{ __typename: 'ItemUnit', id: string, unitId: string, isDefault: boolean, packageSize: number | null, retailUnit: boolean, contentUnitId: string | null, unit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, contentUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null }> } | null } };
+
+export type FlagItemForReviewMutationVariables = Exact<{
+  itemId: Scalars['ID']['input'];
+  reason?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type FlagItemForReviewMutation = { __typename: 'Mutation', flagItemForReview: { __typename: 'ItemPayload', success: boolean, message: string, code: string, item: { __typename: 'Item', id: string } | null } };
 
 export type GetUnitBySymbolQueryVariables = Exact<{
   symbol: Scalars['String']['input'];
@@ -14642,7 +14696,7 @@ export function useUpdateItemImageMutation(baseOptions?: ApolloReactHooks.Mutati
 export type UpdateItemImageMutationHookResult = ReturnType<typeof useUpdateItemImageMutation>;
 export type UpdateItemImageMutationResult = ApolloReactCommon.MutationResult<UpdateItemImageMutation>;
 export type UpdateItemImageMutationOptions = ApolloReactCommon.BaseMutationOptions<UpdateItemImageMutation, UpdateItemImageMutationVariables>;
-export const ConvertQuantityDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"ConvertQuantity"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"itemId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"quantity"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Float"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"fromUnitId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"toUnitId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"convertQuantity"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"itemId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"itemId"}}},{"kind":"Argument","name":{"kind":"Name","value":"quantity"},"value":{"kind":"Variable","name":{"kind":"Name","value":"quantity"}}},{"kind":"Argument","name":{"kind":"Name","value":"fromUnitId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"fromUnitId"}}},{"kind":"Argument","name":{"kind":"Name","value":"toUnitId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"toUnitId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"value"}},{"kind":"Field","name":{"kind":"Name","value":"displayText"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"displayAsFraction"}},{"kind":"Field","name":{"kind":"Name","value":"minPrecision"}},{"kind":"Field","name":{"kind":"Name","value":"autoConvertThreshold"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const ConvertQuantityDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"ConvertQuantity"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"pantryItemId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"quantity"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Float"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"fromUnitId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"toUnitId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"convertQuantity"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"pantryItemId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"pantryItemId"}}},{"kind":"Argument","name":{"kind":"Name","value":"quantity"},"value":{"kind":"Variable","name":{"kind":"Name","value":"quantity"}}},{"kind":"Argument","name":{"kind":"Name","value":"fromUnitId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"fromUnitId"}}},{"kind":"Argument","name":{"kind":"Name","value":"toUnitId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"toUnitId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"value"}},{"kind":"Field","name":{"kind":"Name","value":"displayText"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"displayAsFraction"}},{"kind":"Field","name":{"kind":"Name","value":"minPrecision"}},{"kind":"Field","name":{"kind":"Name","value":"autoConvertThreshold"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useConvertQuantityQuery__
@@ -14656,7 +14710,7 @@ export const ConvertQuantityDocument = /*#__PURE__*/ {"kind":"Document","definit
  * @example
  * const { data, loading, error } = useConvertQuantityQuery({
  *   variables: {
- *      itemId: // value for 'itemId'
+ *      pantryItemId: // value for 'pantryItemId'
  *      quantity: // value for 'quantity'
  *      fromUnitId: // value for 'fromUnitId'
  *      toUnitId: // value for 'toUnitId'
@@ -14682,7 +14736,7 @@ export type ConvertQuantityQueryHookResult = ReturnType<typeof useConvertQuantit
 export type ConvertQuantityLazyQueryHookResult = ReturnType<typeof useConvertQuantityLazyQuery>;
 export type ConvertQuantitySuspenseQueryHookResult = ReturnType<typeof useConvertQuantitySuspenseQuery>;
 export type ConvertQuantityQueryResult = ApolloReactCommon.QueryResult<ConvertQuantityQuery, ConvertQuantityQueryVariables>;
-export const ItemByUpcFilterDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"ItemByUpcFilter"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"upc"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"upcFormat"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"UpcFormat"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"items"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"lookup"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"upc"},"value":{"kind":"Variable","name":{"kind":"Name","value":"upc"}}},{"kind":"ObjectField","name":{"kind":"Name","value":"upcFormat"},"value":{"kind":"Variable","name":{"kind":"Name","value":"upcFormat"}}}]}}]}},{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"1"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"primaryUpc"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brands"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"units"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"unitId"}}]}},{"kind":"Field","name":{"kind":"Name","value":"variationBrand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchedVariation"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"}},{"kind":"Field","name":{"kind":"Name","value":"packageSize"}},{"kind":"Field","name":{"kind":"Name","value":"confidence"}},{"kind":"Field","name":{"kind":"Name","value":"brandInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]} as unknown as DocumentNode;
+export const ItemByUpcFilterDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"ItemByUpcFilter"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"upc"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"upcFormat"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"UpcFormat"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"items"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"lookup"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"upc"},"value":{"kind":"Variable","name":{"kind":"Name","value":"upc"}}},{"kind":"ObjectField","name":{"kind":"Name","value":"upcFormat"},"value":{"kind":"Variable","name":{"kind":"Name","value":"upcFormat"}}}]}}]}},{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"1"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"primaryUpc"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"shelfLifeDays"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brands"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"units"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"unitId"}}]}},{"kind":"Field","name":{"kind":"Name","value":"variationBrand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchedVariation"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"}},{"kind":"Field","name":{"kind":"Name","value":"packageSize"}},{"kind":"Field","name":{"kind":"Name","value":"confidence"}},{"kind":"Field","name":{"kind":"Name","value":"brandInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useItemByUpcFilterQuery__
@@ -14720,7 +14774,7 @@ export type ItemByUpcFilterQueryHookResult = ReturnType<typeof useItemByUpcFilte
 export type ItemByUpcFilterLazyQueryHookResult = ReturnType<typeof useItemByUpcFilterLazyQuery>;
 export type ItemByUpcFilterSuspenseQueryHookResult = ReturnType<typeof useItemByUpcFilterSuspenseQuery>;
 export type ItemByUpcFilterQueryResult = ApolloReactCommon.QueryResult<ItemByUpcFilterQuery, ItemByUpcFilterQueryVariables>;
-export const ItemBySkuFilterDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"ItemBySkuFilter"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"sku"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"skuStoreId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"items"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"lookup"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"sku"},"value":{"kind":"Variable","name":{"kind":"Name","value":"sku"}}},{"kind":"ObjectField","name":{"kind":"Name","value":"skuStoreId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"skuStoreId"}}}]}}]}},{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"1"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brands"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"units"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"unitId"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]} as unknown as DocumentNode;
+export const ItemBySkuFilterDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"ItemBySkuFilter"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"sku"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"skuStoreId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"items"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"lookup"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"sku"},"value":{"kind":"Variable","name":{"kind":"Name","value":"sku"}}},{"kind":"ObjectField","name":{"kind":"Name","value":"skuStoreId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"skuStoreId"}}}]}}]}},{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"1"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"primaryUpc"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"shelfLifeDays"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brands"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"units"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"unitId"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useItemBySkuFilterQuery__
@@ -14973,6 +15027,33 @@ export function useCreateItemMutation(baseOptions?: ApolloReactHooks.MutationHoo
 export type CreateItemMutationHookResult = ReturnType<typeof useCreateItemMutation>;
 export type CreateItemMutationResult = ApolloReactCommon.MutationResult<CreateItemMutation>;
 export type CreateItemMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateItemMutation, CreateItemMutationVariables>;
+export const FlagItemForReviewDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"FlagItemForReview"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"itemId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"reason"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"flagItemForReview"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"itemId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"itemId"}}},{"kind":"Argument","name":{"kind":"Name","value":"reason"},"value":{"kind":"Variable","name":{"kind":"Name","value":"reason"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}}]} as unknown as DocumentNode;
+
+/**
+ * __useFlagItemForReviewMutation__
+ *
+ * To run a mutation, you first call `useFlagItemForReviewMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useFlagItemForReviewMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [flagItemForReviewMutation, { data, loading, error }] = useFlagItemForReviewMutation({
+ *   variables: {
+ *      itemId: // value for 'itemId'
+ *      reason: // value for 'reason'
+ *   },
+ * });
+ */
+export function useFlagItemForReviewMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<FlagItemForReviewMutation, FlagItemForReviewMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<FlagItemForReviewMutation, FlagItemForReviewMutationVariables>(FlagItemForReviewDocument, options);
+      }
+export type FlagItemForReviewMutationHookResult = ReturnType<typeof useFlagItemForReviewMutation>;
+export type FlagItemForReviewMutationResult = ApolloReactCommon.MutationResult<FlagItemForReviewMutation>;
+export type FlagItemForReviewMutationOptions = ApolloReactCommon.BaseMutationOptions<FlagItemForReviewMutation, FlagItemForReviewMutationVariables>;
 export const GetUnitBySymbolDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetUnitBySymbol"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"symbol"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"unitBySymbol"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"symbol"},"value":{"kind":"Variable","name":{"kind":"Name","value":"symbol"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"isMetric"}},{"kind":"Field","name":{"kind":"Name","value":"baseUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"conversionFactor"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"baseUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**

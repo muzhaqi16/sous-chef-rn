@@ -20,7 +20,6 @@ interface StaggeredTabContentProps {
   onSwipeableClose?: () => void;
   onEndReached?: () => void;
   hasMore?: boolean;
-  isLoadingMore?: boolean;
   canRemoveItems: boolean;
   canEditItems: boolean;
   canMarkPurchased: boolean;
@@ -49,7 +48,6 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   onSwipeableClose,
   onEndReached,
   hasMore,
-  isLoadingMore,
   canRemoveItems,
   canEditItems,
   canMarkPurchased,
@@ -59,11 +57,7 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   listEmptyComponent,
 }) => {
   const footerComponent = (
-    <PaginationFooter
-      isLoadingMore={!!isLoadingMore}
-      hasMore={!!hasMore}
-      itemCount={items.length}
-    />
+    <PaginationFooter hasMore={!!hasMore} itemCount={items.length} />
   );
 
   return (

@@ -5,16 +5,50 @@ import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { createItemSchema, CreateItemFormData } from '#utils/validation/item';
-import { StorageState, ItemType, BaseDimension, type ItemUnitInput } from '#generated';
+import {
+  StorageState,
+  ItemType,
+  BaseDimension,
+  type ItemUnitInput,
+} from '#generated';
 import { FormInput } from '#/components/molecules/FormInput';
 import { FormTextArea } from '#/components/molecules/FormTextArea';
 import { FormNumberInput } from '#/components/molecules/FormNumberInput';
 import { FormSelect } from '#/components/molecules/FormSelect';
 import { FormCheckbox } from '#/components/molecules/FormCheckbox';
-import { MultiImagePicker, type SelectedImage } from '#/components/molecules/MultiImagePicker';
-import { UnitEntryList, type UnitEntry } from '#/components/organisms/UnitEntryList/UnitEntryList';
-import { NetWeightEntryList, type NetWeightEntry } from '#/components/organisms/NetWeightEntryList/NetWeightEntryList';
-import { DynamicFormFields, type FieldDef } from '#/components/molecules/DynamicFormFields';
+import {
+  MultiImagePicker,
+  type SelectedImage,
+} from '#/components/molecules/MultiImagePicker';
+import {
+  UnitEntryList,
+  type UnitEntry,
+} from '#/components/organisms/UnitEntryList/UnitEntryList';
+import {
+  NetWeightEntryList,
+  type NetWeightEntry,
+} from '#/components/organisms/NetWeightEntryList/NetWeightEntryList';
+import {
+  DynamicFormFields,
+  type FieldDef,
+} from '#/components/molecules/DynamicFormFields';
+
+export type AddItemFormMode = 'create' | 'edit' | 'variant';
+
+export interface AddItemFormInitialData {
+  name?: string;
+  description?: string;
+  upc?: string;
+  vendor?: string;
+  brandId?: string;
+  brandName?: string;
+  imageUrl?: string;
+  type?: string;
+  storageState?: string;
+  shelfLifeDays?: number;
+  tags?: string[];
+  categoryIds?: string[];
+}
 
 interface AddItemFormProps {
   barcode?: string;
@@ -25,6 +59,8 @@ interface AddItemFormProps {
   loading?: boolean;
   title?: string;
   enableAutocomplete?: boolean;
+  mode?: AddItemFormMode;
+  initialData?: AddItemFormInitialData;
 }
 
 const STORAGE_STATES = Object.values(StorageState);
@@ -46,157 +82,199 @@ const detectScanType = (value: string): 'barcode' | 'sku' => {
 
 const getFormSections = (
   setSelectedBrandId: (id: string | null) => void,
+  mode: AddItemFormMode = 'create',
 ): Array<{
   title: string;
   fields: FieldDef<CreateItemFormData>[];
-}> => [
-  {
-    title: 'Basic Information',
-    fields: [
-      {
-        name: 'name',
-        label: 'Item Name',
-        placeholder: 'Enter item name',
-        component: FormInput,
-        props: { autoCapitalize: 'words', required: true },
-      },
-      {
-        name: 'description',
-        label: 'Description',
-        placeholder: 'Enter item description (optional)',
-        component: FormTextArea,
-        props: { numberOfLines: 3 },
-      },
-      {
-        name: 'sku',
-        label: 'SKU',
-        placeholder: 'Enter SKU (optional)',
-        component: FormInput,
-      },
-      {
-        name: 'upc',
-        label: 'UPC/Barcode',
-        placeholder: 'Enter UPC/Barcode (optional)',
-        component: FormInput,
-        props: { keyboardType: 'numeric' },
-      },
-    ],
-  },
-  {
-    title: 'Product Details',
-    fields: [
-      {
-        name: 'type',
-        label: 'Item Type',
-        component: FormSelect,
-        props: { componentType: 'select' },
-        options: ITEM_TYPES.map(type => ({ label: type, value: type })),
-      },
-      {
-        name: 'storageState',
-        label: 'Storage State',
-        component: FormSelect,
-        props: { componentType: 'select' },
-        options: STORAGE_STATES.map(state => ({ label: state, value: state })),
-      },
-      {
-        name: 'shelfLifeDays',
-        label: 'Shelf Life (Days)',
-        placeholder: 'Enter shelf life in days',
-        component: FormNumberInput,
-        props: { componentType: 'number', keyboardType: 'numeric' },
-      },
-      {
-        name: 'baseDimension',
-        label: 'Base Dimension',
-        component: FormSelect,
-        props: { componentType: 'select' },
-        options: [
-          { label: 'None', value: '' },
-          { label: 'Volume', value: BaseDimension.Volume },
-          { label: 'Mass', value: BaseDimension.Mass },
-          { label: 'Count', value: BaseDimension.Count },
-        ],
-      },
-      {
-        name: 'defaultConsumeIncrement',
-        label: 'Default Consume Increment',
-        placeholder: 'e.g., 1',
-        component: FormNumberInput,
-        props: { componentType: 'number', keyboardType: 'decimal-pad' },
-      },
-      {
-        name: 'defaultConsumeUnitId',
-        label: 'Default Consume Unit',
-        placeholder: 'tsp, cup, etc.',
-        component: 'unitAutocomplete',
-        props: {
-          componentType: 'autocomplete',
-          onUnitSelected: () => {},
+}> => {
+  const basicFields: FieldDef<CreateItemFormData>[] = [
+    {
+      name: 'name',
+      label: 'Item Name',
+      placeholder: 'Enter item name',
+      component: FormInput,
+      props: { autoCapitalize: 'words', required: true },
+    },
+    {
+      name: 'description',
+      label: 'Description',
+      placeholder: 'Enter item description (optional)',
+      component: FormTextArea,
+      props: { numberOfLines: 3 },
+    },
+    {
+      name: 'sku',
+      label: 'SKU',
+      placeholder: 'Enter SKU (optional)',
+      component: FormInput,
+    },
+    {
+      name: 'upc',
+      label: 'UPC/Barcode',
+      placeholder: 'Enter UPC/Barcode (optional)',
+      component: FormInput,
+      props: { keyboardType: 'numeric' },
+    },
+  ];
+
+  // Add editReason field for edit mode
+  if (mode === 'edit') {
+    basicFields.push({
+      name: 'editReason' as any,
+      label: 'Reason for Edit',
+      placeholder:
+        'What needs to be corrected? (e.g., wrong weight, missing image)',
+      component: FormTextArea,
+      props: { numberOfLines: 2 },
+    });
+  }
+
+  return [
+    {
+      title: 'Basic Information',
+      fields: basicFields,
+    },
+    {
+      title: 'Product Details',
+      fields: [
+        {
+          name: 'type',
+          label: 'Item Type',
+          component: FormSelect,
+          props: { componentType: 'select' },
+          options: ITEM_TYPES.map(type => ({ label: type, value: type })),
         },
-      },
-    ],
-  },
-  {
-    title: 'Brand & Vendor',
-    fields: [
-      {
-        name: 'vendor',
-        label: 'Brand/Vendor',
-        placeholder: 'Enter brand or vendor name',
-        component: 'brandAutocomplete',
-        props: {
-          componentType: 'autocomplete',
-          onBrandSelected: (brandId: string | null) =>
-            setSelectedBrandId(brandId),
+        {
+          name: 'storageState',
+          label: 'Storage State',
+          component: FormSelect,
+          props: { componentType: 'select' },
+          options: STORAGE_STATES.map(state => ({
+            label: state,
+            value: state,
+          })),
         },
-      },
-    ],
-  },
-  {
-    title: 'Tags & Metadata',
-    fields: [
-      {
-        name: 'tags',
-        label: 'Tags',
-        placeholder: 'Comma-separated tags (e.g., organic, gluten-free)',
-        component: FormTextArea,
-        props: { numberOfLines: 2 },
-        renderValue: (value: any) => {
-          if (Array.isArray(value)) {
-            return value.join(', ');
-          }
-          return value || '';
+        {
+          name: 'shelfLifeDays',
+          label: 'Shelf Life (Days)',
+          placeholder: 'Enter shelf life in days',
+          component: FormNumberInput,
+          props: { componentType: 'number', keyboardType: 'numeric' },
         },
-        transformValue: (value: string) => {
-          if (!value || typeof value !== 'string') return [];
-          return value
-            .split(',')
-            .map(tag => tag.trim())
-            .filter(tag => tag.length > 0);
+        {
+          name: 'baseDimension',
+          label: 'Base Dimension',
+          component: FormSelect,
+          props: { componentType: 'select' },
+          options: [
+            { label: 'None', value: '' },
+            { label: 'Volume', value: BaseDimension.Volume },
+            { label: 'Mass', value: BaseDimension.Mass },
+            { label: 'Count', value: BaseDimension.Count },
+          ],
         },
-        transformOnBlur: true,
-      },
-    ],
+        {
+          name: 'defaultConsumeIncrement',
+          label: 'Default Consume Increment',
+          placeholder: 'e.g., 1',
+          component: FormNumberInput,
+          props: { componentType: 'number', keyboardType: 'decimal-pad' },
+        },
+        {
+          name: 'defaultConsumeUnitId',
+          label: 'Default Consume Unit',
+          placeholder: 'tsp, cup, etc.',
+          component: 'unitAutocomplete',
+          props: {
+            componentType: 'autocomplete',
+            onUnitSelected: () => {},
+          },
+        },
+      ],
+    },
+    {
+      title: 'Brand & Vendor',
+      fields: [
+        {
+          name: 'vendor',
+          label: 'Brand/Vendor',
+          placeholder: 'Enter brand or vendor name',
+          component: 'brandAutocomplete',
+          props: {
+            componentType: 'autocomplete',
+            onBrandSelected: (brandId: string | null) =>
+              setSelectedBrandId(brandId),
+          },
+        },
+      ],
+    },
+    {
+      title: 'Tags & Metadata',
+      fields: [
+        {
+          name: 'tags',
+          label: 'Tags',
+          placeholder: 'Comma-separated tags (e.g., organic, gluten-free)',
+          component: FormTextArea,
+          props: { numberOfLines: 2 },
+          renderValue: (value: any) => {
+            if (Array.isArray(value)) {
+              return value.join(', ');
+            }
+            return value || '';
+          },
+          transformValue: (value: string) => {
+            if (!value || typeof value !== 'string') return [];
+            return value
+              .split(',')
+              .map(tag => tag.trim())
+              .filter(tag => tag.length > 0);
+          },
+          transformOnBlur: true,
+        },
+      ],
+    },
+    {
+      title: 'Item Flags',
+      fields: [
+        {
+          name: 'isFoodStampItem',
+          label: 'Food Stamp Eligible',
+          component: FormCheckbox,
+          props: { componentType: 'checkbox' },
+        },
+        {
+          name: 'isFsaEligible',
+          label: 'FSA Eligible',
+          component: FormCheckbox,
+          props: { componentType: 'checkbox' },
+        },
+      ],
+    },
+  ];
+};
+
+const MODE_CONFIG = {
+  create: {
+    title: 'Add New Item',
+    subtitle: (hasBarcode: boolean) =>
+      hasBarcode
+        ? 'Add this item to the database for future scans'
+        : 'Create a new item with basic information',
+    buttonLabel: 'Add Item',
   },
-  {
-    title: 'Item Flags',
-    fields: [
-      {
-        name: 'isFoodStampItem',
-        label: 'Food Stamp Eligible',
-        component: FormCheckbox,
-        props: { componentType: 'checkbox' },
-      },
-      {
-        name: 'isFsaEligible',
-        label: 'FSA Eligible',
-        component: FormCheckbox,
-        props: { componentType: 'checkbox' },
-      },
-    ],
+  edit: {
+    title: 'Suggest Edit',
+    subtitle: () =>
+      "Submit corrections \u2014 we'll review and update the catalog",
+    buttonLabel: 'Submit Suggestion',
   },
-];
+  variant: {
+    title: 'Create New Version',
+    subtitle: () => 'Create a new version of this item for your region',
+    buttonLabel: 'Create Version',
+  },
+};
 
 const AddItemForm: React.FC<AddItemFormProps> = ({
   barcode,
@@ -205,7 +283,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   onSubmit,
   onClose,
   loading = false,
-  title = 'Add New Item',
+  title,
+  mode = 'create',
+  initialData,
 }) => {
   // Track selected brand ID separately from the display name
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
@@ -213,9 +293,13 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   // Multi-image, unit entry, and net weight entry state (managed outside react-hook-form)
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [unitEntries, setUnitEntries] = useState<UnitEntry[]>([]);
-  const [netWeightEntries, setNetWeightEntries] = useState<NetWeightEntry[]>([]);
+  const [netWeightEntries, setNetWeightEntries] = useState<NetWeightEntry[]>(
+    [],
+  );
 
-  // Determine what to populate based on scanned value
+  const modeConfig = MODE_CONFIG[mode];
+
+  // Determine what to populate based on scanned value and initialData
   const getInitialValues = () => {
     const values: any = {
       name: '',
@@ -235,6 +319,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       vendor: '',
       isFoodStampItem: false,
       isFsaEligible: false,
+      editReason: '',
     };
 
     // If we have a scanned value, detect and populate the appropriate field
@@ -250,11 +335,32 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       values.upc = barcode;
     }
 
+    // Merge initialData for edit/variant modes
+    if (initialData) {
+      if (initialData.name) values.name = initialData.name;
+      if (initialData.description) values.description = initialData.description;
+      if (initialData.upc) values.upc = initialData.upc;
+      if (initialData.vendor) values.vendor = initialData.vendor;
+      if (initialData.imageUrl) values.imageUrl = initialData.imageUrl;
+      if (initialData.type) values.type = initialData.type;
+      if (initialData.storageState)
+        values.storageState = initialData.storageState;
+      if (initialData.shelfLifeDays != null)
+        values.shelfLifeDays = initialData.shelfLifeDays;
+      if (initialData.tags) values.tags = initialData.tags;
+      if (initialData.categoryIds) values.categoryIds = initialData.categoryIds;
+    }
+
     return values;
   };
 
+  // Initialize brand ID from initialData if available
+  if (initialData?.brandId && !selectedBrandId) {
+    setSelectedBrandId(initialData.brandId);
+  }
+
   // Get form sections with access to setSelectedBrandId
-  const FORM_SECTIONS = getFormSections(setSelectedBrandId);
+  const FORM_SECTIONS = getFormSections(setSelectedBrandId, mode);
 
   const {
     control,
@@ -314,14 +420,17 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         unitId: entry.unitId || undefined,
         unitName: entry.unitName || undefined,
         isDefault: index === 0,
-        packageSize: entry.packageSize ? parseFloat(entry.packageSize) : undefined,
+        packageSize: entry.packageSize
+          ? parseFloat(entry.packageSize)
+          : undefined,
         contentUnitId: entry.contentUnitId || undefined,
         contentUnitName: entry.contentUnitName || undefined,
       }));
 
-    const allTags = tags.length > 0 || systemTags.length > 0
-      ? [...tags, ...systemTags]
-      : undefined;
+    const allTags =
+      tags.length > 0 || systemTags.length > 0
+        ? [...tags, ...systemTags]
+        : undefined;
 
     // Fields are mapped to the form schema, not directly to CreateItemInput
     // (the API input type uses nested objects like brand, productDetails, etc.)
@@ -350,6 +459,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       baseDimension: data.baseDimension || undefined,
       defaultConsumeIncrement: data.defaultConsumeIncrement || undefined,
       defaultConsumeUnitId: data.defaultConsumeUnitId || undefined,
+      editReason: data.editReason || undefined,
       selectedImages,
     };
 
@@ -359,12 +469,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   return (
     <>
       <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>
-          {barcode
-            ? 'Add this item to the database for future scans'
-            : 'Create a new item with basic information'}
-        </Text>
+        <Text style={styles.title}>{title || modeConfig.title}</Text>
+        <Text style={styles.subtitle}>{modeConfig.subtitle(!!barcode)}</Text>
       </View>
 
       {!!(scannedValue || barcode) && (
@@ -375,10 +481,12 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
               : 'UPC/Barcode'}
           </Text>
           <Text style={styles.barcodeValue}>{scannedValue || barcode}</Text>
-          {!!format && <>
+          {!!format && (
+            <>
               <Text style={styles.formatLabel}>Format</Text>
               <Text style={styles.formatValue}>{format.toUpperCase()}</Text>
-            </>}
+            </>
+          )}
         </View>
       )}
 
@@ -433,7 +541,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           disabled={!isValid}
           onPress={handleSubmit(handleFormSubmit)}
         >
-          Add Item
+          {modeConfig.buttonLabel}
         </AnimatedButton>
 
         <AnimatedButton

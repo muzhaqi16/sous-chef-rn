@@ -10,8 +10,13 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
         id
         imageUrl
         name
+        description
         netWeight
         primaryUpc
+        type
+        storageState
+        shelfLifeDays
+        tags
         displayUnit {
           id
           name
@@ -21,6 +26,14 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
           brand {
             id
             name
+          }
+        }
+        categories {
+          isPrimary
+          category {
+            id
+            name
+            type
           }
         }
         units {
@@ -59,7 +72,13 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: String) {
         id
         imageUrl
         name
+        description
         netWeight
+        primaryUpc
+        type
+        storageState
+        shelfLifeDays
+        tags
         displayUnit {
           id
           name
@@ -69,6 +88,14 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: String) {
           brand {
             id
             name
+          }
+        }
+        categories {
+          isPrimary
+          category {
+            id
+            name
+            type
           }
         }
         units {
@@ -260,6 +287,17 @@ mutation CreateItem($input: CreateItemInput!) {
           symbol
         }
       }
+    }
+  }
+}
+
+mutation FlagItemForReview($itemId: ID!, $reason: String) {
+  flagItemForReview(itemId: $itemId, reason: $reason) {
+    success
+    message
+    code
+    item {
+      id
     }
   }
 }

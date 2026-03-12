@@ -11,7 +11,10 @@ import { formatQuantity } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
 import { WasteReason, PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
-import { PantryActionModal, type PantryActionSharedState } from './PantryActionModal';
+import {
+  PantryActionModal,
+  type PantryActionSharedState,
+} from './PantryActionModal';
 
 interface RecordWastePantryItemModalProps {
   visible: boolean;
@@ -42,13 +45,13 @@ const WASTE_REASON_OPTIONS: Array<{ label: string; value: WasteReason }> = [
   { label: 'Other', value: WasteReason.Other },
 ];
 
-export const RecordWastePantryItemModal: React.FC<RecordWastePantryItemModalProps> = ({
-  visible,
-  pantryItem,
-  onClose,
-  onConfirm }) => {
+export const RecordWastePantryItemModal: React.FC<
+  RecordWastePantryItemModalProps
+> = ({ visible, pantryItem, onClose, onConfirm }) => {
   const [wasteAmountInput, setWasteAmountInput] = useState('');
-  const [wasteReason, setWasteReason] = useState<WasteReason>(WasteReason.Expired);
+  const [wasteReason, setWasteReason] = useState<WasteReason>(
+    WasteReason.Expired,
+  );
   const [isComposted, setIsComposted] = useState(false);
   const [isRecycled, setIsRecycled] = useState(false);
 
@@ -68,11 +71,21 @@ export const RecordWastePantryItemModal: React.FC<RecordWastePantryItemModalProp
       return;
     }
     if (!shared.isConvertedUnit && wasteValue > shared.trackingQuantity) {
-      Alert.alert('Error', `Cannot waste more than available quantity (${shared.trackingQuantity} ${shared.activeUnitSymbol})`);
+      Alert.alert(
+        'Error',
+        `Cannot waste more than available quantity (${shared.trackingQuantity} ${shared.activeUnitSymbol})`,
+      );
       return;
     }
 
-    onConfirm(wasteValue, wasteReason, isComposted, isRecycled, shared.notes, shared.activeUnitId);
+    onConfirm(
+      wasteValue,
+      wasteReason,
+      isComposted,
+      isRecycled,
+      shared.notes,
+      shared.activeUnitId,
+    );
     onClose();
   };
 
@@ -88,7 +101,7 @@ export const RecordWastePantryItemModal: React.FC<RecordWastePantryItemModalProp
       unitToggleLabel="Waste by"
       onConfirm={handleConfirm}
       onReset={handleReset}
-      renderActionFields={(shared) => (
+      renderActionFields={shared => (
         <WasteActionFields
           wasteAmountInput={wasteAmountInput}
           setWasteAmountInput={setWasteAmountInput}
@@ -115,12 +128,21 @@ const WasteActionFields: React.FC<{
   isRecycled: boolean;
   setIsRecycled: (v: boolean) => void;
   shared: PantryActionSharedState;
-}> = ({ wasteAmountInput, setWasteAmountInput, wasteReason, setWasteReason,
-  isComposted, setIsComposted, isRecycled, setIsRecycled, shared }) => {
+}> = ({
+  wasteAmountInput,
+  setWasteAmountInput,
+  wasteReason,
+  setWasteReason,
+  isComposted,
+  setIsComposted,
+  isRecycled,
+  setIsRecycled,
+  shared,
+}) => {
   const wasteAmount = parseFractionalInput(wasteAmountInput);
 
   const conversion = useConversionPreview({
-    itemId: shared.itemId,
+    pantryItemId: shared.pantryItemId,
     inputQuantity: wasteAmount,
     selectedUnitId: shared.activeUnitId,
     selectedUnitSymbol: shared.activeUnitSymbol,
@@ -134,9 +156,10 @@ const WasteActionFields: React.FC<{
     ? conversion.availableInSelectedUnit
     : shared.trackingQuantity;
 
-  const remaining = wasteAmount !== null && !isNaN(wasteAmount) && availableInUnit != null
-    ? availableInUnit - wasteAmount
-    : null;
+  const remaining =
+    wasteAmount !== null && !isNaN(wasteAmount) && availableInUnit != null
+      ? availableInUnit - wasteAmount
+      : null;
 
   return (
     <>

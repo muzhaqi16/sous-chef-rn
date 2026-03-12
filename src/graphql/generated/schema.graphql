@@ -4231,6 +4231,10 @@ type Mutation {
   """
   adjustPantryItemQuantity(id: ID!, input: AdjustPantryItemQuantityInput!): PantryItemPayload!
   """
+  Admin: Delete multiple items (soft delete by default, permanent if specified)
+  """
+  adminBulkDeleteItems(ids: [ID!]!, permanent: Boolean): BulkOperationSummary!
+  """
   Delete images from S3/MinIO storage and update related Item records.
   
   For batches >50 images (or when useQueue=true), the operation runs
@@ -4240,8 +4244,20 @@ type Mutation {
   It removes the specified images from storage and deletes the corresponding ItemImage records.
   """
   adminDeleteImages(input: AdminDeleteImagesInput!): ImageDeletionResult!
+  """Admin: Delete an item (soft delete by default, permanent if specified)"""
+  adminDeleteItem(id: ID!, permanent: Boolean): ItemPayload!
+  """
+  Admin: Delete any recipe (soft delete by default, permanent if specified)
+  """
+  adminDeleteRecipe(id: ID!, permanent: Boolean): RecipePayload!
+  """Admin: Delete any recipe review (bypasses ownership restrictions)"""
+  adminDeleteRecipeReview(id: ID!): RecipeReviewPayload!
   """Delete a user's account as an administrator."""
   adminDeleteUser(id: ID!, input: AdminDeleteUserInput): UserPayload!
+  """Admin: Update any item (bypasses ownership restrictions)"""
+  adminUpdateItem(id: ID!, input: UpdateItemInput!): ItemPayload!
+  """Admin: Update any recipe (bypasses ownership restrictions)"""
+  adminUpdateRecipe(id: ID!, input: UpdateRecipeInput!): RecipePayload!
   """Approve a user-created item for public visibility"""
   approveItem(itemId: ID!): ItemPayload!
   """Archive a shopping list."""
@@ -4252,7 +4268,7 @@ type Mutation {
   bulkCreatePurchases(purchases: [CreatePurchaseInput!]!): BulkPurchasePayload!
   bulkCreateStores(stores: [CreateStoreInput!]!): BulkStorePayload!
   """Delete multiple items"""
-  bulkDeleteItems(ids: [ID!]!, permanent: Boolean): BulkOperationSummary!
+  bulkDeleteItems(ids: [ID!]!): BulkOperationSummary!
   """Delete multiple purchase records at once."""
   bulkDeletePurchases(purchaseIds: [ID!]!): BulkPurchasePayload!
   """Send notifications to multiple users at once (admin only)."""
@@ -4406,7 +4422,7 @@ type Mutation {
   """Delete a home (owner only)."""
   deleteHome(id: ID!): HomePayload!
   """Delete an item (soft delete by default, permanent if specified)"""
-  deleteItem(id: ID!, permanent: Boolean): ItemPayload!
+  deleteItem(id: ID!): ItemPayload!
   """Delete an item unit conversion and its reverse conversion (admin only)"""
   deleteItemUnitConversion(conversionId: ID!): ItemUnitConversionPayload!
   """Delete a meal plan."""
@@ -6060,7 +6076,7 @@ type Query {
   Check if conversion is possible between two units
   Returns availability and confidence level
   """
-  canConvert(fromUnitId: ID!, itemId: ID, toUnitId: ID!): ConversionAvailability!
+  canConvert(fromUnitId: ID!, itemId: ID, pantryItemId: ID, toUnitId: ID!): ConversionAvailability!
   """Check whether the current user's account can be safely deleted."""
   canDeleteAccount: CanDeleteAccountResult!
   """
@@ -6083,7 +6099,7 @@ type Query {
   Convert quantity between units with item context
   Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
   """
-  convertQuantity(fromUnitId: ID!, itemId: ID, quantity: Float!, toUnitId: ID!): ConversionResult
+  convertQuantity(fromUnitId: ID!, pantryItemId: ID, quantity: Float!, toUnitId: ID!): ConversionResult
   """Convert a value from one unit to another."""
   convertUnit(fromUnitId: ID!, toUnitId: ID!, value: Float!): ConvertedUnitValue
   """List all units that a given unit can be converted to."""

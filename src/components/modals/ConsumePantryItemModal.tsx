@@ -9,7 +9,10 @@ import { formatQuantity } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
 import { UsagePurpose, PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
-import { PantryActionModal, type PantryActionSharedState } from './PantryActionModal';
+import {
+  PantryActionModal,
+  type PantryActionSharedState,
+} from './PantryActionModal';
 
 interface ConsumePantryItemModalProps {
   visible: boolean;
@@ -37,7 +40,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   visible,
   pantryItem,
   onClose,
-  onConfirm }) => {
+  onConfirm,
+}) => {
   const [quantityInput, setQuantityInput] = useState('1');
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
 
@@ -59,11 +63,20 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
     // When using a converted unit, validate against converted available quantity
     // When using tracking unit, validate against tracking quantity
     if (!shared.isConvertedUnit && quantityValue > shared.trackingQuantity) {
-      Alert.alert('Error', `Cannot consume more than available quantity (${shared.trackingQuantity} ${shared.activeUnitSymbol})`);
+      Alert.alert(
+        'Error',
+        `Cannot consume more than available quantity (${shared.trackingQuantity} ${shared.activeUnitSymbol})`,
+      );
       return;
     }
 
-    onConfirm(quantityValue, quantityInput, purpose, shared.notes, shared.activeUnitId);
+    onConfirm(
+      quantityValue,
+      quantityInput,
+      purpose,
+      shared.notes,
+      shared.activeUnitId,
+    );
     onClose();
   };
 
@@ -80,7 +93,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       unitToggleLabel="Consume by"
       onConfirm={handleConfirm}
       onReset={handleReset}
-      renderActionFields={(shared) => (
+      renderActionFields={shared => (
         <ConsumeActionFields
           quantityInput={quantityInput}
           setQuantityInput={setQuantityInput}
@@ -102,11 +115,18 @@ const ConsumeActionFields: React.FC<{
   setPurpose: (v: UsagePurpose) => void;
   shared: PantryActionSharedState;
   showFifoHint?: boolean;
-}> = ({ quantityInput, setQuantityInput, purpose, setPurpose, shared, showFifoHint }) => {
+}> = ({
+  quantityInput,
+  setQuantityInput,
+  purpose,
+  setPurpose,
+  shared,
+  showFifoHint,
+}) => {
   const consumeAmount = parseFractionalInput(quantityInput);
 
   const conversion = useConversionPreview({
-    itemId: shared.itemId,
+    pantryItemId: shared.pantryItemId,
     inputQuantity: consumeAmount,
     selectedUnitId: shared.activeUnitId,
     selectedUnitSymbol: shared.activeUnitSymbol,
@@ -121,9 +141,10 @@ const ConsumeActionFields: React.FC<{
     ? conversion.availableInSelectedUnit
     : shared.trackingQuantity;
 
-  const remaining = consumeAmount !== null && !isNaN(consumeAmount) && availableInUnit != null
-    ? availableInUnit - consumeAmount
-    : null;
+  const remaining =
+    consumeAmount !== null && !isNaN(consumeAmount) && availableInUnit != null
+      ? availableInUnit - consumeAmount
+      : null;
 
   return (
     <>
