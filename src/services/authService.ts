@@ -388,7 +388,7 @@ async function handleLogin(
   }
 
   logger.info('Auth success: Login successful');
-  registerDeviceInBackground();
+  requestIdleCallback(() => registerDeviceInBackground());
   incrementLoginCount(user.id);
 
   // Navigation flow control
@@ -445,7 +445,7 @@ async function handleRegistration(
   }
 
   logger.info('Auth success: Registration successful');
-  registerDeviceInBackground();
+  requestIdleCallback(() => registerDeviceInBackground());
 
   if (!user.emailVerified) {
     store.setNavigationState('verification');

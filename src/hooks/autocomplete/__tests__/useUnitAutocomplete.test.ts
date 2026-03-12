@@ -10,9 +10,17 @@ const mockCachedUnits: UnitItem[] = [
 ];
 
 let mockIsOnline = true;
+const mockSetCachedUnits = jest.fn();
+const mockSetLastUnitsFetchedAt = jest.fn();
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: any) => any) =>
-    selector({ isOnline: mockIsOnline, cachedUnits: mockCachedUnits }),
+    selector({
+      isOnline: mockIsOnline,
+      cachedUnits: mockCachedUnits,
+      setCachedUnits: mockSetCachedUnits,
+      lastUnitsFetchedAt: Date.now(), // Fresh cache to skip preload in tests
+      setLastUnitsFetchedAt: mockSetLastUnitsFetchedAt,
+    }),
 }));
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -24,9 +32,11 @@ const mockUseSearchUnitsQuery = jest.fn<any, [any]>(() => ({
   loading: false,
 }));
 
+const mockFetchCommonUnits = jest.fn().mockResolvedValue({ data: null });
 jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
   useSearchUnitsQuery: (options: any) => mockUseSearchUnitsQuery(options),
+  useGetCommonUnitsLazyQuery: () => [mockFetchCommonUnits, { data: null }],
 }));
 
 beforeEach(() => {

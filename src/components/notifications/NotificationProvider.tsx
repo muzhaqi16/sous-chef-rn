@@ -15,11 +15,19 @@ interface NotificationProviderProps {
  * PERFORMANCE: This pattern eliminates cascade re-renders. When NotificationListener
  * re-renders due to notification/auth state changes, it doesn't affect siblings
  * since it returns null (no React elements to reconcile).
+ *
+ * STARTUP PRIORITY: GetNotificationPreferences is deferred via requestIdleCallback
+ * so it doesn't compete with critical startup queries (GetHomes, GetPantry).
+ * Settings defaults cover the gap before the query returns.
  */
 const NotificationListener: React.FC = () => {
   const user = useAuthUser();
   const isAuthenticated = useAppStore(state => !!(state.user && state.accessToken));
-  const {settings} = useNotificationSettings();
+
+  // Defer preferences query until JS thread is idle (after critical startup queries settle)
+  const [startupSettled, setStartupSettled] = useState(false);
+
+  const {settings} = useNotificationSettings({ skip: !startupSettled });
 
   // Defer subscription by 3s to avoid competing with startup queries on the JS thread
   const [ready, setReady] = useState(false);
@@ -30,13 +38,19 @@ const NotificationListener: React.FC = () => {
     setPrevIsAuthenticated(isAuthenticated);
     if (!isAuthenticated) {
       setReady(false);
+      setStartupSettled(false);
     }
   }
 
   useEffect(() => {
     if (isAuthenticated && user) {
+      // Defer preferences query until JS thread is idle after critical startup work
+      const idleId = requestIdleCallback(() => setStartupSettled(true));
       const timer = setTimeout(() => setReady(true), 3000);
-      return () => clearTimeout(timer);
+      return () => {
+        cancelIdleCallback(idleId);
+        clearTimeout(timer);
+      };
     }
   }, [isAuthenticated, user]);
 

@@ -23,14 +23,6 @@ jest.mock('#/services/errorService', () => ({
   }),
 }));
 
-// Mock useDeviceRegistration
-const mockRegisterDeviceInBackground = jest.fn();
-jest.mock('#/hooks/useDeviceRegistration', () => ({
-  useDeviceRegistration: () => ({
-    registerDeviceInBackground: mockRegisterDeviceInBackground,
-  }),
-}));
-
 // Mock useUserPreferences
 const mockShouldShowCredentialPrompt = jest.fn().mockReturnValue(true);
 const mockClearRegistrationPreferences = jest.fn();

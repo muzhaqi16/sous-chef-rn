@@ -97,7 +97,7 @@ function toNestedInput(
   return input;
 }
 
-export const useNotificationSettings = () => {
+export const useNotificationSettings = (options?: { skip?: boolean }) => {
   const user = useAppStore(state => state.user);
   const { handleApolloError } = useErrorService();
 
@@ -106,7 +106,7 @@ export const useNotificationSettings = () => {
   // - errorPolicy: 'all' returns cached data when network fails
 
   const { data, loading, error } = useGetNotificationPreferencesQuery({
-    skip: !user?.id,
+    skip: !user?.id || options?.skip,
     fetchPolicy: 'cache-first',
     errorPolicy: 'all' });
 
