@@ -1,5 +1,10 @@
 import { renderHook } from '@testing-library/react-native';
-import { useRenderTime, useAutoRenderTime } from '../useRenderTime';
+import {
+  useRenderTime,
+  useAutoRenderTime,
+  _resetForTesting,
+  _simulateBackground,
+} from '../useRenderTime';
 import { Telemetry } from '#/services/telemetry';
 
 jest.mock('#/services/telemetry', () => ({
@@ -20,6 +25,7 @@ jest.mock('#/store/performanceStore', () => ({
 describe('useRenderTime', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    _resetForTesting();
     // Ensure Math.random always returns a value below 1.0 (default sample rate in __DEV__)
     jest.spyOn(Math, 'random').mockReturnValue(0.5);
     // Default: Date.now() returns 100 for render, 110 for commit (10ms render)
@@ -153,11 +159,63 @@ describe('useRenderTime', () => {
       }),
     );
   });
+
+  it('discards render when app was backgrounded', () => {
+    // Simulate app going to background at t=500
+    _simulateBackground(500);
+
+    // Render starts at t=100 — lastBackgroundedAt (500) >= renderStart (100) → discard
+    let callIndex = 0;
+    const dateValues = [100, 110];
+    jest.spyOn(Date, 'now').mockImplementation(() => {
+      return dateValues[callIndex++] ?? 110;
+    });
+
+    renderHook(() => useRenderTime('BackgroundedComponent'));
+
+    expect(Telemetry.histogram).not.toHaveBeenCalled();
+    expect(Telemetry.increment).not.toHaveBeenCalled();
+  });
+
+  it('discards render exceeding MAX_VALID_RENDER_MS cap', () => {
+    // renderStart=100, commitTime=1200 → duration=1100ms > 1000ms cap
+    let callIndex = 0;
+    const dateValues = [100, 1200];
+    jest.spyOn(Date, 'now').mockImplementation(() => {
+      return dateValues[callIndex++] ?? 1200;
+    });
+
+    renderHook(() => useRenderTime('OverCapComponent'));
+
+    expect(Telemetry.histogram).not.toHaveBeenCalled();
+    expect(Telemetry.increment).not.toHaveBeenCalled();
+  });
+
+  it('does not discard when background occurred before render started', () => {
+    // Simulate background at t=50 — before the render starts
+    _simulateBackground(50);
+
+    // Render starts at t=100 — lastBackgroundedAt (50) < renderStart (100) → valid
+    let callIndex = 0;
+    const dateValues = [100, 110];
+    jest.spyOn(Date, 'now').mockImplementation(() => {
+      return dateValues[callIndex++] ?? 110;
+    });
+
+    renderHook(() => useRenderTime('ValidComponent'));
+
+    expect(Telemetry.increment).toHaveBeenCalledWith(
+      'component_render_count',
+      1,
+      { component: 'ValidComponent' },
+    );
+  });
 });
 
 describe('useAutoRenderTime', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    _resetForTesting();
     jest.spyOn(Math, 'random').mockReturnValue(0.5);
     jest.spyOn(Date, 'now').mockReturnValue(100);
   });

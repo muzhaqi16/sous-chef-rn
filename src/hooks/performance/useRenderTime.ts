@@ -1,7 +1,41 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import { Telemetry } from '#/services/telemetry';
 import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
 import { usePerformanceStore } from '#/store/performanceStore';
+
+/**
+ * Maximum valid render duration in ms. Any measurement above this is treated
+ * as contaminated (e.g. tree-batching overhead, app backgrounded, hot reload)
+ * and discarded. Individual component renders should not exceed 1 second even
+ * in dev mode — the render-to-commit gap includes other components' work
+ * during batched updates, inflating the measurement.
+ */
+const MAX_VALID_RENDER_MS = 1000;
+
+/**
+ * Tracks the last wall-clock time the app left the foreground.
+ * Module-level subscription — runs once at import, lives for the process.
+ */
+let lastBackgroundedAt = 0;
+
+if (__DEV__) {
+  AppState.addEventListener('change', nextAppState => {
+    if (nextAppState !== 'active') {
+      lastBackgroundedAt = Date.now();
+    }
+  });
+}
+
+/** @internal Test-only: reset module-level background tracking state */
+export function _resetForTesting() {
+  lastBackgroundedAt = 0;
+}
+
+/** @internal Test-only: simulate app going to background at a given timestamp */
+export function _simulateBackground(timestamp: number) {
+  lastBackgroundedAt = timestamp;
+}
 
 /**
  * Hook to track component render time and count
@@ -73,19 +107,33 @@ export function useRenderTime(
 
     const duration = commitTime - renderStart;
     const wasBatched = prevCommitTime > 0 && renderStart < prevCommitTime;
+    const finalDuration = wasBatched ? commitTime - prevCommitTime : duration;
 
-    if (wasBatched) {
-      renderDurationRef.current = commitTime - prevCommitTime;
+    // Discard if app went to background during this render cycle or duration
+    // exceeds the safety cap (likely includes background/idle time).
+    const wasBackgrounded = lastBackgroundedAt >= renderStart;
+    if (wasBackgrounded || finalDuration > MAX_VALID_RENDER_MS) {
+      renderDurationRef.current = -1;
+      console.debug(
+        `[Performance] ${componentName} render discarded: ${
+          wasBackgrounded
+            ? 'app backgrounded'
+            : `exceeded ${MAX_VALID_RENDER_MS}ms cap (${finalDuration}ms)`
+        }`,
+      );
     } else {
-      renderDurationRef.current = duration;
+      renderDurationRef.current = finalDuration;
+      renderCount.current += 1;
     }
-    renderCount.current += 1;
   });
 
   // Report metrics after paint.
   // Intentionally omitting deps — this effect must run after every render to capture timing.
   useEffect(() => {
     if (!__DEV__) return;
+
+    // Skip discarded renders (backgrounded or exceeded max duration cap)
+    if (renderDurationRef.current < 0) return;
 
     // Skip if disabled
     if (!enabled) {
