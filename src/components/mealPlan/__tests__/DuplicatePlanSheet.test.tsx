@@ -74,7 +74,7 @@ describe('DuplicatePlanSheet', () => {
     name: 'Weekly Plan',
     startDate: '2025-03-01T00:00:00.000Z',
     endDate: '2025-03-07T00:00:00.000Z',
-    __typename: 'MealPlan' as const,
+    __typename: 'MealPlan',
   };
 
   const defaultProps = {

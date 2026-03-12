@@ -104,7 +104,7 @@ function createNavigationState(
     name,
     params: {},
   }));
-  return { routes, index, type: 'tab' as const, key: 'tab-key', routeNames, stale: false as const, history: [] } as any;
+  return { routes, index, type: 'tab', key: 'tab-key', routeNames, stale: false, history: [] } as any;
 }
 
 function createDescriptors(

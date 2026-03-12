@@ -5,9 +5,9 @@ import { extractItems } from '../usePaginatedShoppingItems';
 // Minimal edge factory matching ItemEdge shape
 function makeEdge(id: string, itemName: string) {
   return {
-    __typename: 'ShoppingListItemEdge' as const,
+    __typename: 'ShoppingListItemEdge',
     node: {
-      __typename: 'ShoppingListItem' as const,
+      __typename: 'ShoppingListItem',
       id,
       itemName,
     },

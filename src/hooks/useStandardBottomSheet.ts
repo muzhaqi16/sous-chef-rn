@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { Keyboard } from 'react-native';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import type { BottomSheetModal, BottomSheetModalProps } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUnistyles } from 'react-native-unistyles';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
@@ -100,7 +100,7 @@ export function useStandardBottomSheet({
         onClose: () => ref.current?.dismiss() });
 
   // All standard BottomSheetModal props as a spread-ready object
-  const modalProps = ({
+  const modalProps: Partial<BottomSheetModalProps> = ({
       snapPoints: finalSnapPoints,
       enablePanDownToClose: true,
       enableDynamicSizing,
@@ -110,8 +110,8 @@ export function useStandardBottomSheet({
       backgroundStyle: { backgroundColor: theme.colors.background },
       handleIndicatorStyle: { backgroundColor: theme.colors.textSecondary },
       keyboardBehavior: resolvedKeyboardBehavior,
-      keyboardBlurBehavior: 'restore' as const,
-      android_keyboardInputMode: 'adjustPan' as const,
+      keyboardBlurBehavior: 'restore',
+      android_keyboardInputMode: 'adjustPan',
       backdropComponent });
 
   // Standard content container padding

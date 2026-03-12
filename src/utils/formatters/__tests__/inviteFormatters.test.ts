@@ -24,7 +24,7 @@ describe('inviteFormatters', () => {
       ['DECLINED', 'Declined'],
       ['EXPIRED', 'Expired'],
       ['REVOKED', 'Revoked'],
-    ] as const)('formats %s as %s', (input, expected) => {
+    ])('formats %s as %s', (input, expected) => {
       expect(formatInviteStatus(input)).toBe(expected);
     });
 

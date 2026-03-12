@@ -8,7 +8,6 @@ import {
 } from '#generated';
 import { logger } from '#/utils/environment';
 import { useErrorService } from '#/services/errorService';
-import { useDeviceRegistration } from '#/hooks/useDeviceRegistration';
 import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
 import {
   executeMutation,
@@ -396,7 +395,6 @@ export const useAuthOperations = ({
   // Dependencies
   const toast = useToast();
   const { handleApolloError } = useErrorService();
-  const { registerDeviceInBackground } = useDeviceRegistration();
   const {
     shouldShowCredentialPrompt,
     clearRegistrationPreferences,
@@ -462,7 +460,6 @@ export const useAuthOperations = ({
     }
 
     handleAuthSuccess('Login successful');
-    registerDeviceInBackground();
     incrementLoginCount(user.id);
 
     // **EXPLICIT NAVIGATION FLOW CONTROL**
@@ -530,7 +527,6 @@ export const useAuthOperations = ({
     }
 
     handleAuthSuccess('Registration successful');
-    registerDeviceInBackground();
 
     // **EXPLICIT NAVIGATION FLOW CONTROL FOR NEW USERS**
     // Skip biometric setup during registration - let onboarding handle it

@@ -6,19 +6,23 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   FlashList,
   type FlashListRef,
-  type ListRenderItemInfo } from '@shopify/flash-list';
+  type ListRenderItemInfo,
+} from '@shopify/flash-list';
 import type {
   SortableShoppingListProps,
-  SortableShoppingListItem } from './types';
+  SortableShoppingListItem,
+} from './types';
 import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { SwipeableListItem } from './SortableItem';
 import {
   SortableListActionsProvider,
   type SortableListActions,
-  type SortableListPermissions } from './SortableListActionsContext';
+  type SortableListPermissions,
+} from './SortableListActionsContext';
 import {
   SortableListThemeContext,
-  type SortableListThemeColors } from './SortableListThemeContext';
+  type SortableListThemeColors,
+} from './SortableListThemeContext';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
@@ -27,6 +31,9 @@ import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTrac
 // Screen-relative draw distance: scales with viewport so buffer stays ~7-10 items
 // regardless of device size (vs fixed 250 which is ~3.7 items on most devices)
 const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 0.75);
+
+// Module-level constant — avoids creating a new object reference per render
+const MVCP_DISABLED = { disabled: true };
 
 // Module-scope functions — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: SortableShoppingListItem) => item.id;
@@ -67,7 +74,11 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     componentName: 'SortableShoppingList',
     reportInterval: 10000,
   });
-  useDataReferenceTracker(items, 'SortableList.items', perfCallbacks.onDataReferenceChange);
+  useDataReferenceTracker(
+    items,
+    'SortableList.items',
+    perfCallbacks.onDataReferenceChange,
+  );
 
   // PERFORMANCE: Single useUnistyles call for entire list
   const { theme } = useUnistyles();
@@ -88,8 +99,10 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
 
   // Coordinate swipeable items — use external coordinator if provided, otherwise internal fallback
   const internalCoordinator = useSwipeableCoordinator();
-  const handleSwipeableWillOpen = externalOnSwipeableWillOpen ?? internalCoordinator.handleSwipeableWillOpen;
-  const handleSwipeableClose = externalOnSwipeableClose ?? internalCoordinator.handleSwipeableClose;
+  const handleSwipeableWillOpen =
+    externalOnSwipeableWillOpen ?? internalCoordinator.handleSwipeableWillOpen;
+  const handleSwipeableClose =
+    externalOnSwipeableClose ?? internalCoordinator.handleSwipeableClose;
 
   // Actions for context — wrap delete/toggle to prepare FlashList for layout animation
   const actions: SortableListActions = {
@@ -126,14 +139,12 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   const contentContainerStyle = {
     paddingTop: 8,
     paddingBottom: getTabBarBottomPadding(insets.bottom),
+    flexGrow: 1,
   };
 
   return (
     <SortableListThemeContext.Provider value={themeColors}>
-      <SortableListActionsProvider
-        actions={actions}
-        permissions={permissions}
-      >
+      <SortableListActionsProvider actions={actions} permissions={permissions}>
         <View style={styles.container}>
           <FlashList<SortableShoppingListItem>
             ref={flashListRef}
@@ -143,7 +154,6 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             keyExtractor={keyExtractor}
             renderItem={renderItem}
             getItemType={getItemType}
-
             showsVerticalScrollIndicator={false}
             contentContainerStyle={contentContainerStyle}
             ListHeaderComponent={ListHeaderComponent ?? undefined}
@@ -157,7 +167,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             maxItemsInRecyclePool={15}
             onRefresh={onRefresh}
             refreshing={refreshing}
-            maintainVisibleContentPosition={{ disabled: true }}
+            maintainVisibleContentPosition={MVCP_DISABLED}
           />
         </View>
       </SortableListActionsProvider>

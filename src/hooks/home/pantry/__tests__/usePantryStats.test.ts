@@ -1,14 +1,7 @@
 'use no memo';
 
 import { usePantryStats } from '../usePantryStats';
-
-// Import the enum for creating test data
-const StorageState = {
-  Refrigerated: 'REFRIGERATED',
-  Frozen: 'FROZEN',
-  Ambient: 'AMBIENT',
-  None: 'NONE',
-} as const;
+import { StorageState } from '#generated';
 
 describe('usePantryStats', () => {
   describe('client-side fallback (no storageStateCounts)', () => {

@@ -75,7 +75,7 @@ const IngredientRenderItem = ({ item }: { item: any }) => {
   );
 };
 
-const getIngredientItemType = () => 'item' as const;
+const getIngredientItemType = () => 'item';
 
 // Module-scope renderItem — stable reference for FlashList
 const renderIngredientItem = ({ item }: { item: any }) => (
@@ -151,7 +151,7 @@ export const RecipeSearch: React.FC = () => {
   // Search bar right actions
   const searchBarRightActions = [
         ...(hasPantryItems ? [{
-          icon: 'restaurant' as const,
+          icon: 'restaurant',
           onPress: openIngredientSelector,
           color: selectedIngredients.size > 0 ? theme.colors.white : theme.colors.primary,
           backgroundColor: selectedIngredients.size > 0 ? theme.colors.primary : theme.colors.surface,

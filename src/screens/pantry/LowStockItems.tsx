@@ -78,7 +78,7 @@ const arePropsEqual = createPropsComparator<LowStockRenderItemProps>({
 
 const LowStockRenderItem = React.memo(LowStockRenderItemComponent, arePropsEqual);
 
-const getLowStockItemType = () => 'item' as const;
+const getLowStockItemType = () => 'item';
 
 // --- Module-scope LowStockEmpty ---
 

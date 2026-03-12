@@ -11,6 +11,7 @@ import {
   groupNutrientsByCategory,
   getCategoryLabel,
 } from '../nutritionUtils';
+import type { NutrientCategory } from '#/types/nutrition';
 
 const mockNutritions = {
   servingSize: '100g',
@@ -247,12 +248,12 @@ describe('groupNutrientsByCategory', () => {
 });
 
 describe('getCategoryLabel', () => {
-  it.each([
+  it.each<[NutrientCategory, string]>([
     ['macro', 'Macronutrients'],
     ['vitamin', 'Vitamins'],
     ['mineral', 'Minerals'],
     ['other', 'Other'],
-  ] as const)('returns %s for %s', (cat, label) => {
+  ])('returns %s for %s', (cat, label) => {
     expect(getCategoryLabel(cat)).toBe(label);
   });
 });

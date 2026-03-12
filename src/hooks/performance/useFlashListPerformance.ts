@@ -3,9 +3,17 @@
  *
  * Produces FlashList callback props for blank cell detection, initial load
  * tracking, frame gap correlation, and predictive blank risk assessment.
- * Creates an instance-based FlashListDiagnostics per list.
  *
- * Entirely a no-op when !__DEV__ (early return with stub callbacks).
+ * DEV: Full diagnostics via FlashListDiagnostics (ring buffers, frame gap
+ * monitoring, predictive risk assessment, formatted console reports).
+ *
+ * PRODUCTION: Lightweight sampled metrics via Telemetry service:
+ * - flashlist_initial_load_ms (histogram)
+ * - flashlist_blank_cells_total (counter, incremented per detection)
+ * - flashlist_scroll_coverage_ratio (histogram, throttled to 1 report/2s)
+ * - flashlist_data_reference_changes (counter)
+ * - flashlist_session_duration_ms (histogram, reported on unmount)
+ *
  * No try-catch in hook body (React Compiler safe).
  */
 import { useEffect, useRef, useState } from 'react';
@@ -41,95 +49,114 @@ const noopRisk: BlankRiskAssessment = {
   coverageRatio: 1,
   scrollVelocity: 0,
 };
-const noop = () => {};
-const STUB_RETURN: UseFlashListPerformanceReturn = {
-  onLoad: noop,
-  onViewableItemsChanged: noop,
-  onDataReferenceChange: noop,
-  printReport: noop,
-  getBlankRisk: () => noopRisk,
-};
+
+// Throttle interval for coverage ratio reporting (ms)
+const COVERAGE_REPORT_INTERVAL = 2000;
 
 export function useFlashListPerformance<T>(
   flashListRef: React.RefObject<FlashListRef<T> | null>,
   options: UseFlashListPerformanceOptions,
 ): UseFlashListPerformanceReturn {
+  // DEV-only refs for frame gap monitoring
   const frameGapStarted = useRef(false);
   const idleHandle = useRef<number | null>(null);
   const intervalHandle = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Stable instance per hook mount — useState initializer only runs once
-  const [diagnostics] = useState(
-    () => new FlashListDiagnostics(options.componentName),
+  // DEV-only diagnostics instance
+  const [diagnostics] = useState(() =>
+    __DEV__ ? new FlashListDiagnostics(options.componentName) : null,
   );
 
+  // Production metrics: session timing
+  const [sessionStart] = useState(() => performance.now());
+  const lastCoverageReportRef = useRef(0);
+
+  // DEV: start diagnostics session + periodic reports
+  // PROD: cleanup reports session metrics on unmount
   useEffect(() => {
-    if (!__DEV__) return;
+    if (__DEV__ && diagnostics) {
+      diagnostics.startSession();
 
-    diagnostics.startSession();
-
-    const reportMs = options.reportInterval ?? 10000;
-    if (reportMs > 0) {
-      intervalHandle.current = setInterval(() => {
-        diagnostics.printReport();
-      }, reportMs);
+      const reportMs = options.reportInterval ?? 10000;
+      if (reportMs > 0) {
+        intervalHandle.current = setInterval(() => {
+          diagnostics.printReport();
+        }, reportMs);
+      }
     }
 
     return () => {
-      if (intervalHandle.current !== null) {
-        clearInterval(intervalHandle.current);
-        intervalHandle.current = null;
+      // DEV cleanup
+      if (__DEV__) {
+        if (intervalHandle.current !== null) {
+          clearInterval(intervalHandle.current);
+          intervalHandle.current = null;
+        }
+        if (idleHandle.current !== null) {
+          cancelIdleCallback(idleHandle.current);
+          idleHandle.current = null;
+        }
+        diagnostics?.endSession();
+        frameGapStarted.current = false;
       }
-      if (idleHandle.current !== null) {
-        cancelIdleCallback(idleHandle.current);
-        idleHandle.current = null;
-      }
-      diagnostics.endSession();
-      frameGapStarted.current = false;
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!__DEV__) return STUB_RETURN;
+      // Production: report session duration on unmount
+      const duration = performance.now() - sessionStart;
+      Telemetry.histogram('flashlist_session_duration_ms', duration, {
+        component: options.componentName,
+      });
+    };
+  }, [
+    diagnostics,
+    options.componentName,
+    options.reportInterval,
+    sessionStart,
+  ]);
 
   const onLoad = (info: { elapsedTimeInMs: number }) => {
-    diagnostics.recordOnLoad(info.elapsedTimeInMs);
     Telemetry.histogram('flashlist_initial_load_ms', info.elapsedTimeInMs, {
       component: options.componentName,
     });
-    console.log(
-      `📊 [FlashList:${options.componentName}] ${options.componentName} initial load: ${info.elapsedTimeInMs.toFixed(0)}ms`,
-    );
+
+    if (__DEV__ && diagnostics) {
+      diagnostics.recordOnLoad(info.elapsedTimeInMs);
+      console.log(
+        `📊 [FlashList:${options.componentName}] ${
+          options.componentName
+        } initial load: ${info.elapsedTimeInMs.toFixed(0)}ms`,
+      );
+    }
   };
 
   const onViewableItemsChanged = (info: {
     viewableItems: ViewToken<unknown>[];
     changed: ViewToken<unknown>[];
   }) => {
-    diagnostics.recordViewabilityChange();
+    // DEV: diagnostics tracking + frame gap monitoring
+    if (__DEV__ && diagnostics) {
+      diagnostics.recordViewabilityChange();
 
-    // Start frame gap monitor on first viewability change (scroll start proxy)
-    if (!frameGapStarted.current) {
-      frameGapStarted.current = true;
-      diagnostics.startFrameGapMonitor();
-    }
+      if (!frameGapStarted.current) {
+        frameGapStarted.current = true;
+        diagnostics.startFrameGapMonitor();
+      }
 
-    // Cancel any pending idle stop — we're still scrolling
-    if (idleHandle.current !== null) {
-      cancelIdleCallback(idleHandle.current);
-      idleHandle.current = null;
-    }
-
-    // Stop frame gap monitor after 2s of inactivity
-    idleHandle.current = requestIdleCallback(
-      () => {
-        diagnostics.stopFrameGapMonitor();
-        frameGapStarted.current = false;
+      if (idleHandle.current !== null) {
+        cancelIdleCallback(idleHandle.current);
         idleHandle.current = null;
-      },
-      { timeout: 2000 },
-    );
+      }
 
-    // Blank detection: compare computeVisibleIndices vs viewable items
+      idleHandle.current = requestIdleCallback(
+        () => {
+          diagnostics.stopFrameGapMonitor();
+          frameGapStarted.current = false;
+          idleHandle.current = null;
+        },
+        { timeout: 2000 },
+      );
+    }
+
+    // Blank detection — shared between DEV and production
     const visibleIndices = flashListRef.current?.computeVisibleIndices();
     if (!visibleIndices) return;
 
@@ -137,59 +164,105 @@ export function useFlashListPerformance<T>(
     const expectedCount = endIndex - startIndex + 1;
     const viewableCount = info.viewableItems.length;
     const blankDetected = viewableCount < expectedCount;
-    const frameGap = diagnostics.getLastFrameGap();
 
-    // Compute predictive metrics
-    const now = performance.now();
-    const coverageRatio = expectedCount > 0 ? viewableCount / expectedCount : 1;
-    const scrollVelocity = diagnostics.computeScrollVelocity(startIndex, now);
-
-    const metric: ScrollFrameMetric = {
-      timestamp: now,
-      visibleStart: startIndex,
-      visibleEnd: endIndex,
-      viewableCount,
-      expectedCount,
-      blankDetected,
-      frameGap,
-      coverageRatio,
-      scrollVelocity,
-    };
-
-    diagnostics.recordScrollFrame(metric);
-
+    // Production: report each blank detection immediately
     if (blankDetected) {
-      console.log(
-        `📊 [FlashList:${options.componentName}] Blank detected: viewable=${viewableCount}/${expectedCount} visible=[${startIndex},${endIndex}] gap=${frameGap.toFixed(0)}ms`,
-      );
+      Telemetry.increment('flashlist_blank_cells_total', 1, {
+        component: options.componentName,
+      });
     }
 
-    // Predictive assessment runs on EVERY frame so predictiveWarnings count
-    // reflects true risk state. Only log for non-blank frames (blanks have
-    // their own log above — avoid double-logging).
-    const risk = diagnostics.assessBlankRisk();
-    if (!blankDetected) {
-      if (risk.level === 'medium') {
+    // Production: throttled coverage ratio reporting
+    const now = performance.now();
+    if (now - lastCoverageReportRef.current > COVERAGE_REPORT_INTERVAL) {
+      lastCoverageReportRef.current = now;
+      const coverageRatio =
+        expectedCount > 0 ? viewableCount / expectedCount : 1;
+      Telemetry.histogram('flashlist_scroll_coverage_ratio', coverageRatio, {
+        component: options.componentName,
+      });
+    }
+
+    // DEV: full diagnostics with frame metrics + predictive risk
+    if (__DEV__ && diagnostics) {
+      const frameGap = diagnostics.getLastFrameGap();
+      const coverageRatio =
+        expectedCount > 0 ? viewableCount / expectedCount : 1;
+      const scrollVelocity = diagnostics.computeScrollVelocity(startIndex, now);
+
+      const metric: ScrollFrameMetric = {
+        timestamp: now,
+        visibleStart: startIndex,
+        visibleEnd: endIndex,
+        viewableCount,
+        expectedCount,
+        blankDetected,
+        frameGap,
+        coverageRatio,
+        scrollVelocity,
+      };
+
+      diagnostics.recordScrollFrame(metric);
+
+      if (blankDetected) {
         console.log(
-          `⚠️ [FlashList:${options.componentName}] Blank risk MEDIUM: ${risk.factors.join(', ')} (coverage=${risk.coverageRatio.toFixed(2)}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
+          `📊 [FlashList:${
+            options.componentName
+          }] Blank detected: viewable=${viewableCount}/${expectedCount} visible=[${startIndex},${endIndex}] gap=${frameGap.toFixed(
+            0,
+          )}ms`,
         );
-      } else if (risk.level === 'high') {
-        console.log(
-          `🚨 [FlashList:${options.componentName}] Blank risk HIGH: ${risk.factors.join(', ')} (coverage=${risk.coverageRatio.toFixed(2)}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
-        );
+      }
+
+      const risk = diagnostics.assessBlankRisk();
+      if (!blankDetected) {
+        if (risk.level === 'medium') {
+          console.log(
+            `⚠️ [FlashList:${
+              options.componentName
+            }] Blank risk MEDIUM: ${risk.factors.join(
+              ', ',
+            )} (coverage=${risk.coverageRatio.toFixed(
+              2,
+            )}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
+          );
+        } else if (risk.level === 'high') {
+          console.log(
+            `🚨 [FlashList:${
+              options.componentName
+            }] Blank risk HIGH: ${risk.factors.join(
+              ', ',
+            )} (coverage=${risk.coverageRatio.toFixed(
+              2,
+            )}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
+          );
+        }
       }
     }
   };
 
   const onDataReferenceChange = () => {
-    diagnostics.recordDataReferenceChange();
+    Telemetry.increment('flashlist_data_reference_changes', 1, {
+      component: options.componentName,
+    });
+
+    if (__DEV__) {
+      diagnostics?.recordDataReferenceChange();
+    }
   };
 
   const printReport = () => {
-    diagnostics.printReport();
+    if (__DEV__) {
+      diagnostics?.printReport();
+    }
   };
 
-  const getBlankRisk = () => diagnostics.assessBlankRisk();
+  const getBlankRisk = () => {
+    if (__DEV__ && diagnostics) {
+      return diagnostics.assessBlankRisk();
+    }
+    return noopRisk;
+  };
 
   return {
     onLoad,

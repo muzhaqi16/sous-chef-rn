@@ -9,3 +9,41 @@ mutation RegisterDevice($input: DeviceRegistrationInput!) {
     code
   }
 }
+
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+subscription DeviceChanged($userId: ID!) {
+  deviceChanged(userId: $userId) {
+    changeType
+    device {
+      id
+      deviceName
+      deviceType
+      isTrusted
+      lastSeenAt
+    }
+    userId
+    timestamp
+  }
+}
+
+subscription LoginActivityChanged($userId: ID!) {
+  loginActivityChanged(userId: $userId) {
+    activityType
+    loginHistory {
+      id
+      ipCity
+      ipCountry
+      deviceType
+      browserName
+      createdAt
+    }
+    suspiciousActivity {
+      suspiciousActivity
+    }
+    userId
+    timestamp
+  }
+}

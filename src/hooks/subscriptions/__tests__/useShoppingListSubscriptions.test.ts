@@ -1,6 +1,7 @@
 'use no memo';
 
 import { renderHook } from '@testing-library/react-native';
+import { ShoppingListChangeType } from '#generated';
 import { useShoppingListSubscriptions } from '../useShoppingListSubscriptions';
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -228,7 +229,7 @@ describe('useShoppingListSubscriptions', () => {
     const mockClient = { cache: mockCache };
 
     customOnData(
-      { changeType: 'LIST_UPDATED', shoppingList: { id: 'list-1' } },
+      { changeType: ShoppingListChangeType.ListUpdated, shoppingList: { id: 'list-1' } },
       mockClient,
     );
 

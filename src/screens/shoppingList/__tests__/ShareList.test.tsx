@@ -43,6 +43,7 @@ jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
   useRemoveCollaboratorMutation: jest.fn(() => [jest.fn(), { loading: false }]),
   useAddCollaboratorMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+  useShareShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({

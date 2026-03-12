@@ -3,6 +3,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { BarcodeScannerScreen } from '../BarcodeScannerScreen';
+import type { BarcodeSource } from '#/types/navigation';
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -67,7 +68,8 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
-const defaultRoute = { params: { source: 'pantry' as const, pantryId: 'p-1' } };
+const source: BarcodeSource = 'pantry';
+const defaultRoute = { params: { source, pantryId: 'p-1' } };
 
 describe('BarcodeScannerScreen', () => {
   beforeEach(() => {

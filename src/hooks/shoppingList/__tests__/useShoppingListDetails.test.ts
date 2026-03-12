@@ -13,7 +13,7 @@ let mockQueryResult: any = {
 
 jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
-  useGetShoppingListQuery: () => mockQueryResult,
+  useGetShoppingListDetailsQuery: () => mockQueryResult,
 }));
 
 jest.mock('@apollo/client', () => ({
@@ -45,9 +45,7 @@ describe('useShoppingListDetails', () => {
       loading: true,
     };
 
-    const { result } = renderHook(() =>
-      useShoppingListDetails('list-1'),
-    );
+    const { result } = renderHook(() => useShoppingListDetails('list-1'));
 
     expect(result.current.loading).toBe(true);
   });
@@ -61,17 +59,13 @@ describe('useShoppingListDetails', () => {
           name: 'Groceries',
           isDefault: true,
           collaboratorsConnection: {
-            edges: [
-              { node: { id: 'collab-1', email: 'alice@test.com' } },
-            ],
+            edges: [{ node: { id: 'collab-1', email: 'alice@test.com' } }],
           },
         },
       },
     };
 
-    const { result } = renderHook(() =>
-      useShoppingListDetails('list-1'),
-    );
+    const { result } = renderHook(() => useShoppingListDetails('list-1'));
 
     expect(result.current.shoppingList).not.toBeNull();
     expect(result.current.name).toBe('Groceries');
@@ -82,9 +76,7 @@ describe('useShoppingListDetails', () => {
   });
 
   it('returns default values when no shopping list data', () => {
-    const { result } = renderHook(() =>
-      useShoppingListDetails('list-1'),
-    );
+    const { result } = renderHook(() => useShoppingListDetails('list-1'));
 
     expect(result.current.shoppingList).toBeNull();
     expect(result.current.name).toBe('');
@@ -100,9 +92,7 @@ describe('useShoppingListDetails', () => {
       error: testError,
     };
 
-    const { result } = renderHook(() =>
-      useShoppingListDetails('list-1'),
-    );
+    const { result } = renderHook(() => useShoppingListDetails('list-1'));
 
     expect(result.current.error).toBe(testError);
   });
@@ -114,9 +104,7 @@ describe('useShoppingListDetails', () => {
       refetch: mockRefetch,
     };
 
-    const { result } = renderHook(() =>
-      useShoppingListDetails('list-1'),
-    );
+    const { result } = renderHook(() => useShoppingListDetails('list-1'));
 
     expect(result.current.refetch).toBe(mockRefetch);
   });
@@ -127,9 +115,7 @@ describe('useShoppingListDetails', () => {
       networkStatus: 4, // NetworkStatus.refetch
     };
 
-    const { result } = renderHook(() =>
-      useShoppingListDetails('list-1'),
-    );
+    const { result } = renderHook(() => useShoppingListDetails('list-1'));
 
     expect(result.current.isRefetching).toBe(true);
   });
@@ -140,9 +126,7 @@ describe('useShoppingListDetails', () => {
       networkStatus: 7, // NetworkStatus.ready
     };
 
-    const { result } = renderHook(() =>
-      useShoppingListDetails('list-1'),
-    );
+    const { result } = renderHook(() => useShoppingListDetails('list-1'));
 
     expect(result.current.isRefetching).toBe(false);
   });
@@ -162,9 +146,7 @@ describe('useShoppingListDetails', () => {
       },
     };
 
-    const { result } = renderHook(() =>
-      useShoppingListDetails('list-1'),
-    );
+    const { result } = renderHook(() => useShoppingListDetails('list-1'));
 
     expect(result.current.isShared).toBe(false);
   });

@@ -87,7 +87,6 @@ describe('PantryItemCard', () => {
     id: 'pantry-1',
     name: 'Milk',
     quantity: '2 gal',
-    location: 'Fridge',
   };
 
   beforeEach(() => {
@@ -104,9 +103,18 @@ describe('PantryItemCard', () => {
     expect(screen.getByText('2 gal')).toBeTruthy();
   });
 
-  it('renders location in right slot', () => {
-    renderWithProvider(<PantryItemCard {...defaultProps} />);
-    expect(screen.getByText('Fridge')).toBeTruthy();
+  it('renders custom location in right slot when provided', () => {
+    renderWithProvider(
+      <PantryItemCard {...defaultProps} location="Kitchen Cabinet" />,
+    );
+    expect(screen.getByText('Kitchen Cabinet')).toBeTruthy();
+  });
+
+  it('does not render location when location is null', () => {
+    renderWithProvider(<PantryItemCard {...defaultProps} location={null} />);
+    expect(screen.queryByText('Fridge')).toBeNull();
+    expect(screen.queryByText('Freezer')).toBeNull();
+    expect(screen.queryByText('Pantry')).toBeNull();
   });
 
   it('renders with testID based on item id', () => {

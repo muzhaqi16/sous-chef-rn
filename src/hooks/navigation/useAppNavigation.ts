@@ -1,4 +1,5 @@
 import {useNavigation, useRoute, StackActions, CommonActions} from '@react-navigation/native';
+import type { BarcodeSource } from '#/types/navigation';
 
 export function useAppNavigation() {
   const navigation = useNavigation();
@@ -101,14 +102,14 @@ export function useAppNavigation() {
         navigateToNested('Notifications', 'NotificationSettings'),
 
       // Nested stack navigation (Barcode)
-      barcodeScanner: (params?: { source?: 'pantry' | 'shoppingList'; pantryId?: string; shoppingListId?: string }) =>
+      barcodeScanner: (params?: { source?: BarcodeSource; pantryId?: string; shoppingListId?: string }) =>
         navigateToNested('Barcode', 'BarcodeScanner', params),
-      searchResults: (params: { barcode: string; format: string; source?: 'pantry' | 'shoppingList'; pantryId?: string; shoppingListId?: string }) =>
+      searchResults: (params: { barcode: string; format: string; source?: BarcodeSource; pantryId?: string; shoppingListId?: string }) =>
         navigateToNested('Barcode', 'SearchResults', params),
 
       // Alternative: Direct navigation to root stacks
       notifications: () => navigate('Notifications'),
-      barcode: (params?: { source?: 'pantry' | 'shoppingList'; pantryId?: string; shoppingListId?: string }) => navigate('Barcode', {
+      barcode: (params?: { source?: BarcodeSource; pantryId?: string; shoppingListId?: string }) => navigate('Barcode', {
         screen: 'BarcodeScanner',
         params: params }) };
 

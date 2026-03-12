@@ -89,8 +89,8 @@ describe('TemplatePreviewSheet', () => {
     homeId: 'home-1',
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
-    home: { __typename: 'Home' as const, id: 'home-1', name: 'My Home' },
-    __typename: 'MealTemplate' as const,
+    home: { __typename: 'Home', id: 'home-1', name: 'My Home' },
+    __typename: 'MealTemplate',
   };
 
   const defaultProps = {

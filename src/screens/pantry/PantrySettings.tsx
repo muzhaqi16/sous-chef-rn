@@ -225,7 +225,7 @@ export const PantrySettings: React.FC<
               }
 
               const newEdge = {
-                __typename: 'PantryEdge' as const,
+                __typename: 'PantryEdge',
                 cursor: newPantry.id,
                 node: newPantry,
               };

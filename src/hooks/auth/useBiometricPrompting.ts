@@ -2,10 +2,9 @@ import { useAppStore } from '#store/useAppStore';
 import { hasCredentialsForAccount, getBiometricCapability } from '#/storage/keychain';
 import { executeQuery } from '#/utils/compilerSafeWrappers';
 
-interface BiometricPromptDecision {
-  shouldShow: boolean;
-  reason?: string;
-}
+type BiometricPromptDecision =
+  | { shouldShow: false; reason: string }
+  | { shouldShow: true; reason?: undefined };
 
 export const useBiometricPrompting = () => {
   const user = useAppStore(state => state.user);
@@ -24,26 +23,26 @@ export const useBiometricPrompting = () => {
       return { shouldShow: false, reason: 'New user - biometric setup handled during onboarding' };
     }
 
-    const result = await executeQuery(
+    const result = await executeQuery<BiometricPromptDecision>(
       async () => {
         // Check if biometric is available on device
         const biometricInfo = await getBiometricCapability();
         if (!biometricInfo.isAvailable) {
-          return { shouldShow: false as const, reason: 'Biometric not available' };
+          return { shouldShow: false, reason: 'Biometric not available' };
         }
 
         // Check if user already has credentials saved
         const hasCreds = await hasCredentialsForAccount();
         if (hasCreds) {
-          return { shouldShow: false as const, reason: 'Already has biometric setup' };
+          return { shouldShow: false, reason: 'Already has biometric setup' };
         }
 
         // Check if user permanently declined biometric authentication
         if (navState?.biometricDeclinedPermanently) {
-          return { shouldShow: false as const, reason: 'User permanently declined biometric authentication' };
+          return { shouldShow: false, reason: 'User permanently declined biometric authentication' };
         }
 
-        return { shouldShow: true as const };
+        return { shouldShow: true };
       },
       'Error checking biometric prompt eligibility',
     );

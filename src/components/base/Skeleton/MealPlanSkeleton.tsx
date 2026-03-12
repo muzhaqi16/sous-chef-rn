@@ -12,7 +12,10 @@ import { MealPlanItemCardSkeleton } from './MealPlanItemCardSkeleton';
  * so the skeleton matches what the user sees after data loads.
  */
 export const MealPlanSkeleton: React.FC = () => (
-  <ScrollView contentContainerStyle={styles.container}>
+  <ScrollView
+    contentContainerStyle={styles.container}
+    showsVerticalScrollIndicator={false}
+  >
     {/* WeekStrip skeleton */}
     <View style={styles.weekStrip}>
       {/* Left arrow */}

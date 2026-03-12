@@ -1,5 +1,6 @@
 import React, { useLayoutEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
+import type { ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -87,11 +88,11 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   }, [isHighlighted, highlightOpacity]);
 
   // Static card style - backgroundColor doesn't animate
-  const cardStyle = {
+  const cardStyle: ViewStyle = {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     padding: theme.spacing.md,
-    overflow: 'hidden' as const,
+    overflow: 'hidden',
   };
 
   // Animated highlight overlay - only opacity animates

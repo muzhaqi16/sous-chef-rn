@@ -15,7 +15,7 @@ import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { EmptyState } from '#components/base/EmptyState';
 
-const VIEW_MODES = ['flat', 'tree'] as const;
+const VIEW_MODES: ('flat' | 'tree')[] = ['flat', 'tree'];
 
 type RouteParams = {
   homeId: string;

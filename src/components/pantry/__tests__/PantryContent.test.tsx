@@ -225,7 +225,7 @@ const defaultProps = {
   userName: 'John',
   householdName: 'My Kitchen',
   items: [] as PantryItem[],
-  locationFilter: 'all' as const,
+  locationFilter: 'all',
   onLocationFilterChange: jest.fn(),
   locationCounts: { all: 5, fridge: 2, freezer: 1, pantry: 2 },
   searchQuery: '',
@@ -463,7 +463,7 @@ describe('PantryContent', () => {
 
   it('renders custom tabs when provided', () => {
     const customTabs = [
-      { id: 'all' as const, label: 'Everything' },
+      { id: 'all', label: 'Everything' },
       { id: 'custom', label: 'Custom Loc' },
     ];
     render(<PantryContent {...defaultProps} tabs={customTabs} />);

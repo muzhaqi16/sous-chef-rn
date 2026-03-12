@@ -68,7 +68,7 @@ export const RecipeFormScreen: React.FC<
               recipes: {
                 ...existing.recipes,
                 edges: [
-                  { __typename: 'RecipeEdge' as const, cursor: newRecipe.id, node: newRecipe },
+                  { __typename: 'RecipeEdge', cursor: newRecipe.id, node: newRecipe },
                   ...existing.recipes.edges,
                 ],
                 totalCount: (existing.recipes.totalCount ?? 0) + 1,

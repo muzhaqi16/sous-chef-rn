@@ -304,7 +304,7 @@ const CreateHomeScreenComponent = () => {
             }
 
             const newEdge = {
-              __typename: 'PantryEdge' as const,
+              __typename: 'PantryEdge',
               cursor: newPantry.id,
               node: newPantry };
 

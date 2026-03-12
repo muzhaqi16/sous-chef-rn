@@ -1,5 +1,5 @@
 import { NetworkStatus } from '@apollo/client';
-import { useGetShoppingListQuery } from '#generated';
+import { useGetShoppingListDetailsQuery } from '#generated';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 
 export function useShoppingListDetails(listId: string | undefined) {
@@ -8,14 +8,15 @@ export function useShoppingListDetails(listId: string | undefined) {
   // - nextFetchPolicy: cache-first prevents re-fetch on re-render/tab switch
   // - notifyOnNetworkStatusChange: Enables tracking of refetch status
 
-  const { data, loading, error, refetch, networkStatus } = useGetShoppingListQuery({
-    variables: { id: listId ?? '' },
-    skip: !listId,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'ignore',
-    notifyOnNetworkStatusChange: true,
-  });
+  const { data, loading, error, refetch, networkStatus } =
+    useGetShoppingListDetailsQuery({
+      variables: { id: listId ?? '' },
+      skip: !listId,
+      fetchPolicy: 'cache-and-network',
+      nextFetchPolicy: 'cache-first',
+      errorPolicy: 'ignore',
+      notifyOnNetworkStatusChange: true,
+    });
 
   // Real-time updates via subscription are now handled by SubscriptionProvider
   // The ShoppingListUpdated subscription automatically updates the cache via

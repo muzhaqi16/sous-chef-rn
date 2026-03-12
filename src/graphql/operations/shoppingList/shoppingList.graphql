@@ -2,66 +2,9 @@
 # QUERIES
 # ============================================
 
-query GetShoppingList($id: ID!) {
-  shoppingList(id: $id) {
-    id
-    name
-    isDefault
-    totalItems
-    completedItems
-    homeId
-    home {
-      id
-      name
-      myMembership {
-        id
-        role
-        canAddItems
-        canRemoveItems
-        canEditPantry
-      }
-    }
-    ownerships {
-      ...ShoppingListOwnershipFragment
-    }
-    # Items connection for single source of truth
-    # Uses lightweight DisplayFragment for performance
-    # orderBy sortOrder ASC ensures items are returned in correct drag-reorder position
-    itemsConnection(first: 100, orderBy: { sortOrder: ASC }) {
-      edges {
-        cursor
-        node {
-          ...ShoppingListItemDisplayFragment
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      totalCount
-    }
-    collaboratorsConnection(first: 20) {
-      edges {
-        cursor
-        node {
-          ...ShoppingListCollaboratorFragment
-          invitedAt
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      totalCount
-    }
-  }
-}
-
-# Lightweight query for list selector - metadata only, no items/collaborators
-# Use this for dashboard/list views. Use GetShoppingList for full details.
 # Lightweight query for shopping list details WITHOUT items
-# Use this for ShoppingListMain where items come from GetShoppingListItemsPaginated
-# Use GetShoppingList when you need the full itemsConnection (ListSettings, ShareList, resortEdges)
+# Use this for ShoppingListMain, ListSettings, ShareList
+# Items are fetched separately via GetShoppingListItemsFiltered
 query GetShoppingListDetails($id: ID!) {
   shoppingList(id: $id) {
     id
@@ -70,6 +13,8 @@ query GetShoppingListDetails($id: ID!) {
     totalItems
     completedItems
     homeId
+    shareCode
+    isPublic
     home {
       id
       name
@@ -102,7 +47,7 @@ query GetShoppingListDetails($id: ID!) {
 }
 
 # Lightweight query for list selector - metadata only, no items/collaborators
-# Use this for dashboard/list views. Use GetShoppingList for full details.
+# Use this for dashboard/list views.
 query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
   shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
     edges {
@@ -433,6 +378,31 @@ mutation AddItemsToShoppingList(
   }
 }
 
+mutation ShareShoppingList($id: ID!, $input: ShareShoppingListInput!) {
+  shareShoppingList(id: $id, input: $input) {
+    success
+    message
+    code
+    shoppingList {
+      id
+      shareCode
+      isPublic
+    }
+  }
+}
+
+mutation JoinShoppingListByShareCode($shareCode: String!) {
+  joinShoppingListByShareCode(shareCode: $shareCode) {
+    success
+    message
+    code
+    shoppingList {
+      id
+      name
+    }
+  }
+}
+
 # ============================================
 # OFFLINE SYNC MUTATIONS
 # ============================================
@@ -527,12 +497,6 @@ subscription ShoppingListChanges($listId: ID!) {
       name
       totalItems
       completedItems
-    }
-    collaborator {
-      ...ShoppingListCollaboratorFragment
-      canEdit
-      invitedAt
-      lastViewedAt
     }
     clearedItemIds
     clearedCount

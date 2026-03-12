@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
+import { getNotificationTitle } from '#utils/notifications/notificationParser';
 
 import { format } from 'date-fns/format';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -73,23 +74,6 @@ export const NotificationDetailScreen: React.FC<StaticScreenProps<{
       )}
     </NotificationActionHandler>
   );
-};
-
-const getNotificationTitle = (type: string): string => {
-  switch (type) {
-    case 'EXPIRY_REMINDER':
-      return 'Item Expiring Soon';
-    case 'LOW_STOCK':
-      return 'Low Stock Alert';
-    case 'NEW_ITEM_ADDED':
-      return 'New Item Added';
-    case 'MEMBERSHIP_INVITE':
-      return 'Home Invitation';
-    case 'COLLABORATION_INVITE':
-      return 'Shopping List Invitation';
-    default:
-      return 'Notification';
-  }
 };
 
 const styles = StyleSheet.create(theme => ({

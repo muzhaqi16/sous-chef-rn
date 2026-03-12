@@ -105,7 +105,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
                 edges: [
                   ...existing.me.savedRecipesConnection.edges,
                   {
-                    __typename: 'SavedRecipeEdge' as const,
+                    __typename: 'SavedRecipeEdge',
                     cursor: savedRecipe.id,
                     node: savedRecipe,
                   },

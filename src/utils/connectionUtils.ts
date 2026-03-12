@@ -27,7 +27,13 @@ const isDefined = <T>(value: T | null | undefined): value is T => value != null;
 
 /**
  * Extracts nodes from a Relay-style connection, filtering out null edges/nodes.
+ *
+ * PERFORMANCE: WeakMap cache returns the same array when the same edges array
+ * reference is passed. This prevents unnecessary re-renders downstream when
+ * Apollo re-delivers the same edge objects from its normalized cache.
  */
+const extractNodesCache = new WeakMap<readonly any[], any[]>();
+
 export const extractNodes = <T>(
   connection?: {
     edges?: Array<Edge<T>> | null;
@@ -37,7 +43,13 @@ export const extractNodes = <T>(
     return [];
   }
 
-  return connection.edges.map(edge => edge?.node).filter(isDefined);
+  const edges = connection.edges;
+  const cached = extractNodesCache.get(edges);
+  if (cached) return cached as T[];
+
+  const result = edges.map(edge => edge?.node).filter(isDefined);
+  extractNodesCache.set(edges, result);
+  return result;
 };
 
 /**

@@ -1,6 +1,6 @@
 import React from 'react';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
-import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
+import { DynamicFormFields, type FieldDef } from '#components/molecules/DynamicFormFields';
 
 export type FormValues = {
   homeName: string;
@@ -14,29 +14,31 @@ export const FormContent = ({
   form: any;
   needsHome: boolean;
   existingHomeName?: string;
-}) => (
-  <>
-    <DynamicFormFields<FormValues>
-      fields={[
-        ...(needsHome
-          ? [
-              {
-                name: 'homeName' as const,
-                label: 'Home Name',
-                placeholder: 'e.g. Smith Family Home',
-                component: BaseInput,
-              },
-            ]
-          : []),
-        {
-          name: 'pantryName',
-          label: needsHome ? 'Default Pantry Name' : 'Pantry Name',
-          placeholder: 'e.g. Kitchen Pantry',
-          component: BaseInput,
-        },
-      ]}
-      control={form.control}
-      errors={form.formState.errors}
-    />
-  </>
-);
+}) => {
+  const homeField: FieldDef<FormValues> = {
+    name: 'homeName',
+    label: 'Home Name',
+    placeholder: 'e.g. Smith Family Home',
+    component: BaseInput,
+  };
+
+  const fields: FieldDef<FormValues>[] = [
+    ...(needsHome ? [homeField] : []),
+    {
+      name: 'pantryName',
+      label: needsHome ? 'Default Pantry Name' : 'Pantry Name',
+      placeholder: 'e.g. Kitchen Pantry',
+      component: BaseInput,
+    },
+  ];
+
+  return (
+    <>
+      <DynamicFormFields<FormValues>
+        fields={fields}
+        control={form.control}
+        errors={form.formState.errors}
+      />
+    </>
+  );
+};

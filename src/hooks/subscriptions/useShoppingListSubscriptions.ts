@@ -15,8 +15,9 @@ import {
   useShoppingListChangesSubscription,
   useMyShoppingListsChangesSubscription,
   useCollaborationChangesSubscription,
-  CollaborationChangeType,
+  CollaboratorStatus,
   ShoppingListItemDisplayFragmentDoc,
+  ShoppingListChangeType,
   MutationType,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -143,9 +144,9 @@ export function useShoppingListSubscriptions(
   // Handles all shopping list events based on changeType:
   // - ITEMS_CHANGED: item add/update/delete
   // - LIST_UPDATED: metadata changes
-  // - COLLABORATORS_CHANGED: collaborator updates
   // - ITEMS_BATCH_CLEARED: batch clear of purchased items
   // - STATUS_CHANGED: status transitions (no-op currently)
+  // Note: Collaborator events use the separate collaborationChanged subscription
   //
   const changesHandlers = subscriptionService.register({
     subscriptionName: 'ShoppingListChanges',
@@ -169,7 +170,7 @@ export function useShoppingListSubscriptions(
       const payloadUserId = payload.userId;
 
       switch (changeType) {
-        case 'ITEMS_CHANGED': {
+        case ShoppingListChangeType.ItemsChanged: {
           const mutation = payload.mutation;
           const item = payload.item;
 
@@ -303,7 +304,7 @@ export function useShoppingListSubscriptions(
           }
           break;
         }
-        case 'LIST_UPDATED': {
+        case ShoppingListChangeType.ListUpdated: {
           // Metadata updates - handle deletion re-eviction
           const node = payload.shoppingList;
           if (!node?.id) return;
@@ -316,10 +317,7 @@ export function useShoppingListSubscriptions(
           }
           break;
         }
-        case 'COLLABORATORS_CHANGED':
-          // Collaborator updates are handled automatically by Apollo normalization
-          break;
-        case 'ITEMS_BATCH_CLEARED': {
+        case ShoppingListChangeType.ItemsBatchCleared: {
           const clearedItemIds = payload.clearedItemIds || [];
 
           // Skip self-echo
@@ -333,7 +331,7 @@ export function useShoppingListSubscriptions(
           clearAllPurchasedItemsFromCache(client.cache, selectedShoppingListId, clearedItemIds);
           break;
         }
-        case 'STATUS_CHANGED':
+        case ShoppingListChangeType.StatusChanged:
           // Currently unused
           break;
         default:
@@ -351,7 +349,7 @@ export function useShoppingListSubscriptions(
   //
   // My Shopping Lists Changes Subscription
   // Handles list-level metadata updates across all user's shopping lists:
-  // - LIST_UPDATED / STATUS_CHANGED / ITEMS_CHANGED / ITEMS_BATCH_CLEARED / COLLABORATORS_CHANGED
+  // - LIST_UPDATED / STATUS_CHANGED / ITEMS_CHANGED / ITEMS_BATCH_CLEARED
   // Also handles CREATED / DELETED mutations for the shoppingLists connection
   //
   const addToShoppingLists = createAddToQueryConnectionUpdater<{ id: string }>('shoppingLists', 'ShoppingList');
@@ -390,9 +388,9 @@ export function useShoppingListSubscriptions(
       }
 
       // For all other changeTypes (LIST_UPDATED, STATUS_CHANGED, ITEMS_CHANGED,
-      // ITEMS_BATCH_CLEARED, COLLABORATORS_CHANGED), Apollo auto-normalizes the
-      // shoppingList entity by id — the returned metadata fields (totalItems,
-      // completedItems, name, status, isCompleted, estimatedTotal) merge automatically.
+      // ITEMS_BATCH_CLEARED), Apollo auto-normalizes the shoppingList entity by id —
+      // the returned metadata fields (totalItems, completedItems, name, status,
+      // isCompleted, estimatedTotal) merge automatically.
     },
   });
 
@@ -404,9 +402,10 @@ export function useShoppingListSubscriptions(
   //
   // Collaboration Changes Subscription
   // Handles collaborator lifecycle for the currently selected shopping list:
-  // - MEMBER_ADDED / INVITE_ACCEPTED: add to collaboratorsConnection
-  // - MEMBER_REMOVED: remove from collaboratorsConnection
-  // - INVITE_SENT: no cache update (pending invites managed separately)
+  // - CREATED: new invite sent → add to collaboratorsConnection
+  // - UPDATED: invite accepted, role changed, or permissions updated →
+  //   Apollo auto-normalizes; add to connection if newly active
+  // - DELETED: invite declined or collaborator removed → remove from connection
   //
   const addCollaborator = createAddToParentConnectionUpdater<{ id: string }>(
     'ShoppingList',
@@ -438,22 +437,30 @@ export function useShoppingListSubscriptions(
         return;
       }
 
-      const changeType = payload.changeType;
+      const mutation = payload.mutation;
       const collaborator = payload.collaborator;
-      const listId = payload.shoppingListId;
+      const listId = payload.listId;
 
       if (!collaborator?.id || !listId) return;
 
-      switch (changeType) {
-        case CollaborationChangeType.MemberAdded:
-        case CollaborationChangeType.InviteAccepted:
+      switch (mutation) {
+        case MutationType.Created:
+          // New invite sent or collaborator added
           addCollaborator(client.cache, listId, collaborator);
           break;
-        case CollaborationChangeType.MemberRemoved:
-          removeCollaborator(client.cache, listId, collaborator.id, { evictItem: true });
+        case MutationType.Updated:
+          // Invite accepted, role changed, or permissions updated.
+          // Apollo auto-normalizes the collaborator entity by id,
+          // so role/permission changes merge automatically.
+          // If the collaborator just became ACTIVE (invite accepted),
+          // ensure they're in the connection.
+          if (collaborator.status === CollaboratorStatus.Active) {
+            addCollaborator(client.cache, listId, collaborator);
+          }
           break;
-        case CollaborationChangeType.InviteSent:
-          // Pending invites are managed separately
+        case MutationType.Deleted:
+          // Invite declined or collaborator removed
+          removeCollaborator(client.cache, listId, collaborator.id, { evictItem: true });
           break;
         default:
           break;
@@ -462,7 +469,7 @@ export function useShoppingListSubscriptions(
   });
 
   useCollaborationChangesSubscription({
-    variables: { shoppingListId: selectedShoppingListId! },
+    variables: { listId: selectedShoppingListId! },
     skip: !selectedShoppingListId,
     ...collaborationHandlers,
   });

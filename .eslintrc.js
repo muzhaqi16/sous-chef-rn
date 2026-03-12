@@ -22,21 +22,6 @@ module.exports = {
         '@typescript-eslint/no-deprecated': 'warn',
       },
     },
-    {
-      // Warn on `as const` in style helper files — prefer defineStyles() or StyleSheet.create generics
-      files: ['src/styles/**/*.ts'],
-      rules: {
-        'no-restricted-syntax': [
-          'warn',
-          {
-            selector: 'TSAsExpression[typeAnnotation.type="TSTypeReference"][typeAnnotation.typeName.name="const"]',
-            message:
-              'Prefer `defineStyles()` for style helpers or rely on StyleSheet.create generics. ' +
-              'Use `as const` only for union type derivation, GraphQL __typename, or discriminated unions.',
-          },
-        ],
-      },
-    },
   ],
   rules: {
     // Prevent barrel file imports for better tree shaking
@@ -142,6 +127,10 @@ module.exports = {
       {
         selector: 'AssignmentExpression[left.type="MemberExpression"][left.property.name="value"]',
         message: 'Use .set() instead of .value assignment for SharedValues (React Compiler compatibility). If this is not a SharedValue, refactor to avoid .value mutation.',
+      },
+      {
+        selector: 'TSAsExpression[typeAnnotation.type="TSTypeReference"][typeAnnotation.typeName.name="const"]',
+        message: 'Avoid `as const` — let TypeScript infer literal types naturally. Use `as const` only for union type derivation or discriminated unions.',
       },
     ],
   },

@@ -85,16 +85,16 @@ mutation DeclineShoppingListInvite($token: String!) {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription CollaborationChanges($shoppingListId: ID!) {
-  collaborationChanged(shoppingListId: $shoppingListId) {
-    changeType
+subscription CollaborationChanges($listId: ID!) {
+  collaborationChanged(listId: $listId) {
+    mutation
     collaborator {
       ...ShoppingListCollaboratorFragment
       canEdit
       invitedAt
       lastViewedAt
     }
-    shoppingListId
+    listId
     timestamp
     userId
   }

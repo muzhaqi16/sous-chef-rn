@@ -1,7 +1,7 @@
-import {StateCreator} from 'zustand';
-import {RootState} from '../index';
-import {NotificationType} from '#/graphql/generated';
-import {safeParseDate} from '#utils/dateUtils';
+import { StateCreator } from 'zustand';
+import { RootState } from '../index';
+import { NotificationType } from '#/graphql/generated';
+import { safeParseDate } from '#utils/dateUtils';
 
 // Helper to check if a notification is an invitation (should always show)
 // These notification types ask user to join something - they shouldn't require
@@ -23,6 +23,7 @@ export enum NotificationCategory {
   PANTRY = 'PANTRY',
   COLLABORATION = 'COLLABORATION',
   MEMBERSHIP = 'MEMBERSHIP',
+  RECIPE = 'RECIPE',
   SECURITY = 'SECURITY',
   ACCOUNT = 'ACCOUNT',
   SYSTEM = 'SYSTEM',
@@ -63,12 +64,14 @@ export interface NotificationState {
     serverNotifications: NotificationItem[],
   ) => void;
   markAsRead: (notificationId: string) => void;
+  markAsUnread: (notificationId: string) => void;
   markAsReadWithSync: (
     notificationId: string,
     callback?: (success: boolean) => void,
   ) => void;
   markAllAsRead: () => void;
   removeNotification: (notificationId: string) => void;
+  restoreNotification: (notification: NotificationItem) => void;
   clearAll: () => void;
   clearExpired: () => void;
   updateUnreadCount: () => void;
@@ -96,9 +99,11 @@ const initialNotificationState: Omit<
   | 'addMultipleNotifications'
   | 'syncNotificationsFromServer'
   | 'markAsRead'
+  | 'markAsUnread'
   | 'markAsReadWithSync'
   | 'markAllAsRead'
   | 'removeNotification'
+  | 'restoreNotification'
   | 'clearAll'
   | 'clearExpired'
   | 'updateUnreadCount'
@@ -178,7 +183,7 @@ export const createNotificationSlice: StateCreator<
       const newNotification = {
         ...notification,
         isRead: false,
-        source: notification.source || ('local' as const), // Mark as local by default
+        source: notification.source || 'local', // Mark as local by default
         // Ensure sentAt is always a valid ISO string
         sentAt:
           safeParseDate(notification.sentAt)?.toISOString() ||
@@ -241,7 +246,7 @@ export const createNotificationSlice: StateCreator<
         .map(n => ({
           ...n,
           isRead: false,
-          source: n.source || ('local' as const), // Mark as local by default
+          source: n.source || 'local', // Mark as local by default
           // Ensure sentAt is always a valid ISO string
           sentAt:
             safeParseDate(n.sentAt)?.toISOString() || new Date().toISOString(),
@@ -393,15 +398,29 @@ export const createNotificationSlice: StateCreator<
     });
   },
 
+  markAsUnread: notificationId => {
+    set(state => {
+      const notification = state.notifications.find(
+        n => n.id === notificationId,
+      );
+      if (notification && notification.isRead) {
+        notification.isRead = false;
+        notification.readAt = undefined;
+        state.unreadCount += 1;
+        if (notification.priority === NotificationPriority.URGENT) {
+          state.urgentCount += 1;
+        }
+      }
+    });
+  },
+
   markAsReadWithSync: (notificationId, callback) => {
-    // First mark as read locally for immediate UI feedback
+    // Mark as read locally for immediate UI feedback.
+    // Server sync is handled by useNotificationSync hook (syncMarkAsRead).
     get().markAsRead(notificationId);
 
-    // TODO: Add server sync call here when GraphQL mutation is available
-    // This would call a mutation like `markNotificationAsRead(id: $id)`
-    // For now, we'll just mark locally and rely on periodic sync
     if (callback) {
-      callback(true); // Assume success for now
+      callback(true);
     }
   },
 
@@ -439,6 +458,29 @@ export const createNotificationSlice: StateCreator<
     });
   },
 
+  restoreNotification: notification => {
+    set(state => {
+      // Re-insert at sorted position by sentAt (newest first)
+      const insertIndex = state.notifications.findIndex(
+        n =>
+          new Date(n.sentAt).getTime() <=
+          new Date(notification.sentAt).getTime(),
+      );
+      if (insertIndex === -1) {
+        state.notifications.push(notification);
+      } else {
+        state.notifications.splice(insertIndex, 0, notification);
+      }
+
+      if (!notification.isRead) {
+        state.unreadCount += 1;
+        if (notification.priority === NotificationPriority.URGENT) {
+          state.urgentCount += 1;
+        }
+      }
+    });
+  },
+
   clearAll: () => {
     set(state => {
       state.notifications = [];
@@ -471,7 +513,7 @@ export const createNotificationSlice: StateCreator<
   },
 
   setLastFetchedAt: timestamp => {
-    set({lastFetchedAt: timestamp});
+    set({ lastFetchedAt: timestamp });
   },
 
   removeSubscribedList: listId => {

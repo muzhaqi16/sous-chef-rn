@@ -19,6 +19,7 @@ import {
 import { useAppStore } from '#store/useAppStore';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import type { ScannedItem } from '#/store/slices/barcodeScannerSlice';
+import type { BarcodeSource } from '#/types/navigation';
 
 // Cache updater for Pantry.itemsConnection
 const addToPantryItemsConnection = createAddToParentConnectionUpdater<PantryItemDisplayFragment>(
@@ -27,11 +28,11 @@ const addToPantryItemsConnection = createAddToParentConnectionUpdater<PantryItem
   'PantryItem',
 );
 
-interface SearchResultsProps {
+export interface SearchResultsProps {
   item: ScannedItem;
   format?: string;
   onScanAnother: () => void;
-  source?: 'pantry' | 'shoppingList';
+  source?: BarcodeSource;
   pantryId?: string;
   shoppingListId?: string;
 }

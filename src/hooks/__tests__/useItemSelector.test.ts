@@ -138,7 +138,7 @@ describe('useItemSelector', () => {
       ['pantry', 'No pantries available'],
       ['home', 'No homes available'],
       ['custom', 'No items available'],
-    ] as const)('returns correct message for type %s', (type, expected) => {
+    ])('returns correct message for type %s', (type, expected) => {
       const { result } = renderHook(() =>
         useItemSelector({ type: type as any }),
       );

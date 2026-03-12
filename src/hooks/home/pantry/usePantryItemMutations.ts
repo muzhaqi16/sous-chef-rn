@@ -102,7 +102,7 @@ export function usePantryItemMutations({
                 }
               : null,
           }),
-          __typename: 'PantryItem' as const,
+          __typename: 'PantryItem',
         },
       );
     },
@@ -158,7 +158,7 @@ export function usePantryItemMutations({
           'PantryItemPayload',
           'pantryItem',
           {
-            __typename: 'PantryItem' as const,
+            __typename: 'PantryItem',
             id: variables.id,
             version: 1,
             updatedAt: new Date().toISOString(),

@@ -37,7 +37,7 @@ import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Header } from '#components/molecules/Header';
+import { Header, type HeaderAction } from '#components/molecules/Header';
 import { Icon } from '#/utils/iconUtils';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
@@ -402,6 +402,53 @@ export const PantryItemDetail: React.FC<
     );
   }
 
+  const hasExpiredBatches =
+    (item.condition === 'EXPIRED' && item.quantity > 0) ||
+    item.batches?.some(
+      b =>
+        b.status === 'ACTIVE' &&
+        b.expiresAt &&
+        new Date(b.expiresAt) < new Date(),
+    );
+
+  const discardActions: HeaderAction[] = hasExpiredBatches
+    ? [
+        {
+          icon: 'close-circle-outline',
+          onPress: handleDiscardExpired,
+          variant: 'error',
+          testID: 'pantry-item-discard-button',
+        },
+      ]
+    : [];
+
+  const headerActions: HeaderAction[] = [
+    {
+      icon: addToListStatus === 'success' ? 'cart' : 'cart-outline',
+      onPress: handleAddToShoppingList,
+      variant: addToListStatus === 'success' ? 'success' : 'primary',
+      loading: addToListStatus === 'loading',
+      testID: 'pantry-item-add-to-list-button',
+    },
+    ...discardActions,
+    {
+      icon: 'swap-vertical-outline',
+      onPress: () => setAdjustModalVisible(true),
+      testID: 'pantry-item-adjust-button',
+    },
+    {
+      icon: 'create-outline',
+      onPress: handleEdit,
+      testID: 'pantry-item-edit-button',
+    },
+    {
+      icon: 'trash-outline',
+      onPress: handleDelete,
+      variant: 'error',
+      testID: 'pantry-item-delete-button',
+    },
+  ];
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -409,47 +456,7 @@ export const PantryItemDetail: React.FC<
         variant="detail"
         onBack={goBack}
         borderless
-        rightActions={[
-          {
-            icon: addToListStatus === 'success' ? 'cart' : 'cart-outline',
-            onPress: handleAddToShoppingList,
-            variant: addToListStatus === 'success' ? 'success' : 'primary',
-            loading: addToListStatus === 'loading',
-            testID: 'pantry-item-add-to-list-button',
-          },
-          ...((item.condition === 'EXPIRED' && item.quantity > 0) ||
-          (item.batches?.some(
-            b =>
-              b.status === 'ACTIVE' &&
-              b.expiresAt &&
-              new Date(b.expiresAt) < new Date(),
-          ))
-            ? [
-                {
-                  icon: 'close-circle-outline' as const,
-                  onPress: handleDiscardExpired,
-                  variant: 'error' as const,
-                  testID: 'pantry-item-discard-button',
-                },
-              ]
-            : []),
-          {
-            icon: 'swap-vertical-outline',
-            onPress: () => setAdjustModalVisible(true),
-            testID: 'pantry-item-adjust-button',
-          },
-          {
-            icon: 'create-outline',
-            onPress: handleEdit,
-            testID: 'pantry-item-edit-button',
-          },
-          {
-            icon: 'trash-outline',
-            onPress: handleDelete,
-            variant: 'error',
-            testID: 'pantry-item-delete-button',
-          },
-        ]}
+        rightActions={headerActions}
       />
 
       <ScrollView
@@ -564,7 +571,9 @@ export const PantryItemDetail: React.FC<
           <PantryUsageHistory
             usageRecords={item.usageRecords.edges}
             expanded={purchaseHistoryExpanded}
-            onToggle={() => setPurchaseHistoryExpanded(!purchaseHistoryExpanded)}
+            onToggle={() =>
+              setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
+            }
           />
         )}
 

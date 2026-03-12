@@ -186,7 +186,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     const item = {
       ...defaultItem,
       rightElementConfig: {
-        type: 'quantity' as const,
+        type: 'quantity',
         quantity: 3,
         quantityInput: '3',
         unit: 'pcs',
@@ -203,7 +203,7 @@ describe('SwipeableListItem (SortableItem)', () => {
     const item = {
       ...defaultItem,
       leftElementConfig: {
-        type: 'image' as const,
+        type: 'image',
         url: 'https://example.com/image.jpg',
         isPurchased: false,
       },

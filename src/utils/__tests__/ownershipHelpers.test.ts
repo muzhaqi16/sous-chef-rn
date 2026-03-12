@@ -225,7 +225,7 @@ describe('ownershipHelpers', () => {
       ['EDITOR', 'Editor'],
       ['VIEWER', 'Viewer'],
       ['MEMBER', 'Member'],
-    ] as const)('formats %s as %s', (input, expected) => {
+    ])('formats %s as %s', (input, expected) => {
       expect(formatRoleDisplay(input)).toBe(expected);
     });
 

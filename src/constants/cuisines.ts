@@ -1,6 +1,11 @@
 import { Cuisine } from '#generated';
 
-export const POPULAR_CUISINES = [
+export interface PopularCuisine {
+  label: string;
+  value: Cuisine;
+}
+
+export const POPULAR_CUISINES: PopularCuisine[] = [
   { label: 'Italian', value: Cuisine.Italian },
   { label: 'Mexican', value: Cuisine.Mexican },
   { label: 'Chinese', value: Cuisine.Chinese },
@@ -9,9 +14,7 @@ export const POPULAR_CUISINES = [
   { label: 'Thai', value: Cuisine.Thai },
   { label: 'Mediterranean', value: Cuisine.Mediterranean },
   { label: 'American', value: Cuisine.American },
-] as const;
-
-export type PopularCuisine = (typeof POPULAR_CUISINES)[number];
+];
 
 // Helper function to convert enum value to display label
 export const getCuisineLabel = (value: Cuisine): string => {

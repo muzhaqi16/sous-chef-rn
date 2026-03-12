@@ -109,7 +109,7 @@ const areIngredientPropsEqual = createPropsComparator<SelectableItemRenderInfo>(
 
 const SelectableIngredientItem = React.memo(SelectableIngredientItemComponent, areIngredientPropsEqual);
 
-const getSelectableIngredientItemType = () => 'item' as const;
+const getSelectableIngredientItemType = () => 'item';
 
 // --- End module-scope FlashList infrastructure ---
 

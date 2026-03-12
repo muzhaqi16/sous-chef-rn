@@ -64,12 +64,18 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
   },
 }));
 
-const defaultProps = {
+const defaultProps: {
+  visible: boolean;
+  onComplete: jest.Mock;
+  userEmail: string;
+  userPassword: string;
+  mode: 'onboarding' | 'settings';
+} = {
   visible: true,
   onComplete: jest.fn(),
   userEmail: 'test@example.com',
   userPassword: 'password123',
-  mode: 'onboarding' as const,
+  mode: 'onboarding',
 };
 
 describe('BiometricSetupModal', () => {

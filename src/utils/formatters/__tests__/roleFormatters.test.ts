@@ -24,7 +24,7 @@ describe('roleFormatters', () => {
       ['ADMIN', 'Admin'],
       ['MEMBER', 'Member'],
       ['GUEST', 'Guest'],
-    ] as const)('formats %s as %s', (input, expected) => {
+    ])('formats %s as %s', (input, expected) => {
       expect(formatRole(input)).toBe(expected);
     });
 
@@ -61,7 +61,7 @@ describe('roleFormatters', () => {
       ['ADMIN', '⚙️'],
       ['MEMBER', '👤'],
       ['GUEST', '👁️'],
-    ] as const)('returns %s emoji for %s', (role, icon) => {
+    ])('returns %s emoji for %s', (role, icon) => {
       expect(getRoleIcon(role)).toBe(icon);
     });
 

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useSearchUnitsQuery } from '#generated';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchUnitsQuery, useGetCommonUnitsLazyQuery } from '#generated';
 import { useAppStore } from '#store/useAppStore';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
@@ -11,9 +11,46 @@ export interface UnitItem {
   abbreviation?: string;
 }
 
+/** 24 hours in milliseconds — matches backend refresh cadence for common units */
+const UNITS_CACHE_TTL = 24 * 60 * 60 * 1000;
+
 export function useUnitAutocomplete() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const cachedUnits = useAppStore(state => state.cachedUnits);
+  const setCachedUnits = useAppStore(state => state.setCachedUnits);
+  const lastUnitsFetchedAt = useAppStore(state => state.lastUnitsFetchedAt);
+  const setLastUnitsFetchedAt = useAppStore(
+    state => state.setLastUnitsFetchedAt,
+  );
+
+  // Lazy preload: fetch common units on first mount (when AddItemSheet opens)
+  // and cache in Zustand for local-first autocomplete on subsequent uses
+  const hasPreloadedRef = useRef(false);
+  const [fetchCommonUnits] = useGetCommonUnitsLazyQuery({
+    fetchPolicy: 'cache-first',
+    errorPolicy: 'ignore',
+  });
+
+  useEffect(() => {
+    if (hasPreloadedRef.current) return;
+    hasPreloadedRef.current = true;
+
+    const isCacheFresh =
+      cachedUnits.length > 0 &&
+      lastUnitsFetchedAt !== null &&
+      Date.now() - lastUnitsFetchedAt < UNITS_CACHE_TTL;
+
+    if (isCacheFresh) return;
+
+    requestIdleCallback(() => {
+      fetchCommonUnits().then(result => {
+        if (result.data?.units && result.data.units.length > 0) {
+          setCachedUnits(result.data.units);
+          setLastUnitsFetchedAt(Date.now());
+        }
+      });
+    });
+  }, [cachedUnits.length, lastUnitsFetchedAt, fetchCommonUnits, setCachedUnits, setLastUnitsFetchedAt]);
 
   // Skip-based query (not lazy)
   const { data: searchData, loading } = useSearchUnitsQuery({

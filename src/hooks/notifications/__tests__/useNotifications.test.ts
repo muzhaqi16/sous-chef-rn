@@ -1,6 +1,7 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
+import { NotificationType } from '#generated';
 import { useNotifications } from '../useNotifications';
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -58,6 +59,7 @@ jest.mock('#utils/notifications/notificationParser', () => ({
   getNotificationTitle: jest.fn().mockReturnValue('Test Title'),
   getNotificationMessage: jest.fn().mockReturnValue('Test Message'),
   getNotificationCategory: jest.fn().mockReturnValue('PANTRY'),
+  getNotificationPriority: jest.fn().mockReturnValue('MEDIUM'),
 }));
 
 jest.mock('#store/slices/notificationSlice', () => ({
@@ -77,6 +79,19 @@ jest.mock('#store/slices/notificationSlice', () => ({
 jest.mock('#utils/subscriptionErrorHandler', () => ({
   handleSubscriptionError: jest.fn(),
   clearAllRetryStates: jest.fn(),
+}));
+
+const mockSyncMarkAsRead = jest.fn();
+const mockSyncDelete = jest.fn();
+const mockSyncMarkAllAsRead = jest.fn();
+
+jest.mock('../useNotificationSync', () => ({
+  useNotificationSync: () => ({
+    syncMarkAsRead: mockSyncMarkAsRead,
+    syncMarkUnread: jest.fn(),
+    syncDelete: mockSyncDelete,
+    syncMarkAllAsRead: mockSyncMarkAllAsRead,
+  }),
 }));
 
 jest.mock('../useNotificationSettings', () => ({
@@ -115,24 +130,23 @@ describe('useNotifications', () => {
     expect(typeof result.current.getNotificationsByCategory).toBe('function');
   });
 
-  it('handleMarkAllAsRead marks all unread notifications', async () => {
+  it('handleMarkAllAsRead calls syncMarkAllAsRead', () => {
     const { result } = renderHook(() => useNotifications());
 
-    await act(async () => {
-      await result.current.handleMarkAllAsRead();
+    act(() => {
+      result.current.handleMarkAllAsRead();
     });
 
-    expect(mockMarkAsRead).toHaveBeenCalledWith('n1');
-    expect(mockMarkAsRead).not.toHaveBeenCalledWith('n2');
+    expect(mockSyncMarkAllAsRead).toHaveBeenCalled();
   });
 
   it('returns default config merged with user config', () => {
     const { result } = renderHook(() =>
-      useNotifications({ enablePantryNotifications: false }),
+      useNotifications({ showInAppNotifications: false }),
     );
 
-    expect(result.current.config.enablePantryNotifications).toBe(false);
-    expect(result.current.config.enableShoppingListNotifications).toBe(true);
+    expect(result.current.config.showInAppNotifications).toBe(false);
+    expect(result.current.config.showPushNotifications).toBe(true);
   });
 
   it('skips subscription when config.skip is true', () => {
@@ -157,7 +171,7 @@ describe('useNotifications', () => {
               changeType: 'CREATED',
               notification: {
                 id: 'notif-1',
-                type: 'LOW_STOCK',
+                type: NotificationType.LowStock,
                 payload: { itemName: 'Milk' },
                 sentAt: '2024-01-01T00:00:00Z',
               },
@@ -169,7 +183,7 @@ describe('useNotifications', () => {
 
     expect(mockAddNotification).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: 'LOW_STOCK',
+        type: NotificationType.LowStock,
         title: 'Test Title',
         message: 'Test Message',
       }),

@@ -1,23 +1,25 @@
 import { renderHook } from '@testing-library/react-native';
 import { Alert } from 'react-native';
-import { useScannerSetup } from '../useScannerSetup';
+import { useScannerSetup, type ScannerContext } from '../useScannerSetup';
 
 type ScannerOptions = Parameters<typeof useScannerSetup>[0];
 
 // Capture the handler passed to setScannerProps
 let capturedHandler: (() => void) | undefined;
-const mockSetScannerProps = jest.fn(
-  (handler?: () => void) => {
-    capturedHandler = handler;
-  },
-);
+const mockSetScannerProps = jest.fn((handler?: () => void) => {
+  capturedHandler = handler;
+});
 
 jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarSetters: () => ({ setScannerProps: mockSetScannerProps }),
 }));
 
 jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
+const mockNav = (
+  jest.requireMock('#hooks/navigation/useAppNavigation') as {
+    useAppNavigation: jest.Mock;
+  }
+).useAppNavigation();
 
 jest.spyOn(Alert, 'alert');
 
@@ -27,9 +29,9 @@ beforeEach(() => {
 });
 
 describe('useScannerSetup', () => {
-  const defaultOptions = {
+  const defaultOptions: ScannerOptions = {
     homeId: 'home-1',
-    context: { source: 'pantry' as const, pantryId: 'p-1' },
+    context: { source: 'pantry', pantryId: 'p-1' },
   };
 
   it('calls setScannerProps with handler and true on mount', () => {
@@ -50,9 +52,7 @@ describe('useScannerSetup', () => {
   });
 
   it('does not register scanner when enabled is false', () => {
-    renderHook(() =>
-      useScannerSetup({ ...defaultOptions, enabled: false }),
-    );
+    renderHook(() => useScannerSetup({ ...defaultOptions, enabled: false }));
 
     expect(mockSetScannerProps).not.toHaveBeenCalled();
   });
@@ -62,7 +62,9 @@ describe('useScannerSetup', () => {
 
     capturedHandler?.();
 
-    expect(mockNav.navigateTo.barcode).toHaveBeenCalledWith(defaultOptions.context);
+    expect(mockNav.navigateTo.barcode).toHaveBeenCalledWith(
+      defaultOptions.context,
+    );
   });
 
   it('shows alert when homeId is null and no onNoHome provided', () => {
@@ -116,12 +118,14 @@ describe('useScannerSetup', () => {
 
     capturedHandler?.();
     expect(Alert.alert).not.toHaveBeenCalled();
-    expect(mockNav.navigateTo.barcode).toHaveBeenCalledWith(defaultOptions.context);
+    expect(mockNav.navigateTo.barcode).toHaveBeenCalledWith(
+      defaultOptions.context,
+    );
   });
 
   it('reads latest context from ref on scan', () => {
-    const context1 = { source: 'pantry' as const, pantryId: 'p-1' };
-    const context2 = { source: 'shoppingList' as const, listId: 'l-1' };
+    const context1: ScannerContext = { source: 'pantry', pantryId: 'p-1' };
+    const context2: ScannerContext = { source: 'shoppingList', listId: 'l-1' };
 
     const { rerender } = renderHook(
       (props: ScannerOptions) => useScannerSetup(props),

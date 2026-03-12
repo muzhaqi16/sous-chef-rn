@@ -19,11 +19,12 @@ import BarcodeMask from '#components/organisms/BarcodeMask';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
+import type { BarcodeSource } from '#/types/navigation';
 
 const { height: screenHeight } = Dimensions.get('window');
 
 export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
-  source?: 'pantry' | 'shoppingList';
+  source?: BarcodeSource;
   pantryId?: string;
   shoppingListId?: string;
 } | undefined>> = ({ route }) => {

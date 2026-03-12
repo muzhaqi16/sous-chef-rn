@@ -19,7 +19,7 @@ import { useAppStore } from '#store/useAppStore';
 import { addDays, addWeeks, addMonths } from 'date-fns';
 import { MealPlanType, type MealTemplateDisplayFragment } from '#generated';
 
-const PLAN_TYPES = [MealPlanType.Weekly, MealPlanType.Monthly] as const;
+const PLAN_TYPES = [MealPlanType.Weekly, MealPlanType.Monthly];
 
 function formatPlanType(value: string): string {
   return value.charAt(0) + value.slice(1).toLowerCase();

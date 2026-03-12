@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { screen } from '@testing-library/react-native';
-import { SearchResults } from '../SearchResults';
+import { SearchResults, type SearchResultsProps } from '../SearchResults';
 import { renderWithProviders } from '../../../../__tests__/helpers/renderWithProviders';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -59,10 +59,10 @@ jest.mock('../ActionButtons', () => ({
 describe('SearchResults', () => {
   const mockItem = { id: 'item-1', name: 'Organic Milk', upc: '123456', netWeight: 1 };
 
-  const defaultProps = {
+  const defaultProps: SearchResultsProps = {
     item: mockItem,
     onScanAnother: jest.fn(),
-    source: 'pantry' as const,
+    source: 'pantry',
     pantryId: 'pantry-1',
   };
 

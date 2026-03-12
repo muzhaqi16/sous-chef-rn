@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "3.1.16",
+  "version": "3.1.18",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -73,7 +73,9 @@
     "tag:ios": "node scripts/create-tag.mjs prod --ios-only",
     "bundle:ios": "npx react-native bundle --entry-file index.js --bundle-output output.js --platform ios --sourcemap-output output.js.map --dev false --minify true",
     "bundle:android": "npx react-native bundle --entry-file index.js --bundle-output output.js --platform android --sourcemap-output output.js.map --dev false --minify true",
-    "bundle:analyze": "npx source-map-explorer output.js --no-border-checks"
+    "bundle:analyze": "npx source-map-explorer output.js --no-border-checks",
+    "prepare": "husky",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"./*.{json,js}\""
   },
   "dependencies": {
     "@apollo/client": "^4.1.5",
@@ -138,6 +140,8 @@
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.29.0",
     "@babel/runtime": "^7.28.6",
+    "@commitlint/cli": "^20.4.4",
+    "@commitlint/config-conventional": "^20.4.4",
     "@graphql-codegen/add": "^6.0.0",
     "@graphql-codegen/cli": "^6.0.0",
     "@graphql-codegen/fragment-matcher": "^6.0.0",
@@ -166,12 +170,23 @@
     "eslint-plugin-no-barrel-files": "^1.2.2",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "eslint-plugin-react-hooks": "^7.0.1",
+    "husky": "^9.1.7",
     "jest": "^29.6.3",
     "jest-circus": "^29.7.0",
+    "lint-staged": "^16.3.3",
     "prettier": "2.8.8",
     "react-test-renderer": "19.2.0",
     "source-map-explorer": "^2.5.3",
     "typescript": "^5.8.3"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,js,mjs}": [
+      "prettier --write"
+    ]
   },
   "engines": {
     "node": ">=20"
