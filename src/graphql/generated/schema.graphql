@@ -5179,6 +5179,8 @@ type PackageBreakdown {
 
 input PackageInfoInput {
   baseDimension: BaseDimension
+  defaultConsumeIncrement: Float
+  defaultConsumeUnitId: ID
   displayUnitId: ID
   displayUnitName: String
   netWeight: Float
@@ -5625,6 +5627,10 @@ type PantryItemUsagePayload implements MutationPayload {
   message: String!
   pantryItemUsage: PantryItemUsage
   success: Boolean!
+  """
+  Eligible unit symbols when code is INVALID_UNIT. Null for other error codes and successes.
+  """
+  validUnits: [String!]
 }
 
 type PantryLowStockAlertPayload {
@@ -6096,6 +6102,12 @@ type Query {
   """List compatible units for an item with conversion metadata."""
   compatibleUnitsForItem(currentUnitId: ID, itemId: ID!): [CompatibleUnit!]!
   """
+  Get ranked consumption-eligible units for a catalog item.
+  Returns units in priority order: default consume unit → curated → auto measurement → tracking unit → portions.
+  Requires an itemId (catalog item) plus the pantry item's tracking unit context.
+  """
+  consumptionUnitsForItem(itemId: ID!, netWeightUnitId: ID, trackingUnitId: ID!): [RankedUnit!]!
+  """
   Convert quantity between units with item context
   Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
   """
@@ -6210,6 +6222,11 @@ type Query {
   recipes(after: String, before: String, category: RecipeCategory, difficulty: Difficulty, first: Int, includeDeleted: Boolean, last: Int): RecipeConnection!
   """Fetch personalized item recommendations for a user."""
   recommendedItems(limit: Int, userId: String): [ItemSuggestion!]!
+  """
+  Get ranked restock-eligible units for a pantry item.
+  Returns units in priority order: tracking unit → curated retail → auto measurement.
+  """
+  restockUnitsForItem(pantryItemId: ID!): [RankedUnit!]!
   """Fetch a single saved recipe by its ID."""
   savedRecipe(id: ID!): SavedRecipe
   """List all folder names the user has organized saved recipes into."""
@@ -6297,6 +6314,18 @@ input QuietHoursInput {
   quietHoursEnd: String
   quietHoursStart: String
   quietHoursTimezone: String
+}
+
+"""
+A unit ranked for consumption or restock eligibility, with display hints for the frontend unit picker.
+"""
+type RankedUnit {
+  commonFractions: [Float!]
+  defaultIncrement: Float
+  isWholeContainer: Boolean!
+  rank: Int!
+  source: UnitSource!
+  unit: Unit!
 }
 
 type RapidAttempt {
@@ -8046,6 +8075,7 @@ type Unit {
   sortOrder: Int!
   symbol: String!
   type: UnitType!
+  unitRole: UnitRole!
   updatedAt: DateTime!
 }
 
@@ -8078,6 +8108,39 @@ type UnitRef {
   name: String!
   symbol: String!
   type: UnitType!
+}
+
+"""
+Operational role of a unit for eligibility in consumption and restock operations
+"""
+enum UnitRole {
+  """
+  Physical packaging unit (tub, can, jar, bottle, bag, box, package, carton, tube, case, pack, dozen).
+  Valid for restock if it matches the tracking unit. Not valid for consumption as a different container.
+  """
+  CONTAINER
+  """
+  Continuous measurement unit (gram, ounce, cup, tablespoon, milliliter, etc.).
+  Valid for consumption if convertible to the item's net weight unit. Valid for restock if convertible.
+  """
+  MEASUREMENT
+  """
+  Discrete sub-unit of an item (piece, item, slice, clove, head, stalk, sprig, leaf, bunch).
+  Valid for consumption if an item-specific conversion exists. Not valid for restock.
+  """
+  PORTION
+}
+
+"""How a unit was determined to be eligible for an operation"""
+enum UnitSource {
+  """Automatically derived from Unit.unitRole and convertibility"""
+  AUTO
+  """
+  Admin curated via ItemUnit.usageContext, retailUnit, or Item.defaultConsumeUnit
+  """
+  CURATED
+  """The item's tracking unit (always eligible)"""
+  TRACKING_UNIT
 }
 
 """Reusable sub-input for specifying a unit by ID, name, or symbol"""

@@ -1,9 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
@@ -12,14 +10,16 @@ import { ItemSuggestion } from '#generated';
 import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
 import {
   BottomSheetSearchBar,
-  type BottomSheetSearchBarRef } from '#components/molecules/BottomSheetSearchBar';
+  type BottomSheetSearchBarRef,
+} from '#components/molecules/BottomSheetSearchBar';
 import { ActionCard } from '#components/molecules/ActionCard';
 import { SuggestionListItem } from '#components/molecules/SuggestionListItem';
 import { useItemAutocomplete } from '#hooks/autocomplete/useItemAutocomplete';
 import type {
   AddItemSheetProps,
   BaseSuggestionItem,
-  SuggestionGroupConfig } from './types';
+  SuggestionGroupConfig,
+} from './types';
 import { useAddItemSheetState } from './useAddItemSheetState';
 
 /**
@@ -48,7 +48,9 @@ export function AddItemSheet({
   exitingItems: externalExitingItems,
   onExitComplete,
   initialSearchQuery = '',
-  children }: AddItemSheetProps) {
+  showImages = true,
+  children,
+}: AddItemSheetProps) {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -60,7 +62,8 @@ export function AddItemSheet({
   const state = useAddItemSheetState({
     visible,
     contextId,
-    deferFetch: config.deferFetch });
+    deferFetch: config.deferFetch,
+  });
 
   // Destructure for stable references in callbacks
   const { setSearchQuery } = state;
@@ -74,15 +77,17 @@ export function AddItemSheet({
 
   // Determine when to show search results vs suggestions
   const hasSearchQuery = autocomplete.searchTerm.length >= 2;
-  const hasSearchData = autocomplete.displayItems.length > 0 || (hasSearchQuery && !autocomplete.isLoading);
+  const hasSearchData =
+    autocomplete.displayItems.length > 0 ||
+    (hasSearchQuery && !autocomplete.isLoading);
   const showSearchResults = hasSearchQuery && hasSearchData;
   const showSuggestions = !showSearchResults;
 
   // Search handler - called after BottomSheetSearchBar debounce
   const handleSearchChange = (text: string) => {
-      setSearchQuery(text);
-      handleSearchTermChange(text);
-    };
+    setSearchQuery(text);
+    handleSearchTermChange(text);
+  };
 
   // Control bottom sheet visibility
   useEffect(() => {
@@ -104,51 +109,57 @@ export function AddItemSheet({
 
   // Handle selecting a search suggestion
   const handleSelectSearchSuggestion = (item: ItemSuggestion) => {
-      onQuickAddSearchSuggestion(item);
-      // Clear search after adding
-      searchBarRef.current?.clear();
-      setSearchQuery('');
-      resetAutocomplete();
-    };
+    onQuickAddSearchSuggestion(item);
+    // Clear search after adding
+    searchBarRef.current?.clear();
+    setSearchQuery('');
+    resetAutocomplete();
+  };
 
   // Stable theme colors reference for SuggestionListItem (avoids per-item useUnistyles)
-  const themeColors = ({ primary: theme.colors.primary, textTertiary: theme.colors.textTertiary });
+  const themeColors = {
+    primary: theme.colors.primary,
+    textTertiary: theme.colors.textTertiary,
+  };
 
   // Render a suggestion item with exit animation support
   const renderSuggestionItem = (item: BaseSuggestionItem) => {
-      const itemId = item.itemId;
-      const isExiting = exitingItems.has(itemId);
+    const itemId = item.itemId;
+    const isExiting = exitingItems.has(itemId);
 
-      return (
-        <SuggestionListItem
-          key={item.id}
-          imageUrl={item.imageUrl}
-          title={item.name}
-          subtitle={item.category}
-          placeholderIcon={config.placeholderIcon}
-          onQuickAdd={() => onQuickAddSuggestion(item)}
-          quickAddDisabled={isMutating || isExiting}
-          isExiting={isExiting}
-          onExitComplete={onExitComplete ? () => onExitComplete(itemId) : undefined}
-          themeColors={themeColors}
-        />
-      );
-    };
+    return (
+      <SuggestionListItem
+        key={item.id}
+        imageUrl={item.imageUrl}
+        title={item.name}
+        subtitle={item.category}
+        placeholderIcon={config.placeholderIcon}
+        onQuickAdd={() => onQuickAddSuggestion(item)}
+        quickAddDisabled={isMutating || isExiting}
+        isExiting={isExiting}
+        onExitComplete={
+          onExitComplete ? () => onExitComplete(itemId) : undefined
+        }
+        themeColors={themeColors}
+        showImage={showImages}
+      />
+    );
+  };
 
   // Render a section of suggestions
   const renderSuggestionSection = (groupConfig: SuggestionGroupConfig) => {
-      const items = groupConfig.accessor(suggestions.grouped);
-      if (items.length === 0) return null;
+    const items = groupConfig.accessor(suggestions.grouped);
+    if (items.length === 0) return null;
 
-      return (
-        <View key={groupConfig.key} style={styles.suggestionSection}>
-          <Text style={styles.sectionTitle}>{groupConfig.title}</Text>
-          <View style={styles.suggestionList}>
-            {items.map(renderSuggestionItem)}
-          </View>
+    return (
+      <View key={groupConfig.key} style={styles.suggestionSection}>
+        <Text style={styles.sectionTitle}>{groupConfig.title}</Text>
+        <View style={styles.suggestionList}>
+          {items.map(renderSuggestionItem)}
         </View>
-      );
-    };
+      </View>
+    );
+  };
 
   return (
     <>
@@ -165,15 +176,7 @@ export function AddItemSheet({
         keyboardBehavior="extend"
         keyboardBlurBehavior="restore"
         android_keyboardInputMode="adjustResize"
-        backdropComponent={props => (
-          <GlobalBottomSheetBackdrop
-            {...props}
-            disappearsOnIndex={-1}
-            appearsOnIndex={0}
-            pressBehavior="close"
-            onClose={() => bottomSheetRef.current?.dismiss()}
-          />
-        )}
+        backdropComponent={DismissBackdrop}
         // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
         testID={`${config.testIDPrefix}-modal`}
       >
@@ -201,7 +204,8 @@ export function AddItemSheet({
               rightActions={[
                 {
                   icon: 'barcode-outline',
-                  onPress: onScanPress },
+                  onPress: onScanPress,
+                },
               ]}
             />
 
@@ -217,6 +221,7 @@ export function AddItemSheet({
                 quickAddDisabled={isMutating}
                 placeholderIcon={config.placeholderIcon}
                 showBrands={false}
+                showImages={showImages}
               />
             )}
 
@@ -238,7 +243,8 @@ export function AddItemSheet({
             )}
 
             {/* Suggestions Sections - shown when search is empty, deferred until after animation */}
-            {!!showSuggestions && !!state.shouldRenderSuggestions && <>
+            {!!showSuggestions && !!state.shouldRenderSuggestions && (
+              <>
                 {suggestions.loading && !suggestions.hasSuggestions ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator
@@ -263,7 +269,8 @@ export function AddItemSheet({
                       .map(renderSuggestionSection)}
                   </>
                 )}
-              </>}
+              </>
+            )}
           </BottomSheetScrollView>
         </View>
       </BottomSheetModal>
@@ -291,40 +298,52 @@ export function useAddItemSheetRefs() {
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   contentContainer: {
-    padding: theme.spacing.md },
+    padding: theme.spacing.md,
+  },
   title: {
     fontSize: theme.fonts.size.xl,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   actionButtons: {
     flexDirection: 'row',
     gap: theme.spacing.md,
-    marginBottom: theme.spacing.xl },
+    marginBottom: theme.spacing.xl,
+  },
   sectionTitle: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     letterSpacing: 1,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   loadingContainer: {
     padding: theme.spacing.xl,
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   emptyContainer: {
     padding: theme.spacing.xl,
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   emptyText: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs },
+    marginBottom: theme.spacing.xs,
+  },
   emptySubtext: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textTertiary,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   suggestionSection: {
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   suggestionList: {
-    gap: theme.spacing.xs } }));
+    gap: theme.spacing.xs,
+  },
+}));

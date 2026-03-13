@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { alertService } from '#/services/alertService';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { CollapsibleChipPicker } from '#components/molecules/CollapsibleChipPicker';
 import { ConversionPreview } from '#components/atoms/ConversionPreview';
+import { FractionQuickSelect } from '#components/atoms/FractionQuickSelect';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
 import { WasteReason, PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
+import { PantryOperation } from '#hooks/pantry/useOperationUnits';
 import {
   PantryActionModal,
   type PantryActionSharedState,
@@ -67,11 +70,11 @@ export const RecordWastePantryItemModal: React.FC<
 
     const wasteValue = parseFractionalInput(wasteAmountInput);
     if (wasteValue === null || isNaN(wasteValue) || wasteValue <= 0) {
-      Alert.alert('Error', 'Please enter a valid waste amount');
+      alertService.alert('Error', 'Please enter a valid waste amount');
       return;
     }
     if (!shared.isConvertedUnit && wasteValue > shared.trackingQuantity) {
-      Alert.alert(
+      alertService.alert(
         'Error',
         `Cannot waste more than available quantity (${shared.trackingQuantity} ${shared.activeUnitSymbol})`,
       );
@@ -99,6 +102,7 @@ export const RecordWastePantryItemModal: React.FC<
       confirmColor="warning"
       snapPoints={['80%', '95%']}
       unitToggleLabel="Waste by"
+      operation={PantryOperation.Waste}
       onConfirm={handleConfirm}
       onReset={handleReset}
       renderActionFields={shared => (
@@ -191,6 +195,15 @@ const WasteActionFields: React.FC<{
             Remaining: {remaining >= 0 ? formatQuantity(remaining) : 'Invalid'}{' '}
             {shared.activeUnitSymbol}
           </Text>
+        ) : null}
+        {shared.commonFractions != null && shared.commonFractions.length > 0 ? (
+          <FractionQuickSelect
+            fractions={shared.commonFractions}
+            onSelect={value => setWasteAmountInput(value.toString())}
+            selectedValue={wasteAmount ?? undefined}
+            unitSymbol={shared.activeUnitSymbol}
+            displayAsFraction
+          />
         ) : null}
       </View>
 

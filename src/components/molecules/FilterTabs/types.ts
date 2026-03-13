@@ -24,6 +24,8 @@ export interface FilterTabConfig<T extends string = string> {
   showDropdownIndicator?: boolean;
   /** Mark as action tab (uses primary color, not selectable) */
   isAction?: boolean;
+  /** Custom background color when tab is active (overrides theme default) */
+  activeColor?: string;
 }
 
 export interface FilterTabActionButton {

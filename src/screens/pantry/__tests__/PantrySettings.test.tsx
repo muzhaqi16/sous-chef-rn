@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import { alertService } from '#/services/alertService';
 import { PantrySettings } from '../PantrySettings';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -11,10 +12,11 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
   const selectSelectedHomeId = (s: any) => s.selectedHomeId;
-  const fn = (selector: any) => selector({
-    selectedHomeId: 'h1',
-    setSelectedPantryId: jest.fn(),
-  });
+  const fn = (selector: any) =>
+    selector({
+      selectedHomeId: 'h1',
+      setSelectedPantryId: jest.fn(),
+    });
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
@@ -45,21 +47,35 @@ jest.mock('#generated', () => ({
 }));
 
 jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({ handleApolloError: jest.fn(() => ({ message: 'error' })) }),
+  useErrorService: () => ({
+    handleApolloError: jest.fn(() => ({ message: 'error' })),
+  }),
   errorService: { reportError: jest.fn() },
 }));
 jest.mock('#/utils/connectionUtils', () => ({
-  normalizePantry: jest.fn((p) => p),
+  normalizePantry: jest.fn(p => p),
 }));
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
-  subscriptionService: { registerParentDeletion: jest.fn(), unregisterParentDeletion: jest.fn() },
+  subscriptionService: {
+    registerParentDeletion: jest.fn(),
+    unregisterParentDeletion: jest.fn(),
+  },
 }));
 jest.mock('#/utils/compilerSafeWrappers');
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 jest.mock('#components/molecules/ScreenHeader', () => ({
   ScreenHeader: ({ title, rightElement }: any) => {
     const { View, Text } = require('react-native');
-    return <View testID="screen-header"><Text>{title}</Text>{rightElement}</View>;
+    return (
+      <View testID="screen-header">
+        <Text>{title}</Text>
+        {rightElement}
+      </View>
+    );
   },
 }));
 jest.mock('#components/base/Loading', () => ({
@@ -68,7 +84,12 @@ jest.mock('#components/base/Loading', () => ({
 jest.mock('#components/molecules/InfoRow', () => ({
   InfoRow: ({ label, value }: any) => {
     const { View, Text } = require('react-native');
-    return <View><Text>{label}</Text><Text>{value}</Text></View>;
+    return (
+      <View>
+        <Text>{label}</Text>
+        <Text>{value}</Text>
+      </View>
+    );
   },
 }));
 jest.mock('#/styles/commonStyles', () => ({
@@ -164,9 +185,8 @@ describe('PantrySettings', () => {
       error: new Error('Network error'),
     });
 
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     render(<PantrySettings route={editRoute} />);
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Error Loading Pantry',
       'Failed to load pantry data. Please try again.',
     );
@@ -190,20 +210,21 @@ describe('PantrySettings', () => {
       error: null,
     });
 
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     render(<PantrySettings route={editRoute} />);
 
     // Press the Save button
     fireEvent.press(screen.getByText('Save'));
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith('Error', 'Pantry name cannot be empty');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Pantry name cannot be empty',
+    );
   });
 
   it('calls handleDelete and shows confirmation alert', () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     render(<PantrySettings route={editRoute} />);
 
     fireEvent.press(screen.getByText('Delete Pantry'));
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Delete Pantry',
       expect.stringContaining('Are you sure'),
       expect.any(Array),
@@ -262,21 +283,27 @@ describe('PantrySettings', () => {
 
   it('shows no home selected error when saving without selectedHomeId', () => {
     // Override the store mock to return null for selectedHomeId
-    jest.spyOn(require('#store/useAppStore'), 'useAppStore').mockImplementation((selector: any) =>
-      selector({
-        selectedHomeId: null,
-        setSelectedPantryId: jest.fn(),
-      }),
-    );
+    jest
+      .spyOn(require('#store/useAppStore'), 'useAppStore')
+      .mockImplementation((selector: any) =>
+        selector({
+          selectedHomeId: null,
+          setSelectedPantryId: jest.fn(),
+        }),
+      );
 
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     render(<PantrySettings route={createRoute} />);
 
     // Type a name
-    const nameInput = screen.getByPlaceholderText('Enter pantry name (e.g., Kitchen Pantry)');
+    const nameInput = screen.getByPlaceholderText(
+      'Enter pantry name (e.g., Kitchen Pantry)',
+    );
     fireEvent.changeText(nameInput, 'New Pantry');
 
     fireEvent.press(screen.getByText('Create'));
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith('Error', 'No home selected');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'No home selected',
+    );
   });
 });

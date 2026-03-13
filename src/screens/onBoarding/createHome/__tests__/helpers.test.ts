@@ -1,6 +1,6 @@
 'use no memo';
 
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   checkExistingResources,
   createPantryForHome,
@@ -8,7 +8,9 @@ import {
   showSkipPantryWarning,
 } from '../helpers';
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -43,21 +45,32 @@ describe('helpers', () => {
       const homes = [{ id: 'home-1', name: 'Home' }];
       const pantries = [{ id: 'pantry-1', isDefault: true }];
 
-      const result = await checkExistingResources(homes, pantries, mockCallbacks);
+      const result = await checkExistingResources(
+        homes,
+        pantries,
+        mockCallbacks,
+      );
 
       expect(result).toBe(true);
       expect(mockCallbacks.setSelectedHomeId).toHaveBeenCalledWith('home-1');
-      expect(mockCallbacks.setSelectedPantryId).toHaveBeenCalledWith('pantry-1');
+      expect(mockCallbacks.setSelectedPantryId).toHaveBeenCalledWith(
+        'pantry-1',
+      );
       expect(mockCallbacks.onBothExist).toHaveBeenCalled();
     });
 
     it('uses first pantry when no default pantry', async () => {
       const homes = [{ id: 'home-1' }];
-      const pantries = [{ id: 'pantry-1', isDefault: false }, { id: 'pantry-2', isDefault: false }];
+      const pantries = [
+        { id: 'pantry-1', isDefault: false },
+        { id: 'pantry-2', isDefault: false },
+      ];
 
       await checkExistingResources(homes, pantries, mockCallbacks);
 
-      expect(mockCallbacks.setSelectedPantryId).toHaveBeenCalledWith('pantry-1');
+      expect(mockCallbacks.setSelectedPantryId).toHaveBeenCalledWith(
+        'pantry-1',
+      );
     });
 
     it('prefers default pantry over first', async () => {
@@ -69,7 +82,9 @@ describe('helpers', () => {
 
       await checkExistingResources(homes, pantries, mockCallbacks);
 
-      expect(mockCallbacks.setSelectedPantryId).toHaveBeenCalledWith('pantry-2');
+      expect(mockCallbacks.setSelectedPantryId).toHaveBeenCalledWith(
+        'pantry-2',
+      );
     });
   });
 
@@ -85,7 +100,12 @@ describe('helpers', () => {
       });
       const mockSetPantryId = jest.fn();
 
-      const result = await createPantryForHome('home-1', 'Kitchen', mockCreatePantry, mockSetPantryId);
+      const result = await createPantryForHome(
+        'home-1',
+        'Kitchen',
+        mockCreatePantry,
+        mockSetPantryId,
+      );
 
       expect(result).toBe(true);
       expect(mockSetPantryId).toHaveBeenCalledWith('pantry-1');
@@ -105,15 +125,27 @@ describe('helpers', () => {
         data: { createPantry: { success: false, pantry: null } },
       });
 
-      const result = await createPantryForHome('home-1', 'Kitchen', mockCreatePantry, jest.fn());
+      const result = await createPantryForHome(
+        'home-1',
+        'Kitchen',
+        mockCreatePantry,
+        jest.fn(),
+      );
 
       expect(result).toBe(false);
     });
 
     it('returns false on error', async () => {
-      const mockCreatePantry = jest.fn().mockRejectedValue(new Error('Network error'));
+      const mockCreatePantry = jest
+        .fn()
+        .mockRejectedValue(new Error('Network error'));
 
-      const result = await createPantryForHome('home-1', 'Kitchen', mockCreatePantry, jest.fn());
+      const result = await createPantryForHome(
+        'home-1',
+        'Kitchen',
+        mockCreatePantry,
+        jest.fn(),
+      );
 
       expect(result).toBe(false);
     });
@@ -123,7 +155,12 @@ describe('helpers', () => {
         data: { createPantry: { success: true, pantry: null } },
       });
 
-      const result = await createPantryForHome('home-1', 'Kitchen', mockCreatePantry, jest.fn());
+      const result = await createPantryForHome(
+        'home-1',
+        'Kitchen',
+        mockCreatePantry,
+        jest.fn(),
+      );
 
       expect(result).toBe(false);
     });
@@ -134,7 +171,7 @@ describe('helpers', () => {
       const onContinue = jest.fn();
       showPantryCreationError(onContinue);
 
-      expect(Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Notice',
         'Pantry creation failed but you can create it later from settings.',
         [{ text: 'Continue', onPress: onContinue }],
@@ -147,7 +184,7 @@ describe('helpers', () => {
       const onSkip = jest.fn();
       showSkipPantryWarning(onSkip);
 
-      expect(Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Skip Pantry Creation?',
         expect.any(String),
         [

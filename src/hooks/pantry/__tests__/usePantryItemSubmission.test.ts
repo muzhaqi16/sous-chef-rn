@@ -1,7 +1,7 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -34,7 +34,9 @@ jest.mock('#/utils/errors/pantryItemDuplicate', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 const mockOnSuccess = jest.fn();
 const mockHandlePageChange = jest.fn();
@@ -87,7 +89,10 @@ describe('usePantryItemSubmission', () => {
       await result.current.handleConfirm();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Please enter an item name');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Please enter an item name',
+    );
     expect(mockHandlePageChange).toHaveBeenCalledWith(0);
   });
 
@@ -100,7 +105,10 @@ describe('usePantryItemSubmission', () => {
       await result.current.handleConfirm();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Please enter a valid quantity');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Please enter a valid quantity',
+    );
     expect(mockHandlePageChange).toHaveBeenCalledWith(1);
   });
 
@@ -113,7 +121,10 @@ describe('usePantryItemSubmission', () => {
       await result.current.handleConfirm();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Please enter a valid quantity');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Please enter a valid quantity',
+    );
   });
 
   it('does nothing when pantryId is undefined', async () => {
@@ -179,7 +190,11 @@ describe('usePantryItemSubmission', () => {
     });
 
     const { result } = renderHook(() =>
-      usePantryItemSubmission({ ...defaultParams, minQuantity: '1', restockQuantity: '5' }),
+      usePantryItemSubmission({
+        ...defaultParams,
+        minQuantity: '1',
+        restockQuantity: '5',
+      }),
     );
 
     await act(async () => {
@@ -204,7 +219,10 @@ describe('usePantryItemSubmission', () => {
       await result.current.handleConfirm();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to add item. Please try again.');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Failed to add item. Please try again.',
+    );
   });
 
   it('includes expiration date when set', async () => {
@@ -258,7 +276,10 @@ describe('usePantryItemSubmission', () => {
     });
 
     const { result } = renderHook(() =>
-      usePantryItemSubmission({ ...defaultParams, selectedStorageLocationId: 'loc-1' }),
+      usePantryItemSubmission({
+        ...defaultParams,
+        selectedStorageLocationId: 'loc-1',
+      }),
     );
 
     await act(async () => {
@@ -280,7 +301,10 @@ describe('usePantryItemSubmission', () => {
     });
 
     const { result } = renderHook(() =>
-      usePantryItemSubmission({ ...defaultParams, storageLocation: 'Top Shelf' }),
+      usePantryItemSubmission({
+        ...defaultParams,
+        storageLocation: 'Top Shelf',
+      }),
     );
 
     await act(async () => {
@@ -290,7 +314,9 @@ describe('usePantryItemSubmission', () => {
     expect(mockCreatePantryItem).toHaveBeenCalledWith({
       variables: {
         input: expect.objectContaining({
-          storage: expect.objectContaining({ storageLocationName: 'Top Shelf' }),
+          storage: expect.objectContaining({
+            storageLocationName: 'Top Shelf',
+          }),
         }),
       },
     });
@@ -351,7 +377,10 @@ describe('usePantryItemSubmission', () => {
   });
 
   it('handles duplicate pantry item error with restock option', async () => {
-    const { isPantryItemDuplicateError, getPantryItemDuplicateInfo } = require('#/utils/errors/pantryItemDuplicate');
+    const {
+      isPantryItemDuplicateError,
+      getPantryItemDuplicateInfo,
+    } = require('#/utils/errors/pantryItemDuplicate');
     isPantryItemDuplicateError.mockReturnValue(true);
     getPantryItemDuplicateInfo.mockReturnValue({
       existingPantryItemId: 'existing-1',
@@ -368,7 +397,7 @@ describe('usePantryItemSubmission', () => {
       await result.current.handleConfirm();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Item Already in Pantry',
       expect.stringContaining('already in your pantry'),
       expect.any(Array),
@@ -376,7 +405,9 @@ describe('usePantryItemSubmission', () => {
   });
 
   it('shows error when result has error but is not duplicate', async () => {
-    const { isPantryItemDuplicateError } = require('#/utils/errors/pantryItemDuplicate');
+    const {
+      isPantryItemDuplicateError,
+    } = require('#/utils/errors/pantryItemDuplicate');
     isPantryItemDuplicateError.mockReturnValue(false);
 
     mockCreatePantryItem.mockResolvedValue({
@@ -390,7 +421,10 @@ describe('usePantryItemSubmission', () => {
       await result.current.handleConfirm();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to add item. Please try again.');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Failed to add item. Please try again.',
+    );
   });
 
   it('includes net weight when packageDetails and itemNetWeight provided', async () => {

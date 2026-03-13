@@ -2,11 +2,8 @@
  * useWastePantryItemBatch - Mutation hook for wasting a specific batch
  */
 
-import { Alert } from 'react-native';
-import {
-  useWastePantryItemBatchMutation,
-  type WasteReason,
-} from '#generated';
+import { alertService } from '#/services/alertService';
+import { useWastePantryItemBatchMutation, type WasteReason } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
@@ -31,7 +28,12 @@ export function useWastePantryItemBatch({
     notes?: string,
   ): Promise<boolean> => {
     // Persist optimistic waste state to survive cache-and-network refetches while offline
-    optimisticDataPersistence.save('PantryItemBatch', batchId, 'isWasted', true);
+    optimisticDataPersistence.save(
+      'PantryItemBatch',
+      batchId,
+      'isWasted',
+      true,
+    );
 
     const result = await wasteMutation({
       variables: {
@@ -55,7 +57,7 @@ export function useWastePantryItemBatch({
       const { message } = handleApolloError(result.error, {
         operation: 'Waste Batch',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     }
 
     return false;

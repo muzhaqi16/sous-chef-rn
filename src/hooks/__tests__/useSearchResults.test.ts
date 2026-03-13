@@ -1,8 +1,9 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import { useSearchResults } from '../useSearchResults';
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 const mockSetSearchResults = jest.fn();
 const mockSetSearching = jest.fn();

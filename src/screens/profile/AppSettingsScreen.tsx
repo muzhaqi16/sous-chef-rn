@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
@@ -9,33 +10,48 @@ import { UnitSystem } from '#generated';
 import { Picker } from '@react-native-picker/picker';
 import { commonStyles } from '#/styles/commonStyles';
 import { useAppStore } from '#/store/useAppStore';
+import { useStore } from '#store/index';
 import { resetAllFeatureHints } from '#hooks/useFeatureHint';
 import { useUserPreferences } from '#hooks/settings/useUserPreferences';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
+import { Telemetry } from '#services/telemetry';
 
 export const AppSettingsScreen: React.FC = () => {
   const theme = UnistylesRuntime.getTheme();
   const [updating, setUpdating] = useState<string | null>(null);
 
-  const {
-    settings,
-    loading,
-    updateAppSetting,
-    resetToDefaults,
-  } = useAppSettings();
+  const { settings, loading, updateAppSetting, resetToDefaults } =
+    useAppSettings();
 
   // PERFORMANCE: Use selective selectors instead of inline functions
-  const hapticFeedbackEnabled = useAppStore(state => state.hapticFeedbackEnabled);
-  const setHapticFeedbackEnabled = useAppStore(state => state.setHapticFeedbackEnabled);
+  const hapticFeedbackEnabled = useAppStore(
+    state => state.hapticFeedbackEnabled,
+  );
+  const setHapticFeedbackEnabled = useAppStore(
+    state => state.setHapticFeedbackEnabled,
+  );
   const showNavigationLabels = useAppStore(state => state.showNavigationLabels);
-  const setShowNavigationLabels = useAppStore(state => state.setShowNavigationLabels);
+  const setShowNavigationLabels = useAppStore(
+    state => state.setShowNavigationLabels,
+  );
 
   // Per-user preferences
-  const { preferences: userPrefs, updatePreference, resetPreferences: resetUserPreferences } = useUserPreferences();
+  const {
+    preferences: userPrefs,
+    updatePreference,
+    resetPreferences: resetUserPreferences,
+  } = useUserPreferences();
 
   // Telemetry consent
   const userConsent = useAppStore(state => state.userConsent);
   const setUserConsent = useAppStore(state => state.setUserConsent);
+
+  const handleConsentChange = (consent: boolean) => {
+    setUserConsent(consent);
+    // Immediately update running telemetry service to respect new consent
+    const config = useStore.getState().getTelemetryConfig();
+    Telemetry.updateConfig(config);
+  };
 
   const handleSettingChange = (key: string, value: any) => {
     setUpdating(key);
@@ -43,7 +59,10 @@ export const AppSettingsScreen: React.FC = () => {
       async () => {
         const success = await updateAppSetting(key as any, value);
         if (!success) {
-          Alert.alert('Error', 'Failed to update setting. Please try again.');
+          alertService.alert(
+            'Error',
+            'Failed to update setting. Please try again.',
+          );
         }
       },
       () => setUpdating(null),
@@ -51,7 +70,7 @@ export const AppSettingsScreen: React.FC = () => {
   };
 
   const handleResetToDefaults = () => {
-    Alert.alert(
+    alertService.alert(
       'Reset to Defaults',
       'Are you sure you want to reset all app settings to their default values? This will also reset all tutorials.',
       [
@@ -68,9 +87,12 @@ export const AppSettingsScreen: React.FC = () => {
                 resetAllFeatureHints();
                 resetUserPreferences();
                 if (success) {
-                  Alert.alert('Success', 'Settings and tutorials have been reset to defaults.');
+                  alertService.alert(
+                    'Success',
+                    'Settings and tutorials have been reset to defaults.',
+                  );
                 } else {
-                  Alert.alert(
+                  alertService.alert(
                     'Error',
                     'Failed to reset settings. Please try again.',
                   );
@@ -100,12 +122,26 @@ export const AppSettingsScreen: React.FC = () => {
           <Picker
             testID="settings-unit-system-picker"
             selectedValue={settings.preferredUnitSystem}
-            onValueChange={(value) => handleSettingChange('preferredUnitSystem', value)}
+            onValueChange={value =>
+              handleSettingChange('preferredUnitSystem', value)
+            }
             style={styles.picker}
           >
-            <Picker.Item label="Metric (kg, g, L, mL)" value={UnitSystem.Metric} color={theme.colors.textPrimary} />
-            <Picker.Item label="Imperial (lb, oz, gal, fl oz)" value={UnitSystem.Imperial} color={theme.colors.textPrimary} />
-            <Picker.Item label="System Default" value={UnitSystem.System} color={theme.colors.textPrimary} />
+            <Picker.Item
+              label="Metric (kg, g, L, mL)"
+              value={UnitSystem.Metric}
+              color={theme.colors.textPrimary}
+            />
+            <Picker.Item
+              label="Imperial (lb, oz, gal, fl oz)"
+              value={UnitSystem.Imperial}
+              color={theme.colors.textPrimary}
+            />
+            <Picker.Item
+              label="System Default"
+              value={UnitSystem.System}
+              color={theme.colors.textPrimary}
+            />
           </Picker>
         </View>
       </SettingSection>
@@ -170,14 +206,16 @@ export const AppSettingsScreen: React.FC = () => {
           title="Shopping List Images"
           description="Show product images in shopping lists"
           value={userPrefs.showShoppingListImages}
-          onValueChange={value => updatePreference({ showShoppingListImages: value })}
+          onValueChange={value =>
+            updatePreference({ showShoppingListImages: value })
+          }
         />
         <SettingSwitch
           testID="settings-share-usage-data-switch"
           title="Share Usage Data"
           description="Help improve Sous Chef by sharing anonymous usage statistics"
           value={userConsent ?? true}
-          onValueChange={setUserConsent}
+          onValueChange={handleConsentChange}
         />
       </SettingSection>
 

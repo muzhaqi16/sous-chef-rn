@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
+import { alertService } from '#/services/alertService';
 import {
   useCreatePantryItemUsageMutation,
   useRestockPantryItemMutation,
@@ -9,6 +9,16 @@ import {
   PantryItemFragment,
 } from '#generated';
 import { isNetworkError } from '#/utils/isNetworkError';
+import {
+  isInvalidUnitError,
+  isInvalidUnitPayload,
+  getInvalidUnitMessage,
+} from '#/utils/errors/invalidUnit';
+import {
+  isVersionConflictError,
+  isVersionConflictPayload,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 import { Telemetry } from '#services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
@@ -97,6 +107,38 @@ export function usePantryItemActions({
     });
   };
 
+  /**
+   * Handle payload-level errors from pantry mutations.
+   * Returns true if an error was detected and handled, false otherwise.
+   */
+  const handlePayloadError = (
+    payload: {
+      success: boolean;
+      code: string;
+      message: string;
+      validUnits?: string[] | null;
+    },
+    revertFn?: () => void,
+  ): boolean => {
+    if (payload.success) return false;
+
+    revertFn?.();
+
+    if (isInvalidUnitPayload(payload)) {
+      const validList = payload.validUnits?.join(', ');
+      const detail = validList
+        ? `${payload.message}\n\nValid units: ${validList}`
+        : payload.message;
+      alertService.alert('Invalid Unit', detail);
+    } else if (isVersionConflictPayload(payload)) {
+      alertService.alert('Item Updated', payload.message);
+    } else {
+      alertService.alert('Error', payload.message);
+    }
+
+    return true;
+  };
+
   // Consume/Waste item mutation (both use createPantryItemUsage)
   const [createPantryItemUsage] = useCreatePantryItemUsageMutation({
     errorPolicy: 'all',
@@ -127,6 +169,10 @@ export function usePantryItemActions({
     }
 
     const consumeNotes = notes || undefined;
+    const revertOptimistic = canOptimistic
+      ? () => revertQuantity(item.id, originalQty)
+      : undefined;
+
     const consumeResult = await executeMutation(
       () =>
         createPantryItemUsage({
@@ -141,18 +187,36 @@ export function usePantryItemActions({
           },
         }),
       (error: any) => {
-        if (canOptimistic) {
-          revertQuantity(item.id, originalQty);
-        }
+        revertOptimistic?.();
         if (!isNetworkError(error)) {
+          if (isVersionConflictError(error)) {
+            alertService.alert(
+              'Item Updated',
+              getVersionConflictMessage(error),
+            );
+            return;
+          }
+          if (isInvalidUnitError(error)) {
+            alertService.alert('Invalid Unit', getInvalidUnitMessage(error));
+            return;
+          }
           const errorMessage =
             error.message || 'Failed to record item usage. Please try again.';
           console.error('Error consuming pantry item:', error);
-          Alert.alert('Error', errorMessage);
+          alertService.alert('Error', errorMessage);
         }
       },
     );
     if (!consumeResult) return;
+
+    // Check payload-level errors (API returns success: false for validation failures)
+    const consumePayload = consumeResult.data?.createPantryItemUsage;
+    if (
+      consumePayload &&
+      handlePayloadError(consumePayload, revertOptimistic)
+    ) {
+      return;
+    }
 
     closeModal();
   };
@@ -176,6 +240,10 @@ export function usePantryItemActions({
     }
 
     const wasteNotes = notes || undefined;
+    const revertOptimistic = canOptimistic
+      ? () => revertQuantity(item.id, originalQty)
+      : undefined;
+
     const wasteResult = await executeMutation(
       () =>
         createPantryItemUsage({
@@ -193,18 +261,33 @@ export function usePantryItemActions({
           },
         }),
       (error: any) => {
-        if (canOptimistic) {
-          revertQuantity(item.id, originalQty);
-        }
+        revertOptimistic?.();
         if (!isNetworkError(error)) {
+          if (isVersionConflictError(error)) {
+            alertService.alert(
+              'Item Updated',
+              getVersionConflictMessage(error),
+            );
+            return;
+          }
+          if (isInvalidUnitError(error)) {
+            alertService.alert('Invalid Unit', getInvalidUnitMessage(error));
+            return;
+          }
           const errorMessage =
             error.message || 'Failed to record item waste. Please try again.';
           console.error('Error recording pantry item waste:', error);
-          Alert.alert('Error', errorMessage);
+          alertService.alert('Error', errorMessage);
         }
       },
     );
     if (!wasteResult) return;
+
+    // Check payload-level errors
+    const wastePayload = wasteResult.data?.createPantryItemUsage;
+    if (wastePayload && handlePayloadError(wastePayload, revertOptimistic)) {
+      return;
+    }
 
     closeModal();
   };
@@ -246,6 +329,22 @@ export function usePantryItemActions({
 
     const restockNotes = notes || undefined;
     const expiresAtValue = expiresAt ? expiresAt.toISOString() : null;
+    const revertOptimistic = () => {
+      if (canOptimistic) {
+        revertQuantity(item.id, originalQty);
+      }
+      if (cacheIdForBatch) {
+        client.cache.modify({
+          id: cacheIdForBatch,
+          fields: {
+            activeBatchCount(existing: number = 0) {
+              return Math.max(0, (existing ?? 0) - 1);
+            },
+          },
+        });
+      }
+    };
+
     const restockResult = await executeMutation(
       () =>
         restockPantryItem({
@@ -262,18 +361,36 @@ export function usePantryItemActions({
           },
         }),
       (error: any) => {
-        if (canOptimistic) {
-          revertQuantity(item.id, originalQty);
-        }
+        revertOptimistic();
         if (!isNetworkError(error)) {
+          if (isVersionConflictError(error)) {
+            alertService.alert(
+              'Item Updated',
+              getVersionConflictMessage(error),
+            );
+            return;
+          }
+          if (isInvalidUnitError(error)) {
+            alertService.alert('Invalid Unit', getInvalidUnitMessage(error));
+            return;
+          }
           const errorMessage =
             error.message || 'Failed to restock item. Please try again.';
           console.error('Error restocking pantry item:', error);
-          Alert.alert('Error', errorMessage);
+          alertService.alert('Error', errorMessage);
         }
       },
     );
     if (!restockResult) return;
+
+    // Check payload-level errors
+    const restockPayload = restockResult.data?.restockPantryItem;
+    if (
+      restockPayload &&
+      handlePayloadError(restockPayload, revertOptimistic)
+    ) {
+      return;
+    }
 
     closeModal();
   };

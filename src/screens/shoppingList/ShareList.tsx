@@ -6,9 +6,9 @@ import {
   ScrollView,
   RefreshControl,
   Pressable,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { useNavigation } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
@@ -173,7 +173,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
       },
       setTogglingShareCode,
       error => {
-        Alert.alert(
+        alertService.alert(
           'Error',
           error instanceof Error
             ? error.message
@@ -192,7 +192,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   const handleShare = () => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter an email address');
+      alertService.alert('Error', 'Please enter an email address');
       return;
     }
 
@@ -225,7 +225,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
       },
       setSharing,
       error => {
-        Alert.alert(
+        alertService.alert(
           'Error',
           error instanceof Error ? error.message : 'Failed to send invitation',
         );
@@ -234,7 +234,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   };
 
   const handleRemoveMember = (memberId: string) => {
-    Alert.alert(
+    alertService.alert(
       'Remove Member',
       'Are you sure you want to remove this member?',
       [
@@ -254,7 +254,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               });
               refetch();
             } catch {
-              Alert.alert('Error', 'Failed to remove member');
+              alertService.alert('Error', 'Failed to remove member');
             }
           },
         },
@@ -265,7 +265,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   const handleLeaveList = () => {
     // Block owners from leaving
     if (isOwner) {
-      Alert.alert(
+      alertService.alert(
         'Cannot Leave',
         'Owners cannot leave the list. Please transfer ownership to another member or delete the list.',
         [{ text: 'OK' }],
@@ -273,7 +273,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
       return;
     }
 
-    Alert.alert(
+    alertService.alert(
       'Leave Shopping List',
       `Are you sure you want to leave "${
         listName || 'this list'
@@ -285,7 +285,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           style: 'destructive',
           onPress: () => {
             if (!currentUserCollaborator?.id) {
-              Alert.alert('Error', 'Could not determine your membership');
+              alertService.alert(
+                'Error',
+                'Could not determine your membership',
+              );
               return;
             }
 
@@ -306,7 +309,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               },
               setLeaving,
               () => {
-                Alert.alert('Error', 'Failed to leave list');
+                alertService.alert('Error', 'Failed to leave list');
               },
             );
           },

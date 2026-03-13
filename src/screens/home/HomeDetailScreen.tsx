@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, Alert } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useHomeDetailManagement, ROLE_OPTIONS } from '#hooks/home/useHomeDetailManagement';
+import {
+  useHomeDetailManagement,
+  ROLE_OPTIONS,
+} from '#hooks/home/useHomeDetailManagement';
 
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { ModalPicker } from '#components/molecules/ModalPicker';
@@ -89,7 +93,7 @@ export const HomeDetailScreen: React.FC<{
 
     // Check if user is owner
     if (isOwner) {
-      Alert.alert(
+      alertService.alert(
         'Cannot Leave',
         'Owners cannot leave the home. Please transfer ownership to another member or delete the home.',
         [{ text: 'OK' }],

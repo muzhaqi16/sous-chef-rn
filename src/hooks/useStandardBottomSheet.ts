@@ -1,12 +1,14 @@
 import { useRef, useEffect } from 'react';
 import { Keyboard } from 'react-native';
-import type { BottomSheetModal, BottomSheetModalProps } from '@gorhom/bottom-sheet';
+import type {
+  BottomSheetModal,
+  BottomSheetModalProps,
+} from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUnistyles } from 'react-native-unistyles';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import React from 'react';
+import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
 
 interface UseStandardBottomSheetOptions {
   /** When provided, auto-manages present/dismiss. Omit to manage presentation manually via ref. */
@@ -55,7 +57,8 @@ export function useStandardBottomSheet({
   snapPoints,
   keyboardBehavior,
   enableDynamicSizing = false,
-  keyboardAware = false }: UseStandardBottomSheetOptions) {
+  keyboardAware = false,
+}: UseStandardBottomSheetOptions) {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const ref = useRef<BottomSheetModal>(null);
@@ -63,13 +66,16 @@ export function useStandardBottomSheet({
   useBottomSheetBackHandler(ref, visible ?? false);
 
   // Compute final snap points: append expanded point when keyboardAware and not already present
-  const expandedPoint = typeof keyboardAware === 'string' ? keyboardAware : '95%';
-  const finalSnapPoints = keyboardAware && snapPoints[snapPoints.length - 1] !== expandedPoint
-    ? [...snapPoints, expandedPoint]
-    : snapPoints;
+  const expandedPoint =
+    typeof keyboardAware === 'string' ? keyboardAware : '95%';
+  const finalSnapPoints =
+    keyboardAware && snapPoints[snapPoints.length - 1] !== expandedPoint
+      ? [...snapPoints, expandedPoint]
+      : snapPoints;
 
   // Resolve keyboard behavior: keyboardAware defaults to 'interactive'
-  const resolvedKeyboardBehavior = keyboardBehavior ?? (keyboardAware ? 'interactive' : 'extend');
+  const resolvedKeyboardBehavior =
+    keyboardBehavior ?? (keyboardAware ? 'interactive' : 'extend');
 
   // Auto present/dismiss when visible is provided
   useEffect(() => {
@@ -90,32 +96,24 @@ export function useStandardBottomSheet({
     return () => sub.remove();
   }, [keyboardAware]);
 
-  // Backdrop component that dismisses via ref
-  const backdropComponent = (props: any) =>
-      React.createElement(GlobalBottomSheetBackdrop, {
-        ...props,
-        disappearsOnIndex: -1,
-        appearsOnIndex: 0,
-        pressBehavior: 'close',
-        onClose: () => ref.current?.dismiss() });
-
   // All standard BottomSheetModal props as a spread-ready object
-  const modalProps: Partial<BottomSheetModalProps> = ({
-      snapPoints: finalSnapPoints,
-      enablePanDownToClose: true,
-      enableDynamicSizing,
-      topInset: insets.top,
-      onDismiss,
-      animationConfigs,
-      backgroundStyle: { backgroundColor: theme.colors.background },
-      handleIndicatorStyle: { backgroundColor: theme.colors.textSecondary },
-      keyboardBehavior: resolvedKeyboardBehavior,
-      keyboardBlurBehavior: 'restore',
-      android_keyboardInputMode: 'adjustPan',
-      backdropComponent });
+  const modalProps: Partial<BottomSheetModalProps> = {
+    snapPoints: finalSnapPoints,
+    enablePanDownToClose: true,
+    enableDynamicSizing,
+    topInset: insets.top,
+    onDismiss,
+    animationConfigs,
+    backgroundStyle: { backgroundColor: theme.colors.background },
+    handleIndicatorStyle: { backgroundColor: theme.colors.textSecondary },
+    keyboardBehavior: resolvedKeyboardBehavior,
+    keyboardBlurBehavior: 'restore',
+    android_keyboardInputMode: 'adjustPan',
+    backdropComponent: DismissBackdrop,
+  };
 
   // Standard content container padding
-  const contentContainerStyle = ({ paddingBottom: insets.bottom + 16 });
+  const contentContainerStyle = { paddingBottom: insets.bottom + 16 };
 
   return { ref, modalProps, contentContainerStyle, theme, insets };
 }

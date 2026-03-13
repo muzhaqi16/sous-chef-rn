@@ -8,7 +8,7 @@ export interface VersionConflictDetails {
 }
 
 /**
- * Check if an error is a VERSION_CONFLICT error from the API
+ * Check if an error is a CONFLICT error from the API (Apollo error level)
  *
  * @param error - Error object that may contain GraphQL errors
  * @returns True if the error is a version conflict
@@ -16,21 +16,33 @@ export interface VersionConflictDetails {
 export function isVersionConflictError(error: any): boolean {
   if ('graphQLErrors' in error && error.graphQLErrors) {
     return error.graphQLErrors.some(
-      (err: any) => err.extensions?.code === 'VERSION_CONFLICT',
+      (err: any) => err.extensions?.code === 'CONFLICT',
     );
   }
 
   if ('extensions' in error && error.extensions) {
-    return error.extensions.code === 'VERSION_CONFLICT';
+    return error.extensions.code === 'CONFLICT';
   }
 
   return false;
 }
 
 /**
+ * Check if a mutation payload indicates a CONFLICT error.
+ * Use this to detect version conflicts returned as payload fields (success: false, code: 'CONFLICT')
+ * rather than thrown GraphQL errors.
+ */
+export function isVersionConflictPayload(payload: {
+  success: boolean;
+  code: string;
+}): boolean {
+  return !payload.success && payload.code === 'CONFLICT';
+}
+
+/**
  * Extract version conflict details from an error
  *
- * @param error - Error containing VERSION_CONFLICT
+ * @param error - Error containing CONFLICT
  * @returns Version conflict details or null if not a version conflict
  */
 export function getVersionConflictDetails(
@@ -40,7 +52,7 @@ export function getVersionConflictDetails(
 
   if ('graphQLErrors' in error && error.graphQLErrors) {
     versionError = error.graphQLErrors.find(
-      (err: any) => err.extensions?.code === 'VERSION_CONFLICT',
+      (err: any) => err.extensions?.code === 'CONFLICT',
     );
   } else if ('extensions' in error && error.extensions) {
     versionError = error;
@@ -71,7 +83,7 @@ export function getVersionConflictDetails(
 /**
  * Get a user-friendly message for a version conflict error
  *
- * @param error - Error containing VERSION_CONFLICT
+ * @param error - Error containing CONFLICT
  * @returns User-friendly error message
  */
 export function getVersionConflictMessage(error: any): string {

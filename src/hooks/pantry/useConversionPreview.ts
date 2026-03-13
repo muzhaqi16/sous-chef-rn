@@ -14,7 +14,7 @@ interface UseConversionPreviewOptions {
   trackingUnitSymbol: string;
   /** The item's current quantity in tracking units */
   availableInTrackingUnit: number;
-  /** Ratio from compatibleUnitsForItem: selectedUnit = trackingUnit * ratio */
+  /** Conversion ratio: selectedUnit = trackingUnit * ratio */
   conversionRatio: number | null;
 }
 

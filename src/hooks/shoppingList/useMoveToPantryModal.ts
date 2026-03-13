@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { ShoppingListItemDisplayFragment } from '#generated';
 import { useLazyHomeData } from '#hooks/home/useLazyHomeData';
 import { useMoveToPantry, type MoveToPantryInput } from './useMoveToPantry';
@@ -79,7 +79,8 @@ export function useMoveToPantryModal(
     selectedPantryId,
     isLoaded: homeDataLoaded,
     fetchHomeData,
-    loading: homeLoading } = useLazyHomeData();
+    loading: homeLoading,
+  } = useLazyHomeData();
 
   // Move to pantry mutation
   const { moveToPantry, loading: moveLoading } = useMoveToPantry({
@@ -87,32 +88,33 @@ export function useMoveToPantryModal(
     onSuccess: () => {
       setVisible(false);
       setSelectedItem(null);
-    } });
+    },
+  });
 
   const openForItem = async (itemId: string) => {
-      // Fetch home data if not already loaded (lazy load on demand)
-      if (!homeDataLoaded) {
-        await fetchHomeData();
-      }
+    // Fetch home data if not already loaded (lazy load on demand)
+    if (!homeDataLoaded) {
+      await fetchHomeData();
+    }
 
-      // Check pantries after data is loaded
-      // Note: pantries will be populated after fetchHomeData completes and component re-renders
-      // We check pantries.length here but the actual check happens after the async fetch
-      if (pantries.length === 0 && homeDataLoaded) {
-        Alert.alert(
-          'No Pantry Available',
-          'Please create a pantry in your home first.',
-          [{ text: 'OK' }],
-        );
-        return;
-      }
+    // Check pantries after data is loaded
+    // Note: pantries will be populated after fetchHomeData completes and component re-renders
+    // We check pantries.length here but the actual check happens after the async fetch
+    if (pantries.length === 0 && homeDataLoaded) {
+      alertService.alert(
+        'No Pantry Available',
+        'Please create a pantry in your home first.',
+        [{ text: 'OK' }],
+      );
+      return;
+    }
 
-      const item = items.find(i => i.id === itemId);
-      if (item) {
-        setSelectedItem(item as ShoppingListItemDisplayFragment);
-        setVisible(true);
-      }
-    };
+    const item = items.find(i => i.id === itemId);
+    if (item) {
+      setSelectedItem(item as ShoppingListItemDisplayFragment);
+      setVisible(true);
+    }
+  };
 
   const close = () => {
     setVisible(false);
@@ -120,9 +122,9 @@ export function useMoveToPantryModal(
   };
 
   const confirm = async (input: MoveToPantryInput) => {
-      if (!selectedItem) return;
-      await moveToPantry(selectedItem, input);
-    };
+    if (!selectedItem) return;
+    await moveToPantry(selectedItem, input);
+  };
 
   return {
     visible,
@@ -132,5 +134,6 @@ export function useMoveToPantryModal(
     isLoading: homeLoading || moveLoading,
     openForItem,
     close,
-    confirm };
+    confirm,
+  };
 }

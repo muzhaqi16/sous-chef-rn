@@ -7,10 +7,7 @@ import { useHybridSearch } from '#/hooks/search/useHybridSearch';
 import { useCreateStorageLocation } from '#/hooks/storageLocation/useCreateStorageLocation';
 import { useAppStore, selectIsOnline } from '#/store/useAppStore';
 import { useShallow } from 'zustand/shallow';
-import {
-  GetPantryDocument,
-  type GetPantryQuery,
-} from '#generated';
+import { GetPantryDocument, type GetPantryQuery } from '#generated';
 import { normalizePantry } from '#/utils/connectionUtils';
 import {
   type LocationFilter,
@@ -21,7 +18,10 @@ import { PAGE_SIZE } from '#/constants/pagination';
 import { pantryItemSearch } from '#/utils/searchUtils';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
-import type { PantrySortOption, PantrySortDirection } from '#store/slices/preferencesSlice';
+import type {
+  PantrySortOption,
+  PantrySortDirection,
+} from '#store/slices/preferencesSlice';
 
 /**
  * usePantryScreen - Facade hook for the PantryMain screen
@@ -132,7 +132,7 @@ export function usePantryScreen() {
       if (!pantry?.id?.trim()) return null;
       return {
         id: pantry.id,
-        itemsFirst: 25,
+        itemsFirst: PAGE_SIZE.DEFAULT,
         itemsFilter: { ...(locationQueryFilter ?? {}), search },
         itemsOrderBy: orderBy,
         storageLocationsFirst: 0,
@@ -154,9 +154,33 @@ export function usePantryScreen() {
   const tabIconSize = 16;
   const defaultTabs: FilterTabConfig<LocationFilter>[] = [
     { id: 'all', label: 'All' },
-    { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline', iconElement: React.createElement(StorageLocationIcon, { type: 'REFRIGERATOR', size: tabIconSize }) },
-    { id: 'freezer', label: 'Freezer', icon: 'snow-outline', iconElement: React.createElement(StorageLocationIcon, { type: 'FREEZER', size: tabIconSize }) },
-    { id: 'pantry', label: 'Pantry', icon: 'cube-outline', iconElement: React.createElement(StorageLocationIcon, { type: 'PANTRY_SHELF', size: tabIconSize }) },
+    {
+      id: 'fridge',
+      label: 'Fridge',
+      icon: 'thermometer-outline',
+      iconElement: React.createElement(StorageLocationIcon, {
+        type: 'REFRIGERATOR',
+        size: tabIconSize,
+      }),
+    },
+    {
+      id: 'freezer',
+      label: 'Freezer',
+      icon: 'snow-outline',
+      iconElement: React.createElement(StorageLocationIcon, {
+        type: 'FREEZER',
+        size: tabIconSize,
+      }),
+    },
+    {
+      id: 'pantry',
+      label: 'Pantry',
+      icon: 'cube-outline',
+      iconElement: React.createElement(StorageLocationIcon, {
+        type: 'PANTRY_SHELF',
+        size: tabIconSize,
+      }),
+    },
   ];
 
   const customTabs: FilterTabConfig<LocationFilter>[] =
@@ -164,7 +188,15 @@ export function usePantryScreen() {
       (location: (typeof pantryStorageLocations)[number]) => ({
         id: location.id,
         label: location.name,
-        iconElement: React.createElement(StorageLocationIcon, { type: location.type, size: tabIconSize }),
+        ...(location.color ? { activeColor: location.color } : undefined),
+        ...(location.icon
+          ? { icon: location.icon }
+          : {
+              iconElement: React.createElement(StorageLocationIcon, {
+                type: location.type,
+                size: tabIconSize,
+              }),
+            }),
       }),
     );
 
@@ -196,8 +228,8 @@ export function usePantryScreen() {
   const householdName = noHomeSelected
     ? 'Tap to select a home'
     : noHomes
-      ? 'No homes yet'
-      : currentHome?.name || 'Your Home';
+    ? 'No homes yet'
+    : currentHome?.name || 'Your Home';
 
   // -------------------------------------------------------------------------
   // 7. Sort change handler
@@ -231,7 +263,9 @@ export function usePantryScreen() {
   // Refetch pantry items when switching between pantries
   // Uses "adjusting state during render" pattern (no ref.current read during render)
   // -------------------------------------------------------------------------
-  const [prevPantryId, setPrevPantryId] = useState<string | undefined>(pantry?.id);
+  const [prevPantryId, setPrevPantryId] = useState<string | undefined>(
+    pantry?.id,
+  );
   if (prevPantryId !== pantry?.id) {
     setPrevPantryId(pantry?.id);
     if (prevPantryId && pantry?.id) {

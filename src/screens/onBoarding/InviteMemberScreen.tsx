@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Text, View, TextInput, Pressable, Alert } from 'react-native';
+import { Text, View, TextInput, Pressable } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { StyleSheet } from 'react-native-unistyles';
@@ -69,17 +70,20 @@ export const InviteMemberScreen = () => {
     const trimmedEmail = currentEmail.trim().toLowerCase();
 
     if (!validateEmail(trimmedEmail)) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address');
+      alertService.alert('Invalid Email', 'Please enter a valid email address');
       return;
     }
 
     if (invites.some(invite => invite.email === trimmedEmail)) {
-      Alert.alert('Duplicate Email', 'This email has already been added');
+      alertService.alert(
+        'Duplicate Email',
+        'This email has already been added',
+      );
       return;
     }
 
     if (trimmedEmail === user?.email?.toLowerCase()) {
-      Alert.alert('Invalid Email', "You can't invite yourself");
+      alertService.alert('Invalid Email', "You can't invite yourself");
       return;
     }
 
@@ -167,9 +171,9 @@ export const InviteMemberScreen = () => {
           navigateToNextStep('InviteMembers');
         },
         setIsInviting,
-        (error) => {
+        error => {
           console.error('Error sending invites:', error);
-          Alert.alert(
+          alertService.alert(
             'Partial Success',
             'Some invitations may have failed. You can invite more members later from settings.',
             [
@@ -204,8 +208,10 @@ export const InviteMemberScreen = () => {
   };
 
   const getSubtitle = () => {
-    if (hasNeither) return 'Create a home or shopping list first to invite others';
-    if (hasBoth) return 'Share your home and shopping lists with others (optional)';
+    if (hasNeither)
+      return 'Create a home or shopping list first to invite others';
+    if (hasBoth)
+      return 'Share your home and shopping lists with others (optional)';
     if (hasHome) return 'Share your home with others (optional)';
     return 'Share your shopping list with others (optional)';
   };
@@ -222,9 +228,7 @@ export const InviteMemberScreen = () => {
       >
         <View style={styles.container}>
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              Nothing to share yet
-            </Text>
+            <Text style={styles.emptyStateText}>Nothing to share yet</Text>
             <Text style={styles.emptyStateSubtext}>
               You need to create a home or shopping list first to invite others.
               You can invite people later from settings.
@@ -262,7 +266,10 @@ export const InviteMemberScreen = () => {
             onSubmitEditing={addInvite}
           />
           <Pressable
-            style={({pressed}) => [styles.addButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.addButton,
+              pressed && styles.pressed,
+            ]}
             onPress={addInvite}
             disabled={!currentEmail.trim()}
           >
@@ -292,18 +299,26 @@ export const InviteMemberScreen = () => {
                     <Text style={styles.inviteEmail}>{invite.email}</Text>
                     <Pressable
                       onPress={() => toggleInviteType(invite.id)}
-                      style={({pressed}) => [styles.typeButton, pressed && styles.pressed]}
+                      style={({ pressed }) => [
+                        styles.typeButton,
+                        pressed && styles.pressed,
+                      ]}
                       disabled={!hasBoth}
                     >
                       <Text style={styles.typeText}>
                         {getInviteTypeLabel(invite.type)}
-                        {!!hasBoth && <Text style={styles.typeHint}> (tap to change)</Text>}
+                        {!!hasBoth && (
+                          <Text style={styles.typeHint}> (tap to change)</Text>
+                        )}
                       </Text>
                     </Pressable>
                   </View>
                   <Pressable
                     onPress={() => removeInvite(invite.id)}
-                    style={({pressed}) => [styles.removeButton, pressed && styles.pressed]}
+                    style={({ pressed }) => [
+                      styles.removeButton,
+                      pressed && styles.pressed,
+                    ]}
                   >
                     <Text style={styles.removeButtonText}>✕</Text>
                   </Pressable>

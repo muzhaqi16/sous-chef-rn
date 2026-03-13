@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Alert } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
@@ -10,7 +11,8 @@ import {
   Intolerance,
   HealthGoal,
   Cuisine,
-  RestrictionSeverity } from '#generated';
+  RestrictionSeverity,
+} from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#/utils/iconUtils';
 import { StringArrayManager } from '#/components/organisms/StringArrayManager/StringArrayManager';
@@ -29,14 +31,15 @@ export const DietaryProfileScreen: React.FC = () => {
     loading,
     updateDietaryProfile,
     addDietaryRestriction,
-    removeDietaryRestriction } = useDietaryProfile();
+    removeDietaryRestriction,
+  } = useDietaryProfile();
 
   // State for modals and editing
   const [editingMeals, setEditingMeals] = useState(false);
   const [editingSnacks, setEditingSnacks] = useState(false);
 
   const handleRemoveRestriction = (id: string) => {
-    Alert.alert(
+    alertService.alert(
       'Remove Restriction',
       'Are you sure you want to remove this dietary restriction?',
       [
@@ -46,9 +49,10 @@ export const DietaryProfileScreen: React.FC = () => {
           onPress: async () => {
             const success = await removeDietaryRestriction(id);
             if (!success) {
-              Alert.alert('Error', 'Failed to remove restriction');
+              alertService.alert('Error', 'Failed to remove restriction');
             }
-          } },
+          },
+        },
         { text: 'Cancel', style: 'cancel' },
       ],
     );
@@ -74,7 +78,9 @@ export const DietaryProfileScreen: React.FC = () => {
       // Check if all succeeded
       return results.every(result => result === true);
     } catch (error) {
-      errorService.reportError(error, { operation: 'DietaryProfile.addRestrictions' });
+      errorService.reportError(error, {
+        operation: 'DietaryProfile.addRestrictions',
+      });
       return false;
     }
   };
@@ -115,38 +121,50 @@ export const DietaryProfileScreen: React.FC = () => {
   const handleAddCuisine = async (cuisine: Cuisine) => {
     const currentCuisines = (profile?.preferredCuisines || []) as Cuisine[];
     return await updateDietaryProfile({
-      preferredCuisines: [...currentCuisines, cuisine] });
+      preferredCuisines: [...currentCuisines, cuisine],
+    });
   };
 
   const handleRemoveCuisine = async (cuisine: Cuisine) => {
     const currentCuisines = (profile?.preferredCuisines || []) as Cuisine[];
     await updateDietaryProfile({
-      preferredCuisines: currentCuisines.filter(c => c !== cuisine) });
+      preferredCuisines: currentCuisines.filter(c => c !== cuisine),
+    });
   };
 
   // Ingredient handlers
   const handleAddFavoriteIngredient = async (ingredient: string) => {
     return await updateDietaryProfile({
-      favoriteIngredients: [...(profile?.favoriteIngredients || []), ingredient] });
+      favoriteIngredients: [
+        ...(profile?.favoriteIngredients || []),
+        ingredient,
+      ],
+    });
   };
 
   const handleRemoveFavoriteIngredient = async (ingredient: string) => {
     await updateDietaryProfile({
       favoriteIngredients: (profile?.favoriteIngredients || []).filter(
         i => i !== ingredient,
-      ) });
+      ),
+    });
   };
 
   const handleAddDislikedIngredient = async (ingredient: string) => {
     return await updateDietaryProfile({
-      dislikedIngredients: [...(profile?.dislikedIngredients || []), ingredient] });
+      dislikedIngredients: [
+        ...(profile?.dislikedIngredients || []),
+        ingredient,
+      ],
+    });
   };
 
   const handleRemoveDislikedIngredient = async (ingredient: string) => {
     await updateDietaryProfile({
       dislikedIngredients: (profile?.dislikedIngredients || []).filter(
         i => i !== ingredient,
-      ) });
+      ),
+    });
   };
 
   // Modal handlers
@@ -168,13 +186,9 @@ export const DietaryProfileScreen: React.FC = () => {
   };
 
   // Memoize container style
-  const favoriteContainerStyle = (
-    { marginTop: theme.spacing.md }
-  );
+  const favoriteContainerStyle = { marginTop: theme.spacing.md };
 
-  const dislikedContainerStyle = (
-    { marginTop: theme.spacing.md }
-  );
+  const dislikedContainerStyle = { marginTop: theme.spacing.md };
 
   if (loading) {
     return (
@@ -259,10 +273,16 @@ export const DietaryProfileScreen: React.FC = () => {
       >
         <Text style={commonStyles.subtitle}>Nutrition Goals</Text>
         <View style={styles.sectionCard}>
-          <Pressable style={({pressed}) => pressed && styles.pressed} onPress={handleOpenMeals}>
+          <Pressable
+            style={({ pressed }) => pressed && styles.pressed}
+            onPress={handleOpenMeals}
+          >
             <InfoRow label="Meals per day" value={profile.mealsPerDay} />
           </Pressable>
-          <Pressable style={({pressed}) => pressed && styles.pressed} onPress={handleOpenSnacks}>
+          <Pressable
+            style={({ pressed }) => pressed && styles.pressed}
+            onPress={handleOpenSnacks}
+          >
             <InfoRow
               label="Snacks per day"
               value={profile.snacksPerDay}
@@ -283,7 +303,10 @@ export const DietaryProfileScreen: React.FC = () => {
             <Text style={commonStyles.subtitle}>Cooking Preferences</Text>
             <Pressable
               onPress={handleOpenCookingPrefs}
-              style={({pressed}) => [styles.editButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.editButton,
+                pressed && styles.pressed,
+              ]}
             >
               <Icon
                 name="create-outline"
@@ -292,7 +315,9 @@ export const DietaryProfileScreen: React.FC = () => {
               />
             </Pressable>
           </View>
-          {!!profile.cookingSkillLevel && <InfoRow label="Skill Level" value={profile.cookingSkillLevel} />}
+          {!!profile.cookingSkillLevel && (
+            <InfoRow label="Skill Level" value={profile.cookingSkillLevel} />
+          )}
           {!!profile.maxPrepTimeMinutes && (
             <InfoRow
               label="Max Prep Time"
@@ -319,10 +344,12 @@ export const DietaryProfileScreen: React.FC = () => {
       </Animated.View>
 
       {/* Macro Targets Section (Advanced) */}
-      {!!(profile.calorieTarget ||
+      {!!(
+        profile.calorieTarget ||
         profile.proteinTarget ||
         profile.carbsTarget ||
-        profile.fatTarget) && (
+        profile.fatTarget
+      ) && (
         <Animated.View
           entering={FadeIn.duration(TIMING.SLOW).delay(400)}
           layout={LinearTransition}
@@ -330,10 +357,15 @@ export const DietaryProfileScreen: React.FC = () => {
         >
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={commonStyles.subtitle}>Macro Targets (Advanced)</Text>
+              <Text style={commonStyles.subtitle}>
+                Macro Targets (Advanced)
+              </Text>
               <Pressable
                 onPress={handleOpenMacros}
-                style={({pressed}) => [styles.editButton, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.editButton,
+                  pressed && styles.pressed,
+                ]}
               >
                 <Icon
                   name="create-outline"
@@ -349,8 +381,12 @@ export const DietaryProfileScreen: React.FC = () => {
                 unit="kcal"
               />
             )}
-            {!!profile.proteinTarget && <InfoRow label="Protein" value={profile.proteinTarget} unit="g" />}
-            {!!profile.carbsTarget && <InfoRow label="Carbs" value={profile.carbsTarget} unit="g" />}
+            {!!profile.proteinTarget && (
+              <InfoRow label="Protein" value={profile.proteinTarget} unit="g" />
+            )}
+            {!!profile.carbsTarget && (
+              <InfoRow label="Carbs" value={profile.carbsTarget} unit="g" />
+            )}
             {!!profile.fatTarget && (
               <InfoRow
                 label="Fat"
@@ -395,7 +431,8 @@ export const DietaryProfileScreen: React.FC = () => {
           cookingSkillLevel: profile?.cookingSkillLevel,
           maxPrepTimeMinutes: profile?.maxPrepTimeMinutes,
           maxCookTimeMinutes: profile?.maxCookTimeMinutes,
-          budgetPerMeal: profile?.budgetPerMeal }}
+          budgetPerMeal: profile?.budgetPerMeal,
+        }}
       />
 
       {/* Macro Targets Sheet */}
@@ -407,7 +444,8 @@ export const DietaryProfileScreen: React.FC = () => {
           calorieTarget: profile?.calorieTarget,
           proteinTarget: profile?.proteinTarget,
           carbsTarget: profile?.carbsTarget,
-          fatTarget: profile?.fatTarget }}
+          fatTarget: profile?.fatTarget,
+        }}
       />
     </ProfileScreenWrapper>
   );
@@ -417,22 +455,28 @@ const styles = StyleSheet.create(theme => ({
   sectionContainer: {
     paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
-    marginTop: theme.spacing.xs },
+    marginTop: theme.spacing.xs,
+  },
   sectionCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: theme.spacing.sm,
-    marginTop: theme.spacing.xs },
+    marginTop: theme.spacing.xs,
+  },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   editButton: {
-    padding: theme.spacing.xs },
+    padding: theme.spacing.xs,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));
 
 export default DietaryProfileScreen;

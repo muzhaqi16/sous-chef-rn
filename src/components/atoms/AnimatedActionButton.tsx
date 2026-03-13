@@ -1,6 +1,7 @@
 import React, { useLayoutEffect } from 'react';
 import { StyleProp, ViewStyle, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -35,6 +36,7 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   testID,
 }) => {
   const { theme } = useUnistyles();
+  const animatedTheme = useAnimatedTheme();
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
 
@@ -42,14 +44,18 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   useLayoutEffect(() => {
     if (isHighlighted) {
       // Pulse animation with rotation
-      scale.set(withSequence(
-        withTiming(1.1, { duration: TIMING.STANDARD }),
-        withTiming(1, { duration: TIMING.STANDARD }),
-      ));
-      rotation.set(withSequence(
-        withTiming(1, { duration: TIMING.STANDARD }),
-        withTiming(0, { duration: TIMING.STANDARD }),
-      ));
+      scale.set(
+        withSequence(
+          withTiming(1.1, { duration: TIMING.STANDARD }),
+          withTiming(1, { duration: TIMING.STANDARD }),
+        ),
+      );
+      rotation.set(
+        withSequence(
+          withTiming(1, { duration: TIMING.STANDARD }),
+          withTiming(0, { duration: TIMING.STANDARD }),
+        ),
+      );
     }
   }, [isHighlighted, scale, rotation]);
 
@@ -57,10 +63,13 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
     const rotate = interpolate(rotation.value, [0, 1], [0, 90]);
 
     return {
-      backgroundColor: withTiming(backgroundColor || theme.colors.surface, {
-        duration: TIMING.FAST,
-        easing: standardEasing,
-      }),
+      backgroundColor: withTiming(
+        backgroundColor || animatedTheme.value.colors.surface,
+        {
+          duration: TIMING.FAST,
+          easing: standardEasing,
+        },
+      ),
       transform: [{ scale: scale.value }, { rotate: `${rotate}deg` }],
     };
   });

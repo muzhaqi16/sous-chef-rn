@@ -69,7 +69,8 @@ export interface UseFeatureHintReturn {
 export const useFeatureHint = ({
   featureId,
   showOnMount = false,
-  delay = 0 }: UseFeatureHintOptions): UseFeatureHintReturn => {
+  delay = 0,
+}: UseFeatureHintOptions): UseFeatureHintReturn => {
   // Per-user storage key scoping
   const userId = useAppStore(state => state.user?.id);
   const storageKey = userId
@@ -117,7 +118,10 @@ export const useFeatureHint = ({
   // depends on refs (stable identity) and setState fns (stable identity)
   const actions: UseFeatureHintActions = {
     show() {
-      if (tutorialsEnabledRef.current && !(storage.getBoolean(storageKeyRef.current) ?? false)) {
+      if (
+        tutorialsEnabledRef.current &&
+        !(storage.getBoolean(storageKeyRef.current) ?? false)
+      ) {
         setIsVisible(true);
       }
     },
@@ -168,10 +172,7 @@ export const markFeatureHintAsShown = (
 /**
  * Reset a feature hint (will show again next time)
  */
-export const resetFeatureHint = (
-  featureId: string,
-  userId?: string,
-): void => {
+export const resetFeatureHint = (featureId: string, userId?: string): void => {
   const storageKey = userId
     ? `${FEATURE_HINT_PREFIX}${userId}_${featureId}`
     : `${FEATURE_HINT_PREFIX}${featureId}`;
@@ -201,5 +202,27 @@ export const getLoginCount = (userId: string): number => {
 
 export const incrementLoginCount = (userId: string): void => {
   const key = `${LOGIN_COUNT_PREFIX}${userId}`;
+  storage.set(key, (storage.getNumber(key) ?? 0) + 1);
+};
+
+const SCREEN_VISIT_PREFIX = 'screen_visit_';
+
+export const getScreenVisitCount = (
+  screenId: string,
+  userId?: string,
+): number => {
+  const key = userId
+    ? `${SCREEN_VISIT_PREFIX}${userId}_${screenId}`
+    : `${SCREEN_VISIT_PREFIX}${screenId}`;
+  return storage.getNumber(key) ?? 0;
+};
+
+export const incrementScreenVisitCount = (
+  screenId: string,
+  userId?: string,
+): void => {
+  const key = userId
+    ? `${SCREEN_VISIT_PREFIX}${userId}_${screenId}`
+    : `${SCREEN_VISIT_PREFIX}${screenId}`;
   storage.set(key, (storage.getNumber(key) ?? 0) + 1);
 };

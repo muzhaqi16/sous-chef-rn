@@ -62,6 +62,14 @@ export function useFlashListPerformance<T>(
   const idleHandle = useRef<number | null>(null);
   const intervalHandle = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // DEV: rAF deduplication — only record one metric per animation frame
+  const pendingMetricRef = useRef<ScrollFrameMetric | null>(null);
+  const dedupeRAFRef = useRef<number | null>(null);
+
+  // DEV: streak-based logging — log only streak start/end, not every blank frame
+  const wasBlankRef = useRef(false);
+  const streakCountRef = useRef(0);
+
   // DEV-only diagnostics instance
   const [diagnostics] = useState(() =>
     __DEV__ ? new FlashListDiagnostics(options.componentName) : null,
@@ -95,6 +103,10 @@ export function useFlashListPerformance<T>(
         if (idleHandle.current !== null) {
           cancelIdleCallback(idleHandle.current);
           idleHandle.current = null;
+        }
+        if (dedupeRAFRef.current !== null) {
+          cancelAnimationFrame(dedupeRAFRef.current);
+          dedupeRAFRef.current = null;
         }
         diagnostics?.endSession();
         frameGapStarted.current = false;
@@ -183,14 +195,18 @@ export function useFlashListPerformance<T>(
       });
     }
 
-    // DEV: full diagnostics with frame metrics + predictive risk
+    // DEV: rAF-deduplicated diagnostics — only record one metric per animation
+    // frame (last callback wins). This prevents intra-frame viewability updates
+    // from inflating totalScrollFrames and sustained blank counts, and reduces
+    // console.log overhead that degrades FlashList recycling speed.
     if (__DEV__ && diagnostics) {
       const frameGap = diagnostics.getLastFrameGap();
       const coverageRatio =
         expectedCount > 0 ? viewableCount / expectedCount : 1;
       const scrollVelocity = diagnostics.computeScrollVelocity(startIndex, now);
 
-      const metric: ScrollFrameMetric = {
+      // Store as pending — only the last callback per frame gets recorded
+      pendingMetricRef.current = {
         timestamp: now,
         visibleStart: startIndex,
         visibleEnd: endIndex,
@@ -202,41 +218,62 @@ export function useFlashListPerformance<T>(
         scrollVelocity,
       };
 
-      diagnostics.recordScrollFrame(metric);
+      if (dedupeRAFRef.current === null) {
+        dedupeRAFRef.current = requestAnimationFrame(() => {
+          const pending = pendingMetricRef.current;
+          if (pending && diagnostics) {
+            diagnostics.recordScrollFrame(pending);
 
-      if (blankDetected) {
-        console.log(
-          `📊 [FlashList:${
-            options.componentName
-          }] Blank detected: viewable=${viewableCount}/${expectedCount} visible=[${startIndex},${endIndex}] gap=${frameGap.toFixed(
-            0,
-          )}ms`,
-        );
-      }
+            // Streak-based logging: only log streak start, complete blanks, and streak end
+            if (pending.blankDetected) {
+              streakCountRef.current += 1;
+              if (!wasBlankRef.current || pending.viewableCount === 0) {
+                console.log(
+                  `📊 [FlashList:${options.componentName}] Blank: viewable=${
+                    pending.viewableCount
+                  }/${pending.expectedCount} visible=[${pending.visibleStart},${
+                    pending.visibleEnd
+                  }] gap=${pending.frameGap.toFixed(0)}ms`,
+                );
+              }
+              wasBlankRef.current = true;
+            } else {
+              if (wasBlankRef.current && streakCountRef.current > 1) {
+                console.log(
+                  `📊 [FlashList:${options.componentName}] Blank streak ended after ${streakCountRef.current} frames`,
+                );
+              }
+              streakCountRef.current = 0;
+              wasBlankRef.current = false;
 
-      const risk = diagnostics.assessBlankRisk();
-      if (!blankDetected) {
-        if (risk.level === 'medium') {
-          console.log(
-            `⚠️ [FlashList:${
-              options.componentName
-            }] Blank risk MEDIUM: ${risk.factors.join(
-              ', ',
-            )} (coverage=${risk.coverageRatio.toFixed(
-              2,
-            )}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
-          );
-        } else if (risk.level === 'high') {
-          console.log(
-            `🚨 [FlashList:${
-              options.componentName
-            }] Blank risk HIGH: ${risk.factors.join(
-              ', ',
-            )} (coverage=${risk.coverageRatio.toFixed(
-              2,
-            )}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
-          );
-        }
+              // Risk assessment only on non-blank frames (same as before)
+              const risk = diagnostics.assessBlankRisk();
+              if (risk.level === 'medium') {
+                console.log(
+                  `⚠️ [FlashList:${
+                    options.componentName
+                  }] Blank risk MEDIUM: ${risk.factors.join(
+                    ', ',
+                  )} (coverage=${risk.coverageRatio.toFixed(
+                    2,
+                  )}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
+                );
+              } else if (risk.level === 'high') {
+                console.log(
+                  `🚨 [FlashList:${
+                    options.componentName
+                  }] Blank risk HIGH: ${risk.factors.join(
+                    ', ',
+                  )} (coverage=${risk.coverageRatio.toFixed(
+                    2,
+                  )}, velocity=${risk.scrollVelocity.toFixed(0)} items/s)`,
+                );
+              }
+            }
+          }
+          pendingMetricRef.current = null;
+          dedupeRAFRef.current = null;
+        });
       }
     }
   };

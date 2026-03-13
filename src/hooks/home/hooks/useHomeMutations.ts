@@ -7,8 +7,8 @@
  * - Error handling with user feedback
  */
 
-import { Alert } from 'react-native';
 import type { ErrorLike } from '@apollo/client';
+import { alertService } from '#/services/alertService';
 import { useShallow } from 'zustand/shallow';
 import {
   useCreateHomeMutation,
@@ -30,7 +30,10 @@ import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { normalizeHome } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { addToHomesCache, removeFromHomesCache } from './utils';
-import { executeCacheUpdate, executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 
 interface UseHomeMutationsOptions {
   homes: any[] | null;
@@ -71,7 +74,8 @@ export function useHomeMutations({
         if (!data?.createHome?.home) return;
 
         executeCacheUpdate(
-          () => addToHomesCache(cache, data.createHome!.home!, { position: 'end' }),
+          () =>
+            addToHomesCache(cache, data.createHome!.home!, { position: 'end' }),
           'Cache update failed for createHome:',
           refetch,
         );
@@ -90,7 +94,10 @@ export function useHomeMutations({
           if (freshHomes.length === 1 && freshHomes[0].id === newHome.id) {
             setSelectedHomeId(newHome.id);
             setDefaultHome(newHome.id).catch((error: any) => {
-              console.warn('Failed to set newly created home as default:', error);
+              console.warn(
+                'Failed to set newly created home as default:',
+                error,
+              );
             });
           }
 
@@ -110,7 +117,7 @@ export function useHomeMutations({
         const { message } = handleApolloError(error, {
           operation: 'Create Home',
         });
-        Alert.alert('Error', message);
+        alertService.alert('Error', message);
       },
     });
 
@@ -133,12 +140,12 @@ export function useHomeMutations({
     },
     onCompleted: data => {
       if (data?.updateHome?.home) {
-        Alert.alert('Success', 'Home updated successfully');
+        alertService.alert('Success', 'Home updated successfully');
       }
     },
     onError: (error: ErrorLike) => {
       if (handleVersionConflict(error)) {
-        Alert.alert('Home Updated', getVersionConflictMessage(error), [
+        alertService.alert('Home Updated', getVersionConflictMessage(error), [
           { text: 'Refresh', onPress: () => refetch() },
           { text: 'Cancel', style: 'cancel' },
         ]);
@@ -148,7 +155,7 @@ export function useHomeMutations({
       const { message } = handleApolloError(error, {
         operation: 'Update Home',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     },
   });
 
@@ -180,7 +187,10 @@ export function useHomeMutations({
               // Clear orphaned pantry selection - useDefaultHome will auto-select new home's default
               setSelectedPantryId(null);
               setDefaultHome(newDefaultHome.id).catch((error: any) => {
-                console.warn('Failed to set new default home after delete:', error);
+                console.warn(
+                  'Failed to set new default home after delete:',
+                  error,
+                );
               });
             } else {
               // No homes left, clear all selections
@@ -194,7 +204,7 @@ export function useHomeMutations({
         const { message } = handleApolloError(error, {
           operation: 'Delete Home',
         });
-        Alert.alert('Error', message);
+        alertService.alert('Error', message);
       },
     });
 
@@ -253,12 +263,13 @@ export function useHomeMutations({
 
     if (Object.keys(updates).length > 0) {
       const result = await executeMutation(
-        () => updateHomeMutation({
-          variables: {
-            id: homeId,
-            input: updates,
-          },
-        }),
+        () =>
+          updateHomeMutation({
+            variables: {
+              id: homeId,
+              input: updates,
+            },
+          }),
         'Update home error:',
       );
       if (!result) return false;

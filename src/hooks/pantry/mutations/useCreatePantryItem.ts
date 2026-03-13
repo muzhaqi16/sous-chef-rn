@@ -9,17 +9,22 @@
  * - Handles PANTRY_ITEM_ALREADY_EXISTS with restock/force-add options
  */
 
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   useCreatePantryItemMutation,
   useRestockPantryItemMutation,
-  CreatePantryItemInput } from '#generated';
+  CreatePantryItemInput,
+} from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   isPantryItemDuplicateError,
-  getPantryItemDuplicateInfo } from '#/utils/errors/pantryItemDuplicate';
+  getPantryItemDuplicateInfo,
+} from '#/utils/errors/pantryItemDuplicate';
 import { addToPantryItemsCache } from './utils';
-import { executeCacheUpdate, executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 import type { CreatePantryItemParams } from './types';
 
 interface UseCreatePantryItemOptions {
@@ -45,7 +50,8 @@ interface UseCreatePantryItemOptions {
  */
 export function useCreatePantryItem({
   pantryId,
-  onSuccess }: UseCreatePantryItemOptions) {
+  onSuccess,
+}: UseCreatePantryItemOptions) {
   const { handleApolloError } = useErrorService();
 
   const [createMutation] = useCreatePantryItemMutation({
@@ -58,153 +64,188 @@ export function useCreatePantryItem({
         () => addToPantryItemsCache(cache, pantryId, pantryItem),
         'Cache update failed:',
       );
-    } });
+    },
+  });
 
   const [restockMutation] = useRestockPantryItemMutation({
-    errorPolicy: 'all' });
+    errorPolicy: 'all',
+  });
 
   const createPantryItem = async ({
-      input,
+    input,
+    pantryId: targetPantryId,
+    quantityValue,
+    unitId,
+    selectedLocationId,
+    selectedCategoryId,
+  }: CreatePantryItemParams): Promise<boolean> => {
+    if (!input.itemName?.trim()) {
+      alertService.alert('Error', 'Please enter an item name');
+      return false;
+    }
+
+    const storageLocationInput = selectedLocationId
+      ? { storageLocationId: selectedLocationId }
+      : input.location.trim()
+      ? { storageLocationName: input.location.trim() }
+      : {};
+
+    const baseInput = {
       pantryId: targetPantryId,
-      quantityValue,
-      unitId,
-      selectedLocationId,
-      selectedCategoryId }: CreatePantryItemParams): Promise<boolean> => {
-      if (!input.itemName?.trim()) {
-        Alert.alert('Error', 'Please enter an item name');
-        return false;
-      }
+      ...(unitId && { unit: { unitId } }),
+      quantity: quantityValue,
+      storage: {
+        storageState: input.storageState,
+        storageNotes: input.notes.trim() || null,
+        ...storageLocationInput,
+      },
+      expiresAt: input.expirationDate?.toISOString() || null,
+      ...(input.minQuantity || input.restockQuantity
+        ? {
+            thresholds: {
+              ...(input.minQuantity && {
+                minQuantity: parseFloat(input.minQuantity),
+              }),
+              ...(input.restockQuantity && {
+                restockQuantity: parseFloat(input.restockQuantity),
+              }),
+            },
+          }
+        : {}),
+      ...(input.netWeight
+        ? {
+            netWeight: {
+              netWeight: parseFloat(input.netWeight),
+              ...(input.netWeightUnitId && {
+                netWeightUnitId: input.netWeightUnitId,
+              }),
+            },
+          }
+        : {}),
+    };
 
-      const storageLocationInput = selectedLocationId
-        ? { storageLocationId: selectedLocationId }
-        : input.location.trim()
-        ? { storageLocationName: input.location.trim() }
-        : {};
+    let mutationInput: CreatePantryItemInput;
 
-      const baseInput = {
-        pantryId: targetPantryId,
-        ...(unitId && { unit: { unitId } }),
-        quantity: quantityValue,
-        storage: {
-          storageState: input.storageState,
-          storageNotes: input.notes.trim() || null,
-          ...storageLocationInput },
-        expiresAt: input.expirationDate?.toISOString() || null,
-        ...(input.minQuantity || input.restockQuantity
-          ? {
-              thresholds: {
-                ...(input.minQuantity && {
-                  minQuantity: parseFloat(input.minQuantity) }),
-                ...(input.restockQuantity && {
-                  restockQuantity: parseFloat(input.restockQuantity) }) } }
-          : {}),
-        ...(input.netWeight
-          ? {
-              netWeight: {
-                netWeight: parseFloat(input.netWeight),
-                ...(input.netWeightUnitId && {
-                  netWeightUnitId: input.netWeightUnitId }) } }
-          : {}) };
+    if (input.selectedItemId) {
+      // Linking to existing catalog item
+      mutationInput = {
+        ...baseInput,
+        itemId: input.selectedItemId,
+      };
+    } else {
+      // Creating new item via inline item input
+      const category = selectedCategoryId
+        ? selectedCategoryId
+        : input.category.trim() || undefined;
 
-      let mutationInput: CreatePantryItemInput;
+      mutationInput = {
+        ...baseInput,
+        item: {
+          name: input.itemName.trim(),
+          description: input.notes.trim() || null,
+          ...(input.brand?.trim() && { brand: input.brand.trim() }),
+          ...(category && { category }),
+        },
+      };
+    }
 
-      if (input.selectedItemId) {
-        // Linking to existing catalog item
-        mutationInput = {
-          ...baseInput,
-          itemId: input.selectedItemId };
-      } else {
-        // Creating new item via inline item input
-        const category = selectedCategoryId
-          ? selectedCategoryId
-          : input.category.trim() || undefined;
+    const result = await createMutation({
+      variables: { input: mutationInput },
+    });
 
-        mutationInput = {
-          ...baseInput,
-          item: {
-            name: input.itemName.trim(),
-            description: input.notes.trim() || null,
-            ...(input.brand?.trim() && { brand: input.brand.trim() }),
-            ...(category && { category }) } };
-      }
+    if (result.data?.createPantryItem?.success) {
+      onSuccess?.();
+      return true;
+    }
 
-      const result = await createMutation({
-        variables: { input: mutationInput } });
-
-      if (result.data?.createPantryItem?.success) {
-        onSuccess?.();
-        return true;
-      }
-
-      // Check for duplicate pantry item error
-      if (result.error && isPantryItemDuplicateError(result.error)) {
-        const duplicateInfo = getPantryItemDuplicateInfo(result.error);
-        if (duplicateInfo) {
-          return new Promise<boolean>(resolve => {
-            Alert.alert(
-              'Item Already in Pantry',
-              'This item is already in your pantry. Would you like to restock it or add a separate entry?',
-              [
-                {
-                  text: 'Cancel',
-                  style: 'cancel',
-                  onPress: () => resolve(false) },
-                {
-                  text: 'Restock',
-                  onPress: async () => {
-                    const restockQuantity = quantityValue ?? 1;
-                    const restockResult = await executeMutation(
-                      () => restockMutation({
+    // Check for duplicate pantry item error
+    if (result.error && isPantryItemDuplicateError(result.error)) {
+      const duplicateInfo = getPantryItemDuplicateInfo(result.error);
+      if (duplicateInfo) {
+        return new Promise<boolean>(resolve => {
+          alertService.alert(
+            'Item Already in Pantry',
+            'This item is already in your pantry. Would you like to restock it or add a separate entry?',
+            [
+              {
+                text: 'Cancel',
+                style: 'cancel',
+                onPress: () => resolve(false),
+              },
+              {
+                text: 'Restock',
+                onPress: async () => {
+                  const restockQuantity = quantityValue ?? 1;
+                  const restockResult = await executeMutation(
+                    () =>
+                      restockMutation({
                         variables: {
                           id: duplicateInfo.existingPantryItemId,
-                          input: { quantity: restockQuantity } } }),
-                      'Restock pantry item error:',
+                          input: { quantity: restockQuantity },
+                        },
+                      }),
+                    'Restock pantry item error:',
+                  );
+                  if (!restockResult) {
+                    alertService.alert(
+                      'Error',
+                      'Failed to restock item. Please try again.',
                     );
-                    if (!restockResult) {
-                      Alert.alert('Error', 'Failed to restock item. Please try again.');
-                      resolve(false);
-                      return;
-                    }
+                    resolve(false);
+                    return;
+                  }
+                  onSuccess?.();
+                  resolve(true);
+                },
+              },
+              {
+                text: 'Add Anyway',
+                onPress: async () => {
+                  const retryResult = await executeMutation(
+                    () =>
+                      createMutation({
+                        variables: {
+                          input: { ...mutationInput, forceAdd: true },
+                        },
+                      }),
+                    'Force add pantry item error:',
+                  );
+                  if (!retryResult) {
+                    alertService.alert(
+                      'Error',
+                      'Failed to add item. Please try again.',
+                    );
+                    resolve(false);
+                    return;
+                  }
+                  if (retryResult.data?.createPantryItem?.success) {
                     onSuccess?.();
                     resolve(true);
-                  } },
-                {
-                  text: 'Add Anyway',
-                  onPress: async () => {
-                    const retryResult = await executeMutation(
-                      () => createMutation({
-                        variables: {
-                          input: { ...mutationInput, forceAdd: true } } }),
-                      'Force add pantry item error:',
+                  } else {
+                    alertService.alert(
+                      'Error',
+                      'Failed to add item. Please try again.',
                     );
-                    if (!retryResult) {
-                      Alert.alert('Error', 'Failed to add item. Please try again.');
-                      resolve(false);
-                      return;
-                    }
-                    if (retryResult.data?.createPantryItem?.success) {
-                      onSuccess?.();
-                      resolve(true);
-                    } else {
-                      Alert.alert('Error', 'Failed to add item. Please try again.');
-                      resolve(false);
-                    }
-                  } },
-              ],
-            );
-          });
-        }
+                    resolve(false);
+                  }
+                },
+              },
+            ],
+          );
+        });
       }
+    }
 
-      // Non-duplicate error
-      if (result.error) {
-        const { message } = handleApolloError(result.error, {
-          operation: 'Create Pantry Item' });
-        Alert.alert('Error', message);
-      }
+    // Non-duplicate error
+    if (result.error) {
+      const { message } = handleApolloError(result.error, {
+        operation: 'Create Pantry Item',
+      });
+      alertService.alert('Error', message);
+    }
 
-      return false;
-    };
+    return false;
+  };
 
   return { createPantryItem };
 }

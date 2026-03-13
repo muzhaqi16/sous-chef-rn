@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { StorageLocationsScreen } from '../StorageLocationsScreen';
 
 // Mock token scheduler / refreshToken
@@ -64,9 +64,12 @@ jest.mock('#components/organisms/storageLocation/StorageLocationCard', () => ({
   },
 }));
 
-jest.mock('#components/modals/StorageLocationSheet/StorageLocationSheet', () => ({
-  StorageLocationSheet: () => null,
-}));
+jest.mock(
+  '#components/modals/StorageLocationSheet/StorageLocationSheet',
+  () => ({
+    StorageLocationSheet: () => null,
+  }),
+);
 
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: {
@@ -85,7 +88,9 @@ jest.mock('#/components/base/SousChefLoader', () => ({
   SousChefLoader: () => 'SousChefLoader',
 }));
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 const defaultRoute = { params: { homeId: 'home-1' } };
 
@@ -118,9 +123,7 @@ describe('StorageLocationsScreen', () => {
       refetch: jest.fn(),
     });
 
-    const tree = render(
-      <StorageLocationsScreen route={defaultRoute} />,
-    );
+    const tree = render(<StorageLocationsScreen route={defaultRoute} />);
     expect(tree.toJSON()).toBeTruthy();
   });
 
@@ -258,7 +261,9 @@ describe('StorageLocationsScreen', () => {
           id: 'loc-1',
           name: 'Kitchen',
           isDefault: true,
-          children: [{ id: 'loc-2', name: 'Fridge', isDefault: false, children: [] }],
+          children: [
+            { id: 'loc-2', name: 'Fridge', isDefault: false, children: [] },
+          ],
         },
       ],
       initialLoading: false,
@@ -360,7 +365,7 @@ describe('StorageLocationsScreen', () => {
     );
     fireEvent.press(getByTestId('delete-loc-1'));
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Cannot Delete Default Location',
       'Set another location as default first.',
       [{ text: 'OK' }],
@@ -392,7 +397,7 @@ describe('StorageLocationsScreen', () => {
     );
     fireEvent.press(getByTestId('delete-loc-1'));
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Cannot Delete Location',
       '"Fridge" has 5 items. Move or remove them first.',
       [{ text: 'Got It' }],
@@ -407,7 +412,13 @@ describe('StorageLocationsScreen', () => {
     useStorageLocationManagement.mockReturnValue({
       locations: [
         { id: 'loc-1', name: 'Kitchen', isDefault: false, currentItemCount: 0 },
-        { id: 'loc-2', name: 'Fridge', isDefault: false, currentItemCount: 0, parentLocation: { id: 'loc-1' } },
+        {
+          id: 'loc-2',
+          name: 'Fridge',
+          isDefault: false,
+          currentItemCount: 0,
+          parentLocation: { id: 'loc-1' },
+        },
       ],
       tree: [],
       initialLoading: false,
@@ -425,7 +436,7 @@ describe('StorageLocationsScreen', () => {
     );
     fireEvent.press(getByTestId('delete-loc-1'));
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Cannot Delete Location',
       '"Kitchen" has 1 sub-location. Move or remove them first.',
       [{ text: 'Got It' }],
@@ -439,7 +450,12 @@ describe('StorageLocationsScreen', () => {
     );
     useStorageLocationManagement.mockReturnValue({
       locations: [
-        { id: 'loc-1', name: 'Empty Shelf', isDefault: false, currentItemCount: 0 },
+        {
+          id: 'loc-1',
+          name: 'Empty Shelf',
+          isDefault: false,
+          currentItemCount: 0,
+        },
       ],
       tree: [],
       initialLoading: false,
@@ -457,7 +473,7 @@ describe('StorageLocationsScreen', () => {
     );
     fireEvent.press(getByTestId('delete-loc-1'));
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Delete Storage Location',
       'Are you sure you want to delete "Empty Shelf"? This cannot be undone.',
       expect.arrayContaining([

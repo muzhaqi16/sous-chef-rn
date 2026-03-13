@@ -10,12 +10,6 @@ jest.mock('#utils/imageUtils', () => ({
     item?.imageUrl ? `https://cdn.test/${item.imageUrl}` : null,
 }));
 
-// Mock settings hook
-let mockShowImages = true;
-jest.mock('#hooks/settings/useUserPreferences', () => ({
-  useShowShoppingListImages: () => mockShowImages,
-}));
-
 // Factory for ShoppingListItemDisplayFragment-like objects
 function createDisplayItem(overrides: Record<string, unknown> = {}) {
   return {
@@ -34,7 +28,7 @@ function createDisplayItem(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  mockShowImages = true;
+  jest.clearAllMocks();
 });
 
 describe('useShoppingListTransform', () => {
@@ -69,7 +63,9 @@ describe('useShoppingListTransform', () => {
     const items = [createDisplayItem({ unitName: null })];
     const { result } = renderHook(() => useShoppingListTransform(items));
 
-    expect(result.current.sortableItems[0]!.rightElementConfig!.unit).toBe('gal');
+    expect(result.current.sortableItems[0]!.rightElementConfig!.unit).toBe(
+      'gal',
+    );
   });
 
   it('creates image config as leftElementConfig when images enabled', () => {
@@ -83,9 +79,10 @@ describe('useShoppingListTransform', () => {
   });
 
   it('omits leftElementConfig when images are disabled', () => {
-    mockShowImages = false;
     const items = [createDisplayItem()];
-    const { result } = renderHook(() => useShoppingListTransform(items));
+    const { result } = renderHook(() =>
+      useShoppingListTransform(items, { showImages: false }),
+    );
 
     expect(result.current.sortableItems[0].leftElementConfig).toBeUndefined();
   });
@@ -156,7 +153,9 @@ describe('useShoppingListTransform', () => {
     const items = [createDisplayItem({ quantity: null })];
     const { result } = renderHook(() => useShoppingListTransform(items));
 
-    expect(result.current.sortableItems[0]!.rightElementConfig!.quantity).toBe(0);
+    expect(result.current.sortableItems[0]!.rightElementConfig!.quantity).toBe(
+      0,
+    );
   });
 
   it('handles empty items array', () => {

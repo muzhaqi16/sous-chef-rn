@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { CreateHomeScreen } from '../CreateHomeScreen';
 
 jest.mock('../../../../apollo/links/tokenScheduler');
@@ -73,7 +73,9 @@ jest.mock('../helpers', () => ({
 
 jest.mock('#/utils/connectionUtils', () => ({
   normalizeHomes: jest.fn((homes: any) => homes || []),
-  extractNodes: jest.fn((data: any) => data?.edges?.map((e: any) => e.node) || []),
+  extractNodes: jest.fn(
+    (data: any) => data?.edges?.map((e: any) => e.node) || [],
+  ),
 }));
 
 jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
@@ -88,7 +90,11 @@ jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('../FormContent', () => ({
   FormContent: () => {
     const { View, Text } = require('react-native');
-    return <View testID="form-content"><Text>Form Content</Text></View>;
+    return (
+      <View testID="form-content">
+        <Text>Form Content</Text>
+      </View>
+    );
   },
 }));
 
@@ -98,7 +104,9 @@ jest.mock('../LoadingView', () => ({
     return (
       <View testID="loading-view">
         <Text>Loading...</Text>
-        <Pressable onPress={onSkip}><Text>Skip</Text></Pressable>
+        <Pressable onPress={onSkip}>
+          <Text>Skip</Text>
+        </Pressable>
       </View>
     );
   },
@@ -120,7 +128,11 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
 jest.mock('../SubmitButton', () => ({
   SubmitButton: ({ onPress, isCreating }: any) => {
     const { Pressable, Text } = require('react-native');
-    return <Pressable testID="submit-button" onPress={onPress}><Text>{isCreating ? 'Creating...' : 'Submit'}</Text></Pressable>;
+    return (
+      <Pressable testID="submit-button" onPress={onPress}>
+        <Text>{isCreating ? 'Creating...' : 'Submit'}</Text>
+      </Pressable>
+    );
   },
 }));
 
@@ -134,7 +146,11 @@ jest.mock('../ErrorMessage', () => ({
 jest.mock('#components/base/Button', () => ({
   Button: ({ title, onPress }: any) => {
     const { Pressable, Text } = require('react-native');
-    return <Pressable testID={`button-${title}`} onPress={onPress}><Text>{title}</Text></Pressable>;
+    return (
+      <Pressable testID={`button-${title}`} onPress={onPress}>
+        <Text>{title}</Text>
+      </Pressable>
+    );
   },
 }));
 
@@ -145,7 +161,8 @@ jest.mock('#utils/formatters/roleFormatters', () => ({
 // Mock react-hook-form
 jest.mock('react-hook-form', () => ({
   useForm: () => ({
-    handleSubmit: (fn: any) => () => fn({ homeName: 'My Home', pantryName: 'Kitchen' }),
+    handleSubmit: (fn: any) => () =>
+      fn({ homeName: 'My Home', pantryName: 'Kitchen' }),
     control: {},
     formState: { errors: {} },
     register: jest.fn(),
@@ -159,12 +176,17 @@ jest.mock('@hookform/resolvers/yup', () => ({
   yupResolver: jest.fn(() => jest.fn()),
 }));
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
   // Restore default mock implementations after clearAllMocks
-  const { useGetHomesQuery, useGetMyPendingInvitesQuery } = require('#generated');
+  const {
+    useGetHomesQuery,
+    useGetMyPendingInvitesQuery,
+  } = require('#generated');
   useGetHomesQuery.mockReturnValue({
     data: { homes: { edges: [] } },
     loading: false,
@@ -177,7 +199,9 @@ beforeEach(() => {
 
   const { normalizeHomes, extractNodes } = require('#/utils/connectionUtils');
   normalizeHomes.mockImplementation((homes: any) => homes || []);
-  extractNodes.mockImplementation((data: any) => data?.edges?.map((e: any) => e.node) || []);
+  extractNodes.mockImplementation(
+    (data: any) => data?.edges?.map((e: any) => e.node) || [],
+  );
 
   const { formatRole } = require('#utils/formatters/roleFormatters');
   formatRole.mockImplementation((role: string) => role);
@@ -251,7 +275,10 @@ describe('CreateHomeScreen', () => {
               id: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
-              inviter: { email: 'john@test.com', profile: { displayName: 'John' } },
+              inviter: {
+                email: 'john@test.com',
+                profile: { displayName: 'John' },
+              },
             },
           ],
         },
@@ -305,7 +332,9 @@ describe('CreateHomeScreen', () => {
 
   it('shows correct subtitle when no home exists', () => {
     const { getByText } = render(<CreateHomeScreen />);
-    expect(getByText('Create your home and pantry to get started')).toBeTruthy();
+    expect(
+      getByText('Create your home and pantry to get started'),
+    ).toBeTruthy();
   });
 
   it('shows subtitle for existing setup', () => {
@@ -319,7 +348,9 @@ describe('CreateHomeScreen', () => {
     ]);
 
     const { getByText } = render(<CreateHomeScreen />);
-    expect(getByText('Your home and pantry are already configured')).toBeTruthy();
+    expect(
+      getByText('Your home and pantry are already configured'),
+    ).toBeTruthy();
   });
 
   it('shows existing home name in resource card when home exists but pantry missing', () => {
@@ -375,7 +406,10 @@ describe('CreateHomeScreen', () => {
               id: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
-              inviter: { email: 'john@test.com', profile: { displayName: 'John' } },
+              inviter: {
+                email: 'john@test.com',
+                profile: { displayName: 'John' },
+              },
             },
           ],
         },
@@ -399,7 +433,10 @@ describe('CreateHomeScreen', () => {
               id: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
-              inviter: { email: 'john@test.com', profile: { displayName: 'John' } },
+              inviter: {
+                email: 'john@test.com',
+                profile: { displayName: 'John' },
+              },
             },
           ],
         },
@@ -497,10 +534,12 @@ describe('CreateHomeScreen', () => {
 
     const { getByText } = render(<CreateHomeScreen />);
     fireEvent.press(getByText('Accept'));
-    expect(mockAcceptHomeInvite).toHaveBeenCalledWith({ variables: { token: 'invite-1' } });
+    expect(mockAcceptHomeInvite).toHaveBeenCalledWith({
+      variables: { token: 'invite-1' },
+    });
   });
 
-  it('calls Alert.alert when Decline button is pressed', () => {
+  it('calls alertService.alert when Decline button is pressed', () => {
     const { useGetMyPendingInvitesQuery } = require('#generated');
     useGetMyPendingInvitesQuery.mockReturnValue({
       data: {
@@ -520,7 +559,7 @@ describe('CreateHomeScreen', () => {
 
     const { getByText } = render(<CreateHomeScreen />);
     fireEvent.press(getByText('Decline'));
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Decline Invitation',
       expect.stringContaining('Johns Home'),
       expect.any(Array),
@@ -534,7 +573,9 @@ describe('CreateHomeScreen', () => {
           success: true,
           home: {
             id: 'home-new',
-            pantriesConnection: { edges: [{ node: { id: 'p1', isDefault: true } }] },
+            pantriesConnection: {
+              edges: [{ node: { id: 'p1', isDefault: true } }],
+            },
           },
         },
       },
@@ -634,13 +675,15 @@ describe('CreateHomeScreen', () => {
     const { getByText } = render(<CreateHomeScreen />);
     fireEvent.press(getByText('Decline'));
 
-    // Get the Alert.alert call and execute the "Decline" button's onPress
-    const alertCall = (Alert.alert as jest.Mock).mock.calls[0];
+    // Get the alertService.alert call and execute the "Decline" button's onPress
+    const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2];
     const declineButton = buttons.find((b: any) => b.text === 'Decline');
     declineButton.onPress();
 
-    expect(mockDeclineHomeInvite).toHaveBeenCalledWith({ variables: { token: 'invite-1' } });
+    expect(mockDeclineHomeInvite).toHaveBeenCalledWith({
+      variables: { token: 'invite-1' },
+    });
   });
 
   it('shows error message when createHome mutation fails', async () => {
@@ -660,7 +703,9 @@ describe('CreateHomeScreen', () => {
           success: true,
           home: {
             id: 'home-new',
-            pantriesConnection: { edges: [{ node: { id: 'p1', isDefault: true } }] },
+            pantriesConnection: {
+              edges: [{ node: { id: 'p1', isDefault: true } }],
+            },
           },
         },
       },
@@ -681,7 +726,9 @@ describe('CreateHomeScreen', () => {
 
   it('handles createHome success without home in response by refetching', async () => {
     const mockRefetch = jest.fn().mockResolvedValue({
-      data: { homes: { edges: [{ node: { id: 'found-home', name: 'My Home' } }] } },
+      data: {
+        homes: { edges: [{ node: { id: 'found-home', name: 'My Home' } }] },
+      },
     });
 
     const { useGetHomesQuery } = require('#generated');
@@ -797,7 +844,10 @@ describe('CreateHomeScreen', () => {
       }),
     );
 
-    const { createPantryForHome, showPantryCreationError } = require('../helpers');
+    const {
+      createPantryForHome,
+      showPantryCreationError,
+    } = require('../helpers');
     createPantryForHome.mockResolvedValue(false);
 
     const { getByTestId } = render(<CreateHomeScreen />);
@@ -940,7 +990,10 @@ describe('CreateHomeScreen', () => {
               id: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Home A' },
-              inviter: { email: 'a@test.com', profile: { displayName: 'Alice' } },
+              inviter: {
+                email: 'a@test.com',
+                profile: { displayName: 'Alice' },
+              },
             },
             {
               id: 'invite-2',
@@ -974,7 +1027,9 @@ describe('CreateHomeScreen', () => {
           success: true,
           home: {
             id: 'home-new',
-            pantriesConnection: { edges: [{ node: { id: 'p1', isDefault: false } }] },
+            pantriesConnection: {
+              edges: [{ node: { id: 'p1', isDefault: false } }],
+            },
           },
         },
       },

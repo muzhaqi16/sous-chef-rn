@@ -39,37 +39,51 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
   };
 
   const hasColor = !!location.color;
-  const temperatureLabel = location.temperature ? TEMPERATURE_LABELS[location.temperature] : null;
+  const temperatureLabel = location.temperature
+    ? TEMPERATURE_LABELS[location.temperature]
+    : null;
   const hasCapacity = location.capacity != null && location.capacity > 0;
 
   return (
     <View style={[commonStyles.card, commonStyles.shadow, styles.card]}>
       <View style={styles.cardContent}>
         {hasColor ? (
-          <View style={[styles.colorStrip, { backgroundColor: location.color }]} />
+          <View
+            style={[styles.colorStrip, { backgroundColor: location.color }]}
+          />
         ) : null}
         <View style={styles.cardBody}>
           <Pressable
             onPress={onPress}
-            style={({pressed}) => [styles.cardHeader, pressed && onPress && styles.pressed]}
+            style={({ pressed }) => [
+              styles.cardHeader,
+              pressed && onPress && styles.pressed,
+            ]}
             disabled={!onPress}
           >
-            <View style={commonStyles.row}>
+            <View style={styles.headerRow}>
               <StorageLocationIcon type={location.type} size={20} />
               <View style={styles.info}>
                 <View style={commonStyles.rowSpaceBetween}>
                   <Text style={commonStyles.title}>{location.name}</Text>
                   <View style={styles.badges}>
                     {!!isDefault && <Badge variant="primary">Default</Badge>}
-                    {!!temperatureLabel && <Badge variant="primary">{temperatureLabel}</Badge>}
+                    {!!temperatureLabel && (
+                      <Badge variant="primary">{temperatureLabel}</Badge>
+                    )}
                   </View>
                 </View>
                 <Text style={[commonStyles.caption, styles.subtitle]}>
-                  {!location.parentLocation && <Text>{formatType(location.type)} • </Text>}
+                  {!location.parentLocation && (
+                    <Text>{formatType(location.type)} • </Text>
+                  )}
                   {location.currentItemCount}{' '}
                   {location.currentItemCount === 1 ? 'item' : 'items'}
                   {hasCapacity ? (
-                    <Text> / {location.capacity} {location.capacityUnit || 'units'}</Text>
+                    <Text>
+                      {' '}
+                      / {location.capacity} {location.capacityUnit || 'units'}
+                    </Text>
                   ) : null}
                   {!!location.parentLocation && (
                     <Text style={styles.parentInfo}>
@@ -90,7 +104,11 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
           <View style={[commonStyles.row, styles.actions]}>
             {!isDefault && (
               <Pressable
-                style={({pressed}) => [commonStyles.row, styles.actionButton, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  commonStyles.row,
+                  styles.actionButton,
+                  pressed && styles.pressed,
+                ]}
                 onPress={onSetDefault}
               >
                 <Icon name="star-outline" size={18} />
@@ -98,14 +116,23 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               </Pressable>
             )}
             <Pressable
-              style={({pressed}) => [commonStyles.row, styles.actionButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                commonStyles.row,
+                styles.actionButton,
+                pressed && styles.pressed,
+              ]}
               onPress={onEdit}
             >
               <Icon name="create-outline" size={18} />
               <Text style={styles.actionText}>Edit</Text>
             </Pressable>
             <Pressable
-              style={({pressed}) => [commonStyles.row, styles.actionButton, styles.deleteButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                commonStyles.row,
+                styles.actionButton,
+                styles.deleteButton,
+                pressed && styles.pressed,
+              ]}
               onPress={onDelete}
             >
               <Icon name="trash-outline" size={18} color={theme.colors.error} />
@@ -136,6 +163,11 @@ const styles = StyleSheet.create(theme => ({
   },
   cardHeader: {
     paddingBottom: theme.spacing.sm,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.sm,
   },
   icon: {
     marginRight: theme.spacing.sm,
@@ -181,7 +213,7 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
   },
   deleteButton: {
-    backgroundColor: theme.colors.validation.errorBg,
+    backgroundColor: 'transparent',
   },
   deleteText: {
     fontSize: theme.fonts.size.sm,

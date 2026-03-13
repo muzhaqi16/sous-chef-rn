@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import { alertService } from '#/services/alertService';
 import { InviteMemberScreen } from '../InviteMemberScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -22,10 +23,11 @@ let mockSelectedHomeId: string | null = 'h1';
 let mockSelectedShoppingListId: string | null = 'sl1';
 
 jest.mock('#store/useAppStore', () => {
-  const fn = (selector: any) => selector({
-    selectedHomeId: mockSelectedHomeId,
-    selectedShoppingListId: mockSelectedShoppingListId,
-  });
+  const fn = (selector: any) =>
+    selector({
+      selectedHomeId: mockSelectedHomeId,
+      selectedShoppingListId: mockSelectedShoppingListId,
+    });
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
@@ -34,12 +36,22 @@ jest.mock('#store/useAppStore', () => {
 
 jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
-  useInviteToHomeMutation: jest.fn(() => [jest.fn(() => Promise.resolve()), { loading: false }]),
-  useAddCollaboratorMutation: jest.fn(() => [jest.fn(() => Promise.resolve()), { loading: false }]),
+  useInviteToHomeMutation: jest.fn(() => [
+    jest.fn(() => Promise.resolve()),
+    { loading: false },
+  ]),
+  useAddCollaboratorMutation: jest.fn(() => [
+    jest.fn(() => Promise.resolve()),
+    { loading: false },
+  ]),
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/utils/compilerSafeWrappers');
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
   OnBoardingWrapper: ({ title, subtitle, children }: any) => {
@@ -56,7 +68,11 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
 jest.mock('#components/base/Button', () => ({
   Button: ({ title, onPress, disabled }: any) => {
     const { Pressable, Text } = require('react-native');
-    return <Pressable onPress={onPress} disabled={disabled} testID="invite-button"><Text>{title}</Text></Pressable>;
+    return (
+      <Pressable onPress={onPress} disabled={disabled} testID="invite-button">
+        <Text>{title}</Text>
+      </Pressable>
+    );
   },
 }));
 
@@ -89,7 +105,9 @@ describe('InviteMemberScreen', () => {
 
   it('shows tip text', () => {
     render(<InviteMemberScreen />);
-    expect(screen.getByText(/You can always invite more people later/)).toBeTruthy();
+    expect(
+      screen.getByText(/You can always invite more people later/),
+    ).toBeTruthy();
   });
 
   it('shows send invites button disabled initially', () => {
@@ -114,32 +132,38 @@ describe('InviteMemberScreen', () => {
   });
 
   it('shows alert for invalid email', () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     render(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'not-an-email');
     fireEvent.press(screen.getByText('Add'));
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith('Invalid Email', 'Please enter a valid email address');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Invalid Email',
+      'Please enter a valid email address',
+    );
   });
 
   it('shows alert for duplicate email', () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     render(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'friend@test.com');
     fireEvent.press(screen.getByText('Add'));
     fireEvent.changeText(input, 'friend@test.com');
     fireEvent.press(screen.getByText('Add'));
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith('Duplicate Email', 'This email has already been added');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Duplicate Email',
+      'This email has already been added',
+    );
   });
 
   it('shows alert when inviting yourself', () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     render(<InviteMemberScreen />);
     const input = screen.getByPlaceholderText('Enter email address');
     fireEvent.changeText(input, 'me@test.com');
     fireEvent.press(screen.getByText('Add'));
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith('Invalid Email', "You can't invite yourself");
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Invalid Email',
+      "You can't invite yourself",
+    );
   });
 
   it('removes an invite when remove button pressed', () => {
@@ -201,14 +225,18 @@ describe('InviteMemberScreen', () => {
   it('shows subtitle when only shopping list available', () => {
     mockSelectedHomeId = null;
     render(<InviteMemberScreen />);
-    expect(screen.getByText(/Share your shopping list with others/)).toBeTruthy();
+    expect(
+      screen.getByText(/Share your shopping list with others/),
+    ).toBeTruthy();
   });
 
   it('shows subtitle when neither resource exists', () => {
     mockSelectedHomeId = null;
     mockSelectedShoppingListId = null;
     render(<InviteMemberScreen />);
-    expect(screen.getByText(/Create a home or shopping list first/)).toBeTruthy();
+    expect(
+      screen.getByText(/Create a home or shopping list first/),
+    ).toBeTruthy();
   });
 
   it('sends invites and navigates on success when invites exist', async () => {
@@ -228,7 +256,9 @@ describe('InviteMemberScreen', () => {
     render(<InviteMemberScreen />);
     // Button is disabled when no invites are added
     const button = screen.getByTestId('invite-button');
-    expect(button.props.accessibilityState?.disabled ?? button.props.disabled).toBeTruthy();
+    expect(
+      button.props.accessibilityState?.disabled ?? button.props.disabled,
+    ).toBeTruthy();
   });
 
   it('shows "Continue" button in nothing-to-share state', () => {
@@ -294,7 +324,10 @@ describe('InviteMemberScreen', () => {
   it('sends home invite for home-type invites', async () => {
     const mockInviteToHome = jest.fn().mockResolvedValue({});
     const { useInviteToHomeMutation } = require('#generated');
-    useInviteToHomeMutation.mockReturnValue([mockInviteToHome, { loading: false }]);
+    useInviteToHomeMutation.mockReturnValue([
+      mockInviteToHome,
+      { loading: false },
+    ]);
 
     mockSelectedShoppingListId = null;
 
@@ -312,6 +345,8 @@ describe('InviteMemberScreen', () => {
     mockSelectedHomeId = null;
     mockSelectedShoppingListId = null;
     render(<InviteMemberScreen />);
-    expect(screen.getByText(/You need to create a home or shopping list first/)).toBeTruthy();
+    expect(
+      screen.getByText(/You need to create a home or shopping list first/),
+    ).toBeTruthy();
   });
 });

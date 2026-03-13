@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  Pressable,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { alertService } from '#/services/alertService';
 import { useApolloClient } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
@@ -59,10 +53,18 @@ export const InvitationAcceptanceModal: React.FC<
       if (!data?.acceptShoppingListInvite?.collaborator) return;
 
       try {
-        const addToShoppingListsCache = createAddToQueryFieldUpdater('shoppingLists');
-        addToShoppingListsCache(cache, data.acceptShoppingListInvite.collaborator, { position: 'end' });
+        const addToShoppingListsCache =
+          createAddToQueryFieldUpdater('shoppingLists');
+        addToShoppingListsCache(
+          cache,
+          data.acceptShoppingListInvite.collaborator,
+          { position: 'end' },
+        );
       } catch (error) {
-        console.warn('Cache update failed for acceptShoppingListInvite:', error);
+        console.warn(
+          'Cache update failed for acceptShoppingListInvite:',
+          error,
+        );
       }
     },
   });
@@ -95,7 +97,9 @@ export const InvitationAcceptanceModal: React.FC<
 
         if (!token) {
           onClose();
-          toastService.error('Unable to find invitation. It may have expired or been cancelled.');
+          toastService.error(
+            'Unable to find invitation. It may have expired or been cancelled.',
+          );
           setAccepting(false);
           return;
         }
@@ -111,9 +115,12 @@ export const InvitationAcceptanceModal: React.FC<
           if (result.error) {
             const errorMessage = result.error.message;
             onClose();
-            const message = errorMessage?.includes('expired') || errorMessage?.includes('Invalid')
-              ? 'This invitation is no longer valid. It may have expired or already been used.'
-              : errorMessage || 'Failed to accept invitation. Please try again.';
+            const message =
+              errorMessage?.includes('expired') ||
+              errorMessage?.includes('Invalid')
+                ? 'This invitation is no longer valid. It may have expired or already been used.'
+                : errorMessage ||
+                  'Failed to accept invitation. Please try again.';
             toastService.error(message);
             return;
           }
@@ -145,9 +152,12 @@ export const InvitationAcceptanceModal: React.FC<
           if (result.error) {
             const errorMessage = result.error.message;
             onClose();
-            const message = errorMessage?.includes('expired') || errorMessage?.includes('Invalid')
-              ? 'This invitation is no longer valid. It may have expired or already been used.'
-              : errorMessage || 'Failed to accept invitation. Please try again.';
+            const message =
+              errorMessage?.includes('expired') ||
+              errorMessage?.includes('Invalid')
+                ? 'This invitation is no longer valid. It may have expired or already been used.'
+                : errorMessage ||
+                  'Failed to accept invitation. Please try again.';
             toastService.error(message);
             return;
           }
@@ -164,9 +174,10 @@ export const InvitationAcceptanceModal: React.FC<
         onClose();
         // Show non-blocking toast with contextual message
         const err = error as any;
-        const message = err.message?.includes('expired') || err.message?.includes('Invalid')
-          ? 'This invitation is no longer valid. It may have expired or already been used.'
-          : err.message || 'Failed to accept invitation. Please try again.';
+        const message =
+          err.message?.includes('expired') || err.message?.includes('Invalid')
+            ? 'This invitation is no longer valid. It may have expired or already been used.'
+            : err.message || 'Failed to accept invitation. Please try again.';
         toastService.error(message);
       },
     );
@@ -176,11 +187,11 @@ export const InvitationAcceptanceModal: React.FC<
     if (!invitation) return;
 
     // Show confirmation alert
-    Alert.alert(
+    alertService.alert(
       'Decline Invitation',
       `Are you sure you want to decline this invitation to ${invitation.entityName}?`,
       [
-        {text: 'Cancel', style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Decline',
           style: 'destructive',
@@ -192,10 +203,12 @@ export const InvitationAcceptanceModal: React.FC<
 
                 // Fallback: Fetch token if missing (real-time notifications may not include it)
                 if (!token && invitation.type === 'SHOPPING_LIST_INVITE') {
-                  const result = await client.query<MyShoppingListInvitesQuery>({
-                    query: MyShoppingListInvitesDocument,
-                    fetchPolicy: 'network-only',
-                  });
+                  const result = await client.query<MyShoppingListInvitesQuery>(
+                    {
+                      query: MyShoppingListInvitesDocument,
+                      fetchPolicy: 'network-only',
+                    },
+                  );
                   const invites = result.data?.me?.pendingCollaborationInvites;
                   const invite = invites?.find(
                     inv => inv.id === invitation.payload?.inviteId,
@@ -205,28 +218,33 @@ export const InvitationAcceptanceModal: React.FC<
 
                 if (!token) {
                   onClose();
-                  toastService.error('Unable to find invitation. It may have expired or been cancelled.');
+                  toastService.error(
+                    'Unable to find invitation. It may have expired or been cancelled.',
+                  );
                   setRejecting(false);
                   return;
                 }
 
                 if (invitation.type === 'HOME_INVITE') {
                   const result = await declineHomeInvite({
-                    variables: {token: token!},
+                    variables: { token: token! },
                   });
 
                   // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
                   if (result.error) {
                     const errorMessage = result.error.message;
                     onClose();
-                    const message = errorMessage?.includes('expired') || errorMessage?.includes('Invalid')
-                      ? 'This invitation is no longer valid. It may have expired or already been used.'
-                      : errorMessage || 'Failed to decline invitation. Please try again.';
+                    const message =
+                      errorMessage?.includes('expired') ||
+                      errorMessage?.includes('Invalid')
+                        ? 'This invitation is no longer valid. It may have expired or already been used.'
+                        : errorMessage ||
+                          'Failed to decline invitation. Please try again.';
                     toastService.error(message);
                     return;
                   }
 
-                  Alert.alert(
+                  alertService.alert(
                     'Invitation Declined',
                     `You have declined the invitation to ${invitation.entityName}`,
                     [
@@ -241,21 +259,24 @@ export const InvitationAcceptanceModal: React.FC<
                   );
                 } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
                   const result = await declineShoppingListInvite({
-                    variables: {token: token!},
+                    variables: { token: token! },
                   });
 
                   // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
                   if (result.error) {
                     const errorMessage = result.error.message;
                     onClose();
-                    const message = errorMessage?.includes('expired') || errorMessage?.includes('Invalid')
-                      ? 'This invitation is no longer valid. It may have expired or already been used.'
-                      : errorMessage || 'Failed to decline invitation. Please try again.';
+                    const message =
+                      errorMessage?.includes('expired') ||
+                      errorMessage?.includes('Invalid')
+                        ? 'This invitation is no longer valid. It may have expired or already been used.'
+                        : errorMessage ||
+                          'Failed to decline invitation. Please try again.';
                     toastService.error(message);
                     return;
                   }
 
-                  Alert.alert(
+                  alertService.alert(
                     'Invitation Declined',
                     `You have declined the invitation to ${invitation.entityName}`,
                     [
@@ -276,9 +297,12 @@ export const InvitationAcceptanceModal: React.FC<
                 onClose();
                 // Show non-blocking toast with contextual message
                 const err = error as any;
-                const message = err.message?.includes('expired') || err.message?.includes('Invalid')
-                  ? 'This invitation is no longer valid. It may have expired or already been used.'
-                  : err.message || 'Failed to decline invitation. Please try again.';
+                const message =
+                  err.message?.includes('expired') ||
+                  err.message?.includes('Invalid')
+                    ? 'This invitation is no longer valid. It may have expired or already been used.'
+                    : err.message ||
+                      'Failed to decline invitation. Please try again.';
                 toastService.error(message);
               },
             );
@@ -305,15 +329,19 @@ export const InvitationAcceptanceModal: React.FC<
           <View style={styles.header}>
             <View style={styles.iconContainer}>
               <Icon
-                name={
-                  invitation.type === 'HOME_INVITE' ? 'home' : 'cart'
-                }
+                name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
                 size={32}
                 color={theme.colors.primary}
               />
             </View>
             <Text style={styles.title}>{invitation.title}</Text>
-            <Pressable style={({pressed}) => [styles.closeButton, pressed && styles.pressed]} onPress={onClose}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.closeButton,
+                pressed && styles.pressed,
+              ]}
+              onPress={onClose}
+            >
               <Icon name="close" size={24} color={theme.colors.textSecondary} />
             </Pressable>
           </View>
@@ -324,7 +352,11 @@ export const InvitationAcceptanceModal: React.FC<
 
             {!!invitation.inviterName && (
               <View style={styles.inviterContainer}>
-                <Icon name="person" size={16} color={theme.colors.textSecondary} />
+                <Icon
+                  name="person"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                />
                 <Text style={styles.inviterText}>
                   Invited by {invitation.inviterName}
                 </Text>
@@ -333,9 +365,7 @@ export const InvitationAcceptanceModal: React.FC<
 
             <View style={styles.entityContainer}>
               <Icon
-                name={
-                  invitation.type === 'HOME_INVITE' ? 'home' : 'cart'
-                }
+                name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
                 size={16}
                 color={theme.colors.textSecondary}
               />
@@ -346,7 +376,11 @@ export const InvitationAcceptanceModal: React.FC<
           {/* Actions */}
           <View style={styles.actions}>
             <Pressable
-              style={({pressed}) => [styles.button, styles.rejectButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.button,
+                styles.rejectButton,
+                pressed && styles.pressed,
+              ]}
               onPress={handleReject}
               disabled={accepting || rejecting}
             >
@@ -363,7 +397,11 @@ export const InvitationAcceptanceModal: React.FC<
             </Pressable>
 
             <Pressable
-              style={({pressed}) => [styles.button, styles.acceptButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.button,
+                styles.acceptButton,
+                pressed && styles.pressed,
+              ]}
               onPress={handleAccept}
               disabled={accepting || rejecting}
             >
@@ -399,7 +437,15 @@ const styles = StyleSheet.create(theme => ({
     width: '100%',
     maxWidth: 400,
     overflow: 'hidden',
-    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 8, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.25)' }],
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 8,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.25)',
+      },
+    ],
   },
   header: {
     flexDirection: 'row',

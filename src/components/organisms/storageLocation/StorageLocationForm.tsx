@@ -249,57 +249,63 @@ export const StorageLocationForm = forwardRef<
 
         {/* Parent Location Selector */}
         {parentOptions.length > 0 && (
-          <View style={commonStyles.inputGroup}>
+          <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
             <Text style={commonStyles.label}>Parent Location (Optional)</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.parentScroll}
-            >
-              <Pressable
-                style={({ pressed }) => [
-                  styles.parentButton,
-                  !formData.parentLocationId && styles.parentButtonSelected,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() =>
-                  setFormData({ ...formData, parentLocationId: undefined })
-                }
+            <View style={styles.carouselContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.parentScroll}
+                contentContainerStyle={styles.typeScrollContent}
               >
-                <Text
-                  style={[
-                    styles.parentLabel,
-                    !formData.parentLocationId && styles.parentLabelSelected,
-                  ]}
-                >
-                  None
-                </Text>
-              </Pressable>
-              {parentOptions.map(location => (
                 <Pressable
-                  key={location.id}
                   style={({ pressed }) => [
                     styles.parentButton,
-                    formData.parentLocationId === location.id &&
-                      styles.parentButtonSelected,
+                    !formData.parentLocationId && styles.parentButtonSelected,
                     pressed && styles.pressed,
                   ]}
                   onPress={() =>
-                    setFormData({ ...formData, parentLocationId: location.id })
+                    setFormData({ ...formData, parentLocationId: undefined })
                   }
                 >
                   <Text
                     style={[
                       styles.parentLabel,
-                      formData.parentLocationId === location.id &&
-                        styles.parentLabelSelected,
+                      !formData.parentLocationId && styles.parentLabelSelected,
                     ]}
                   >
-                    {location.name}
+                    None
                   </Text>
                 </Pressable>
-              ))}
-            </ScrollView>
+                {parentOptions.map(location => (
+                  <Pressable
+                    key={location.id}
+                    style={({ pressed }) => [
+                      styles.parentButton,
+                      formData.parentLocationId === location.id &&
+                        styles.parentButtonSelected,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() =>
+                      setFormData({
+                        ...formData,
+                        parentLocationId: location.id,
+                      })
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.parentLabel,
+                        formData.parentLocationId === location.id &&
+                          styles.parentLabelSelected,
+                      ]}
+                    >
+                      {location.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
             <Text style={styles.hint}>
               Organize locations hierarchically (e.g., drawer inside fridge)
             </Text>
@@ -318,75 +324,82 @@ export const StorageLocationForm = forwardRef<
         />
 
         {/* Temperature */}
-        <View style={commonStyles.inputGroup}>
+        <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
           <Text style={commonStyles.label}>Temperature</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.parentScroll}
-          >
-            {TEMPERATURE_OPTIONS.map(option => (
-              <Pressable
-                key={option.value}
-                style={({ pressed }) => [
-                  styles.parentButton,
-                  formData.temperature === option.value &&
-                    styles.parentButtonSelected,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() =>
-                  setFormData({ ...formData, temperature: option.value })
-                }
-              >
-                <Text
-                  style={[
-                    styles.parentLabel,
+          <View style={styles.carouselContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.typeScroll}
+              contentContainerStyle={styles.typeScrollContent}
+            >
+              {TEMPERATURE_OPTIONS.map(option => (
+                <Pressable
+                  key={option.value}
+                  style={({ pressed }) => [
+                    styles.parentButton,
                     formData.temperature === option.value &&
-                      styles.parentLabelSelected,
+                      styles.parentButtonSelected,
+                    pressed && styles.pressed,
                   ]}
+                  onPress={() =>
+                    setFormData({ ...formData, temperature: option.value })
+                  }
                 >
-                  {option.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+                  <Text
+                    style={[
+                      styles.parentLabel,
+                      formData.temperature === option.value &&
+                        styles.parentLabelSelected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
         </View>
 
         {/* Color */}
-        <View style={commonStyles.inputGroup}>
+        <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
           <Text style={commonStyles.label}>Color (Optional)</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.colorScroll}
-          >
-            <Pressable
-              style={({ pressed }) => [
-                styles.colorSwatch,
-                styles.colorSwatchNone,
-                !formData.color && styles.colorSwatchSelected,
-                pressed && styles.pressed,
-              ]}
-              onPress={() => setFormData({ ...formData, color: null })}
+          <View style={styles.carouselContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.typeScroll}
+              contentContainerStyle={styles.typeScrollContent}
             >
-              <Text style={styles.colorNoneText}>-</Text>
-            </Pressable>
-            {COLOR_PRESETS.map(preset => (
               <Pressable
-                key={preset.value}
                 style={({ pressed }) => [
                   styles.colorSwatch,
-                  { backgroundColor: preset.value },
-                  formData.color === preset.value && styles.colorSwatchSelected,
+                  styles.colorSwatchNone,
+                  !formData.color && styles.colorSwatchSelected,
                   pressed && styles.pressed,
                 ]}
-                onPress={() =>
-                  setFormData({ ...formData, color: preset.value })
-                }
-                accessibilityLabel={preset.label}
-              />
-            ))}
-          </ScrollView>
+                onPress={() => setFormData({ ...formData, color: null })}
+              >
+                <Text style={styles.colorNoneText}>-</Text>
+              </Pressable>
+              {COLOR_PRESETS.map(preset => (
+                <Pressable
+                  key={preset.value}
+                  style={({ pressed }) => [
+                    styles.colorSwatch,
+                    { backgroundColor: preset.value },
+                    formData.color === preset.value &&
+                      styles.colorSwatchSelected,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() =>
+                    setFormData({ ...formData, color: preset.value })
+                  }
+                  accessibilityLabel={preset.label}
+                />
+              ))}
+            </ScrollView>
+          </View>
         </View>
 
         {/* Advanced Settings Collapsible */}
@@ -566,9 +579,6 @@ const styles = StyleSheet.create(theme => ({
   hint: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  colorScroll: {
     marginTop: theme.spacing.xs,
   },
   colorSwatch: {

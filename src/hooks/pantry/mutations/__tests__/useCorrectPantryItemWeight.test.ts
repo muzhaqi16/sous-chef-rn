@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useCorrectPantryItemWeight } from '../useCorrectPantryItemWeight';
 
 const mockCorrectMutation = jest.fn();
@@ -24,7 +24,9 @@ jest.mock('#/utils/errors/versionConflict', () => ({
   getVersionConflictMessage: jest.fn(() => 'Version conflict message'),
 }));
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -55,7 +57,12 @@ describe('useCorrectPantryItemWeight', () => {
 
     let success: boolean;
     await act(async () => {
-      success = await result.current.correctWeight('item-1', 500, 'Measured with scale', 2);
+      success = await result.current.correctWeight(
+        'item-1',
+        500,
+        'Measured with scale',
+        2,
+      );
     });
 
     expect(success!).toBe(true);
@@ -115,7 +122,10 @@ describe('useCorrectPantryItemWeight', () => {
     });
 
     expect(success!).toBe(false);
-    expect(Alert.alert).toHaveBeenCalledWith('Item Updated', 'Version conflict message');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Item Updated',
+      'Version conflict message',
+    );
   });
 
   it('returns false and shows generic error on non-conflict error', async () => {
@@ -132,7 +142,7 @@ describe('useCorrectPantryItemWeight', () => {
     });
 
     expect(success!).toBe(false);
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Test error');
+    expect(alertService.alert).toHaveBeenCalledWith('Error', 'Test error');
   });
 
   it('returns false when mutation returns no pantryItem', async () => {

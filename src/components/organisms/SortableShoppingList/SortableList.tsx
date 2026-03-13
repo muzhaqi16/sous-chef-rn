@@ -28,9 +28,10 @@ import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 
-// Screen-relative draw distance: scales with viewport so buffer stays ~7-10 items
-// regardless of device size (vs fixed 250 which is ~3.7 items on most devices)
-const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 1.5);
+// Screen-relative draw distance: 2× viewport gives ~17 items of buffer at
+// ~95px/item. Provides better scroll coverage while keeping pagination cost
+// manageable.
+const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
 
 // Module-level constant — avoids creating a new object reference per render
 const MVCP_DISABLED = { disabled: true };

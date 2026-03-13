@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import { CreateMealPlanScreen } from '../CreateMealPlanScreen';
 
 // Mock token scheduler / refreshToken
@@ -81,7 +80,9 @@ jest.mock('#components/mealPlan/TemplatePreviewSheet', () => ({
   TemplatePreviewSheet: () => null,
 }));
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 describe('CreateMealPlanScreen', () => {
   beforeEach(() => {

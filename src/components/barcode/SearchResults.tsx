@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ScrollView, Alert } from 'react-native';
+import { ScrollView } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { ItemCard } from './ItemCard';
 import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
@@ -110,7 +111,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             const duplicateInfo = getPantryItemDuplicateInfo(result.error);
             if (duplicateInfo) {
               setIsLoading(false);
-              Alert.alert(
+              alertService.alert(
                 'Item Already in Pantry',
                 'This item is already in your pantry. Would you like to restock it or add a separate entry?',
                 [
@@ -132,7 +133,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                         },
                         setIsLoading,
                         () => {
-                          Alert.alert(
+                          alertService.alert(
                             'Error',
                             'Failed to restock item. Please try again.',
                           );
@@ -155,7 +156,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                             setPendingPantryScrollToTop(true);
                             onScanAnother();
                           } else {
-                            Alert.alert(
+                            alertService.alert(
                               'Error',
                               'Failed to add item. Please try again.',
                             );
@@ -163,7 +164,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                         },
                         setIsLoading,
                         () => {
-                          Alert.alert(
+                          alertService.alert(
                             'Error',
                             'Failed to add item. Please try again.',
                           );
@@ -182,7 +183,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             setPendingPantryScrollToTop(true);
             onScanAnother();
           } else if (result.error) {
-            Alert.alert('Error', 'Failed to add item. Please try again.');
+            alertService.alert(
+              'Error',
+              'Failed to add item. Please try again.',
+            );
           }
         } else if (source === 'shoppingList' && shoppingListId) {
           await addToShoppingList({
@@ -212,13 +216,13 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           setIsAdded(true);
           onScanAnother();
         } else {
-          Alert.alert('Error', 'Missing required information');
+          alertService.alert('Error', 'Missing required information');
         }
       },
       setIsLoading,
       error => {
         console.error('Error adding item:', error);
-        Alert.alert('Error', 'Failed to add item. Please try again.');
+        alertService.alert('Error', 'Failed to add item. Please try again.');
       },
     );
   };

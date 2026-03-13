@@ -38,11 +38,12 @@ export function MultiSelectChipSheet<T extends string = string>({
   onDone,
   loading = false,
 }: MultiSelectChipSheetProps<T>) {
-  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
-    onDismiss: onClose,
-    snapPoints: ['60%', '80%'],
-    keyboardBehavior: 'interactive',
-  });
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      onDismiss: onClose,
+      snapPoints: ['60%', '80%'],
+      keyboardBehavior: 'interactive',
+    });
   const [searchQuery, setSearchQuery] = useState('');
 
   // Reset search query when sheet opens (render-time state update)
@@ -85,10 +86,7 @@ export function MultiSelectChipSheet<T extends string = string>({
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetView
-        style={[
-          styles.bottomSheetContent,
-          contentContainerStyle,
-        ]}
+        style={[styles.bottomSheetContent, contentContainerStyle]}
       >
         <BottomSheetHeader
           title={title}
@@ -102,11 +100,7 @@ export function MultiSelectChipSheet<T extends string = string>({
         {/* Search Input */}
         {!!showSearch && (
           <View style={styles.searchContainer}>
-            <Icon
-              name="search"
-              size={18}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="search" size={18} color={theme.colors.textSecondary} />
             <BottomSheetTextInput
               style={styles.searchInput}
               placeholder="Search..."
@@ -126,7 +120,10 @@ export function MultiSelectChipSheet<T extends string = string>({
               : `${selectedItems.length} selected`}
           </Text>
           {selectedItems.length > 0 && (
-            <Pressable onPress={handleClearAll} style={({pressed}) => pressed && styles.pressed}>
+            <Pressable
+              onPress={handleClearAll}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
               <Text style={styles.clearText}>Clear all</Text>
             </Pressable>
           )}
@@ -210,7 +207,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: theme.spacing.xs,
+    gap: theme.spacing.sm,
   },
   loadingContainer: {
     paddingVertical: theme.spacing.lg,

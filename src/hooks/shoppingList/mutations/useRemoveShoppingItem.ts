@@ -7,8 +7,8 @@
  * - Error handling with user feedback
  */
 
-import { Alert } from 'react-native';
 import { gql } from '@apollo/client';
+import { alertService } from '#/services/alertService';
 import { useRemoveItemFromShoppingListMutation } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
@@ -34,7 +34,10 @@ interface UseRemoveShoppingItemReturn {
   removeItem: (itemId: string) => Promise<unknown>;
 }
 
-export function useRemoveShoppingItem({ listId, refetch }: UseRemoveShoppingItemOptions): UseRemoveShoppingItemReturn {
+export function useRemoveShoppingItem({
+  listId,
+  refetch,
+}: UseRemoveShoppingItemOptions): UseRemoveShoppingItemReturn {
   const { handleApolloError } = useErrorService();
   const { createRemoveOperation } = useCrudOperations();
 
@@ -67,7 +70,9 @@ export function useRemoveShoppingItem({ listId, refetch }: UseRemoveShoppingItem
           });
           const wasPurchased = itemData ? itemData.isPurchased : false;
 
-          removeFromShoppingListItemsCache(cache, listId, itemId, { evictItem: true });
+          removeFromShoppingListItemsCache(cache, listId, itemId, {
+            evictItem: true,
+          });
 
           // Update totalItems and conditionally completedItems
           const parentCacheId = cache.identify({
@@ -98,7 +103,7 @@ export function useRemoveShoppingItem({ listId, refetch }: UseRemoveShoppingItem
       const { message } = handleApolloError(error, {
         operation: 'Remove Shopping List Item',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     },
   });
 

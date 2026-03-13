@@ -1,15 +1,71 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  RefreshControl,
+} from 'react-native';
+import { alertService } from '#/services/alertService';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { usePerformanceStore } from '#/store/performanceStore';
 import { Environment } from '#/utils/environment';
 import { useAppStore, selectIsAdminUser } from '#/store/useAppStore';
+import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
+import { useFPSMonitor } from '#/hooks/performance/useFPSMonitor';
+import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 import performance from 'react-native-performance';
 
+/**
+ * Isolated FPS display component.
+ * Owns its own useFPSMonitor call so that FPS state updates (10/sec)
+ * only re-render this small card — not the entire dashboard with its
+ * table sorts and IIFE recomputations.
+ */
+const FPSSection: React.FC = () => {
+  const { fps, isLowFPS, stats: fpsStats } = useFPSMonitor();
+
+  return (
+    <View style={styles.metricsSection}>
+      <Text style={styles.sectionTitle}>Live FPS</Text>
+      <Text style={styles.sectionSubtitle}>Frame rate monitor (DEV only)</Text>
+      <View style={styles.startupCard}>
+        <View style={styles.startupRow}>
+          <Text style={styles.startupLabel}>Current FPS</Text>
+          <Text
+            style={[styles.startupValue, isLowFPS && styles.memoryCritical]}
+          >
+            {fps}
+          </Text>
+        </View>
+        <View style={styles.startupRow}>
+          <Text style={styles.startupLabel}>Min / Avg / Max</Text>
+          <Text style={styles.startupValue}>
+            {fpsStats.min} / {fpsStats.avg} / {fpsStats.max}
+          </Text>
+        </View>
+        <View style={styles.startupRow}>
+          <Text style={styles.startupLabel}>Low FPS Events</Text>
+          <Text
+            style={[
+              styles.startupValue,
+              fpsStats.lowFPSCount > 0 && styles.memoryWarning,
+            ]}
+          >
+            {fpsStats.lowFPSCount}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+};
+
 export const PerformanceDashboard: React.FC = () => {
+  const { theme } = useUnistyles();
+
   // Performance state (from isolated performance store)
   const isEnabled = usePerformanceStore(state => state.isEnabled);
   const trackRenders = usePerformanceStore(state => state.trackRenders);
@@ -30,19 +86,59 @@ export const PerformanceDashboard: React.FC = () => {
     state => state.clearPerformanceData,
   );
 
-  const [, setClearCounter] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(0);
+
+  // Auto-refresh every 5 seconds to keep startup/HTTP metrics current
+  useEffect(() => {
+    const tick = () => setLastUpdated(Date.now());
+    tick();
+    const id = setInterval(tick, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Wire memory toggle: start/stop MemoryMonitor when toggled
+  const handleTrackMemoryChange = (enabled: boolean) => {
+    setTrackMemory(enabled);
+    if (enabled && isEnabled) {
+      MemoryMonitor.start(10000);
+    } else {
+      MemoryMonitor.stop();
+    }
+  };
+
+  // Wire master toggle: stop MemoryMonitor when master is disabled
+  const handlePerformanceEnabledChange = (enabled: boolean) => {
+    setPerformanceEnabled(enabled);
+    if (!enabled && MemoryMonitor.isEnabled()) {
+      MemoryMonitor.stop();
+    }
+  };
+
+  const handleRefresh = () => {
+    executeRefreshWithFinally(async () => {
+      if (trackMemory && isEnabled) {
+        await MemoryMonitor.takeSnapshot('manual_refresh');
+      }
+      setLastUpdated(Date.now());
+    }, setRefreshing);
+  };
 
   // Derive sorted metrics from raw data
   const slowestComponents = [...componentMetrics.values()]
-        .sort((a, b) => b.avgRenderTime - a.avgRenderTime)
-        .slice(0, 10);
+    .sort((a, b) => b.avgRenderTime - a.avgRenderTime)
+    .slice(0, 10);
   const slowestScreens = [...screenMetrics.values()]
-        .sort((a, b) => b.avgInteractiveTime - a.avgInteractiveTime)
-        .slice(0, 10);
+    .sort((a, b) => b.avgInteractiveTime - a.avgInteractiveTime)
+    .slice(0, 10);
   const recentMemorySnapshots = memorySnapshots.slice(-5);
+  const latestMemorySnapshot =
+    memorySnapshots.length > 0
+      ? memorySnapshots[memorySnapshots.length - 1]
+      : null;
 
   const handleClearData = () => {
-    Alert.alert(
+    alertService.alert(
       'Clear Performance Data',
       'Are you sure you want to clear all performance metrics?',
       [
@@ -55,8 +151,9 @@ export const PerformanceDashboard: React.FC = () => {
             performance.clearMarks();
             performance.clearMeasures();
             performance.clearResourceTimings();
-            setClearCounter(c => c + 1);
-          } },
+            setLastUpdated(Date.now());
+          },
+        },
       ],
     );
   };
@@ -80,6 +177,10 @@ export const PerformanceDashboard: React.FC = () => {
 
   const isAdminUser = useAppStore(selectIsAdminUser);
 
+  // lastUpdated is used to ensure IIFEs below recompute on interval/pull-to-refresh
+  // eslint-disable-next-line no-void
+  void lastUpdated;
+
   const startupMetrics = (() => {
     const entries = performance.getEntriesByType('react-native-mark');
     const find = (name: string) => entries.find(e => e.name === name);
@@ -96,7 +197,8 @@ export const PerformanceDashboard: React.FC = () => {
       bundleLoad:
         bundleStart && bundleEnd
           ? bundleEnd.startTime - bundleStart.startTime
-          : null };
+          : null,
+    };
   })();
 
   const recentHttpRequests = (() => {
@@ -128,14 +230,31 @@ export const PerformanceDashboard: React.FC = () => {
   }
 
   return (
-    <ProfileScreenWrapper title="Performance Dashboard">
-      <ScrollView style={styles.scrollView}>
+    <ProfileScreenWrapper title="Performance Dashboard" scrollEnabled={false}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
+      >
+        {/* Last Updated */}
+        <View style={styles.lastUpdated}>
+          <Text style={styles.lastUpdatedText}>
+            Last updated: {formatTimestamp(lastUpdated)}
+          </Text>
+        </View>
+
         <SettingSection title="Performance Tracking">
           <SettingSwitch
             title="Enable Performance Tracking"
             description="Master switch for all performance monitoring"
             value={isEnabled}
-            onValueChange={setPerformanceEnabled}
+            onValueChange={handlePerformanceEnabledChange}
           />
           <SettingSwitch
             title="Track Component Renders"
@@ -148,7 +267,7 @@ export const PerformanceDashboard: React.FC = () => {
             title="Track Memory Usage"
             description="Monitor memory consumption over time"
             value={trackMemory}
-            onValueChange={setTrackMemory}
+            onValueChange={handleTrackMemoryChange}
             disabled={!isEnabled}
           />
           <SettingSwitch
@@ -159,6 +278,9 @@ export const PerformanceDashboard: React.FC = () => {
             disabled={!isEnabled}
           />
         </SettingSection>
+
+        {/* FPS Monitor (DEV only) — isolated component to avoid 10/sec re-renders of parent */}
+        {!!__DEV__ && <FPSSection />}
 
         {/* Startup Metrics */}
         {(startupMetrics.nativeLaunch !== null ||
@@ -246,6 +368,9 @@ export const PerformanceDashboard: React.FC = () => {
                 <Text style={[styles.tableHeaderText, styles.maxColumn]}>
                   Max
                 </Text>
+                <Text style={[styles.tableHeaderText, styles.totalColumn]}>
+                  Total
+                </Text>
                 <Text style={[styles.tableHeaderText, styles.countColumn]}>
                   Count
                 </Text>
@@ -269,6 +394,9 @@ export const PerformanceDashboard: React.FC = () => {
                   </Text>
                   <Text style={[styles.tableCell, styles.maxColumn]}>
                     {formatTime(metric.maxRenderTime)}
+                  </Text>
+                  <Text style={[styles.tableCell, styles.totalColumn]}>
+                    {formatTime(metric.totalRenderTime)}
                   </Text>
                   <Text style={[styles.tableCell, styles.countColumn]}>
                     {metric.renderCount}
@@ -330,39 +458,90 @@ export const PerformanceDashboard: React.FC = () => {
           </View>
         )}
 
-        {/* Memory Snapshots */}
-        {!!trackMemory && recentMemorySnapshots.length > 0 && (
+        {/* Memory Usage */}
+        {!!trackMemory && (
           <View style={styles.metricsSection}>
-            <Text style={styles.sectionTitle}>Recent Memory Snapshots</Text>
-            <Text style={styles.sectionSubtitle}>
-              Last 5 memory measurements
-            </Text>
-            <View style={styles.memoryList}>
-              {recentMemorySnapshots.map((snapshot) => (
-                <View key={snapshot.timestamp} style={styles.memoryItem}>
-                  <View style={styles.memoryItemHeader}>
-                    <Text style={styles.memoryTime}>
-                      {formatTimestamp(snapshot.timestamp)}
-                    </Text>
+            <Text style={styles.sectionTitle}>Memory Usage</Text>
+            {!!latestMemorySnapshot && (
+              <>
+                <Text style={styles.sectionSubtitle}>Current</Text>
+                <View style={styles.startupCard}>
+                  <View style={styles.startupRow}>
+                    <Text style={styles.startupLabel}>Used</Text>
                     <Text
                       style={[
-                        styles.memoryUsage,
-                        snapshot.usagePercent > 80 && styles.memoryWarning,
-                        snapshot.usagePercent > 95 && styles.memoryCritical,
+                        styles.startupValue,
+                        latestMemorySnapshot.usagePercent > 80 &&
+                          styles.memoryWarning,
+                        latestMemorySnapshot.usagePercent > 95 &&
+                          styles.memoryCritical,
                       ]}
                     >
-                      {snapshot.usagePercent.toFixed(1)}%
+                      {formatMemory(latestMemorySnapshot.usedBytes)}
+                      {!!latestMemorySnapshot.limitBytes &&
+                        ` / ${formatMemory(latestMemorySnapshot.limitBytes)}`}
                     </Text>
                   </View>
-                  <Text style={styles.memoryDetails}>
-                    {formatMemory(snapshot.usedBytes)}
-                    {!!snapshot.limitBytes &&
-                      ` / ${formatMemory(snapshot.limitBytes)}`}
-                    {!!snapshot.context && ` • ${snapshot.context}`}
-                  </Text>
+                  <View style={styles.startupRow}>
+                    <Text style={styles.startupLabel}>Usage</Text>
+                    <Text
+                      style={[
+                        styles.startupValue,
+                        latestMemorySnapshot.usagePercent > 80 &&
+                          styles.memoryWarning,
+                        latestMemorySnapshot.usagePercent > 95 &&
+                          styles.memoryCritical,
+                      ]}
+                    >
+                      {latestMemorySnapshot.usagePercent.toFixed(1)}%
+                    </Text>
+                  </View>
                 </View>
-              ))}
-            </View>
+              </>
+            )}
+
+            {/* Recent History */}
+            {recentMemorySnapshots.length > 0 && (
+              <>
+                <Text
+                  style={[styles.sectionSubtitle, styles.memoryHistoryLabel]}
+                >
+                  Recent History
+                </Text>
+                <View style={styles.memoryList}>
+                  {recentMemorySnapshots.map(snapshot => (
+                    <View key={snapshot.timestamp} style={styles.memoryItem}>
+                      <View style={styles.memoryItemHeader}>
+                        <Text style={styles.memoryTime}>
+                          {formatTimestamp(snapshot.timestamp)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.memoryUsage,
+                            snapshot.usagePercent > 80 && styles.memoryWarning,
+                            snapshot.usagePercent > 95 && styles.memoryCritical,
+                          ]}
+                        >
+                          {snapshot.usagePercent.toFixed(1)}%
+                        </Text>
+                      </View>
+                      <Text style={styles.memoryDetails}>
+                        {formatMemory(snapshot.usedBytes)}
+                        {!!snapshot.limitBytes &&
+                          ` / ${formatMemory(snapshot.limitBytes)}`}
+                        {!!snapshot.context && ` • ${snapshot.context}`}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {!latestMemorySnapshot && (
+              <Text style={styles.sectionSubtitle}>
+                Waiting for first memory snapshot...
+              </Text>
+            )}
           </View>
         )}
 
@@ -402,110 +581,153 @@ export const PerformanceDashboard: React.FC = () => {
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   notAvailableContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl },
+    padding: theme.spacing.xl,
+  },
   notAvailableText: {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
+  lastUpdated: {
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
+    alignItems: 'flex-end',
+  },
+  lastUpdatedText: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.textTertiary,
+  },
   metricsSection: {
     marginVertical: theme.spacing['3'],
-    paddingHorizontal: theme.spacing.md },
+    paddingHorizontal: theme.spacing.md,
+  },
   sectionTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs },
+    marginBottom: theme.spacing.xs,
+  },
   sectionSubtitle: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing['3'] },
+    marginBottom: theme.spacing['3'],
+  },
   table: {
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.sm,
-    overflow: 'hidden' },
+    overflow: 'hidden',
+  },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: theme.colors.backgroundSecondary,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing['3'],
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border },
+    borderBottomColor: theme.colors.border,
+  },
   tableHeaderText: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
-    textTransform: 'uppercase' },
+    textTransform: 'uppercase',
+  },
   tableRow: {
     flexDirection: 'row',
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing['3'],
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border },
+    borderBottomColor: theme.colors.border,
+  },
   tableRowEven: {
-    backgroundColor: theme.colors.backgroundSecondary },
+    backgroundColor: theme.colors.backgroundSecondary,
+  },
   tableCell: {
     fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   nameColumn: {
-    flex: 2 },
+    flex: 2,
+  },
   avgColumn: {
     flex: 1,
-    textAlign: 'right' },
+    textAlign: 'right',
+  },
   maxColumn: {
     flex: 1,
-    textAlign: 'right' },
-  countColumn: {
+    textAlign: 'right',
+  },
+  totalColumn: {
     flex: 1,
-    textAlign: 'right' },
+    textAlign: 'right',
+  },
+  countColumn: {
+    flex: 0.7,
+    textAlign: 'right',
+  },
+  memoryHistoryLabel: {
+    marginTop: theme.spacing.md,
+  },
   memoryList: {
-    gap: theme.spacing['3'] },
+    gap: theme.spacing['3'],
+  },
   memoryItem: {
     backgroundColor: theme.colors.backgroundSecondary,
     padding: theme.spacing['3'],
     borderRadius: theme.radii.sm,
     borderLeftWidth: 3,
-    borderLeftColor: theme.colors.primary },
+    borderLeftColor: theme.colors.primary,
+  },
   memoryItemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.xs },
+    marginBottom: theme.spacing.xs,
+  },
   memoryTime: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   memoryUsage: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: 'bold',
-    color: theme.colors.success },
+    color: theme.colors.success,
+  },
   memoryWarning: {
-    color: theme.colors.warning },
+    color: theme.colors.warning,
+  },
   memoryCritical: {
-    color: theme.colors.error },
+    color: theme.colors.error,
+  },
   memoryDetails: {
     fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing['3xl'] },
+    padding: theme.spacing['3xl'],
+  },
   emptyStateText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   emptyStateSubtext: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   clearButton: {
     marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.xl,
@@ -513,19 +735,23 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm + 2,
     paddingHorizontal: theme.spacing.xl,
     borderRadius: theme.radii.sm,
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   clearButtonText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.white },
+    color: theme.colors.white,
+  },
   pressed: {
-    opacity: theme.opacity.pressed },
+    opacity: theme.opacity.pressed,
+  },
   startupCard: {
     backgroundColor: theme.colors.backgroundSecondary,
     borderRadius: theme.radii.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    overflow: 'hidden' },
+    overflow: 'hidden',
+  },
   startupRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -533,13 +759,17 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border },
+    borderBottomColor: theme.colors.border,
+  },
   startupLabel: {
     fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   startupValue: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary } }));
+    color: theme.colors.textPrimary,
+  },
+}));
 
 export default PerformanceDashboard;

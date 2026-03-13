@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useAdjustPantryItemQuantity } from '../useAdjustPantryItemQuantity';
 
 const mockAdjustMutation = jest.fn();
@@ -24,7 +24,9 @@ jest.mock('#/utils/errors/versionConflict', () => ({
   getVersionConflictMessage: jest.fn(() => 'Version conflict message'),
 }));
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -55,7 +57,11 @@ describe('useAdjustPantryItemQuantity', () => {
 
     let success: boolean;
     await act(async () => {
-      success = await result.current.adjustQuantity('item-1', 5, 'Physical count');
+      success = await result.current.adjustQuantity(
+        'item-1',
+        5,
+        'Physical count',
+      );
     });
 
     expect(success!).toBe(true);
@@ -160,7 +166,10 @@ describe('useAdjustPantryItemQuantity', () => {
     });
 
     expect(success!).toBe(false);
-    expect(Alert.alert).toHaveBeenCalledWith('Item Updated', 'Version conflict message');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Item Updated',
+      'Version conflict message',
+    );
   });
 
   it('shows generic error alert on non-conflict error', async () => {
@@ -177,7 +186,7 @@ describe('useAdjustPantryItemQuantity', () => {
     });
 
     expect(success!).toBe(false);
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Adjust error');
+    expect(alertService.alert).toHaveBeenCalledWith('Error', 'Adjust error');
   });
 
   it('returns false when no pantryItem returned', async () => {

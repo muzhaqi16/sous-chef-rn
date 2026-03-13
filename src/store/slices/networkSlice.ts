@@ -9,6 +9,8 @@ export interface NetworkState {
   lastOnlineTime: number | null;
   lastOfflineTime: number | null;
   needsTokenRefresh: boolean;
+  /** User-enabled offline mode (from app settings) */
+  offlineModeEnabled: boolean;
 
   // Actions
   setNetworkStatus: (status: {
@@ -19,6 +21,7 @@ export interface NetworkState {
   setOnline: () => void;
   setOffline: () => void;
   setNeedsTokenRefresh: (value: boolean) => void;
+  setOfflineModeEnabled: (enabled: boolean) => void;
 }
 
 const initialNetworkState = {
@@ -28,6 +31,7 @@ const initialNetworkState = {
   lastOnlineTime: null,
   lastOfflineTime: null,
   needsTokenRefresh: false,
+  offlineModeEnabled: false,
 };
 
 export const createNetworkSlice: StateCreator<
@@ -77,6 +81,12 @@ export const createNetworkSlice: StateCreator<
   setNeedsTokenRefresh: (value: boolean) => {
     set(draft => {
       draft.needsTokenRefresh = value;
+    });
+  },
+
+  setOfflineModeEnabled: (enabled: boolean) => {
+    set(draft => {
+      draft.offlineModeEnabled = enabled;
     });
   },
 });

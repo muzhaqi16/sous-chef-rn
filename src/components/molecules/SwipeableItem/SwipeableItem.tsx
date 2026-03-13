@@ -1,5 +1,9 @@
 import React from 'react';
-import { View, type AccessibilityActionEvent, type AccessibilityActionInfo } from 'react-native';
+import {
+  View,
+  type AccessibilityActionEvent,
+  type AccessibilityActionInfo,
+} from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { type SharedValue } from 'react-native-reanimated';
 import { RightActions } from './RightActions';
@@ -8,6 +12,15 @@ import { SwipeableContent } from './SwipeableContent';
 import { useSwipeableActions } from './hooks/useSwipeableActions';
 import { styles } from './styles';
 import { SwipeableItemProps } from './types';
+
+// Pre-computed placeholder styles — avoids creating new object on every render
+const PLACEHOLDER_STYLES: Record<number, { width: number }> = {
+  80: { width: 80 },
+  120: { width: 120 },
+  180: { width: 180 },
+};
+const getPlaceholderStyle = (count: number) =>
+  PLACEHOLDER_STYLES[count <= 1 ? 80 : count === 2 ? 120 : 180];
 
 const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   children,
@@ -28,7 +41,8 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   onSwipeableWillOpen,
   onSwipeableClose,
   testIDPrefix,
-  swipeMode }) => {
+  swipeMode,
+}) => {
   // Calculate thresholds based on number of actions
   // Fewer actions = smaller threshold for more natural swipe feel
   const leftActionCount = [
@@ -47,61 +61,58 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     handleSwipeableWillOpen,
     handleSwipeableClose,
     hasSwipeStarted,
-    handleSwipeOpenStartDrag } = useSwipeableActions({
+    handleSwipeOpenStartDrag,
+  } = useSwipeableActions({
     itemId,
     onEdit,
     onDelete,
 
     onSwipeableWillOpen,
-    onSwipeableClose });
+    onSwipeableClose,
+  });
 
-  // Placeholder width must match actual action container width so Swipeable
-  // measures correctly in pan.onStart (before onSwipeableOpenStartDrag fires).
   // In shopping mode, LeftActions renders only edit (1 btn) and RightActions
   // renders only delete (1 btn), regardless of how many callbacks are provided.
-  const getActionWidth = (count: number): number => {
-    if (count <= 1) return 80;
-    if (count === 2) return 120;
-    return 180;
-  };
-  const leftButtonCount = swipeMode === 'shopping' ? (onEdit ? 1 : 0) : leftActionCount;
-  const rightButtonCount = swipeMode === 'shopping' ? (onDelete ? 1 : 0) : rightActionCount;
+  const leftButtonCount =
+    swipeMode === 'shopping' ? (onEdit ? 1 : 0) : leftActionCount;
+  const rightButtonCount =
+    swipeMode === 'shopping' ? (onDelete ? 1 : 0) : rightActionCount;
 
   const renderRightActions = (progress: SharedValue<number>) => {
-      if (!hasSwipeStarted && rightButtonCount > 0) {
-        return <View style={{ width: getActionWidth(rightButtonCount) }} />;
-      }
-      return (
-        <RightActions
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onActionPress={handleActionPress}
-          testIDPrefix={testIDPrefix}
-          progress={progress}
-          swipeMode={swipeMode}
-        />
-      );
-    };
+    if (!hasSwipeStarted && rightButtonCount > 0) {
+      return <View style={getPlaceholderStyle(rightButtonCount)} />;
+    }
+    return (
+      <RightActions
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onActionPress={handleActionPress}
+        testIDPrefix={testIDPrefix}
+        progress={progress}
+        swipeMode={swipeMode}
+      />
+    );
+  };
 
   const renderLeftActions = (progress: SharedValue<number>) => {
-      if (!hasSwipeStarted && leftButtonCount > 0) {
-        return <View style={{ width: getActionWidth(leftButtonCount) }} />;
-      }
-      return (
-        <LeftActions
-          onTogglePurchase={onTogglePurchase}
-          onConsume={onConsume}
-          onWaste={onWaste}
-          onRestock={onRestock}
-          isPurchased={isPurchased}
-          swipeableRef={swipeableRef}
-          progress={progress}
-          swipeMode={swipeMode}
-          onEdit={onEdit}
-          onActionPress={handleActionPress}
-        />
-      );
-    };
+    if (!hasSwipeStarted && leftButtonCount > 0) {
+      return <View style={getPlaceholderStyle(leftButtonCount)} />;
+    }
+    return (
+      <LeftActions
+        onTogglePurchase={onTogglePurchase}
+        onConsume={onConsume}
+        onWaste={onWaste}
+        onRestock={onRestock}
+        isPurchased={isPurchased}
+        swipeableRef={swipeableRef}
+        progress={progress}
+        swipeMode={swipeMode}
+        onEdit={onEdit}
+        onActionPress={handleActionPress}
+      />
+    );
+  };
 
   // Build accessibility actions from available callbacks so VoiceOver/TalkBack
   // users can discover swipe actions without swiping
@@ -109,7 +120,11 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     const actions: AccessibilityActionInfo[] = [];
     if (onEdit) actions.push({ name: 'edit', label: 'Edit' });
     if (onDelete) actions.push({ name: 'delete', label: 'Delete' });
-    if (onTogglePurchase) actions.push({ name: 'togglePurchase', label: isPurchased ? 'Mark as unpurchased' : 'Mark as purchased' });
+    if (onTogglePurchase)
+      actions.push({
+        name: 'togglePurchase',
+        label: isPurchased ? 'Mark as unpurchased' : 'Mark as purchased',
+      });
     if (onConsume) actions.push({ name: 'consume', label: 'Consume' });
     if (onWaste) actions.push({ name: 'waste', label: 'Record waste' });
     if (onRestock) actions.push({ name: 'restock', label: 'Restock' });
@@ -118,12 +133,24 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
 
   const handleAccessibilityAction = (event: AccessibilityActionEvent) => {
     switch (event.nativeEvent.actionName) {
-      case 'edit': onEdit?.(); break;
-      case 'delete': onDelete?.(); break;
-      case 'togglePurchase': onTogglePurchase?.(); break;
-      case 'consume': onConsume?.(); break;
-      case 'waste': onWaste?.(); break;
-      case 'restock': onRestock?.(); break;
+      case 'edit':
+        onEdit?.();
+        break;
+      case 'delete':
+        onDelete?.();
+        break;
+      case 'togglePurchase':
+        onTogglePurchase?.();
+        break;
+      case 'consume':
+        onConsume?.();
+        break;
+      case 'waste':
+        onWaste?.();
+        break;
+      case 'restock':
+        onRestock?.();
+        break;
     }
   };
 
@@ -144,6 +171,8 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
         onSwipeableClose={handleSwipeableClose}
         onSwipeableOpenStartDrag={handleSwipeOpenStartDrag}
         overshootFriction={8}
+        overshootRight={false}
+        overshootLeft={false}
         containerStyle={styles.swipeableContainer}
         childrenContainerStyle={styles.childrenContainer}
       >

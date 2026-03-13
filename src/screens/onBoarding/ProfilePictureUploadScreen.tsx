@@ -4,11 +4,11 @@ import {
   Pressable,
   Text,
   Image,
-  Alert,
   Dimensions,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { Icon } from '#utils/iconUtils';
@@ -135,7 +135,7 @@ export const ProfilePictureUploadScreen = () => {
       setCroppedImage(null); // Reset cropped image when new image is selected
     } catch (error) {
       const validationError = error as ImageValidationError;
-      Alert.alert('Invalid Image', validationError.message);
+      alertService.alert('Invalid Image', validationError.message);
     }
   };
 
@@ -150,7 +150,7 @@ export const ProfilePictureUploadScreen = () => {
         if (result === RESULTS.GRANTED) {
           launchCamera(DEFAULT_OPTIONS, handleImageResponse);
         } else {
-          Alert.alert(
+          alertService.alert(
             'Camera Permission',
             'Camera permission is required to take photos. Please enable it in your device settings.',
           );
@@ -187,7 +187,7 @@ export const ProfilePictureUploadScreen = () => {
           ImageUploadPurpose.ProfileAvatar,
           {
             onError: (error: Error) => {
-              Alert.alert('Upload Failed', error.message);
+              alertService.alert('Upload Failed', error.message);
             },
           },
         );
@@ -200,7 +200,7 @@ export const ProfilePictureUploadScreen = () => {
       setIsUploading,
       error => {
         console.error('Avatar upload error:', error);
-        Alert.alert('Upload Failed', 'Failed to update profile photo');
+        alertService.alert('Upload Failed', 'Failed to update profile photo');
       },
     );
   };

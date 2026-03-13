@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   useUpdateShoppingListItemQuantityMutation,
   ShoppingListItemDisplayFragment,
@@ -98,7 +98,7 @@ export function useQuantityEditModal(
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
     errorPolicy: 'all',
     onError: error => {
-      Alert.alert('Error', error.message || 'Failed to update item');
+      alertService.alert('Error', error.message || 'Failed to update item');
     },
   });
 

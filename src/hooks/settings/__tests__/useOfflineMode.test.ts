@@ -1,33 +1,29 @@
 import { renderHook } from '@testing-library/react-native';
-import { useOfflineMode, useIsEffectivelyOffline, useCanUseNetwork } from '../useOfflineMode';
+import {
+  useOfflineMode,
+  useIsEffectivelyOffline,
+  useCanUseNetwork,
+} from '../useOfflineMode';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
 let mockIsOnline = true;
-let mockOfflineModeMMKV = false;
+let mockOfflineModeEnabled = false;
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: any) => any) =>
     selector({
       isOnline: mockIsOnline,
+      offlineModeEnabled: mockOfflineModeEnabled,
     }),
-}));
-
-jest.mock('#/storage/mmkv', () => ({
-  storage: {
-    getBoolean: (key: string) => {
-      if (key === 'user_offline_mode') return mockOfflineModeMMKV;
-      return undefined;
-    },
-  },
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockIsOnline = true;
-  mockOfflineModeMMKV = false;
+  mockOfflineModeEnabled = false;
 });
 
 describe('useOfflineMode', () => {
@@ -51,7 +47,7 @@ describe('useOfflineMode', () => {
   });
 
   it('returns isOfflineModeEnabled true when user enabled offline mode', () => {
-    mockOfflineModeMMKV = true;
+    mockOfflineModeEnabled = true;
     const { result } = renderHook(() => useOfflineMode());
 
     expect(result.current.isOfflineModeEnabled).toBe(true);
@@ -61,7 +57,7 @@ describe('useOfflineMode', () => {
 
   it('returns effectively offline when both device offline and offline mode enabled', () => {
     mockIsOnline = false;
-    mockOfflineModeMMKV = true;
+    mockOfflineModeEnabled = true;
     const { result } = renderHook(() => useOfflineMode());
 
     expect(result.current.isEffectivelyOffline).toBe(true);
@@ -89,7 +85,7 @@ describe('useIsEffectivelyOffline', () => {
   });
 
   it('returns true when offline mode is enabled', () => {
-    mockOfflineModeMMKV = true;
+    mockOfflineModeEnabled = true;
     const { result } = renderHook(() => useIsEffectivelyOffline());
     expect(result.current).toBe(true);
   });
@@ -108,7 +104,7 @@ describe('useCanUseNetwork', () => {
   });
 
   it('returns false when offline mode is enabled', () => {
-    mockOfflineModeMMKV = true;
+    mockOfflineModeEnabled = true;
     const { result } = renderHook(() => useCanUseNetwork());
     expect(result.current).toBe(false);
   });

@@ -24,6 +24,8 @@ interface ItemSuggestionsListProps {
   placeholderIcon?: 'cube-outline' | 'cart-outline';
   /** Whether to show brand names (default: true) */
   showBrands?: boolean;
+  /** When false, always show placeholder icon regardless of image URL */
+  showImages?: boolean;
 }
 
 interface SuggestionRowProps {
@@ -34,16 +36,26 @@ interface SuggestionRowProps {
   placeholderIcon: 'cube-outline' | 'cart-outline';
   primaryColor: string;
   showBrands: boolean;
+  showImages: boolean;
 }
 
-const SuggestionRow = ({ item, isLast, onSelectSuggestion, quickAddDisabled, placeholderIcon, primaryColor, showBrands }: SuggestionRowProps) => {
+const SuggestionRow = ({
+  item,
+  isLast,
+  onSelectSuggestion,
+  quickAddDisabled,
+  placeholderIcon,
+  primaryColor,
+  showBrands,
+  showImages,
+}: SuggestionRowProps) => {
   const imageUrl = resolveImageUrl(item);
   const handlePress = () => onSelectSuggestion(item);
 
   return (
     <View style={[styles.suggestionItem, !isLast && styles.itemBorder]}>
       <View style={styles.imageContainer}>
-        {imageUrl ? (
+        {showImages && imageUrl ? (
           <CachedImage uri={imageUrl} style={styles.image} displaySize={40} />
         ) : (
           <View style={styles.imagePlaceholder}>
@@ -62,7 +74,7 @@ const SuggestionRow = ({ item, isLast, onSelectSuggestion, quickAddDisabled, pla
         )}
       </View>
       <Pressable
-        style={({pressed}) => [
+        style={({ pressed }) => [
           styles.quickAddButton,
           quickAddDisabled && styles.quickAddButtonDisabled,
           pressed && styles.pressed,
@@ -84,7 +96,9 @@ export const ItemSuggestionsList = ({
   onSelectSuggestion,
   quickAddDisabled = false,
   placeholderIcon = 'cube-outline',
-  showBrands = true }: ItemSuggestionsListProps) => {
+  showBrands = true,
+  showImages = true,
+}: ItemSuggestionsListProps) => {
   const { theme } = useUnistyles();
 
   const hasResults = suggestions.length > 0;
@@ -93,14 +107,14 @@ export const ItemSuggestionsList = ({
   const renderAddManually = (isLast: boolean) => (
     <Pressable
       key="add-manually"
-      style={({pressed}) => [styles.addManuallyOption, !isLast && styles.itemBorder, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.addManuallyOption,
+        !isLast && styles.itemBorder,
+        pressed && styles.pressed,
+      ]}
       onPress={onAddManually}
     >
-      <Icon
-        name="add-circle-outline"
-        size={20}
-        color={theme.colors.primary}
-      />
+      <Icon name="add-circle-outline" size={20} color={theme.colors.primary} />
       <Text style={styles.addManuallyText}>
         {hasResults
           ? `Add "${searchQuery}" manually`
@@ -114,8 +128,7 @@ export const ItemSuggestionsList = ({
       {addManuallyPosition === 'top' && renderAddManually(!hasResults)}
       {suggestions.map((item, index) => {
         const isLastSuggestion = index === suggestions.length - 1;
-        const isLast =
-          addManuallyPosition === 'top' ? isLastSuggestion : false;
+        const isLast = addManuallyPosition === 'top' ? isLastSuggestion : false;
         return (
           <SuggestionRow
             key={item.id}
@@ -126,6 +139,7 @@ export const ItemSuggestionsList = ({
             placeholderIcon={placeholderIcon}
             primaryColor={theme.colors.primary}
             showBrands={showBrands}
+            showImages={showImages}
           />
         );
       })}
@@ -141,57 +155,72 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: theme.colors.border },
+    borderColor: theme.colors.border,
+  },
   itemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border },
+    borderBottomColor: theme.colors.border,
+  },
   suggestionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md },
+    padding: theme.spacing.md,
+  },
   imageContainer: {
     width: 40,
     height: 40,
     borderRadius: theme.radii.sm,
     overflow: 'hidden',
-    marginRight: theme.spacing.md },
+    marginRight: theme.spacing.md,
+  },
   image: {
     width: 40,
-    height: 40 },
+    height: 40,
+  },
   imagePlaceholder: {
     width: 40,
     height: 40,
     backgroundColor: theme.colors.surfaceVariant,
     alignItems: 'center',
-    justifyContent: 'center' },
+    justifyContent: 'center',
+  },
   suggestionInfo: {
     flex: 1,
-    marginRight: theme.spacing.md },
+    marginRight: theme.spacing.md,
+  },
   suggestionName: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   suggestionBrands: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2 },
+    marginTop: 2,
+  },
   quickAddButton: {
     width: 36,
     height: 36,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
-    justifyContent: 'center' },
+    justifyContent: 'center',
+  },
   quickAddButtonDisabled: {
-    opacity: theme.opacity.disabled },
+    opacity: theme.opacity.disabled,
+  },
   addManuallyOption: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   addManuallyText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

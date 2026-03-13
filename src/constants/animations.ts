@@ -1,4 +1,9 @@
-import { FadeIn, FadeOut, LinearTransition, Easing } from 'react-native-reanimated';
+import {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  Easing,
+} from 'react-native-reanimated';
 import type { SlideAnimationConfig } from '#hooks/animations/types';
 
 // Note: DRAG_ITEM_HEIGHT and other drag constants are in './drag.ts'
@@ -21,6 +26,21 @@ export const SPRING = {
   GENTLE: { damping: 20, stiffness: 180 },
   HEAVY: { damping: 25, stiffness: 350, mass: 0.8 },
   EXPAND: { damping: 20, stiffness: 200 },
+  TOAST_ENTER: { damping: 20, stiffness: 180 },
+  TOAST_DISMISS: { damping: 25, stiffness: 200 },
+};
+
+/**
+ * Alert modal animation constants.
+ */
+export const ALERT = {
+  ENTER_SCALE_FROM: 0.85,
+  EXIT_SCALE_TO: 0.9,
+  DEPTH_SCALE: 0.95,
+  DEPTH_TRANSLATE_Y: -8,
+  DEPTH_OPACITY: 0.6,
+  BACKDROP_OPACITY: 0.5,
+  MAX_VISIBLE: 2,
 };
 
 /**
@@ -31,6 +51,17 @@ export const SHEET = {
   BACKDROP_OPACITY: 0.5,
   BACKDROP_FADE_IN: 100,
   BACKDROP_FADE_OUT: 300,
+};
+
+/**
+ * Toast animation constants.
+ */
+export const TOAST = {
+  AUTO_DISMISS_SHORT: 2000,
+  AUTO_DISMISS_LONG: 3500,
+  SWIPE_THRESHOLD: 50,
+  OFFSCREEN_Y: -150,
+  QUEUE_DELAY: 300,
 };
 
 /**

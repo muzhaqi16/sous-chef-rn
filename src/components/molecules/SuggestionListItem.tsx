@@ -30,6 +30,8 @@ export interface SuggestionListItemProps {
     primary: string;
     textTertiary: string;
   };
+  /** When false, always show placeholder icon regardless of imageUrl */
+  showImage?: boolean;
 }
 
 const EXIT_CONFIG = SLIDE_PRESETS.exitWithFade;
@@ -53,6 +55,7 @@ export const SuggestionListItem = ({
   isExiting = false,
   onExitComplete,
   themeColors,
+  showImage = true,
 }: SuggestionListItemProps) => {
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
@@ -69,14 +72,22 @@ export const SuggestionListItem = ({
 
   useLayoutEffect(() => {
     if (isExiting) {
-      translateX.set(withTiming(EXIT_CONFIG.slideDistance, { duration: EXIT_CONFIG.duration }));
+      translateX.set(
+        withTiming(EXIT_CONFIG.slideDistance, {
+          duration: EXIT_CONFIG.duration,
+        }),
+      );
       opacity.set(
-        withTiming(EXIT_CONFIG.opacityTarget, { duration: EXIT_CONFIG.duration }, (finished) => {
-          'worklet';
-          if (finished) {
-            scheduleOnRN(notifyExitComplete);
-          }
-        })
+        withTiming(
+          EXIT_CONFIG.opacityTarget,
+          { duration: EXIT_CONFIG.duration },
+          finished => {
+            'worklet';
+            if (finished) {
+              scheduleOnRN(notifyExitComplete);
+            }
+          },
+        ),
       );
     } else {
       // Reset for error rollback — item reappears without animation
@@ -103,20 +114,22 @@ export const SuggestionListItem = ({
   return (
     <Animated.View style={animatedStyle}>
       <Pressable
-        style={({pressed}) => [styles.container, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.container, pressed && styles.pressed]}
         onPress={handlePress}
         disabled={!onPress && !onQuickAdd}
         testID={testID}
       >
         <View style={styles.imageContainer}>
-          {imageUrl ? (
+          {showImage && imageUrl ? (
             <CachedImage uri={imageUrl} style={styles.image} displaySize={40} />
           ) : (
             <View style={styles.imagePlaceholder}>
               <Icon
                 name={placeholderIcon}
                 size={20}
-                color={themeColors?.primary ?? styles.quickAddButton.backgroundColor}
+                color={
+                  themeColors?.primary ?? styles.quickAddButton.backgroundColor
+                }
                 library={placeholderIconLibrary}
               />
             </View>
@@ -134,7 +147,10 @@ export const SuggestionListItem = ({
         </View>
         {!!onQuickAdd && (
           <Pressable
-            style={({pressed}) => [styles.quickAddButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.quickAddButton,
+              pressed && styles.pressed,
+            ]}
             onPress={onQuickAdd}
             disabled={disabled}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -142,7 +158,11 @@ export const SuggestionListItem = ({
             <Icon
               name="add"
               size={20}
-              color={disabled ? (themeColors?.textTertiary ?? '#999') : (themeColors?.primary ?? '#007AFF')}
+              color={
+                disabled
+                  ? themeColors?.textTertiary ?? '#999'
+                  : themeColors?.primary ?? '#007AFF'
+              }
             />
           </Pressable>
         )}

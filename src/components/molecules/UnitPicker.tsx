@@ -11,11 +11,29 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { SPRING, TIMING } from '#/constants/animations';
-import type { UnitGroup, SelectedUnitInfo } from '#hooks/pantry/useCompatibleUnits';
+import type { UnitType } from '#generated';
+import type { SelectedUnitInfo } from '#hooks/pantry/useOperationUnits';
+
+/** Minimal interface for any unit renderable in the picker */
+export interface PickableUnit {
+  unitId: string;
+  unitName: string;
+  unitSymbol: string;
+  unitType: UnitType;
+  isTrackingUnit: boolean;
+  conversionRatio: number | null;
+  conversionConfidence: number | null;
+}
+
+export interface PickableUnitGroup {
+  type: UnitType;
+  label: string;
+  units: PickableUnit[];
+}
 
 interface UnitPickerProps {
   label: string;
-  groups: UnitGroup[];
+  groups: PickableUnitGroup[];
   selectedUnitId: string | undefined;
   onSelect: (unit: SelectedUnitInfo) => void;
   loading: boolean;

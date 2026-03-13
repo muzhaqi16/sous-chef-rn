@@ -1,10 +1,6 @@
 import React, { useEffect } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  RefreshControl,
-  Alert } from 'react-native';
+import { View, Text, Pressable, RefreshControl } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -20,7 +16,10 @@ import { useAddLowStockToShoppingList } from '#hooks/pantry/useAddLowStockToShop
 import { commonStyles } from '#/styles/commonStyles';
 import { createPropsComparator } from '#utils/memoUtils';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
-import { LowStockActionsProvider, useLowStockActions } from './LowStockActionsContext';
+import {
+  LowStockActionsProvider,
+  useLowStockActions,
+} from './LowStockActionsContext';
 
 const keyExtractor = (item: { id: string }) => item.id;
 
@@ -39,13 +38,14 @@ interface LowStockRenderItemProps {
   primaryColor: string;
 }
 
-const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({ item, primaryColor }) => {
+const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({
+  item,
+  primaryColor,
+}) => {
   const { navigateTo, handleAddToList } = useLowStockActions();
 
   return (
-    <SwipeableItem
-      onPress={() => navigateTo({ itemId: item.id })}
-    >
+    <SwipeableItem onPress={() => navigateTo({ itemId: item.id })}>
       <View style={[commonStyles.card, styles.itemCard]}>
         <View style={styles.itemInfo}>
           <Text style={styles.itemName}>{item.itemName}</Text>
@@ -55,13 +55,12 @@ const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({ item, 
         </View>
         <Pressable
           onPress={() => handleAddToList(item.id)}
-          style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.actionButton,
+            pressed && styles.pressed,
+          ]}
         >
-          <Icon
-            name="cart-outline"
-            size={20}
-            color={primaryColor}
-          />
+          <Icon name="cart-outline" size={20} color={primaryColor} />
         </Pressable>
       </View>
     </SwipeableItem>
@@ -76,7 +75,10 @@ const arePropsEqual = createPropsComparator<LowStockRenderItemProps>({
   },
 });
 
-const LowStockRenderItem = React.memo(LowStockRenderItemComponent, arePropsEqual);
+const LowStockRenderItem = React.memo(
+  LowStockRenderItemComponent,
+  arePropsEqual,
+);
 
 const getLowStockItemType = () => 'item';
 
@@ -126,7 +128,10 @@ export const LowStockItems: React.FC = () => {
   const { addLowStockToShoppingList, loading: addAllLoading } =
     useAddLowStockToShoppingList({ homeId: selectedHomeId ?? undefined });
 
-  const { state: { items: allItems, loading, hasMore, isLoadingMore }, actions: { refetch, loadMore } } = usePantryManagement(pantry?.id);
+  const {
+    state: { items: allItems, loading, hasMore, isLoadingMore },
+    actions: { refetch, loadMore },
+  } = usePantryManagement(pantry?.id);
   const [addToShoppingList] = useAddItemToShoppingListMutation();
 
   // Progressively load all pages so the isLowStock filter sees every item
@@ -151,14 +156,16 @@ export const LowStockItems: React.FC = () => {
   const handleAddToList = async (itemId: string) => {
     try {
       await addToShoppingList({
-        variables: { input: { shoppingListId: '', itemId } } });
+        variables: { input: { shoppingListId: '', itemId } },
+      });
     } catch {
-      Alert.alert('Error', 'Failed to add to shopping list');
+      alertService.alert('Error', 'Failed to add to shopping list');
     }
   };
 
   const actions = {
-    navigateTo: (params: { itemId: string }) => navigateTo.pantryItemDetail(params),
+    navigateTo: (params: { itemId: string }) =>
+      navigateTo.pantryItemDetail(params),
     handleAddToList,
   };
 
@@ -173,7 +180,8 @@ export const LowStockItems: React.FC = () => {
             icon: 'cart-outline',
             onPress: addLowStockToShoppingList,
             loading: addAllLoading,
-            testID: 'add-all-low-stock' },
+            testID: 'add-all-low-stock',
+          },
         ]}
       />
 
@@ -197,7 +205,10 @@ export const LowStockItems: React.FC = () => {
             <LowStockEmpty loading={loading} hasItems={!!allItems} />
           }
           renderItem={({ item }: { item: LowStockItem }) => (
-            <LowStockRenderItem item={item} primaryColor={theme.colors.primary} />
+            <LowStockRenderItem
+              item={item}
+              primaryColor={theme.colors.primary}
+            />
           )}
         />
       </LowStockActionsProvider>
@@ -207,31 +218,44 @@ export const LowStockItems: React.FC = () => {
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   scrollContent: {
-    padding: theme.spacing.md },
+    padding: theme.spacing.md,
+  },
   emptyState: {
-    padding: theme.spacing['2xl'] },
+    padding: theme.spacing['2xl'],
+  },
   emptyText: {
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.lg,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   loadingContainer: {
-    padding: theme.spacing['2xl'] },
+    padding: theme.spacing['2xl'],
+  },
   skeletonContainer: {
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   itemCard: {
     ...commonStyles.rowSpaceBetween,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   itemInfo: {
-    flex: 1 },
+    flex: 1,
+  },
   itemName: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   itemDetails: {
-    marginTop: theme.spacing.xs },
+    marginTop: theme.spacing.xs,
+  },
   actionButton: {
-    padding: theme.spacing.xs },
+    padding: theme.spacing.xs,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

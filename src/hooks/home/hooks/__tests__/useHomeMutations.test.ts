@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useHomeMutations } from '../useHomeMutations';
 
 const mockCreateHomeMutation = jest.fn();
@@ -17,7 +17,10 @@ jest.mock('#generated', () => ({
     mockCreateHomeMutation,
     { loading: false, client: mockApolloClient },
   ]),
-  useUpdateHomeMutation: jest.fn(() => [mockUpdateHomeMutation, { loading: false }]),
+  useUpdateHomeMutation: jest.fn(() => [
+    mockUpdateHomeMutation,
+    { loading: false },
+  ]),
   useDeleteHomeMutation: jest.fn(() => [
     mockDeleteHomeMutation,
     { loading: false, client: mockApolloClient },
@@ -60,16 +63,20 @@ jest.mock('#/utils/connectionUtils', () => ({
 // mockCreateAddOperation and mockCreateRemoveOperation capture config for assertions
 const mockCreateAddOperation = jest.fn((config: any) => {
   return async (input: any) => {
-    const { Alert: MockAlert } = require('react-native');
+    const {
+      alertService: mockAlertService,
+    } = require('#/services/alertService');
     const validation = config.validateInput?.(input);
     if (typeof validation === 'string') {
-      MockAlert.alert('Validation Error', validation);
+      mockAlertService.alert('Validation Error', validation);
       return false;
     }
     const transformedInput = config.transformInput
       ? config.transformInput(input)
       : input;
-    const result = await config.mutation({ variables: { input: transformedInput } });
+    const result = await config.mutation({
+      variables: { input: transformedInput },
+    });
     if (result.data) {
       config.onSuccess?.(result.data);
       return result.data;
@@ -80,14 +87,18 @@ const mockCreateAddOperation = jest.fn((config: any) => {
 
 const mockCreateRemoveOperation = jest.fn((config: any) => {
   return async () => {
-    const { Alert: MockAlert } = require('react-native');
+    const {
+      alertService: mockAlertService,
+    } = require('#/services/alertService');
     return new Promise(resolve => {
-      MockAlert.alert(config.operationName, 'Confirm?', [
+      mockAlertService.alert(config.operationName, 'Confirm?', [
         { text: 'Cancel', onPress: () => resolve(false) },
         {
           text: 'Delete',
           onPress: async () => {
-            const result = await config.mutation({ variables: { id: config.itemId } });
+            const result = await config.mutation({
+              variables: { id: config.itemId },
+            });
             resolve(result?.data || false);
           },
         },
@@ -110,11 +121,17 @@ jest.mock('../utils', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 const createOptions = () => ({
   homes: [
-    { id: 'home-1', name: 'Home 1', pantries: [{ id: 'p-1', isDefault: true }] },
+    {
+      id: 'home-1',
+      name: 'Home 1',
+      pantries: [{ id: 'p-1', isDefault: true }],
+    },
     { id: 'home-2', name: 'Home 2', pantries: [] },
   ],
   refetch: jest.fn().mockResolvedValue(undefined),
@@ -201,7 +218,7 @@ describe('useHomeMutations', () => {
       });
 
       expect(returnValue).toBe(false);
-      expect(Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Validation Error',
         'Please enter a home name',
       );
@@ -249,7 +266,9 @@ describe('useHomeMutations', () => {
 
       let returnValue: any;
       await act(async () => {
-        returnValue = await result.current.updateHome('home-1', { isDefault: true });
+        returnValue = await result.current.updateHome('home-1', {
+          isDefault: true,
+        });
       });
 
       expect(returnValue).toBe(true);
@@ -265,7 +284,9 @@ describe('useHomeMutations', () => {
 
       let returnValue: any;
       await act(async () => {
-        returnValue = await result.current.updateHome('home-1', { name: 'Test' });
+        returnValue = await result.current.updateHome('home-1', {
+          name: 'Test',
+        });
       });
 
       expect(returnValue).toBe(false);
@@ -276,12 +297,12 @@ describe('useHomeMutations', () => {
     it('calls deleteHomeMutation with confirmation dialog', async () => {
       const { result } = renderHook(() => useHomeMutations(createOptions()));
 
-      // This triggers Alert.alert with confirmation
+      // This triggers alertService.alert with confirmation
       act(() => {
         result.current.deleteHome('home-2', 'Home 2');
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Delete Home',
         expect.any(String),
         expect.any(Array),

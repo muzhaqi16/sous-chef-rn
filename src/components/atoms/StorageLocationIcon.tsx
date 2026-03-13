@@ -185,12 +185,15 @@ const SVG_MAP: Record<string, string> = {
 interface StorageLocationIconProps {
   type: string;
   size?: number;
+  color?: string;
 }
 
 export const StorageLocationIcon: React.FC<StorageLocationIconProps> = ({
   type,
   size = 24,
+  color,
 }) => {
   const xml = SVG_MAP[type] ?? CUSTOM;
-  return <SvgXml xml={xml} width={size} height={size} />;
+  const finalXml = color ? xml.replace(/#[0-9A-Fa-f]{6}/g, color) : xml;
+  return <SvgXml xml={finalXml} width={size} height={size} />;
 };

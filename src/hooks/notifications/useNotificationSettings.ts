@@ -1,11 +1,11 @@
-;
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useAppStore } from '#store/useAppStore';
 import {
   useGetNotificationPreferencesQuery,
   useUpdateNotificationPreferencesMutation,
   ExpirationFrequency,
-  type UpdateNotificationPreferencesInput } from '#generated';
+  type UpdateNotificationPreferencesInput,
+} from '#generated';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useErrorService } from '#/services/errorService';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
@@ -45,11 +45,7 @@ export interface NotificationSettings {
   quietHoursTimezone: string | null;
 }
 
-const CHANNELS_KEYS = new Set([
-  'emailEnabled',
-  'pushEnabled',
-  'smsEnabled',
-]);
+const CHANNELS_KEYS = new Set(['emailEnabled', 'pushEnabled', 'smsEnabled']);
 
 const EXPIRATION_KEYS = new Set([
   'expirationNotifications',
@@ -108,7 +104,8 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   const { data, loading, error } = useGetNotificationPreferencesQuery({
     skip: !user?.id || options?.skip,
     fetchPolicy: 'cache-first',
-    errorPolicy: 'all' });
+    errorPolicy: 'all',
+  });
 
   const preferences = data?.me?.notificationPreferences;
 
@@ -138,13 +135,18 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
             ...preferences,
             ...definedInputs,
             __typename: 'NotificationPreferences',
-            updatedAt: new Date().toISOString() } } };
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      };
     },
     onError: error => {
       const { message } = handleApolloError(error, {
-        operation: 'Update Notification Preferences' });
-      Alert.alert('Error', message);
-    } });
+        operation: 'Update Notification Preferences',
+      });
+      alertService.alert('Error', message);
+    },
+  });
 
   // PERFORMANCE: Memoize settings object to prevent recreating on every render
   const settings = (() => {
@@ -182,37 +184,44 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
       quietHoursEnabled: preferences?.quietHoursEnabled ?? false,
       quietHoursStart: preferences?.quietHoursStart ?? '22:00',
       quietHoursEnd: preferences?.quietHoursEnd ?? '08:00',
-      quietHoursTimezone: preferences?.quietHoursTimezone ?? null };
+      quietHoursTimezone: preferences?.quietHoursTimezone ?? null,
+    };
   })();
 
   const updateNotificationSetting = async (
-      key: keyof NotificationSettings,
-      value: boolean | string | number | ExpirationFrequency,
-    ) => {
-      const result = await executeMutation(
-        () => updatePreferences({
-          variables: { input: toNestedInput({ [key]: value }) } }),
-        'Failed to update notification setting',
-      );
-      return result ? !!result.data : false;
-    };
+    key: keyof NotificationSettings,
+    value: boolean | string | number | ExpirationFrequency,
+  ) => {
+    const result = await executeMutation(
+      () =>
+        updatePreferences({
+          variables: { input: toNestedInput({ [key]: value }) },
+        }),
+      'Failed to update notification setting',
+    );
+    return result ? !!result.data : false;
+  };
 
-  const updateMultipleSettings = async (updates: Partial<NotificationSettings>) => {
-      // Convert null to undefined for GraphQL input
-      const cleanedUpdates = Object.fromEntries(
-        Object.entries(updates).map(([key, value]) => [
-          key,
-          value === null ? undefined : value,
-        ]),
-      );
+  const updateMultipleSettings = async (
+    updates: Partial<NotificationSettings>,
+  ) => {
+    // Convert null to undefined for GraphQL input
+    const cleanedUpdates = Object.fromEntries(
+      Object.entries(updates).map(([key, value]) => [
+        key,
+        value === null ? undefined : value,
+      ]),
+    );
 
-      const result = await executeMutation(
-        () => updatePreferences({
-          variables: { input: toNestedInput(cleanedUpdates) } }),
-        'Failed to update notification settings',
-      );
-      return result ? !!result.data : false;
-    };
+    const result = await executeMutation(
+      () =>
+        updatePreferences({
+          variables: { input: toNestedInput(cleanedUpdates) },
+        }),
+      'Failed to update notification settings',
+    );
+    return result ? !!result.data : false;
+  };
 
   const resetToDefaults = async () => {
     const defaultSettings: Partial<NotificationSettings> = {
@@ -235,7 +244,8 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
       monthlyReport: false,
       quietHoursEnabled: false,
       quietHoursStart: '22:00',
-      quietHoursEnd: '08:00' };
+      quietHoursEnd: '08:00',
+    };
 
     return updateMultipleSettings(defaultSettings);
   };
@@ -275,5 +285,6 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     updateNotificationSetting,
     updateMultipleSettings,
     resetToDefaults,
-    isQuietTime };
+    isQuietTime,
+  };
 };

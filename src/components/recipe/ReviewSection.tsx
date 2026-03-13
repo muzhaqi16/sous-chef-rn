@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Alert } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { alertService } from '#/services/alertService';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { RatingBreakdown } from './RatingBreakdown';
 import { ReviewCard } from './ReviewCard';
@@ -20,7 +21,10 @@ interface ReviewSectionProps {
   hasReviewed: boolean;
   isOwnRecipe: boolean;
   createReview: (rating: number, comment?: string) => Promise<void>;
-  updateReview: (id: string, input: { rating?: number; comment?: string }) => Promise<void>;
+  updateReview: (
+    id: string,
+    input: { rating?: number; comment?: string },
+  ) => Promise<void>;
   deleteReview: (id: string) => Promise<void>;
   toggleHelpful: (reviewId: string, isHelpful: boolean) => Promise<void>;
   hasVotedHelpful: (review: RecipeReviewFragment) => boolean;
@@ -44,7 +48,8 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   deleteReview,
   toggleHelpful,
   hasVotedHelpful,
-  submitting }) => {
+  submitting,
+}) => {
   const { theme } = useUnistyles();
   const [sheetVisible, setSheetVisible] = useState(false);
 
@@ -54,16 +59,16 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
     : reviews;
 
   const handleSubmit = async (rating: number, comment?: string) => {
-      if (hasReviewed && userReview) {
-        await updateReview(userReview.id, { rating, comment });
-      } else {
-        await createReview(rating, comment);
-      }
-    };
+    if (hasReviewed && userReview) {
+      await updateReview(userReview.id, { rating, comment });
+    } else {
+      await createReview(rating, comment);
+    }
+  };
 
   const handleDelete = () => {
     if (!userReview) return;
-    Alert.alert(
+    alertService.alert(
       'Delete Review',
       'Are you sure you want to delete your review?',
       [
@@ -71,7 +76,8 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => deleteReview(userReview.id) },
+          onPress: () => deleteReview(userReview.id),
+        },
       ],
     );
   };
@@ -109,9 +115,16 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
       ) : (
         <Pressable
           onPress={() => setSheetVisible(true)}
-          style={({ pressed }) => [styles.writeButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.writeButton,
+            pressed && styles.pressed,
+          ]}
         >
-          <Ionicons name="create-outline" size={18} color={theme.colors.primary} />
+          <Ionicons
+            name="create-outline"
+            size={18}
+            color={theme.colors.primary}
+          />
           <Text style={styles.writeButtonText}>Write a Review</Text>
         </Pressable>
       )}
@@ -153,19 +166,23 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginBottom: theme.spacing.xl },
+    marginBottom: theme.spacing.xl,
+  },
   sectionTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   ownReviewSection: {
-    marginTop: theme.spacing.md },
+    marginTop: theme.spacing.md,
+  },
   ownReviewLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
-    marginBottom: theme.spacing.xs },
+    marginBottom: theme.spacing.xs,
+  },
   writeButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -176,18 +193,24 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.primary,
     borderRadius: theme.radii.md,
-    borderStyle: 'dashed' },
+    borderStyle: 'dashed',
+  },
   writeButtonText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary },
+    color: theme.colors.primary,
+  },
   reviewsList: {
-    marginTop: theme.spacing.sm },
+    marginTop: theme.spacing.sm,
+  },
   emptyText: {
     textAlign: 'center',
     color: theme.colors.textSecondary,
     fontSize: theme.fonts.size.sm,
     marginTop: theme.spacing.md,
-    fontStyle: 'italic' },
+    fontStyle: 'italic',
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

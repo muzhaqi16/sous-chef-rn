@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import NotificationSettingsScreen from '../NotificationSettingsScreen';
 
 // Mock token scheduler / refreshToken
@@ -80,7 +79,9 @@ jest.mock('#components/molecules/AlertBanner', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 describe('NotificationSettingsScreen', () => {
   beforeEach(() => {

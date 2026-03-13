@@ -19,11 +19,15 @@ const RING_BUFFER_SIZE = 120;
 const COVERAGE_TREND_SIZE = 5;
 const CORRELATION_WINDOW_MS = 500;
 
+/** Minimum consecutive blank frames at overlapping ranges to count as sustained */
+const SUSTAINED_BLANK_THRESHOLD = 3;
+
 function createEmptySession(): FlashListSessionMetrics {
   return {
     initialLoadTime: null,
     dataReferenceChanges: 0,
     blankFrameCount: 0,
+    sustainedBlankCount: 0,
     totalScrollFrames: 0,
     longestBlankStreak: 0,
     longFrameCount: 0,
@@ -49,6 +53,11 @@ export class FlashListDiagnostics {
   private lastFrameTime = 0;
   private lastFrameGap = 0;
   private currentBlankStreak = 0;
+
+  // Sustained blank tracking — consecutive blanks at overlapping visible ranges
+  private sustainedBlankStreak = 0;
+  private sustainedBlankLastStart = -1;
+  private sustainedBlankLastEnd = -1;
 
   // Predictive state
   private coverageTrend: number[] = [];
@@ -118,6 +127,10 @@ export class FlashListDiagnostics {
     this.currentBlankStreak = 0;
     this.lastFrameTime = 0;
     this.lastFrameGap = 0;
+    // Reset sustained blank state
+    this.sustainedBlankStreak = 0;
+    this.sustainedBlankLastStart = -1;
+    this.sustainedBlankLastEnd = -1;
     // Reset predictive state
     this.coverageTrend = [];
     this.previousVisibleStart = -1;
@@ -144,8 +157,28 @@ export class FlashListDiagnostics {
       if (this.currentBlankStreak > this.session.longestBlankStreak) {
         this.session.longestBlankStreak = this.currentBlankStreak;
       }
+
+      // Sustained blank: blank at overlapping visible range for 3+ consecutive frames
+      const rangesOverlap =
+        metric.visibleStart <= this.sustainedBlankLastEnd &&
+        metric.visibleEnd >= this.sustainedBlankLastStart;
+
+      if (rangesOverlap || this.sustainedBlankStreak === 0) {
+        this.sustainedBlankStreak += 1;
+      } else {
+        // Non-overlapping range — reset streak (user scrolled past, different region)
+        this.sustainedBlankStreak = 1;
+      }
+
+      this.sustainedBlankLastStart = metric.visibleStart;
+      this.sustainedBlankLastEnd = metric.visibleEnd;
+
+      if (this.sustainedBlankStreak === SUSTAINED_BLANK_THRESHOLD) {
+        this.session.sustainedBlankCount += 1;
+      }
     } else {
       this.currentBlankStreak = 0;
+      this.sustainedBlankStreak = 0;
     }
 
     // Update coverage trend
@@ -326,6 +359,10 @@ export class FlashListDiagnostics {
       s.totalScrollFrames > 0
         ? ((s.blankFrameCount / s.totalScrollFrames) * 100).toFixed(1)
         : '0.0';
+    const sustainedBlankPercent =
+      s.totalScrollFrames > 0
+        ? ((s.sustainedBlankCount / s.totalScrollFrames) * 100).toFixed(1)
+        : '0.0';
 
     const recentBlanks = report.recentFrames
       .filter(f => f.blankDetected)
@@ -334,7 +371,9 @@ export class FlashListDiagnostics {
     const blankLines = recentBlanks
       .map(f => {
         const offset = formatDuration(f.timestamp - s.sessionStart);
-        return `  +${offset}  gap=${f.frameGap.toFixed(0)}ms  visible=[${f.visibleStart},${f.visibleEnd}]  viewable=${f.viewableCount}/${f.expectedCount}`;
+        return `  +${offset}  gap=${f.frameGap.toFixed(0)}ms  visible=[${
+          f.visibleStart
+        },${f.visibleEnd}]  viewable=${f.viewableCount}/${f.expectedCount}`;
       })
       .join('\n');
 
@@ -349,13 +388,16 @@ export class FlashListDiagnostics {
     console.log(
       `\n📊 [FlashList:${this.componentName}] Session Report\n` +
         `====================================================\n` +
-        `Initial Load:     ${s.initialLoadTime !== null ? formatDuration(s.initialLoadTime) : 'N/A'}\n` +
+        `Initial Load:     ${
+          s.initialLoadTime !== null ? formatDuration(s.initialLoadTime) : 'N/A'
+        }\n` +
         `Session Duration: ${formatDuration(duration)}\n` +
         `Data Ref Changes: ${s.dataReferenceChanges} (${report.dataChangeBlankCorrelations} correlated with blank frames)\n` +
         `----------------------------------------------------\n` +
         `Scroll Quality:\n` +
         `  Total Frames:   ${s.totalScrollFrames}\n` +
-        `  Blank Frames:   ${s.blankFrameCount} (${blankPercent}%)\n` +
+        `  Blank Frames:   ${s.blankFrameCount} (${blankPercent}%) transient\n` +
+        `  Sustained:      ${s.sustainedBlankCount} (${sustainedBlankPercent}%) user-visible\n` +
         `  Longest Blank:  ${s.longestBlankStreak} consecutive\n` +
         `  Long Frames:    ${s.longFrameCount} (>32ms gap)\n` +
         `  Peak Frame Gap: ${s.peakFrameGap.toFixed(0)}ms\n` +

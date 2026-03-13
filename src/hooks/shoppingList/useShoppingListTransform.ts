@@ -1,5 +1,4 @@
 import { resolveImageUrl } from '#utils/imageUtils';
-import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import type {
   SortableShoppingListItem,
@@ -16,6 +15,8 @@ interface TransformOptions {
    * to ensure checkbox state matches the tab they're in.
    */
   forcePurchasedState?: boolean;
+  /** Whether to show product images (default: true). Passed from parent to support deferred removal. */
+  showImages?: boolean;
 }
 
 /**
@@ -27,6 +28,8 @@ interface MultiSourceTransformOptions {
   rawUnpurchasedItems: ShoppingListItemDisplayFragment[];
   /** Pre-filtered purchased items (from pagination) */
   rawPurchasedItems: ShoppingListItemDisplayFragment[];
+  /** Whether to show product images (default: true). Passed from parent to support deferred removal. */
+  showImages?: boolean;
 }
 
 /**
@@ -49,7 +52,8 @@ function transformItem(
   const imageUrl = resolveImageUrl(item);
 
   // Use forced state if provided, otherwise read from server data
-  const isPurchasedValue = forcePurchasedState ?? item.purchaseInfo?.isPurchased;
+  const isPurchasedValue =
+    forcePurchasedState ?? item.purchaseInfo?.isPurchased;
 
   // Create quantity config
   const rightElementConfig: QuantityElementConfig = {
@@ -74,7 +78,7 @@ function transformItem(
   return {
     id: item.id,
     title: item.itemName,
-    subtitle: item.category || undefined,
+    subtitle: item.category?.split(',')[0].trim() || undefined,
     sortOrder: item.sortOrder ?? 'zzz',
     isPurchased: isPurchasedValue,
     rightElementConfig,
@@ -123,8 +127,7 @@ export function useShoppingListTransform(
   items: ShoppingListItemDisplayFragment[],
   options?: TransformOptions,
 ) {
-  const { forcePurchasedState } = options ?? {};
-  const showImages = useShowShoppingListImages();
+  const { forcePurchasedState, showImages = true } = options ?? {};
 
   // Transform items using the extracted helper function
   const sortableItems = transformItems(items, forcePurchasedState, showImages);
@@ -155,12 +158,17 @@ export function useShoppingListTransform(
  * });
  * ```
  */
-export function useShoppingListTransformMulti(options: MultiSourceTransformOptions) {
-  const { rawUnpurchasedItems, rawPurchasedItems } = options;
-  const showImages = useShowShoppingListImages();
+export function useShoppingListTransformMulti(
+  options: MultiSourceTransformOptions,
+) {
+  const { rawUnpurchasedItems, rawPurchasedItems, showImages = true } = options;
 
   // Transform only the two partitioned arrays (skip redundant combined transform)
-  const unpurchasedItems = transformItems(rawUnpurchasedItems, false, showImages);
+  const unpurchasedItems = transformItems(
+    rawUnpurchasedItems,
+    false,
+    showImages,
+  );
   const purchasedItems = transformItems(rawPurchasedItems, true, showImages);
 
   return { unpurchasedItems, purchasedItems };

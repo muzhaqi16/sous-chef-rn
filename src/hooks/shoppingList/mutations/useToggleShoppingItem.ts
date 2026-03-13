@@ -7,8 +7,8 @@
  * - Persist optimistic state for offline support
  */
 
-import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
+import { alertService } from '#/services/alertService';
 import {
   useToggleShoppingListItemPurchasedMutation,
   ShoppingListItemDisplayFragmentDoc,
@@ -17,7 +17,8 @@ import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   moveShoppingListItemToPurchased,
-  moveShoppingListItemToUnpurchased } from '#/apollo/utils/shoppingListCacheUpdaters';
+  moveShoppingListItemToUnpurchased,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -42,7 +43,10 @@ interface UseToggleShoppingItemOptions {
  * await toggleItem('item-123');
  * ```
  */
-export function useToggleShoppingItem({ listId, refetch }: UseToggleShoppingItemOptions) {
+export function useToggleShoppingItem({
+  listId,
+  refetch,
+}: UseToggleShoppingItemOptions) {
   const { handleApolloError } = useErrorService();
   const client = useApolloClient();
 
@@ -51,7 +55,10 @@ export function useToggleShoppingItem({ listId, refetch }: UseToggleShoppingItem
     // Optimistic response ensures update() runs immediately (not after network response)
     optimisticResponse: (variables, { IGNORE }) => {
       const item = client.cache.readFragment<ShoppingListItemDisplayFragment>({
-        id: client.cache.identify({ __typename: 'ShoppingListItem', id: variables.input.id }),
+        id: client.cache.identify({
+          __typename: 'ShoppingListItem',
+          id: variables.input.id,
+        }),
         fragment: ShoppingListItemDisplayFragmentDoc,
         fragmentName: 'ShoppingListItemDisplayFragment',
       });
@@ -67,8 +74,12 @@ export function useToggleShoppingItem({ listId, refetch }: UseToggleShoppingItem
             ...item,
             purchaseInfo: {
               __typename: 'ShoppingListItemPurchaseInfo',
-              isPurchased: variables.input.purchased },
-            updatedAt: new Date().toISOString() } } };
+              isPurchased: variables.input.purchased,
+            },
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      };
     },
     update(cache, _result, { variables }) {
       if (!variables || !listId) return;
@@ -83,11 +94,14 @@ export function useToggleShoppingItem({ listId, refetch }: UseToggleShoppingItem
           purchaseInfo(existingPurchaseInfo = {}) {
             return {
               ...existingPurchaseInfo,
-              isPurchased: newStatus };
+              isPurchased: newStatus,
+            };
           },
           updatedAt() {
             return new Date().toISOString();
-          } } });
+          },
+        },
+      });
 
       // 2. Move item between purchased/unpurchased connections
       // moveShoppingListItem* handles BOTH itemsConnection filtered variants
@@ -127,32 +141,38 @@ export function useToggleShoppingItem({ listId, refetch }: UseToggleShoppingItem
 
       // For server/validation errors, show alert and refetch to restore correct state
       const { message } = handleApolloError(error, {
-        operation: 'Toggle Item Purchased' });
-      Alert.alert('Error', message);
+        operation: 'Toggle Item Purchased',
+      });
+      alertService.alert('Error', message);
       refetch();
-    } });
+    },
+  });
 
   const toggleItem = async (itemId: string) => {
-      if (!listId) return false;
+    if (!listId) return false;
 
-      const item = client.cache.readFragment<ShoppingListItemDisplayFragment>({
-        id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-        fragment: ShoppingListItemDisplayFragmentDoc,
-        fragmentName: 'ShoppingListItemDisplayFragment',
-      });
-      if (!item) return false;
+    const item = client.cache.readFragment<ShoppingListItemDisplayFragment>({
+      id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+      fragment: ShoppingListItemDisplayFragmentDoc,
+      fragmentName: 'ShoppingListItemDisplayFragment',
+    });
+    if (!item) return false;
 
-      const newStatus = !item.purchaseInfo?.isPurchased;
+    const newStatus = !item.purchaseInfo?.isPurchased;
 
-      const result = await executeMutation(
-        () => togglePurchasedMutation({
-          variables: { input: { id: itemId, purchased: newStatus } } }),
-        'Toggle shopping list item purchased error:',
-      );
-      if (!result) return false;
+    const result = await executeMutation(
+      () =>
+        togglePurchasedMutation({
+          variables: { input: { id: itemId, purchased: newStatus } },
+        }),
+      'Toggle shopping list item purchased error:',
+    );
+    if (!result) return false;
 
-      return result.data?.toggleShoppingListItemPurchased?.shoppingListItem ?? false;
-    };
+    return (
+      result.data?.toggleShoppingListItemPurchased?.shoppingListItem ?? false
+    );
+  };
 
   return { toggleItem };
 }

@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useCanUseNetwork } from '#hooks/settings/useOfflineMode';
 
 /**
@@ -33,9 +33,9 @@ export function useOfflineDisabled(customMessage?: string) {
   const canUseNetwork = useCanUseNetwork();
 
   const showOfflineMessage = () => {
-    Alert.alert(
+    alertService.alert(
       'Offline',
-      customMessage ?? 'This feature requires an internet connection'
+      customMessage ?? 'This feature requires an internet connection',
     );
   };
 
@@ -43,5 +43,6 @@ export function useOfflineDisabled(customMessage?: string) {
     /** True if network operations are disabled (offline or offline mode enabled) */
     isDisabled: !canUseNetwork,
     /** Shows an alert explaining the feature requires network */
-    showOfflineMessage };
+    showOfflineMessage,
+  };
 }

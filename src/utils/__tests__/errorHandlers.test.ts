@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   withVersionConflictHandling,
   withMutationErrorHandling,
@@ -22,9 +22,12 @@ jest.mock('#/services/errorService', () => ({
 const { handleVersionConflict } = require('../errors/versionConflict');
 const { errorService } = require('#/services/errorService');
 
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
+
 beforeEach(() => {
   jest.clearAllMocks();
-  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 describe('withVersionConflictHandling', () => {
@@ -40,7 +43,7 @@ describe('withVersionConflictHandling', () => {
     const wrapped = withVersionConflictHandling(fn, { itemName: 'Item' });
     const result = await wrapped();
     expect(result).toBe(false);
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Item Updated',
       'Version conflict message',
       expect.any(Array),
@@ -61,7 +64,7 @@ describe('withVersionConflictHandling', () => {
     const wrapped = withVersionConflictHandling(fn, { onRefresh });
     await wrapped();
     // Simulate pressing "Refresh"
-    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+    const buttons = (alertService.alert as jest.Mock).mock.calls[0][2];
     const refreshButton = buttons.find((b: any) => b.text === 'Refresh');
     refreshButton.onPress();
     expect(onRefresh).toHaveBeenCalled();
@@ -80,7 +83,7 @@ describe('withMutationErrorHandling', () => {
     const wrapped = withMutationErrorHandling(fn, { operation: 'Test' });
     const result = await wrapped();
     expect(result).toBe(false);
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'fail');
+    expect(alertService.alert).toHaveBeenCalledWith('Error', 'fail');
     expect(errorService.reportError).toHaveBeenCalled();
   });
 
@@ -91,7 +94,7 @@ describe('withMutationErrorHandling', () => {
       customMessage: 'Custom error',
     });
     await wrapped();
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Custom error');
+    expect(alertService.alert).toHaveBeenCalledWith('Error', 'Custom error');
   });
 
   it('suppresses alert when showAlert is false', async () => {
@@ -101,7 +104,7 @@ describe('withMutationErrorHandling', () => {
       showAlert: false,
     });
     await wrapped();
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 });
 
@@ -117,7 +120,7 @@ describe('withGenericErrorHandling', () => {
     const wrapped = withGenericErrorHandling(fn, 'Failed');
     const result = await wrapped();
     expect(result).toBe(false);
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed');
+    expect(alertService.alert).toHaveBeenCalledWith('Error', 'Failed');
   });
 });
 
@@ -126,14 +129,18 @@ describe('composeErrorHandlers', () => {
     const fn = jest.fn().mockResolvedValue('ok');
     const order: number[] = [];
 
-    const handler1 = (inner: any) => async (...args: any[]) => {
-      order.push(1);
-      return inner(...args);
-    };
-    const handler2 = (inner: any) => async (...args: any[]) => {
-      order.push(2);
-      return inner(...args);
-    };
+    const handler1 =
+      (inner: any) =>
+      async (...args: any[]) => {
+        order.push(1);
+        return inner(...args);
+      };
+    const handler2 =
+      (inner: any) =>
+      async (...args: any[]) => {
+        order.push(2);
+        return inner(...args);
+      };
 
     const composed = composeErrorHandlers(fn, [handler1, handler2]);
     await composed();
@@ -147,21 +154,21 @@ describe('handleVersionConflictAlert', () => {
     handleVersionConflict.mockReturnValue(true);
     const result = handleVersionConflictAlert(new Error('conflict'));
     expect(result).toBe(true);
-    expect(Alert.alert).toHaveBeenCalled();
+    expect(alertService.alert).toHaveBeenCalled();
   });
 
   it('returns false for non-version-conflict errors', () => {
     handleVersionConflict.mockReturnValue(false);
     const result = handleVersionConflictAlert(new Error('other'));
     expect(result).toBe(false);
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 });
 
 describe('handleMutationErrorAlert', () => {
   it('shows alert and reports error', () => {
     handleMutationErrorAlert(new Error('boom'), { operation: 'Test' });
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'boom');
+    expect(alertService.alert).toHaveBeenCalledWith('Error', 'boom');
     expect(errorService.reportError).toHaveBeenCalled();
   });
 
@@ -170,6 +177,6 @@ describe('handleMutationErrorAlert', () => {
       operation: 'Test',
       showAlert: false,
     });
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 });

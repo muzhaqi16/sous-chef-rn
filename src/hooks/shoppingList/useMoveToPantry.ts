@@ -1,14 +1,19 @@
 import { useRef } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   useMoveShoppingItemToPantryMutation,
   StorageState,
-  ShoppingListItemDisplayFragment } from '#generated';
+  ShoppingListItemDisplayFragment,
+} from '#generated';
 import { Telemetry } from '#/services/telemetry';
 import {
   createAddToParentConnectionUpdater,
-  createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { executeCacheUpdate, executeMutation } from '#/utils/compilerSafeWrappers';
+  createRemoveFromParentConnectionUpdater,
+} from '#/apollo/utils/cacheUpdaters';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 
 export interface MoveToPantryInput {
   pantryId: string;
@@ -32,7 +37,8 @@ interface UseMoveToPantryOptions {
  */
 export function useMoveToPantry({
   currentListId,
-  onSuccess }: UseMoveToPantryOptions) {
+  onSuccess,
+}: UseMoveToPantryOptions) {
   // Refs to track mutation input for cache update
   const moveToPantryIdRef = useRef<string | null>(null);
   const removeFromListRef = useRef<boolean>(true);
@@ -45,74 +51,82 @@ export function useMoveToPantry({
         if (!data?.moveShoppingItemToPantry || !moveToPantryIdRef.current)
           return;
 
-        executeCacheUpdate(
-          () => {
-            // Add to pantry items cache
-            const addToPantryCache = createAddToParentConnectionUpdater(
-              'Pantry',
-              'itemsConnection',
-              'PantryItem',
-            );
-            addToPantryCache(
-              cache,
-              moveToPantryIdRef.current!,
-              data.moveShoppingItemToPantry!.pantryItem!,
-            );
+        executeCacheUpdate(() => {
+          // Add to pantry items cache
+          const addToPantryCache = createAddToParentConnectionUpdater(
+            'Pantry',
+            'itemsConnection',
+            'PantryItem',
+          );
+          addToPantryCache(
+            cache,
+            moveToPantryIdRef.current!,
+            data.moveShoppingItemToPantry!.pantryItem!,
+          );
 
-            const selectedItem = selectedItemRef.current;
-            if (!selectedItem || !currentListId) return;
+          const selectedItem = selectedItemRef.current;
+          if (!selectedItem || !currentListId) return;
 
-            if (removeFromListRef.current) {
-              // Remove from shopping list cache if removeFromList was true
-              const removeFromShoppingListCache =
-                createRemoveFromParentConnectionUpdater(
-                  'ShoppingList',
-                  'itemsConnection',
-                  'ShoppingListItem',
-                );
-              removeFromShoppingListCache(cache, currentListId, selectedItem.id);
-            } else {
-              // If keeping in list, mark as unpurchased in cache (server does this automatically)
-              const cacheId = cache.identify({
-                __typename: 'ShoppingListItem',
-                id: selectedItem.id });
-              if (cacheId) {
-                cache.modify({
-                  id: cacheId,
-                  fields: {
-                    purchaseInfo(existing: any) {
-                      return { ...existing, isPurchased: false };
-                    },
-                    version(existingVersion = 0) {
-                      return existingVersion + 1;
-                    },
-                    updatedAt() {
-                      return new Date().toISOString();
-                    } } });
-              }
+          if (removeFromListRef.current) {
+            // Remove from shopping list cache if removeFromList was true
+            const removeFromShoppingListCache =
+              createRemoveFromParentConnectionUpdater(
+                'ShoppingList',
+                'itemsConnection',
+                'ShoppingListItem',
+              );
+            removeFromShoppingListCache(cache, currentListId, selectedItem.id);
+          } else {
+            // If keeping in list, mark as unpurchased in cache (server does this automatically)
+            const cacheId = cache.identify({
+              __typename: 'ShoppingListItem',
+              id: selectedItem.id,
+            });
+            if (cacheId) {
+              cache.modify({
+                id: cacheId,
+                fields: {
+                  purchaseInfo(existing: any) {
+                    return { ...existing, isPurchased: false };
+                  },
+                  version(existingVersion = 0) {
+                    return existingVersion + 1;
+                  },
+                  updatedAt() {
+                    return new Date().toISOString();
+                  },
+                },
+              });
             }
-          },
-          'Cache update failed for moveShoppingItemToPantry:',
-        );
+          }
+        }, 'Cache update failed for moveShoppingItemToPantry:');
       },
       onCompleted: () => {
         onSuccess?.();
       },
       onError: error => {
-        Alert.alert('Error', error.message || 'Failed to move item to pantry');
-      } });
+        alertService.alert(
+          'Error',
+          error.message || 'Failed to move item to pantry',
+        );
+      },
+    });
 
   /**
    * Move a shopping list item to pantry
    */
-  const moveToPantry = async (item: ShoppingListItemDisplayFragment, input: MoveToPantryInput) => {
-      // Store refs for cache update
-      selectedItemRef.current = item;
-      moveToPantryIdRef.current = input.pantryId;
-      removeFromListRef.current = input.removeFromList;
+  const moveToPantry = async (
+    item: ShoppingListItemDisplayFragment,
+    input: MoveToPantryInput,
+  ) => {
+    // Store refs for cache update
+    selectedItemRef.current = item;
+    moveToPantryIdRef.current = input.pantryId;
+    removeFromListRef.current = input.removeFromList;
 
-      const result = await executeMutation(
-        () => moveShoppingItemToPantry({
+    const result = await executeMutation(
+      () =>
+        moveShoppingItemToPantry({
           variables: {
             input: {
               shoppingListItemId: item.id,
@@ -123,20 +137,25 @@ export function useMoveToPantry({
               expiresAt: input.expiresAt,
               removeFromList: input.removeFromList,
               actualPrice: input.actualPrice,
-              notes: input.notes } } }),
-        'Failed to move item to pantry:',
-      );
-      if (!result) return false;
+              notes: input.notes,
+            },
+          },
+        }),
+      'Failed to move item to pantry:',
+    );
+    if (!result) return false;
 
-      Telemetry.trackEvent('shopping_item_moved_to_pantry', {
-        shopping_list_id: currentListId,
-        pantry_id: input.pantryId,
-        remove_from_list: input.removeFromList });
+    Telemetry.trackEvent('shopping_item_moved_to_pantry', {
+      shopping_list_id: currentListId,
+      pantry_id: input.pantryId,
+      remove_from_list: input.removeFromList,
+    });
 
-      return true;
-    };
+    return true;
+  };
 
   return {
     moveToPantry,
-    loading };
+    loading,
+  };
 }

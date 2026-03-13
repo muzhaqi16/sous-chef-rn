@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 
 /**
  * Module-level try-catch wrapper for array manager operations.
@@ -154,7 +154,8 @@ export function useArrayManager<T>({
   validate,
   equals = defaultEquals,
   transform = defaultTransform,
-  showAlerts = true }: ArrayManagerOptions<T>): ArrayManagerResult<T> {
+  showAlerts = true,
+}: ArrayManagerOptions<T>): ArrayManagerResult<T> {
   const [items, setItems] = useState<T[]>(initialValues);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,116 +163,116 @@ export function useArrayManager<T>({
   const clearError = () => setError(null);
 
   const showError = (message: string) => {
-      setError(message);
-      if (showAlerts) {
-        Alert.alert('Error', message);
-      }
-    };
+    setError(message);
+    if (showAlerts) {
+      alertService.alert('Error', message);
+    }
+  };
 
   const add = async (item: T): Promise<boolean> => {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      const result = await executeArrayOperation(async () => {
-        // Transform item (e.g., trim strings)
-        const transformedItem = transform(item);
+    const result = await executeArrayOperation(async () => {
+      // Transform item (e.g., trim strings)
+      const transformedItem = transform(item);
 
-        // Validate
-        if (validate) {
-          const validationError = validate(transformedItem);
-          if (validationError) {
-            showError(validationError);
-            return false;
-          }
-        }
-
-        // Check for duplicates
-        if (items.some((existing) => equals(existing, transformedItem))) {
-          showError('This item already exists');
+      // Validate
+      if (validate) {
+        const validationError = validate(transformedItem);
+        if (validationError) {
+          showError(validationError);
           return false;
         }
+      }
 
-        // Update via API
-        const newItems = [...items, transformedItem];
-        const success = await onUpdate(newItems);
+      // Check for duplicates
+      if (items.some(existing => equals(existing, transformedItem))) {
+        showError('This item already exists');
+        return false;
+      }
 
-        if (success) {
-          setItems(newItems);
-          return true;
-        } else {
-          showError('Failed to add item');
-          return false;
-        }
-      }, showError);
+      // Update via API
+      const newItems = [...items, transformedItem];
+      const success = await onUpdate(newItems);
 
-      setLoading(false);
-      return result === false ? false : result;
-    };
+      if (success) {
+        setItems(newItems);
+        return true;
+      } else {
+        showError('Failed to add item');
+        return false;
+      }
+    }, showError);
+
+    setLoading(false);
+    return result === false ? false : result;
+  };
 
   const remove = async (item: T): Promise<boolean> => {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      const result = await executeArrayOperation(async () => {
-        const newItems = items.filter((existing) => !equals(existing, item));
+    const result = await executeArrayOperation(async () => {
+      const newItems = items.filter(existing => !equals(existing, item));
 
-        const success = await onUpdate(newItems);
+      const success = await onUpdate(newItems);
 
-        if (success) {
-          setItems(newItems);
-          return true;
-        } else {
-          showError('Failed to remove item');
-          return false;
-        }
-      }, showError);
+      if (success) {
+        setItems(newItems);
+        return true;
+      } else {
+        showError('Failed to remove item');
+        return false;
+      }
+    }, showError);
 
-      setLoading(false);
-      return result === false ? false : result;
-    };
+    setLoading(false);
+    return result === false ? false : result;
+  };
 
   const update = async (oldItem: T, newItem: T): Promise<boolean> => {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      const result = await executeArrayOperation(async () => {
-        // Transform new item
-        const transformedItem = transform(newItem);
+    const result = await executeArrayOperation(async () => {
+      // Transform new item
+      const transformedItem = transform(newItem);
 
-        // Validate
-        if (validate) {
-          const validationError = validate(transformedItem);
-          if (validationError) {
-            showError(validationError);
-            return false;
-          }
-        }
-
-        // Check if new item is duplicate (excluding the old item)
-        const otherItems = items.filter((existing) => !equals(existing, oldItem));
-        if (otherItems.some((existing) => equals(existing, transformedItem))) {
-          showError('This item already exists');
+      // Validate
+      if (validate) {
+        const validationError = validate(transformedItem);
+        if (validationError) {
+          showError(validationError);
           return false;
         }
+      }
 
-        const newItems = items.map((existing) =>
-          equals(existing, oldItem) ? transformedItem : existing,
-        );
+      // Check if new item is duplicate (excluding the old item)
+      const otherItems = items.filter(existing => !equals(existing, oldItem));
+      if (otherItems.some(existing => equals(existing, transformedItem))) {
+        showError('This item already exists');
+        return false;
+      }
 
-        const success = await onUpdate(newItems);
+      const newItems = items.map(existing =>
+        equals(existing, oldItem) ? transformedItem : existing,
+      );
 
-        if (success) {
-          setItems(newItems);
-          return true;
-        } else {
-          showError('Failed to update item');
-          return false;
-        }
-      }, showError);
+      const success = await onUpdate(newItems);
 
-      setLoading(false);
-      return result === false ? false : result;
-    };
+      if (success) {
+        setItems(newItems);
+        return true;
+      } else {
+        showError('Failed to update item');
+        return false;
+      }
+    }, showError);
+
+    setLoading(false);
+    return result === false ? false : result;
+  };
 
   const clear = async (): Promise<boolean> => {
     setLoading(true);
@@ -294,12 +295,12 @@ export function useArrayManager<T>({
   };
 
   const has = (item: T): boolean => {
-      return items.some((existing) => equals(existing, item));
-    };
+    return items.some(existing => equals(existing, item));
+  };
 
   const indexOf = (item: T): number => {
-      return items.findIndex((existing) => equals(existing, item));
-    };
+    return items.findIndex(existing => equals(existing, item));
+  };
 
   return {
     items,
@@ -311,5 +312,6 @@ export function useArrayManager<T>({
     indexOf,
     loading,
     error,
-    clearError };
+    clearError,
+  };
 }

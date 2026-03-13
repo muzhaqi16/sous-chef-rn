@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Alert, Text, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
@@ -176,7 +177,7 @@ const RecipeMainInner: React.FC = () => {
       setLoadingRandom,
       error => {
         console.error('Failed to fetch random recipes:', error);
-        Alert.alert(
+        alertService.alert(
           'Error',
           'Failed to load recipe suggestions. Please try again.',
         );
@@ -388,7 +389,7 @@ const RecipeMainInner: React.FC = () => {
       optimisticDataPersistence.clear('SavedRecipe', recipeId, 'isFavorited');
     } catch (error) {
       console.error('Failed to remove recipe:', error);
-      Alert.alert('Error', 'Failed to remove recipe. Please try again.');
+      alertService.alert('Error', 'Failed to remove recipe. Please try again.');
     }
   };
 
@@ -397,7 +398,7 @@ const RecipeMainInner: React.FC = () => {
       await deleteRecipeMutation({ variables: { id } });
     } catch (error) {
       console.error('Failed to delete recipe:', error);
-      Alert.alert('Error', 'Failed to delete recipe. Please try again.');
+      alertService.alert('Error', 'Failed to delete recipe. Please try again.');
     }
   };
 
@@ -417,7 +418,12 @@ const RecipeMainInner: React.FC = () => {
     </Pressable>
   );
 
-  const emptyStateConfig: { icon: IconName; title: string; description: string; action: { label: string; onPress: () => void } } =
+  const emptyStateConfig: {
+    icon: IconName;
+    title: string;
+    description: string;
+    action: { label: string; onPress: () => void };
+  } =
     activeView === 'myRecipes'
       ? {
           icon: 'create-outline',

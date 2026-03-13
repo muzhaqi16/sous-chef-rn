@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { RecipeFormScreen } from '../index';
 
 jest.mock('../../../../apollo/links/tokenScheduler');
@@ -10,8 +10,12 @@ jest.mock('../../../../apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-const mockCreateRecipe = jest.fn().mockResolvedValue({ data: { createRecipe: { success: true } } });
-const mockUpdateRecipe = jest.fn().mockResolvedValue({ data: { updateRecipe: { success: true } } });
+const mockCreateRecipe = jest
+  .fn()
+  .mockResolvedValue({ data: { createRecipe: { success: true } } });
+const mockUpdateRecipe = jest
+  .fn()
+  .mockResolvedValue({ data: { updateRecipe: { success: true } } });
 
 jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
@@ -50,14 +54,18 @@ jest.mock('#components/organisms/FormModal', () => ({
     return (
       <View testID={testID}>
         <Text>{title}</Text>
-        <Pressable testID="save-button" onPress={onSave}><Text>Save</Text></Pressable>
+        <Pressable testID="save-button" onPress={onSave}>
+          <Text>Save</Text>
+        </Pressable>
         {children}
       </View>
     );
   },
 }));
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -84,7 +92,10 @@ describe('RecipeFormScreen', () => {
 
     fireEvent.press(getByTestId('save-button'));
 
-    expect(Alert.alert).toHaveBeenCalledWith('Validation Error', expect.any(String));
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Validation Error',
+      expect.any(String),
+    );
   });
 
   it('renders with test ID', () => {

@@ -5,21 +5,28 @@
  * Creates a WEIGHT_CORRECTED audit record with mandatory reason.
  */
 
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   useCorrectPantryItemWeightMutation,
-  PantryItemDisplayFragmentDoc } from '#generated';
+  PantryItemDisplayFragmentDoc,
+} from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
-  getVersionConflictMessage } from '#/utils/errors/versionConflict';
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
+import {
+  isInvalidUnitError,
+  getInvalidUnitMessage,
+} from '#/utils/errors/invalidUnit';
 
 interface UseCorrectPantryItemWeightOptions {
   onSuccess?: () => void;
 }
 
 export function useCorrectPantryItemWeight({
-  onSuccess }: UseCorrectPantryItemWeightOptions = {}) {
+  onSuccess,
+}: UseCorrectPantryItemWeightOptions = {}) {
   const { handleApolloError } = useErrorService();
 
   const [correctMutation, { loading }] = useCorrectPantryItemWeightMutation({
@@ -31,45 +38,57 @@ export function useCorrectPantryItemWeight({
       cache.writeFragment({
         id: cache.identify({
           __typename: 'PantryItem',
-          id: pantryItem.id }),
+          id: pantryItem.id,
+        }),
         fragment: PantryItemDisplayFragmentDoc,
         fragmentName: 'PantryItemDisplay',
-        data: pantryItem });
-    } });
+        data: pantryItem,
+      });
+    },
+  });
 
   const correctWeight = async (
-      pantryItemId: string,
-      netWeight: number,
-      reason: string,
-      version: number,
-      netWeightUnitId?: string,
-    ): Promise<boolean> => {
-      const result = await correctMutation({
-        variables: {
-          id: pantryItemId,
-          input: {
-            netWeight,
-            reason,
-            version,
-            ...(netWeightUnitId ? { netWeightUnitId } : {}) } } });
+    pantryItemId: string,
+    netWeight: number,
+    reason: string,
+    version: number,
+    netWeightUnitId?: string,
+  ): Promise<boolean> => {
+    const result = await correctMutation({
+      variables: {
+        id: pantryItemId,
+        input: {
+          netWeight,
+          reason,
+          version,
+          ...(netWeightUnitId ? { netWeightUnitId } : {}),
+        },
+      },
+    });
 
-      if (result.data?.correctPantryItemWeight?.pantryItem) {
-        onSuccess?.();
-        return true;
+    if (result.data?.correctPantryItemWeight?.pantryItem) {
+      onSuccess?.();
+      return true;
+    }
+
+    if (result.error) {
+      if (handleVersionConflict(result.error)) {
+        alertService.alert(
+          'Item Updated',
+          getVersionConflictMessage(result.error),
+        );
+      } else if (isInvalidUnitError(result.error)) {
+        alertService.alert('Invalid Unit', getInvalidUnitMessage(result.error));
+      } else {
+        const { message } = handleApolloError(result.error, {
+          operation: 'Correct Weight',
+        });
+        alertService.alert('Error', message);
       }
+    }
 
-      if (result.error) {
-        if (handleVersionConflict(result.error)) {
-          Alert.alert('Item Updated', getVersionConflictMessage(result.error));
-        } else {
-          const { message } = handleApolloError(result.error, {
-            operation: 'Correct Weight' });
-          Alert.alert('Error', message);
-        }
-      }
-
-      return false;
-    };
+    return false;
+  };
 
   return { correctWeight, loading };
 }

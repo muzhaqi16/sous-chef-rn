@@ -4,12 +4,12 @@ import {
   Text,
   Pressable,
   Modal,
-  Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { authService } from '#/services/authService';
@@ -95,14 +95,16 @@ export const BiometricSetupModal = ({
           if (hasExistingCredentials) {
             // User has existing credentials - try to load them with biometric auth
             // Note: loadStoredCredentials may throw if biometric auth fails
-            const credentials = await authService.loadStoredCredentials(userEmail);
+            const credentials = await authService.loadStoredCredentials(
+              userEmail,
+            );
             if (credentials) {
               // Successfully authenticated with biometric - enable the setting
               onComplete(true);
               return;
             } else {
               // User cancelled biometric authentication
-              Alert.alert(
+              alertService.alert(
                 'Authentication Required',
                 'Biometric authentication is required to enable this setting.',
                 [{ text: 'OK', onPress: () => onComplete(false) }],
@@ -114,7 +116,7 @@ export const BiometricSetupModal = ({
             if (!password.trim()) {
               // Show password input if not already visible
               if (!needsPassword) {
-                Alert.alert(
+                alertService.alert(
                   'Password Required',
                   'Enter your password to enable biometric authentication with your existing account.',
                   [{ text: 'OK' }],
@@ -124,12 +126,15 @@ export const BiometricSetupModal = ({
             }
 
             // Save credentials with the entered password
-            const success = await authService.storeCredentials(userEmail, password);
+            const success = await authService.storeCredentials(
+              userEmail,
+              password,
+            );
             if (success) {
               onComplete(true);
               return;
             } else {
-              Alert.alert(
+              alertService.alert(
                 'Setup Failed',
                 'Failed to enable biometric authentication. Please verify your password and try again.',
                 [{ text: 'OK', onPress: () => onComplete(false) }],
@@ -141,7 +146,7 @@ export const BiometricSetupModal = ({
 
         // Onboarding mode - save credentials with biometric protection
         if (needsPassword && !password.trim()) {
-          Alert.alert(
+          alertService.alert(
             'Password Required',
             'Please enter your password to enable biometric authentication.',
           );
@@ -152,13 +157,16 @@ export const BiometricSetupModal = ({
         const passwordToUse = userPassword || password;
 
         // Store credentials with biometric protection
-        const success = await authService.storeCredentials(userEmail, passwordToUse);
+        const success = await authService.storeCredentials(
+          userEmail,
+          passwordToUse,
+        );
 
         if (success) {
           onComplete(true);
         } else {
           // Biometric setup failed during onboarding
-          Alert.alert(
+          alertService.alert(
             'Setup Failed',
             'Biometric setup failed. You can enable it later in Settings.',
             [{ text: 'OK', onPress: () => onComplete(false) }],
@@ -168,7 +176,7 @@ export const BiometricSetupModal = ({
       setIsEnabling,
       error => {
         console.error('Error enabling biometric authentication:', error);
-        Alert.alert(
+        alertService.alert(
           'Setup Failed',
           'Biometric setup failed. You can enable it later in Settings.',
           [{ text: 'OK', onPress: () => onComplete(false) }],

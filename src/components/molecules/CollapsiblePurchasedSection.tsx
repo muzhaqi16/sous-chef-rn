@@ -1,11 +1,13 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, Pressable, Alert } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { alertService } from '#/services/alertService';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   FadeIn,
-  FadeOut } from 'react-native-reanimated';
+  FadeOut,
+} from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { SPRING, TIMING } from '#/constants/animations';
@@ -41,7 +43,8 @@ export const CollapsiblePurchasedSection: React.FC<
   onSwipeableWillOpen,
   onSwipeableClose,
   isExpanded: controlledIsExpanded,
-  onExpandedChange }) => {
+  onExpandedChange,
+}) => {
   const { theme } = useUnistyles();
   // Auto-expand when all items are purchased (no unpurchased items)
   // This prevents the confusing "empty list" appearance when finishing shopping
@@ -54,17 +57,18 @@ export const CollapsiblePurchasedSection: React.FC<
     : internalExpanded;
 
   const setExpanded = (next: boolean) => {
-      if (isControlled) {
-        onExpandedChange?.(next);
-      } else {
-        setInternalExpanded(next);
-        onExpandedChange?.(next);
-      }
-    };
+    if (isControlled) {
+      onExpandedChange?.(next);
+    } else {
+      setInternalExpanded(next);
+      onExpandedChange?.(next);
+    }
+  };
 
   // Preserve expansion state and only auto-expand when completing all shopping
   // Render-time state update: detect zero threshold crossing
-  const [prevUnpurchasedCount, setPrevUnpurchasedCount] = useState(unpurchasedCount);
+  const [prevUnpurchasedCount, setPrevUnpurchasedCount] =
+    useState(unpurchasedCount);
   if (unpurchasedCount !== prevUnpurchasedCount) {
     const crossedZeroThreshold =
       prevUnpurchasedCount > 0 && unpurchasedCount === 0;
@@ -90,7 +94,8 @@ export const CollapsiblePurchasedSection: React.FC<
 
   const animatedChevronStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ rotate: `${chevronRotation.value}deg` }] };
+      transform: [{ rotate: `${chevronRotation.value}deg` }],
+    };
   });
 
   if (purchasedItems.length === 0) {
@@ -98,7 +103,7 @@ export const CollapsiblePurchasedSection: React.FC<
   }
 
   const handleClearAll = () => {
-    Alert.alert(
+    alertService.alert(
       'Clear Purchased Items',
       `Delete all ${purchasedItems.length} purchased items? This cannot be undone.`,
       [
@@ -110,7 +115,8 @@ export const CollapsiblePurchasedSection: React.FC<
             if (onClearAll) {
               await onClearAll();
             }
-          } },
+          },
+        },
       ],
     );
   };
@@ -119,11 +125,12 @@ export const CollapsiblePurchasedSection: React.FC<
     <View key="collapsible-purchased-section" style={styles.container}>
       {/* Header */}
       <Pressable
-        style={({pressed}) => [
+        style={({ pressed }) => [
           styles.header,
           {
             backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border },
+            borderColor: theme.colors.border,
+          },
           pressed && styles.pressed,
         ]}
         onPress={() => {
@@ -132,7 +139,11 @@ export const CollapsiblePurchasedSection: React.FC<
         }}
       >
         <View style={styles.headerLeft}>
-          <Icon name="checkmark-circle" size={20} color={theme.colors.success} />
+          <Icon
+            name="checkmark-circle"
+            size={20}
+            color={theme.colors.success}
+          />
           <Text
             style={[styles.headerText, { color: theme.colors.textPrimary }]}
           >
@@ -143,7 +154,7 @@ export const CollapsiblePurchasedSection: React.FC<
         <View style={styles.headerRight}>
           {!!onClearAll && (
             <Pressable
-              style={({pressed}) => [
+              style={({ pressed }) => [
                 styles.clearButton,
                 { backgroundColor: theme.colors.error + '20' },
                 pressed && styles.pressed,
@@ -196,7 +207,8 @@ export const CollapsiblePurchasedSection: React.FC<
 const styles = StyleSheet.create(theme => ({
   container: {
     marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -204,26 +216,35 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing['3'],
     borderTopWidth: 1,
-    borderBottomWidth: 1 },
+    borderBottomWidth: 1,
+  },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1 },
+    flex: 1,
+  },
   checkIcon: {
-    marginRight: theme.spacing.sm },
+    marginRight: theme.spacing.sm,
+  },
   headerText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing['3'] },
+    gap: theme.spacing['3'],
+  },
   clearButton: {
     paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.xs + 2,
-    borderRadius: theme.radii.sm },
+    borderRadius: theme.radii.sm,
+  },
   clearButtonText: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

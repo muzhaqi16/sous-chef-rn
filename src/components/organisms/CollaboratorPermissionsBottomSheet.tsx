@@ -4,14 +4,12 @@ import {
   Text,
   Pressable,
   ActivityIndicator,
-  Alert,
   Dimensions,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import BottomSheet, {
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
+import { alertService } from '#/services/alertService';
+import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
 import { Button } from '../base/Button';
 import { Icon } from '#utils/iconUtils';
 import {
@@ -65,7 +63,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
   const handleSubmit = () => {
     if (!collaborator || !selectedRole || !collaborator.collaboratorId) {
-      Alert.alert('Error', 'Missing required information');
+      alertService.alert('Error', 'Missing required information');
       return;
     }
 
@@ -92,7 +90,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
       },
       setIsSubmitting,
       (error: unknown) => {
-        Alert.alert(
+        alertService.alert(
           'Error',
           (error as any)?.message || 'Failed to update collaborator role',
         );
@@ -114,17 +112,6 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     CollaboratorRole.Admin,
   ];
 
-  const renderBackdrop = (props: any) => (
-    <GlobalBottomSheetBackdrop
-      {...props}
-      appearsOnIndex={0}
-      disappearsOnIndex={-1}
-      opacity={0.5}
-      pressBehavior="close"
-      onClose={() => bottomSheetRef.current?.close()}
-    />
-  );
-
   if (!collaborator) return null;
 
   return (
@@ -136,7 +123,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
       onClose={handleClose}
       enablePanDownToClose
       animateOnMount={true}
-      backdropComponent={renderBackdrop}
+      backdropComponent={DismissBackdrop}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
     >
@@ -156,7 +143,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
             return (
               <Pressable
                 key={role}
-                style={({pressed}) => [
+                style={({ pressed }) => [
                   styles.roleCard,
                   isSelected && {
                     borderColor: theme.colors.primary,

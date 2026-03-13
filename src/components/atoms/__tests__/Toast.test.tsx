@@ -1,6 +1,6 @@
-import React, {useEffect} from 'react';
+import React, { useEffect } from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { Platform, Text } from 'react-native';
+import { Text } from 'react-native';
 import { ToastProvider } from '../Toast';
 import { useToast } from '../../../hooks/useToast';
 
@@ -12,21 +12,19 @@ jest.mock('#/services/toastService', () => ({
 }));
 
 // Helper component that triggers a toast
-const ToastTrigger: React.FC<{ message: string; type?: any }> = ({ message, type }) => {
+const ToastTrigger: React.FC<{
+  message: string;
+  type?: any;
+  action?: { label: string; onPress: () => void };
+}> = ({ message, type, action }) => {
   const showToast = useToast();
- useEffect(() => {
-    showToast({ message, type });
-  }, [message, type, showToast]);
+  useEffect(() => {
+    showToast({ message, type, action });
+  }, [message, type, action, showToast]);
   return <Text>Trigger</Text>;
 };
 
 describe('ToastProvider', () => {
-  const originalPlatform = Platform.OS;
-
-  afterEach(() => {
-    Object.defineProperty(Platform, 'OS', { value: originalPlatform });
-  });
-
   it('renders children', () => {
     render(
       <ToastProvider>
@@ -45,8 +43,7 @@ describe('ToastProvider', () => {
     expect(screen.getByText('Trigger')).toBeTruthy();
   });
 
-  it('displays toast message on iOS', () => {
-    Object.defineProperty(Platform, 'OS', { value: 'ios' });
+  it('displays toast message', () => {
     render(
       <ToastProvider>
         <ToastTrigger message="Toast message" />
@@ -56,8 +53,7 @@ describe('ToastProvider', () => {
     expect(screen.getByText('Toast message')).toBeTruthy();
   });
 
-  it('displays toast with success type on iOS', () => {
-    Object.defineProperty(Platform, 'OS', { value: 'ios' });
+  it('displays toast with success type', () => {
     render(
       <ToastProvider>
         <ToastTrigger message="Saved!" type="success" />
@@ -66,8 +62,7 @@ describe('ToastProvider', () => {
     expect(screen.getByTestId('toast-success')).toBeTruthy();
   });
 
-  it('displays toast with error type on iOS', () => {
-    Object.defineProperty(Platform, 'OS', { value: 'ios' });
+  it('displays toast with error type', () => {
     render(
       <ToastProvider>
         <ToastTrigger message="Failed!" type="error" />
@@ -76,8 +71,7 @@ describe('ToastProvider', () => {
     expect(screen.getByTestId('toast-error')).toBeTruthy();
   });
 
-  it('renders multiple toast types on iOS without crashing', () => {
-    Object.defineProperty(Platform, 'OS', { value: 'ios' });
+  it('renders toast with warning type without crashing', () => {
     render(
       <ToastProvider>
         <ToastTrigger message="Warning!" type="warning" />
@@ -85,5 +79,19 @@ describe('ToastProvider', () => {
     );
     expect(screen.getByTestId('toast-warning')).toBeTruthy();
     expect(screen.getByText('Warning!')).toBeTruthy();
+  });
+
+  it('renders action button when action is provided', () => {
+    const onPress = jest.fn();
+    render(
+      <ToastProvider>
+        <ToastTrigger
+          message="Failed!"
+          type="error"
+          action={{ label: 'Retry', onPress }}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByText('Retry')).toBeTruthy();
   });
 });

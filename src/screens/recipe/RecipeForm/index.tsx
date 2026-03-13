@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormModal } from '#components/organisms/FormModal';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -54,21 +54,25 @@ export const RecipeFormScreen: React.FC<
     }
   }, [recipeData?.recipe, populateFromRecipe]);
 
-  const [createRecipeMutation, { loading: creating }] =
-    useCreateRecipeMutation({
+  const [createRecipeMutation, { loading: creating }] = useCreateRecipeMutation(
+    {
       update: (cache, { data }) => {
         if (!data?.createRecipe?.success || !data.createRecipe.recipe) return;
         const newRecipe = data.createRecipe.recipe;
         cache.updateQuery<MyRecipesQuery>(
           { query: MyRecipesDocument },
-          (existing) => {
+          existing => {
             if (!existing?.recipes) return existing;
             return {
               ...existing,
               recipes: {
                 ...existing.recipes,
                 edges: [
-                  { __typename: 'RecipeEdge', cursor: newRecipe.id, node: newRecipe },
+                  {
+                    __typename: 'RecipeEdge',
+                    cursor: newRecipe.id,
+                    node: newRecipe,
+                  },
                   ...existing.recipes.edges,
                 ],
                 totalCount: (existing.recipes.totalCount ?? 0) + 1,
@@ -77,7 +81,8 @@ export const RecipeFormScreen: React.FC<
           },
         );
       },
-    });
+    },
+  );
   const [updateRecipeMutation, { loading: updating }] =
     useUpdateRecipeMutation();
   const [updateRecipeIngredientsMutation, { loading: updatingIngredients }] =
@@ -87,7 +92,7 @@ export const RecipeFormScreen: React.FC<
   const handleSave = () => {
     const error = form.validate();
     if (error) {
-      Alert.alert('Validation Error', error);
+      alertService.alert('Validation Error', error);
       return;
     }
 
@@ -107,7 +112,8 @@ export const RecipeFormScreen: React.FC<
             }),
           ]);
           const recipeSuccess = updateResult.data?.updateRecipe?.success;
-          const ingredientsSuccess = ingredientsResult.data?.updateRecipeIngredients?.success;
+          const ingredientsSuccess =
+            ingredientsResult.data?.updateRecipeIngredients?.success;
           if (recipeSuccess && ingredientsSuccess) {
             goBack();
           } else {
@@ -115,7 +121,7 @@ export const RecipeFormScreen: React.FC<
               updateResult.data?.updateRecipe?.message ??
               ingredientsResult.data?.updateRecipeIngredients?.message ??
               'Failed to update recipe.';
-            Alert.alert('Error', errorMessage);
+            alertService.alert('Error', errorMessage);
           }
         } else {
           const input = form.buildCreateInput();
@@ -125,7 +131,7 @@ export const RecipeFormScreen: React.FC<
           if (result.data?.createRecipe?.success) {
             goBack();
           } else {
-            Alert.alert(
+            alertService.alert(
               'Error',
               result.data?.createRecipe?.message ?? 'Failed to create recipe.',
             );
@@ -135,7 +141,7 @@ export const RecipeFormScreen: React.FC<
       (err: unknown) => {
         const message =
           err instanceof Error ? err.message : 'An unexpected error occurred.';
-        Alert.alert('Error', message);
+        alertService.alert('Error', message);
       },
     );
   };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -19,6 +19,13 @@ interface PantryHeaderProps {
   onHomePress?: () => void;
   /** Callback when notification bell is pressed */
   onNotificationPress?: () => void;
+  /** Callback with screen-coordinate rect when the home badge lays out */
+  onHomeBadgeLayout?: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
 }
 
 /**
@@ -30,23 +37,47 @@ interface PantryHeaderProps {
  * - Avatar with optional notification badge
  */
 export const PantryHeader: React.FC<PantryHeaderProps> = ({
-    userName,
-    householdName,
-    avatarUrl,
-    notificationCount = 0,
-    onAvatarPress,
-    onHomePress,
-    onNotificationPress,
-  }) => {
-    const { theme } = useUnistyles();
+  userName,
+  householdName,
+  avatarUrl,
+  notificationCount = 0,
+  onAvatarPress,
+  onHomePress,
+  onNotificationPress,
+  onHomeBadgeLayout,
+}) => {
+  const { theme } = useUnistyles();
+  const badgeRef = useRef<View>(null);
 
-    return (
-      <View style={styles.greetingRow}>
-        <View style={styles.greetingContent}>
-          <Text style={styles.greeting}>
-            Hello, <Text style={styles.userName}>{userName}</Text>!
-          </Text>
-          <Pressable onPress={onHomePress} style={styles.householdBadge}>
+  return (
+    <View style={styles.greetingRow}>
+      <View style={styles.greetingContent}>
+        <Text style={styles.greeting}>
+          Hello, <Text style={styles.userName}>{userName}</Text>!
+        </Text>
+        <Pressable onPress={onHomePress} style={styles.householdBadge}>
+          <View
+            ref={badgeRef}
+            collapsable={false}
+            style={styles.householdBadgeInner}
+            onLayout={() => {
+              if (onHomeBadgeLayout) {
+                // Delay measurement to ensure Android native layout is settled
+                requestAnimationFrame(() => {
+                  badgeRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+                    if (w > 0 && h > 0) {
+                      onHomeBadgeLayout({
+                        x: pageX,
+                        y: pageY,
+                        width: w,
+                        height: h,
+                      });
+                    }
+                  });
+                });
+              }
+            }}
+          >
             <Icon
               size={theme.typography.fontSize.lg}
               name="swap-horizontal-outline"
@@ -58,46 +89,45 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
               size={theme.typography.fontSize.lg}
               color={theme.colors.textTertiary}
             />
-          </Pressable>
-        </View>
-
-        {/* Notification bell */}
-        {!!onNotificationPress && (
-          <Pressable
-            onPress={onNotificationPress}
-            style={styles.notificationButton}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Notifications"
-          >
-            <Icon
-              name="notifications-outline"
-              size={24}
-              color={theme.colors.textSecondary}
-            />
-            {notificationCount > 0 && (
-              <View style={styles.notificationDot} />
-            )}
-          </Pressable>
-        )}
-
-        {/* Avatar */}
-        <Pressable onPress={onAvatarPress} style={styles.avatarContainer}>
-          {avatarUrl ? (
-            <CachedImage uri={avatarUrl} style={styles.avatarImage} displaySize={48} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Icon
-                name="person"
-                size={24}
-                color={theme.colors.textSecondary}
-              />
-            </View>
-          )}
+          </View>
         </Pressable>
       </View>
-    );
-  };
+
+      {/* Notification bell */}
+      {!!onNotificationPress && (
+        <Pressable
+          onPress={onNotificationPress}
+          style={styles.notificationButton}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+        >
+          <Icon
+            name="notifications-outline"
+            size={24}
+            color={theme.colors.textSecondary}
+          />
+          {notificationCount > 0 && <View style={styles.notificationDot} />}
+        </Pressable>
+      )}
+
+      {/* Avatar */}
+      <Pressable onPress={onAvatarPress} style={styles.avatarContainer}>
+        {avatarUrl ? (
+          <CachedImage
+            uri={avatarUrl}
+            style={styles.avatarImage}
+            displaySize={48}
+          />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Icon name="person" size={24} color={theme.colors.textSecondary} />
+          </View>
+        )}
+      </Pressable>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create(theme => ({
   greetingRow: {
@@ -120,9 +150,12 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
   },
   householdBadge: {
+    marginTop: theme.spacing.xs,
+  },
+  householdBadgeInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: theme.spacing.xs,
+    alignSelf: 'flex-start',
     gap: theme.spacing.xs + 2,
   },
   householdName: {

@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { alertService } from '#/services/alertService';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { ConversionPreview } from '#components/atoms/ConversionPreview';
+import { FractionQuickSelect } from '#components/atoms/FractionQuickSelect';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
 import type { PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
+import { PantryOperation } from '#hooks/pantry/useOperationUnits';
 import {
   PantryActionModal,
   type PantryActionSharedState,
@@ -53,7 +56,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
 
     const quantityValue = parseFractionalInput(quantityInput);
     if (quantityValue === null || isNaN(quantityValue) || quantityValue <= 0) {
-      Alert.alert('Error', 'Please enter a valid quantity');
+      alertService.alert('Error', 'Please enter a valid quantity');
       return;
     }
 
@@ -82,9 +85,10 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       onClose={onClose}
       title="Restock Item"
       confirmLabel="Restock"
-      snapPoints={['55%', '95%']}
+      snapPoints={['80%', '95%']}
       unitToggleLabel="Restock by"
       currentQuantityLabel="Current:"
+      operation={PantryOperation.Restock}
       onConfirm={handleConfirm}
       onReset={handleReset}
       renderActionFields={shared => (
@@ -172,6 +176,15 @@ const RestockActionFields: React.FC<{
             New quantity: {formatQuantity(newQuantity)}{' '}
             {shared.activeUnitSymbol}
           </Text>
+        ) : null}
+        {shared.commonFractions != null && shared.commonFractions.length > 0 ? (
+          <FractionQuickSelect
+            fractions={shared.commonFractions}
+            onSelect={value => setQuantityInput(value.toString())}
+            selectedValue={addAmount ?? undefined}
+            unitSymbol={shared.activeUnitSymbol}
+            displayAsFraction
+          />
         ) : null}
       </View>
 

@@ -71,6 +71,7 @@ query GetPantry(
           name
           type
           icon
+          color
           isDefault
           currentItemCount
           parentLocation {
@@ -276,6 +277,52 @@ query GetPantryLedgerAnalytics(
   }
 }
 
+query ConsumptionUnitsForItem(
+  $itemId: ID!
+  $trackingUnitId: ID!
+  $netWeightUnitId: ID
+) {
+  consumptionUnitsForItem(
+    itemId: $itemId
+    trackingUnitId: $trackingUnitId
+    netWeightUnitId: $netWeightUnitId
+  ) {
+    unit {
+      id
+      name
+      symbol
+      type
+      unitRole
+      commonFractions
+      displayAsFraction
+    }
+    rank
+    source
+    defaultIncrement
+    commonFractions
+    isWholeContainer
+  }
+}
+
+query RestockUnitsForItem($pantryItemId: ID!) {
+  restockUnitsForItem(pantryItemId: $pantryItemId) {
+    unit {
+      id
+      name
+      symbol
+      type
+      unitRole
+      commonFractions
+      displayAsFraction
+    }
+    rank
+    source
+    defaultIncrement
+    commonFractions
+    isWholeContainer
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================
@@ -380,6 +427,7 @@ mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
     success
     message
     code
+    validUnits
     pantryItemUsage {
       id
       quantityUsed
@@ -413,6 +461,7 @@ mutation RestockPantryItem($id: ID!, $input: RestockPantryItemInput!) {
     success
     message
     code
+    validUnits
     pantryItemUsage {
       id
       quantityUsed

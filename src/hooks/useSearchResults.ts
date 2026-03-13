@@ -14,7 +14,7 @@ import {
   selectBottomSheetState,
 } from '#store/useAppStore';
 import { ScannedItem } from '../store/slices/barcodeScannerSlice';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useImageUpload } from './useImageUpload';
 import { storage } from '#/storage/mmkv';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -294,7 +294,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
       cleanupPendingImageStorage();
       pendingBrandNameRef.current = undefined;
 
-      Alert.alert('Error', `Failed to add item: ${error.message}`);
+      alertService.alert('Error', `Failed to add item: ${error.message}`);
     },
   });
 
@@ -516,7 +516,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
       }
 
       hideBottomSheet();
-      Alert.alert(
+      alertService.alert(
         'Thank You',
         'Your suggestion has been submitted for review.',
       );

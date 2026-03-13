@@ -1,19 +1,14 @@
-import { useState } from 'react';
 import { useAppStore } from '#store/useAppStore';
-import { storage } from '#/storage/mmkv';
 
 /**
- * Read offlineMode from MMKV (synced by useAppSettings).
- * Defaults to false — offline mode is rarely enabled.
+ * Read offlineMode from Zustand (synced from MMKV on hydration and from
+ * useAppSettings on GraphQL response).
  *
  * PERFORMANCE: Avoids calling useAppSettings() which triggers the GetUserSettings
- * GraphQL query. This hook is called from multiple startup-path components
- * (e.g., usePantryItemSuggestions, offlineFetchPolicies) and was causing
- * GetUserSettings to fire at startup competing with critical queries.
+ * GraphQL query. Reactive — updates immediately when the user toggles offline mode.
  */
 function useOfflineModePreference(): boolean {
-  const [value] = useState(() => storage.getBoolean('user_offline_mode') ?? false);
-  return value;
+  return useAppStore(state => state.offlineModeEnabled);
 }
 
 /**
@@ -47,7 +42,7 @@ export const useOfflineMode = () => {
   const isEffectivelyOffline = isOfflineModeEnabled || isDeviceOffline;
   const canUseNetwork = isOnline && !isOfflineModeEnabled;
 
-  return ({
+  return {
     /**
      * True if app should behave as offline (user enabled OR device offline)
      * Use this to switch fetch policies to cache-only
@@ -74,7 +69,7 @@ export const useOfflineMode = () => {
      * Loading state - always false since we read from MMKV
      */
     loading: false,
-  });
+  };
 };
 
 /**

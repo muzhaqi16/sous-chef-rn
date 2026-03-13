@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useRoute } from '@react-navigation/native';
 
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -32,17 +32,20 @@ function handleSearchError(error: unknown, label: string): void {
   };
   console.error(`${label}:`, error);
   if (err.isQuotaExceeded) {
-    Alert.alert(
+    alertService.alert(
       'API Limit Reached',
       'Spoonacular API quota exceeded. Please try again later.',
     );
   } else if (err.isRateLimitError) {
-    Alert.alert(
+    alertService.alert(
       'Rate Limit',
       'Too many requests. Please try again in a moment.',
     );
   } else {
-    Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
+    alertService.alert(
+      'Search Error',
+      'Failed to search recipes. Please try again.',
+    );
   }
 }
 
@@ -154,7 +157,10 @@ async function executeIngredientSearch(
 
 export function useRecipeSearch() {
   const { navigate, goBack } = useAppNavigation();
-  const { state: { selectedHomeId }, actions: { getDefaultPantry } } = useDefaultHome();
+  const {
+    state: { selectedHomeId },
+    actions: { getDefaultPantry },
+  } = useDefaultHome();
   const route = useRoute();
   const initialQuery =
     (route.params as { initialQuery?: string } | undefined)?.initialQuery || '';
@@ -172,7 +178,9 @@ export function useRecipeSearch() {
 
   // Get pantry for ingredient selection
   const defaultPantry = getDefaultPantry(homeData);
-  const { state: { items: pantryItems } } = usePantryManagement(defaultPantry?.id);
+  const {
+    state: { items: pantryItems },
+  } = usePantryManagement(defaultPantry?.id);
 
   // Get dietary profile for filter defaults
   const { profile: dietaryProfile } = useDietaryProfile();
@@ -273,7 +281,7 @@ export function useRecipeSearch() {
           return;
         }
       }
-      Alert.alert(
+      alertService.alert(
         'Search Required',
         'Please enter a search term or add items to your pantry',
       );
@@ -328,7 +336,7 @@ export function useRecipeSearch() {
   // Ingredient-based search
   const handleIngredientSearch = async () => {
     if (selectedIngredients.size === 0) {
-      Alert.alert(
+      alertService.alert(
         'No Ingredients Selected',
         'Please select at least one ingredient',
       );

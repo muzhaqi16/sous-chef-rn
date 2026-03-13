@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Alert } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { alertService } from '#/services/alertService';
 import { AnimatedChip } from '#/components/atoms/AnimatedChip';
 import { POPULAR_CUISINES, getAllCuisineOptions } from '#/constants/cuisines';
 import { Cuisine } from '#generated';
@@ -23,6 +24,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
   const [isAdding, setIsAdding] = useState(false);
 
   const handleToggleCuisine = async (cuisine: Cuisine) => {
+    if (isAdding) return;
     if (selectedCuisines.includes(cuisine)) {
       onRemove(cuisine);
     } else {
@@ -30,7 +32,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
       const success = await onAdd(cuisine);
       setIsAdding(false);
       if (!success) {
-        Alert.alert('Error', 'Failed to add cuisine');
+        alertService.alert('Error', 'Failed to add cuisine');
       }
     }
   };
@@ -49,22 +51,23 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
 
       {/* Cuisine Chips Grid */}
       <View style={styles.chipGrid}>
-        {cuisinesToShow.map((cuisine) => (
+        {cuisinesToShow.map(cuisine => (
           <AnimatedChip
             key={cuisine.value}
             label={cuisine.label}
             selected={selectedCuisines.includes(cuisine.value)}
             onPress={() => handleToggleCuisine(cuisine.value)}
-            disabled={isAdding}
           />
         ))}
 
         {/* Show More/Less Button */}
         {!showAllCuisines && (
           <Pressable
-            style={({pressed}) => [styles.showMoreButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.showMoreButton,
+              pressed && styles.pressed,
+            ]}
             onPress={() => setShowAllCuisines(true)}
-            disabled={isAdding}
           >
             <Icon
               name="add-circle-outline"
@@ -77,9 +80,11 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
 
         {!!showAllCuisines && (
           <Pressable
-            style={({pressed}) => [styles.showMoreButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.showMoreButton,
+              pressed && styles.pressed,
+            ]}
             onPress={() => setShowAllCuisines(false)}
-            disabled={isAdding}
           >
             <Icon
               name="remove-circle-outline"
@@ -94,7 +99,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
   );
 };
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     marginBottom: theme.spacing.lg,
   },
@@ -105,7 +110,7 @@ const styles = StyleSheet.create((theme) => ({
   chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.xs,
+    gap: theme.spacing.sm,
   },
   showMoreButton: {
     flexDirection: 'row',

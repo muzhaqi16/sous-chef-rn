@@ -7,7 +7,7 @@
  * - Optimistic response with cache update
  */
 
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   useUpdatePantryItemQuantityMutation,
   PantryItemDisplayFragmentDoc,
@@ -76,7 +76,7 @@ export function useUpdatePantryItemQuantity({
     },
     onError: error => {
       if (handleVersionConflict(error)) {
-        Alert.alert('Item Updated', getVersionConflictMessage(error), [
+        alertService.alert('Item Updated', getVersionConflictMessage(error), [
           { text: 'Refresh', onPress: () => refetch?.() },
           { text: 'Cancel', style: 'cancel' },
         ]);
@@ -85,7 +85,7 @@ export function useUpdatePantryItemQuantity({
       const { message } = handleApolloError(error, {
         operation: 'Update Quantity',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     },
   });
 

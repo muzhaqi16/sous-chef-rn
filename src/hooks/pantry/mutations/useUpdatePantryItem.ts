@@ -8,8 +8,12 @@
  * - Optimistic response with cache update
  */
 
-import { Alert } from 'react-native';
-import { useUpdatePantryItemMutation, PantryItemFragment, StorageType } from '#generated';
+import { alertService } from '#/services/alertService';
+import {
+  useUpdatePantryItemMutation,
+  PantryItemFragment,
+  StorageType,
+} from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
@@ -18,7 +22,11 @@ import {
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
-import { buildDirtyUpdateInput, buildOptimisticUnit, stateToCountKey } from './utils';
+import {
+  buildDirtyUpdateInput,
+  buildOptimisticUnit,
+  stateToCountKey,
+} from './utils';
 import type { FormDataInput, UnitSelection } from './types';
 
 interface UseUpdatePantryItemOptions {
@@ -63,7 +71,7 @@ export function useUpdatePantryItem({
     errorPolicy: 'all',
     onError: error => {
       if (handleVersionConflict(error)) {
-        Alert.alert('Item Updated', getVersionConflictMessage(error), [
+        alertService.alert('Item Updated', getVersionConflictMessage(error), [
           { text: 'Refresh', onPress: () => refetch?.() },
           { text: 'Cancel', style: 'cancel' },
         ]);
@@ -72,7 +80,7 @@ export function useUpdatePantryItem({
       const { message } = handleApolloError(error, {
         operation: 'Update Pantry Item',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     },
   });
 
@@ -146,7 +154,10 @@ export function useUpdatePantryItem({
     // Include new unit in optimistic response to prevent race condition
     // with updateQuantity mutation overwriting the unit
     if (trackingUnit?.id && trackingUnit.id !== currentItem.unit?.id) {
-      optimisticUpdate.unit = buildOptimisticUnit(trackingUnit, currentItem.unit);
+      optimisticUpdate.unit = buildOptimisticUnit(
+        trackingUnit,
+        currentItem.unit,
+      );
     }
 
     const pantryId = currentItem.pantryId;
@@ -170,7 +181,8 @@ export function useUpdatePantryItem({
                 id: cache.identify({ __typename: 'Pantry', id: pantryId }),
                 fields: {
                   stats(existingStats: any) {
-                    if (!existingStats?.storageLocationCounts) return existingStats;
+                    if (!existingStats?.storageLocationCounts)
+                      return existingStats;
                     const counts = [...existingStats.storageLocationCounts];
                     // Decrement old location
                     if (oldLocationId) {
@@ -211,7 +223,8 @@ export function useUpdatePantryItem({
                   id: cache.identify({ __typename: 'Pantry', id: pantryId }),
                   fields: {
                     stats(existingStats: any) {
-                      if (!existingStats?.storageStateCounts) return existingStats;
+                      if (!existingStats?.storageStateCounts)
+                        return existingStats;
                       return {
                         ...existingStats,
                         storageStateCounts: {

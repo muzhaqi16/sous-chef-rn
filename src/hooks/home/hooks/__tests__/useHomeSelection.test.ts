@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useHomeSelection } from '../useHomeSelection';
 
 const mockSetDefaultHomeMutation = jest.fn();
@@ -38,7 +38,9 @@ jest.mock('#/services/errorService', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 const createHomes = () => [
   {
@@ -161,7 +163,10 @@ describe('useHomeSelection', () => {
       });
 
       expect(success!).toBe(false);
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Invalid home ID');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Invalid home ID',
+      );
     });
 
     it('shows error when home not found in list', async () => {
@@ -179,7 +184,10 @@ describe('useHomeSelection', () => {
       });
 
       expect(success!).toBe(false);
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Home not found');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Home not found',
+      );
     });
 
     it('calls mutation and updates state on success', async () => {
@@ -209,9 +217,16 @@ describe('useHomeSelection', () => {
       });
 
       expect(success!).toBe(true);
-      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(false);
-      expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith('home-2', 'pantry-3');
-      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith('pantry-3');
+      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(
+        false,
+      );
+      expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
+        'home-2',
+        'pantry-3',
+      );
+      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
+        'pantry-3',
+      );
     });
 
     it('rolls back on mutation failure', async () => {
@@ -235,7 +250,10 @@ describe('useHomeSelection', () => {
 
       expect(success!).toBe(false);
       // Rollback: setHomeAndPantry called with previous values
-      expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith('home-1', 'pantry-1');
+      expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
+        'home-1',
+        'pantry-1',
+      );
     });
 
     it('rolls back when mutation returns no data', async () => {
@@ -272,7 +290,11 @@ describe('useHomeSelection', () => {
       }),
     );
 
-    expect(result.current.setSelectedHomeId).toBe(mockStoreState.setSelectedHomeId);
-    expect(result.current.setSelectedPantryId).toBe(mockStoreState.setSelectedPantryId);
+    expect(result.current.setSelectedHomeId).toBe(
+      mockStoreState.setSelectedHomeId,
+    );
+    expect(result.current.setSelectedPantryId).toBe(
+      mockStoreState.setSelectedPantryId,
+    );
   });
 });

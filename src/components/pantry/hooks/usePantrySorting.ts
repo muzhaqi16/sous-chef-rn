@@ -10,6 +10,73 @@ interface SortableItem {
   createdAt?: string;
 }
 
+// Module-level reference-identity cache for sort output.
+// Prevents creating a new array (via .slice()) when inputs haven't changed.
+// Defined at module scope (like computeDisplayMap) so the compiler doesn't flag
+// the cache writes as side effects inside a hook body.
+let _lastSortInput: unknown = null;
+let _lastSortOption: SortOption | null = null;
+let _lastSortDirection: SortDirection | null = null;
+let _lastSortResult: any[] = [];
+
+function cachedSort<T extends SortableItem>(
+  items: T[],
+  option: SortOption,
+  direction: SortDirection,
+): T[] {
+  if (
+    items === _lastSortInput &&
+    option === _lastSortOption &&
+    direction === _lastSortDirection
+  ) {
+    return _lastSortResult as T[];
+  }
+
+  // Pre-compute timestamps into a Map (O(n)) instead of wrapping each item
+  const expiryMap = new Map<string, number>();
+  const createdMap = new Map<string, number>();
+  for (const item of items) {
+    if (option === 'expiry') {
+      expiryMap.set(
+        item.id,
+        item.expiresAt ? new Date(item.expiresAt).getTime() : Infinity,
+      );
+    } else if (option === 'recent') {
+      createdMap.set(
+        item.id,
+        item.createdAt ? new Date(item.createdAt).getTime() : 0,
+      );
+    }
+  }
+
+  // Single shallow copy, sorted in-place — no wrapper objects, no final .map()
+  const sorted = items.slice();
+  sorted.sort((a, b) => {
+    let comparison = 0;
+    switch (option) {
+      case 'name':
+        comparison = (a.itemName || '').localeCompare(b.itemName || '');
+        break;
+      case 'expiry':
+        comparison = expiryMap.get(a.id)! - expiryMap.get(b.id)!;
+        break;
+      case 'quantity':
+        comparison = a.quantity - b.quantity;
+        break;
+      case 'recent':
+        comparison = createdMap.get(b.id)! - createdMap.get(a.id)!;
+        break;
+    }
+    return direction === 'asc' ? comparison : -comparison;
+  });
+
+  _lastSortInput = items;
+  _lastSortOption = option;
+  _lastSortDirection = direction;
+  _lastSortResult = sorted;
+  return sorted;
+}
+
 interface UsePantrySortingOptions {
   /** Initial sort option from preferences */
   initialSortOption?: SortOption;
@@ -70,7 +137,8 @@ export function usePantrySorting<T extends SortableItem>(
   const {
     initialSortOption = 'recent',
     initialSortDirection = 'desc',
-    onSortChange } = options;
+    onSortChange,
+  } = options;
 
   // Sort state (local, initialized from props)
   const [sortOption, setSortOption] = useState<SortOption>(initialSortOption);
@@ -89,62 +157,29 @@ export function usePantrySorting<T extends SortableItem>(
 
   // Handle sort option selection
   const handleSortSelect = (option: SortOption) => {
-      let newOption = sortOption;
-      let newDirection = sortDirection;
+    let newOption = sortOption;
+    let newDirection = sortDirection;
 
-      if (sortOption === option) {
-        // Toggle direction if same option selected
-        newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-        setSortDirection(newDirection);
-      } else {
-        // Set new option and reset to ascending
-        newOption = option;
-        newDirection = 'asc';
-        setSortOption(newOption);
-        setSortDirection(newDirection);
-      }
+    if (sortOption === option) {
+      // Toggle direction if same option selected
+      newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      setSortDirection(newDirection);
+    } else {
+      // Set new option and reset to ascending
+      newOption = option;
+      newDirection = 'asc';
+      setSortOption(newOption);
+      setSortDirection(newDirection);
+    }
 
-      // Persist to store
-      onSortChange?.(newOption, newDirection);
-      setSortModalVisible(false);
-    };
+    // Persist to store
+    onSortChange?.(newOption, newDirection);
+    setSortModalVisible(false);
+  };
 
-  // Sort function - optimized: single shallow copy sorted in-place with a Map lookup
-  const sortItems = (items: T[]): T[] => {
-      // Pre-compute timestamps into a Map (O(n)) instead of wrapping each item
-      const expiryMap = new Map<string, number>();
-      const createdMap = new Map<string, number>();
-      for (const item of items) {
-        if (sortOption === 'expiry') {
-          expiryMap.set(item.id, item.expiresAt ? new Date(item.expiresAt).getTime() : Infinity);
-        } else if (sortOption === 'recent') {
-          createdMap.set(item.id, item.createdAt ? new Date(item.createdAt).getTime() : 0);
-        }
-      }
-
-      // Single shallow copy, sorted in-place — no wrapper objects, no final .map()
-      const sorted = items.slice();
-      sorted.sort((a, b) => {
-        let comparison = 0;
-        switch (sortOption) {
-          case 'name':
-            comparison = (a.itemName || '').localeCompare(b.itemName || '');
-            break;
-          case 'expiry':
-            comparison = expiryMap.get(a.id)! - expiryMap.get(b.id)!;
-            break;
-          case 'quantity':
-            comparison = a.quantity - b.quantity;
-            break;
-          case 'recent':
-            comparison = createdMap.get(b.id)! - createdMap.get(a.id)!;
-            break;
-        }
-        return sortDirection === 'asc' ? comparison : -comparison;
-      });
-
-      return sorted;
-    };
+  // Sort function — delegates to module-level cachedSort for reference stability
+  const sortItems = (items: T[]): T[] =>
+    cachedSort(items, sortOption, sortDirection);
 
   return {
     sortOption,
@@ -153,5 +188,6 @@ export function usePantrySorting<T extends SortableItem>(
     openSortModal,
     closeSortModal,
     handleSortSelect,
-    sortItems };
+    sortItems,
+  };
 }

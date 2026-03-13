@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   InvitationAcceptanceModal,
   InvitationData,
@@ -21,7 +21,9 @@ export const NotificationActionHandler: React.FC<
   const [invitationModalVisible, setInvitationModalVisible] = useState(false);
   const [currentInvitation, setCurrentInvitation] =
     useState<InvitationData | null>(null);
-  const [currentNotificationId, setCurrentNotificationId] = useState<string | null>(null);
+  const [currentNotificationId, setCurrentNotificationId] = useState<
+    string | null
+  >(null);
   const { navigateTo, navigate } = useAppNavigation();
   const setHomeAndPantry = useAppStore(state => state.setHomeAndPantry);
   const removeNotification = useAppStore(state => state.removeNotification);
@@ -74,7 +76,7 @@ export const NotificationActionHandler: React.FC<
           //   },
           // });
         } catch {
-          Alert.alert(
+          alertService.alert(
             'Navigation Error',
             'Could not navigate to shopping list.',
           );
@@ -86,7 +88,10 @@ export const NotificationActionHandler: React.FC<
         try {
           navigate('Pantry');
         } catch {
-          Alert.alert('Navigation Error', 'Could not navigate to pantry.');
+          alertService.alert(
+            'Navigation Error',
+            'Could not navigate to pantry.',
+          );
         }
         break;
 
@@ -97,7 +102,7 @@ export const NotificationActionHandler: React.FC<
           //   listId: notification.payload.listId,
           // });
         } catch {
-          Alert.alert(
+          alertService.alert(
             'Navigation Error',
             'Could not navigate to shopping list.',
           );
@@ -109,13 +114,16 @@ export const NotificationActionHandler: React.FC<
         try {
           navigateTo.profile();
         } catch {
-          Alert.alert('Navigation Error', 'Could not navigate to settings.');
+          alertService.alert(
+            'Navigation Error',
+            'Could not navigate to settings.',
+          );
         }
         break;
 
       default:
         // Unknown action, show alert
-        Alert.alert(
+        alertService.alert(
           'Action Required',
           `This notification requires action: ${notification.actionType}`,
           [
@@ -155,7 +163,7 @@ export const NotificationActionHandler: React.FC<
         });
       } else {
         // Fallback if homeId not provided
-        Alert.alert('Success', `Welcome to ${invitation.entityName}!`, [
+        alertService.alert('Success', `Welcome to ${invitation.entityName}!`, [
           {
             text: 'OK',
             onPress: () => navigateTo.pantryMain(),
@@ -164,7 +172,7 @@ export const NotificationActionHandler: React.FC<
       }
     } else {
       // Shopping list invitation accepted
-      Alert.alert(
+      alertService.alert(
         'Success',
         `You can now collaborate on ${invitation.entityName}`,
         [
@@ -180,7 +188,10 @@ export const NotificationActionHandler: React.FC<
 
   const handleInvitationReject = () => {
     // Handle rejection
-    Alert.alert('Invitation Rejected', 'The invitation has been declined.');
+    alertService.alert(
+      'Invitation Rejected',
+      'The invitation has been declined.',
+    );
   };
 
   return (

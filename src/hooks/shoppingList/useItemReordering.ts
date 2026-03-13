@@ -1,5 +1,5 @@
-import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
+import { alertService } from '#/services/alertService';
 import type { ModifierDetails } from '@apollo/client/cache';
 import type { Reference } from '@apollo/client/utilities';
 import { useMoveShoppingListItemMutation } from '#generated';
@@ -180,7 +180,10 @@ export function useItemReordering<T extends ShoppingListItem>(
         });
 
         // Helper to sort edges by sortOrder with secondary sort by id
-        const sortEdges = (edges: readonly Reference[], readField: ModifierDetails['readField']) => {
+        const sortEdges = (
+          edges: readonly Reference[],
+          readField: ModifierDetails['readField'],
+        ) => {
           return [...edges].sort((a, b) => {
             const nodeA = readField<Reference>('node', a);
             const nodeB = readField<Reference>('node', b);
@@ -221,7 +224,12 @@ export function useItemReordering<T extends ShoppingListItem>(
     });
 
     // Persist optimistic sortOrder to survive cache-and-network refetches while offline
-    optimisticDataPersistence.save('ShoppingListItem', itemId, 'sortOrder', newSortOrder);
+    optimisticDataPersistence.save(
+      'ShoppingListItem',
+      itemId,
+      'sortOrder',
+      newSortOrder,
+    );
 
     // Execute mutation (NO optimisticResponse - cache already updated above)
     const moveAfterItemId = afterItemId ?? undefined;
@@ -242,7 +250,7 @@ export function useItemReordering<T extends ShoppingListItem>(
 
         // PERFORMANCE: Handle version conflict errors with user-friendly message
         if (handleVersionConflict(error)) {
-          Alert.alert('Item Updated', getVersionConflictMessage(error), [
+          alertService.alert('Item Updated', getVersionConflictMessage(error), [
             { text: 'Refresh', onPress: () => refetch?.() },
             { text: 'Cancel', style: 'cancel' },
           ]);
@@ -250,7 +258,10 @@ export function useItemReordering<T extends ShoppingListItem>(
         }
 
         // Generic error fallback
-        Alert.alert('Error', 'Failed to reorder items. Please try again.');
+        alertService.alert(
+          'Error',
+          'Failed to reorder items. Please try again.',
+        );
       },
     );
     if (!result) return;
@@ -258,7 +269,10 @@ export function useItemReordering<T extends ShoppingListItem>(
     // Check for GraphQL errors (with errorPolicy: 'all', errors don't throw)
     if (result.error) {
       console.error('MoveShoppingListItem mutation error:', result.error);
-      Alert.alert('Error', result.error.message || 'Failed to reorder item');
+      alertService.alert(
+        'Error',
+        result.error.message || 'Failed to reorder item',
+      );
       refetch?.(); // Refetch to restore correct order
       return;
     }

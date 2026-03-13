@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  Alert,
   ScrollView,
   RefreshControl,
   Pressable,
   ActivityIndicator,
 } from 'react-native';
+import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
 import {
   useGetPantryItemQuery,
@@ -139,14 +139,14 @@ export const PantryItemDetail: React.FC<
   // Expired to waste mutation (item-level)
   const { convertExpiredToWaste } = useConvertExpiredToWaste({
     onSuccess: () => {
-      Alert.alert('Done', 'Expired item has been discarded.');
+      alertService.alert('Done', 'Expired item has been discarded.');
     },
   });
 
   // Expired batches to waste mutation (batch-level)
   const { convertExpiredBatches } = useConvertExpiredBatchesToWaste({
     onSuccess: () => {
-      Alert.alert('Done', 'Expired batches have been discarded.');
+      alertService.alert('Done', 'Expired batches have been discarded.');
     },
   });
 
@@ -200,31 +200,35 @@ export const PantryItemDetail: React.FC<
   }, [item?.itemName, getCachedSuggestions, setCachedSuggestions]);
 
   const handleDelete = () => {
-    Alert.alert('Delete Item', 'Are you sure you want to delete this item?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteItem({
-              variables: { id: itemId },
-            });
-            goBack();
-          } catch (error) {
-            errorService.reportError(error, {
-              operation: 'PantryItemDetail.deleteItem',
-            });
-            Alert.alert('Error', 'Failed to delete item');
-          }
+    alertService.alert(
+      'Delete Item',
+      'Are you sure you want to delete this item?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteItem({
+                variables: { id: itemId },
+              });
+              goBack();
+            } catch (error) {
+              errorService.reportError(error, {
+                operation: 'PantryItemDetail.deleteItem',
+              });
+              alertService.alert('Error', 'Failed to delete item');
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const handleAddToShoppingList = () => {
     if (!selectedShoppingListId) {
-      Alert.alert(
+      alertService.alert(
         'No Shopping List Selected',
         'Please select a shopping list first.',
         [
@@ -302,7 +306,7 @@ export const PantryItemDetail: React.FC<
     const hasBatches = (item.activeBatchCount ?? 0) > 0;
 
     if (hasBatches) {
-      Alert.alert(
+      alertService.alert(
         'Discard Expired Batches',
         'This will mark all expired batches as wasted.',
         [
@@ -315,7 +319,7 @@ export const PantryItemDetail: React.FC<
         ],
       );
     } else {
-      Alert.alert(
+      alertService.alert(
         'Discard Expired Item',
         `This will mark the remaining ${item.quantity} ${
           item.unit?.name || ''

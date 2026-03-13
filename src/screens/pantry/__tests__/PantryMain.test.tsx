@@ -13,6 +13,9 @@ jest.mock('#/apollo/links/refreshToken');
 
 // --- Navigation ---
 jest.mock('#hooks/navigation/useAppNavigation');
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn(),
+}));
 
 // --- Tab bar ---
 jest.mock('#/context/TabBarActionsContext', () => ({
@@ -177,7 +180,8 @@ jest.mock('#hooks/useFeatureHint', () => ({
     hasBeenShown: true,
     actions: { show: jest.fn(), dismiss: jest.fn() },
   }),
-  getLoginCount: () => 1,
+  getScreenVisitCount: () => 1,
+  incrementScreenVisitCount: jest.fn(),
 }));
 jest.mock('#services/telemetry', () => ({
   Telemetry: { trackEvent: jest.fn(), trackScreen: jest.fn() },
@@ -235,9 +239,12 @@ jest.mock(
     };
   },
 );
-jest.mock('#/components/organisms/FeatureHintOverlay', () => ({
-  FeatureHintOverlay: () => null,
-}));
+jest.mock(
+  '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark',
+  () => ({
+    SpotlightCoachMark: () => null,
+  }),
+);
 jest.mock('#components/base/Skeleton/PantryScreenSkeleton', () => ({
   PantryScreenSkeleton: () => null,
 }));

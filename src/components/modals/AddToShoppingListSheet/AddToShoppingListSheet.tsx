@@ -3,21 +3,27 @@ import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useShoppingListSuggestions,
-  ShoppingListSuggestionItem } from '#hooks/shoppingList/useShoppingListSuggestions';
+  ShoppingListSuggestionItem,
+} from '#hooks/shoppingList/useShoppingListSuggestions';
 import { toastService } from '#/services/toastService';
 import {
   useAddItemToShoppingListMutation,
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
   type AddItemToShoppingListMutationVariables,
-  ItemSuggestion } from '#generated';
+  ItemSuggestion,
+} from '#generated';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import { createOptimisticShoppingListItem } from '#/hooks/shoppingList/mutations/utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
-import type { BaseSuggestionItem, SuggestionsHookResult } from '../AddItemSheet/types';
+import type {
+  BaseSuggestionItem,
+  SuggestionsHookResult,
+} from '../AddItemSheet/types';
 import { shoppingListSheetConfig } from '../AddItemSheet/configs/shoppingListConfig';
 
 interface AddToShoppingListSheetProps {
@@ -35,96 +41,111 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   shoppingListId,
   onClose,
   initialSearchQuery = '',
-  onItemAdded }) => {
+  onItemAdded,
+}) => {
   const { navigate, navigateTo } = useAppNavigation();
   const client = useApolloClient();
+  const showImages = useShowShoppingListImages();
 
   // Shared state management for sheet visibility and deferred data fetching
   const state = useAddItemSheetState({
     visible,
     contextId: shoppingListId,
-    deferFetch: shoppingListSheetConfig.deferFetch });
+    deferFetch: shoppingListSheetConfig.deferFetch,
+  });
 
   // Fetch shopping list suggestions (deferred until sheet animation completes)
   const suggestionsResult = useShoppingListSuggestions({
     shoppingListId,
     limit: 15,
-    skip: !visible || !state.shouldFetch });
+    skip: !visible || !state.shouldFetch,
+  });
 
   // Adapt suggestions to the expected interface
-  const suggestions: SuggestionsHookResult = ({
+  const suggestions: SuggestionsHookResult = {
     grouped: suggestionsResult.grouped,
     loading: suggestionsResult.loading,
     hasSuggestions: suggestionsResult.hasSuggestions,
-    refetch: suggestionsResult.refetch });
+    refetch: suggestionsResult.refetch,
+  };
 
   const removeFromSuggestionsCache = (itemId: string) => {
-      client.cache.updateQuery<GetShoppingListSuggestionsQuery>(
-        {
-          query: GetShoppingListSuggestionsDocument,
-          variables: { id: shoppingListId!, limit: 15 } },
-        data => {
-          if (!data?.shoppingList) return data;
-          return {
-            ...data,
-            shoppingList: {
-              ...data.shoppingList,
-              suggestions: data.shoppingList.suggestions.filter(
-                s => s.itemId !== itemId,
-              ) } };
-        },
-      );
-    };
+    client.cache.updateQuery<GetShoppingListSuggestionsQuery>(
+      {
+        query: GetShoppingListSuggestionsDocument,
+        variables: { id: shoppingListId!, limit: 15 },
+      },
+      data => {
+        if (!data?.shoppingList) return data;
+        return {
+          ...data,
+          shoppingList: {
+            ...data.shoppingList,
+            suggestions: data.shoppingList.suggestions.filter(
+              s => s.itemId !== itemId,
+            ),
+          },
+        };
+      },
+    );
+  };
 
   // Track temp ID for optimistic response cleanup
   const lastTempIdRef = useRef<string | null>(null);
 
   // Add shopping list item mutation with optimistic response for instant UI
-  const [addItemMutation, { loading: adding }] = useAddItemToShoppingListMutation({
-    errorPolicy: 'all',
-    optimisticResponse: (variables: AddItemToShoppingListMutationVariables) => {
-      const { tempId, entity } = createOptimisticShoppingListItem({
-        itemName: variables.input.itemName ?? '',
-        itemId: variables.input.itemId,
-        unitId: variables.input.unit?.unitId,
-      });
-      lastTempIdRef.current = tempId;
-      return buildOptimisticMutationResponse(
-        'addItemToShoppingList',
-        'ShoppingListItemPayload',
-        'shoppingListItem',
-        entity,
-      );
-    },
-    update(cache, { data }) {
-      const newItem = data?.addItemToShoppingList?.shoppingListItem;
-      if (!newItem || !shoppingListId) return;
-
-      // Evict temp-ID entity when the real server response arrives
-      if (lastTempIdRef.current && !newItem.id.startsWith('temp-')) {
-        cache.evict({
-          id: cache.identify({ __typename: 'ShoppingListItem', id: lastTempIdRef.current }),
+  const [addItemMutation, { loading: adding }] =
+    useAddItemToShoppingListMutation({
+      errorPolicy: 'all',
+      optimisticResponse: (
+        variables: AddItemToShoppingListMutationVariables,
+      ) => {
+        const { tempId, entity } = createOptimisticShoppingListItem({
+          itemName: variables.input.itemName ?? '',
+          itemId: variables.input.itemId,
+          unitId: variables.input.unit?.unitId,
         });
-        cache.gc();
-        lastTempIdRef.current = null;
-      }
+        lastTempIdRef.current = tempId;
+        return buildOptimisticMutationResponse(
+          'addItemToShoppingList',
+          'ShoppingListItemPayload',
+          'shoppingListItem',
+          entity,
+        );
+      },
+      update(cache, { data }) {
+        const newItem = data?.addItemToShoppingList?.shoppingListItem;
+        if (!newItem || !shoppingListId) return;
 
-      executeCacheUpdate(
-        () => addNewItemToShoppingListCache(cache, shoppingListId, newItem),
-        'Cache update failed for addItem:',
-      );
-    },
-    onError: () => {
-      lastTempIdRef.current = null;
-    },
-  });
+        // Evict temp-ID entity when the real server response arrives
+        if (lastTempIdRef.current && !newItem.id.startsWith('temp-')) {
+          cache.evict({
+            id: cache.identify({
+              __typename: 'ShoppingListItem',
+              id: lastTempIdRef.current,
+            }),
+          });
+          cache.gc();
+          lastTempIdRef.current = null;
+        }
+
+        executeCacheUpdate(
+          () => addNewItemToShoppingListCache(cache, shoppingListId, newItem),
+          'Cache update failed for addItem:',
+        );
+      },
+      onError: () => {
+        lastTempIdRef.current = null;
+      },
+    });
 
   // Handle scan barcode press
   const handleScanPress = () => {
     onClose();
     navigateTo.barcode({
       source: 'shoppingList',
-      shoppingListId });
+      shoppingListId,
+    });
   };
 
   // Handle add manually press - navigates to AddItem screen
@@ -133,75 +154,92 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     if (shoppingListId) {
       navigate('AddItem', {
         listId: shoppingListId,
-        initialItemName: searchValue || undefined });
+        initialItemName: searchValue || undefined,
+      });
     }
   };
 
   // Handle quick add from search autocomplete (fire-and-forget)
   const handleQuickAddSearchSuggestion = (item: ItemSuggestion) => {
-      if (!shoppingListId || adding) return;
+    if (!shoppingListId || adding) return;
 
-      // 1. Show toast immediately (don't wait for mutation)
-      toastService.success(shoppingListSheetConfig.quickAdd.toastMessage(item.name));
+    // 1. Show toast immediately (don't wait for mutation)
+    toastService.success(
+      shoppingListSheetConfig.quickAdd.toastMessage(item.name),
+    );
 
-      // 2. Fire mutation without await
-      addItemMutation({
-        variables: {
-          input: {
-            shoppingListId,
-            itemId: item.id,
-            itemName: item.name,
-            quantity: null,
-            unit: item.defaultUnit?.id
-              ? { unitId: item.defaultUnit.id }
-              : undefined } } })
-        .then(() => {
-          onItemAdded?.();
-        })
-        .catch(() => {
-          toastService.error('Failed to add item. Please try again.');
-        });
-    };
+    // 2. Fire mutation without await
+    addItemMutation({
+      variables: {
+        input: {
+          shoppingListId,
+          itemId: item.id,
+          itemName: item.name,
+          quantity: null,
+          unit: item.defaultUnit?.id
+            ? { unitId: item.defaultUnit.id }
+            : undefined,
+        },
+      },
+    })
+      .then(() => {
+        onItemAdded?.();
+      })
+      .catch(() => {
+        toastService.error('Failed to add item. Please try again.');
+      });
+  };
 
   // Handle quick add from suggestion (fire-and-forget with exit animations)
   const handleQuickAddSuggestion = (item: BaseSuggestionItem) => {
-      // Cast to ShoppingListSuggestionItem for full type info
-      const shoppingItem = item as unknown as ShoppingListSuggestionItem;
-      if (!shoppingListId || adding || state.exitingItems.has(shoppingItem.itemId)) return;
+    // Cast to ShoppingListSuggestionItem for full type info
+    const shoppingItem = item as unknown as ShoppingListSuggestionItem;
+    if (
+      !shoppingListId ||
+      adding ||
+      state.exitingItems.has(shoppingItem.itemId)
+    )
+      return;
 
-      // Use lastUnitId if available (for recently deleted), otherwise defaultUnitId
-      const unitId = shoppingItem.lastUnitId ?? shoppingItem.defaultUnitId ?? undefined;
+    // Use lastUnitId if available (for recently deleted), otherwise defaultUnitId
+    const unitId =
+      shoppingItem.lastUnitId ?? shoppingItem.defaultUnitId ?? undefined;
 
-      // 1. Start exit animation
-      state.startExitAnimation(shoppingItem.itemId);
+    // 1. Start exit animation
+    state.startExitAnimation(shoppingItem.itemId);
 
-      // 2. Show toast immediately (don't wait for mutation)
-      toastService.success(shoppingListSheetConfig.quickAdd.toastMessage(shoppingItem.name));
+    // 2. Show toast immediately (don't wait for mutation)
+    toastService.success(
+      shoppingListSheetConfig.quickAdd.toastMessage(shoppingItem.name),
+    );
 
-      // 3. Fire mutation without await
-      addItemMutation({
-        variables: {
-          input: {
-            shoppingListId,
-            itemId: shoppingItem.itemId,
-            itemName: shoppingItem.name,
-            quantity: null,
-            unit: unitId ? { unitId } : undefined } } })
-        .then(() => {
-          onItemAdded?.();
-        })
-        .catch(() => {
-          // On error: remove from exiting, show error toast
-          state.completeExitAnimation(shoppingItem.itemId);
-          toastService.error('Failed to add item. Please try again.');
-        });
-    };
+    // 3. Fire mutation without await
+    addItemMutation({
+      variables: {
+        input: {
+          shoppingListId,
+          itemId: shoppingItem.itemId,
+          itemName: shoppingItem.name,
+          quantity: null,
+          unit: unitId ? { unitId } : undefined,
+        },
+      },
+    })
+      .then(() => {
+        onItemAdded?.();
+      })
+      .catch(() => {
+        // On error: remove from exiting, show error toast
+        state.completeExitAnimation(shoppingItem.itemId);
+        toastService.error('Failed to add item. Please try again.');
+      });
+  };
 
   // Handle exit animation complete
   const handleExitComplete = (itemId: string) => {
-      removeFromSuggestionsCache(itemId);
-      state.completeExitAnimation(itemId);
-    };
+    removeFromSuggestionsCache(itemId);
+    state.completeExitAnimation(itemId);
+  };
 
   return (
     <AddItemSheet
@@ -219,6 +257,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       onExitComplete={handleExitComplete}
       shouldFetch={state.shouldFetch}
       initialSearchQuery={initialSearchQuery}
+      showImages={showImages}
     />
   );
 };

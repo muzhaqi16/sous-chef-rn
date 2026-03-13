@@ -14,8 +14,8 @@ jest.mock('#hooks/useBottomSheetBackHandler', () => ({
   useBottomSheetBackHandler: jest.fn(),
 }));
 
-jest.mock('#components/atoms/GlobalBottomSheetBackdrop', () => ({
-  GlobalBottomSheetBackdrop: 'GlobalBottomSheetBackdrop',
+jest.mock('#components/atoms/DismissBackdrop', () => ({
+  DismissBackdrop: 'DismissBackdrop',
 }));
 
 beforeEach(() => {
@@ -30,9 +30,7 @@ describe('useStandardBottomSheet', () => {
   };
 
   it('returns ref, modalProps, contentContainerStyle, theme, and insets', () => {
-    const { result } = renderHook(() =>
-      useStandardBottomSheet(defaultOptions),
-    );
+    const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
     expect(result.current.ref).toBeDefined();
     expect(result.current.modalProps).toBeDefined();
@@ -50,17 +48,13 @@ describe('useStandardBottomSheet', () => {
   });
 
   it('sets enablePanDownToClose to true', () => {
-    const { result } = renderHook(() =>
-      useStandardBottomSheet(defaultOptions),
-    );
+    const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
     expect(result.current.modalProps.enablePanDownToClose).toBe(true);
   });
 
   it('defaults keyboardBehavior to extend', () => {
-    const { result } = renderHook(() =>
-      useStandardBottomSheet(defaultOptions),
-    );
+    const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
     expect(result.current.modalProps.keyboardBehavior).toBe('extend');
   });
@@ -77,9 +71,7 @@ describe('useStandardBottomSheet', () => {
   });
 
   it('defaults enableDynamicSizing to false', () => {
-    const { result } = renderHook(() =>
-      useStandardBottomSheet(defaultOptions),
-    );
+    const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
     expect(result.current.modalProps.enableDynamicSizing).toBe(false);
   });
@@ -94,9 +86,7 @@ describe('useStandardBottomSheet', () => {
   });
 
   it('includes animation configs in modalProps', () => {
-    const { result } = renderHook(() =>
-      useStandardBottomSheet(defaultOptions),
-    );
+    const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
     expect(result.current.modalProps.animationConfigs).toEqual({
       damping: 80,
@@ -105,9 +95,7 @@ describe('useStandardBottomSheet', () => {
   });
 
   it('applies theme colors to background and handle indicator styles', () => {
-    const { result } = renderHook(() =>
-      useStandardBottomSheet(defaultOptions),
-    );
+    const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
     expect(result.current.modalProps.backgroundStyle).toEqual({
       backgroundColor: expect.any(String),
@@ -118,20 +106,19 @@ describe('useStandardBottomSheet', () => {
   });
 
   it('includes paddingBottom in contentContainerStyle from insets', () => {
-    const { result } = renderHook(() =>
-      useStandardBottomSheet(defaultOptions),
-    );
+    const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
     // paddingBottom = insets.bottom + 16
-    expect(result.current.contentContainerStyle.paddingBottom).toBeGreaterThanOrEqual(16);
+    expect(
+      result.current.contentContainerStyle.paddingBottom,
+    ).toBeGreaterThanOrEqual(16);
   });
 
-  it('provides a backdropComponent function', () => {
-    const { result } = renderHook(() =>
-      useStandardBottomSheet(defaultOptions),
-    );
+  it('uses DismissBackdrop as backdropComponent', () => {
+    const { DismissBackdrop } = require('#components/atoms/DismissBackdrop');
+    const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
-    expect(typeof result.current.modalProps.backdropComponent).toBe('function');
+    expect(result.current.modalProps.backdropComponent).toBe(DismissBackdrop);
   });
 
   describe('auto present/dismiss', () => {

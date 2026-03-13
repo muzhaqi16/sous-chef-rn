@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { Telemetry } from '#/services/telemetry';
 
 /**
@@ -57,7 +57,7 @@ export function useAddItemSheet(
   const open = () => {
     if (!currentListId) {
       Telemetry.trackEvent('add_item_no_list_selected');
-      Alert.alert(
+      alertService.alert(
         'No List Selected',
         'Please select or create a shopping list first.',
         [
@@ -67,7 +67,8 @@ export function useAddItemSheet(
             onPress: () => {
               Telemetry.trackEvent('create_list_from_add_item');
               onNavigateToListSettings?.();
-            } },
+            },
+          },
         ],
       );
       return;
