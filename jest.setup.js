@@ -64,6 +64,17 @@ jest.mock('react-native-unistyles', () => {
 });
 
 // ---------------------------------------------------------------------------
+// react-native-unistyles/reanimated
+// ---------------------------------------------------------------------------
+jest.mock('react-native-unistyles/reanimated', () => {
+  const { lightTheme } = require('./src/theme/themes');
+
+  return {
+    useAnimatedTheme: jest.fn(() => ({ value: lightTheme })),
+  };
+});
+
+// ---------------------------------------------------------------------------
 // react-native-reanimated
 // ---------------------------------------------------------------------------
 jest.mock('react-native-reanimated', () => {
@@ -141,8 +152,22 @@ jest.mock('react-native-reanimated', () => {
     interpolateColor: jest.fn(() => 'rgba(0,0,0,0)'),
     runOnUI: jest.fn(fn => fn),
     createAnimatedComponent: component => component,
-    FadeIn: { duration: returnSelf, delay: returnSelf, springify: returnSelf, damping: returnSelf, stiffness: returnSelf, mass: returnSelf },
-    FadeOut: { duration: returnSelf, delay: returnSelf, springify: returnSelf, damping: returnSelf, stiffness: returnSelf, mass: returnSelf },
+    FadeIn: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+      damping: returnSelf,
+      stiffness: returnSelf,
+      mass: returnSelf,
+    },
+    FadeOut: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+      damping: returnSelf,
+      stiffness: returnSelf,
+      mass: returnSelf,
+    },
     FadeInDown: {
       duration: returnSelf,
       delay: returnSelf,
@@ -223,9 +248,30 @@ jest.mock('react-native-reanimated', () => {
       stiffness: returnSelf,
       mass: returnSelf,
     },
-    ZoomIn: { duration: returnSelf, delay: returnSelf, springify: returnSelf, damping: returnSelf, stiffness: returnSelf, mass: returnSelf },
-    ZoomOut: { duration: returnSelf, delay: returnSelf, springify: returnSelf, damping: returnSelf, stiffness: returnSelf, mass: returnSelf },
-    Layout: { duration: returnSelf, delay: returnSelf, springify: returnSelf, damping: returnSelf, stiffness: returnSelf, mass: returnSelf },
+    ZoomIn: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+      damping: returnSelf,
+      stiffness: returnSelf,
+      mass: returnSelf,
+    },
+    ZoomOut: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+      damping: returnSelf,
+      stiffness: returnSelf,
+      mass: returnSelf,
+    },
+    Layout: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+      damping: returnSelf,
+      stiffness: returnSelf,
+      mass: returnSelf,
+    },
     LinearTransition: {
       duration: returnSelf,
       delay: returnSelf,
@@ -570,14 +616,14 @@ jest.mock('@shopify/flash-list', () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, deps);
       const [, setCounter] = React.useState(0);
-      const setState = React.useCallback((newValue) => {
+      const setState = React.useCallback(newValue => {
         const next =
           typeof newValue === 'function'
             ? newValue(valueRef.current)
             : newValue;
         if (next !== valueRef.current) {
           valueRef.current = next;
-          setCounter((c) => c + 1);
+          setCounter(c => c + 1);
         }
       }, []);
       return [valueRef.current, setState];
@@ -845,8 +891,9 @@ jest.mock('react-native-performance', () => {
 // ---------------------------------------------------------------------------
 // React Native globals not available in Jest
 // ---------------------------------------------------------------------------
-globalThis.requestIdleCallback = (cb) => setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 50 }), 0);
-globalThis.cancelIdleCallback = (id) => clearTimeout(id);
+globalThis.requestIdleCallback = cb =>
+  setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 50 }), 0);
+globalThis.cancelIdleCallback = id => clearTimeout(id);
 
 // ---------------------------------------------------------------------------
 // Suppress all console output in tests by default.
