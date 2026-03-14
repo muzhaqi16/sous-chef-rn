@@ -124,7 +124,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
       enablePanDownToClose
       animateOnMount={true}
       backdropComponent={DismissBackdrop}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
+      backgroundStyle={{ backgroundColor: theme.colors.surface }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
     >
       <BottomSheetScrollView

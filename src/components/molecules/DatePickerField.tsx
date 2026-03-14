@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, Platform } from 'react-native';
 import DateTimePicker, {
-  DateTimePickerEvent } from '@react-native-community/datetimepicker';
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Label } from '#components/atoms/Label';
@@ -31,40 +32,50 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   maximumDate,
   required,
   error,
-  testID }) => {
+  testID,
+}) => {
   const { theme } = useUnistyles();
   const [showPicker, setShowPicker] = useState(false);
 
-  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-      // On Android, the picker closes automatically
-      if (Platform.OS === 'android') {
-        setShowPicker(false);
-      }
+  const handleDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    // On Android, the picker closes automatically
+    if (Platform.OS === 'android') {
+      setShowPicker(false);
+    }
 
-      if (event.type === 'set' && selectedDate) {
-        onChange(selectedDate);
-      } else if (event.type === 'dismissed') {
-        // User cancelled
-        setShowPicker(false);
-      }
-    };
+    if (event.type === 'set' && selectedDate) {
+      onChange(selectedDate);
+      setShowPicker(false);
+    } else if (event.type === 'dismissed') {
+      // User cancelled
+      setShowPicker(false);
+    }
+  };
 
   const handlePress = () => {
-    setShowPicker(true);
+    setShowPicker(prev => !prev);
   };
 
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
-      day: 'numeric' });
+      day: 'numeric',
+    });
   };
 
   return (
     <View style={styles.container} testID={testID}>
       {label ? <Label required={required}>{label}</Label> : null}
       <Pressable
-        style={({pressed}) => [styles.input, error && styles.inputError, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.input,
+          error && styles.inputError,
+          pressed && styles.pressed,
+        ]}
         onPress={handlePress}
       >
         <Icon
@@ -79,30 +90,33 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       {!!showPicker && (
-          <DateTimePicker
-            style={styles.calendarPicker}
-            value={value || new Date()}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            minimumDate={minimumDate}
-            maximumDate={maximumDate}
-            onChange={handleDateChange}
-          />
-        )}
+        <DateTimePicker
+          style={styles.calendarPicker}
+          value={value || new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+          minimumDate={minimumDate}
+          maximumDate={maximumDate}
+          onChange={handleDateChange}
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   label: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   required: {
-    color: theme.colors.error },
+    color: theme.colors.error,
+  },
   input: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -112,20 +126,28 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.inputBackground,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   inputError: {
-    borderColor: theme.colors.error },
+    borderColor: theme.colors.error,
+  },
   dateText: {
     flex: 1,
     fontSize: theme.fonts.size.md,
-    color: theme.colors.inputText },
+    color: theme.colors.inputText,
+  },
   placeholder: {
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   errorText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.error,
-    marginTop: theme.spacing.xs },
+    marginTop: theme.spacing.xs,
+  },
   calendarPicker: {
-    alignSelf: 'center' },
+    alignSelf: 'center',
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

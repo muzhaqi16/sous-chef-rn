@@ -16,7 +16,7 @@ import {
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#/utils/iconUtils';
 import { StringArrayManager } from '#/components/organisms/StringArrayManager/StringArrayManager';
-import { NumberInputModal } from '#/components/organisms/modal/NumberInputModal';
+import { NumberInputSheet } from '#/components/modals/NumberInputSheet/NumberInputSheet';
 import { InfoRow } from '#/components/molecules/InfoRow';
 import { CuisineSelector } from '#/components/organisms/CuisineSelector';
 import { DietaryRestrictionSelector } from '#/components/organisms/DietaryRestrictionSelector';
@@ -277,7 +277,12 @@ export const DietaryProfileScreen: React.FC = () => {
             style={({ pressed }) => pressed && styles.pressed}
             onPress={handleOpenMeals}
           >
-            <InfoRow label="Meals per day" value={profile.mealsPerDay} />
+            <InfoRow
+              label="Meals per day"
+              value={profile.mealsPerDay}
+              icon="create-outline"
+              iconColor={theme.colors.primary}
+            />
           </Pressable>
           <Pressable
             style={({ pressed }) => pressed && styles.pressed}
@@ -287,6 +292,8 @@ export const DietaryProfileScreen: React.FC = () => {
               label="Snacks per day"
               value={profile.snacksPerDay}
               showBorder={false}
+              icon="create-outline"
+              iconColor={theme.colors.primary}
             />
           </Pressable>
         </View>
@@ -399,24 +406,24 @@ export const DietaryProfileScreen: React.FC = () => {
         </Animated.View>
       )}
 
-      {/* Nutrition Goals Modals */}
-      <NumberInputModal
+      {/* Nutrition Goals Sheets */}
+      <NumberInputSheet
         visible={editingMeals}
         title="Meals Per Day"
         value={profile.mealsPerDay}
         onSave={handleSaveMeals}
-        onCancel={handleCloseMeals}
+        onClose={handleCloseMeals}
         min={1}
         max={6}
         placeholder="e.g., 3"
       />
 
-      <NumberInputModal
+      <NumberInputSheet
         visible={editingSnacks}
         title="Snacks Per Day"
         value={profile.snacksPerDay}
         onSave={handleSaveSnacks}
-        onCancel={handleCloseSnacks}
+        onClose={handleCloseSnacks}
         min={0}
         max={5}
         placeholder="e.g., 2"

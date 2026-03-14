@@ -5,8 +5,8 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
-  runOnJS,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   alertService,
@@ -54,7 +54,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
     scale.set(
       withTiming(ALERT.EXIT_SCALE_TO, { duration: TIMING.FAST }, finished => {
         if (finished) {
-          runOnJS(dismissEntry)(onDismiss, entry.id);
+          scheduleOnRN(dismissEntry, onDismiss, entry.id);
         }
       }),
     );
@@ -75,7 +75,6 @@ const AlertCard: React.FC<AlertCardProps> = ({
     ],
   }));
 
-  const hasMultipleButtons = entry.buttons.length >= 2;
   const isVerticalLayout = entry.buttons.length > 2;
 
   return (

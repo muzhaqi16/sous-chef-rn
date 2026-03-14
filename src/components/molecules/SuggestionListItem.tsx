@@ -119,22 +119,29 @@ export const SuggestionListItem = ({
         disabled={!onPress && !onQuickAdd}
         testID={testID}
       >
-        <View style={styles.imageContainer}>
-          {showImage && imageUrl ? (
-            <CachedImage uri={imageUrl} style={styles.image} displaySize={40} />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Icon
-                name={placeholderIcon}
-                size={20}
-                color={
-                  themeColors?.primary ?? styles.quickAddButton.backgroundColor
-                }
-                library={placeholderIconLibrary}
+        {!!showImage && (
+          <View style={styles.imageContainer}>
+            {imageUrl ? (
+              <CachedImage
+                uri={imageUrl}
+                style={styles.image}
+                displaySize={40}
               />
-            </View>
-          )}
-        </View>
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Icon
+                  name={placeholderIcon}
+                  size={20}
+                  color={
+                    themeColors?.primary ??
+                    styles.quickAddButton.backgroundColor
+                  }
+                  library={placeholderIconLibrary}
+                />
+              </View>
+            )}
+          </View>
+        )}
         <View style={styles.info}>
           <Text style={styles.title} numberOfLines={1}>
             {title}

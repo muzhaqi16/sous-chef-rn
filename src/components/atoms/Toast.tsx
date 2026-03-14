@@ -49,6 +49,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queueRef = useRef<ToastOptions[]>([]);
 
+  const showToastRef = useRef<ToastFn | null>(null);
+
   const translateY = useSharedValue(TOAST.OFFSCREEN_Y);
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(0);
@@ -123,12 +125,17 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
     presentToast(opts);
   };
 
+  // Keep ref in sync (written in effect, not during render — per CLAUDE.md)
+  useEffect(() => {
+    showToastRef.current = showToast;
+  });
+
   // Initialize toast service bridge
   useEffect(() => {
     toastService.init((message, type, options) => {
-      showToast({ message, type: type ?? 'default', ...options });
+      showToastRef.current?.({ message, type: type ?? 'default', ...options });
     });
-  }, [showToast]);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {

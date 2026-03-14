@@ -54,15 +54,17 @@ const SuggestionRow = ({
 
   return (
     <View style={[styles.suggestionItem, !isLast && styles.itemBorder]}>
-      <View style={styles.imageContainer}>
-        {showImages && imageUrl ? (
-          <CachedImage uri={imageUrl} style={styles.image} displaySize={40} />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Icon name={placeholderIcon} size={20} color={primaryColor} />
-          </View>
-        )}
-      </View>
+      {!!showImages && (
+        <View style={styles.imageContainer}>
+          {imageUrl ? (
+            <CachedImage uri={imageUrl} style={styles.image} displaySize={40} />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Icon name={placeholderIcon} size={20} color={primaryColor} />
+            </View>
+          )}
+        </View>
+      )}
       <View style={styles.suggestionInfo}>
         <Text style={styles.suggestionName} numberOfLines={1}>
           {item.name}

@@ -104,7 +104,7 @@ export function useStandardBottomSheet({
     topInset: insets.top,
     onDismiss,
     animationConfigs,
-    backgroundStyle: { backgroundColor: theme.colors.background },
+    backgroundStyle: { backgroundColor: theme.colors.surface },
     handleIndicatorStyle: { backgroundColor: theme.colors.textSecondary },
     keyboardBehavior: resolvedKeyboardBehavior,
     keyboardBlurBehavior: 'restore',

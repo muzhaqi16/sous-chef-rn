@@ -96,25 +96,28 @@ jest.mock('#/components/organisms/CuisineSelector', () => {
   };
 });
 
-jest.mock('#/components/organisms/StringArrayManager/StringArrayManager', () => {
-  const { View, Text } = require('react-native');
-  return {
-    StringArrayManager: ({ title, items }: any) => (
-      <View testID={`string-array-${title}`}>
-        <Text>{title}</Text>
-        {items ? items.map((item: string) => (
-          <Text key={item}>{item}</Text>
-        )) : null}
-      </View>
-    ),
-  };
-});
+jest.mock(
+  '#/components/organisms/StringArrayManager/StringArrayManager',
+  () => {
+    const { View, Text } = require('react-native');
+    return {
+      StringArrayManager: ({ title, items }: any) => (
+        <View testID={`string-array-${title}`}>
+          <Text>{title}</Text>
+          {items
+            ? items.map((item: string) => <Text key={item}>{item}</Text>)
+            : null}
+        </View>
+      ),
+    };
+  },
+);
 
-jest.mock('#/components/organisms/modal/NumberInputModal', () => {
+jest.mock('#/components/modals/NumberInputSheet/NumberInputSheet', () => {
   const { View } = require('react-native');
   return {
-    NumberInputModal: ({ visible, title }: any) =>
-      visible ? <View testID={`modal-${title}`} /> : null,
+    NumberInputSheet: ({ visible, title }: any) =>
+      visible ? <View testID={`sheet-${title}`} /> : null,
   };
 });
 
@@ -130,9 +133,12 @@ jest.mock('#/components/molecules/InfoRow', () => {
   };
 });
 
-jest.mock('#/components/modals/CookingPreferencesSheet/CookingPreferencesSheet', () => ({
-  CookingPreferencesSheet: () => null,
-}));
+jest.mock(
+  '#/components/modals/CookingPreferencesSheet/CookingPreferencesSheet',
+  () => ({
+    CookingPreferencesSheet: () => null,
+  }),
+);
 
 jest.mock('#/components/modals/MacroTargetsSheet/MacroTargetsSheet', () => ({
   MacroTargetsSheet: () => null,

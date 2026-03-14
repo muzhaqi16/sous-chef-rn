@@ -87,7 +87,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
       topInset={insets.top}
       onDismiss={onClose}
       animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
+      backgroundStyle={{ backgroundColor: theme.colors.surface }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
       backdropComponent={DismissBackdrop}
     >
