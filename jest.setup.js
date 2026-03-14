@@ -546,6 +546,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
       animatedContentHeight: { value: 0 },
       handleContentLayout: jest.fn(),
     })),
+    useBottomSheetSpringConfigs: jest.fn(config => config),
   };
 });
 
