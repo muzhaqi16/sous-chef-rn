@@ -8,6 +8,10 @@ jest.mock('#/utils/iconUtils', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
+jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
+  useSharedBottomSheetConfigs: () => ({}),
+}));
+
 describe('StringArrayManager', () => {
   const defaultProps = {
     title: 'Preferred Cuisines',
@@ -44,12 +48,7 @@ describe('StringArrayManager', () => {
   });
 
   it('shows default empty message', () => {
-    render(
-      <StringArrayManager
-        {...defaultProps}
-        items={[]}
-      />,
-    );
+    render(<StringArrayManager {...defaultProps} items={[]} />);
     expect(screen.getByText('No items added yet')).toBeTruthy();
   });
 
@@ -63,9 +62,7 @@ describe('StringArrayManager', () => {
   });
 
   it('shows max items error when limit reached', () => {
-    render(
-      <StringArrayManager {...defaultProps} maxItems={3} />,
-    );
+    render(<StringArrayManager {...defaultProps} maxItems={3} />);
     // Try to add when already at max - this should set error internally
     // The add button still renders, pressing it should trigger max error
     expect(screen.getByText('Italian')).toBeTruthy();
@@ -73,10 +70,7 @@ describe('StringArrayManager', () => {
 
   it('opens modal when add button pressed', () => {
     render(
-      <StringArrayManager
-        {...defaultProps}
-        addButtonLabel="Add Cuisine"
-      />,
+      <StringArrayManager {...defaultProps} addButtonLabel="Add Cuisine" />,
     );
     // The modal title should appear inside the modal
     // We can verify the component renders without crashing

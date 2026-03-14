@@ -1,7 +1,6 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import { usePantryItemMutations } from '../usePantryItemMutations';
 
 jest.mock('../../../../apollo/links/tokenScheduler');
@@ -29,23 +28,42 @@ jest.mock('#/utils/generateId', () => ({
 }));
 
 jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
-  enhanceWithVersion: jest.fn((obj: any, updates: any) => ({ ...obj, ...updates })),
-  createOptimisticEntity: jest.fn((typename: string, id: string, fields: any) => ({
-    __typename: typename,
-    id,
-    ...fields,
+  enhanceWithVersion: jest.fn((obj: any, updates: any) => ({
+    ...obj,
+    ...updates,
   })),
+  createOptimisticEntity: jest.fn(
+    (typename: string, id: string, fields: any) => ({
+      __typename: typename,
+      id,
+      ...fields,
+    }),
+  ),
 }));
 
 jest.mock('#/apollo/utils/optimisticTypes', () => ({
-  buildOptimisticMutationResponse: jest.fn((opName: string, payloadType: string, fieldName: string, data: any) => ({
-    __typename: 'Mutation',
-    [opName]: { __typename: payloadType, success: true, [fieldName]: data },
-  })),
-  buildOptimisticDeleteResponse: jest.fn((opName: string, payloadType: string, fieldName: string, typename: string, id: string) => ({
-    __typename: 'Mutation',
-    [opName]: { __typename: payloadType, success: true, [fieldName]: { __typename: typename, id } },
-  })),
+  buildOptimisticMutationResponse: jest.fn(
+    (opName: string, payloadType: string, fieldName: string, data: any) => ({
+      __typename: 'Mutation',
+      [opName]: { __typename: payloadType, success: true, [fieldName]: data },
+    }),
+  ),
+  buildOptimisticDeleteResponse: jest.fn(
+    (
+      opName: string,
+      payloadType: string,
+      fieldName: string,
+      typename: string,
+      id: string,
+    ) => ({
+      __typename: 'Mutation',
+      [opName]: {
+        __typename: payloadType,
+        success: true,
+        [fieldName]: { __typename: typename, id },
+      },
+    }),
+  ),
 }));
 
 jest.mock('#/utils/errors/versionConflict', () => ({
@@ -60,7 +78,9 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
       await config.mutation({ variables: { input: transformed } });
     }),
     createUpdateOperation: jest.fn((config: any) => async (updates: any) => {
-      await config.mutation({ variables: { id: config.itemId, input: updates } });
+      await config.mutation({
+        variables: { id: config.itemId, input: updates },
+      });
     }),
   }),
 }));
@@ -79,12 +99,19 @@ jest.mock('../utils', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 const defaultOptions = {
   pantryId: 'pantry-1',
   pantryItems: [
-    { id: 'item-1', itemName: 'Milk', version: 1, updatedAt: '2024-01-01' } as any,
+    {
+      id: 'item-1',
+      itemName: 'Milk',
+      version: 1,
+      updatedAt: '2024-01-01',
+    } as any,
   ],
   refetch: jest.fn().mockResolvedValue(undefined),
 };
@@ -103,8 +130,12 @@ describe('usePantryItemMutations', () => {
   });
 
   it('removeItem registers pending delete before mutation', async () => {
-    const { subscriptionService } = require('#/services/subscriptions/SubscriptionService');
-    mockDeletePantryItem.mockResolvedValue({ data: { deletePantryItem: { pantryItem: { id: 'item-1' } } } });
+    const {
+      subscriptionService,
+    } = require('#/services/subscriptions/SubscriptionService');
+    mockDeletePantryItem.mockResolvedValue({
+      data: { deletePantryItem: { pantryItem: { id: 'item-1' } } },
+    });
 
     const { result } = renderHook(() => usePantryItemMutations(defaultOptions));
 
@@ -122,8 +153,12 @@ describe('usePantryItemMutations', () => {
   });
 
   it('removeItem unregisters pending delete after success', async () => {
-    const { subscriptionService } = require('#/services/subscriptions/SubscriptionService');
-    mockDeletePantryItem.mockResolvedValue({ data: { deletePantryItem: { pantryItem: { id: 'item-1' } } } });
+    const {
+      subscriptionService,
+    } = require('#/services/subscriptions/SubscriptionService');
+    mockDeletePantryItem.mockResolvedValue({
+      data: { deletePantryItem: { pantryItem: { id: 'item-1' } } },
+    });
 
     const { result } = renderHook(() => usePantryItemMutations(defaultOptions));
 
@@ -131,7 +166,9 @@ describe('usePantryItemMutations', () => {
       await result.current.removeItem('item-1');
     });
 
-    expect(subscriptionService.unregisterPendingDelete).toHaveBeenCalledWith('item-1');
+    expect(subscriptionService.unregisterPendingDelete).toHaveBeenCalledWith(
+      'item-1',
+    );
   });
 
   it('removeItem does nothing when pantryId is undefined', async () => {
@@ -147,7 +184,9 @@ describe('usePantryItemMutations', () => {
   });
 
   it('removeItem unregisters pending delete on error', async () => {
-    const { subscriptionService } = require('#/services/subscriptions/SubscriptionService');
+    const {
+      subscriptionService,
+    } = require('#/services/subscriptions/SubscriptionService');
     mockDeletePantryItem.mockRejectedValue(new Error('Delete failed'));
 
     const { result } = renderHook(() => usePantryItemMutations(defaultOptions));
@@ -160,16 +199,22 @@ describe('usePantryItemMutations', () => {
       }
     });
 
-    expect(subscriptionService.unregisterPendingDelete).toHaveBeenCalledWith('item-1');
+    expect(subscriptionService.unregisterPendingDelete).toHaveBeenCalledWith(
+      'item-1',
+    );
   });
 
   it('updateItem calls the update mutation via createUpdateOperation', async () => {
-    mockUpdatePantryItem.mockResolvedValue({ data: { updatePantryItem: { pantryItem: { id: 'item-1' } } } });
+    mockUpdatePantryItem.mockResolvedValue({
+      data: { updatePantryItem: { pantryItem: { id: 'item-1' } } },
+    });
 
     const { result } = renderHook(() => usePantryItemMutations(defaultOptions));
 
     await act(async () => {
-      await result.current.updateItem('item-1', { itemName: 'Updated Milk' } as any);
+      await result.current.updateItem('item-1', {
+        itemName: 'Updated Milk',
+      } as any);
     });
 
     // The createUpdateOperation mock calls mutation directly
@@ -177,7 +222,9 @@ describe('usePantryItemMutations', () => {
   });
 
   it('addItem calls createAddOperation with transformed input', async () => {
-    mockCreatePantryItem.mockResolvedValue({ data: { createPantryItem: { pantryItem: { id: 'new-1' } } } });
+    mockCreatePantryItem.mockResolvedValue({
+      data: { createPantryItem: { pantryItem: { id: 'new-1' } } },
+    });
 
     const { result } = renderHook(() => usePantryItemMutations(defaultOptions));
 

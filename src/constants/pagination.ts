@@ -22,7 +22,7 @@ export const PAGE_SIZE = {
   /** Compact lists (e.g., storage locations, dropdowns) */
   COMPACT: 15,
   /** Standard paginated lists (e.g., pantry items, shopping lists) */
-  DEFAULT: 25,
+  DEFAULT: 15,
   /** Infinite scroll increment */
   SCROLL: 30,
   /** Larger datasets (e.g., hybrid sort threshold) */

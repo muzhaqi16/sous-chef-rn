@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Alert,
-} from 'react-native';
+import { View } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
@@ -97,7 +95,7 @@ export const StorageLocationsScreen: React.FC<{
   const handleDelete = (location: any) => {
     // Default location cannot be deleted
     if (location.isDefault) {
-      Alert.alert(
+      alertService.alert(
         'Cannot Delete Default Location',
         'Set another location as default first.',
         [{ text: 'OK' }],
@@ -113,18 +111,22 @@ export const StorageLocationsScreen: React.FC<{
 
     if (itemCount > 0 || childCount > 0) {
       const parts: string[] = [];
-      if (itemCount > 0) parts.push(`${itemCount} item${itemCount !== 1 ? 's' : ''}`);
-      if (childCount > 0) parts.push(`${childCount} sub-location${childCount !== 1 ? 's' : ''}`);
-      Alert.alert(
+      if (itemCount > 0)
+        parts.push(`${itemCount} item${itemCount !== 1 ? 's' : ''}`);
+      if (childCount > 0)
+        parts.push(`${childCount} sub-location${childCount !== 1 ? 's' : ''}`);
+      alertService.alert(
         'Cannot Delete Location',
-        `"${location.name}" has ${parts.join(' and ')}. Move or remove them first.`,
+        `"${location.name}" has ${parts.join(
+          ' and ',
+        )}. Move or remove them first.`,
         [{ text: 'Got It' }],
       );
       return;
     }
 
     // Empty, non-default — normal confirmation
-    Alert.alert(
+    alertService.alert(
       'Delete Storage Location',
       `Are you sure you want to delete "${location.name}"? This cannot be undone.`,
       [
@@ -158,7 +160,11 @@ export const StorageLocationsScreen: React.FC<{
           {
             content: (
               <View style={commonStyles.loadingContainer}>
-                <SousChefLoader size="small" showBrand={false} message="Loading storage locations..." />
+                <SousChefLoader
+                  size="small"
+                  showBrand={false}
+                  message="Loading storage locations..."
+                />
               </View>
             ),
           },
@@ -188,7 +194,7 @@ export const StorageLocationsScreen: React.FC<{
               options={VIEW_MODES}
               value={viewMode}
               onChange={setViewMode}
-              formatLabel={(v) => v === 'flat' ? 'List View' : 'Tree View'}
+              formatLabel={v => (v === 'flat' ? 'List View' : 'Tree View')}
             />
           )}
 
@@ -199,7 +205,10 @@ export const StorageLocationsScreen: React.FC<{
               description="Create storage locations to organize your pantry items by where they're stored."
               action={{
                 label: 'Add Location',
-                onPress: () => { setEditingLocation(null); setSheetVisible(true); },
+                onPress: () => {
+                  setEditingLocation(null);
+                  setSheetVisible(true);
+                },
               }}
             />
           ) : viewMode === 'tree' ? (
@@ -253,4 +262,3 @@ export const StorageLocationsScreen: React.FC<{
     </>
   );
 };
-

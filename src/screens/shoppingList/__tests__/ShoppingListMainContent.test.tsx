@@ -101,10 +101,13 @@ jest.mock('#/utils/permissions/shoppingListPermissions', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.mock('#components/organisms/AnimatedItemSelector/AnimatedItemSelector', () => {
-  const { forwardRef } = require('react');
-  return { AnimatedItemSelector: forwardRef(() => null) };
-});
+jest.mock(
+  '#components/organisms/AnimatedItemSelector/AnimatedItemSelector',
+  () => {
+    const { forwardRef } = require('react');
+    return { AnimatedItemSelector: forwardRef(() => null) };
+  },
+);
 
 jest.mock('#components/templates/ListTemplate', () => ({
   ListTemplate: () => null,
@@ -122,12 +125,19 @@ jest.mock('#components/organisms/ShoppingListTabs/ShoppingListTabs', () => ({
   ShoppingListTabs: () => null,
 }));
 
-jest.mock('#components/organisms/SwipeHintOverlay', () => ({
-  SwipeHintOverlay: () => null,
-}));
+jest.mock(
+  '#components/organisms/InteractiveSwipeHint/InteractiveSwipeHint',
+  () => ({
+    InteractiveSwipeHint: () => null,
+  }),
+);
 
 const makeScreenData = (overrides: any = {}) => {
-  const { state: stateOverrides, actions: actionsOverrides, ...legacyOverrides } = overrides;
+  const {
+    state: stateOverrides,
+    actions: actionsOverrides,
+    ...legacyOverrides
+  } = overrides;
   return {
     state: {
       lists: [{ id: 'list-1', name: 'Groceries' }],
@@ -191,7 +201,9 @@ describe('ShoppingListMainContent', () => {
     const { getByTestId } = render(
       <ShoppingListMainContent
         screenData={makeScreenData({
-          unpurchasedItems: [{ id: 'item-1', name: 'Milk', purchaseInfo: null }],
+          unpurchasedItems: [
+            { id: 'item-1', name: 'Milk', purchaseInfo: null },
+          ],
         })}
       />,
     );

@@ -1,17 +1,20 @@
 import React from 'react';
-import { Text, Pressable, Alert } from 'react-native';
+import { Text, Pressable } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   launchCamera,
   launchImageLibrary,
   ImagePickerResponse,
   MediaType,
   CameraOptions,
-  ImageLibraryOptions } from 'react-native-image-picker';
+  ImageLibraryOptions,
+} from 'react-native-image-picker';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import {
   validateImageFile,
-  ImageValidationError } from '#utils/imageValidation';
+  ImageValidationError,
+} from '#utils/imageValidation';
 import { useBottomSheetModal } from '#hooks/useBottomSheetModal';
 import { usePermission } from '#hooks/permissions/usePermission';
 import { ImagePickerSheet } from './ImagePickerSheet';
@@ -38,7 +41,8 @@ const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   includeBase64: false,
   maxHeight: 2000,
   maxWidth: 2000,
-  quality: 0.8 };
+  quality: 0.8,
+};
 
 export const ImagePicker: React.FC<ImagePickerProps> = ({
   onImageSelected,
@@ -47,61 +51,68 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   onError,
   disabled = false,
   isProfile = false,
-  children }) => {
+  children,
+}) => {
   const { theme } = useUnistyles();
   const { ref: sheetRef, open: openSheet } = useBottomSheetModal();
-  const { request: requestCamera, isBlocked, openSettings } = usePermission('camera');
+  const {
+    request: requestCamera,
+    isBlocked,
+    openSettings,
+  } = usePermission('camera');
 
   const handleImageResponse = (response: ImagePickerResponse) => {
-      if (response.didCancel || response.errorCode || !response.assets?.length) {
-        return;
-      }
+    if (response.didCancel || response.errorCode || !response.assets?.length) {
+      return;
+    }
 
-      if (multiSelect && onMultiImageSelected) {
-        // Multi-select mode: process all assets
-        const validImages: ImageFile[] = [];
-        for (const asset of response.assets) {
-          if (!asset.uri) continue;
-          const imageFile: ImageFile = {
-            uri: asset.uri,
-            fileName: asset.fileName,
-            fileSize: asset.fileSize,
-            type: asset.type };
-          try {
-            validateImageFile(imageFile, isProfile);
-            validImages.push(imageFile);
-          } catch (error) {
-            const validationError = error as ImageValidationError;
-            onError?.(validationError);
-          }
-        }
-        if (validImages.length > 0) {
-          onMultiImageSelected(validImages);
-        }
-      } else {
-        // Single-select mode (backward compatible)
-        const asset = response.assets[0];
-        if (!asset?.uri) return;
+    if (multiSelect && onMultiImageSelected) {
+      // Multi-select mode: process all assets
+      const validImages: ImageFile[] = [];
+      for (const asset of response.assets) {
+        if (!asset.uri) continue;
         const imageFile: ImageFile = {
           uri: asset.uri,
           fileName: asset.fileName,
           fileSize: asset.fileSize,
-          type: asset.type };
-
+          type: asset.type,
+        };
         try {
           validateImageFile(imageFile, isProfile);
-          onImageSelected(imageFile);
+          validImages.push(imageFile);
         } catch (error) {
           const validationError = error as ImageValidationError;
           onError?.(validationError);
-          Alert.alert('Invalid Image', validationError.message);
         }
       }
-    };
+      if (validImages.length > 0) {
+        onMultiImageSelected(validImages);
+      }
+    } else {
+      // Single-select mode (backward compatible)
+      const asset = response.assets[0];
+      if (!asset?.uri) return;
+      const imageFile: ImageFile = {
+        uri: asset.uri,
+        fileName: asset.fileName,
+        fileSize: asset.fileSize,
+        type: asset.type,
+      };
+
+      try {
+        validateImageFile(imageFile, isProfile);
+        onImageSelected(imageFile);
+      } catch (error) {
+        const validationError = error as ImageValidationError;
+        onError?.(validationError);
+        alertService.alert('Invalid Image', validationError.message);
+      }
+    }
+  };
 
   const handleCameraPress = async () => {
     if (isBlocked) {
-      Alert.alert(
+      alertService.alert(
         'Camera Permission',
         'Camera permission is required. Please enable it in your device settings.',
         [
@@ -120,7 +131,8 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   const handleLibraryPress = () => {
     const libraryOptions: ImageLibraryOptions = {
       ...DEFAULT_OPTIONS,
-      ...(multiSelect && { selectionLimit: 0 }) };
+      ...(multiSelect && { selectionLimit: 0 }),
+    };
     launchImageLibrary(libraryOptions, handleImageResponse);
   };
 
@@ -140,7 +152,11 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   if (children) {
     return (
       <>
-        <Pressable onPress={showImagePicker} disabled={disabled} style={({pressed}) => pressed && styles.pressed}>
+        <Pressable
+          onPress={showImagePicker}
+          disabled={disabled}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
           {children}
         </Pressable>
         {renderSheet()}
@@ -151,7 +167,11 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   return (
     <>
       <Pressable
-        style={({pressed}) => [styles.pickerButton, disabled && styles.pickerButtonDisabled, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.pickerButton,
+          disabled && styles.pickerButtonDisabled,
+          pressed && styles.pressed,
+        ]}
         onPress={showImagePicker}
         disabled={disabled}
       >
@@ -175,13 +195,18 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   pickerButtonDisabled: {
     opacity: theme.opacity.disabled,
-    borderColor: theme.colors.border },
+    borderColor: theme.colors.border,
+  },
   pickerButtonText: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.primary },
+    color: theme.colors.primary,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

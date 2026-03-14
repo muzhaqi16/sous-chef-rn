@@ -352,23 +352,6 @@ query MatchRecipeIngredientsToPantry(
   }
 }
 
-query CompatibleUnitsForItem($itemId: ID!, $currentUnitId: ID) {
-  compatibleUnitsForItem(itemId: $itemId, currentUnitId: $currentUnitId) {
-    unit {
-      id
-      name
-      symbol
-      type
-    }
-    isDefault
-    isConfigured
-    conversionRatio
-    conversionConfidence
-    source
-    usageContexts
-  }
-}
-
 mutation ConfirmRecipeConsumption(
   $input: ConfirmRecipeConsumptionInput!
 ) {

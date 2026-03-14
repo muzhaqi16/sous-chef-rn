@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useScannerSetup, type ScannerContext } from '../useScannerSetup';
 
 type ScannerOptions = Parameters<typeof useScannerSetup>[0];
@@ -21,7 +21,9 @@ const mockNav = (
   }
 ).useAppNavigation();
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -77,7 +79,7 @@ describe('useScannerSetup', () => {
 
     capturedHandler?.();
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'No Home Selected',
       expect.any(String),
       expect.any(Array),
@@ -99,7 +101,7 @@ describe('useScannerSetup', () => {
     capturedHandler?.();
 
     expect(onNoHome).toHaveBeenCalled();
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('reads latest homeId from ref (not stale closure)', () => {
@@ -110,14 +112,14 @@ describe('useScannerSetup', () => {
 
     // Initially homeId is null — scanner should show alert
     capturedHandler?.();
-    expect(Alert.alert).toHaveBeenCalled();
+    expect(alertService.alert).toHaveBeenCalled();
     jest.clearAllMocks();
 
     // Update homeId — effect should NOT re-run (ref pattern), but handler should read new value
     rerender({ ...defaultOptions, homeId: 'home-2' });
 
     capturedHandler?.();
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(alertService.alert).not.toHaveBeenCalled();
     expect(mockNav.navigateTo.barcode).toHaveBeenCalledWith(
       defaultOptions.context,
     );

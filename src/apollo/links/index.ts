@@ -3,6 +3,7 @@ import { getMainDefinition } from '@apollo/client/utilities';
 import { authLink } from './authLink';
 import { createConsoleLink } from './consoleLink';
 import { createTelemetryLink } from './telemetryLink';
+import { createOfflineModeLink } from './offlineModeLink';
 import { errorLink } from './errorLink';
 import { httpLink } from './httpLink';
 import { wsLink } from './wsLink';
@@ -43,16 +44,21 @@ export function createLink() {
   // Telemetry link for tracking GraphQL operations
   const telemetryLink = createTelemetryLink();
 
+  // Offline mode link - blocks queries when user has enabled offline mode
+  const offlineModeLink = createOfflineModeLink();
+
   // Queue link for offline mutation support
   const queueLink = createQueueLink();
 
   // Link chain - ordered by priority
   // Offline support is handled by:
-  // 1. errorLink - catches network failures, returns cached data
-  // 2. fetch policies (cache-and-network → cache-first) - immediate cache, then network
-  // 3. queueLink - queues mutations when offline
+  // 1. offlineModeLink - blocks queries when user-enabled offline mode is active
+  // 2. errorLink - catches network failures, returns cached data
+  // 3. fetch policies (cache-and-network → cache-first) - immediate cache, then network
+  // 4. queueLink - queues mutations when offline
   // Note: Query deduplication is handled by Apollo Client's built-in queryDeduplication: true
   return ApolloLink.from([
+    offlineModeLink, // Block queries when offline mode enabled (before telemetry to skip tracking)
     telemetryLink, // Track operations for monitoring
     errorLink, // Handle/log errors + return cached data on network failures
     authLink, // Authentication headers

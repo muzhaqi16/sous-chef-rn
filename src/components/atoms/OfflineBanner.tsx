@@ -14,14 +14,27 @@ import { Icon } from '#utils/iconUtils';
  */
 export const OfflineBanner: React.FC = () => {
   const isOnline = useAppStore(state => state.isOnline);
+  const offlineModeEnabled = useAppStore(state => state.offlineModeEnabled);
 
-  if (isOnline) return null;
+  if (isOnline && !offlineModeEnabled) return null;
+
+  const isDeviceOffline = !isOnline;
+  const iconName = isDeviceOffline
+    ? 'cloud-offline-outline'
+    : 'airplane-outline';
+  const message = isDeviceOffline
+    ? "You're offline — changes will sync when reconnected"
+    : 'Offline mode enabled — using cached data only';
 
   return (
-    <View style={styles.container} accessibilityRole="alert" accessibilityLiveRegion="polite">
-      <Icon name="cloud-offline-outline" size={16} color={styles.text.color} />
+    <View
+      style={styles.container}
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+    >
+      <Icon name={iconName} size={16} color={styles.text.color} />
       <Text maxFontSizeMultiplier={1.5} style={styles.text}>
-        You're offline — changes will sync when reconnected
+        {message}
       </Text>
     </View>
   );

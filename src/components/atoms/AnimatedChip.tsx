@@ -1,15 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { CachedImage } from '#components/atoms/CachedImage';
 import Animated, {
   FadeIn,
   FadeOut,
   LinearTransition,
+  interpolate,
+  interpolateColor,
+  useAnimatedProps,
   useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
-import { Icon } from '#utils/iconUtils';
-import { standardEasing, SPRING, TIMING } from '#/constants/animations';
+import Svg, { Path } from 'react-native-svg';
+import { HapticService } from '#services/haptic/HapticService';
+import { standardEasing, TIMING } from '#/constants/animations';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+const CHECKMARK_PATH = 'M3 7.5 L6 10.5 L11 4.5';
+const CHECKMARK_LENGTH = 12;
 
 type AnimatedChipProps = {
   label: string;
@@ -27,45 +39,93 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   imageUrl,
 }) => {
   const { theme } = useUnistyles();
+  const animatedTheme = useAnimatedTheme();
 
-  // Animated container style — only dynamic properties that change with selection/state
+  // Drive selection animations via shared value — only animates when selected truly changes
+  const selectedProgress = useSharedValue(selected ? 1 : 0);
+  const [prevSelected, setPrevSelected] = useState(selected);
+  if (selected !== prevSelected) {
+    setPrevSelected(selected);
+    selectedProgress.set(
+      withTiming(selected ? 1 : 0, {
+        duration: TIMING.STANDARD,
+        easing: standardEasing,
+      }),
+    );
+  }
+
+  const handlePress = () => {
+    if (disabled) return;
+    HapticService.light();
+    onPress();
+  };
+
+  // Animated container style driven by shared value
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
-      paddingLeft: imageUrl ? theme.spacing.sm : theme.spacing['3'],
-      paddingRight: selected ? theme.spacing.sm : theme.spacing['3'],
-      borderColor: selected
-        ? theme.colors.primary
-        : theme.colors.border,
-      backgroundColor: selected
-        ? theme.colors.chipSelectedBackground
-        : theme.colors.chipBackground,
-      opacity: disabled ? theme.opacity.disabled : 1,
+      paddingLeft: imageUrl
+        ? animatedTheme.value.spacing.sm
+        : animatedTheme.value.spacing['3'],
+      paddingRight: interpolate(
+        selectedProgress.value,
+        [0, 1],
+        [animatedTheme.value.spacing['3'], animatedTheme.value.spacing.sm],
+      ),
+      borderColor: interpolateColor(
+        selectedProgress.value,
+        [0, 1],
+        [animatedTheme.value.colors.border, animatedTheme.value.colors.primary],
+      ),
+      backgroundColor: interpolateColor(
+        selectedProgress.value,
+        [0, 1],
+        [
+          animatedTheme.value.colors.chipBackground,
+          animatedTheme.value.colors.primaryLight,
+        ],
+      ),
+      opacity: disabled ? animatedTheme.value.opacity.disabled : 1,
     };
-  }, [selected, disabled, theme, imageUrl]);
+  }, [selectedProgress, disabled, imageUrl]);
 
-  // Animated text style for color transitions
+  // Animated text style driven by shared value
   const animatedTextStyle = useAnimatedStyle(() => {
     return {
-      color: selected
-        ? theme.colors.chipSelectedText
-        : theme.colors.chipText,
+      color: interpolateColor(
+        selectedProgress.value,
+        [0, 1],
+        [
+          animatedTheme.value.colors.chipText,
+          animatedTheme.value.colors.primary,
+        ],
+      ),
     };
-  }, [selected, theme]);
+  }, [selectedProgress]);
+
+  // SVG checkmark draw-on animation driven by same shared value
+  const checkmarkAnimatedProps = useAnimatedProps(() => {
+    return {
+      strokeDashoffset: interpolate(
+        selectedProgress.value,
+        [0, 1],
+        [CHECKMARK_LENGTH, 0],
+      ),
+    };
+  }, [selectedProgress]);
 
   // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View
   return (
     <View style={styles.container}>
       <Animated.View
-        layout={LinearTransition.springify().mass(0.8).damping(SPRING.EXPAND.damping).stiffness(SPRING.EXPAND.stiffness)}
-        onTouchEnd={disabled ? undefined : onPress}
+        layout={LinearTransition.springify()
+          .mass(0.8)
+          .damping(30)
+          .stiffness(250)}
+        onTouchEnd={handlePress}
         style={[styles.chip, animatedContainerStyle]}
       >
         {!!imageUrl && (
-          <CachedImage
-            uri={imageUrl}
-            style={styles.image}
-            displaySize={24}
-          />
+          <CachedImage uri={imageUrl} style={styles.image} displaySize={24} />
         )}
         <Animated.Text style={[styles.label, animatedTextStyle]}>
           {label}
@@ -81,11 +141,18 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
               standardEasing.factory(),
             )}
           >
-            <Icon
-              name="checkmark-circle"
-              size={18}
-              color={theme.colors.chipSelectedText}
-            />
+            <Svg width={14} height={14} viewBox="0 0 14 14">
+              <AnimatedPath
+                d={CHECKMARK_PATH}
+                stroke={theme.colors.primary}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+                strokeDasharray={CHECKMARK_LENGTH}
+                animatedProps={checkmarkAnimatedProps}
+              />
+            </Svg>
           </Animated.View>
         )}
       </Animated.View>

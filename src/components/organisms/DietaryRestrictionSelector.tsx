@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Alert } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { alertService } from '#/services/alertService';
 import { RestrictionSection } from '#/components/molecules/RestrictionSection/RestrictionSection';
 import { MultiSelectChipSheet } from '#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
 import { Diet, Intolerance, HealthGoal, RestrictionSeverity } from '#generated';
@@ -90,59 +91,63 @@ export const DietaryRestrictionSelector: React.FC<
   const [isSavingGoals, setIsSavingGoals] = useState(false);
 
   // Derive existing restrictions
-  const existingDiets = existingRestrictions.map(r => r.diet).filter(Boolean) as Diet[];
+  const existingDiets = existingRestrictions
+    .map(r => r.diet)
+    .filter(Boolean) as Diet[];
   const existingIntolerances = existingRestrictions
-        .map(r => r.intolerance)
-        .filter(Boolean) as Intolerance[];
+    .map(r => r.intolerance)
+    .filter(Boolean) as Intolerance[];
   const existingHealthGoals = existingRestrictions
-        .map(r => r.healthGoal)
-        .filter(Boolean) as HealthGoal[];
+    .map(r => r.healthGoal)
+    .filter(Boolean) as HealthGoal[];
 
   // Map existing restrictions to display items
   const existingDietItems = existingRestrictions
-        .filter(r => r.diet)
-        .map(r => ({
-          id: r.id,
-          label: DIETS.find(d => d.value === r.diet)?.label || r.diet!,
-        }));
+    .filter(r => r.diet)
+    .map(r => ({
+      id: r.id,
+      label: DIETS.find(d => d.value === r.diet)?.label || r.diet!,
+    }));
 
   const existingIntoleranceItems = existingRestrictions
-        .filter(r => r.intolerance)
-        .map(r => ({
-          id: r.id,
-          label:
-            INTOLERANCES.find(i => i.value === r.intolerance)?.label ||
-            r.intolerance!,
-        }));
+    .filter(r => r.intolerance)
+    .map(r => ({
+      id: r.id,
+      label:
+        INTOLERANCES.find(i => i.value === r.intolerance)?.label ||
+        r.intolerance!,
+    }));
 
   const existingGoalItems = existingRestrictions
-        .filter(r => r.healthGoal)
-        .map(r => ({
-          id: r.id,
-          label:
-            HEALTH_GOALS.find(h => h.value === r.healthGoal)?.label ||
-            r.healthGoal!,
-        }));
+    .filter(r => r.healthGoal)
+    .map(r => ({
+      id: r.id,
+      label:
+        HEALTH_GOALS.find(h => h.value === r.healthGoal)?.label ||
+        r.healthGoal!,
+    }));
 
   // Prepare available items for sheets (exclude already added)
-  const availableDiets = DIETS.filter(d => !existingDiets.includes(d.value)).map(d => ({
-        id: d.value,
-        label: d.label,
-      }));
+  const availableDiets = DIETS.filter(
+    d => !existingDiets.includes(d.value),
+  ).map(d => ({
+    id: d.value,
+    label: d.label,
+  }));
 
-  const availableIntolerances = INTOLERANCES.filter(i => !existingIntolerances.includes(i.value)).map(
-        i => ({
-          id: i.value,
-          label: i.label,
-        }),
-      );
+  const availableIntolerances = INTOLERANCES.filter(
+    i => !existingIntolerances.includes(i.value),
+  ).map(i => ({
+    id: i.value,
+    label: i.label,
+  }));
 
-  const availableGoals = HEALTH_GOALS.filter(h => !existingHealthGoals.includes(h.value)).map(
-        h => ({
-          id: h.value,
-          label: h.label,
-        }),
-      );
+  const availableGoals = HEALTH_GOALS.filter(
+    h => !existingHealthGoals.includes(h.value),
+  ).map(h => ({
+    id: h.value,
+    label: h.label,
+  }));
 
   // Handle opening sheets
   const handleOpenDietSheet = () => {
@@ -167,26 +172,20 @@ export const DietaryRestrictionSelector: React.FC<
       return;
     }
 
-    executeRefreshWithFinally(
-      async () => {
-        const restrictions: RestrictionType[] = selectedDietIds.map(diet => ({
-          diet,
-        }));
+    executeRefreshWithFinally(async () => {
+      const restrictions: RestrictionType[] = selectedDietIds.map(diet => ({
+        diet,
+      }));
 
-        const success = await onAdd(
-          restrictions,
-          RestrictionSeverity.Preference,
-        );
+      const success = await onAdd(restrictions, RestrictionSeverity.Preference);
 
-        if (success) {
-          setSelectedDietIds([]);
-          setDietSheetVisible(false);
-        } else {
-          Alert.alert('Error', 'Failed to add diets');
-        }
-      },
-      setIsSavingDiets,
-    );
+      if (success) {
+        setSelectedDietIds([]);
+        setDietSheetVisible(false);
+      } else {
+        alertService.alert('Error', 'Failed to add diets');
+      }
+    }, setIsSavingDiets);
   };
 
   const handleSaveIntolerances = () => {
@@ -195,28 +194,25 @@ export const DietaryRestrictionSelector: React.FC<
       return;
     }
 
-    executeRefreshWithFinally(
-      async () => {
-        const restrictions: RestrictionType[] = selectedIntoleranceIds.map(
-          intolerance => ({
-            intolerance,
-          }),
-        );
+    executeRefreshWithFinally(async () => {
+      const restrictions: RestrictionType[] = selectedIntoleranceIds.map(
+        intolerance => ({
+          intolerance,
+        }),
+      );
 
-        const success = await onAdd(
-          restrictions,
-          RestrictionSeverity.Intolerance,
-        );
+      const success = await onAdd(
+        restrictions,
+        RestrictionSeverity.Intolerance,
+      );
 
-        if (success) {
-          setSelectedIntoleranceIds([]);
-          setIntoleranceSheetVisible(false);
-        } else {
-          Alert.alert('Error', 'Failed to add intolerances');
-        }
-      },
-      setIsSavingIntolerances,
-    );
+      if (success) {
+        setSelectedIntoleranceIds([]);
+        setIntoleranceSheetVisible(false);
+      } else {
+        alertService.alert('Error', 'Failed to add intolerances');
+      }
+    }, setIsSavingIntolerances);
   };
 
   const handleSaveGoals = () => {
@@ -225,25 +221,22 @@ export const DietaryRestrictionSelector: React.FC<
       return;
     }
 
-    executeRefreshWithFinally(
-      async () => {
-        const restrictions: RestrictionType[] = selectedGoalIds.map(
-          healthGoal => ({
-            healthGoal,
-          }),
-        );
+    executeRefreshWithFinally(async () => {
+      const restrictions: RestrictionType[] = selectedGoalIds.map(
+        healthGoal => ({
+          healthGoal,
+        }),
+      );
 
-        const success = await onAdd(restrictions, RestrictionSeverity.Goal);
+      const success = await onAdd(restrictions, RestrictionSeverity.Goal);
 
-        if (success) {
-          setSelectedGoalIds([]);
-          setGoalSheetVisible(false);
-        } else {
-          Alert.alert('Error', 'Failed to add health goals');
-        }
-      },
-      setIsSavingGoals,
-    );
+      if (success) {
+        setSelectedGoalIds([]);
+        setGoalSheetVisible(false);
+      } else {
+        alertService.alert('Error', 'Failed to add health goals');
+      }
+    }, setIsSavingGoals);
   };
 
   return (

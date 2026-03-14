@@ -4,6 +4,7 @@ import {
   useItemByUpcFilterQuery,
   useItemBySkuFilterQuery,
   useCreateItemMutation,
+  useFlagItemForReviewMutation,
   CreateItemMutation,
   UpcFormat,
 } from '#generated';
@@ -13,7 +14,7 @@ import {
   selectBottomSheetState,
 } from '#store/useAppStore';
 import { ScannedItem } from '../store/slices/barcodeScannerSlice';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useImageUpload } from './useImageUpload';
 import { storage } from '#/storage/mmkv';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -45,6 +46,10 @@ const convertToScannedItem = (
     imageUrl?: string | null;
     primaryUpc?: string | null;
     netWeight?: number | null;
+    type?: string | null;
+    storageState?: string | null;
+    shelfLifeDays?: number | null;
+    tags?: string[] | null;
     displayUnit?: {
       id: string;
       name: string;
@@ -52,6 +57,13 @@ const convertToScannedItem = (
     } | null;
     brands?: Array<{
       brand: {
+        id: string;
+        name: string;
+      };
+    }> | null;
+    categories?: Array<{
+      isPrimary?: boolean | null;
+      category: {
         id: string;
         name: string;
       };
@@ -121,11 +133,22 @@ const convertToScannedItem = (
     displayUnit: effectiveDisplayUnit,
     brandName: effectiveBrandName,
     brandId: effectiveBrandId,
+    type: item.type || undefined,
+    storageState: item.storageState || undefined,
+    shelfLifeDays: item.shelfLifeDays ?? undefined,
+    tags: item.tags ?? undefined,
+    categories: item.categories?.map(c => ({
+      id: c.category.id,
+      name: c.category.name,
+      isPrimary: c.isPrimary ?? undefined,
+    })),
   };
 };
 
 /** Upload pending images after item creation (module-level to avoid try-catch in hook body) */
-async function uploadPendingImages<T extends { id: string; imageUrl?: string | null }>(
+async function uploadPendingImages<
+  T extends { id: string; imageUrl?: string | null },
+>(
   createdItem: T,
   uploadItemImage: (image: any, itemId: string) => Promise<string | null>,
 ): Promise<T> {
@@ -163,6 +186,58 @@ async function uploadPendingImages<T extends { id: string; imageUrl?: string | n
 function cleanupPendingImageStorage(): void {
   storage.remove('temp_pending_item_images');
   storage.remove('temp_pending_item_image');
+}
+
+/** Build a human-readable reason string from form corrections */
+function buildSuggestEditReason(formData: Record<string, unknown>): string {
+  const parts: string[] = [];
+  if (formData.editReason) {
+    parts.push(String(formData.editReason));
+  }
+  const fields: Array<[string, string]> = [
+    ['name', 'Name'],
+    ['vendor', 'Brand'],
+    ['primaryUpc', 'UPC'],
+  ];
+  for (const [key, label] of fields) {
+    if (formData[key]) {
+      parts.push(`${label}: ${formData[key]}`);
+    }
+  }
+  if (
+    formData.netWeights &&
+    Array.isArray(formData.netWeights) &&
+    formData.netWeights.length > 0
+  ) {
+    const weights = formData.netWeights
+      .map((w: any) => `${w.value} ${w.unitName}`)
+      .join(', ');
+    parts.push(`Net Weight: ${weights}`);
+  }
+  return parts.join(' | ') || 'User suggested corrections';
+}
+
+/** Build a corrected ScannedItem from form data */
+function buildCorrectedScannedItem(
+  original: ScannedItem,
+  formData: Record<string, unknown>,
+): ScannedItem {
+  return {
+    ...original,
+    name: (formData.name as string) || original.name,
+    description: (formData.description as string) || original.description,
+    brandName:
+      (formData.vendor as string) ||
+      (formData.brandName as string) ||
+      original.brandName,
+    brandId: (formData.brandId as string) || original.brandId,
+    imageUrl: (formData.imageUrl as string) || original.imageUrl,
+    upc: (formData.primaryUpc as string) || original.upc,
+    type: (formData.type as string) || original.type,
+    storageState: (formData.storageState as string) || original.storageState,
+    shelfLifeDays: (formData.shelfLifeDays as number) ?? original.shelfLifeDays,
+    tags: (formData.tags as string[]) || original.tags,
+  };
 }
 
 export const useSearchResults = (barcode: string, format?: string) => {
@@ -219,7 +294,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
       cleanupPendingImageStorage();
       pendingBrandNameRef.current = undefined;
 
-      Alert.alert('Error', `Failed to add item: ${error.message}`);
+      alertService.alert('Error', `Failed to add item: ${error.message}`);
     },
   });
 
@@ -400,6 +475,54 @@ export const useSearchResults = (barcode: string, format?: string) => {
     );
   };
 
+  const [flagItem, { loading: suggestingEdit }] =
+    useFlagItemForReviewMutation();
+
+  const handleSuggestEdit = async (itemId: string, formData: any) => {
+    const reason = buildSuggestEditReason(formData);
+
+    // Store images for upload if provided
+    if (formData.selectedImages && formData.selectedImages.length > 0) {
+      storage.set(
+        'temp_pending_item_images',
+        JSON.stringify(formData.selectedImages),
+      );
+    }
+
+    const result = await executeMutation(
+      () => flagItem({ variables: { itemId, reason } }),
+      'Error flagging item for review:',
+    );
+
+    if (result !== false) {
+      // Upload images if any were selected
+      if (formData.selectedImages?.length > 0) {
+        await executeMutation(
+          () =>
+            uploadPendingImages(
+              { id: itemId, imageUrl: null },
+              uploadItemImage,
+            ),
+          'Error uploading images for suggestion:',
+        );
+      }
+      cleanupPendingImageStorage();
+
+      // Update local display with corrected data
+      const currentItem = searchResults[0];
+      if (currentItem) {
+        const correctedItem = buildCorrectedScannedItem(currentItem, formData);
+        setSearchResults([correctedItem]);
+      }
+
+      hideBottomSheet();
+      alertService.alert(
+        'Thank You',
+        'Your suggestion has been submitted for review.',
+      );
+    }
+  };
+
   const handleRetry = () => {
     setSearchError(null);
     // Add refetch logic here
@@ -410,7 +533,9 @@ export const useSearchResults = (barcode: string, format?: string) => {
     loading: upcLoading || skuLoading,
     error: upcError || skuError,
     addingItem,
+    suggestingEdit,
     handleAddItem,
+    handleSuggestEdit,
     handleRetry,
     clearSearch,
   };

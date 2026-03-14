@@ -9,6 +9,7 @@ interface ProfileScreenWrapperProps {
   title?: string;
   showBackButton?: boolean;
   testID?: string;
+  scrollEnabled?: boolean;
 }
 
 /**
@@ -20,6 +21,7 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
   title,
   showBackButton = true,
   testID,
+  scrollEnabled = true,
 }) => {
   const { goBack } = useAppNavigation();
   const { theme } = useUnistyles();
@@ -32,12 +34,16 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
       {!!showBackButton && (
         <Header title={title ?? ''} onBack={goBack} centerTitle />
       )}
-      <ScrollView
-        style={styles.scrollView}
-        contentInsetAdjustmentBehavior="automatic"
-      >
-        {children}
-      </ScrollView>
+      {scrollEnabled ? (
+        <ScrollView
+          style={styles.scrollView}
+          contentInsetAdjustmentBehavior="automatic"
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        <View style={styles.scrollView}>{children}</View>
+      )}
     </View>
   );
 };

@@ -2,7 +2,7 @@
  * useOpenPantryItemBatch - Mutation hook for marking a batch as opened
  */
 
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useOpenPantryItemBatchMutation } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -32,7 +32,7 @@ export function useOpenPantryItemBatch({
         'pantryItem',
         null,
       ),
-      update: (cache) => {
+      update: cache => {
         // Optimistically update the batch in cache
         cache.modify({
           id: cache.identify({ __typename: 'PantryItemBatch', id: batchId }),
@@ -43,7 +43,12 @@ export function useOpenPantryItemBatch({
         });
 
         // Persist optimistic state to survive cache-and-network refetches while offline
-        optimisticDataPersistence.save('PantryItemBatch', batchId, 'isOpened', true);
+        optimisticDataPersistence.save(
+          'PantryItemBatch',
+          batchId,
+          'isOpened',
+          true,
+        );
       },
     });
 
@@ -57,7 +62,7 @@ export function useOpenPantryItemBatch({
       const { message } = handleApolloError(result.error, {
         operation: 'Open Batch',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     }
 
     return false;

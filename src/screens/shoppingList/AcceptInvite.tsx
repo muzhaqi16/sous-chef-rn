@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -59,9 +54,10 @@ export const AcceptInvite: React.FC = () => {
   // Note: Tokens are no longer exposed in query responses for security.
   // When navigating via deep link, token comes from route params.
   // When navigating via in-app UI, inviteId is used to match.
-  const shoppingListInvite = shoppingListData?.me?.pendingCollaborationInvites?.find(
-    inv => (inviteId ? inv.id === inviteId : false),
-  );
+  const shoppingListInvite =
+    shoppingListData?.me?.pendingCollaborationInvites?.find(inv =>
+      inviteId ? inv.id === inviteId : false,
+    );
 
   const homeInvite = homeInviteData?.me?.pendingHomeInvites?.find(inv =>
     inviteId ? inv.id === inviteId : false,
@@ -92,7 +88,7 @@ export const AcceptInvite: React.FC = () => {
     const inviteToken = resolveInviteToken();
 
     if (!inviteToken) {
-      Alert.alert('Error', 'Invalid invitation');
+      alertService.alert('Error', 'Invalid invitation');
       return;
     }
 
@@ -100,22 +96,24 @@ export const AcceptInvite: React.FC = () => {
       async () => {
         if (invitationType === 'shopping_list') {
           await acceptShoppingListInvite({ variables: { token: inviteToken } });
-          Alert.alert('Success', 'Shopping list invitation accepted!', [
+          alertService.alert('Success', 'Shopping list invitation accepted!', [
             { text: 'OK', onPress: () => navigation.goBack() },
           ]);
         } else if (invitationType === 'home') {
           await acceptHomeInvite({ variables: { token: inviteToken } });
-          Alert.alert('Success', 'Home invitation accepted!', [
+          alertService.alert('Success', 'Home invitation accepted!', [
             { text: 'OK', onPress: () => navigation.goBack() },
           ]);
         } else {
-          Alert.alert('Error', 'Unknown invitation type');
+          alertService.alert('Error', 'Unknown invitation type');
         }
       },
       setProcessing,
       (error: unknown) => {
-        errorService.reportError(error, { operation: 'AcceptInvite.acceptInvitation' });
-        Alert.alert('Error', getErrorMessage(error));
+        errorService.reportError(error, {
+          operation: 'AcceptInvite.acceptInvitation',
+        });
+        alertService.alert('Error', getErrorMessage(error));
       },
     );
   };
@@ -124,11 +122,11 @@ export const AcceptInvite: React.FC = () => {
     const inviteToken = resolveInviteToken();
 
     if (!inviteToken) {
-      Alert.alert('Error', 'Invalid invitation');
+      alertService.alert('Error', 'Invalid invitation');
       return;
     }
 
-    Alert.alert(
+    alertService.alert(
       'Decline Invitation',
       'Are you sure you want to decline this invitation?',
       [
@@ -144,14 +142,16 @@ export const AcceptInvite: React.FC = () => {
                     variables: { token: inviteToken! },
                   });
                 } else if (invitationType === 'home') {
-                  await declineHomeInvite({ variables: { token: inviteToken! } });
+                  await declineHomeInvite({
+                    variables: { token: inviteToken! },
+                  });
                 }
 
                 navigation.goBack();
               },
               setProcessing,
               () => {
-                Alert.alert('Error', 'Failed to decline invitation');
+                alertService.alert('Error', 'Failed to decline invitation');
               },
             );
           },
@@ -177,7 +177,11 @@ export const AcceptInvite: React.FC = () => {
             : 'Loading invitation details...'}
         </Text>
         <Pressable
-          style={({pressed}) => [styles.button, styles.declineButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.button,
+            styles.declineButton,
+            pressed && styles.pressed,
+          ]}
           onPress={() => navigation.goBack()}
         >
           <Text style={styles.declineButtonText}>Go Back</Text>
@@ -233,10 +237,11 @@ export const AcceptInvite: React.FC = () => {
           </Text>
         </View>
 
-        {!!((invitationType === 'shopping_list' &&
-          (shoppingListInvite as any)?.shoppingList?.description) || // Acceptable: optional field
-          (invitationType === 'home' &&
-            (homeInvite as any)?.home?.description)) && (
+        {!!(
+          (invitationType === 'shopping_list' &&
+            (shoppingListInvite as any)?.shoppingList?.description) || // Acceptable: optional field
+          (invitationType === 'home' && (homeInvite as any)?.home?.description)
+        ) && (
           <View style={styles.messageContainer}>
             <Text style={styles.messageLabel}>Description:</Text>
             <Text style={styles.message}>
@@ -251,7 +256,11 @@ export const AcceptInvite: React.FC = () => {
 
         <View style={styles.actions}>
           <Pressable
-            style={({pressed}) => [styles.button, styles.declineButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.button,
+              styles.declineButton,
+              pressed && styles.pressed,
+            ]}
             onPress={handleDecline}
             disabled={processing}
           >
@@ -259,7 +268,11 @@ export const AcceptInvite: React.FC = () => {
           </Pressable>
 
           <Pressable
-            style={({pressed}) => [styles.button, styles.acceptButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.button,
+              styles.acceptButton,
+              pressed && styles.pressed,
+            ]}
             onPress={handleAccept}
             disabled={processing}
           >

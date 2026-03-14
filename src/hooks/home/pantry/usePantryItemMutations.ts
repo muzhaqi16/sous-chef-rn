@@ -7,7 +7,7 @@
  * - Cache updates for offline-first support
  */
 
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { generateId } from '#/utils/generateId';
 import {
   useCreatePantryItemMutation,
@@ -73,7 +73,7 @@ export function usePantryItemMutations({
       const { message } = handleApolloError(error, {
         operation: 'Add Pantry Item',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     },
     optimisticResponse: (variables: CreatePantryItemMutationVariables) => {
       const tempId = `temp-${generateId()}`;
@@ -137,7 +137,7 @@ export function usePantryItemMutations({
     errorPolicy: 'all',
     onError: error => {
       if (handleVersionConflict(error)) {
-        Alert.alert('Item Updated', getVersionConflictMessage(error), [
+        alertService.alert('Item Updated', getVersionConflictMessage(error), [
           { text: 'Refresh', onPress: () => refetch() },
           { text: 'Cancel', style: 'cancel' },
         ]);
@@ -147,7 +147,7 @@ export function usePantryItemMutations({
       const { message } = handleApolloError(error, {
         operation: 'Update Pantry Item',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     },
     optimisticResponse: variables => {
       const currentItem = pantryItems.find(item => item.id === variables.id);
@@ -201,7 +201,7 @@ export function usePantryItemMutations({
       const { message } = handleApolloError(error, {
         operation: 'Remove Pantry Item',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
       refetch(); // Restore state on error
     },
     update: (cache, { data }, { variables }) => {

@@ -18,6 +18,21 @@ jest.mock('#/utils/environment', () => ({
   Environment: {
     shouldEnableAnalytics: jest.fn(),
     isDevelopment: jest.fn(),
+    getApiConfig: jest.fn(() => ({ wsUrl: 'ws://localhost:4000/graphql' })),
+  },
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
+jest.mock('#store', () => ({
+  useStore: {
+    getState: jest.fn(() => ({
+      network: { isConnected: true },
+    })),
   },
 }));
 
@@ -52,11 +67,12 @@ const createMockOperation = (name: string, type: string = 'query') => ({
 
 // Helper to create a mock forward function
 const createMockForward = (response: any = { data: {} }) => {
-  return jest.fn(() =>
-    new Observable(observer => {
-      observer.next(response);
-      observer.complete();
-    }),
+  return jest.fn(
+    () =>
+      new Observable(observer => {
+        observer.next(response);
+        observer.complete();
+      }),
   );
 };
 
@@ -89,7 +105,7 @@ describe('createTelemetryLink', () => {
       expect(Telemetry.increment).not.toHaveBeenCalled();
     });
 
-    it('enables telemetry in development mode', (done) => {
+    it('enables telemetry in development mode', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
@@ -112,7 +128,7 @@ describe('createTelemetryLink', () => {
       });
     });
 
-    it('enables telemetry when analytics is enabled', (done) => {
+    it('enables telemetry when analytics is enabled', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(true);
       mockedEnvironment.isDevelopment.mockReturnValue(false);
 
@@ -157,7 +173,7 @@ describe('createTelemetryLink', () => {
       jest.spyOn(Math, 'random').mockRestore();
     });
 
-    it('always records telemetry in development regardless of sampling', (done) => {
+    it('always records telemetry in development regardless of sampling', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
@@ -182,7 +198,7 @@ describe('createTelemetryLink', () => {
   });
 
   describe('timing and reporting', () => {
-    it('reports duration via histogram on successful response', (done) => {
+    it('reports duration via histogram on successful response', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
@@ -208,7 +224,7 @@ describe('createTelemetryLink', () => {
       });
     });
 
-    it('places and clears performance marks', (done) => {
+    it('places and clears performance marks', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
@@ -229,7 +245,7 @@ describe('createTelemetryLink', () => {
       });
     });
 
-    it('reports errors in response', (done) => {
+    it('reports errors in response', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
@@ -262,7 +278,7 @@ describe('createTelemetryLink', () => {
       });
     });
 
-    it('reports slow queries when duration exceeds 1000ms', (done) => {
+    it('reports slow queries when duration exceeds 1000ms', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
@@ -295,7 +311,7 @@ describe('createTelemetryLink', () => {
       });
     });
 
-    it('reports network errors', (done) => {
+    it('reports network errors', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
@@ -314,7 +330,9 @@ describe('createTelemetryLink', () => {
       result.subscribe({
         error: () => {
           expect(Telemetry.error).toHaveBeenCalledWith(
-            expect.stringContaining('GraphQL Network Error in NetworkFailQuery'),
+            expect.stringContaining(
+              'GraphQL Network Error in NetworkFailQuery',
+            ),
             expect.objectContaining({
               operation_name: 'NetworkFailQuery',
               network_error: true,
@@ -332,7 +350,7 @@ describe('createTelemetryLink', () => {
   });
 
   describe('operation types', () => {
-    it('identifies unnamed operations as "unnamed"', (done) => {
+    it('identifies unnamed operations as "unnamed"', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
@@ -340,9 +358,7 @@ describe('createTelemetryLink', () => {
       const operation = {
         operationName: '',
         query: {
-          definitions: [
-            { kind: 'OperationDefinition', operation: 'query' },
-          ],
+          definitions: [{ kind: 'OperationDefinition', operation: 'query' }],
         },
         variables: {},
         setContext: jest.fn(),
@@ -363,7 +379,7 @@ describe('createTelemetryLink', () => {
       });
     });
 
-    it('detects mutation operation type', (done) => {
+    it('detects mutation operation type', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 

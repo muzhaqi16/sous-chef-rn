@@ -5,7 +5,8 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   Easing,
-  cancelAnimation } from 'react-native-reanimated';
+  cancelAnimation,
+} from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useRecyclingState } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
@@ -66,17 +67,17 @@ const ExpirationText = React.memo<{
  */
 const SlideAnimatedWrapper: React.FC<{
   itemId: string;
+  onDelete: (id: string) => void;
   children: (handleDelete: () => void) => React.ReactNode;
-}> = ({ itemId, children }) => {
-  const { actions } = usePantryActions();
-
+}> = ({ itemId, onDelete, children }) => {
   const translateX = useSharedValue(0);
   const slideOpacity = useSharedValue(1);
   const isAnimating = useSharedValue(false);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.get() }],
-    opacity: slideOpacity.get() }));
+    opacity: slideOpacity.get(),
+  }));
 
   // Synchronous reset on FlashList cell recycling — fires during render (before paint)
   useRecyclingState(undefined, [itemId], () => {
@@ -87,9 +88,9 @@ const SlideAnimatedWrapper: React.FC<{
     isAnimating.set(false);
   });
 
-  // Stable callback for scheduleOnRN — captures actions/itemId via closure
+  // Stable callback for scheduleOnRN — captures onDelete/itemId via closure
   const doDelete = () => {
-    actions.onItemDelete?.(itemId);
+    onDelete(itemId);
   };
 
   const handleDelete = () => {
@@ -98,19 +99,21 @@ const SlideAnimatedWrapper: React.FC<{
 
     const config = {
       duration: SLIDE_PRESETS.exitWithFade.duration,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1) };
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+    };
 
-    slideOpacity.set(withTiming(
-      SLIDE_PRESETS.exitWithFade.opacityTarget,
-      config,
-    ));
-    translateX.set(withTiming(SCREEN_WIDTH, config, finished => {
-      'worklet';
-      isAnimating.set(false);
-      if (finished) {
-        scheduleOnRN(doDelete);
-      }
-    }));
+    slideOpacity.set(
+      withTiming(SLIDE_PRESETS.exitWithFade.opacityTarget, config),
+    );
+    translateX.set(
+      withTiming(SCREEN_WIDTH, config, finished => {
+        'worklet';
+        isAnimating.set(false);
+        if (finished) {
+          scheduleOnRN(doDelete);
+        }
+      }),
+    );
   };
 
   return (
@@ -139,20 +142,22 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
   packageBreakdownText,
   remainingNetWeightText,
   quantityBreakdownText,
-  activeBatchCount }) => {
+  activeBatchCount,
+}) => {
   const { actions, swipeable } = usePantryActions();
 
   // PERFORMANCE: Single object for all item action callbacks
-  const itemActions = ({
-      onPress: () => actions.onItemPress(id),
-      onEdit: actions.onItemEdit ? () => actions.onItemEdit!(id) : undefined,
-      onConsume: actions.onItemConsume
-        ? () => actions.onItemConsume!(id)
-        : undefined,
-      onWaste: actions.onItemWaste ? () => actions.onItemWaste!(id) : undefined,
-      onRestock: actions.onItemRestock
-        ? () => actions.onItemRestock!(id)
-        : undefined });
+  const itemActions = {
+    onPress: () => actions.onItemPress(id),
+    onEdit: actions.onItemEdit ? () => actions.onItemEdit!(id) : undefined,
+    onConsume: actions.onItemConsume
+      ? () => actions.onItemConsume!(id)
+      : undefined,
+    onWaste: actions.onItemWaste ? () => actions.onItemWaste!(id) : undefined,
+    onRestock: actions.onItemRestock
+      ? () => actions.onItemRestock!(id)
+      : undefined,
+  };
 
   // Map ItemVariant to CardVariant
   const cardVariant: CardVariant = variant;
@@ -227,7 +232,9 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
 
   if (actions.onItemDelete) {
     return (
-      <SlideAnimatedWrapper itemId={id}>{renderCard}</SlideAnimatedWrapper>
+      <SlideAnimatedWrapper itemId={id} onDelete={actions.onItemDelete}>
+        {renderCard}
+      </SlideAnimatedWrapper>
     );
   }
 
@@ -236,13 +243,17 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   expiration: {
-    fontSize: theme.typography.fontSize.sm - 1 },
+    fontSize: theme.typography.fontSize.sm - 1,
+  },
   expirationBold: {
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   outOfStock: {
     fontSize: theme.typography.fontSize.sm - 1,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.warning } }));
+    color: theme.colors.warning,
+  },
+}));
 
 // PERFORMANCE: Custom comparator only checks data primitives — action callbacks come
 // from context and don't appear in props, so every prop is a stable primitive/string.

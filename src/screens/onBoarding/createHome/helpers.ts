@@ -1,4 +1,4 @@
-import {Alert} from 'react-native';
+import { alertService } from '#/services/alertService';
 
 // Resource checking helpers
 export const checkExistingResources = async (
@@ -63,20 +63,20 @@ export const createPantryForHome = async (
 
 // Alert helpers
 export const showPantryCreationError = (onContinue: () => void) => {
-  Alert.alert(
+  alertService.alert(
     'Notice',
     'Pantry creation failed but you can create it later from settings.',
-    [{text: 'Continue', onPress: onContinue}],
+    [{ text: 'Continue', onPress: onContinue }],
   );
 };
 
 export const showSkipPantryWarning = (onSkip: () => void) => {
-  Alert.alert(
+  alertService.alert(
     'Skip Pantry Creation?',
     'You have a home but no pantry. You can create one later from settings.',
     [
-      {text: 'Cancel', style: 'cancel'},
-      {text: 'Skip', onPress: onSkip, style: 'destructive'},
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Skip', onPress: onSkip, style: 'destructive' },
     ],
   );
 };

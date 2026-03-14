@@ -73,7 +73,9 @@ interface ResetManagerState {
   fullReset: () => Promise<void>;
   sessionExpired: () => Promise<void>;
   resetOnboarding: () => Promise<void>;
-  tokenRefreshFailed: (reason: 'auth_rejected' | 'network' | 'unknown') => Promise<void>;
+  tokenRefreshFailed: (
+    reason: 'auth_rejected' | 'network' | 'unknown',
+  ) => Promise<void>;
 }
 
 // Add navigation state machine interface
@@ -205,6 +207,7 @@ export const useStore = create<RootState>()(
             lastOnlineTime,
             lastOfflineTime,
             needsTokenRefresh,
+            offlineModeEnabled, // Initialized from MMKV on startup, not persisted via Zustand
 
             // UI state (temporary, session-only)
             bottomSheetVisible,

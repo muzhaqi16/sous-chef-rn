@@ -1,13 +1,17 @@
 'use no memo';
 
 import React from 'react';
-import { Alert } from 'react-native';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { alertService } from '#/services/alertService';
 import { RecipeMain } from '../RecipeMain';
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: jest.fn(() => ({
@@ -101,7 +105,11 @@ jest.mock('#/hooks/offline/useOptimisticDataRestoration', () => ({
 }));
 
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: { save: jest.fn(), clear: jest.fn(), clearEntity: jest.fn() },
+  optimisticDataPersistence: {
+    save: jest.fn(),
+    clear: jest.fn(),
+    clearEntity: jest.fn(),
+  },
 }));
 
 // Top-level capturing mocks.
@@ -112,11 +120,17 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
 
 type AnyProps = Record<string, any>;
 
-let mockItemListImpl: (props: AnyProps) => React.ReactElement | null = () => null;
-let mockFilterTabsImpl: (props: AnyProps) => React.ReactElement | null = () => null;
-let mockFolderPickerImpl: (props: AnyProps) => React.ReactElement | null = () => null;
-let mockTagPickerImpl: (props: AnyProps) => React.ReactElement | null = () => null;
-let mockSegmentedControlImpl: (props: AnyProps) => React.ReactElement | null = () => null;
+let mockItemListImpl: (props: AnyProps) => React.ReactElement | null = () =>
+  null;
+let mockFilterTabsImpl: (props: AnyProps) => React.ReactElement | null = () =>
+  null;
+let mockFolderPickerImpl: (props: AnyProps) => React.ReactElement | null = () =>
+  null;
+let mockTagPickerImpl: (props: AnyProps) => React.ReactElement | null = () =>
+  null;
+let mockSegmentedControlImpl: (
+  props: AnyProps,
+) => React.ReactElement | null = () => null;
 
 jest.mock('#components/organisms/ItemList', () => ({
   ItemList: (props: AnyProps) => mockItemListImpl(props),
@@ -150,7 +164,7 @@ jest.mock('#components/base/Skeleton/RecipeSkeleton', () => ({
 // Render TabScreenHeader including headerRight so header action buttons are accessible in tests
 jest.mock('#components/molecules/TabScreenHeader', () => ({
   TabScreenHeader: ({ title, headerRight }: any) => {
-    const ReactInMock = require("react");
+    const ReactInMock = require('react');
     const { View, Text } = require('react-native');
     return ReactInMock.createElement(
       View,
@@ -262,7 +276,13 @@ describe('RecipeMain', () => {
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'r-1', name: 'Pasta', servings: 2, folder: 'Favorites', tags: ['easy'] },
+          {
+            recipeId: 'r-1',
+            name: 'Pasta',
+            servings: 2,
+            folder: 'Favorites',
+            tags: ['easy'],
+          },
         ],
         loading: false,
       },
@@ -284,7 +304,13 @@ describe('RecipeMain', () => {
       '#/services/recipeApi/SpoonacularService',
     );
     spoonacularService.getRandomRecipes.mockResolvedValue([
-      { id: 'rand-1', title: 'Random Soup', servings: 4, readyInMinutes: 30, image: null },
+      {
+        id: 'rand-1',
+        title: 'Random Soup',
+        servings: 4,
+        readyInMinutes: 30,
+        image: null,
+      },
     ]);
 
     const tree = render(<RecipeMain />);
@@ -430,16 +456,28 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useRecipeFolders } = jest.requireMock('#/hooks/recipe/useRecipeFolders');
+    const { useRecipeFolders } = jest.requireMock(
+      '#/hooks/recipe/useRecipeFolders',
+    );
     useRecipeFolders.mockReturnValue({ folders: [] });
 
     const { useRecipeTags } = jest.requireMock('#/hooks/recipe/useRecipeTags');
     useRecipeTags.mockReturnValue({ tags: [] });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
-        recipes: [{ recipeId: 'r-1', name: 'Pasta', servings: 2, folder: null, tags: [] }],
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'Pasta',
+            servings: 2,
+            folder: null,
+            tags: [],
+          },
+        ],
         loading: false,
       },
       actions: {
@@ -456,7 +494,9 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [],
@@ -476,19 +516,46 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useRecipeFolders } = jest.requireMock('#/hooks/recipe/useRecipeFolders');
-    useRecipeFolders.mockReturnValue({ folders: ['Breakfast', 'Lunch', 'Dinner'] });
+    const { useRecipeFolders } = jest.requireMock(
+      '#/hooks/recipe/useRecipeFolders',
+    );
+    useRecipeFolders.mockReturnValue({
+      folders: ['Breakfast', 'Lunch', 'Dinner'],
+    });
 
     const { useRecipeTags } = jest.requireMock('#/hooks/recipe/useRecipeTags');
     useRecipeTags.mockReturnValue({ tags: ['quick', 'healthy', 'comfort'] });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'r-1', name: 'Pancakes', servings: 4, totalTimeMinutes: 20, folder: 'Breakfast', tags: ['quick'] },
-          { recipeId: 'r-2', name: 'Salad', servings: 2, totalTimeMinutes: 10, folder: 'Lunch', tags: ['healthy'] },
-          { recipeId: 'r-3', name: 'Stew', servings: 6, totalTimeMinutes: 60, folder: 'Dinner', tags: ['comfort'] },
+          {
+            recipeId: 'r-1',
+            name: 'Pancakes',
+            servings: 4,
+            totalTimeMinutes: 20,
+            folder: 'Breakfast',
+            tags: ['quick'],
+          },
+          {
+            recipeId: 'r-2',
+            name: 'Salad',
+            servings: 2,
+            totalTimeMinutes: 10,
+            folder: 'Lunch',
+            tags: ['healthy'],
+          },
+          {
+            recipeId: 'r-3',
+            name: 'Stew',
+            servings: 6,
+            totalTimeMinutes: 60,
+            folder: 'Dinner',
+            tags: ['comfort'],
+          },
         ],
         loading: false,
       },
@@ -506,7 +573,9 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
@@ -538,7 +607,9 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
@@ -571,7 +642,9 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
@@ -603,7 +676,9 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     const recipes = Array.from({ length: 20 }, (_, i) => ({
       recipeId: `r-${i}`,
       name: `Recipe ${i}`,
@@ -637,10 +712,18 @@ describe('RecipeMain', () => {
       '#/services/recipeApi/SpoonacularService',
     );
     spoonacularService.getRandomRecipes.mockResolvedValue([
-      { id: 'r1', title: 'Random Soup', servings: 4, readyInMinutes: 30, image: 'https://example.com/soup.jpg' },
+      {
+        id: 'r1',
+        title: 'Random Soup',
+        servings: 4,
+        readyInMinutes: 30,
+        image: 'https://example.com/soup.jpg',
+      },
     ]);
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [],
@@ -670,10 +753,18 @@ describe('RecipeMain', () => {
       '#/services/recipeApi/SpoonacularService',
     );
     spoonacularService.getRandomRecipes.mockResolvedValue([
-      { id: 'r1', title: 'Random Soup', servings: 4, readyInMinutes: 30, image: null },
+      {
+        id: 'r1',
+        title: 'Random Soup',
+        servings: 4,
+        readyInMinutes: 30,
+        image: null,
+      },
     ]);
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [],
@@ -698,7 +789,9 @@ describe('RecipeMain', () => {
     ));
 
     const mockNavigate = jest.fn();
-    const { useAppNavigation } = jest.requireMock('#hooks/navigation/useAppNavigation');
+    const { useAppNavigation } = jest.requireMock(
+      '#hooks/navigation/useAppNavigation',
+    );
     useAppNavigation.mockReturnValue({
       navigate: mockNavigate,
       goBack: jest.fn(),
@@ -708,7 +801,9 @@ describe('RecipeMain', () => {
     const searchBtn = tree.getByLabelText('Search recipes');
     fireEvent.press(searchBtn);
 
-    expect(mockNavigate).toHaveBeenCalledWith('RecipeSearch', { initialQuery: '' });
+    expect(mockNavigate).toHaveBeenCalledWith('RecipeSearch', {
+      initialQuery: '',
+    });
   });
 
   it('navigates to RecipeCreate when add button callback fires', () => {
@@ -717,18 +812,26 @@ describe('RecipeMain', () => {
     ));
 
     const mockNavigate = jest.fn();
-    const { useAppNavigation } = jest.requireMock('#hooks/navigation/useAppNavigation');
+    const { useAppNavigation } = jest.requireMock(
+      '#hooks/navigation/useAppNavigation',
+    );
     useAppNavigation.mockReturnValue({
       navigate: mockNavigate,
       goBack: jest.fn(),
     });
 
-    const { useTabBarAddButton } = jest.requireMock('#hooks/navigation/useTabBarAddButton');
+    const { useTabBarAddButton } = jest.requireMock(
+      '#hooks/navigation/useTabBarAddButton',
+    );
     let addCallback: () => void;
-    useTabBarAddButton.mockImplementation((cb: () => void) => { addCallback = cb; });
+    useTabBarAddButton.mockImplementation((cb: () => void) => {
+      addCallback = cb;
+    });
 
     render(<RecipeMain />);
-    act(() => { addCallback!(); });
+    act(() => {
+      addCallback!();
+    });
 
     expect(mockNavigate).toHaveBeenCalledWith('RecipeCreate');
   });
@@ -742,10 +845,18 @@ describe('RecipeMain', () => {
       '#/services/recipeApi/SpoonacularService',
     );
     spoonacularService.getRandomRecipes.mockResolvedValue([
-      { id: 'r1', title: 'Random 1', servings: 2, readyInMinutes: 20, image: null },
+      {
+        id: 'r1',
+        title: 'Random 1',
+        servings: 2,
+        readyInMinutes: 20,
+        image: null,
+      },
     ]);
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [],
@@ -764,7 +875,13 @@ describe('RecipeMain', () => {
 
     // Press the refresh button
     spoonacularService.getRandomRecipes.mockResolvedValue([
-      { id: 'r2', title: 'Random 2', servings: 3, readyInMinutes: 15, image: null },
+      {
+        id: 'r2',
+        title: 'Random 2',
+        servings: 3,
+        readyInMinutes: 15,
+        image: null,
+      },
     ]);
 
     const refreshBtn = tree.getByLabelText('Refresh recipe suggestions');
@@ -783,9 +900,13 @@ describe('RecipeMain', () => {
     const { spoonacularService } = jest.requireMock(
       '#/services/recipeApi/SpoonacularService',
     );
-    spoonacularService.getRandomRecipes.mockRejectedValue(new Error('API error'));
+    spoonacularService.getRandomRecipes.mockRejectedValue(
+      new Error('API error'),
+    );
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [],
@@ -819,7 +940,9 @@ describe('RecipeMain', () => {
     );
     spoonacularService.getRandomRecipes.mockRejectedValue(abortError);
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [],
@@ -843,19 +966,25 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
-
     const { spoonacularService } = jest.requireMock(
       '#/services/recipeApi/SpoonacularService',
     );
     // First call succeeds (initial load), second fails (refresh)
     spoonacularService.getRandomRecipes
       .mockResolvedValueOnce([
-        { id: 'r1', title: 'Random', servings: 2, readyInMinutes: 10, image: null },
+        {
+          id: 'r1',
+          title: 'Random',
+          servings: 2,
+          readyInMinutes: 10,
+          image: null,
+        },
       ])
       .mockRejectedValueOnce(new Error('Network fail'));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [],
@@ -877,12 +1006,10 @@ describe('RecipeMain', () => {
       fireEvent.press(refreshBtn);
     });
 
-    expect(alertSpy).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       'Failed to load recipe suggestions. Please try again.',
     );
-
-    alertSpy.mockRestore();
   });
 
   it('navigates to RecipeDetail with externalSource for random recipe items', async () => {
@@ -891,7 +1018,9 @@ describe('RecipeMain', () => {
     ));
 
     const mockNavigate = jest.fn();
-    const { useAppNavigation } = jest.requireMock('#hooks/navigation/useAppNavigation');
+    const { useAppNavigation } = jest.requireMock(
+      '#hooks/navigation/useAppNavigation',
+    );
     useAppNavigation.mockReturnValue({
       navigate: mockNavigate,
       goBack: jest.fn(),
@@ -901,10 +1030,18 @@ describe('RecipeMain', () => {
       '#/services/recipeApi/SpoonacularService',
     );
     spoonacularService.getRandomRecipes.mockResolvedValue([
-      { id: 999, title: 'Rand Recipe', servings: 2, readyInMinutes: 10, image: null },
+      {
+        id: 999,
+        title: 'Rand Recipe',
+        servings: 2,
+        readyInMinutes: 10,
+        image: null,
+      },
     ]);
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [],
@@ -945,17 +1082,28 @@ describe('RecipeMain', () => {
     ));
 
     const mockNavigate = jest.fn();
-    const { useAppNavigation } = jest.requireMock('#hooks/navigation/useAppNavigation');
+    const { useAppNavigation } = jest.requireMock(
+      '#hooks/navigation/useAppNavigation',
+    );
     useAppNavigation.mockReturnValue({
       navigate: mockNavigate,
       goBack: jest.fn(),
     });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'abc-123', name: 'Saved Recipe', servings: 2, totalTimeMinutes: 30, folder: null, tags: [] },
+          {
+            recipeId: 'abc-123',
+            name: 'Saved Recipe',
+            servings: 2,
+            totalTimeMinutes: 30,
+            folder: null,
+            tags: [],
+          },
         ],
         loading: false,
       },
@@ -990,11 +1138,20 @@ describe('RecipeMain', () => {
     const { useUnfavoriteRecipeMutation } = jest.requireMock('#generated');
     useUnfavoriteRecipeMutation.mockReturnValue([mockUnfavorite]);
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'del-1', name: 'Delete Me', servings: 2, totalTimeMinutes: 10, folder: null, tags: [] },
+          {
+            recipeId: 'del-1',
+            name: 'Delete Me',
+            servings: 2,
+            totalTimeMinutes: 10,
+            folder: null,
+            tags: [],
+          },
         ],
         loading: false,
       },
@@ -1025,17 +1182,25 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
-
-    const mockUnfavorite = jest.fn().mockRejectedValue(new Error('Mutation fail'));
+    const mockUnfavorite = jest
+      .fn()
+      .mockRejectedValue(new Error('Mutation fail'));
     const { useUnfavoriteRecipeMutation } = jest.requireMock('#generated');
     useUnfavoriteRecipeMutation.mockReturnValue([mockUnfavorite]);
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'fail-1', name: 'Fail', servings: 1, folder: null, tags: [] },
+          {
+            recipeId: 'fail-1',
+            name: 'Fail',
+            servings: 1,
+            folder: null,
+            tags: [],
+          },
         ],
         loading: false,
       },
@@ -1056,12 +1221,10 @@ describe('RecipeMain', () => {
       await capturedOnItemDelete!('fail-1');
     });
 
-    expect(alertSpy).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       'Failed to remove recipe. Please try again.',
     );
-
-    alertSpy.mockRestore();
   });
 
   it('filters recipes by search query matching name', () => {
@@ -1069,12 +1232,28 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'r-1', name: 'Pasta Carbonara', description: 'Italian classic', servings: 2, folder: null, tags: [] },
-          { recipeId: 'r-2', name: 'Chicken Tikka', description: 'Indian curry', servings: 4, folder: null, tags: [] },
+          {
+            recipeId: 'r-1',
+            name: 'Pasta Carbonara',
+            description: 'Italian classic',
+            servings: 2,
+            folder: null,
+            tags: [],
+          },
+          {
+            recipeId: 'r-2',
+            name: 'Chicken Tikka',
+            description: 'Indian curry',
+            servings: 4,
+            folder: null,
+            tags: [],
+          },
         ],
         loading: false,
       },
@@ -1118,12 +1297,28 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'r-1', name: 'Dish A', description: 'Delicious curry', servings: 2, folder: null, tags: [] },
-          { recipeId: 'r-2', name: 'Dish B', description: 'Light salad', servings: 4, folder: null, tags: [] },
+          {
+            recipeId: 'r-1',
+            name: 'Dish A',
+            description: 'Delicious curry',
+            servings: 2,
+            folder: null,
+            tags: [],
+          },
+          {
+            recipeId: 'r-2',
+            name: 'Dish B',
+            description: 'Light salad',
+            servings: 4,
+            folder: null,
+            tags: [],
+          },
         ],
         loading: false,
       },
@@ -1162,16 +1357,28 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useRecipeFolders } = jest.requireMock('#/hooks/recipe/useRecipeFolders');
+    const { useRecipeFolders } = jest.requireMock(
+      '#/hooks/recipe/useRecipeFolders',
+    );
     useRecipeFolders.mockReturnValue({ folders: ['Favorites', 'Quick Meals'] });
 
     const { useRecipeTags } = jest.requireMock('#/hooks/recipe/useRecipeTags');
     useRecipeTags.mockReturnValue({ tags: [] });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
-        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Favorites', tags: [] }],
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'P',
+            servings: 2,
+            folder: 'Favorites',
+            tags: [],
+          },
+        ],
         loading: false,
       },
       actions: {
@@ -1195,16 +1402,28 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useRecipeFolders } = jest.requireMock('#/hooks/recipe/useRecipeFolders');
+    const { useRecipeFolders } = jest.requireMock(
+      '#/hooks/recipe/useRecipeFolders',
+    );
     useRecipeFolders.mockReturnValue({ folders: [] });
 
     const { useRecipeTags } = jest.requireMock('#/hooks/recipe/useRecipeTags');
     useRecipeTags.mockReturnValue({ tags: ['easy', 'healthy'] });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
-        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: ['easy'] }],
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'P',
+            servings: 2,
+            folder: null,
+            tags: ['easy'],
+          },
+        ],
         loading: false,
       },
       actions: {
@@ -1228,16 +1447,28 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useRecipeFolders } = jest.requireMock('#/hooks/recipe/useRecipeFolders');
+    const { useRecipeFolders } = jest.requireMock(
+      '#/hooks/recipe/useRecipeFolders',
+    );
     useRecipeFolders.mockReturnValue({ folders: ['Fav'] });
 
     const { useRecipeTags } = jest.requireMock('#/hooks/recipe/useRecipeTags');
     useRecipeTags.mockReturnValue({ tags: ['easy'] });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
-        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Fav', tags: ['easy'] }],
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'P',
+            servings: 2,
+            folder: 'Fav',
+            tags: ['easy'],
+          },
+        ],
         loading: false,
       },
       actions: {
@@ -1265,10 +1496,14 @@ describe('RecipeMain', () => {
     ));
 
     const mockRefetch = jest.fn().mockResolvedValue({});
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
-        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: [] }],
+        recipes: [
+          { recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: [] },
+        ],
         loading: false,
       },
       actions: {
@@ -1300,10 +1535,18 @@ describe('RecipeMain', () => {
       '#/services/recipeApi/SpoonacularService',
     );
     spoonacularService.getRandomRecipes.mockResolvedValue([
-      { id: 'r1', title: 'Random', servings: 2, readyInMinutes: 10, image: null },
+      {
+        id: 'r1',
+        title: 'Random',
+        servings: 2,
+        readyInMinutes: 10,
+        image: null,
+      },
     ]);
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [],
@@ -1336,10 +1579,18 @@ describe('RecipeMain', () => {
       '#/services/recipeApi/SpoonacularService',
     );
     spoonacularService.getRandomRecipes.mockResolvedValue([
-      { id: 101, title: 'Random Bowl', servings: 2, readyInMinutes: 15, image: null },
+      {
+        id: 101,
+        title: 'Random Bowl',
+        servings: 2,
+        readyInMinutes: 15,
+        image: null,
+      },
     ]);
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [],
@@ -1371,11 +1622,20 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'r-1', name: 'My Pasta', servings: 2, totalTimeMinutes: 30, folder: null, tags: [] },
+          {
+            recipeId: 'r-1',
+            name: 'My Pasta',
+            servings: 2,
+            totalTimeMinutes: 30,
+            folder: null,
+            tags: [],
+          },
         ],
         loading: false,
       },
@@ -1401,11 +1661,21 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'r-1', name: 'With Image', imageUrl: 'https://img.com/a.jpg', servings: 2, totalTimeMinutes: 30, folder: null, tags: [] },
+          {
+            recipeId: 'r-1',
+            name: 'With Image',
+            imageUrl: 'https://img.com/a.jpg',
+            servings: 2,
+            totalTimeMinutes: 30,
+            folder: null,
+            tags: [],
+          },
         ],
         loading: false,
       },
@@ -1430,11 +1700,21 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'r-1', name: 'No Image', imageUrl: null, servings: 2, totalTimeMinutes: 30, folder: null, tags: [] },
+          {
+            recipeId: 'r-1',
+            name: 'No Image',
+            imageUrl: null,
+            servings: 2,
+            totalTimeMinutes: 30,
+            folder: null,
+            tags: [],
+          },
         ],
         loading: false,
       },
@@ -1459,16 +1739,28 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useRecipeFolders } = jest.requireMock('#/hooks/recipe/useRecipeFolders');
+    const { useRecipeFolders } = jest.requireMock(
+      '#/hooks/recipe/useRecipeFolders',
+    );
     useRecipeFolders.mockReturnValue({ folders: ['Dinner'] });
 
     const { useRecipeTags } = jest.requireMock('#/hooks/recipe/useRecipeTags');
     useRecipeTags.mockReturnValue({ tags: [] });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
-        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Dinner', tags: [] }],
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'P',
+            servings: 2,
+            folder: 'Dinner',
+            tags: [],
+          },
+        ],
         loading: false,
       },
       actions: {
@@ -1494,7 +1786,9 @@ describe('RecipeMain', () => {
     render(<RecipeMain />);
 
     // Open folder picker via tab press
-    act(() => { folderOnPress!(); });
+    act(() => {
+      folderOnPress!();
+    });
 
     // Select a folder
     act(() => {
@@ -1502,7 +1796,9 @@ describe('RecipeMain', () => {
     });
 
     // After selection, the folder tab label should reflect the selected folder name
-    expect(capturedTabs!.find((t: any) => t.id === 'folder')?.label).toBe('Dinner');
+    expect(capturedTabs!.find((t: any) => t.id === 'folder')?.label).toBe(
+      'Dinner',
+    );
   });
 
   it('shows tag count in filter tab label when tags are selected', () => {
@@ -1510,16 +1806,28 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useRecipeFolders } = jest.requireMock('#/hooks/recipe/useRecipeFolders');
+    const { useRecipeFolders } = jest.requireMock(
+      '#/hooks/recipe/useRecipeFolders',
+    );
     useRecipeFolders.mockReturnValue({ folders: [] });
 
     const { useRecipeTags } = jest.requireMock('#/hooks/recipe/useRecipeTags');
     useRecipeTags.mockReturnValue({ tags: ['easy', 'healthy'] });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
-        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: ['easy'] }],
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'P',
+            servings: 2,
+            folder: null,
+            tags: ['easy'],
+          },
+        ],
         loading: false,
       },
       actions: {
@@ -1544,14 +1852,18 @@ describe('RecipeMain', () => {
 
     render(<RecipeMain />);
 
-    act(() => { tagOnPress!(); });
+    act(() => {
+      tagOnPress!();
+    });
 
     act(() => {
       capturedTagPickerOnSelect!(['easy', 'healthy']);
     });
 
     // After selecting 2 tags, the label should reflect the count
-    expect(capturedTabs!.find((t: any) => t.id === 'tags')?.label).toBe('2 Tags');
+    expect(capturedTabs!.find((t: any) => t.id === 'tags')?.label).toBe(
+      '2 Tags',
+    );
   });
 
   it('handles rename folder callback from FolderPicker', async () => {
@@ -1560,17 +1872,23 @@ describe('RecipeMain', () => {
     ));
 
     const mockRenameFolder = jest.fn().mockResolvedValue(true);
-    const { useFolderActions } = jest.requireMock('#/hooks/recipe/useFolderActions');
+    const { useFolderActions } = jest.requireMock(
+      '#/hooks/recipe/useFolderActions',
+    );
     useFolderActions.mockReturnValue({
       renameFolder: mockRenameFolder,
       deleteFolder: jest.fn(),
       loading: false,
     });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
-        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: [] }],
+        recipes: [
+          { recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: [] },
+        ],
         loading: false,
       },
       actions: {
@@ -1578,7 +1896,9 @@ describe('RecipeMain', () => {
       },
     });
 
-    let capturedOnRename: ((oldName: string, newName: string) => Promise<boolean>) | undefined;
+    let capturedOnRename:
+      | ((oldName: string, newName: string) => Promise<boolean>)
+      | undefined;
     mockFolderPickerImpl = (props: AnyProps) => {
       capturedOnRename = props.onRenameFolder;
       return null;
@@ -1600,17 +1920,23 @@ describe('RecipeMain', () => {
     ));
 
     const mockDeleteFolder = jest.fn().mockResolvedValue(true);
-    const { useFolderActions } = jest.requireMock('#/hooks/recipe/useFolderActions');
+    const { useFolderActions } = jest.requireMock(
+      '#/hooks/recipe/useFolderActions',
+    );
     useFolderActions.mockReturnValue({
       renameFolder: jest.fn(),
       deleteFolder: mockDeleteFolder,
       loading: false,
     });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
-        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: [] }],
+        recipes: [
+          { recipeId: 'r-1', name: 'P', servings: 2, folder: null, tags: [] },
+        ],
         loading: false,
       },
       actions: {
@@ -1618,7 +1944,9 @@ describe('RecipeMain', () => {
       },
     });
 
-    let capturedOnDelete: ((folderName: string) => Promise<boolean>) | undefined;
+    let capturedOnDelete:
+      | ((folderName: string) => Promise<boolean>)
+      | undefined;
     mockFolderPickerImpl = (props: AnyProps) => {
       capturedOnDelete = props.onDeleteFolder;
       return null;
@@ -1643,10 +1971,18 @@ describe('RecipeMain', () => {
       '#/services/recipeApi/SpoonacularService',
     );
     spoonacularService.getRandomRecipes.mockResolvedValue([
-      { id: 'r1', title: 'Random', servings: 2, readyInMinutes: 10, image: null },
+      {
+        id: 'r1',
+        title: 'Random',
+        servings: 2,
+        readyInMinutes: 10,
+        image: null,
+      },
     ]);
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     // Start with no saved recipes
     useSavedRecipes.mockReturnValue({
       state: {
@@ -1667,7 +2003,15 @@ describe('RecipeMain', () => {
     // Now user has a saved recipe
     useSavedRecipes.mockReturnValue({
       state: {
-        recipes: [{ recipeId: 'new-1', name: 'New', servings: 2, folder: null, tags: [] }],
+        recipes: [
+          {
+            recipeId: 'new-1',
+            name: 'New',
+            servings: 2,
+            folder: null,
+            tags: [],
+          },
+        ],
         loading: false,
       },
       actions: {
@@ -1684,11 +2028,20 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'r-1', name: 'Quick', servings: 3, totalTimeMinutes: 20, folder: null, tags: [] },
+          {
+            recipeId: 'r-1',
+            name: 'Quick',
+            servings: 3,
+            totalTimeMinutes: 20,
+            folder: null,
+            tags: [],
+          },
         ],
         loading: false,
       },
@@ -1714,11 +2067,23 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'r-1', name: 'No Time', servings: 2, totalTimeMinutes: null, readyInMinutes: null, prepTimeMinutes: null, cookTimeMinutes: null, folder: null, tags: [] },
+          {
+            recipeId: 'r-1',
+            name: 'No Time',
+            servings: 2,
+            totalTimeMinutes: null,
+            readyInMinutes: null,
+            prepTimeMinutes: null,
+            cookTimeMinutes: null,
+            folder: null,
+            tags: [],
+          },
         ],
         loading: false,
       },
@@ -1744,15 +2109,31 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useRecipeFolders } = jest.requireMock('#/hooks/recipe/useRecipeFolders');
+    const { useRecipeFolders } = jest.requireMock(
+      '#/hooks/recipe/useRecipeFolders',
+    );
     useRecipeFolders.mockReturnValue({ folders: ['Dinner'] });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'r-1', name: 'Dinner Recipe', servings: 2, folder: 'Dinner', tags: [] },
-          { recipeId: 'r-2', name: 'Lunch Recipe', servings: 2, folder: 'Lunch', tags: [] },
+          {
+            recipeId: 'r-1',
+            name: 'Dinner Recipe',
+            servings: 2,
+            folder: 'Dinner',
+            tags: [],
+          },
+          {
+            recipeId: 'r-2',
+            name: 'Lunch Recipe',
+            servings: 2,
+            folder: 'Lunch',
+            tags: [],
+          },
         ],
         loading: false,
       },
@@ -1795,12 +2176,26 @@ describe('RecipeMain', () => {
     const { useRecipeTags } = jest.requireMock('#/hooks/recipe/useRecipeTags');
     useRecipeTags.mockReturnValue({ tags: ['easy'] });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
         recipes: [
-          { recipeId: 'r-1', name: 'Easy Recipe', servings: 2, folder: null, tags: ['easy'] },
-          { recipeId: 'r-2', name: 'Hard Recipe', servings: 2, folder: null, tags: ['hard'] },
+          {
+            recipeId: 'r-1',
+            name: 'Easy Recipe',
+            servings: 2,
+            folder: null,
+            tags: ['easy'],
+          },
+          {
+            recipeId: 'r-2',
+            name: 'Hard Recipe',
+            servings: 2,
+            folder: null,
+            tags: ['hard'],
+          },
         ],
         loading: false,
       },
@@ -1861,11 +2256,20 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useRecipeManagement } = jest.requireMock('#/hooks/recipe/useRecipeManagement');
+    const { useRecipeManagement } = jest.requireMock(
+      '#/hooks/recipe/useRecipeManagement',
+    );
     useRecipeManagement.mockReturnValue({
       state: {
         recipes: [
-          { id: 'my-1', name: 'My Pasta', description: 'Homemade', servings: 4, totalTimeMinutes: 30, imageUrl: null },
+          {
+            id: 'my-1',
+            name: 'My Pasta',
+            description: 'Homemade',
+            servings: 4,
+            totalTimeMinutes: 30,
+            imageUrl: null,
+          },
         ],
         loading: false,
         hasMore: false,
@@ -1938,17 +2342,27 @@ describe('RecipeMain', () => {
     ));
 
     const mockNavigate = jest.fn();
-    const { useAppNavigation } = jest.requireMock('#hooks/navigation/useAppNavigation');
+    const { useAppNavigation } = jest.requireMock(
+      '#hooks/navigation/useAppNavigation',
+    );
     useAppNavigation.mockReturnValue({
       navigate: mockNavigate,
       goBack: jest.fn(),
     });
 
-    const { useRecipeManagement } = jest.requireMock('#/hooks/recipe/useRecipeManagement');
+    const { useRecipeManagement } = jest.requireMock(
+      '#/hooks/recipe/useRecipeManagement',
+    );
     useRecipeManagement.mockReturnValue({
       state: {
         recipes: [
-          { id: 'my-1', name: 'My Pasta', servings: 2, totalTimeMinutes: 20, imageUrl: null },
+          {
+            id: 'my-1',
+            name: 'My Pasta',
+            servings: 2,
+            totalTimeMinutes: 20,
+            imageUrl: null,
+          },
         ],
         loading: false,
         hasMore: false,
@@ -1984,7 +2398,9 @@ describe('RecipeMain', () => {
       capturedOnItemPress!('my-1');
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith('RecipeDetail', { recipeId: 'my-1' });
+    expect(mockNavigate).toHaveBeenCalledWith('RecipeDetail', {
+      recipeId: 'my-1',
+    });
   });
 
   it('calls deleteRecipeMutation when deleting a My Recipes item', async () => {
@@ -1996,11 +2412,19 @@ describe('RecipeMain', () => {
     const { useDeleteRecipeMutation } = jest.requireMock('#generated');
     useDeleteRecipeMutation.mockReturnValue([mockDelete]);
 
-    const { useRecipeManagement } = jest.requireMock('#/hooks/recipe/useRecipeManagement');
+    const { useRecipeManagement } = jest.requireMock(
+      '#/hooks/recipe/useRecipeManagement',
+    );
     useRecipeManagement.mockReturnValue({
       state: {
         recipes: [
-          { id: 'my-1', name: 'Delete Me', servings: 2, totalTimeMinutes: 10, imageUrl: null },
+          {
+            id: 'my-1',
+            name: 'Delete Me',
+            servings: 2,
+            totalTimeMinutes: 10,
+            imageUrl: null,
+          },
         ],
         loading: false,
         hasMore: false,
@@ -2044,16 +2468,28 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useRecipeFolders } = jest.requireMock('#/hooks/recipe/useRecipeFolders');
+    const { useRecipeFolders } = jest.requireMock(
+      '#/hooks/recipe/useRecipeFolders',
+    );
     useRecipeFolders.mockReturnValue({ folders: ['Dinner'] });
 
     const { useRecipeTags } = jest.requireMock('#/hooks/recipe/useRecipeTags');
     useRecipeTags.mockReturnValue({ tags: ['easy'] });
 
-    const { useSavedRecipes } = jest.requireMock('#/hooks/recipe/useSavedRecipes');
+    const { useSavedRecipes } = jest.requireMock(
+      '#/hooks/recipe/useSavedRecipes',
+    );
     useSavedRecipes.mockReturnValue({
       state: {
-        recipes: [{ recipeId: 'r-1', name: 'P', servings: 2, folder: 'Dinner', tags: ['easy'] }],
+        recipes: [
+          {
+            recipeId: 'r-1',
+            name: 'P',
+            servings: 2,
+            folder: 'Dinner',
+            tags: ['easy'],
+          },
+        ],
         loading: false,
       },
       actions: {
@@ -2112,12 +2548,28 @@ describe('RecipeMain', () => {
       <Component />
     ));
 
-    const { useRecipeManagement } = jest.requireMock('#/hooks/recipe/useRecipeManagement');
+    const { useRecipeManagement } = jest.requireMock(
+      '#/hooks/recipe/useRecipeManagement',
+    );
     useRecipeManagement.mockReturnValue({
       state: {
         recipes: [
-          { id: 'my-1', name: 'Pasta Carbonara', description: 'Italian', servings: 2, totalTimeMinutes: 30, imageUrl: null },
-          { id: 'my-2', name: 'Chicken Tikka', description: 'Indian', servings: 4, totalTimeMinutes: 45, imageUrl: null },
+          {
+            id: 'my-1',
+            name: 'Pasta Carbonara',
+            description: 'Italian',
+            servings: 2,
+            totalTimeMinutes: 30,
+            imageUrl: null,
+          },
+          {
+            id: 'my-2',
+            name: 'Chicken Tikka',
+            description: 'Indian',
+            servings: 4,
+            totalTimeMinutes: 45,
+            imageUrl: null,
+          },
         ],
         loading: false,
         hasMore: false,

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { Alert, Image } from 'react-native';
+import { Image } from 'react-native';
 import { ImageCropScreen } from '../ImageCropScreen';
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -76,7 +76,9 @@ jest.mock('#components/molecules/Header', () => ({
     const { View, Text, Pressable } = require('react-native');
     return (
       <View>
-        <Pressable testID="back-button" onPress={onBack}><Text>Back</Text></Pressable>
+        <Pressable testID="back-button" onPress={onBack}>
+          <Text>Back</Text>
+        </Pressable>
         <Text>{title}</Text>
       </View>
     );
@@ -102,7 +104,9 @@ jest.mock('#/services/errorService', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 jest.spyOn(Image, 'getSize').mockImplementation((uri: string, success: any) => {
   success(800, 600);
 });

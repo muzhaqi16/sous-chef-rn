@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import type { ErrorLike } from '@apollo/client';
-import type { AlertButton } from 'react-native';
-import { handleQueryComplexityError, isQueryComplexityError } from '#/utils/errors/queryComplexity';
+import {
+  handleQueryComplexityError,
+  isQueryComplexityError,
+} from '#/utils/errors/queryComplexity';
 import { validatePagination } from '#/constants/pagination';
-import { Alert } from 'react-native';
+import { alertService, type AlertButton } from '#/services/alertService';
 
 /**
  * Wrapper to add query complexity error handling to generated query hooks
@@ -26,9 +28,11 @@ import { Alert } from 'react-native';
  * });
  * ```
  */
-export function useQueryWithComplexityHandling<T extends { error?: ErrorLike; refetch?: (...args: unknown[]) => unknown }>(
+export function useQueryWithComplexityHandling<
+  T extends { error?: ErrorLike; refetch?: (...args: unknown[]) => unknown },
+>(
   queryHookResult: T,
-  onRetry?: () => void
+  onRetry?: () => void,
 ): T & { handleComplexityError: () => void } {
   const hasShownAlertRef = useRef(false);
   const lastErrorRef = useRef<ErrorLike | null>(null);
@@ -39,13 +43,15 @@ export function useQueryWithComplexityHandling<T extends { error?: ErrorLike; re
     if (error && isQueryComplexityError(error)) {
       handleQueryComplexityError(error, onRetry);
 
-      Alert.alert(
+      alertService.alert(
         'Request Too Large',
         'The request was too complex. Please try with fewer items or simplify your request.',
-        ([
-          { text: 'Cancel', style: 'cancel' },
-          onRetry ? { text: 'Retry', onPress: onRetry } : undefined,
-        ] as (AlertButton | undefined)[]).filter((b): b is AlertButton => b != null)
+        (
+          [
+            { text: 'Cancel', style: 'cancel' },
+            onRetry ? { text: 'Retry', onPress: onRetry } : undefined,
+          ] as (AlertButton | undefined)[]
+        ).filter((b): b is AlertButton => b != null),
       );
     }
   };
@@ -63,13 +69,15 @@ export function useQueryWithComplexityHandling<T extends { error?: ErrorLike; re
       // Inline handleComplexityError logic to avoid dependency on function that changes every render
       const error = queryHookResult.error;
       handleQueryComplexityError(error, onRetry);
-      Alert.alert(
+      alertService.alert(
         'Request Too Large',
         'The request was too complex. Please try with fewer items or simplify your request.',
-        ([
-          { text: 'Cancel', style: 'cancel' },
-          onRetry ? { text: 'Retry', onPress: onRetry } : undefined,
-        ] as (AlertButton | undefined)[]).filter((b): b is AlertButton => b != null)
+        (
+          [
+            { text: 'Cancel', style: 'cancel' },
+            onRetry ? { text: 'Retry', onPress: onRetry } : undefined,
+          ] as (AlertButton | undefined)[]
+        ).filter((b): b is AlertButton => b != null),
       );
     } else if (!queryHookResult.error) {
       // Reset when error clears
@@ -99,7 +107,7 @@ export function useQueryWithComplexityHandling<T extends { error?: ErrorLike; re
  * ```
  */
 export function useValidatedPagination<T extends Record<string, any>>(
-  variables: T
+  variables: T,
 ): T {
   return {
     ...variables,

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { HapticService } from '#services/haptic/HapticService';
 
 interface FilterTabItemProps {
   routeKey: string;
@@ -24,14 +25,21 @@ const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
   return (
     <Pressable
       key={routeKey}
-      onPress={onPress}
+      onPress={() => {
+        HapticService.selection();
+        onPress();
+      }}
       testID={testID}
       style={[styles.tab, isActive && styles.tabActive]}
     >
-      <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{title}</Text>
+      <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+        {title}
+      </Text>
       {!!hasCount && (
         <View style={[styles.countBadge, isActive && styles.countBadgeActive]}>
-          <Text style={[styles.countText, isActive && styles.countTextActive]}>{count}</Text>
+          <Text style={[styles.countText, isActive && styles.countTextActive]}>
+            {count}
+          </Text>
         </View>
       )}
     </Pressable>

@@ -1,72 +1,26 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { ActivityIndicator } from 'react-native';
+import { render } from '@testing-library/react-native';
 import { PaginationFooter } from '../PaginationFooter';
 
 describe('PaginationFooter', () => {
-  it('shows loading text when isLoadingMore is true', () => {
-    render(
-      <PaginationFooter
-        isLoadingMore={true}
-        hasMore={true}
-        itemCount={10}
-      />,
+  it('shows spinner when hasMore is true', () => {
+    const { UNSAFE_getByType } = render(
+      <PaginationFooter hasMore={true} itemCount={10} />,
     );
-    expect(screen.getByText('Loading more items...')).toBeTruthy();
-  });
-
-  it('shows custom loading text', () => {
-    render(
-      <PaginationFooter
-        isLoadingMore={true}
-        hasMore={true}
-        itemCount={10}
-        loadingText="Fetching recipes..."
-      />,
-    );
-    expect(screen.getByText('Fetching recipes...')).toBeTruthy();
-  });
-
-  it('shows hint text when hasMore is true and not loading more', () => {
-    render(
-      <PaginationFooter
-        isLoadingMore={false}
-        hasMore={true}
-        itemCount={10}
-      />,
-    );
-    expect(screen.getByText('Scroll to load more')).toBeTruthy();
-  });
-
-  it('shows custom hint text', () => {
-    render(
-      <PaginationFooter
-        isLoadingMore={false}
-        hasMore={true}
-        itemCount={10}
-        hintText="Pull to load more"
-      />,
-    );
-    expect(screen.getByText('Pull to load more')).toBeTruthy();
+    expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
   });
 
   it('renders nothing when no more items', () => {
     const { toJSON } = render(
-      <PaginationFooter
-        isLoadingMore={false}
-        hasMore={false}
-        itemCount={10}
-      />,
+      <PaginationFooter hasMore={false} itemCount={10} />,
     );
     expect(toJSON()).toBeNull();
   });
 
   it('renders nothing when hasMore but no items yet', () => {
     const { toJSON } = render(
-      <PaginationFooter
-        isLoadingMore={false}
-        hasMore={true}
-        itemCount={0}
-      />,
+      <PaginationFooter hasMore={true} itemCount={0} />,
     );
     expect(toJSON()).toBeNull();
   });

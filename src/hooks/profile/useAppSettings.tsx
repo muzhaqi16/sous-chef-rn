@@ -1,13 +1,15 @@
-import {useEffect} from 'react';
-import {useAppStore} from '#store/useAppStore';
+import { useEffect } from 'react';
+import { useAppStore } from '#store/useAppStore';
+import { useStore } from '#store/index';
 import {
   useGetUserSettingsQuery,
   useUpdateUserPreferencesMutation,
   AppTheme,
   UnitSystem,
-  UpdateUserSettingsInput } from '#generated';
-import {executeMutation} from '#/utils/compilerSafeWrappers';
-import {storage} from '#/storage/mmkv';
+  UpdateUserSettingsInput,
+} from '#generated';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { storage } from '#/storage/mmkv';
 
 export interface AppSettings {
   theme: AppTheme;
@@ -22,8 +24,9 @@ export interface AppSettings {
 
 export const useAppSettings = () => {
   const user = useAppStore(state => state.user);
-  const {data, loading, refetch} = useGetUserSettingsQuery({
-    skip: !user?.id });
+  const { data, loading, refetch } = useGetUserSettingsQuery({
+    skip: !user?.id,
+  });
   const [updateSettings] = useUpdateUserPreferencesMutation();
 
   const settings = data?.me?.settings;
@@ -37,50 +40,61 @@ export const useAppSettings = () => {
       offlineMode: settings?.offlineMode ?? false,
       preferredUnitSystem: settings?.preferredUnitSystem || UnitSystem.Metric,
       enabledFeatures: settings?.enabledFeatures || [],
-      betaFeatures: settings?.betaFeatures || [] };
+      betaFeatures: settings?.betaFeatures || [],
+    };
   };
 
-  const toSettingsInput = (updates: Partial<AppSettings>): UpdateUserSettingsInput => {
+  const toSettingsInput = (
+    updates: Partial<AppSettings>,
+  ): UpdateUserSettingsInput => {
     const input: UpdateUserSettingsInput = {};
-    if ('theme' in updates || 'compactMode' in updates || 'showTutorials' in updates) {
+    if (
+      'theme' in updates ||
+      'compactMode' in updates ||
+      'showTutorials' in updates
+    ) {
       input.ui = {};
       if ('theme' in updates) input.ui.theme = updates.theme;
       if ('compactMode' in updates) input.ui.compactMode = updates.compactMode;
-      if ('showTutorials' in updates) input.ui.showTutorials = updates.showTutorials;
+      if ('showTutorials' in updates)
+        input.ui.showTutorials = updates.showTutorials;
     }
     if ('autoSync' in updates || 'offlineMode' in updates) {
       input.sync = {};
       if ('autoSync' in updates) input.sync.autoSync = updates.autoSync;
-      if ('offlineMode' in updates) input.sync.offlineMode = updates.offlineMode;
+      if ('offlineMode' in updates)
+        input.sync.offlineMode = updates.offlineMode;
     }
     if ('preferredUnitSystem' in updates) {
-      input.regional = {preferredUnitSystem: updates.preferredUnitSystem};
+      input.regional = { preferredUnitSystem: updates.preferredUnitSystem };
     }
     if ('enabledFeatures' in updates || 'betaFeatures' in updates) {
       input.features = {};
-      if ('enabledFeatures' in updates) input.features.enabledFeatures = updates.enabledFeatures;
-      if ('betaFeatures' in updates) input.features.betaFeatures = updates.betaFeatures;
+      if ('enabledFeatures' in updates)
+        input.features.enabledFeatures = updates.enabledFeatures;
+      if ('betaFeatures' in updates)
+        input.features.betaFeatures = updates.betaFeatures;
     }
     return input;
   };
 
   const updateAppSetting = async (key: keyof AppSettings, value: any) => {
-      const input = toSettingsInput({[key]: value} as Partial<AppSettings>);
-      const result = await executeMutation(
-        () => updateSettings({ variables: { input } }),
-        'Failed to update app setting',
-      );
-      return result !== false;
-    };
+    const input = toSettingsInput({ [key]: value } as Partial<AppSettings>);
+    const result = await executeMutation(
+      () => updateSettings({ variables: { input } }),
+      'Failed to update app setting',
+    );
+    return result !== false;
+  };
 
   const updateMultipleSettings = async (updates: Partial<AppSettings>) => {
-      const input = toSettingsInput(updates);
-      const result = await executeMutation(
-        () => updateSettings({ variables: { input } }),
-        'Failed to update app settings',
-      );
-      return result !== false;
-    };
+    const input = toSettingsInput(updates);
+    const result = await executeMutation(
+      () => updateSettings({ variables: { input } }),
+      'Failed to update app settings',
+    );
+    return result !== false;
+  };
 
   const resetToDefaults = async () => {
     const defaultSettings: Partial<AppSettings> = {
@@ -89,7 +103,8 @@ export const useAppSettings = () => {
       showTutorials: true,
       autoSync: true,
       offlineMode: false,
-      preferredUnitSystem: UnitSystem.Metric };
+      preferredUnitSystem: UnitSystem.Metric,
+    };
 
     return updateMultipleSettings(defaultSettings);
   };
@@ -106,6 +121,7 @@ export const useAppSettings = () => {
     }
     if (settings?.offlineMode !== undefined) {
       storage.set('user_offline_mode', settings.offlineMode);
+      useStore.getState().setOfflineModeEnabled(settings.offlineMode);
     }
   }, [settings?.showTutorials, settings?.offlineMode]);
 
@@ -115,5 +131,6 @@ export const useAppSettings = () => {
     updateAppSetting,
     updateMultipleSettings,
     resetToDefaults,
-    refetch };
+    refetch,
+  };
 };

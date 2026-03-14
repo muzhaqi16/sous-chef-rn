@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { alertService } from '#/services/alertService';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { ConversionPreview } from '#components/atoms/ConversionPreview';
+import { FractionQuickSelect } from '#components/atoms/FractionQuickSelect';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
 import type { PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
-import { PantryActionModal, type PantryActionSharedState } from './PantryActionModal';
+import { PantryOperation } from '#hooks/pantry/useOperationUnits';
+import {
+  PantryActionModal,
+  type PantryActionSharedState,
+} from './PantryActionModal';
 
 interface RestockPantryItemModalProps {
   visible: boolean;
@@ -31,7 +37,8 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   visible,
   pantryItem,
   onClose,
-  onConfirm }) => {
+  onConfirm,
+}) => {
   const [quantityInput, setQuantityInput] = useState('1');
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
   const [totalCostInput, setTotalCostInput] = useState('');
@@ -49,11 +56,13 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
 
     const quantityValue = parseFractionalInput(quantityInput);
     if (quantityValue === null || isNaN(quantityValue) || quantityValue <= 0) {
-      Alert.alert('Error', 'Please enter a valid quantity');
+      alertService.alert('Error', 'Please enter a valid quantity');
       return;
     }
 
-    const costPerUnit = costPerUnitInput ? parseFloat(costPerUnitInput) : undefined;
+    const costPerUnit = costPerUnitInput
+      ? parseFloat(costPerUnitInput)
+      : undefined;
     const totalCost = totalCostInput ? parseFloat(totalCostInput) : undefined;
 
     // Pass the quantity and unit directly — the backend handles conversion
@@ -76,12 +85,13 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       onClose={onClose}
       title="Restock Item"
       confirmLabel="Restock"
-      snapPoints={['55%', '95%']}
+      snapPoints={['80%', '95%']}
       unitToggleLabel="Restock by"
       currentQuantityLabel="Current:"
+      operation={PantryOperation.Restock}
       onConfirm={handleConfirm}
       onReset={handleReset}
-      renderActionFields={(shared) => (
+      renderActionFields={shared => (
         <RestockActionFields
           quantityInput={quantityInput}
           setQuantityInput={setQuantityInput}
@@ -108,12 +118,21 @@ const RestockActionFields: React.FC<{
   expiresAt: Date | null;
   setExpiresAt: (v: Date | null) => void;
   shared: PantryActionSharedState;
-}> = ({ quantityInput, setQuantityInput, costPerUnitInput, setCostPerUnitInput,
-  totalCostInput, setTotalCostInput, expiresAt, setExpiresAt, shared }) => {
+}> = ({
+  quantityInput,
+  setQuantityInput,
+  costPerUnitInput,
+  setCostPerUnitInput,
+  totalCostInput,
+  setTotalCostInput,
+  expiresAt,
+  setExpiresAt,
+  shared,
+}) => {
   const addAmount = parseFractionalInput(quantityInput);
 
   const conversion = useConversionPreview({
-    itemId: shared.itemId,
+    pantryItemId: shared.pantryItemId,
     inputQuantity: addAmount,
     selectedUnitId: shared.activeUnitId,
     selectedUnitSymbol: shared.activeUnitSymbol,
@@ -127,9 +146,10 @@ const RestockActionFields: React.FC<{
     ? conversion.availableInSelectedUnit
     : shared.trackingQuantity;
 
-  const newQuantity = addAmount !== null && !isNaN(addAmount) && currentInUnit != null
-    ? currentInUnit + addAmount
-    : null;
+  const newQuantity =
+    addAmount !== null && !isNaN(addAmount) && currentInUnit != null
+      ? currentInUnit + addAmount
+      : null;
 
   return (
     <>
@@ -153,8 +173,18 @@ const RestockActionFields: React.FC<{
         ) : null}
         {newQuantity !== null ? (
           <Text style={styles.newQuantityText}>
-            New quantity: {formatQuantity(newQuantity)} {shared.activeUnitSymbol}
+            New quantity: {formatQuantity(newQuantity)}{' '}
+            {shared.activeUnitSymbol}
           </Text>
+        ) : null}
+        {shared.commonFractions != null && shared.commonFractions.length > 0 ? (
+          <FractionQuickSelect
+            fractions={shared.commonFractions}
+            onSelect={value => setQuantityInput(value.toString())}
+            selectedValue={addAmount ?? undefined}
+            unitSymbol={shared.activeUnitSymbol}
+            displayAsFraction
+          />
         ) : null}
       </View>
 
@@ -214,13 +244,18 @@ const RestockActionFields: React.FC<{
 const styles = StyleSheet.create(theme => ({
   costRow: {
     flexDirection: 'row',
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   costField: {
-    flex: 1 },
+    flex: 1,
+  },
   newQuantityText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
     marginTop: theme.spacing.xs,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

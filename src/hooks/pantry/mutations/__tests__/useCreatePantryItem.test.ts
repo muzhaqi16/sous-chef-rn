@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useCreatePantryItem } from '../useCreatePantryItem';
 
 const mockCreateMutation = jest.fn();
@@ -28,7 +28,9 @@ jest.mock('../utils', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -51,7 +53,7 @@ const createFormInput = (overrides: Record<string, any> = {}) =>
     netWeight: '',
     netWeightUnitId: '',
     ...overrides,
-  }) as any;
+  } as any);
 
 describe('useCreatePantryItem', () => {
   it('returns createPantryItem function', () => {
@@ -80,14 +82,19 @@ describe('useCreatePantryItem', () => {
     });
 
     expect(success!).toBe(false);
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Please enter an item name');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Please enter an item name',
+    );
     expect(mockCreateMutation).not.toHaveBeenCalled();
   });
 
   it('returns true and calls onSuccess on successful creation', async () => {
     const onSuccess = jest.fn();
     mockCreateMutation.mockResolvedValue({
-      data: { createPantryItem: { success: true, pantryItem: { id: 'new-item' } } },
+      data: {
+        createPantryItem: { success: true, pantryItem: { id: 'new-item' } },
+      },
     });
 
     const { result } = renderHook(() =>
@@ -112,7 +119,9 @@ describe('useCreatePantryItem', () => {
 
   it('sends correct variables for new item creation', async () => {
     mockCreateMutation.mockResolvedValue({
-      data: { createPantryItem: { success: true, pantryItem: { id: 'item-1' } } },
+      data: {
+        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
+      },
     });
 
     const { result } = renderHook(() =>
@@ -150,7 +159,9 @@ describe('useCreatePantryItem', () => {
 
   it('sends itemId for existing catalog item', async () => {
     mockCreateMutation.mockResolvedValue({
-      data: { createPantryItem: { success: true, pantryItem: { id: 'item-1' } } },
+      data: {
+        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
+      },
     });
 
     const { result } = renderHook(() =>
@@ -175,7 +186,9 @@ describe('useCreatePantryItem', () => {
 
   it('uses selectedLocationId for storageLocationId', async () => {
     mockCreateMutation.mockResolvedValue({
-      data: { createPantryItem: { success: true, pantryItem: { id: 'item-1' } } },
+      data: {
+        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
+      },
     });
 
     const { result } = renderHook(() =>
@@ -200,7 +213,9 @@ describe('useCreatePantryItem', () => {
 
   it('uses storageLocationName when no selectedLocationId', async () => {
     mockCreateMutation.mockResolvedValue({
-      data: { createPantryItem: { success: true, pantryItem: { id: 'item-1' } } },
+      data: {
+        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
+      },
     });
 
     const { result } = renderHook(() =>
@@ -224,7 +239,9 @@ describe('useCreatePantryItem', () => {
 
   it('uses selectedCategoryId over inline category text', async () => {
     mockCreateMutation.mockResolvedValue({
-      data: { createPantryItem: { success: true, pantryItem: { id: 'item-1' } } },
+      data: {
+        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
+      },
     });
 
     const { result } = renderHook(() =>
@@ -248,7 +265,9 @@ describe('useCreatePantryItem', () => {
 
   it('includes thresholds when minQuantity or restockQuantity provided', async () => {
     mockCreateMutation.mockResolvedValue({
-      data: { createPantryItem: { success: true, pantryItem: { id: 'item-1' } } },
+      data: {
+        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
+      },
     });
 
     const { result } = renderHook(() =>
@@ -272,7 +291,9 @@ describe('useCreatePantryItem', () => {
 
   it('includes netWeight when provided', async () => {
     mockCreateMutation.mockResolvedValue({
-      data: { createPantryItem: { success: true, pantryItem: { id: 'item-1' } } },
+      data: {
+        createPantryItem: { success: true, pantryItem: { id: 'item-1' } },
+      },
     });
 
     const { result } = renderHook(() =>
@@ -291,7 +312,10 @@ describe('useCreatePantryItem', () => {
     });
 
     const input = mockCreateMutation.mock.calls[0][0].variables.input;
-    expect(input.netWeight).toEqual({ netWeight: 500, netWeightUnitId: 'unit-g' });
+    expect(input.netWeight).toEqual({
+      netWeight: 500,
+      netWeightUnitId: 'unit-g',
+    });
   });
 
   it('shows error alert on non-duplicate error', async () => {
@@ -317,6 +341,6 @@ describe('useCreatePantryItem', () => {
     });
 
     expect(success!).toBe(false);
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Create error');
+    expect(alertService.alert).toHaveBeenCalledWith('Error', 'Create error');
   });
 });

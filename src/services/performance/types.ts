@@ -132,6 +132,8 @@ export interface FlashListSessionMetrics {
   initialLoadTime: number | null;
   dataReferenceChanges: number;
   blankFrameCount: number;
+  /** Blanks sustained for 3+ consecutive frames at overlapping visible ranges — user-visible whitespace */
+  sustainedBlankCount: number;
   totalScrollFrames: number;
   longestBlankStreak: number;
   /** frames with >32ms gap */

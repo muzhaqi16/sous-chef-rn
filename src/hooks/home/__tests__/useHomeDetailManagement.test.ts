@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useHomeDetailManagement } from '../useHomeDetailManagement';
 
 const mockGetHomeQuery = {
@@ -23,7 +23,10 @@ const mockLeaveClient = {
 jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
   useGetHomeQuery: jest.fn(() => mockGetHomeQuery),
-  useUpdateHomeMutation: jest.fn(() => [mockUpdateHomeMutation, { loading: false }]),
+  useUpdateHomeMutation: jest.fn(() => [
+    mockUpdateHomeMutation,
+    { loading: false },
+  ]),
   useUpdateMembershipMutation: jest.fn(() => [mockUpdateMembershipMutation]),
   useRemoveMemberMutation: jest.fn(() => [mockRemoveMemberMutation]),
   useRevokeHomeInviteMutation: jest.fn(() => [mockRevokeInviteMutation]),
@@ -51,7 +54,9 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  usePreservedQueryData: jest.fn((data: any, fallback: any) => data ?? fallback),
+  usePreservedQueryData: jest.fn(
+    (data: any, fallback: any) => data ?? fallback,
+  ),
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
@@ -86,14 +91,18 @@ jest.mock('#utils/formatters/roleFormatters', () => ({
 
 const mockCreateRemoveOperation = jest.fn((config: any) => {
   return async () => {
-    const { Alert: MockAlert } = require('react-native');
+    const {
+      alertService: mockAlertService,
+    } = require('#/services/alertService');
     return new Promise(resolve => {
-      MockAlert.alert(config.operationName, 'Confirm?', [
+      mockAlertService.alert(config.operationName, 'Confirm?', [
         { text: 'Cancel', onPress: () => resolve(false) },
         {
           text: 'Delete',
           onPress: async () => {
-            const result = await config.mutation({ variables: { id: config.itemId } });
+            const result = await config.mutation({
+              variables: { id: config.itemId },
+            });
             resolve(result?.data || false);
           },
         },
@@ -108,7 +117,9 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
   }),
 }));
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -216,7 +227,7 @@ describe('useHomeDetailManagement', () => {
         result.current.removeMember('m-1', 'Alice');
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Remove Member',
         'Confirm?',
         expect.any(Array),
@@ -232,7 +243,7 @@ describe('useHomeDetailManagement', () => {
         result.current.revokeInvite('inv-1', 'user@test.com');
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Revoke Invitation',
         'Confirm?',
         expect.any(Array),
@@ -248,7 +259,7 @@ describe('useHomeDetailManagement', () => {
         result.current.leaveHome('Test Home');
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Leave Home',
         expect.stringContaining('Test Home'),
         expect.any(Array),
@@ -318,7 +329,7 @@ describe('useHomeDetailManagement', () => {
         result.current.revokeInvite('inv-2', 'bob@test.com');
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Revoke Invitation',
         'Confirm?',
         expect.any(Array),
@@ -344,12 +355,20 @@ describe('useHomeDetailManagement', () => {
           id: 'home-1',
           name: 'Full Home',
           members: [
-            { id: 'm-1', userId: 'user-1', role: 'OWNER', user: { name: 'Alice' } },
-            { id: 'm-2', userId: 'user-2', role: 'MEMBER', user: { name: 'Bob' } },
+            {
+              id: 'm-1',
+              userId: 'user-1',
+              role: 'OWNER',
+              user: { name: 'Alice' },
+            },
+            {
+              id: 'm-2',
+              userId: 'user-2',
+              role: 'MEMBER',
+              user: { name: 'Bob' },
+            },
           ],
-          invites: [
-            { id: 'inv-1', email: 'charlie@test.com', role: 'MEMBER' },
-          ],
+          invites: [{ id: 'inv-1', email: 'charlie@test.com', role: 'MEMBER' }],
           pantries: [{ id: 'p-1', name: 'Main Pantry' }],
         },
       };

@@ -1,7 +1,7 @@
 'use no memo';
 
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useRecipeSearch } from '../useRecipeSearch';
 
 // Mock token scheduler / refreshToken
@@ -20,7 +20,11 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
+const mockNav = (
+  jest.requireMock('#hooks/navigation/useAppNavigation') as {
+    useAppNavigation: jest.Mock;
+  }
+).useAppNavigation();
 
 jest.mock('#hooks/home/useDefaultHome', () => ({
   useDefaultHome: jest.fn(() => ({
@@ -52,7 +56,8 @@ const mockSearchByIngredients = jest.fn().mockResolvedValue([]);
 jest.mock('#/services/recipeApi/SpoonacularService', () => ({
   spoonacularService: {
     searchRecipes: (...args: any[]) => mockSearchRecipes(...args),
-    searchRecipesByIngredients: (...args: any[]) => mockSearchByIngredients(...args),
+    searchRecipesByIngredients: (...args: any[]) =>
+      mockSearchByIngredients(...args),
   },
 }));
 
@@ -78,7 +83,9 @@ jest.mock('#/utils/recipeTransform', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 describe('useRecipeSearch', () => {
   beforeEach(() => {
@@ -178,7 +185,7 @@ describe('useRecipeSearch', () => {
       await result.current.handleIngredientSearch();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'No Ingredients Selected',
       'Please select at least one ingredient',
     );
@@ -348,7 +355,9 @@ describe('useRecipeSearch', () => {
   });
 
   it('handleTextSearch shows alert when no query and no pantry items', async () => {
-    const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
+    const { usePantryManagement } = jest.requireMock(
+      '#hooks/home/pantry/usePantryManagement',
+    );
     usePantryManagement.mockReturnValue({ state: { items: [] }, actions: {} });
 
     const { result } = renderHook(() => useRecipeSearch());
@@ -357,7 +366,7 @@ describe('useRecipeSearch', () => {
       await result.current.handleTextSearch();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Search Required',
       'Please enter a search term or add items to your pantry',
     );
@@ -375,7 +384,9 @@ describe('useRecipeSearch', () => {
   });
 
   it('handleTextSearch with empty query and pantry items with empty names filters them', async () => {
-    const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
+    const { usePantryManagement } = jest.requireMock(
+      '#hooks/home/pantry/usePantryManagement',
+    );
     usePantryManagement.mockReturnValue({
       state: {
         items: [
@@ -521,7 +532,9 @@ describe('useRecipeSearch', () => {
   });
 
   it('applyFilters with no query and no ingredients does nothing', async () => {
-    const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
+    const { usePantryManagement } = jest.requireMock(
+      '#hooks/home/pantry/usePantryManagement',
+    );
     usePantryManagement.mockReturnValue({ state: { items: [] }, actions: {} });
 
     mockSearchRecipes.mockClear();
@@ -611,7 +624,9 @@ describe('useRecipeSearch', () => {
   });
 
   it('hasPantryItems is false when pantry is empty', () => {
-    const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
+    const { usePantryManagement } = jest.requireMock(
+      '#hooks/home/pantry/usePantryManagement',
+    );
     usePantryManagement.mockReturnValue({ state: { items: [] }, actions: {} });
 
     const { result } = renderHook(() => useRecipeSearch());
@@ -630,8 +645,13 @@ describe('useRecipeSearch', () => {
   });
 
   it('hasPantryItems is false when items is undefined', () => {
-    const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
-    usePantryManagement.mockReturnValue({ state: { items: null }, actions: {} });
+    const { usePantryManagement } = jest.requireMock(
+      '#hooks/home/pantry/usePantryManagement',
+    );
+    usePantryManagement.mockReturnValue({
+      state: { items: null },
+      actions: {},
+    });
 
     const { result } = renderHook(() => useRecipeSearch());
     expect(result.current.hasPantryItems).toBe(false);
@@ -691,7 +711,9 @@ describe('useRecipeSearch', () => {
   });
 
   it('excludedIngredients includes pork items for Halal restriction', () => {
-    const { useDietaryProfile } = jest.requireMock('#/hooks/profile/useDietaryProfile');
+    const { useDietaryProfile } = jest.requireMock(
+      '#/hooks/profile/useDietaryProfile',
+    );
     useDietaryProfile.mockReturnValue({
       profile: {
         restrictions: [{ diet: 'HALAL' }],
@@ -724,7 +746,9 @@ describe('useRecipeSearch', () => {
   });
 
   it('excludedIngredients includes shellfish items for Kosher restriction', () => {
-    const { useDietaryProfile } = jest.requireMock('#/hooks/profile/useDietaryProfile');
+    const { useDietaryProfile } = jest.requireMock(
+      '#/hooks/profile/useDietaryProfile',
+    );
     useDietaryProfile.mockReturnValue({
       profile: {
         restrictions: [{ diet: 'KOSHER' }],
@@ -769,7 +793,8 @@ describe('useRecipeSearch', () => {
     });
 
     // Should not contain excludeIngredients when there are no restrictions
-    const callArgs = mockSearchRecipes.mock.calls[mockSearchRecipes.mock.calls.length - 1][0];
+    const callArgs =
+      mockSearchRecipes.mock.calls[mockSearchRecipes.mock.calls.length - 1][0];
     expect(callArgs.excludeIngredients).toBeUndefined();
   });
 
@@ -793,7 +818,7 @@ describe('useRecipeSearch', () => {
       await result.current.handleTextSearch();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'API Limit Reached',
       'Spoonacular API quota exceeded. Please try again later.',
     );
@@ -819,7 +844,7 @@ describe('useRecipeSearch', () => {
       await result.current.handleTextSearch();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Rate Limit',
       'Too many requests. Please try again in a moment.',
     );
@@ -843,7 +868,7 @@ describe('useRecipeSearch', () => {
       await result.current.handleTextSearch();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Search Error',
       'Failed to search recipes. Please try again.',
     );
@@ -867,7 +892,7 @@ describe('useRecipeSearch', () => {
       await result.current.handleIngredientSearch();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Search Error',
       'Failed to search recipes. Please try again.',
     );
@@ -923,7 +948,9 @@ describe('useRecipeSearch', () => {
   });
 
   it('pantry search with all empty item names shows alert', async () => {
-    const { usePantryManagement } = jest.requireMock('#hooks/home/pantry/usePantryManagement');
+    const { usePantryManagement } = jest.requireMock(
+      '#hooks/home/pantry/usePantryManagement',
+    );
     usePantryManagement.mockReturnValue({
       state: {
         items: [
@@ -940,7 +967,7 @@ describe('useRecipeSearch', () => {
       await result.current.handleTextSearch();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Search Required',
       'Please enter a search term or add items to your pantry',
     );
@@ -958,7 +985,9 @@ describe('useRecipeSearch', () => {
   });
 
   it('handleTextSearch with all filters active sends all parameters', async () => {
-    const { useDietaryProfile } = jest.requireMock('#/hooks/profile/useDietaryProfile');
+    const { useDietaryProfile } = jest.requireMock(
+      '#/hooks/profile/useDietaryProfile',
+    );
     useDietaryProfile.mockReturnValue({
       profile: {
         restrictions: [{ diet: 'HALAL' }],

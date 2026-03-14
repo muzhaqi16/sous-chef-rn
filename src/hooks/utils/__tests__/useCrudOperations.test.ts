@@ -1,7 +1,7 @@
 'use no memo';
 
 import { renderHook } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useCrudOperations } from '../useCrudOperations';
 
 const mockClient = {
@@ -10,7 +10,9 @@ const mockClient = {
   cache: { identify: jest.fn() },
 };
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 jest.mock('@apollo/client/react', () => ({
   useApolloClient: jest.fn(() => mockClient),
@@ -35,7 +37,9 @@ describe('useCrudOperations', () => {
 
   describe('createAddOperation', () => {
     it('calls mutation with input and returns data on success', async () => {
-      const mockMutation = jest.fn().mockResolvedValue({ data: { id: '1', name: 'Item' } });
+      const mockMutation = jest
+        .fn()
+        .mockResolvedValue({ data: { id: '1', name: 'Item' } });
       const onSuccess = jest.fn();
 
       const { result } = renderHook(() => useCrudOperations());
@@ -48,7 +52,9 @@ describe('useCrudOperations', () => {
 
       const data = await addOp({ name: 'Test' });
 
-      expect(mockMutation).toHaveBeenCalledWith({ variables: { input: { name: 'Test' } } });
+      expect(mockMutation).toHaveBeenCalledWith({
+        variables: { input: { name: 'Test' } },
+      });
       expect(onSuccess).toHaveBeenCalledWith({ id: '1', name: 'Item' });
       expect(data).toEqual({ id: '1', name: 'Item' });
     });
@@ -60,7 +66,10 @@ describe('useCrudOperations', () => {
 
       const addOp = result.current.createAddOperation({
         mutation: mockMutation,
-        transformInput: (input: { name: string }) => ({ name: input.name.toUpperCase(), extra: true }),
+        transformInput: (input: { name: string }) => ({
+          name: input.name.toUpperCase(),
+          extra: true,
+        }),
       });
 
       await addOp({ name: 'test' });
@@ -85,7 +94,10 @@ describe('useCrudOperations', () => {
 
       expect(data).toBe(false);
       expect(mockMutation).not.toHaveBeenCalled();
-      expect(Alert.alert).toHaveBeenCalledWith('Validation Error', 'Name is required');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Validation Error',
+        'Name is required',
+      );
     });
 
     it('validates input and rejects with boolean false', async () => {
@@ -102,7 +114,10 @@ describe('useCrudOperations', () => {
 
       expect(data).toBe(false);
       expect(mockMutation).not.toHaveBeenCalled();
-      expect(Alert.alert).toHaveBeenCalledWith('Validation Error', 'Invalid input');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Validation Error',
+        'Invalid input',
+      );
     });
 
     it('returns false when parentId is required but null', async () => {
@@ -119,7 +134,10 @@ describe('useCrudOperations', () => {
 
       expect(data).toBe(false);
       expect(mockMutation).not.toHaveBeenCalled();
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Parent context is required');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Parent context is required',
+      );
     });
 
     it('returns false when parentId function resolves to undefined', async () => {
@@ -136,7 +154,10 @@ describe('useCrudOperations', () => {
 
       expect(data).toBe(false);
       expect(mockMutation).not.toHaveBeenCalled();
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Parent context is required');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Parent context is required',
+      );
     });
 
     it('resolves parentId from function', async () => {
@@ -169,7 +190,10 @@ describe('useCrudOperations', () => {
       const data = await addOp({ name: 'test' });
 
       expect(data).toBe(false);
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Duplicate entry');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Duplicate entry',
+      );
     });
 
     it('shows error when result has no data', async () => {
@@ -185,13 +209,18 @@ describe('useCrudOperations', () => {
       const data = await addOp({ name: 'test' });
 
       expect(data).toBe(false);
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to create item');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Failed to create item',
+      );
     });
   });
 
   describe('createUpdateOperation', () => {
     it('calls mutation with id and input on success', async () => {
-      const mockMutation = jest.fn().mockResolvedValue({ data: { id: '1', name: 'Updated' } });
+      const mockMutation = jest
+        .fn()
+        .mockResolvedValue({ data: { id: '1', name: 'Updated' } });
       const onSuccess = jest.fn();
 
       const { result } = renderHook(() => useCrudOperations());
@@ -246,13 +275,18 @@ describe('useCrudOperations', () => {
 
       expect(data).toBe(false);
       expect(mockMutation).not.toHaveBeenCalled();
-      expect(Alert.alert).toHaveBeenCalledWith('Validation Error', 'Field is required');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Validation Error',
+        'Field is required',
+      );
     });
   });
 
   describe('createRemoveOperation', () => {
     it('calls mutation with item id', async () => {
-      const mockMutation = jest.fn().mockResolvedValue({ data: { id: '1', deleted: true } });
+      const mockMutation = jest
+        .fn()
+        .mockResolvedValue({ data: { id: '1', deleted: true } });
       const onSuccess = jest.fn();
 
       const { result } = renderHook(() => useCrudOperations());
@@ -265,7 +299,9 @@ describe('useCrudOperations', () => {
 
       const data = await removeOp();
 
-      expect(mockMutation).toHaveBeenCalledWith({ variables: { id: 'item-1' } });
+      expect(mockMutation).toHaveBeenCalledWith({
+        variables: { id: 'item-1' },
+      });
       expect(onSuccess).toHaveBeenCalledWith({ id: '1', deleted: true });
       expect(data).toEqual({ id: '1', deleted: true });
     });
@@ -285,8 +321,8 @@ describe('useCrudOperations', () => {
 
       const deletePromise = removeOp();
 
-      // Alert.alert should have been called with confirmation dialog
-      expect(Alert.alert).toHaveBeenCalledWith(
+      // alertService.alert should have been called with confirmation dialog
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Delete Item',
         'Are you sure you want to delete My Item?',
         expect.arrayContaining([
@@ -296,14 +332,16 @@ describe('useCrudOperations', () => {
       );
 
       // Simulate pressing 'Delete' button
-      const alertCalls = (Alert.alert as jest.Mock).mock.calls;
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
       const buttons = alertCalls[alertCalls.length - 1][2];
       const deleteButton = buttons.find((b: any) => b.text === 'Delete');
 
       await deleteButton.onPress();
       const data = await deletePromise;
 
-      expect(mockMutation).toHaveBeenCalledWith({ variables: { id: 'item-1' } });
+      expect(mockMutation).toHaveBeenCalledWith({
+        variables: { id: 'item-1' },
+      });
       expect(data).toEqual({ id: '1' });
     });
 
@@ -322,13 +360,18 @@ describe('useCrudOperations', () => {
 
       expect(data).toBe(false);
       expect(mockMutation).not.toHaveBeenCalled();
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Parent context is required');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Parent context is required',
+      );
     });
   });
 
   describe('createSimpleOperation', () => {
     it('calls operation with args and returns data', async () => {
-      const mockOperation = jest.fn().mockResolvedValue({ data: { result: 'done' } });
+      const mockOperation = jest
+        .fn()
+        .mockResolvedValue({ data: { result: 'done' } });
       const onSuccess = jest.fn();
 
       const { result } = renderHook(() => useCrudOperations());
@@ -359,7 +402,10 @@ describe('useCrudOperations', () => {
 
       expect(data).toBe(false);
       expect(mockOperation).not.toHaveBeenCalled();
-      expect(Alert.alert).toHaveBeenCalledWith('Validation Error', 'Cannot be empty');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Validation Error',
+        'Cannot be empty',
+      );
     });
 
     it('validates and rejects with boolean false', async () => {
@@ -375,7 +421,10 @@ describe('useCrudOperations', () => {
       const data = await simpleOp('anything');
 
       expect(data).toBe(false);
-      expect(Alert.alert).toHaveBeenCalledWith('Validation Error', 'Invalid operation');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Validation Error',
+        'Invalid operation',
+      );
     });
 
     it('returns false when operation returns no data', async () => {
@@ -391,7 +440,10 @@ describe('useCrudOperations', () => {
       const data = await simpleOp();
 
       expect(data).toBe(false);
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to my operation');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Failed to my operation',
+      );
     });
   });
 });

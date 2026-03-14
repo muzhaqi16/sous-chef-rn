@@ -7,8 +7,8 @@
  * - Apollo auto-normalizes response by __typename + id
  */
 
-import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
+import { alertService } from '#/services/alertService';
 import {
   useUpdateShoppingListItemMutation,
   ShoppingListItemDisplayFragmentDoc,
@@ -52,7 +52,7 @@ export function useUpdateShoppingItem({
       const { message } = handleApolloError(error, {
         operation: 'Update Shopping List Item',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     },
   });
 
@@ -113,7 +113,7 @@ export function useUpdateShoppingItem({
         }),
       error => {
         if (handleVersionConflict(error)) {
-          Alert.alert('Item Updated', getVersionConflictMessage(error), [
+          alertService.alert('Item Updated', getVersionConflictMessage(error), [
             { text: 'Refresh', onPress: () => refetch() },
             { text: 'Cancel', style: 'cancel' },
           ]);

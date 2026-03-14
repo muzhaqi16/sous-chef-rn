@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useConvertExpiredToWaste } from '../useConvertExpiredToWaste';
 
 const mockConvertMutation = jest.fn();
@@ -18,7 +18,9 @@ jest.mock('#/services/errorService', () => ({
   }),
 }));
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -74,7 +76,10 @@ describe('useConvertExpiredToWaste', () => {
     });
 
     expect(success!).toBe(false);
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Test error message');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Test error message',
+    );
   });
 
   it('returns false when mutation returns no pantryItem', async () => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, Alert, Switch } from 'react-native';
+import { View, Text, Pressable, Switch } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { alertService } from '#/services/alertService';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -11,9 +12,7 @@ import { Header } from '#components/molecules/Header';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { Icon } from '#utils/iconUtils';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import {
-  StorageState,
-  ShoppingListItemDisplayFragment } from '#generated';
+import { StorageState, ShoppingListItemDisplayFragment } from '#generated';
 
 const STORAGE_STATES = Object.values(StorageState);
 
@@ -41,11 +40,14 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   pantries,
   selectedPantryId,
   onClose,
-  onConfirm }) => {
-  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
-    onDismiss: onClose,
-    snapPoints: ['75%', '95%'],
-    keyboardAware: true });
+  onConfirm,
+}) => {
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      onDismiss: onClose,
+      snapPoints: ['75%', '95%'],
+      keyboardAware: true,
+    });
 
   // Form state
   const [quantityInput, setQuantityInput] = useState('');
@@ -65,9 +67,15 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
   // Reset form when modal opens with new item (render-time state update)
   const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevShoppingListItem, setPrevShoppingListItem] = useState(shoppingListItem);
-  const [prevSelectedPantryId, setPrevSelectedPantryId] = useState(selectedPantryId);
-  if (visible !== prevVisible || shoppingListItem !== prevShoppingListItem || selectedPantryId !== prevSelectedPantryId) {
+  const [prevShoppingListItem, setPrevShoppingListItem] =
+    useState(shoppingListItem);
+  const [prevSelectedPantryId, setPrevSelectedPantryId] =
+    useState(selectedPantryId);
+  if (
+    visible !== prevVisible ||
+    shoppingListItem !== prevShoppingListItem ||
+    selectedPantryId !== prevSelectedPantryId
+  ) {
     setPrevVisible(visible);
     setPrevShoppingListItem(shoppingListItem);
     setPrevSelectedPantryId(selectedPantryId);
@@ -100,20 +108,20 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     if (!shoppingListItem) return;
 
     if (!pantryId) {
-      Alert.alert('Error', 'Please select a pantry');
+      alertService.alert('Error', 'Please select a pantry');
       return;
     }
 
     const quantityValue = parseFractionalInput(quantityInput);
 
     if (quantityValue === null || isNaN(quantityValue) || quantityValue <= 0) {
-      Alert.alert('Error', 'Please enter a valid quantity');
+      alertService.alert('Error', 'Please enter a valid quantity');
       return;
     }
 
     // Validate unit is selected
     if (!unitId && !unitValue.trim()) {
-      Alert.alert('Error', 'Please select a unit');
+      alertService.alert('Error', 'Please select a unit');
       return;
     }
 
@@ -130,7 +138,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       expiresAt: expirationDate?.toISOString(),
       removeFromList,
       actualPrice: isNaN(actualPrice!) ? undefined : actualPrice,
-      notes: notes || undefined });
+      notes: notes || undefined,
+    });
     onClose();
   };
 
@@ -149,10 +158,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetFormScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.contentContainer,
-          contentContainerStyle,
-        ]}
+        contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
@@ -162,16 +168,19 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
           leftActions={[
             {
               icon: 'close',
-              onPress: onClose },
+              onPress: onClose,
+            },
           ]}
           rightActions={[
             {
               icon: 'checkmark',
-              onPress: handleConfirm },
+              onPress: handleConfirm,
+            },
           ]}
         />
 
-        {!!shoppingListItem && <>
+        {!!shoppingListItem && (
+          <>
             {/* Item Info */}
             <View style={styles.itemInfo}>
               <Text style={styles.itemName}>{shoppingListItem.itemName}</Text>
@@ -193,7 +202,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   {pantries.map(pantry => (
                     <Pressable
                       key={pantry.id}
-                      style={({pressed}) => [
+                      style={({ pressed }) => [
                         styles.pantryOption,
                         pantryId === pantry.id && styles.pantryOptionActive,
                         pressed && styles.pressed,
@@ -264,7 +273,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     onChangeText={setUnitValue}
                     placeholder="pcs, kg"
                     required
-                    onUnitSelected={(id) => {
+                    onUnitSelected={id => {
                       setUnitId(id);
                     }}
                   />
@@ -279,7 +288,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 {STORAGE_STATES.map(state => (
                   <Pressable
                     key={state}
-                    style={({pressed}) => [
+                    style={({ pressed }) => [
                       styles.segment,
                       storageState === state && styles.segmentActive,
                       pressed && styles.pressed,
@@ -305,7 +314,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
               <Text style={styles.sectionLabel}>Expiration Date</Text>
               <View style={styles.dateRow}>
                 <Pressable
-                  style={({pressed}) => [styles.dateInput, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.dateInput,
+                    pressed && styles.pressed,
+                  ]}
                   onPress={() => setShowDatePicker(true)}
                 >
                   <Icon
@@ -321,7 +333,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 </Pressable>
                 {!!expirationDate && (
                   <Pressable
-                    style={({pressed}) => [styles.clearDateButton, pressed && styles.pressed]}
+                    style={({ pressed }) => [
+                      styles.clearDateButton,
+                      pressed && styles.pressed,
+                    ]}
                     onPress={clearExpirationDate}
                   >
                     <Icon
@@ -380,11 +395,13 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 onValueChange={setRemoveFromList}
                 trackColor={{
                   false: theme.colors.border,
-                  true: theme.colors.primary }}
+                  true: theme.colors.primary,
+                }}
                 thumbColor={theme.colors.white}
               />
             </View>
-          </>}
+          </>
+        )}
       </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
@@ -392,41 +409,53 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   contentContainer: {
-    padding: theme.spacing.md },
+    padding: theme.spacing.md,
+  },
   itemInfo: {
     marginBottom: theme.spacing.xl,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md },
+    borderRadius: theme.radii.md,
+  },
   itemName: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs },
+    marginBottom: theme.spacing.xs,
+  },
   itemQuantity: {
     fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   section: {
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   sectionLabel: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   requiredAsterisk: {
-    color: theme.colors.error },
+    color: theme.colors.error,
+  },
   quantityUnitRow: {
     flexDirection: 'row',
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   quantityField: {
-    flex: 0.4 },
+    flex: 0.4,
+  },
   unitField: {
     flex: 0.6,
-    zIndex: 10 },
+    zIndex: 10,
+  },
   pantryList: {
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   pantryOption: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -436,55 +465,69 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   pantryOptionActive: {
     backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary },
+    borderColor: theme.colors.primary,
+  },
   pantryOptionText: {
     flex: 1,
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   pantryOptionTextActive: {
-    color: theme.colors.white },
+    color: theme.colors.white,
+  },
   defaultBadge: {
     paddingVertical: theme.spacing.xs / 2,
     paddingHorizontal: theme.spacing.sm,
     backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.sm },
+    borderRadius: theme.radii.sm,
+  },
   defaultBadgeActive: {
-    backgroundColor: theme.colors.overlays.light },
+    backgroundColor: theme.colors.overlays.light,
+  },
   defaultBadgeText: {
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   defaultBadgeTextActive: {
-    color: theme.colors.white },
+    color: theme.colors.white,
+  },
   segmentedControl: {
     flexDirection: 'row',
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
-    overflow: 'hidden' },
+    overflow: 'hidden',
+  },
   segment: {
     flex: 1,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.surface },
+    backgroundColor: theme.colors.surface,
+  },
   segmentActive: {
-    backgroundColor: theme.colors.primary },
+    backgroundColor: theme.colors.primary,
+  },
   segmentText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   segmentTextActive: {
-    color: theme.colors.white },
+    color: theme.colors.white,
+  },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   dateInput: {
     flex: 1,
     flexDirection: 'row',
@@ -494,13 +537,16 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.radii.md },
+    borderRadius: theme.radii.md,
+  },
   dateText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
-    marginLeft: theme.spacing.md },
+    marginLeft: theme.spacing.md,
+  },
   clearDateButton: {
-    padding: theme.spacing.sm },
+    padding: theme.spacing.sm,
+  },
   toggleSection: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -509,17 +555,23 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md },
+    borderRadius: theme.radii.md,
+  },
   toggleInfo: {
     flex: 1,
-    marginRight: theme.spacing.md },
+    marginRight: theme.spacing.md,
+  },
   toggleLabel: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   toggleDescription: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs },
+    marginTop: theme.spacing.xs,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

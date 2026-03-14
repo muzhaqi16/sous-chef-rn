@@ -28,9 +28,10 @@ import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 
-// Screen-relative draw distance: scales with viewport so buffer stays ~7-10 items
-// regardless of device size (vs fixed 250 which is ~3.7 items on most devices)
-const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 0.75);
+// Screen-relative draw distance: 2× viewport gives ~17 items of buffer at
+// ~95px/item. Provides better scroll coverage while keeping pagination cost
+// manageable.
+const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
 
 // Module-level constant — avoids creating a new object reference per render
 const MVCP_DISABLED = { disabled: true };
@@ -40,9 +41,6 @@ const keyExtractor = (item: SortableShoppingListItem) => item.id;
 const renderItem = (info: ListRenderItemInfo<SortableShoppingListItem>) => (
   <SwipeableListItem {...info} />
 );
-const getItemType = (item: SortableShoppingListItem) =>
-  item.isPurchased ? 'purchased' : 'shopping';
-
 const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   items,
   onItemPress,
@@ -153,7 +151,6 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             extraData={`${disabled}-${canRemoveItems}-${canEditItems}-${canMarkPurchased}-${canReorderItems}`}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
-            getItemType={getItemType}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={contentContainerStyle}
             ListHeaderComponent={ListHeaderComponent ?? undefined}
@@ -164,7 +161,6 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             onLoad={perfCallbacks.onLoad}
             onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
             drawDistance={DRAW_DISTANCE}
-            maxItemsInRecyclePool={15}
             onRefresh={onRefresh}
             refreshing={refreshing}
             maintainVisibleContentPosition={MVCP_DISABLED}

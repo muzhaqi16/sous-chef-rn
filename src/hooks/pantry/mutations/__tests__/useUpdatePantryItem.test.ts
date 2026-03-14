@@ -1,5 +1,4 @@
 import { renderHook } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import { useUpdatePantryItem } from '../useUpdatePantryItem';
 
 const mockUpdateMutation = jest.fn();
@@ -40,14 +39,12 @@ jest.mock('#/apollo/utils/optimisticTypes', () => ({
 }));
 
 jest.mock('../utils', () => ({
-  buildDirtyUpdateInput: jest.fn(
-    (data: any, dirtyFields: any) => {
-      const input: Record<string, any> = {};
-      if (dirtyFields.itemName) input.itemName = data.itemName;
-      if (dirtyFields.notes) input.storageNotes = data.notes;
-      return input;
-    },
-  ),
+  buildDirtyUpdateInput: jest.fn((data: any, dirtyFields: any) => {
+    const input: Record<string, any> = {};
+    if (dirtyFields.itemName) input.itemName = data.itemName;
+    if (dirtyFields.notes) input.storageNotes = data.notes;
+    return input;
+  }),
   buildOptimisticUnit: jest.fn(() => ({
     __typename: 'Unit',
     id: 'new-unit-id',
@@ -56,7 +53,9 @@ jest.mock('../utils', () => ({
   })),
 }));
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -69,7 +68,7 @@ const createCurrentItem = () =>
     quantity: 5,
     unit: { id: 'unit-1', symbol: 'g', name: 'Gram' },
     version: 1,
-  }) as any;
+  } as any);
 
 const createFormData = (overrides: Record<string, any> = {}) =>
   ({
@@ -80,7 +79,7 @@ const createFormData = (overrides: Record<string, any> = {}) =>
     category: '',
     unit: 'kg',
     ...overrides,
-  }) as any;
+  } as any);
 
 describe('useUpdatePantryItem', () => {
   it('returns updatePantryItemFields function', () => {
@@ -162,7 +161,12 @@ describe('useUpdatePantryItem', () => {
       dirtyFields: { notes: true },
       selectedLocationId: null,
       selectedBrandId: null,
-      trackingUnit: { id: 'new-unit-id', name: 'Kilogram', symbol: 'kg', type: 'WEIGHT' },
+      trackingUnit: {
+        id: 'new-unit-id',
+        name: 'Kilogram',
+        symbol: 'kg',
+        type: 'WEIGHT',
+      },
     });
 
     // The optimisticResponse should be passed

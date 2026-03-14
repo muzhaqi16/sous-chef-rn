@@ -4231,6 +4231,10 @@ type Mutation {
   """
   adjustPantryItemQuantity(id: ID!, input: AdjustPantryItemQuantityInput!): PantryItemPayload!
   """
+  Admin: Delete multiple items (soft delete by default, permanent if specified)
+  """
+  adminBulkDeleteItems(ids: [ID!]!, permanent: Boolean): BulkOperationSummary!
+  """
   Delete images from S3/MinIO storage and update related Item records.
   
   For batches >50 images (or when useQueue=true), the operation runs
@@ -4240,8 +4244,20 @@ type Mutation {
   It removes the specified images from storage and deletes the corresponding ItemImage records.
   """
   adminDeleteImages(input: AdminDeleteImagesInput!): ImageDeletionResult!
+  """Admin: Delete an item (soft delete by default, permanent if specified)"""
+  adminDeleteItem(id: ID!, permanent: Boolean): ItemPayload!
+  """
+  Admin: Delete any recipe (soft delete by default, permanent if specified)
+  """
+  adminDeleteRecipe(id: ID!, permanent: Boolean): RecipePayload!
+  """Admin: Delete any recipe review (bypasses ownership restrictions)"""
+  adminDeleteRecipeReview(id: ID!): RecipeReviewPayload!
   """Delete a user's account as an administrator."""
   adminDeleteUser(id: ID!, input: AdminDeleteUserInput): UserPayload!
+  """Admin: Update any item (bypasses ownership restrictions)"""
+  adminUpdateItem(id: ID!, input: UpdateItemInput!): ItemPayload!
+  """Admin: Update any recipe (bypasses ownership restrictions)"""
+  adminUpdateRecipe(id: ID!, input: UpdateRecipeInput!): RecipePayload!
   """Approve a user-created item for public visibility"""
   approveItem(itemId: ID!): ItemPayload!
   """Archive a shopping list."""
@@ -4252,7 +4268,7 @@ type Mutation {
   bulkCreatePurchases(purchases: [CreatePurchaseInput!]!): BulkPurchasePayload!
   bulkCreateStores(stores: [CreateStoreInput!]!): BulkStorePayload!
   """Delete multiple items"""
-  bulkDeleteItems(ids: [ID!]!, permanent: Boolean): BulkOperationSummary!
+  bulkDeleteItems(ids: [ID!]!): BulkOperationSummary!
   """Delete multiple purchase records at once."""
   bulkDeletePurchases(purchaseIds: [ID!]!): BulkPurchasePayload!
   """Send notifications to multiple users at once (admin only)."""
@@ -4406,7 +4422,7 @@ type Mutation {
   """Delete a home (owner only)."""
   deleteHome(id: ID!): HomePayload!
   """Delete an item (soft delete by default, permanent if specified)"""
-  deleteItem(id: ID!, permanent: Boolean): ItemPayload!
+  deleteItem(id: ID!): ItemPayload!
   """Delete an item unit conversion and its reverse conversion (admin only)"""
   deleteItemUnitConversion(conversionId: ID!): ItemUnitConversionPayload!
   """Delete a meal plan."""
@@ -5163,6 +5179,8 @@ type PackageBreakdown {
 
 input PackageInfoInput {
   baseDimension: BaseDimension
+  defaultConsumeIncrement: Float
+  defaultConsumeUnitId: ID
   displayUnitId: ID
   displayUnitName: String
   netWeight: Float
@@ -5609,6 +5627,10 @@ type PantryItemUsagePayload implements MutationPayload {
   message: String!
   pantryItemUsage: PantryItemUsage
   success: Boolean!
+  """
+  Eligible unit symbols when code is INVALID_UNIT. Null for other error codes and successes.
+  """
+  validUnits: [String!]
 }
 
 type PantryLowStockAlertPayload {
@@ -6060,7 +6082,7 @@ type Query {
   Check if conversion is possible between two units
   Returns availability and confidence level
   """
-  canConvert(fromUnitId: ID!, itemId: ID, toUnitId: ID!): ConversionAvailability!
+  canConvert(fromUnitId: ID!, itemId: ID, pantryItemId: ID, toUnitId: ID!): ConversionAvailability!
   """Check whether the current user's account can be safely deleted."""
   canDeleteAccount: CanDeleteAccountResult!
   """
@@ -6080,10 +6102,16 @@ type Query {
   """List compatible units for an item with conversion metadata."""
   compatibleUnitsForItem(currentUnitId: ID, itemId: ID!): [CompatibleUnit!]!
   """
+  Get ranked consumption-eligible units for a catalog item.
+  Returns units in priority order: default consume unit → curated → auto measurement → tracking unit → portions.
+  Requires an itemId (catalog item) plus the pantry item's tracking unit context.
+  """
+  consumptionUnitsForItem(itemId: ID!, netWeightUnitId: ID, trackingUnitId: ID!): [RankedUnit!]!
+  """
   Convert quantity between units with item context
   Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
   """
-  convertQuantity(fromUnitId: ID!, itemId: ID, quantity: Float!, toUnitId: ID!): ConversionResult
+  convertQuantity(fromUnitId: ID!, pantryItemId: ID, quantity: Float!, toUnitId: ID!): ConversionResult
   """Convert a value from one unit to another."""
   convertUnit(fromUnitId: ID!, toUnitId: ID!, value: Float!): ConvertedUnitValue
   """List all units that a given unit can be converted to."""
@@ -6194,6 +6222,11 @@ type Query {
   recipes(after: String, before: String, category: RecipeCategory, difficulty: Difficulty, first: Int, includeDeleted: Boolean, last: Int): RecipeConnection!
   """Fetch personalized item recommendations for a user."""
   recommendedItems(limit: Int, userId: String): [ItemSuggestion!]!
+  """
+  Get ranked restock-eligible units for a pantry item.
+  Returns units in priority order: tracking unit → curated retail → auto measurement.
+  """
+  restockUnitsForItem(pantryItemId: ID!): [RankedUnit!]!
   """Fetch a single saved recipe by its ID."""
   savedRecipe(id: ID!): SavedRecipe
   """List all folder names the user has organized saved recipes into."""
@@ -6281,6 +6314,18 @@ input QuietHoursInput {
   quietHoursEnd: String
   quietHoursStart: String
   quietHoursTimezone: String
+}
+
+"""
+A unit ranked for consumption or restock eligibility, with display hints for the frontend unit picker.
+"""
+type RankedUnit {
+  commonFractions: [Float!]
+  defaultIncrement: Float
+  isWholeContainer: Boolean!
+  rank: Int!
+  source: UnitSource!
+  unit: Unit!
 }
 
 type RapidAttempt {
@@ -8030,6 +8075,7 @@ type Unit {
   sortOrder: Int!
   symbol: String!
   type: UnitType!
+  unitRole: UnitRole!
   updatedAt: DateTime!
 }
 
@@ -8062,6 +8108,39 @@ type UnitRef {
   name: String!
   symbol: String!
   type: UnitType!
+}
+
+"""
+Operational role of a unit for eligibility in consumption and restock operations
+"""
+enum UnitRole {
+  """
+  Physical packaging unit (tub, can, jar, bottle, bag, box, package, carton, tube, case, pack, dozen).
+  Valid for restock if it matches the tracking unit. Not valid for consumption as a different container.
+  """
+  CONTAINER
+  """
+  Continuous measurement unit (gram, ounce, cup, tablespoon, milliliter, etc.).
+  Valid for consumption if convertible to the item's net weight unit. Valid for restock if convertible.
+  """
+  MEASUREMENT
+  """
+  Discrete sub-unit of an item (piece, item, slice, clove, head, stalk, sprig, leaf, bunch).
+  Valid for consumption if an item-specific conversion exists. Not valid for restock.
+  """
+  PORTION
+}
+
+"""How a unit was determined to be eligible for an operation"""
+enum UnitSource {
+  """Automatically derived from Unit.unitRole and convertibility"""
+  AUTO
+  """
+  Admin curated via ItemUnit.usageContext, retailUnit, or Item.defaultConsumeUnit
+  """
+  CURATED
+  """The item's tracking unit (always eligible)"""
+  TRACKING_UNIT
 }
 
 """Reusable sub-input for specifying a unit by ID, name, or symbol"""

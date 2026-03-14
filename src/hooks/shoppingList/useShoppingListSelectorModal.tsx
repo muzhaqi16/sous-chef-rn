@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, Pressable, Alert } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
@@ -149,7 +150,7 @@ export function useShoppingListSelectorModal({
     const count = selectedForDeletion.size;
     if (count === 0) return;
 
-    Alert.alert(
+    alertService.alert(
       `Delete ${count} List${count > 1 ? 's' : ''}`,
       `Are you sure you want to delete ${
         count > 1 ? 'these lists' : 'this list'

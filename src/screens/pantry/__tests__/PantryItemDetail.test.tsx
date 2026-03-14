@@ -2,11 +2,16 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import { alertService } from '#/services/alertService';
 import { PantryItemDetail } from '../PantryItemDetail';
 
 // --- Break circular deps ---
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 // --- Navigation ---
 jest.mock('#hooks/navigation/useAppNavigation');
@@ -100,7 +105,10 @@ jest.mock('#hooks/pantry/mutations/useCorrectPantryItemWeight', () => ({
   useCorrectPantryItemWeight: () => ({ correctWeight: jest.fn() }),
 }));
 jest.mock('#hooks/pantry/mutations/useConvertExpiredBatchesToWaste', () => ({
-  useConvertExpiredBatchesToWaste: () => ({ convertExpiredBatches: jest.fn(), loading: false }),
+  useConvertExpiredBatchesToWaste: () => ({
+    convertExpiredBatches: jest.fn(),
+    loading: false,
+  }),
 }));
 
 // --- Utils ---
@@ -114,7 +122,9 @@ jest.mock('#utils/nutritionUtils', () => ({
   hasNutritionData: jest.fn(() => false),
 }));
 jest.mock('#hooks/pantry/usePantryItemTransformation', () => {
-  const actual = jest.requireActual('#hooks/pantry/usePantryItemTransformation');
+  const actual = jest.requireActual(
+    '#hooks/pantry/usePantryItemTransformation',
+  );
   return {
     ...actual,
     formatPackageBreakdownFull: jest.fn(() => null),
@@ -136,7 +146,9 @@ jest.mock('#/services/recipeApi/SpoonacularService', () => ({
 }));
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
-  useErrorService: () => ({ handleApolloError: jest.fn(() => ({ message: 'Error' })) }),
+  useErrorService: () => ({
+    handleApolloError: jest.fn(() => ({ message: 'Error' })),
+  }),
 }));
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeWithLoadingState: jest.fn(),
@@ -1905,8 +1917,6 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   // ---------- handleDelete ----------
 
   it('triggers delete alert when delete button is pressed', () => {
-    const alertSpy = jest.spyOn(require('react-native').Alert, 'alert');
-
     // We need to actually render the header with functional onPress
     const mockHeader = require('#components/molecules/Header');
     let capturedRightActions: any[];
@@ -1929,13 +1939,12 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
       (a: any) => a.testID === 'pantry-item-delete-button',
     );
     deleteAction.onPress();
-    expect(alertSpy).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Delete Item',
       'Are you sure you want to delete this item?',
       expect.any(Array),
     );
 
-    alertSpy.mockRestore();
     // Restore header mock
     mockHeader.Header = jest.fn(({ rightActions, ...props }: any) => {
       const { View, Text } = require('react-native');
@@ -1953,7 +1962,6 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   // ---------- handleAddToShoppingList ----------
 
   it('shows alert when no shopping list is selected', () => {
-    const alertSpy = jest.spyOn(require('react-native').Alert, 'alert');
     const storeModule = require('#store/useAppStore');
     const origUseAppStore = storeModule.useAppStore;
     // Override to return null for selectedShoppingListId
@@ -1983,13 +1991,12 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
       (a: any) => a.testID === 'pantry-item-add-to-list-button',
     );
     addToListAction.onPress();
-    expect(alertSpy).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'No Shopping List Selected',
       'Please select a shopping list first.',
       expect.any(Array),
     );
 
-    alertSpy.mockRestore();
     storeModule.useAppStore = origUseAppStore;
     // Restore header mock
     mockHeader.Header = jest.fn(({ rightActions, ...props }: any) => {
@@ -2049,7 +2056,6 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
   // ---------- handleDiscardExpired ----------
 
   it('shows discard alert when discard button is pressed', () => {
-    const alertSpy = jest.spyOn(require('react-native').Alert, 'alert');
     useGetPantryItemQuery.mockReturnValue({
       data: {
         pantryItem: {
@@ -2082,13 +2088,12 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
       (a: any) => a.testID === 'pantry-item-discard-button',
     );
     discardAction.onPress();
-    expect(alertSpy).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Discard Expired Item',
       expect.stringContaining('3'),
       expect.any(Array),
     );
 
-    alertSpy.mockRestore();
     // Restore header mock
     mockHeader.Header = jest.fn(({ rightActions, ...props }: any) => {
       const { View, Text } = require('react-native');

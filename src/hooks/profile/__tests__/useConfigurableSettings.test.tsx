@@ -1,7 +1,7 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useConfigurableSettings } from '../useConfigurableSettings';
 
 // Mock token scheduler / refreshToken
@@ -117,7 +117,9 @@ jest.mock('#components/organisms/BiometricSetupModal', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 const mockProfile = {
   firstName: 'John',
@@ -274,7 +276,9 @@ describe('useConfigurableSettings', () => {
     const lastNameItem = result.current.sections[0].items.find(
       (i: any) => i.key === 'lastName',
     );
-    act(() => { lastNameItem.onSave('Smith'); });
+    act(() => {
+      lastNameItem.onSave('Smith');
+    });
     expect(mockUpdateProfileMutation).toHaveBeenCalledWith({
       variables: { input: { lastName: 'Smith' } },
     });
@@ -293,7 +297,9 @@ describe('useConfigurableSettings', () => {
     const item = result.current.sections[0].items.find(
       (i: any) => i.key === 'displayName',
     );
-    act(() => { item.onSave('newdisplay'); });
+    act(() => {
+      item.onSave('newdisplay');
+    });
     expect(mockUpdateProfileMutation).toHaveBeenCalledWith({
       variables: { input: { displayName: 'newdisplay' } },
     });
@@ -314,7 +320,9 @@ describe('useConfigurableSettings', () => {
     const langItem = result.current.sections[1].items.find(
       (i: any) => i.key === 'language',
     );
-    act(() => { langItem.onSave('es'); });
+    act(() => {
+      langItem.onSave('es');
+    });
     expect(mockSetLanguage).toHaveBeenCalledWith('es');
     expect(mockUpdateSettingsMutation).toHaveBeenCalledWith({
       variables: { input: { regional: { language: 'es' } } },
@@ -333,7 +341,9 @@ describe('useConfigurableSettings', () => {
       (i: any) => i.key === 'darkMode',
     );
     expect(darkModeItem.value).toBe(true);
-    act(() => { darkModeItem.onPress(); });
+    act(() => {
+      darkModeItem.onPress();
+    });
     expect(mockSetTheme).toHaveBeenCalledWith('LIGHT');
   });
 
@@ -344,7 +354,9 @@ describe('useConfigurableSettings', () => {
     });
     mockCheckStoredCredentials.mockResolvedValue(false);
 
-    const { result, rerender } = renderHook(() => useConfigurableSettings(mockProfile));
+    const { result, rerender } = renderHook(() =>
+      useConfigurableSettings(mockProfile),
+    );
     // Wait for biometric info to load
     await act(async () => {
       await new Promise(resolve => setTimeout(resolve, 0));
@@ -374,7 +386,9 @@ describe('useConfigurableSettings', () => {
       biometryType: 'FaceID',
     });
     mockCheckStoredCredentials.mockResolvedValue(false);
-    mockGetUserNavigationState.mockReturnValue({ biometricDeclinedPermanently: true } as any);
+    mockGetUserNavigationState.mockReturnValue({
+      biometricDeclinedPermanently: true,
+    } as any);
 
     const { result } = renderHook(() => useConfigurableSettings(mockProfile));
     await act(async () => {
@@ -418,16 +432,24 @@ describe('useConfigurableSettings', () => {
       });
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
-      const phoneItem = result.current.sections[0].items.find((i: any) => i.key === 'phone');
+      const phoneItem = result.current.sections[0].items.find(
+        (i: any) => i.key === 'phone',
+      );
       expect(phoneItem.value).toBe('555-1234');
 
-      const websiteItem = result.current.sections[0].items.find((i: any) => i.key === 'website');
+      const websiteItem = result.current.sections[0].items.find(
+        (i: any) => i.key === 'website',
+      );
       expect(websiteItem.value).toBe('https://example.com');
 
-      const bioItem = result.current.sections[0].items.find((i: any) => i.key === 'bio');
+      const bioItem = result.current.sections[0].items.find(
+        (i: any) => i.key === 'bio',
+      );
       expect(bioItem.value).toBe('Test bio');
 
-      const dobItem = result.current.sections[0].items.find((i: any) => i.key === 'dateOfBirth');
+      const dobItem = result.current.sections[0].items.find(
+        (i: any) => i.key === 'dateOfBirth',
+      );
       expect(dobItem).toBeDefined();
 
       // Restore config
@@ -445,8 +467,12 @@ describe('useConfigurableSettings', () => {
       });
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
-      const phoneItem = result.current.sections[0].items.find((i: any) => i.key === 'phone');
-      act(() => { phoneItem.onSave('555-9999'); });
+      const phoneItem = result.current.sections[0].items.find(
+        (i: any) => i.key === 'phone',
+      );
+      act(() => {
+        phoneItem.onSave('555-9999');
+      });
       expect(mockUpdateProfileMutation).toHaveBeenCalledWith({
         variables: { input: { phone: '555-9999' } },
       });
@@ -465,8 +491,12 @@ describe('useConfigurableSettings', () => {
       });
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
-      const item = result.current.sections[0].items.find((i: any) => i.key === 'website');
-      act(() => { item.onSave('https://new.com'); });
+      const item = result.current.sections[0].items.find(
+        (i: any) => i.key === 'website',
+      );
+      act(() => {
+        item.onSave('https://new.com');
+      });
       expect(mockUpdateProfileMutation).toHaveBeenCalledWith({
         variables: { input: { website: 'https://new.com' } },
       });
@@ -485,8 +515,12 @@ describe('useConfigurableSettings', () => {
       });
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
-      const item = result.current.sections[0].items.find((i: any) => i.key === 'bio');
-      act(() => { item.onSave('New bio'); });
+      const item = result.current.sections[0].items.find(
+        (i: any) => i.key === 'bio',
+      );
+      act(() => {
+        item.onSave('New bio');
+      });
       expect(mockUpdateProfileMutation).toHaveBeenCalledWith({
         variables: { input: { bio: 'New bio' } },
       });
@@ -506,8 +540,12 @@ describe('useConfigurableSettings', () => {
       });
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
-      const item = result.current.sections[0].items.find((i: any) => i.key === 'dateOfBirth');
-      act(() => { item.onSave('1990-01-01'); });
+      const item = result.current.sections[0].items.find(
+        (i: any) => i.key === 'dateOfBirth',
+      );
+      act(() => {
+        item.onSave('1990-01-01');
+      });
       expect(dateStringToISO).toHaveBeenCalledWith('1990-01-01');
       expect(mockUpdateProfileMutation).toHaveBeenCalled();
 
@@ -529,12 +567,16 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHook(() =>
         useConfigurableSettings({ ...mockProfile, gender: 'male' }),
       );
-      const item = result.current.sections[0].items.find((i: any) => i.key === 'gender');
+      const item = result.current.sections[0].items.find(
+        (i: any) => i.key === 'gender',
+      );
       expect(item.value).toBe('male');
       expect(item.options).toBeDefined();
       expect(item.options.length).toBe(5);
 
-      act(() => { item.onSave('female'); });
+      act(() => {
+        item.onSave('female');
+      });
       expect(mockUpdateProfileMutation).toHaveBeenCalledWith({
         variables: { input: { gender: 'female' } },
       });
@@ -552,8 +594,12 @@ describe('useConfigurableSettings', () => {
         items: [{ key: 'gender', label: 'Gender', type: 'modal' }],
       });
 
-      const { result } = renderHook(() => useConfigurableSettings({ ...mockProfile, gender: undefined }));
-      const item = result.current.sections[0].items.find((i: any) => i.key === 'gender');
+      const { result } = renderHook(() =>
+        useConfigurableSettings({ ...mockProfile, gender: undefined }),
+      );
+      const item = result.current.sections[0].items.find(
+        (i: any) => i.key === 'gender',
+      );
       expect(item.value).toBe('');
 
       PROFILE_SETTINGS_CONFIG.length = 0;
@@ -568,15 +614,25 @@ describe('useConfigurableSettings', () => {
       PROFILE_SETTINGS_CONFIG.length = 0;
       PROFILE_SETTINGS_CONFIG.push({
         title: 'Privacy',
-        items: [{ key: 'profileVisibility', label: 'Profile Visibility', type: 'modal' }],
+        items: [
+          {
+            key: 'profileVisibility',
+            label: 'Profile Visibility',
+            type: 'modal',
+          },
+        ],
       });
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
-      const item = result.current.sections[0].items.find((i: any) => i.key === 'profileVisibility');
+      const item = result.current.sections[0].items.find(
+        (i: any) => i.key === 'profileVisibility',
+      );
       expect(item.value).toBe('PUBLIC');
       expect(item.options).toBeDefined();
 
-      act(() => { item.onSave('PRIVATE'); });
+      act(() => {
+        item.onSave('PRIVATE');
+      });
       expect(mockUpdateProfileMutation).toHaveBeenCalledWith({
         variables: { input: { profileVisibility: 'PRIVATE' } },
       });
@@ -595,10 +651,14 @@ describe('useConfigurableSettings', () => {
       });
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
-      const item = result.current.sections[0].items.find((i: any) => i.key === 'showEmail');
+      const item = result.current.sections[0].items.find(
+        (i: any) => i.key === 'showEmail',
+      );
       expect(item.value).toBe(true); // mockProfile.showEmail is true
 
-      act(() => { item.onPress(); });
+      act(() => {
+        item.onPress();
+      });
       expect(mockUpdateProfileMutation).toHaveBeenCalledWith({
         variables: { input: { showEmail: false } },
       });
@@ -617,10 +677,14 @@ describe('useConfigurableSettings', () => {
       });
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
-      const item = result.current.sections[0].items.find((i: any) => i.key === 'showPhone');
+      const item = result.current.sections[0].items.find(
+        (i: any) => i.key === 'showPhone',
+      );
       expect(item.value).toBe(false); // mockProfile.showPhone is false
 
-      act(() => { item.onPress(); });
+      act(() => {
+        item.onPress();
+      });
       expect(mockUpdateProfileMutation).toHaveBeenCalledWith({
         variables: { input: { showPhone: true } },
       });
@@ -638,13 +702,29 @@ describe('useConfigurableSettings', () => {
       PROFILE_SETTINGS_CONFIG.push({
         title: 'Nav',
         items: [
-          { key: 'personalInformation', label: 'Personal Information', type: 'navigation' },
+          {
+            key: 'personalInformation',
+            label: 'Personal Information',
+            type: 'navigation',
+          },
           { key: 'notifications', label: 'Notifications', type: 'navigation' },
-          { key: 'dietaryProfile', label: 'Dietary Profile', type: 'navigation' },
+          {
+            key: 'dietaryProfile',
+            label: 'Dietary Profile',
+            type: 'navigation',
+          },
           { key: 'appSettings', label: 'App Settings', type: 'navigation' },
           { key: 'debugInfo', label: 'Debug Info', type: 'navigation' },
-          { key: 'performanceDashboard', label: 'Performance Dashboard', type: 'navigation' },
-          { key: 'changePassword', label: 'Change Password', type: 'navigation' },
+          {
+            key: 'performanceDashboard',
+            label: 'Performance Dashboard',
+            type: 'navigation',
+          },
+          {
+            key: 'changePassword',
+            label: 'Change Password',
+            type: 'navigation',
+          },
         ],
       });
 
@@ -654,7 +734,9 @@ describe('useConfigurableSettings', () => {
       items.forEach((item: any) => {
         expect(typeof item.onPress).toBe('function');
         // Should not throw
-        act(() => { item.onPress(); });
+        act(() => {
+          item.onPress();
+        });
       });
 
       PROFILE_SETTINGS_CONFIG.length = 0;
@@ -687,17 +769,39 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
       const items = result.current.sections[0].items;
 
-      expect(items.find((i: any) => i.key === 'personalInformation').testID).toBe('profile-menu-personalInformation');
-      expect(items.find((i: any) => i.key === 'notifications').testID).toBe('profile-menu-notifications');
-      expect(items.find((i: any) => i.key === 'dietaryProfile').testID).toBe('profile-menu-dietaryProfile');
-      expect(items.find((i: any) => i.key === 'appSettings').testID).toBe('profile-menu-appSettings');
-      expect(items.find((i: any) => i.key === 'debugInfo').testID).toBe('profile-menu-debugInfo');
-      expect(items.find((i: any) => i.key === 'performanceDashboard').testID).toBe('profile-menu-performanceDashboard');
-      expect(items.find((i: any) => i.key === 'logout').testID).toBe('profile-logout-button');
-      expect(items.find((i: any) => i.key === 'privacy').testID).toBe('profile-menu-privacy');
-      expect(items.find((i: any) => i.key === 'help').testID).toBe('profile-menu-help');
-      expect(items.find((i: any) => i.key === 'about').testID).toBe('profile-menu-about');
-      expect(items.find((i: any) => i.key === 'feedback').testID).toBe('profile-menu-feedback');
+      expect(
+        items.find((i: any) => i.key === 'personalInformation').testID,
+      ).toBe('profile-menu-personalInformation');
+      expect(items.find((i: any) => i.key === 'notifications').testID).toBe(
+        'profile-menu-notifications',
+      );
+      expect(items.find((i: any) => i.key === 'dietaryProfile').testID).toBe(
+        'profile-menu-dietaryProfile',
+      );
+      expect(items.find((i: any) => i.key === 'appSettings').testID).toBe(
+        'profile-menu-appSettings',
+      );
+      expect(items.find((i: any) => i.key === 'debugInfo').testID).toBe(
+        'profile-menu-debugInfo',
+      );
+      expect(
+        items.find((i: any) => i.key === 'performanceDashboard').testID,
+      ).toBe('profile-menu-performanceDashboard');
+      expect(items.find((i: any) => i.key === 'logout').testID).toBe(
+        'profile-logout-button',
+      );
+      expect(items.find((i: any) => i.key === 'privacy').testID).toBe(
+        'profile-menu-privacy',
+      );
+      expect(items.find((i: any) => i.key === 'help').testID).toBe(
+        'profile-menu-help',
+      );
+      expect(items.find((i: any) => i.key === 'about').testID).toBe(
+        'profile-menu-about',
+      );
+      expect(items.find((i: any) => i.key === 'feedback').testID).toBe(
+        'profile-menu-feedback',
+      );
 
       PROFILE_SETTINGS_CONFIG.length = 0;
       original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
@@ -715,7 +819,9 @@ describe('useConfigurableSettings', () => {
       });
 
       renderHook(() => useConfigurableSettings(mockProfile));
-      expect(console.warn).toHaveBeenCalledWith('Unhandled setting key: unknownKey');
+      expect(console.warn).toHaveBeenCalledWith(
+        'Unhandled setting key: unknownKey',
+      );
 
       PROFILE_SETTINGS_CONFIG.length = 0;
       original.forEach((item: any) => PROFILE_SETTINGS_CONFIG.push(item));
@@ -724,7 +830,10 @@ describe('useConfigurableSettings', () => {
 
   describe('biometric authentication', () => {
     it('biometric onPress does nothing when not available', async () => {
-      mockGetBiometricInfo.mockResolvedValue({ isAvailable: false, biometryType: null });
+      mockGetBiometricInfo.mockResolvedValue({
+        isAvailable: false,
+        biometryType: null,
+      });
       mockCheckStoredCredentials.mockResolvedValue(false);
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
@@ -741,11 +850,14 @@ describe('useConfigurableSettings', () => {
       });
 
       // Should not show modal or alert
-      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(alertService.alert).not.toHaveBeenCalled();
     });
 
     it('biometric onPress shows modal when available and not enabled', async () => {
-      mockGetBiometricInfo.mockResolvedValue({ isAvailable: true, biometryType: 'FaceID' });
+      mockGetBiometricInfo.mockResolvedValue({
+        isAvailable: true,
+        biometryType: 'FaceID',
+      });
       mockCheckStoredCredentials.mockResolvedValue(false);
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
@@ -762,11 +874,14 @@ describe('useConfigurableSettings', () => {
       });
 
       // The modal state should be set (no alert, but modal opened)
-      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(alertService.alert).not.toHaveBeenCalled();
     });
 
     it('biometric onPress shows disable alert when currently enabled', async () => {
-      mockGetBiometricInfo.mockResolvedValue({ isAvailable: true, biometryType: 'FaceID' });
+      mockGetBiometricInfo.mockResolvedValue({
+        isAvailable: true,
+        biometryType: 'FaceID',
+      });
       mockCheckStoredCredentials.mockResolvedValue(true);
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
@@ -782,7 +897,7 @@ describe('useConfigurableSettings', () => {
         await biometricItem.onPress();
       });
 
-      expect(Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Disable Biometric Authentication',
         expect.any(String),
         expect.any(Array),
@@ -790,7 +905,10 @@ describe('useConfigurableSettings', () => {
     });
 
     it('biometric disable alert calls removeCredentials on confirm', async () => {
-      mockGetBiometricInfo.mockResolvedValue({ isAvailable: true, biometryType: 'FaceID' });
+      mockGetBiometricInfo.mockResolvedValue({
+        isAvailable: true,
+        biometryType: 'FaceID',
+      });
       mockCheckStoredCredentials.mockResolvedValue(true);
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
@@ -807,7 +925,7 @@ describe('useConfigurableSettings', () => {
       });
 
       // Get the 'Disable' button from the alert
-      const alertCalls = (Alert.alert as jest.Mock).mock.calls;
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
       const lastCall = alertCalls[alertCalls.length - 1];
       const buttons = lastCall[2];
       const disableButton = buttons.find((b: any) => b.text === 'Disable');
@@ -820,7 +938,10 @@ describe('useConfigurableSettings', () => {
     });
 
     it('biometric uses "biometric" fallback when biometryType is null', async () => {
-      mockGetBiometricInfo.mockResolvedValue({ isAvailable: true, biometryType: null });
+      mockGetBiometricInfo.mockResolvedValue({
+        isAvailable: true,
+        biometryType: null,
+      });
       mockCheckStoredCredentials.mockResolvedValue(true);
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
@@ -867,7 +988,10 @@ describe('useConfigurableSettings', () => {
 
   describe('handleBiometricModalComplete', () => {
     it('sets biometricEnabled to true and resets declination when enabled', async () => {
-      mockGetBiometricInfo.mockResolvedValue({ isAvailable: true, biometryType: 'FaceID' });
+      mockGetBiometricInfo.mockResolvedValue({
+        isAvailable: true,
+        biometryType: 'FaceID',
+      });
       mockCheckStoredCredentials.mockResolvedValue(false);
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
@@ -897,7 +1021,10 @@ describe('useConfigurableSettings', () => {
     });
 
     it('re-checks credentials when modal completes with enabled=false', async () => {
-      mockGetBiometricInfo.mockResolvedValue({ isAvailable: true, biometryType: 'FaceID' });
+      mockGetBiometricInfo.mockResolvedValue({
+        isAvailable: true,
+        biometryType: 'FaceID',
+      });
       mockCheckStoredCredentials.mockResolvedValue(false);
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
@@ -910,7 +1037,9 @@ describe('useConfigurableSettings', () => {
         await modal.props.onComplete(false);
       });
 
-      expect(mockCheckStoredCredentials).toHaveBeenCalledWith('test@example.com');
+      expect(mockCheckStoredCredentials).toHaveBeenCalledWith(
+        'test@example.com',
+      );
     });
   });
 

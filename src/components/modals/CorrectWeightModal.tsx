@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { alertService } from '#/services/alertService';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { FormInput } from '#components/molecules/FormInput';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
@@ -15,18 +16,24 @@ interface CorrectWeightModalProps {
   visible: boolean;
   pantryItem: PantryItemFragment | null;
   onClose: () => void;
-  onConfirm: (netWeight: number, reason: string, netWeightUnitId?: string) => void;
+  onConfirm: (
+    netWeight: number,
+    reason: string,
+    netWeightUnitId?: string,
+  ) => void;
 }
 
 export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   visible,
   pantryItem,
   onClose,
-  onConfirm }) => {
+  onConfirm,
+}) => {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible: visible && !!pantryItem,
     onDismiss: onClose,
-    snapPoints: ['65%', '85%'] });
+    snapPoints: ['65%', '85%'],
+  });
   const [weightInput, setWeightInput] = useState('');
   const [unitDisplay, setUnitDisplay] = useState('');
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
@@ -41,29 +48,34 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
     if (visible && pantryItem) {
       setWeightInput(pantryItem.netWeight?.toString() || '');
       setUnitDisplay(
-        pantryItem.netWeightUnit?.symbol || pantryItem.netWeightUnit?.name || '',
+        pantryItem.netWeightUnit?.symbol ||
+          pantryItem.netWeightUnit?.name ||
+          '',
       );
       setSelectedUnitId(pantryItem.netWeightUnit?.id || null);
       setReason('');
     }
   }
 
-  const handleUnitSelected = (unitId: string | null, unitName: string | null) => {
-      setSelectedUnitId(unitId);
-      if (unitName) setUnitDisplay(unitName);
-    };
+  const handleUnitSelected = (
+    unitId: string | null,
+    unitName: string | null,
+  ) => {
+    setSelectedUnitId(unitId);
+    if (unitName) setUnitDisplay(unitName);
+  };
 
   const handleConfirm = () => {
     if (!pantryItem) return;
 
     const netWeight = parseFloat(weightInput);
     if (isNaN(netWeight) || netWeight <= 0) {
-      Alert.alert('Error', 'Please enter a valid weight');
+      alertService.alert('Error', 'Please enter a valid weight');
       return;
     }
 
     if (!reason.trim()) {
-      Alert.alert('Error', 'Please provide a reason for the correction');
+      alertService.alert('Error', 'Please provide a reason for the correction');
       return;
     }
 
@@ -104,7 +116,8 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
           confirmLabel="Correct"
         />
 
-        {!!pantryItem && <>
+        {!!pantryItem && (
+          <>
             <View style={commonStyles.bottomSheetItemInfo}>
               <Text style={commonStyles.bottomSheetItemName}>
                 {pantryItem.itemName}
@@ -168,7 +181,8 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
                 useBottomSheetInput
               />
             </View>
-          </>}
+          </>
+        )}
       </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );

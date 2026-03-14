@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Alert } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
+import { View, Text } from 'react-native';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { alertService } from '#/services/alertService';
+import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -32,7 +31,8 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
   visible,
   onClose,
   onSave,
-  initialValues }) => {
+  initialValues,
+}) => {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -84,7 +84,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         caloriesValue < DIETARY_LIMITS.calories.min ||
         caloriesValue > DIETARY_LIMITS.calories.max
       ) {
-        Alert.alert(
+        alertService.alert(
           'Invalid Input',
           `Calories must be between ${DIETARY_LIMITS.calories.min} and ${DIETARY_LIMITS.calories.max}`,
         );
@@ -101,7 +101,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         proteinValue < DIETARY_LIMITS.protein.min ||
         proteinValue > DIETARY_LIMITS.protein.max
       ) {
-        Alert.alert(
+        alertService.alert(
           'Invalid Input',
           `Protein must be between ${DIETARY_LIMITS.protein.min}g and ${DIETARY_LIMITS.protein.max}g`,
         );
@@ -118,7 +118,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         carbsValue < DIETARY_LIMITS.carbs.min ||
         carbsValue > DIETARY_LIMITS.carbs.max
       ) {
-        Alert.alert(
+        alertService.alert(
           'Invalid Input',
           `Carbs must be between ${DIETARY_LIMITS.carbs.min}g and ${DIETARY_LIMITS.carbs.max}g`,
         );
@@ -135,7 +135,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         fatValue < DIETARY_LIMITS.fat.min ||
         fatValue > DIETARY_LIMITS.fat.max
       ) {
-        Alert.alert(
+        alertService.alert(
           'Invalid Input',
           `Fat must be between ${DIETARY_LIMITS.fat.min}g and ${DIETARY_LIMITS.fat.max}g`,
         );
@@ -149,7 +149,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
     setSaving(false);
 
     if (!success) {
-      Alert.alert('Error', 'Failed to update macro targets');
+      alertService.alert('Error', 'Failed to update macro targets');
     }
   };
 
@@ -162,19 +162,11 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
       topInset={insets.top}
       onDismiss={onClose}
       animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
+      backgroundStyle={{ backgroundColor: theme.colors.surface }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
+      backdropComponent={DismissBackdrop}
     >
       <BottomSheetScrollView
         style={styles.scrollView}
@@ -252,12 +244,17 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   contentContainer: {
-    padding: theme.spacing.md },
+    padding: theme.spacing.md,
+  },
   description: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   section: {
-    marginBottom: theme.spacing.lg } }));
+    marginBottom: theme.spacing.lg,
+  },
+}));

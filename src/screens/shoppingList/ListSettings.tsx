@@ -5,9 +5,9 @@ import {
   ScrollView,
   Pressable,
   Switch,
-  Alert,
   TextInput,
 } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
@@ -212,7 +212,7 @@ export const ListSettings: React.FC<
 
   const handleDelete = () => {
     if (!listId) return; // Should never happen as delete button is hidden
-    Alert.alert(
+    alertService.alert(
       'Delete List',
       'Are you sure you want to delete this list? This action cannot be undone.',
       [
@@ -260,7 +260,7 @@ export const ListSettings: React.FC<
   };
 
   const handleLeaveList = () => {
-    Alert.alert(
+    alertService.alert(
       'Leave Shopping List',
       `Are you sure you want to leave "${
         name || 'this list'

@@ -25,7 +25,9 @@ export interface UseHybridSearchConfig<TQuery, TItem extends { id: string }> {
   /** GraphQL document for server search */
   searchDocument: DocumentNode;
   /** Build variables for the server search query. Return null to skip. */
-  buildSearchVariables: (debouncedSearch: string) => Record<string, unknown> | null;
+  buildSearchVariables: (
+    debouncedSearch: string,
+  ) => Record<string, unknown> | null;
   /** Extract items from the query response */
   extractItems: (data: TQuery) => TItem[];
   /** Local search predicate */
@@ -53,6 +55,30 @@ export interface UseHybridSearchReturn<TItem> {
 
 function stableStringify(value: unknown): string {
   return JSON.stringify(value) ?? '';
+}
+
+// Stable empty array reference for when server results are null (loading state)
+const EMPTY_SEARCH_RESULTS: never[] = [];
+
+// Module-level cache for local filter results — prevents new array on every render
+// when items reference and search query haven't changed
+let _lastFilterItems: unknown = null;
+let _lastFilterQuery = '';
+let _lastFilterResult: any[] = [];
+
+function cachedLocalFilter<TItem extends { id: string }>(
+  items: TItem[],
+  query: string,
+  predicate: (item: TItem, q: string) => boolean,
+): TItem[] {
+  if (items === _lastFilterItems && query === _lastFilterQuery) {
+    return _lastFilterResult as TItem[];
+  }
+  const result = query ? items.filter(item => predicate(item, query)) : items;
+  _lastFilterItems = items;
+  _lastFilterQuery = query;
+  _lastFilterResult = result;
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -100,7 +126,14 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
   }
 
   // Track when all pages have been loaded
-  if (!hasMore && !loading && totalCount > 0 && !allItemsLoaded && !debouncedSearch && items.length >= totalCount) {
+  if (
+    !hasMore &&
+    !loading &&
+    totalCount > 0 &&
+    !allItemsLoaded &&
+    !debouncedSearch &&
+    items.length >= totalCount
+  ) {
     setAllItemsLoaded(true);
   }
   // Reset when more data becomes available (items added, filter changed, refetch)
@@ -137,7 +170,8 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
 
   // Derive isSearching: we're searching when server sort is active with a search
   // term and results haven't arrived for the current variables yet
-  const isSearching = searchActive && !!variables && serverState.resolvedKey !== variablesKey;
+  const isSearching =
+    searchActive && !!variables && serverState.resolvedKey !== variablesKey;
 
   // Store extractItems in a ref so the effect can read it without
   // depending on the (potentially unstable) function reference.
@@ -158,18 +192,22 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
 
     const run = async () => {
       const data = await executeSearchQuery<TQuery>(
-        () => client.query<TQuery>({
-          query: searchDocument,
-          variables: effectVariables,
-          fetchPolicy: 'network-only',
-        }),
+        () =>
+          client.query<TQuery>({
+            query: searchDocument,
+            variables: effectVariables,
+            fetchPolicy: 'network-only',
+          }),
         () => cancelled,
       );
 
       if (cancelled) return;
 
       if (data) {
-        setServerState({ results: currentExtract(data), resolvedKey: variablesKey });
+        setServerState({
+          results: currentExtract(data),
+          resolvedKey: variablesKey,
+        });
       }
     };
 
@@ -198,14 +236,12 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
   let activeItems: TItem[];
 
   if (searchActive) {
-    // Server search path: use server results (fall back to empty during loading)
-    activeItems = serverState.results ?? [];
+    // Server search path: use server results (fall back to stable empty array during loading)
+    activeItems = serverState.results ?? EMPTY_SEARCH_RESULTS;
   } else if (debouncedSearch) {
-    // Local search path: filter items using the predicate
+    // Local search path: cached filter avoids new array when inputs unchanged
     const trimmed = debouncedSearch.trim();
-    activeItems = trimmed
-      ? items.filter(item => searchPredicate(item, trimmed))
-      : items;
+    activeItems = cachedLocalFilter(items, trimmed, searchPredicate);
   } else {
     // No search: pass through main query items
     activeItems = items;

@@ -1,8 +1,9 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import { useSearchResults } from '../useSearchResults';
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 const mockSetSearchResults = jest.fn();
 const mockSetSearching = jest.fn();
@@ -55,7 +56,11 @@ jest.mock('#generated', () => ({
     loading: false,
     error: undefined,
   })),
-  useCreateItemMutation: jest.fn(() => [mockCreateItemMutation, { loading: false }]),
+  useCreateItemMutation: jest.fn(() => [
+    mockCreateItemMutation,
+    { loading: false },
+  ]),
+  useFlagItemForReviewMutation: jest.fn(() => [jest.fn(), { loading: false }]),
 }));
 
 jest.mock('../useImageUpload', () => ({
@@ -133,21 +138,23 @@ describe('useSearchResults', () => {
     useItemByUpcFilterQuery.mockReturnValue({
       data: {
         items: {
-          edges: [{
-            node: {
-              id: 'item-1',
-              name: 'Test Product',
-              description: 'A test product',
-              imageUrl: 'http://img.com/1.jpg',
-              primaryUpc: '1234567890',
-              netWeight: 500,
-              displayUnit: { id: 'unit-1', name: 'grams', symbol: 'g' },
-              brands: [{ brand: { id: 'brand-1', name: 'TestBrand' } }],
-              units: [{ unitId: 'unit-1', isDefault: true }],
-              variationBrand: null,
-              matchedVariation: null,
+          edges: [
+            {
+              node: {
+                id: 'item-1',
+                name: 'Test Product',
+                description: 'A test product',
+                imageUrl: 'http://img.com/1.jpg',
+                primaryUpc: '1234567890',
+                netWeight: 500,
+                displayUnit: { id: 'unit-1', name: 'grams', symbol: 'g' },
+                brands: [{ brand: { id: 'brand-1', name: 'TestBrand' } }],
+                units: [{ unitId: 'unit-1', isDefault: true }],
+                variationBrand: null,
+                matchedVariation: null,
+              },
             },
-          }],
+          ],
         },
       },
       loading: false,
@@ -167,7 +174,10 @@ describe('useSearchResults', () => {
   });
 
   it('falls back to SKU query when UPC finds nothing', () => {
-    const { useItemByUpcFilterQuery, useItemBySkuFilterQuery } = require('#generated');
+    const {
+      useItemByUpcFilterQuery,
+      useItemBySkuFilterQuery,
+    } = require('#generated');
     useItemByUpcFilterQuery.mockReturnValue({
       data: { items: { edges: [] } },
       loading: false,
@@ -176,21 +186,23 @@ describe('useSearchResults', () => {
     useItemBySkuFilterQuery.mockReturnValue({
       data: {
         items: {
-          edges: [{
-            node: {
-              id: 'item-sku',
-              name: 'SKU Product',
-              description: null,
-              imageUrl: null,
-              primaryUpc: null,
-              netWeight: null,
-              displayUnit: null,
-              brands: [],
-              units: [],
-              variationBrand: null,
-              matchedVariation: null,
+          edges: [
+            {
+              node: {
+                id: 'item-sku',
+                name: 'SKU Product',
+                description: null,
+                imageUrl: null,
+                primaryUpc: null,
+                netWeight: null,
+                displayUnit: null,
+                brands: [],
+                units: [],
+                variationBrand: null,
+                matchedVariation: null,
+              },
             },
-          }],
+          ],
         },
       },
       loading: false,
@@ -208,7 +220,10 @@ describe('useSearchResults', () => {
   });
 
   it('shows bottom sheet when neither UPC nor SKU finds results', () => {
-    const { useItemByUpcFilterQuery, useItemBySkuFilterQuery } = require('#generated');
+    const {
+      useItemByUpcFilterQuery,
+      useItemBySkuFilterQuery,
+    } = require('#generated');
     useItemByUpcFilterQuery.mockReturnValue({
       data: { items: { edges: [] } },
       loading: false,
@@ -237,7 +252,9 @@ describe('useSearchResults', () => {
     renderHook(() => useSearchResults('1234567890'));
 
     expect(mockSetSearching).toHaveBeenCalledWith(false);
-    expect(mockSetSearchError).toHaveBeenCalledWith('Search timed out. Please try again.');
+    expect(mockSetSearchError).toHaveBeenCalledWith(
+      'Search timed out. Please try again.',
+    );
   });
 
   it('handles network error from queries', () => {
@@ -265,7 +282,9 @@ describe('useSearchResults', () => {
 
     renderHook(() => useSearchResults('1234567890'));
 
-    expect(mockSetSearchError).toHaveBeenCalledWith('Search failed: Server error');
+    expect(mockSetSearchError).toHaveBeenCalledWith(
+      'Search failed: Server error',
+    );
   });
 
   it('maps ean-13 format correctly', () => {
@@ -360,7 +379,10 @@ describe('useSearchResults', () => {
   });
 
   it('returns loading true when SKU query is loading', () => {
-    const { useItemByUpcFilterQuery, useItemBySkuFilterQuery } = require('#generated');
+    const {
+      useItemByUpcFilterQuery,
+      useItemBySkuFilterQuery,
+    } = require('#generated');
     useItemByUpcFilterQuery.mockReturnValue({
       data: { items: { edges: [] } },
       loading: false,

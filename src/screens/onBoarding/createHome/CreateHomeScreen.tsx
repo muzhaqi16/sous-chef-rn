@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import {
-  View,
-  Text,
-  Pressable,
-  ActivityIndicator,
-  Alert } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { formatRole } from '#utils/formatters/roleFormatters';
 import { createPropsComparator } from '#utils/memoUtils';
 import type { HomeInviteFragment } from '#generated';
-import { InviteActionsProvider, useInviteActions } from './InviteActionsContext';
+import {
+  InviteActionsProvider,
+  useInviteActions,
+} from './InviteActionsContext';
 
 // Components
 import { FormContent, type FormValues } from './FormContent';
@@ -30,13 +29,15 @@ import {
   useGetHomesQuery,
   useGetMyPendingInvitesQuery,
   useAcceptHomeInviteMutation,
-  useDeclineHomeInviteMutation } from '#generated';
+  useDeclineHomeInviteMutation,
+} from '#generated';
 
 // Store & Navigation
 import {
   useAppStore,
   selectUser,
-  selectSelectedHomeId } from '#store/useAppStore';
+  selectSelectedHomeId,
+} from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 
 // Validation & Helpers
@@ -45,7 +46,10 @@ import { createPantryForHome, showPantryCreationError } from './helpers';
 import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
 import { OnboardingErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { executeWithLoadingState, executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  executeWithLoadingState,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 
 /** Module-level async function for home/pantry creation.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
@@ -75,7 +79,10 @@ async function performCreateHome(
           allowJoinCode: true,
           createDefaultPantry: true,
           defaultPantryName: data.pantryName.trim(),
-          tags: ['onboarding'] } } });
+          tags: ['onboarding'],
+        },
+      },
+    });
 
     const payload = response.data?.createHome;
 
@@ -84,20 +91,26 @@ async function performCreateHome(
         deps.setSelectedHomeId(payload.home.id);
 
         const pantries = extractNodes(payload.home.pantriesConnection) as any[];
-        const defaultPantry = pantries.find(
-          (p: { isDefault: boolean }) => p.isDefault,
-        ) || pantries[0];
+        const defaultPantry =
+          pantries.find((p: { isDefault: boolean }) => p.isDefault) ||
+          pantries[0];
         if (defaultPantry) {
           deps.setSelectedPantryId(defaultPantry.id);
         }
       } else {
         const refetchResult = await deps.refetchHomes();
-        const refetchedHomes = normalizeHomes(extractNodes(refetchResult.data?.homes));
-        const newHome = refetchedHomes.find((h: any) => h.name === data.homeName.trim());
+        const refetchedHomes = normalizeHomes(
+          extractNodes(refetchResult.data?.homes),
+        );
+        const newHome = refetchedHomes.find(
+          (h: any) => h.name === data.homeName.trim(),
+        );
         if (newHome?.id) {
           deps.setSelectedHomeId(newHome.id);
         } else {
-          throw new Error('Home was created but could not be found. Please try again.');
+          throw new Error(
+            'Home was created but could not be found. Please try again.',
+          );
         }
       }
     } else {
@@ -145,14 +158,15 @@ interface InviteRenderItemProps {
   item: HomeInviteFragment;
 }
 
-const InviteRenderItemComponent: React.FC<InviteRenderItemProps> = ({ item: invite }) => {
+const InviteRenderItemComponent: React.FC<InviteRenderItemProps> = ({
+  item: invite,
+}) => {
   const { theme } = useUnistyles();
-  const { handleAcceptInvite, handleDeclineInvite, accepting } = useInviteActions();
+  const { handleAcceptInvite, handleDeclineInvite, accepting } =
+    useInviteActions();
 
   const inviterName =
-    invite.inviter?.profile?.displayName ||
-    invite.inviter?.email ||
-    'Someone';
+    invite.inviter?.profile?.displayName || invite.inviter?.email || 'Someone';
   const inviteHomeName = invite.home?.name || 'Unknown Home';
 
   return (
@@ -162,45 +176,40 @@ const InviteRenderItemComponent: React.FC<InviteRenderItemProps> = ({ item: invi
       <View style={styles.inviteDetailsContainer}>
         <Text style={styles.inviteDetail}>
           <Text style={styles.inviteDetailLabel}>From: </Text>
-          <Text style={styles.inviteDetailValue}>
-            {inviterName}
-          </Text>
+          <Text style={styles.inviteDetailValue}>{inviterName}</Text>
         </Text>
 
         <Text style={styles.inviteDetail}>
           <Text style={styles.inviteDetailLabel}>Role: </Text>
-          <Text style={styles.inviteRoleText}>
-            {formatRole(invite.role)}
-          </Text>
+          <Text style={styles.inviteRoleText}>{formatRole(invite.role)}</Text>
         </Text>
       </View>
 
       <View style={styles.inviteActions}>
         <Pressable
-          style={({pressed}) => [styles.button, styles.inviteDeclineButton, pressed && styles.pressed]}
-          onPress={() =>
-            handleDeclineInvite(invite.id, inviteHomeName)
-          }
+          style={({ pressed }) => [
+            styles.button,
+            styles.inviteDeclineButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={() => handleDeclineInvite(invite.id, inviteHomeName)}
           disabled={accepting}
         >
-          <Text style={styles.inviteDeclineButtonText}>
-            Decline
-          </Text>
+          <Text style={styles.inviteDeclineButtonText}>Decline</Text>
         </Pressable>
         <Pressable
-          style={({pressed}) => [styles.button, styles.inviteAcceptButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.button,
+            styles.inviteAcceptButton,
+            pressed && styles.pressed,
+          ]}
           onPress={() => handleAcceptInvite(invite.id)}
           disabled={accepting}
         >
           {accepting ? (
-            <ActivityIndicator
-              size="small"
-              color={theme.colors.white}
-            />
+            <ActivityIndicator size="small" color={theme.colors.white} />
           ) : (
-            <Text style={styles.inviteAcceptButtonText}>
-              Accept
-            </Text>
+            <Text style={styles.inviteAcceptButtonText}>Accept</Text>
           )}
         </Pressable>
       </View>
@@ -216,7 +225,10 @@ const areInvitePropsEqual = createPropsComparator<InviteRenderItemProps>({
   },
 });
 
-const InviteRenderItem = React.memo(InviteRenderItemComponent, areInvitePropsEqual);
+const InviteRenderItem = React.memo(
+  InviteRenderItemComponent,
+  areInvitePropsEqual,
+);
 
 const renderInviteItem = ({ item }: { item: HomeInviteFragment }) => (
   <InviteRenderItem item={item} />
@@ -244,26 +256,35 @@ const CreateHomeScreenComponent = () => {
     if (user?.id && !hasTrackedStartRef.current) {
       setUserNavigationState(user.id, {
         onboardingStartedAt: Date.now(),
-        isNewUser: true });
+        isNewUser: true,
+      });
       hasTrackedStartRef.current = true;
     }
   }, [user?.id, setUserNavigationState]);
 
   // GraphQL Queries
-  const { data: homesData, loading: homesLoading, refetch: refetchHomes } = useGetHomesQuery({
+  const {
+    data: homesData,
+    loading: homesLoading,
+    refetch: refetchHomes,
+  } = useGetHomesQuery({
     skip: !user?.id,
-    fetchPolicy: 'cache-and-network' });
+    fetchPolicy: 'cache-and-network',
+  });
 
   const { data: pendingInvitesData, loading: invitesLoading } =
     useGetMyPendingInvitesQuery({
       skip: !user?.id,
-      fetchPolicy: 'cache-and-network' });
+      fetchPolicy: 'cache-and-network',
+    });
 
   // Extract nodes from connection types (homes and pantries return Connection types)
   const homes = normalizeHomes(extractNodes(homesData?.homes));
   const pendingInvites = pendingInvitesData?.me?.pendingHomeInvites || [];
   const existingHome = homes[0];
-  const existingPantry = existingHome?.pantries?.find((p: { isDefault: boolean }) => p.isDefault) || existingHome?.pantries?.[0];
+  const existingPantry =
+    existingHome?.pantries?.find((p: { isDefault: boolean }) => p.isDefault) ||
+    existingHome?.pantries?.[0];
   const needsHome = !existingHome;
   const needsPantry = !existingPantry;
   const hasPendingInvites = pendingInvites.length > 0;
@@ -279,7 +300,8 @@ const CreateHomeScreenComponent = () => {
 
       const homeCacheId = cache.identify({
         __typename: 'Home',
-        id: newPantry.homeId });
+        id: newPantry.homeId,
+      });
 
       if (!homeCacheId) {
         return;
@@ -295,7 +317,8 @@ const CreateHomeScreenComponent = () => {
                 __typename: 'Pantry',
                 id: newPantry.id,
                 name: newPantry.name,
-                isDefault: newPantry.isDefault },
+                isDefault: newPantry.isDefault,
+              },
             ];
           },
           pantriesConnection(existingConnection = null) {
@@ -306,7 +329,8 @@ const CreateHomeScreenComponent = () => {
             const newEdge = {
               __typename: 'PantryEdge',
               cursor: newPantry.id,
-              node: newPantry };
+              node: newPantry,
+            };
 
             const edges = [...(existingConnection.edges || []), newEdge];
 
@@ -315,9 +339,13 @@ const CreateHomeScreenComponent = () => {
               edges,
               totalCount:
                 (existingConnection.totalCount ?? edges.length) +
-                (existingConnection.edges?.length === edges.length ? 0 : 0) };
-          } } });
-    } });
+                (existingConnection.edges?.length === edges.length ? 0 : 0),
+            };
+          },
+        },
+      });
+    },
+  });
 
   const [acceptHomeInvite, { loading: accepting }] =
     useAcceptHomeInviteMutation({
@@ -334,7 +362,8 @@ const CreateHomeScreenComponent = () => {
           // We just need to ensure it's in the GetHomes query result
           const userCacheId = cache.identify({
             __typename: 'User',
-            id: user.id });
+            id: user.id,
+          });
 
           if (!userCacheId) return;
 
@@ -345,7 +374,8 @@ const CreateHomeScreenComponent = () => {
               homes(existingHomes = [], { readField, toReference }) {
                 const homeRef = toReference({
                   __typename: 'Home',
-                  id: homeId });
+                  id: homeId,
+                });
 
                 // Check if home already exists in the list
                 const exists = existingHomes.some(
@@ -357,7 +387,9 @@ const CreateHomeScreenComponent = () => {
                 }
 
                 return [...existingHomes, homeRef];
-              } } });
+              },
+            },
+          });
         } catch (error) {
           console.warn('Cache update failed for acceptHomeInvite:', error);
           // UI will still work via optimistic/onCompleted handlers
@@ -370,28 +402,46 @@ const CreateHomeScreenComponent = () => {
         }
       },
       onError: error => {
-        Alert.alert('Error', error.message || 'Failed to accept invitation');
-      } });
+        alertService.alert(
+          'Error',
+          error.message || 'Failed to accept invitation',
+        );
+      },
+    });
 
   const [declineHomeInvite] = useDeclineHomeInviteMutation({
     // Note: Declining an invite doesn't add or remove homes from the list,
     // it just changes the invite status. No cache update needed.
     onError: error => {
-      Alert.alert('Error', error.message || 'Failed to decline invitation');
-    } });
+      alertService.alert(
+        'Error',
+        error.message || 'Failed to decline invitation',
+      );
+    },
+  });
 
   // Form Setup
   const form = useForm<FormValues>({
-    resolver: yupResolver(getCreateHomeSchema(needsHome)) as Resolver<FormValues>,
+    resolver: yupResolver(
+      getCreateHomeSchema(needsHome),
+    ) as Resolver<FormValues>,
     defaultValues: {
       homeName: '',
-      pantryName: 'Kitchen Pantry' } });
+      pantryName: 'Kitchen Pantry',
+    },
+  });
 
   // Check existing resources without auto-navigating
   useEffect(() => {
     if (homesLoading) return;
 
-    syncExistingResources(existingHome, existingPantry, setSelectedHomeId, setSelectedPantryId, setCheckingExisting);
+    syncExistingResources(
+      existingHome,
+      existingPantry,
+      setSelectedHomeId,
+      setSelectedPantryId,
+      setCheckingExisting,
+    );
   }, [
     homesLoading,
     existingHome,
@@ -402,10 +452,11 @@ const CreateHomeScreenComponent = () => {
 
   // Form submission handler
   const onSubmit = (data: FormValues) => {
-      setGraphqlError(null);
+    setGraphqlError(null);
 
-      executeWithLoadingState(
-        () => performCreateHome(data, {
+    executeWithLoadingState(
+      () =>
+        performCreateHome(data, {
           needsHome,
           needsPantry,
           selectedHomeId,
@@ -417,12 +468,14 @@ const CreateHomeScreenComponent = () => {
           skipToStep,
           navigateToNextStep,
         }),
-        setIsCreating,
-        (error: unknown) => {
-          setGraphqlError((error as any)?.message || 'An error occurred during setup');
-        },
-      );
-    };
+      setIsCreating,
+      (error: unknown) => {
+        setGraphqlError(
+          (error as any)?.message || 'An error occurred during setup',
+        );
+      },
+    );
+  };
 
   const handleAcceptInvite = (token: string) => {
     // Error handled by onError in mutation config
@@ -433,7 +486,7 @@ const CreateHomeScreenComponent = () => {
   };
 
   const handleDeclineInvite = (token: string, homeNameParam: string) => {
-    Alert.alert(
+    alertService.alert(
       'Decline Invitation',
       `Are you sure you want to decline the invitation to join ${homeNameParam}?`,
       [
@@ -447,17 +500,14 @@ const CreateHomeScreenComponent = () => {
               () => declineHomeInvite({ variables: { token } }),
               'Failed to decline home invite',
             );
-          } },
+          },
+        },
       ],
     );
   };
 
   // Loading state
-  if (
-    checkingExisting ||
-    homesLoading ||
-    invitesLoading
-  ) {
+  if (checkingExisting || homesLoading || invitesLoading) {
     return <LoadingView onSkip={() => skipToStep('CreateShoppingList')} />;
   }
 
@@ -607,24 +657,28 @@ export const CreateHomeScreen = () => (
 
 const styles = StyleSheet.create(theme => ({
   existingResourcesContainer: {
-    marginVertical: theme.spacing.lg },
+    marginVertical: theme.spacing.lg,
+  },
   resourceCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   resourceLabel: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
-    letterSpacing: 0.5 },
+    letterSpacing: 0.5,
+  },
   resourceName: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   defaultBadge: {
     backgroundColor: theme.colors.surface,
     paddingHorizontal: theme.spacing.sm,
@@ -633,25 +687,30 @@ const styles = StyleSheet.create(theme => ({
     alignSelf: 'flex-start',
     marginTop: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: theme.colors.primary },
+    borderColor: theme.colors.primary,
+  },
   defaultBadgeText: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.semibold,
-    textTransform: 'uppercase' },
+    textTransform: 'uppercase',
+  },
   infoText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: theme.spacing.md,
-    lineHeight: theme.typography.lineHeight.normal },
+    lineHeight: theme.typography.lineHeight.normal,
+  },
   invitesContainer: {
-    marginVertical: theme.spacing.lg },
+    marginVertical: theme.spacing.lg,
+  },
   invitesSectionTitle: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   inviteCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
@@ -659,64 +718,90 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 4, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.1)' }] },
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 2,
+        blurRadius: 4,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.1)',
+      },
+    ],
+  },
   inviteHomeName: {
     fontSize: theme.typography.fontSize.xl,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
-    lineHeight: theme.typography.lineHeight.relaxed },
+    lineHeight: theme.typography.lineHeight.relaxed,
+  },
   inviteDetailsContainer: {
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   inviteDetail: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
-    lineHeight: 20 },
+    lineHeight: 20,
+  },
   inviteDetailLabel: {
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   inviteDetailValue: {
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   inviteRoleText: {
     fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.primary },
+    color: theme.colors.primary,
+  },
   inviteActions: {
     flexDirection: 'row',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   button: {
     flex: 1,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
     alignItems: 'center',
-    justifyContent: 'center' },
+    justifyContent: 'center',
+  },
   inviteDeclineButton: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border },
+    borderColor: theme.colors.border,
+  },
   inviteDeclineButtonText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   inviteAcceptButton: {
-    backgroundColor: theme.colors.primary },
+    backgroundColor: theme.colors.primary,
+  },
   inviteAcceptButtonText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.white },
+    color: theme.colors.white,
+  },
   orDivider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: theme.spacing.lg },
+    marginVertical: theme.spacing.lg,
+  },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: theme.colors.border },
+    backgroundColor: theme.colors.border,
+  },
   dividerText: {
     paddingHorizontal: theme.spacing.md,
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

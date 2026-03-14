@@ -1,7 +1,7 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useImageUpload } from '../useImageUpload';
 
 jest.mock('../../apollo/links/tokenScheduler');
@@ -36,7 +36,9 @@ jest.mock('#store', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 // Mock XMLHttpRequest
 const mockXhr = {
@@ -87,7 +89,9 @@ describe('useImageUpload', () => {
 
   it('updateProfileAvatarUrl calls updateProfile mutation', async () => {
     mockUpdateProfile.mockResolvedValue({
-      data: { updateProfile: { userProfile: { id: 'u1', avatar: 'http://img.jpg' } } },
+      data: {
+        updateProfile: { userProfile: { id: 'u1', avatar: 'http://img.jpg' } },
+      },
     });
     const { result } = renderHook(() => useImageUpload());
 
@@ -116,7 +120,11 @@ describe('useImageUpload', () => {
 
   it('updateProfileCoverUrl calls updateProfile mutation with coverImage', async () => {
     mockUpdateProfile.mockResolvedValue({
-      data: { updateProfile: { userProfile: { id: 'u1', coverImage: 'http://cover.jpg' } } },
+      data: {
+        updateProfile: {
+          userProfile: { id: 'u1', coverImage: 'http://cover.jpg' },
+        },
+      },
     });
     const { result } = renderHook(() => useImageUpload());
 
@@ -137,7 +145,10 @@ describe('useImageUpload', () => {
 
     let item: any;
     await act(async () => {
-      item = await result.current.updateItemImageUrl('item1', 'http://item.jpg');
+      item = await result.current.updateItemImageUrl(
+        'item1',
+        'http://item.jpg',
+      );
     });
 
     expect(mockUpdateItemImage).toHaveBeenCalledWith({
@@ -163,7 +174,7 @@ describe('useImageUpload', () => {
     });
 
     expect(returnVal).toBeNull();
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'No Internet Connection',
       expect.stringContaining('internet connection'),
     );
@@ -227,11 +238,17 @@ describe('useImageUpload', () => {
 
     let item: any;
     await act(async () => {
-      item = await result.current.updateItemImageUrl('item1', 'http://item.jpg');
+      item = await result.current.updateItemImageUrl(
+        'item1',
+        'http://item.jpg',
+      );
     });
 
     expect(item).toBeNull();
-    expect(Alert.alert).toHaveBeenCalledWith('Update Failed', 'Failed to update item image');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Update Failed',
+      'Failed to update item image',
+    );
   });
 
   it('uploadProfileImage shows specific error for file size issue', async () => {
@@ -251,7 +268,7 @@ describe('useImageUpload', () => {
       );
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
       expect.stringContaining('too large or corrupted'),
     );
@@ -269,12 +286,14 @@ describe('useImageUpload', () => {
     const { result } = renderHook(() => useImageUpload());
 
     await act(async () => {
-      await result.current.uploadProfileImage(
-        { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
-      );
+      await result.current.uploadProfileImage({
+        uri: 'file://img.jpg',
+        fileSize: 1000,
+        type: 'image/jpeg',
+      });
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
       expect.stringContaining('JPEG, PNG, or WebP'),
     );
@@ -291,12 +310,14 @@ describe('useImageUpload', () => {
     const { result } = renderHook(() => useImageUpload());
 
     await act(async () => {
-      await result.current.uploadProfileImage(
-        { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
-      );
+      await result.current.uploadProfileImage({
+        uri: 'file://img.jpg',
+        fileSize: 1000,
+        type: 'image/jpeg',
+      });
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
       expect.stringContaining('too large'),
     );
@@ -319,7 +340,7 @@ describe('useImageUpload', () => {
       );
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
       'Upload failed',
     );
@@ -345,7 +366,7 @@ describe('useImageUpload', () => {
     });
 
     expect(onError).toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
       'Something went wrong',
     );
@@ -362,12 +383,14 @@ describe('useImageUpload', () => {
     const { result } = renderHook(() => useImageUpload());
 
     await act(async () => {
-      await result.current.uploadProfileImage(
-        { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
-      );
+      await result.current.uploadProfileImage({
+        uri: 'file://img.jpg',
+        fileSize: 1000,
+        type: 'image/jpeg',
+      });
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
       'Upload failed',
     );

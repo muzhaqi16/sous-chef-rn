@@ -5,9 +5,9 @@ import {
   ScrollView,
   Pressable,
   Switch,
-  Alert,
   TextInput,
 } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { Icon } from '#/utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
@@ -110,7 +110,7 @@ export const PantrySettings: React.FC<
       const { message } = handleApolloError(error, {
         operation: 'Set Default Pantry',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
       // Revert the toggle on error
       setIsDefault(!isDefault);
     },
@@ -122,7 +122,7 @@ export const PantrySettings: React.FC<
       const { message } = handleApolloError(error, {
         operation: 'Delete Pantry',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     },
     // Update cache directly instead of refetching
     update: (cache, { data }, { variables }) => {
@@ -253,7 +253,7 @@ export const PantrySettings: React.FC<
       goBack();
     },
     onError: () => {
-      Alert.alert('Error', 'Failed to create pantry');
+      alertService.alert('Error', 'Failed to create pantry');
     },
   });
 
@@ -263,7 +263,7 @@ export const PantrySettings: React.FC<
       errorService.reportError(pantryError, {
         operation: 'PantrySettings.loadPantry',
       });
-      Alert.alert(
+      alertService.alert(
         'Error Loading Pantry',
         'Failed to load pantry data. Please try again.',
       );
@@ -304,12 +304,12 @@ export const PantrySettings: React.FC<
 
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Pantry name cannot be empty');
+      alertService.alert('Error', 'Pantry name cannot be empty');
       return;
     }
 
     if (!selectedHomeId) {
-      Alert.alert('Error', 'No home selected');
+      alertService.alert('Error', 'No home selected');
       return;
     }
 
@@ -341,7 +341,7 @@ export const PantrySettings: React.FC<
       },
       setSaving,
       () => {
-        Alert.alert(
+        alertService.alert(
           'Error',
           pantryId ? 'Failed to save settings' : 'Failed to create pantry',
         );
@@ -352,7 +352,7 @@ export const PantrySettings: React.FC<
   const handleDelete = () => {
     if (!pantryId) return;
 
-    Alert.alert(
+    alertService.alert(
       'Delete Pantry',
       'Are you sure you want to delete this pantry? This action cannot be undone and will remove all items in this pantry.',
       [
@@ -462,7 +462,6 @@ export const PantrySettings: React.FC<
               label="Items in pantry"
               value={`${pantry?.items?.length || 0} items`}
             />
-
           </View>
         )}
 

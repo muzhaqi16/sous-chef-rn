@@ -1,16 +1,13 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import { useNotificationSettings } from '../useNotificationSettings';
 
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) =>
-    selector({ user: { id: 'user-1' } }),
-  ),
+  useAppStore: jest.fn((selector: any) => selector({ user: { id: 'user-1' } })),
 }));
 
 const mockUpdatePreferences = jest.fn();
@@ -61,7 +58,9 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -98,13 +97,18 @@ describe('useNotificationSettings', () => {
   });
 
   it('updateNotificationSetting calls mutation with nested input', async () => {
-    mockUpdatePreferences.mockResolvedValue({ data: { updateNotificationPreferences: true } });
+    mockUpdatePreferences.mockResolvedValue({
+      data: { updateNotificationPreferences: true },
+    });
 
     const { result } = renderHook(() => useNotificationSettings());
 
     let success: boolean = false;
     await act(async () => {
-      success = await result.current.updateNotificationSetting('pushEnabled', true);
+      success = await result.current.updateNotificationSetting(
+        'pushEnabled',
+        true,
+      );
     });
 
     expect(mockUpdatePreferences).toHaveBeenCalledWith({
@@ -116,7 +120,9 @@ describe('useNotificationSettings', () => {
   });
 
   it('updateNotificationSetting maps feature keys correctly', async () => {
-    mockUpdatePreferences.mockResolvedValue({ data: { updateNotificationPreferences: true } });
+    mockUpdatePreferences.mockResolvedValue({
+      data: { updateNotificationPreferences: true },
+    });
 
     const { result } = renderHook(() => useNotificationSettings());
 
@@ -132,12 +138,17 @@ describe('useNotificationSettings', () => {
   });
 
   it('updateNotificationSetting maps expiration keys correctly', async () => {
-    mockUpdatePreferences.mockResolvedValue({ data: { updateNotificationPreferences: true } });
+    mockUpdatePreferences.mockResolvedValue({
+      data: { updateNotificationPreferences: true },
+    });
 
     const { result } = renderHook(() => useNotificationSettings());
 
     await act(async () => {
-      await result.current.updateNotificationSetting('expirationDaysThreshold', 7);
+      await result.current.updateNotificationSetting(
+        'expirationDaysThreshold',
+        7,
+      );
     });
 
     expect(mockUpdatePreferences).toHaveBeenCalledWith({
@@ -148,7 +159,9 @@ describe('useNotificationSettings', () => {
   });
 
   it('updateMultipleSettings sends batch update', async () => {
-    mockUpdatePreferences.mockResolvedValue({ data: { updateNotificationPreferences: true } });
+    mockUpdatePreferences.mockResolvedValue({
+      data: { updateNotificationPreferences: true },
+    });
 
     const { result } = renderHook(() => useNotificationSettings());
 
@@ -165,7 +178,9 @@ describe('useNotificationSettings', () => {
   });
 
   it('resetToDefaults sends default values', async () => {
-    mockUpdatePreferences.mockResolvedValue({ data: { updateNotificationPreferences: true } });
+    mockUpdatePreferences.mockResolvedValue({
+      data: { updateNotificationPreferences: true },
+    });
 
     const { result } = renderHook(() => useNotificationSettings());
 

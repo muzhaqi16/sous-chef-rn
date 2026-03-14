@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import {
   View,
   ScrollView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Text,
 } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string } from 'yup';
@@ -410,12 +410,15 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     // Validate quantity input
     const quantityValue = parseQuantityInput(data.quantityInput || '');
     if (!quantityValue || quantityValue <= 0) {
-      Alert.alert('Error', 'Please enter a valid quantity');
+      alertService.alert('Error', 'Please enter a valid quantity');
       return;
     }
 
     if (!currentPantryId) {
-      Alert.alert('Error', 'No pantry selected. Please select a pantry first.');
+      alertService.alert(
+        'Error',
+        'No pantry selected. Please select a pantry first.',
+      );
       return;
     }
 
@@ -437,7 +440,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         } else {
           const currentItem = existingItemData?.pantryItem;
           if (!currentItem || !itemId) {
-            Alert.alert('Error', 'Item not found');
+            alertService.alert('Error', 'Item not found');
             return;
           }
 
@@ -495,7 +498,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           `${mode === 'add' ? 'Add' : 'Update'} pantry item error:`,
           error,
         );
-        Alert.alert(
+        alertService.alert(
           'Error',
           `Failed to ${
             mode === 'add' ? 'add' : 'update'

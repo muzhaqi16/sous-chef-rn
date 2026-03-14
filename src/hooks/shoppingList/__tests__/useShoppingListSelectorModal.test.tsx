@@ -8,7 +8,11 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
+const mockNav = (
+  jest.requireMock('#hooks/navigation/useAppNavigation') as {
+    useAppNavigation: jest.Mock;
+  }
+).useAppNavigation();
 
 const mockSetOverlayOpen = jest.fn();
 jest.mock('#/context/TabBarActionsContext', () => ({
@@ -42,27 +46,30 @@ jest.mock('react-native-unistyles', () => ({
     },
   })),
   StyleSheet: {
-    create: (fn: any) => (typeof fn === 'function' ? fn({
-      colors: {
-        primary: '#007AFF',
-        error: '#FF3B30',
-        errorLight: '#FFE5E5',
-        textPrimary: '#000',
-        textSecondary: '#666',
-        textTertiary: '#999',
-        surface: '#FFF',
-        border: '#EEE',
-        primaryLight: '#E3F2FF',
-        white: '#FFF',
-      },
-      spacing: { xs: 4, sm: 8, md: 16, lg: 24 },
-      fonts: {
-        size: { xs: 10, sm: 12, md: 14, lg: 16 },
-        weight: { medium: '500', semibold: '600' },
-      },
-      radii: { md: 8, full: 999 },
-      opacity: { pressed: 0.7 },
-    }) : fn),
+    create: (fn: any) =>
+      typeof fn === 'function'
+        ? fn({
+            colors: {
+              primary: '#007AFF',
+              error: '#FF3B30',
+              errorLight: '#FFE5E5',
+              textPrimary: '#000',
+              textSecondary: '#666',
+              textTertiary: '#999',
+              surface: '#FFF',
+              border: '#EEE',
+              primaryLight: '#E3F2FF',
+              white: '#FFF',
+            },
+            spacing: { xs: 4, sm: 8, md: 16, lg: 24 },
+            fonts: {
+              size: { xs: 10, sm: 12, md: 14, lg: 16 },
+              weight: { medium: '500', semibold: '600' },
+            },
+            radii: { md: 8, full: 999 },
+            opacity: { pressed: 0.7 },
+          })
+        : fn,
   },
 }));
 
@@ -87,7 +94,10 @@ const mockDeleteList = jest.fn().mockResolvedValue({
 });
 jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
-  useDeleteShoppingListMutation: jest.fn(() => [mockDeleteList, { loading: false }]),
+  useDeleteShoppingListMutation: jest.fn(() => [
+    mockDeleteList,
+    { loading: false },
+  ]),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
@@ -117,6 +127,10 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
+
 jest.mock('#store', () => ({
   useStore: {
     getState: jest.fn(() => ({
@@ -135,7 +149,9 @@ const makeLists = () => [
     totalItems: 5,
     completedItems: 2,
     _isOwner: true,
-    ownerships: [{ user: { email: 'me@test.com', profile: { displayName: 'Me' } } }],
+    ownerships: [
+      { user: { email: 'me@test.com', profile: { displayName: 'Me' } } },
+    ],
   },
   {
     id: 'list-2',
@@ -146,7 +162,9 @@ const makeLists = () => [
     totalItems: 3,
     completedItems: 0,
     _isOwner: false,
-    ownerships: [{ user: { email: 'other@test.com', profile: { displayName: 'Other' } } }],
+    ownerships: [
+      { user: { email: 'other@test.com', profile: { displayName: 'Other' } } },
+    ],
   },
 ];
 
@@ -283,8 +301,16 @@ describe('useShoppingListSelectorModal', () => {
       }),
     );
 
-    const headerItem = { _isHeader: true, id: 'header-personal', title: 'Personal Lists' };
-    const rendered = result.current.listConfig.renderCustomItem!(headerItem as any, false, jest.fn());
+    const headerItem = {
+      _isHeader: true,
+      id: 'header-personal',
+      title: 'Personal Lists',
+    };
+    const rendered = result.current.listConfig.renderCustomItem!(
+      headerItem as any,
+      false,
+      jest.fn(),
+    );
     expect(rendered).toBeTruthy();
   });
 
@@ -298,7 +324,11 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     const lists = makeLists();
-    const rendered = result.current.listConfig.renderCustomItem!(lists[1] as any, false, jest.fn());
+    const rendered = result.current.listConfig.renderCustomItem!(
+      lists[1] as any,
+      false,
+      jest.fn(),
+    );
     expect(rendered).toBeTruthy();
   });
 
@@ -312,7 +342,11 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     const lists = makeLists();
-    const rendered = result.current.listConfig.renderCustomItem!(lists[0] as any, true, jest.fn());
+    const rendered = result.current.listConfig.renderCustomItem!(
+      lists[0] as any,
+      true,
+      jest.fn(),
+    );
     expect(rendered).toBeTruthy();
   });
 
@@ -338,7 +372,17 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     const rendered = result.current.listConfig.renderCustomItem!(
-      { id: 'list-3', name: 'Empty List', isDefault: false, homeId: null, home: null, totalItems: 0, completedItems: 0, _isOwner: true, ownerships: [] } as any,
+      {
+        id: 'list-3',
+        name: 'Empty List',
+        isDefault: false,
+        homeId: null,
+        home: null,
+        totalItems: 0,
+        completedItems: 0,
+        _isOwner: true,
+        ownerships: [],
+      } as any,
       false,
       jest.fn(),
     );
@@ -359,7 +403,11 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     act(() => {
-      result.current.listConfig.onSelect('header-personal', { _isHeader: true, id: 'header-personal', title: 'Personal' } as any);
+      result.current.listConfig.onSelect('header-personal', {
+        _isHeader: true,
+        id: 'header-personal',
+        title: 'Personal',
+      } as any);
     });
 
     expect(mockSetId).not.toHaveBeenCalled();
@@ -473,7 +521,9 @@ describe('useShoppingListSelectorModal', () => {
       result.current.listConfig.actions![1].onPress();
     });
 
-    expect(mockNav.navigate).toHaveBeenCalledWith('ShareList', { listId: 'list-1' });
+    expect(mockNav.navigate).toHaveBeenCalledWith('ShareList', {
+      listId: 'list-1',
+    });
   });
 
   it('action navigates to ListSettings with listId when List Settings pressed', () => {
@@ -489,7 +539,9 @@ describe('useShoppingListSelectorModal', () => {
       result.current.listConfig.actions![2].onPress();
     });
 
-    expect(mockNav.navigate).toHaveBeenCalledWith('ListSettings', { listId: 'list-1' });
+    expect(mockNav.navigate).toHaveBeenCalledWith('ListSettings', {
+      listId: 'list-1',
+    });
   });
 
   it('renderCustomItem for non-owner shared list shows owner info fallback', () => {
@@ -515,7 +567,11 @@ describe('useShoppingListSelectorModal', () => {
       }),
     );
 
-    const rendered = result.current.listConfig.renderCustomItem!(listsNoProfile[0] as any, false, jest.fn());
+    const rendered = result.current.listConfig.renderCustomItem!(
+      listsNoProfile[0] as any,
+      false,
+      jest.fn(),
+    );
     expect(rendered).toBeTruthy();
   });
 
@@ -528,8 +584,16 @@ describe('useShoppingListSelectorModal', () => {
       }),
     );
 
-    const headerItem = { _isHeader: true, id: 'header-home-1', title: 'Family Home' };
-    const rendered = result.current.listConfig.renderCustomItem!(headerItem as any, false, jest.fn());
+    const headerItem = {
+      _isHeader: true,
+      id: 'header-home-1',
+      title: 'Family Home',
+    };
+    const rendered = result.current.listConfig.renderCustomItem!(
+      headerItem as any,
+      false,
+      jest.fn(),
+    );
     expect(rendered).toBeTruthy();
   });
 
@@ -547,7 +611,11 @@ describe('useShoppingListSelectorModal', () => {
 
       const lists = makeLists();
       const onPress = jest.fn();
-      const rendered = result.current.listConfig.renderCustomItem!(lists[0] as any, false, onPress);
+      const rendered = result.current.listConfig.renderCustomItem!(
+        lists[0] as any,
+        false,
+        onPress,
+      );
 
       // Simulate long press via the Pressable
       const { render: rtlRender } = require('@testing-library/react-native');
@@ -589,7 +657,9 @@ describe('useShoppingListSelectorModal', () => {
     it('does not select list when in delete mode ref is true', () => {
       const mockSetId = jest.fn();
       const { useStore } = require('#store');
-      useStore.getState.mockReturnValue({ setSelectedShoppingListId: mockSetId });
+      useStore.getState.mockReturnValue({
+        setSelectedShoppingListId: mockSetId,
+      });
 
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
@@ -612,9 +682,6 @@ describe('useShoppingListSelectorModal', () => {
 
   describe('handleDeleteSelected', () => {
     it('does nothing when no items are selected for deletion', () => {
-      const { Alert } = require('react-native');
-      jest.spyOn(Alert, 'alert');
-
       const { result } = renderHook(() =>
         useShoppingListSelectorModal({
           listDataWithOwnership: makeLists() as any,
@@ -941,7 +1008,9 @@ describe('useShoppingListSelectorModal', () => {
       });
 
       expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
-      expect(mockNav.navigate).toHaveBeenCalledWith('ShareList', { listId: 'list-1' });
+      expect(mockNav.navigate).toHaveBeenCalledWith('ShareList', {
+        listId: 'list-1',
+      });
     });
 
     it('settings action closes overlay and selector', () => {
@@ -958,7 +1027,9 @@ describe('useShoppingListSelectorModal', () => {
       });
 
       expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
-      expect(mockNav.navigate).toHaveBeenCalledWith('ListSettings', { listId: 'list-1' });
+      expect(mockNav.navigate).toHaveBeenCalledWith('ListSettings', {
+        listId: 'list-1',
+      });
     });
   });
 });

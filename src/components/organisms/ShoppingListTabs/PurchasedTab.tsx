@@ -26,7 +26,6 @@ const PurchasedTabComponent: React.FC = () => {
     disabled,
     onEndReached,
     hasMore,
-    isLoadingMore,
     canRemoveItems,
     canEditItems,
     canMarkPurchased,
@@ -77,7 +76,6 @@ const PurchasedTabComponent: React.FC = () => {
           onSwipeableClose={actions.onSwipeableClose}
           onEndReached={onEndReached}
           hasMore={hasMore}
-          isLoadingMore={isLoadingMore}
           canRemoveItems={canRemoveItems}
           canEditItems={canEditItems}
           canMarkPurchased={canMarkPurchased}

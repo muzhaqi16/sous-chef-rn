@@ -63,11 +63,33 @@ const HAPTIC_PATTERNS: Record<HapticFeedbackType, number | number[]> = {
  */
 class HapticFeedbackService {
   private supported: boolean = true;
+  private initialized = false;
+  private enabledPreference: boolean | undefined;
+  private unsubscribe: (() => void) | undefined;
 
   constructor() {
     // Check if vibration is supported
     // Note: Vibration API is supported on iOS and Android by default in RN
     this.supported = Platform.OS === 'ios' || Platform.OS === 'android';
+  }
+
+  /**
+   * Initialize the service by caching the user preference from the store
+   * and subscribing to future changes. Call after store hydration in App.tsx.
+   */
+  initialize(): void {
+    if (this.initialized) return;
+
+    this.enabledPreference = useStore.getState().hapticFeedbackEnabled ?? true;
+    this.initialized = true;
+
+    // Subscribe to store changes so toggling in settings takes effect immediately
+    this.unsubscribe = useStore.subscribe(
+      state => state.hapticFeedbackEnabled,
+      enabled => {
+        this.enabledPreference = enabled ?? true;
+      },
+    );
   }
 
   /**
@@ -80,9 +102,15 @@ class HapticFeedbackService {
 
   /**
    * Check if haptic feedback is currently enabled
-   * Reads from the store preference
+   * Uses cached preference when initialized, falls back to store read otherwise
    */
   isEnabled(): boolean {
+    if (this.initialized) {
+      return (this.enabledPreference ?? true) && this.supported;
+    }
+    if (__DEV__) {
+      console.warn('[HapticService] isEnabled() called before initialize()');
+    }
     const hapticEnabled = useStore.getState().hapticFeedbackEnabled;
     return (hapticEnabled ?? true) && this.supported;
   }

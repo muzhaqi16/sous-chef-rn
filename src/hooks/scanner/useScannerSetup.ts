@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { BarcodeSource } from '#/types/navigation';
@@ -93,7 +93,7 @@ export function useScannerSetup(options: UseScannerSetupOptions): void {
         if (onNoHomeRef.current) {
           onNoHomeRef.current();
         } else {
-          Alert.alert(
+          alertService.alert(
             'No Home Selected',
             'You need to be a member of a home to scan items.',
             [

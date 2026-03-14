@@ -1,16 +1,13 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import { useDietaryProfile } from '../useDietaryProfile';
 
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) =>
-    selector({ user: { id: 'user-1' } }),
-  ),
+  useAppStore: jest.fn((selector: any) => selector({ user: { id: 'user-1' } })),
 }));
 
 const mockUpdateProfile = jest.fn();
@@ -22,7 +19,15 @@ const mockProfileData = {
   id: 'dp-1',
   userId: 'user-1',
   restrictions: [
-    { id: 'r1', diet: 'VEGAN', intolerance: null, healthGoal: null, severity: 'STRICT', notes: 'test', appliesToHomeId: null },
+    {
+      id: 'r1',
+      diet: 'VEGAN',
+      intolerance: null,
+      healthGoal: null,
+      severity: 'STRICT',
+      notes: 'test',
+      appliesToHomeId: null,
+    },
   ],
   preferredCuisines: ['Italian'],
   dislikedIngredients: ['cilantro'],
@@ -57,7 +62,10 @@ jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
 }));
 
 jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
-  enhanceWithVersion: jest.fn((obj: any, updates: any) => ({ ...obj, ...updates })),
+  enhanceWithVersion: jest.fn((obj: any, updates: any) => ({
+    ...obj,
+    ...updates,
+  })),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -68,7 +76,9 @@ jest.mock('#/services/errorService', () => ({
   }),
 }));
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -120,12 +130,17 @@ describe('useDietaryProfile', () => {
   });
 
   it('updateDietaryProfile calls mutation with cleaned input', async () => {
-    mockUpdateProfile.mockResolvedValue({ data: { updateDietaryProfile: true } });
+    mockUpdateProfile.mockResolvedValue({
+      data: { updateDietaryProfile: true },
+    });
     const { result } = renderHook(() => useDietaryProfile());
 
     let success: boolean = false;
     await act(async () => {
-      success = await result.current.updateDietaryProfile({ mealsPerDay: 4, calorieTarget: null });
+      success = await result.current.updateDietaryProfile({
+        mealsPerDay: 4,
+        calorieTarget: null,
+      });
     });
 
     expect(mockUpdateProfile).toHaveBeenCalledWith({
@@ -163,12 +178,16 @@ describe('useDietaryProfile', () => {
   });
 
   it('updateDietaryRestriction calls mutation', async () => {
-    mockUpdateRestriction.mockResolvedValue({ data: { updateRestriction: true } });
+    mockUpdateRestriction.mockResolvedValue({
+      data: { updateRestriction: true },
+    });
     const { result } = renderHook(() => useDietaryProfile());
 
     let success: boolean = false;
     await act(async () => {
-      success = await result.current.updateDietaryRestriction('r1', { severity: 'MODERATE' as any });
+      success = await result.current.updateDietaryRestriction('r1', {
+        severity: 'MODERATE' as any,
+      });
     });
 
     expect(mockUpdateRestriction).toHaveBeenCalledWith({
@@ -180,7 +199,9 @@ describe('useDietaryProfile', () => {
   });
 
   it('removeDietaryRestriction calls mutation', async () => {
-    mockRemoveRestriction.mockResolvedValue({ data: { removeRestriction: true } });
+    mockRemoveRestriction.mockResolvedValue({
+      data: { removeRestriction: true },
+    });
     const { result } = renderHook(() => useDietaryProfile());
 
     let success: boolean = false;

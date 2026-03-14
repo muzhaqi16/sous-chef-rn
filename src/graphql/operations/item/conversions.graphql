@@ -3,13 +3,13 @@
 # ============================================
 
 query ConvertQuantity(
-  $itemId: ID
+  $pantryItemId: ID
   $quantity: Float!
   $fromUnitId: ID!
   $toUnitId: ID!
 ) {
   convertQuantity(
-    itemId: $itemId
+    pantryItemId: $pantryItemId
     quantity: $quantity
     fromUnitId: $fromUnitId
     toUnitId: $toUnitId

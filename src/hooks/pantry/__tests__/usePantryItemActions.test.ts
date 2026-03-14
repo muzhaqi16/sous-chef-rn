@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { usePantryItemActions } from '../usePantryItemActions';
 
 const mockCacheModify = jest.fn();
@@ -35,16 +35,21 @@ jest.mock('#services/telemetry', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
-const createPantryItem = (id: string, quantity = 5) => ({
-  id,
-  quantity,
-  unit: { id: 'unit-1', symbol: 'ea' },
-  item: { name: `Item ${id}` },
-}) as any;
+const createPantryItem = (id: string, quantity = 5) =>
+  ({
+    id,
+    quantity,
+    unit: { id: 'unit-1', symbol: 'ea' },
+    item: { name: `Item ${id}` },
+  } as any);
 
-const createOptions = (items = [createPantryItem('item-1'), createPantryItem('item-2')]) => ({
+const createOptions = (
+  items = [createPantryItem('item-1'), createPantryItem('item-2')],
+) => ({
   pantryItems: items,
   removeItem: jest.fn().mockResolvedValue(undefined),
   navigateTo: {
@@ -81,7 +86,9 @@ describe('usePantryItemActions', () => {
 
   describe('handleConsumeItem', () => {
     it('opens consume modal for existing item', () => {
-      const { result } = renderHook(() => usePantryItemActions(createOptions()));
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
 
       act(() => {
         result.current.handleConsumeItem('item-1');
@@ -94,7 +101,9 @@ describe('usePantryItemActions', () => {
     });
 
     it('does nothing for unknown item', () => {
-      const { result } = renderHook(() => usePantryItemActions(createOptions()));
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
 
       act(() => {
         result.current.handleConsumeItem('unknown');
@@ -106,7 +115,9 @@ describe('usePantryItemActions', () => {
 
   describe('handleWasteItem', () => {
     it('opens waste modal', () => {
-      const { result } = renderHook(() => usePantryItemActions(createOptions()));
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
 
       act(() => {
         result.current.handleWasteItem('item-2');
@@ -119,7 +130,9 @@ describe('usePantryItemActions', () => {
 
   describe('handleRestockItem', () => {
     it('opens restock modal', () => {
-      const { result } = renderHook(() => usePantryItemActions(createOptions()));
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
 
       act(() => {
         result.current.handleRestockItem('item-1');
@@ -139,7 +152,9 @@ describe('usePantryItemActions', () => {
         result.current.handleEditItem('item-1');
       });
 
-      expect(options.navigateTo.pantryItem).toHaveBeenCalledWith({ itemId: 'item-1' });
+      expect(options.navigateTo.pantryItem).toHaveBeenCalledWith({
+        itemId: 'item-1',
+      });
     });
   });
 
@@ -162,7 +177,9 @@ describe('usePantryItemActions', () => {
         data: { createPantryItemUsage: { success: true } },
       });
 
-      const { result } = renderHook(() => usePantryItemActions(createOptions()));
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
 
       // Open consume modal first
       act(() => {
@@ -173,7 +190,12 @@ describe('usePantryItemActions', () => {
 
       // Confirm consume
       await act(async () => {
-        await result.current.handleConfirmConsume(2, '2', 'COOK' as any, 'For dinner');
+        await result.current.handleConfirmConsume(
+          2,
+          '2',
+          'COOK' as any,
+          'For dinner',
+        );
       });
 
       expect(mockCreatePantryItemUsage).toHaveBeenCalledWith({
@@ -192,7 +214,9 @@ describe('usePantryItemActions', () => {
     });
 
     it('does nothing when no modal is open', async () => {
-      const { result } = renderHook(() => usePantryItemActions(createOptions()));
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
 
       await act(async () => {
         await result.current.handleConfirmConsume(1, '1', 'COOK' as any, '');
@@ -204,7 +228,9 @@ describe('usePantryItemActions', () => {
     it('reverts quantity and shows error on failure', async () => {
       mockCreatePantryItemUsage.mockRejectedValue(new Error('Failed'));
 
-      const { result } = renderHook(() => usePantryItemActions(createOptions()));
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
 
       act(() => {
         result.current.handleConsumeItem('item-1');
@@ -216,7 +242,10 @@ describe('usePantryItemActions', () => {
 
       // Cache modify called for optimistic update AND revert
       expect(mockCacheModify).toHaveBeenCalled();
-      expect(Alert.alert).toHaveBeenCalledWith('Error', expect.any(String));
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        expect.any(String),
+      );
       expect(console.error).toHaveBeenCalledWith(
         expect.stringContaining('Error consuming pantry item:'),
         expect.any(Error),
@@ -230,7 +259,9 @@ describe('usePantryItemActions', () => {
         data: { createPantryItemUsage: { success: true } },
       });
 
-      const { result } = renderHook(() => usePantryItemActions(createOptions()));
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
 
       act(() => {
         result.current.handleWasteItem('item-1');
@@ -271,7 +302,9 @@ describe('usePantryItemActions', () => {
         data: { restockPantryItem: { success: true } },
       });
 
-      const { result } = renderHook(() => usePantryItemActions(createOptions()));
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
 
       act(() => {
         result.current.handleRestockItem('item-1');
@@ -303,7 +336,9 @@ describe('usePantryItemActions', () => {
         data: { restockPantryItem: { success: true } },
       });
 
-      const { result } = renderHook(() => usePantryItemActions(createOptions()));
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
 
       act(() => {
         result.current.handleRestockItem('item-1');
@@ -330,9 +365,211 @@ describe('usePantryItemActions', () => {
     });
   });
 
+  describe('payload error handling', () => {
+    it('shows invalid unit alert on consume payload UNIT_INVALID', async () => {
+      mockCreatePantryItemUsage.mockResolvedValue({
+        data: {
+          createPantryItemUsage: {
+            success: false,
+            code: 'UNIT_INVALID',
+            message: "Cannot consume in 'jar'",
+            validUnits: ['oz', 'cup', 'tbsp'],
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
+
+      act(() => {
+        result.current.handleConsumeItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmConsume(2, '2', 'COOK' as any, '');
+      });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Invalid Unit',
+        expect.stringContaining('oz, cup, tbsp'),
+      );
+      // Modal should not close on payload error
+      expect(result.current.consumeModal.visible).toBe(true);
+    });
+
+    it('shows invalid unit alert on waste payload UNIT_INVALID', async () => {
+      mockCreatePantryItemUsage.mockResolvedValue({
+        data: {
+          createPantryItemUsage: {
+            success: false,
+            code: 'UNIT_INVALID',
+            message: "Cannot waste in 'jar'",
+            validUnits: null,
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
+
+      act(() => {
+        result.current.handleWasteItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmWaste(
+          1,
+          'EXPIRED' as any,
+          false,
+          false,
+          '',
+        );
+      });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Invalid Unit',
+        "Cannot waste in 'jar'",
+      );
+      expect(result.current.wasteModal.visible).toBe(true);
+    });
+
+    it('shows version conflict alert on consume payload CONFLICT', async () => {
+      mockCreatePantryItemUsage.mockResolvedValue({
+        data: {
+          createPantryItemUsage: {
+            success: false,
+            code: 'CONFLICT',
+            message: 'Version conflict: expected 3, found 4',
+            validUnits: null,
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
+
+      act(() => {
+        result.current.handleConsumeItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmConsume(1, '1', 'COOK' as any, '');
+      });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Item Updated',
+        expect.stringContaining('Version conflict'),
+      );
+    });
+
+    it('shows invalid unit alert on restock payload UNIT_INVALID', async () => {
+      mockRestockPantryItem.mockResolvedValue({
+        data: {
+          restockPantryItem: {
+            success: false,
+            code: 'UNIT_INVALID',
+            message: "Cannot restock in 'slice'",
+            validUnits: ['bottle', 'mL'],
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
+
+      act(() => {
+        result.current.handleRestockItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmRestock(2, '2', '');
+      });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Invalid Unit',
+        expect.stringContaining('bottle, mL'),
+      );
+      expect(result.current.restockModal.visible).toBe(true);
+    });
+
+    it('reverts optimistic updates on restock payload error', async () => {
+      mockRestockPantryItem.mockResolvedValue({
+        data: {
+          restockPantryItem: {
+            success: false,
+            code: 'UNIT_INVALID',
+            message: 'Invalid unit',
+            validUnits: null,
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
+
+      act(() => {
+        result.current.handleRestockItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmRestock(3, '3', '');
+      });
+
+      // Optimistic update + revert = at least 3 cache.modify calls
+      // (1: quantity optimistic, 2: batch count optimistic, 3+: reverts)
+      expect(mockCacheModify).toHaveBeenCalled();
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Invalid Unit',
+        'Invalid unit',
+      );
+    });
+
+    it('shows generic error for unknown payload failure codes', async () => {
+      mockCreatePantryItemUsage.mockResolvedValue({
+        data: {
+          createPantryItemUsage: {
+            success: false,
+            code: 'VALIDATION_ERROR',
+            message: 'Cannot use more than available quantity',
+            validUnits: null,
+          },
+        },
+      });
+
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
+
+      act(() => {
+        result.current.handleConsumeItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmConsume(
+          100,
+          '100',
+          'COOK' as any,
+          '',
+        );
+      });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Cannot use more than available quantity',
+      );
+    });
+  });
+
   describe('modal close', () => {
     it('closes consume modal', () => {
-      const { result } = renderHook(() => usePantryItemActions(createOptions()));
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
 
       act(() => {
         result.current.handleConsumeItem('item-1');
@@ -346,7 +583,9 @@ describe('usePantryItemActions', () => {
     });
 
     it('only one modal can be open at a time', () => {
-      const { result } = renderHook(() => usePantryItemActions(createOptions()));
+      const { result } = renderHook(() =>
+        usePantryItemActions(createOptions()),
+      );
 
       act(() => {
         result.current.handleConsumeItem('item-1');

@@ -34,7 +34,7 @@ export const urlRule = string().url('Please enter a valid URL').optional();
 // Shelf life validation (in days)
 export const shelfLifeDaysRule = number()
   .transform((value, originalValue) =>
-    String(originalValue).trim() === '' ? undefined : value
+    String(originalValue).trim() === '' ? undefined : value,
   )
   .integer('Must be a whole number')
   .min(1, 'Shelf life must be at least 1 day')
@@ -54,7 +54,7 @@ export const displayPricePerUnitRule = string()
 // Unit quantity validation
 export const unitQtyRule = number()
   .transform((value, originalValue) =>
-    String(originalValue).trim() === '' ? undefined : value
+    String(originalValue).trim() === '' ? undefined : value,
   )
   .min(0.001, 'Unit quantity must be greater than 0')
   .optional();
@@ -65,9 +65,7 @@ export const defaultUnitRule = string()
   .optional();
 
 // Category IDs validation
-export const categoryIdsRule = array()
-  .of(string().required())
-  .optional();
+export const categoryIdsRule = array().of(string().required()).optional();
 
 // Units array validation
 export const unitsRule = array()
@@ -82,7 +80,7 @@ export const unitsRule = array()
       retailUnit: boolean().optional(),
       packageDescription: string().optional(),
       conversionRatio: number().min(0.001).optional(),
-    })
+    }),
   )
   .optional();
 
@@ -114,8 +112,13 @@ export const selectedImagesRule = array()
           'ingredient_list',
         ])
         .default('front'),
-    })
+    }),
   )
+  .optional();
+
+// Edit reason validation (for suggest-edit flow)
+export const editReasonRule = string()
+  .max(500, 'Edit reason cannot exceed 500 characters')
   .optional();
 
 // --- Create Item validation schema -------------------------------------------
@@ -128,6 +131,7 @@ export const createItemSchema = object({
   description: descriptionRule.nullable(),
   upc: upcRule,
   sku: skuRule,
+  editReason: editReasonRule,
 
   // Net Weights (manufacturer-provided, e.g., dual-label packaging)
   netWeights: array()
@@ -148,7 +152,7 @@ export const createItemSchema = object({
   baseDimension: string().nullable().optional(),
   defaultConsumeIncrement: number()
     .transform((value, originalValue) =>
-      String(originalValue).trim() === '' ? undefined : value
+      String(originalValue).trim() === '' ? undefined : value,
     )
     .min(0.001, 'Must be greater than 0')
     .optional(),

@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Alert } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
+import { View, Text } from 'react-native';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { alertService } from '#/services/alertService';
+import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
 import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
@@ -29,11 +28,9 @@ interface CookingPreferencesSheetProps {
   };
 }
 
-export const CookingPreferencesSheet: React.FC<CookingPreferencesSheetProps> = ({
-  visible,
-  onClose,
-  onSave,
-  initialValues }) => {
+export const CookingPreferencesSheet: React.FC<
+  CookingPreferencesSheetProps
+> = ({ visible, onClose, onSave, initialValues }) => {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -90,7 +87,7 @@ export const CookingPreferencesSheet: React.FC<CookingPreferencesSheetProps> = (
         prepTimeValue < DIETARY_LIMITS.prepTime.min ||
         prepTimeValue > DIETARY_LIMITS.prepTime.max
       ) {
-        Alert.alert(
+        alertService.alert(
           'Invalid Input',
           `Prep time must be between ${DIETARY_LIMITS.prepTime.min} and ${DIETARY_LIMITS.prepTime.max} minutes`,
         );
@@ -107,7 +104,7 @@ export const CookingPreferencesSheet: React.FC<CookingPreferencesSheetProps> = (
         cookTimeValue < DIETARY_LIMITS.cookTime.min ||
         cookTimeValue > DIETARY_LIMITS.cookTime.max
       ) {
-        Alert.alert(
+        alertService.alert(
           'Invalid Input',
           `Cook time must be between ${DIETARY_LIMITS.cookTime.min} and ${DIETARY_LIMITS.cookTime.max} minutes`,
         );
@@ -124,7 +121,7 @@ export const CookingPreferencesSheet: React.FC<CookingPreferencesSheetProps> = (
         budgetValue < DIETARY_LIMITS.budget.min ||
         budgetValue > DIETARY_LIMITS.budget.max
       ) {
-        Alert.alert(
+        alertService.alert(
           'Invalid Input',
           `Budget must be between $${DIETARY_LIMITS.budget.min} and $${DIETARY_LIMITS.budget.max}`,
         );
@@ -138,7 +135,7 @@ export const CookingPreferencesSheet: React.FC<CookingPreferencesSheetProps> = (
     setSaving(false);
 
     if (!success) {
-      Alert.alert('Error', 'Failed to update cooking preferences');
+      alertService.alert('Error', 'Failed to update cooking preferences');
     }
   };
 
@@ -151,19 +148,11 @@ export const CookingPreferencesSheet: React.FC<CookingPreferencesSheetProps> = (
       topInset={insets.top}
       onDismiss={onClose}
       animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
+      backgroundStyle={{ backgroundColor: theme.colors.surface }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
+      backdropComponent={DismissBackdrop}
     >
       <BottomSheetScrollView
         style={styles.scrollView}
@@ -241,21 +230,28 @@ export const CookingPreferencesSheet: React.FC<CookingPreferencesSheetProps> = (
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   contentContainer: {
-    padding: theme.spacing.md },
+    padding: theme.spacing.md,
+  },
   section: {
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   label: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   pickerContainer: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    overflow: 'hidden' },
+    overflow: 'hidden',
+  },
   picker: {
-    backgroundColor: 'transparent' } }));
+    backgroundColor: 'transparent',
+  },
+}));

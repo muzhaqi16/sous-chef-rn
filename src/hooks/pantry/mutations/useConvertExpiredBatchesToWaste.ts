@@ -5,7 +5,7 @@
  * No optimistic update — relies on server response for complex recalculation.
  */
 
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useConvertExpiredBatchesToWasteMutation } from '#generated';
 import { useErrorService } from '#/services/errorService';
 
@@ -39,7 +39,7 @@ export function useConvertExpiredBatchesToWaste({
       const { message } = handleApolloError(result.error, {
         operation: 'Discard Expired Batches',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     }
 
     return false;

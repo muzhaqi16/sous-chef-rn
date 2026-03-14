@@ -4,20 +4,17 @@ import {
   Text,
   TextInput,
   Pressable,
-  Alert,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
 } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { LoadingInline } from '#components/base/Loading';
-import {
-  useDeleteAccountMutation,
-  useCanDeleteAccountQuery,
-} from '#generated';
+import { useDeleteAccountMutation, useCanDeleteAccountQuery } from '#generated';
 import { authService } from '#/services/authService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { errorService } from '#/services/errorService';
@@ -45,18 +42,18 @@ export const DeleteAccountScreen: React.FC = () => {
   const [deleteAccountMutation] = useDeleteAccountMutation({
     onCompleted: () => authService.logout(),
     onError: error => {
-      Alert.alert('Error', `Failed to delete account: ${error.message}`);
+      alertService.alert('Error', `Failed to delete account: ${error.message}`);
       setIsDeleting(false);
     },
   });
 
   const handleDeleteAccount = async () => {
     if (confirmText.trim().toUpperCase() !== 'DELETE') {
-      Alert.alert('Error', 'Please type DELETE to confirm');
+      alertService.alert('Error', 'Please type DELETE to confirm');
       return;
     }
 
-    Alert.alert(
+    alertService.alert(
       'Final Confirmation',
       'Are you absolutely sure? This action cannot be undone and all your data will be permanently deleted.',
       [
@@ -72,7 +69,9 @@ export const DeleteAccountScreen: React.FC = () => {
             try {
               await deleteAccountMutation();
             } catch (error) {
-              errorService.reportError(error, { operation: 'DeleteAccount.deleteAccount' });
+              errorService.reportError(error, {
+                operation: 'DeleteAccount.deleteAccount',
+              });
               setIsDeleting(false);
             }
           },
@@ -87,17 +86,13 @@ export const DeleteAccountScreen: React.FC = () => {
 
   const renderErrorState = () => (
     <View style={styles.centerContainer}>
-      <Icon
-        name="alert-circle-outline"
-        size={48}
-        color={theme.colors.error}
-      />
+      <Icon name="alert-circle-outline" size={48} color={theme.colors.error} />
       <Text style={styles.errorTitle}>Unable to check account status</Text>
       <Text style={styles.errorText}>
         {eligibilityError?.message || 'An error occurred. Please try again.'}
       </Text>
       <Pressable
-        style={({pressed}) => [styles.retryButton, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
         onPress={() => refetchEligibility()}
       >
         <Text style={styles.retryButtonText}>Retry</Text>
@@ -126,11 +121,7 @@ export const DeleteAccountScreen: React.FC = () => {
       {blockers.map((blocker, index) => (
         <View key={blocker.resourceId || index} style={styles.blockerCard}>
           <View style={styles.blockerHeader}>
-            <Icon
-              name="home-outline"
-              size={20}
-              color={theme.colors.primary}
-            />
+            <Icon name="home-outline" size={20} color={theme.colors.primary} />
             <Text style={styles.blockerResourceName}>
               {blocker.resourceName}
             </Text>
@@ -149,7 +140,13 @@ export const DeleteAccountScreen: React.FC = () => {
         </View>
       ))}
 
-      <Pressable style={({pressed}) => [styles.goBackButton, pressed && styles.pressed]} onPress={goBack}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.goBackButton,
+          pressed && styles.pressed,
+        ]}
+        onPress={goBack}
+      >
         <Text style={styles.goBackButtonText}>Go Back</Text>
       </Pressable>
     </ScrollView>
@@ -165,11 +162,7 @@ export const DeleteAccountScreen: React.FC = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.warningContainer}>
-          <Icon
-            name="warning-outline"
-            size={48}
-            color={theme.colors.error}
-          />
+          <Icon name="warning-outline" size={48} color={theme.colors.error} />
           <Text style={styles.warningTitle}>Warning: This is permanent!</Text>
         </View>
 
@@ -243,7 +236,7 @@ export const DeleteAccountScreen: React.FC = () => {
         </View>
 
         <Pressable
-          style={({pressed}) => [
+          style={({ pressed }) => [
             styles.deleteButton,
             (confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting) &&
               styles.deleteButtonDisabled,
@@ -258,7 +251,10 @@ export const DeleteAccountScreen: React.FC = () => {
         </Pressable>
 
         <Pressable
-          style={({pressed}) => [styles.cancelButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.cancelButton,
+            pressed && styles.pressed,
+          ]}
           onPress={goBack}
           disabled={isDeleting}
         >

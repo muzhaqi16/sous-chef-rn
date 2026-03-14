@@ -25,7 +25,9 @@ export interface SuggestionGroupConfig {
   /** Display title (e.g., "LOW STOCK", "ADD AGAIN") */
   title: string;
   /** Function to extract items from grouped data */
-  accessor: (grouped: Record<string, BaseSuggestionItem[]>) => BaseSuggestionItem[];
+  accessor: (
+    grouped: Record<string, BaseSuggestionItem[]>,
+  ) => BaseSuggestionItem[];
   /** Priority order for display (lower = higher priority) */
   priority: number;
 }
@@ -129,6 +131,8 @@ export interface AddItemSheetProps {
   /** Optional: Refs for external control */
   bottomSheetRef?: RefObject<BottomSheetModal>;
   searchBarRef?: RefObject<BottomSheetSearchBarRef>;
+  /** Optional: When false, hide product images in suggestions (default: true) */
+  showImages?: boolean;
   /** Optional: Child component (e.g., AddDetailsSheet) */
   children?: React.ReactNode;
 }

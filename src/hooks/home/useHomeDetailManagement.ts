@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useShallow } from 'zustand/shallow';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import {
@@ -11,16 +11,25 @@ import {
   useLeaveHomeMutation,
   useSetDefaultHomeMutation,
   GetHomesDocument,
-  MembershipRole } from '#generated';
+  MembershipRole,
+} from '#generated';
 import { MESSAGES } from '#/constants/messages';
 import { normalizeHome } from '#/utils/connectionUtils';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { executeCacheUpdate, executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
   handleVersionConflict,
-  getVersionConflictMessage } from '#/utils/errors/versionConflict';
-import { useAppStore, selectSelectedHomeId, selectHomeState } from '#store/useAppStore';
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
+import {
+  useAppStore,
+  selectSelectedHomeId,
+  selectHomeState,
+} from '#store/useAppStore';
 
 export interface RolePickerState {
   visible: boolean;
@@ -64,18 +73,20 @@ export function useHomeDetailManagement(homeId: string) {
   const { data, loading, refetch } = useGetHomeQuery({
     variables: { homeId },
     fetchPolicy: 'cache-and-network',
-    errorPolicy: 'ignore' });
+    errorPolicy: 'ignore',
+  });
 
   // Mutations
   const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
     // Mutation returns updated scalar fields; Apollo auto-merges by __typename + id
     errorPolicy: 'all',
     onError: error => {
-      Alert.alert(
+      alertService.alert(
         'Error',
         error.message || MESSAGES.errors.updateHomeNameFailed,
       );
-    } });
+    },
+  });
 
   const [updateMembershipMutation] = useUpdateMembershipMutation({
     errorPolicy: 'all',
@@ -95,74 +106,83 @@ export function useHomeDetailManagement(homeId: string) {
           },
           updatedAt() {
             return new Date().toISOString();
-          } } });
+          },
+        },
+      });
     },
     onError: error => {
-      Alert.alert(
+      alertService.alert(
         'Error',
         error.message || MESSAGES.errors.updateMemberRoleFailed,
       );
-    } });
+    },
+  });
 
   const [removeMemberMutation] = useRemoveMemberMutation({
     errorPolicy: 'all',
     update(cache, { data }, { variables }) {
       if (!data?.removeMember?.success || !variables) return;
 
-      executeCacheUpdate(
-        () => {
-          const removeFromMembersCache = createRemoveFromParentConnectionUpdater(
-            'Home',
-            'membersConnection',
-            'Membership',
-          );
-          removeFromMembersCache(cache, homeId, variables.id, { evictItem: true });
-        },
-        'Cache update failed for removeMember:',
-      );
+      executeCacheUpdate(() => {
+        const removeFromMembersCache = createRemoveFromParentConnectionUpdater(
+          'Home',
+          'membersConnection',
+          'Membership',
+        );
+        removeFromMembersCache(cache, homeId, variables.id, {
+          evictItem: true,
+        });
+      }, 'Cache update failed for removeMember:');
     },
     onError: error => {
       // PERFORMANCE: Handle version conflict errors with user-friendly message
       if (handleVersionConflict(error)) {
-        Alert.alert('Member Updated', getVersionConflictMessage(error), [
+        alertService.alert('Member Updated', getVersionConflictMessage(error), [
           { text: 'Refresh', onPress: () => refetch() },
           { text: 'Cancel', style: 'cancel' },
         ]);
         return;
       }
 
-      Alert.alert('Error', error.message || MESSAGES.errors.removeMemberFailed);
-    } });
+      alertService.alert(
+        'Error',
+        error.message || MESSAGES.errors.removeMemberFailed,
+      );
+    },
+  });
 
   const [revokeInviteMutation] = useRevokeHomeInviteMutation({
     errorPolicy: 'all',
     update(cache, { data }, { variables }) {
       if (!data?.revokeHomeInvite?.success || !variables) return;
 
-      executeCacheUpdate(
-        () => {
-          const removeFromInvitesCache = createRemoveFromParentConnectionUpdater(
-            'Home',
-            'invitesConnection',
-            'HomeInvite',
-          );
-          removeFromInvitesCache(cache, homeId, variables.id, { evictItem: true });
-        },
-        'Cache update failed for revokeInvite:',
-      );
+      executeCacheUpdate(() => {
+        const removeFromInvitesCache = createRemoveFromParentConnectionUpdater(
+          'Home',
+          'invitesConnection',
+          'HomeInvite',
+        );
+        removeFromInvitesCache(cache, homeId, variables.id, {
+          evictItem: true,
+        });
+      }, 'Cache update failed for revokeInvite:');
     },
     onError: error => {
       // PERFORMANCE: Handle version conflict errors with user-friendly message
       if (handleVersionConflict(error)) {
-        Alert.alert('Invite Updated', getVersionConflictMessage(error), [
+        alertService.alert('Invite Updated', getVersionConflictMessage(error), [
           { text: 'Refresh', onPress: () => refetch() },
           { text: 'Cancel', style: 'cancel' },
         ]);
         return;
       }
 
-      Alert.alert('Error', error.message || MESSAGES.errors.revokeInviteFailed);
-    } });
+      alertService.alert(
+        'Error',
+        error.message || MESSAGES.errors.revokeInviteFailed,
+      );
+    },
+  });
 
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation();
 
@@ -172,20 +192,19 @@ export function useHomeDetailManagement(homeId: string) {
       update(cache, { data }) {
         if (!data?.leaveHome?.success) return;
 
-        executeCacheUpdate(
-          () => {
-            cache.evict({
-              id: cache.identify({ __typename: 'Home', id: homeId }) });
-            cache.gc();
-          },
-          'Cache update failed for leaveHome:',
-        );
+        executeCacheUpdate(() => {
+          cache.evict({
+            id: cache.identify({ __typename: 'Home', id: homeId }),
+          });
+          cache.gc();
+        }, 'Cache update failed for leaveHome:');
       },
       onCompleted: data => {
         if (data?.leaveHome?.success && homeId === selectedHomeId) {
           // Read remaining homes from cache
           const cachedData = leaveClient.cache.readQuery({
-            query: GetHomesDocument }) as { homes: any[] } | null;
+            query: GetHomesDocument,
+          }) as { homes: any[] } | null;
           const remainingHomes = cachedData?.homes ?? [];
 
           if (remainingHomes.length > 0) {
@@ -193,7 +212,8 @@ export function useHomeDetailManagement(homeId: string) {
             setSelectedHomeId(newDefaultHome.id);
             setSelectedPantryId(null);
             setDefaultHomeMutation({
-              variables: { homeId: newDefaultHome.id } }).catch(err => {
+              variables: { homeId: newDefaultHome.id },
+            }).catch(err => {
               console.warn('Failed to set new default home after leave:', err);
             });
           } else {
@@ -205,8 +225,9 @@ export function useHomeDetailManagement(homeId: string) {
         }
       },
       onError: error => {
-        Alert.alert('Error', error.message || 'Failed to leave home');
-      } });
+        alertService.alert('Error', error.message || 'Failed to leave home');
+      },
+    });
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
   const preservedHomeData = usePreservedQueryData(data?.home, null);
@@ -217,84 +238,102 @@ export function useHomeDetailManagement(homeId: string) {
 
   // Handler functions
   const saveName = async (name: string) => {
-      await updateHomeMutation({
-        variables: {
-          id: homeId,
-          input: { name } } });
-    };
+    await updateHomeMutation({
+      variables: {
+        id: homeId,
+        input: { name },
+      },
+    });
+  };
 
   // Role picker state (drives ModalPicker in the screen)
   const [rolePickerState, setRolePickerState] = useState<RolePickerState>(
     INITIAL_ROLE_PICKER_STATE,
   );
 
-  const openRolePicker = (membershipId: string, currentRole: string, memberName: string) => {
-      setRolePickerState({ visible: true, membershipId, currentRole, memberName });
-    };
+  const openRolePicker = (
+    membershipId: string,
+    currentRole: string,
+    memberName: string,
+  ) => {
+    setRolePickerState({
+      visible: true,
+      membershipId,
+      currentRole,
+      memberName,
+    });
+  };
 
   const closeRolePicker = () => {
-      setRolePickerState(INITIAL_ROLE_PICKER_STATE);
-    };
+    setRolePickerState(INITIAL_ROLE_PICKER_STATE);
+  };
 
   const handleRoleSelect = async (value: string) => {
-      const { membershipId, currentRole } = rolePickerState;
-      closeRolePicker();
-      if (value === currentRole) return;
+    const { membershipId, currentRole } = rolePickerState;
+    closeRolePicker();
+    if (value === currentRole) return;
 
-      await updateMembershipMutation({
-        variables: {
-          id: membershipId,
-          input: { role: value as MembershipRole } } });
-    };
+    await updateMembershipMutation({
+      variables: {
+        id: membershipId,
+        input: { role: value as MembershipRole },
+      },
+    });
+  };
 
   const removeMember = (membershipId: string, memberName: string) => {
-      const operation = createRemoveOperation({
-        mutation: removeMemberMutation,
-        itemId: membershipId,
-        confirmMessage: `Are you sure you want to remove {name} from this home?`,
-        itemName: memberName,
-        operationName: 'Remove Member' });
-      return operation();
-    };
+    const operation = createRemoveOperation({
+      mutation: removeMemberMutation,
+      itemId: membershipId,
+      confirmMessage: `Are you sure you want to remove {name} from this home?`,
+      itemName: memberName,
+      operationName: 'Remove Member',
+    });
+    return operation();
+  };
 
   const revokeInvite = (inviteId: string, inviteEmail: string) => {
-      const operation = createRemoveOperation({
-        mutation: revokeInviteMutation,
-        itemId: inviteId,
-        confirmMessage: `Are you sure you want to revoke the invitation to {name}?`,
-        itemName: inviteEmail,
-        operationName: 'Revoke Invitation' });
-      return operation();
-    };
+    const operation = createRemoveOperation({
+      mutation: revokeInviteMutation,
+      itemId: inviteId,
+      confirmMessage: `Are you sure you want to revoke the invitation to {name}?`,
+      itemName: inviteEmail,
+      operationName: 'Revoke Invitation',
+    });
+    return operation();
+  };
 
   const leaveHome = (homeName: string): Promise<boolean> => {
-      return new Promise(resolve => {
-        Alert.alert(
-          'Leave Home',
-          `Are you sure you want to leave "${homeName}"? You will lose access to this home and its pantries and shopping lists.`,
-          [
-            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-            {
-              text: 'Leave',
-              style: 'destructive',
-              onPress: async () => {
-                const result = await executeMutation(
-                  () => leaveHomeMutation({ variables: { homeId } }),
-                  'Failed to leave home',
-                );
-                resolve(result ? !!result.data?.leaveHome?.success : false);
-              } },
-          ],
-        );
-      });
-    };
+    return new Promise(resolve => {
+      alertService.alert(
+        'Leave Home',
+        `Are you sure you want to leave "${homeName}"? You will lose access to this home and its pantries and shopping lists.`,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          {
+            text: 'Leave',
+            style: 'destructive',
+            onPress: async () => {
+              const result = await executeMutation(
+                () => leaveHomeMutation({ variables: { homeId } }),
+                'Failed to leave home',
+              );
+              resolve(result ? !!result.data?.leaveHome?.success : false);
+            },
+          },
+        ],
+      );
+    });
+  };
 
   const toggleJoinCode = async (enabled: boolean) => {
-      await updateHomeMutation({
-        variables: {
-          id: homeId,
-          input: { allowJoinCode: enabled } } });
-    };
+    await updateHomeMutation({
+      variables: {
+        id: homeId,
+        input: { allowJoinCode: enabled },
+      },
+    });
+  };
 
   return {
     // Data
@@ -315,5 +354,6 @@ export function useHomeDetailManagement(homeId: string) {
     removeMember,
     revokeInvite,
     leaveHome,
-    toggleJoinCode };
+    toggleJoinCode,
+  };
 }

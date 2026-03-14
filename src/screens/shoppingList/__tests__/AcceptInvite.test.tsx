@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { alertService } from '#/services/alertService';
 import { AcceptInvite } from '../AcceptInvite';
 
 // Mock token scheduler / refreshToken
@@ -39,6 +40,10 @@ jest.mock('#/services/errorService', () => ({
   getErrorMessage: jest.fn((e: any) => e?.message || 'Unknown error'),
 }));
 
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
+
 jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/molecules/Header', () => ({
@@ -54,10 +59,16 @@ describe('AcceptInvite', () => {
     jest.clearAllMocks();
     // Reset generated mocks to defaults (clearAllMocks does not clear mockReturnValue)
     const gen = jest.requireMock('#generated');
-    gen.useMyShoppingListInvitesQuery.mockReturnValue({ data: null, loading: false });
+    gen.useMyShoppingListInvitesQuery.mockReturnValue({
+      data: null,
+      loading: false,
+    });
     gen.useAcceptShoppingListInviteMutation.mockReturnValue([jest.fn()]);
     gen.useDeclineShoppingListInviteMutation.mockReturnValue([jest.fn()]);
-    gen.useGetMyPendingInvitesQuery.mockReturnValue({ data: null, loading: false });
+    gen.useGetMyPendingInvitesQuery.mockReturnValue({
+      data: null,
+      loading: false,
+    });
     gen.useAcceptHomeInviteMutation.mockReturnValue([jest.fn()]);
     gen.useDeclineHomeInviteMutation.mockReturnValue([jest.fn()]);
     // Reset route mock
@@ -65,16 +76,18 @@ describe('AcceptInvite', () => {
     nav.useRoute.mockReturnValue({ params: { inviteId: 'invite-1' } });
     // Restore executeWithLoadingState
     const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
-    executeWithLoadingState.mockImplementation(async (fn: any, setLoading: any, onError?: any) => {
-      setLoading(true);
-      try {
-        return await fn();
-      } catch (e) {
-        onError?.(e);
-      } finally {
-        setLoading(false);
-      }
-    });
+    executeWithLoadingState.mockImplementation(
+      async (fn: any, setLoading: any, onError?: any) => {
+        setLoading(true);
+        try {
+          return await fn();
+        } catch (e) {
+          onError?.(e);
+        } finally {
+          setLoading(false);
+        }
+      },
+    );
   });
 
   it('shows "not found" when no invite matches', () => {
@@ -363,7 +376,10 @@ describe('AcceptInvite', () => {
 
   it('calls acceptShoppingListInvite on accept for shopping list invite', async () => {
     const mockAcceptSL = jest.fn().mockResolvedValue({});
-    const { useMyShoppingListInvitesQuery, useAcceptShoppingListInviteMutation } = jest.requireMock('#generated');
+    const {
+      useMyShoppingListInvitesQuery,
+      useAcceptShoppingListInviteMutation,
+    } = jest.requireMock('#generated');
     useMyShoppingListInvitesQuery.mockReturnValue({
       data: {
         me: {
@@ -386,12 +402,17 @@ describe('AcceptInvite', () => {
     await waitFor(() => expect(tree.getByText('Accept')).toBeTruthy());
     fireEvent.press(tree.getByText('Accept'));
 
-    await waitFor(() => expect(mockAcceptSL).toHaveBeenCalledWith({ variables: { token: 'invite-1' } }));
+    await waitFor(() =>
+      expect(mockAcceptSL).toHaveBeenCalledWith({
+        variables: { token: 'invite-1' },
+      }),
+    );
   });
 
   it('calls acceptHomeInvite on accept for home invite', async () => {
     const mockAcceptHome = jest.fn().mockResolvedValue({});
-    const { useGetMyPendingInvitesQuery, useAcceptHomeInviteMutation } = jest.requireMock('#generated');
+    const { useGetMyPendingInvitesQuery, useAcceptHomeInviteMutation } =
+      jest.requireMock('#generated');
     useGetMyPendingInvitesQuery.mockReturnValue({
       data: {
         me: {
@@ -414,11 +435,14 @@ describe('AcceptInvite', () => {
     await waitFor(() => expect(tree.getByText(/join/)).toBeTruthy());
     fireEvent.press(tree.getByText('Accept'));
 
-    await waitFor(() => expect(mockAcceptHome).toHaveBeenCalledWith({ variables: { token: 'invite-1' } }));
+    await waitFor(() =>
+      expect(mockAcceptHome).toHaveBeenCalledWith({
+        variables: { token: 'invite-1' },
+      }),
+    );
   });
 
   it('shows decline confirmation dialog', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     const { useMyShoppingListInvitesQuery } = jest.requireMock('#generated');
     useMyShoppingListInvitesQuery.mockReturnValue({
       data: {
@@ -440,7 +464,7 @@ describe('AcceptInvite', () => {
     await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());
     fireEvent.press(tree.getByText('Decline'));
 
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Decline Invitation',
       'Are you sure you want to decline this invitation?',
       expect.any(Array),
@@ -448,9 +472,11 @@ describe('AcceptInvite', () => {
   });
 
   it('calls declineShoppingListInvite when decline is confirmed', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     const mockDeclineSL = jest.fn().mockResolvedValue({});
-    const { useMyShoppingListInvitesQuery, useDeclineShoppingListInviteMutation } = jest.requireMock('#generated');
+    const {
+      useMyShoppingListInvitesQuery,
+      useDeclineShoppingListInviteMutation,
+    } = jest.requireMock('#generated');
     useMyShoppingListInvitesQuery.mockReturnValue({
       data: {
         me: {
@@ -473,18 +499,22 @@ describe('AcceptInvite', () => {
     fireEvent.press(tree.getByText('Decline'));
 
     // Get the Alert buttons and press Decline
-    const alertCall = (require('react-native').Alert.alert as jest.Mock).mock.calls[0];
+    const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2];
     const declineBtn = buttons.find((b: any) => b.text === 'Decline');
     await declineBtn.onPress();
 
-    await waitFor(() => expect(mockDeclineSL).toHaveBeenCalledWith({ variables: { token: 'invite-1' } }));
+    await waitFor(() =>
+      expect(mockDeclineSL).toHaveBeenCalledWith({
+        variables: { token: 'invite-1' },
+      }),
+    );
   });
 
   it('calls declineHomeInvite when decline is confirmed for home invite', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     const mockDeclineHome = jest.fn().mockResolvedValue({});
-    const { useGetMyPendingInvitesQuery, useDeclineHomeInviteMutation } = jest.requireMock('#generated');
+    const { useGetMyPendingInvitesQuery, useDeclineHomeInviteMutation } =
+      jest.requireMock('#generated');
     useGetMyPendingInvitesQuery.mockReturnValue({
       data: {
         me: {
@@ -507,18 +537,26 @@ describe('AcceptInvite', () => {
     await waitFor(() => expect(tree.getByText(/join/)).toBeTruthy());
     fireEvent.press(tree.getByText('Decline'));
 
-    const alertCall = (require('react-native').Alert.alert as jest.Mock).mock.calls[0];
+    const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2];
     const declineBtn = buttons.find((b: any) => b.text === 'Decline');
     await declineBtn.onPress();
 
-    await waitFor(() => expect(mockDeclineHome).toHaveBeenCalledWith({ variables: { token: 'invite-1' } }));
+    await waitFor(() =>
+      expect(mockDeclineHome).toHaveBeenCalledWith({
+        variables: { token: 'invite-1' },
+      }),
+    );
   });
 
   it('shows error alert when accept fails', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
-    const mockAcceptSL = jest.fn().mockRejectedValue(new Error('Network error'));
-    const { useMyShoppingListInvitesQuery, useAcceptShoppingListInviteMutation } = jest.requireMock('#generated');
+    const mockAcceptSL = jest
+      .fn()
+      .mockRejectedValue(new Error('Network error'));
+    const {
+      useMyShoppingListInvitesQuery,
+      useAcceptShoppingListInviteMutation,
+    } = jest.requireMock('#generated');
     useMyShoppingListInvitesQuery.mockReturnValue({
       data: {
         me: {
@@ -542,7 +580,7 @@ describe('AcceptInvite', () => {
 
     // Wait for error handling
     await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
         expect.any(String),
       );
@@ -550,13 +588,16 @@ describe('AcceptInvite', () => {
   });
 
   it('shows error alert for invalid invitation when no token', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     const { useRoute } = jest.requireMock('@react-navigation/native');
     useRoute.mockReturnValue({ params: {} });
 
     // No invites found but not loading
-    const { useMyShoppingListInvitesQuery, useGetMyPendingInvitesQuery } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({ data: null, loading: false });
+    const { useMyShoppingListInvitesQuery, useGetMyPendingInvitesQuery } =
+      jest.requireMock('#generated');
+    useMyShoppingListInvitesQuery.mockReturnValue({
+      data: null,
+      loading: false,
+    });
     useGetMyPendingInvitesQuery.mockReturnValue({ data: null, loading: false });
 
     const tree = render(<AcceptInvite />);
@@ -671,7 +712,10 @@ describe('AcceptInvite', () => {
             {
               id: 'invite-1',
               role: 'MEMBER',
-              invitedBy: { email: 'owner@test.com', profile: { displayName: 'HomeOwner' } },
+              invitedBy: {
+                email: 'owner@test.com',
+                profile: { displayName: 'HomeOwner' },
+              },
               home: { name: 'Family Home' },
             },
           ],
@@ -693,7 +737,10 @@ describe('AcceptInvite', () => {
             {
               id: 'invite-1',
               role: 'EDITOR',
-              invitedBy: { email: 'host@test.com', profile: { displayName: 'ListOwner' } },
+              invitedBy: {
+                email: 'host@test.com',
+                profile: { displayName: 'ListOwner' },
+              },
               shoppingList: { name: 'My List' },
             },
           ],
@@ -720,10 +767,15 @@ describe('AcceptInvite', () => {
 
   it('uses token from route params when available', async () => {
     const { useRoute } = jest.requireMock('@react-navigation/native');
-    useRoute.mockReturnValue({ params: { token: 'deep-link-token', inviteId: 'invite-1' } });
+    useRoute.mockReturnValue({
+      params: { token: 'deep-link-token', inviteId: 'invite-1' },
+    });
 
     const mockAcceptSL = jest.fn().mockResolvedValue({});
-    const { useMyShoppingListInvitesQuery, useAcceptShoppingListInviteMutation } = jest.requireMock('#generated');
+    const {
+      useMyShoppingListInvitesQuery,
+      useAcceptShoppingListInviteMutation,
+    } = jest.requireMock('#generated');
     useMyShoppingListInvitesQuery.mockReturnValue({
       data: {
         me: {
@@ -747,7 +799,11 @@ describe('AcceptInvite', () => {
     fireEvent.press(tree.getByText('Accept'));
 
     // Should use route token, not invite.id
-    await waitFor(() => expect(mockAcceptSL).toHaveBeenCalledWith({ variables: { token: 'deep-link-token' } }));
+    await waitFor(() =>
+      expect(mockAcceptSL).toHaveBeenCalledWith({
+        variables: { token: 'deep-link-token' },
+      }),
+    );
   });
 
   it('shows "join" text for home invite and "collaborate on" for shopping list', async () => {
@@ -774,9 +830,11 @@ describe('AcceptInvite', () => {
   });
 
   it('shows error alert when decline fails', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     const mockDeclineSL = jest.fn().mockRejectedValue(new Error('Failed'));
-    const { useMyShoppingListInvitesQuery, useDeclineShoppingListInviteMutation } = jest.requireMock('#generated');
+    const {
+      useMyShoppingListInvitesQuery,
+      useDeclineShoppingListInviteMutation,
+    } = jest.requireMock('#generated');
     useMyShoppingListInvitesQuery.mockReturnValue({
       data: {
         me: {
@@ -798,14 +856,14 @@ describe('AcceptInvite', () => {
     await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());
     fireEvent.press(tree.getByText('Decline'));
 
-    const alertCall = (require('react-native').Alert.alert as jest.Mock).mock.calls[0];
+    const alertCall = (alertService.alert as jest.Mock).mock.calls[0];
     const buttons = alertCall[2];
     const declineBtn = buttons.find((b: any) => b.text === 'Decline');
     await declineBtn.onPress();
 
     // Wait for error handling
     await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
         'Failed to decline invitation',
       );

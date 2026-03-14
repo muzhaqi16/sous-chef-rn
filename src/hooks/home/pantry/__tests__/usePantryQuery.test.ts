@@ -53,7 +53,8 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
   usePreservedArrayData: (data: any) => data || [],
-  usePreservedQueryData: (data: any, initial: any) => data !== undefined ? data : initial,
+  usePreservedQueryData: (data: any, initial: any) =>
+    data !== undefined ? data : initial,
 }));
 
 const mockSetIsPantryQueryComplete = jest.fn();
@@ -68,7 +69,10 @@ jest.mock('#store/useAppStore', () => ({
   selectSetIsPantryQueryComplete: (s: any) => s.setIsPantryQueryComplete,
 }));
 
-(global as any).requestIdleCallback = jest.fn((cb: any) => { cb(); return 1; });
+(global as any).requestIdleCallback = jest.fn((cb: any) => {
+  cb();
+  return 1;
+});
 (global as any).cancelIdleCallback = jest.fn();
 
 beforeEach(() => {
@@ -127,7 +131,9 @@ describe('usePantryQuery', () => {
 
     const { result } = renderHook(() => usePantryQuery('pantry-1'));
 
-    expect(result.current.state.pantryItems).toEqual([{ id: 'item-1', itemName: 'Milk' }]);
+    expect(result.current.state.pantryItems).toEqual([
+      { id: 'item-1', itemName: 'Milk' },
+    ]);
     expect(result.current.state.totalCount).toBe(1);
   });
 
@@ -144,14 +150,14 @@ describe('usePantryQuery', () => {
     );
   });
 
-  it('passes itemsFirst as 25 (PAGE_SIZE.DEFAULT)', () => {
+  it('passes itemsFirst as 15 (PAGE_SIZE.DEFAULT)', () => {
     const { useGetPantryQuery } = require('#generated');
 
     renderHook(() => usePantryQuery('pantry-1'));
 
     expect(useGetPantryQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        variables: expect.objectContaining({ itemsFirst: 25 }),
+        variables: expect.objectContaining({ itemsFirst: 15 }),
       }),
     );
   });
@@ -196,7 +202,9 @@ describe('usePantryQuery', () => {
   });
 
   it('filters pending deletes from items', () => {
-    const { subscriptionService } = require('#/services/subscriptions/SubscriptionService');
+    const {
+      subscriptionService,
+    } = require('#/services/subscriptions/SubscriptionService');
     subscriptionService.filterPendingDeletes.mockReturnValue([]);
 
     renderHook(() => usePantryQuery('pantry-1'));

@@ -1,6 +1,7 @@
 import React, {
   createContext,
   useContext,
+  useDeferredValue,
   useEffect,
   useRef,
   useImperativeHandle,
@@ -51,9 +52,11 @@ import type { ExpirationVariant } from './PantryItemCard';
 // Stable empty array reference to avoid FlashList re-renders when showing skeletons
 const EMPTY_ARRAY: PantryItem[] = [];
 
-// Screen-relative draw distance: scales with viewport so buffer stays ~7-10 items
-// regardless of device size (vs fixed 250 which is 37% on SE but 27% on Pro Max)
-const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 0.75);
+// Screen-relative draw distance: 2× viewport gives ~17 items of buffer at
+// ~95px/item. useDeferredValue on FlashList data makes pagination non-blocking,
+// so the extra buffer is affordable. Previous testing showed 1.5× had too few
+// pre-rendered cells (12.2% sustained blanks) while 3×+ was excessive.
+const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
 
 // Module-level constant — avoids creating a new object reference per render
 const MVCP_DISABLED = { disabled: true };
@@ -139,6 +142,14 @@ interface PantryContentProps {
   // State
   refreshing?: boolean;
   loading?: boolean;
+
+  /** Callback with screen-coordinate rect when the home badge lays out */
+  onHomeBadgeLayout?: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
 }
 
 export interface PantryContentRef {
@@ -195,9 +206,83 @@ function hasConsumptionStarted(item: PantryItem): boolean {
  * expirationColors are stable, this returns the same Map — preventing all
  * PantryRenderItemInner components from re-rendering via DisplayMapContext.
  */
-let _lastDisplayMapItems: unknown = null;
-let _lastDisplayMapColors: unknown = null;
+let _lastDisplayMapItems: PantryItem[] | null = null;
+let _lastDisplayMapColors: {
+  expired: string;
+  warning: string;
+  normal: string;
+} | null = null;
 let _lastDisplayMap: Map<string, ItemDisplayData> = new Map();
+let _displayMapHits = 0;
+let _displayMapMisses = 0;
+
+/** Value-equality check for expiration colors (3 string comparisons). */
+function colorsMatch(
+  a: { expired: string; warning: string; normal: string } | null,
+  b: { expired: string; warning: string; normal: string },
+): boolean {
+  return (
+    a != null &&
+    a.expired === b.expired &&
+    a.warning === b.warning &&
+    a.normal === b.normal
+  );
+}
+
+/** Compute display data for a single item and add it to the map. */
+function computeItemEntry(
+  item: PantryItem,
+  now: Date,
+  expirationColors: { expired: string; warning: string; normal: string },
+  getLocation: (
+    storageState?: string | null,
+    storageLocation?: { name: string } | null,
+  ) => string | null,
+  map: Map<string, ItemDisplayData>,
+): void {
+  const expiresIn = item.expiresAt
+    ? differenceInCalendarDays(new Date(item.expiresAt), now)
+    : null;
+  const expStatus = getExpirationStatus(expiresIn);
+  const isExpired = expiresIn !== null && expiresIn < 0;
+  const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
+  const variant: ItemVariant = getItemVariant(isExpired, isExpiringSoon);
+  const hasExpiry = item.expiresAt != null;
+
+  let expirationColor: string | undefined;
+  if (hasExpiry) {
+    const expType = expStatus.type;
+    if (expType === 'expired' || expType === 'critical') {
+      expirationColor = expirationColors.expired;
+    } else if (expType === 'warning') {
+      expirationColor = expirationColors.warning;
+    } else {
+      expirationColor = expirationColors.normal;
+    }
+  }
+
+  map.set(item.id, {
+    id: item.id,
+    name: item.itemName || 'Unknown Item',
+    imageUrl: resolveImageUrl(item),
+    expirationText: hasExpiry ? expStatus.text : null,
+    expirationVariant: hasExpiry ? expStatus.type : undefined,
+    expirationColor,
+    variant,
+    quantityDisplay: formatQuantityDisplay(item.quantity, item.unit?.symbol),
+    location: getLocation(item.storageState, item.storageLocation),
+    isOutOfStock: item.quantity === 0,
+    packageBreakdownText: formatPackageBreakdown(
+      item.packageBreakdown,
+      item.quantityBreakdown?.totalContentUnits,
+    ),
+    remainingNetWeightText: hasConsumptionStarted(item)
+      ? formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit)
+      : null,
+    quantityBreakdownText: formatQuantityBreakdown(item.quantityBreakdown),
+    activeBatchCount: item.activeBatchCount,
+  });
+}
 
 function computeDisplayMap(
   items: PantryItem[],
@@ -207,59 +292,78 @@ function computeDisplayMap(
     storageLocation?: { name: string } | null,
   ) => string | null,
 ): Map<string, ItemDisplayData> {
-  // Reference-identity cache: same inputs → same output
+  // Cache check: reference equality for items + value equality for colors
   if (
     items === _lastDisplayMapItems &&
-    expirationColors === _lastDisplayMapColors
+    colorsMatch(_lastDisplayMapColors, expirationColors)
   ) {
+    if (__DEV__) {
+      _displayMapHits++;
+      if (_displayMapHits % 10 === 0) {
+        console.log(
+          `[computeDisplayMap] hits=${_displayMapHits} misses=${_displayMapMisses} ratio=${(
+            (_displayMapHits / (_displayMapHits + _displayMapMisses)) *
+            100
+          ).toFixed(1)}%`,
+        );
+      }
+    }
     return _lastDisplayMap;
   }
 
-  const map = new Map<string, ItemDisplayData>();
-  for (const item of items) {
-    const expiresIn = item.expiresAt
-      ? differenceInCalendarDays(new Date(item.expiresAt), new Date())
-      : null;
-    const expStatus = getExpirationStatus(expiresIn);
-    const isExpired = expiresIn !== null && expiresIn < 0;
-    const isExpiringSoon =
-      expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-    const variant: ItemVariant = getItemVariant(isExpired, isExpiringSoon);
-    const hasExpiry = item.expiresAt != null;
+  // Incremental path: if colors unchanged and items were appended (pagination),
+  // reuse existing map entries and only compute the new items.
+  const prevItems = _lastDisplayMapItems;
+  const isAppend =
+    colorsMatch(_lastDisplayMapColors, expirationColors) &&
+    prevItems != null &&
+    items.length > prevItems.length &&
+    prevItems.every((prev, i) => prev.id === items[i].id);
 
-    let expirationColor: string | undefined;
-    if (hasExpiry) {
-      const expType = expStatus.type;
-      if (expType === 'expired' || expType === 'critical') {
-        expirationColor = expirationColors.expired;
-      } else if (expType === 'warning') {
-        expirationColor = expirationColors.warning;
-      } else {
-        expirationColor = expirationColors.normal;
-      }
+  if (isAppend) {
+    if (__DEV__) {
+      _displayMapMisses++;
+      console.log(
+        `[computeDisplayMap] INCREMENTAL — computing ${
+          items.length - prevItems.length
+        } new items (${prevItems.length}→${items.length})`,
+      );
     }
+    // Mutate existing Map in-place — same reference prevents DisplayMapContext
+    // from propagating to all consumers. Only newly-mounted FlashList cells
+    // (for appended items) read the updated entries on mount.
+    const now = new Date();
+    for (let i = prevItems.length; i < items.length; i++) {
+      computeItemEntry(
+        items[i],
+        now,
+        expirationColors,
+        getLocation,
+        _lastDisplayMap,
+      );
+    }
+    _lastDisplayMapItems = items;
+    _lastDisplayMapColors = expirationColors;
+    return _lastDisplayMap;
+  }
 
-    map.set(item.id, {
-      id: item.id,
-      name: item.itemName || 'Unknown Item',
-      imageUrl: resolveImageUrl(item),
-      expirationText: hasExpiry ? expStatus.text : null,
-      expirationVariant: hasExpiry ? expStatus.type : undefined,
-      expirationColor,
-      variant,
-      quantityDisplay: formatQuantityDisplay(item.quantity, item.unit?.symbol),
-      location: getLocation(item.storageState, item.storageLocation),
-      isOutOfStock: item.quantity === 0,
-      packageBreakdownText: formatPackageBreakdown(
-        item.packageBreakdown,
-        item.quantityBreakdown?.totalContentUnits,
-      ),
-      remainingNetWeightText: hasConsumptionStarted(item)
-        ? formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit)
-        : null,
-      quantityBreakdownText: formatQuantityBreakdown(item.quantityBreakdown),
-      activeBatchCount: item.activeBatchCount,
-    });
+  // Full recompute
+  if (__DEV__) {
+    _displayMapMisses++;
+    console.log(
+      `[computeDisplayMap] FULL MISS — items changed: ${
+        items !== _lastDisplayMapItems
+      }, colors changed: ${!colorsMatch(
+        _lastDisplayMapColors,
+        expirationColors,
+      )}, items.length: ${items.length}`,
+    );
+  }
+
+  const map = new Map<string, ItemDisplayData>();
+  const now = new Date();
+  for (const item of items) {
+    computeItemEntry(item, now, expirationColors, getLocation, map);
   }
 
   _lastDisplayMapItems = items;
@@ -281,13 +385,6 @@ const getLocationString = (
 ): string | null => {
   if (storageLocation?.name) return storageLocation.name;
   return null;
-};
-
-// Module-scope getItemType — separate recycling pools by layout shape
-const getItemType = (item: PantryItem): string => {
-  if (item.quantity === 0) return 'out-of-stock';
-  if (!item.expiresAt) return 'no-expiry';
-  return 'with-expiry';
 };
 
 // Module-scope keyExtractor — zero runtime overhead (no compiler tracking/comparison)
@@ -473,7 +570,6 @@ export const PantryContent = React.forwardRef<
       onLowStockNavigate,
       totalCount,
       onAddItem,
-      isLoadingMore = false,
       hasMore = false,
       onRefresh,
       onEndReached,
@@ -482,6 +578,7 @@ export const PantryContent = React.forwardRef<
       noHomeSelected,
       noHomes,
       onSelectHome,
+      onHomeBadgeLayout,
     },
     ref,
   ) => {
@@ -567,25 +664,33 @@ export const PantryContent = React.forwardRef<
       ? localFilteredItems
       : sortItems(localFilteredItems);
 
+    // Defer pagination data updates — React keeps the JS thread available for
+    // scroll events while processing new items at low priority. displayMap and
+    // image preloading stay eager (computed from sortedItems) so entries are
+    // ready before FlashList mounts new cells.
+    const deferredSortedItems = useDeferredValue(sortedItems);
+
+    useDataReferenceTracker(
+      sortedItems,
+      'PantryContent.sortedItems',
+      perfCallbacks.onDataReferenceChange,
+    );
+
     // Precomputed expiration colors — used by computeDisplayMap.
-    // React Compiler auto-memoizes this object: deps are primitive strings
-    // (compared by value), so the reference stays stable across re-renders.
+    // The Unistyles Babel plugin must run before the React Compiler so the
+    // compiler can properly memoize theme-derived values. computeDisplayMap
+    // uses value-equality for colors as a belt-and-suspenders fallback.
     const expirationColors = {
       expired: theme.colors.expiration.expiredText,
       warning: theme.colors.expiration.warningText,
       normal: theme.colors.textSecondary,
     };
 
-    // Use sortedItems directly — the outer useDeferredValue in PantryMain already
-    // defers Apollo cache updates. A second deferral here only desynchronizes
-    // FlashList data from itemDisplayMap, causing getItemType instability.
-    const deferredSortedItems = sortedItems;
-
     // Pre-compute display data for ALL items at list level — eliminates per-item
     // computeItemDisplay calls during scroll/recycling. React Compiler auto-memoizes
-    // this when deferredSortedItems and expirationColors are stable.
+    // this when sortedItems and expirationColors are stable.
     const displayMap = computeDisplayMap(
-      deferredSortedItems,
+      sortedItems,
       expirationColors,
       getLocationString,
     );
@@ -593,12 +698,12 @@ export const PantryContent = React.forwardRef<
     // Preload images for visible + upcoming items to prevent blank shimmer during fast scroll
     useEffect(() => {
       const urls: string[] = [];
-      for (const item of deferredSortedItems) {
+      for (const item of sortedItems) {
         const url = resolveImageUrl(item);
         if (url) urls.push(url);
       }
       if (urls.length > 0) preloadImages(urls);
-    }, [deferredSortedItems]);
+    }, [sortedItems]);
 
     // Scroll to top when filter or sort changes to reset position after reorder
     const prevLocationFilter = useRef(locationFilter);
@@ -646,7 +751,7 @@ export const PantryContent = React.forwardRef<
     // Stable extraData — string avoids new array reference every render
     const extraData = `${sortOption}-${sortDirection}-${locationFilter}`;
 
-    const isEmpty = !showSkeletons && deferredSortedItems.length === 0;
+    const isEmpty = !showSkeletons && sortedItems.length === 0;
 
     // Use flexGrow when empty so ListEmptyComponent can center properly;
     // drop the large paddingBottom that creates excess space below the empty state
@@ -667,6 +772,7 @@ export const PantryContent = React.forwardRef<
               onAvatarPress={onAvatarPress}
               onHomePress={onHomePress}
               onNotificationPress={onNotificationPress}
+              onHomeBadgeLayout={onHomeBadgeLayout}
             />
           </View>
 
@@ -722,9 +828,7 @@ export const PantryContent = React.forwardRef<
                   data={showSkeletons ? EMPTY_ARRAY : deferredSortedItems}
                   renderItem={renderItem}
                   keyExtractor={keyExtractor}
-                  getItemType={getItemType}
                   drawDistance={DRAW_DISTANCE}
-                  maxItemsInRecyclePool={15}
                   extraData={extraData}
                   contentContainerStyle={listContentStyle}
                   showsVerticalScrollIndicator={false}
@@ -763,7 +867,6 @@ export const PantryContent = React.forwardRef<
                   }
                   ListFooterComponent={
                     <PaginationFooter
-                      isLoadingMore={isLoadingMore}
                       hasMore={hasMore}
                       itemCount={deferredSortedItems.length}
                     />

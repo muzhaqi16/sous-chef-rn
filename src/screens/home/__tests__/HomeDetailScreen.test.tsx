@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import { HomeDetailScreen } from '../HomeDetailScreen';
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -19,7 +18,12 @@ const mockToggleJoinCode = jest.fn().mockResolvedValue(undefined);
 const mockRefetch = jest.fn();
 const mockHandleRoleSelect = jest.fn();
 const mockCloseRolePicker = jest.fn();
-const mockRolePickerState = { visible: false, membershipId: '', currentRole: '', memberName: '' };
+const mockRolePickerState = {
+  visible: false,
+  membershipId: '',
+  currentRole: '',
+  memberName: '',
+};
 
 jest.mock('#hooks/home/useHomeDetailManagement', () => ({
   useHomeDetailManagement: jest.fn(() => ({
@@ -33,7 +37,12 @@ jest.mock('#hooks/home/useHomeDetailManagement', () => ({
         { userId: 'user-2', role: 'MEMBER', profile: { displayName: 'Jane' } },
       ],
       invites: [],
-      myMembership: { id: 'membership-1', role: 'OWNER', status: 'ACTIVE', canManageHome: true },
+      myMembership: {
+        id: 'membership-1',
+        role: 'OWNER',
+        status: 'ACTIVE',
+        canManageHome: true,
+      },
     },
     loading: false,
     leaving: false,
@@ -57,9 +66,7 @@ jest.mock('#hooks/home/useHomeDetailManagement', () => ({
 }));
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) =>
-    selector({ user: { id: 'user-1' } }),
-  ),
+  useAppStore: jest.fn((selector: any) => selector({ user: { id: 'user-1' } })),
   selectUser: (s: any) => s.user,
 }));
 
@@ -77,7 +84,9 @@ jest.mock('#components/templates/DetailTemplate', () => ({
     return (
       <View testID="detail-template">
         <Text>{title}</Text>
-        <Pressable testID="back-button" onPress={onBack}><Text>Back</Text></Pressable>
+        <Pressable testID="back-button" onPress={onBack}>
+          <Text>Back</Text>
+        </Pressable>
         {sections?.map((s: any, i: number) => (
           <View key={i} testID={`section-${i}`}>
             {s.title ? <Text>{s.title}</Text> : null}
@@ -92,21 +101,35 @@ jest.mock('#components/templates/DetailTemplate', () => ({
 jest.mock('#components/molecules/EditableField', () => ({
   EditableField: ({ label, value }: any) => {
     const { View, Text } = require('react-native');
-    return <View testID="editable-field"><Text>{label}: {value}</Text></View>;
+    return (
+      <View testID="editable-field">
+        <Text>
+          {label}: {value}
+        </Text>
+      </View>
+    );
   },
 }));
 
 jest.mock('#components/molecules/NavigationRow', () => ({
   NavigationRow: ({ title, onPress }: any) => {
     const { Pressable, Text } = require('react-native');
-    return <Pressable testID="nav-row" onPress={onPress}><Text>{title}</Text></Pressable>;
+    return (
+      <Pressable testID="nav-row" onPress={onPress}>
+        <Text>{title}</Text>
+      </Pressable>
+    );
   },
 }));
 
 jest.mock('#components/organisms/home/HomeMembersSection', () => ({
   HomeMembersSection: () => {
     const { View, Text } = require('react-native');
-    return <View><Text>Members Section</Text></View>;
+    return (
+      <View>
+        <Text>Members Section</Text>
+      </View>
+    );
   },
 }));
 
@@ -116,7 +139,10 @@ jest.mock('#components/settings/SettingSwitch', () => ({
     return (
       <View>
         <Text>{title}</Text>
-        <Pressable testID="join-code-toggle" onPress={() => onValueChange(!value)}>
+        <Pressable
+          testID="join-code-toggle"
+          onPress={() => onValueChange(!value)}
+        >
           <Text>{value ? 'On' : 'Off'}</Text>
         </Pressable>
       </View>
@@ -127,7 +153,11 @@ jest.mock('#components/settings/SettingSwitch', () => ({
 jest.mock('#components/base/Button', () => ({
   Button: ({ title, onPress }: any) => {
     const { Pressable, Text } = require('react-native');
-    return <Pressable testID={`button-${title}`} onPress={onPress}><Text>{title}</Text></Pressable>;
+    return (
+      <Pressable testID={`button-${title}`} onPress={onPress}>
+        <Text>{title}</Text>
+      </Pressable>
+    );
   },
 }));
 
@@ -143,12 +173,16 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
   // Restore default mock implementations after clearAllMocks
-  const { useHomeDetailManagement } = require('#hooks/home/useHomeDetailManagement');
+  const {
+    useHomeDetailManagement,
+  } = require('#hooks/home/useHomeDetailManagement');
   useHomeDetailManagement.mockReturnValue({
     home: {
       id: 'home-1',
@@ -160,7 +194,12 @@ beforeEach(() => {
         { userId: 'user-2', role: 'MEMBER', profile: { displayName: 'Jane' } },
       ],
       invites: [],
-      myMembership: { id: 'membership-1', role: 'OWNER', status: 'ACTIVE', canManageHome: true },
+      myMembership: {
+        id: 'membership-1',
+        role: 'OWNER',
+        status: 'ACTIVE',
+        canManageHome: true,
+      },
     },
     loading: false,
     leaving: false,
@@ -218,7 +257,9 @@ describe('HomeDetailScreen', () => {
   });
 
   it('shows loading state when loading', () => {
-    const { useHomeDetailManagement } = require('#hooks/home/useHomeDetailManagement');
+    const {
+      useHomeDetailManagement,
+    } = require('#hooks/home/useHomeDetailManagement');
     useHomeDetailManagement.mockReturnValue({
       home: null,
       loading: true,
@@ -240,7 +281,9 @@ describe('HomeDetailScreen', () => {
   });
 
   it('shows leave home button for non-owner member', () => {
-    const { useHomeDetailManagement } = require('#hooks/home/useHomeDetailManagement');
+    const {
+      useHomeDetailManagement,
+    } = require('#hooks/home/useHomeDetailManagement');
     useHomeDetailManagement.mockReturnValue({
       home: {
         id: 'home-1',
@@ -249,10 +292,19 @@ describe('HomeDetailScreen', () => {
         joinCode: 'ABC123',
         members: [
           { userId: 'user-1', role: 'OWNER', profile: { displayName: 'John' } },
-          { userId: 'user-2', role: 'MEMBER', profile: { displayName: 'Jane' } },
+          {
+            userId: 'user-2',
+            role: 'MEMBER',
+            profile: { displayName: 'Jane' },
+          },
         ],
         invites: [],
-        myMembership: { id: 'membership-2', role: 'MEMBER', status: 'ACTIVE', canManageHome: false },
+        myMembership: {
+          id: 'membership-2',
+          role: 'MEMBER',
+          status: 'ACTIVE',
+          canManageHome: false,
+        },
       },
       loading: false,
       leaving: false,

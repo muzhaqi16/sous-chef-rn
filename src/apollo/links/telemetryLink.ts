@@ -3,6 +3,7 @@ import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
+import { useStore } from '#store';
 
 interface GraphQLTiming {
   operationName: string;
@@ -18,20 +19,29 @@ export const createTelemetryLink = () => {
   const timings = new Map<string, GraphQLTiming>();
 
   return new ApolloLink((operation, forward) => {
+    // Skip all telemetry overhead when user has explicitly disabled data sharing
+    if (useStore.getState().userConsent === false) {
+      return forward(operation);
+    }
+
     if (!Environment.shouldEnableAnalytics() && !Environment.isDevelopment()) {
       return forward(operation);
     }
 
     // Sample telemetry in production to reduce overhead
-    if (!Environment.isDevelopment() && Math.random() > PRODUCTION_SAMPLE_RATE) {
+    if (
+      !Environment.isDevelopment() &&
+      Math.random() > PRODUCTION_SAMPLE_RATE
+    ) {
       return forward(operation);
     }
 
     const startTime = performance.now();
     const operationName = operation.operationName || 'unnamed';
-    const operationType = operation.query.definitions[0]?.kind === 'OperationDefinition'
-      ? operation.query.definitions[0]?.operation || 'unknown'
-      : 'unknown';
+    const operationType =
+      operation.query.definitions[0]?.kind === 'OperationDefinition'
+        ? operation.query.definitions[0]?.operation || 'unknown'
+        : 'unknown';
 
     const operationId = `${operationName}_${startTime}`;
     const markName = `gql:${operationName}:${operationId}`;
@@ -57,10 +67,7 @@ export const createTelemetryLink = () => {
       name: operationName,
     });
 
-    const finalizeTiming = (
-      timing: GraphQLTiming,
-      hasErrors: boolean,
-    ) => {
+    const finalizeTiming = (timing: GraphQLTiming, hasErrors: boolean) => {
       const duration = performance.now() - timing.startTime;
       timings.delete(operationId);
 
@@ -84,7 +91,7 @@ export const createTelemetryLink = () => {
 
     return new Observable(observer => {
       const subscription = forward(operation).subscribe({
-        next: (response) => {
+        next: response => {
           const timing = timings.get(operationId);
           if (timing) {
             const hasErrors = !!(response.errors && response.errors.length > 0);
@@ -108,7 +115,8 @@ export const createTelemetryLink = () => {
                   try {
                     errorExtensions = JSON.stringify(error.extensions);
                   } catch {
-                    errorExtensions = 'Extensions contained circular references';
+                    errorExtensions =
+                      'Extensions contained circular references';
                   }
                 }
 
@@ -122,10 +130,14 @@ export const createTelemetryLink = () => {
                 });
               });
 
-              Telemetry.increment('graphql_errors_total', response.errors.length, {
-                type: operationType,
-                name: operationName,
-              });
+              Telemetry.increment(
+                'graphql_errors_total',
+                response.errors.length,
+                {
+                  type: operationType,
+                  name: operationName,
+                },
+              );
             } else {
               Telemetry.debug(`GraphQL Success: ${operationName}`, {
                 duration_ms: duration,

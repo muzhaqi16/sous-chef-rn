@@ -1,14 +1,19 @@
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   StorageState,
   useCreatePantryItemMutation,
-  useRestockPantryItemMutation } from '#generated';
+  useRestockPantryItemMutation,
+} from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   isPantryItemDuplicateError,
-  getPantryItemDuplicateInfo } from '#/utils/errors/pantryItemDuplicate';
-import { executeCacheUpdate, executeMutation } from '#/utils/compilerSafeWrappers';
+  getPantryItemDuplicateInfo,
+} from '#/utils/errors/pantryItemDuplicate';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 
 export interface PantryItemSubmissionParams {
   pantryId: string | undefined;
@@ -62,7 +67,8 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     minQuantity,
     restockQuantity,
     onSuccess,
-    handlePageChange } = params;
+    handlePageChange,
+  } = params;
 
   // Create mutation
   const [createPantryItem, { loading }] = useCreatePantryItemMutation({
@@ -71,35 +77,34 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       const pantryItem = data?.createPantryItem?.pantryItem;
       if (!pantryItem || !pantryId) return;
 
-      executeCacheUpdate(
-        () => {
-          const addToPantryCache = createAddToParentConnectionUpdater(
-            'Pantry',
-            'itemsConnection',
-            'PantryItem',
-          );
-          addToPantryCache(cache, pantryId, pantryItem);
-        },
-        'Cache update failed for createPantryItem:',
-      );
-    } });
+      executeCacheUpdate(() => {
+        const addToPantryCache = createAddToParentConnectionUpdater(
+          'Pantry',
+          'itemsConnection',
+          'PantryItem',
+        );
+        addToPantryCache(cache, pantryId, pantryItem);
+      }, 'Cache update failed for createPantryItem:');
+    },
+  });
 
   // Restock mutation
   const [restockPantryItem] = useRestockPantryItemMutation({
-    errorPolicy: 'all' });
+    errorPolicy: 'all',
+  });
 
   const handleConfirm = async () => {
     if (!pantryId) return;
 
     if (!itemName.trim()) {
-      Alert.alert('Error', 'Please enter an item name');
+      alertService.alert('Error', 'Please enter an item name');
       handlePageChange(0);
       return;
     }
 
     const quantity = parseFractionalInput(quantityInput);
     if (quantity === null || isNaN(quantity) || quantity <= 0) {
-      Alert.alert('Error', 'Please enter a valid quantity');
+      alertService.alert('Error', 'Please enter a valid quantity');
       handlePageChange(1);
       return;
     }
@@ -119,11 +124,13 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
             packageSize: pkgSize,
             contentUnitId: contentUnitId || undefined,
             contentUnitName: !contentUnitId ? contentUnit.trim() : undefined,
-            retailUnit: true },
+            retailUnit: true,
+          },
           {
             unitId: contentUnitId || undefined,
             unitName: !contentUnitId ? contentUnit.trim() : undefined,
-            isDefault: true },
+            isDefault: true,
+          },
         ];
       }
       // Set net weight if provided
@@ -143,17 +150,20 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     const effectivePantryNetWeight = pantryNetWeight
       ? parseFloat(pantryNetWeight) || undefined
       : totalPackageNetWeight;
-    const effectiveNetWeightUnitId = pantryNetWeightUnitId
-      || (totalPackageNetWeight ? displayUnitId : undefined);
+    const effectiveNetWeightUnitId =
+      pantryNetWeightUnitId ||
+      (totalPackageNetWeight ? displayUnitId : undefined);
 
     const mutationInput = {
       pantryId,
       quantity,
-      unit: (unitId || unit.trim())
-        ? {
-            unitId: unitId || undefined,
-            unitName: !unitId && unit.trim() ? unit.trim() : undefined }
-        : undefined,
+      unit:
+        unitId || unit.trim()
+          ? {
+              unitId: unitId || undefined,
+              unitName: !unitId && unit.trim() ? unit.trim() : undefined,
+            }
+          : undefined,
       storage: {
         storageState,
         storageLocationId: selectedStorageLocationId || undefined,
@@ -161,7 +171,8 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
           !selectedStorageLocationId && storageLocation.trim()
             ? storageLocation.trim()
             : undefined,
-        storageNotes: storageNotes.trim() || undefined },
+        storageNotes: storageNotes.trim() || undefined,
+      },
       expiresAt: expirationDate
         ? expirationDate.toISOString().split('T')[0]
         : undefined,
@@ -171,32 +182,40 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
             .map(t => t.trim())
             .filter(Boolean)
         : undefined,
-      thresholds: (minQuantity || restockQuantity)
-        ? {
-            minQuantity: minQuantity ? parseFloat(minQuantity) : undefined,
-            restockQuantity: restockQuantity
-              ? parseFloat(restockQuantity)
-              : undefined }
-        : undefined,
-      netWeight: (effectivePantryNetWeight || effectiveNetWeightUnitId)
-        ? {
-            netWeight: effectivePantryNetWeight,
-            netWeightUnitId: effectiveNetWeightUnitId }
-        : undefined,
+      thresholds:
+        minQuantity || restockQuantity
+          ? {
+              minQuantity: minQuantity ? parseFloat(minQuantity) : undefined,
+              restockQuantity: restockQuantity
+                ? parseFloat(restockQuantity)
+                : undefined,
+            }
+          : undefined,
+      netWeight:
+        effectivePantryNetWeight || effectiveNetWeightUnitId
+          ? {
+              netWeight: effectivePantryNetWeight,
+              netWeightUnitId: effectiveNetWeightUnitId,
+            }
+          : undefined,
       item: {
         name: itemName.trim(),
         brand: brand.trim() || undefined,
         units: itemUnits,
         netWeight: netWeight,
-        displayUnitId: displayUnitId } };
+        displayUnitId: displayUnitId,
+      },
+    };
 
     const result = await executeMutation(
-      () => createPantryItem({
-        variables: { input: mutationInput } }),
+      () =>
+        createPantryItem({
+          variables: { input: mutationInput },
+        }),
       'Create pantry item error:',
     );
     if (!result) {
-      Alert.alert('Error', 'Failed to add item. Please try again.');
+      alertService.alert('Error', 'Failed to add item. Please try again.');
       return;
     }
 
@@ -204,7 +223,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     if (result.error && isPantryItemDuplicateError(result.error)) {
       const duplicateInfo = getPantryItemDuplicateInfo(result.error);
       if (duplicateInfo) {
-        Alert.alert(
+        alertService.alert(
           'Item Already in Pantry',
           'This item is already in your pantry. Would you like to restock it or add a separate entry?',
           [
@@ -213,37 +232,54 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
               text: 'Restock',
               onPress: async () => {
                 const restockResult = await executeMutation(
-                  () => restockPantryItem({
-                    variables: {
-                      id: duplicateInfo.existingPantryItemId,
-                      input: { quantity } } }),
+                  () =>
+                    restockPantryItem({
+                      variables: {
+                        id: duplicateInfo.existingPantryItemId,
+                        input: { quantity },
+                      },
+                    }),
                   'Restock pantry item error:',
                 );
                 if (!restockResult) {
-                  Alert.alert('Error', 'Failed to restock item. Please try again.');
+                  alertService.alert(
+                    'Error',
+                    'Failed to restock item. Please try again.',
+                  );
                   return;
                 }
                 onSuccess();
-              } },
+              },
+            },
             {
               text: 'Add Anyway',
               onPress: async () => {
                 const retryResult = await executeMutation(
-                  () => createPantryItem({
-                    variables: {
-                      input: { ...mutationInput, forceAdd: true } } }),
+                  () =>
+                    createPantryItem({
+                      variables: {
+                        input: { ...mutationInput, forceAdd: true },
+                      },
+                    }),
                   'Force add pantry item error:',
                 );
                 if (!retryResult) {
-                  Alert.alert('Error', 'Failed to add item. Please try again.');
+                  alertService.alert(
+                    'Error',
+                    'Failed to add item. Please try again.',
+                  );
                   return;
                 }
                 if (retryResult.data?.createPantryItem?.pantryItem) {
                   onSuccess();
                 } else {
-                  Alert.alert('Error', 'Failed to add item. Please try again.');
+                  alertService.alert(
+                    'Error',
+                    'Failed to add item. Please try again.',
+                  );
                 }
-              } },
+              },
+            },
           ],
         );
         return;
@@ -253,7 +289,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     if (result.data?.createPantryItem?.pantryItem) {
       onSuccess();
     } else if (result.error) {
-      Alert.alert('Error', 'Failed to add item. Please try again.');
+      alertService.alert('Error', 'Failed to add item. Please try again.');
     }
   };
 

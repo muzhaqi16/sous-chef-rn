@@ -1,13 +1,15 @@
 'use no memo';
 
 import { renderHook } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   useQueryWithComplexityHandling,
   useValidatedPagination,
 } from '../useQueryWithComplexityHandling';
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 jest.mock('#/utils/errors/queryComplexity', () => ({
   handleQueryComplexityError: jest.fn(() => true),
@@ -32,7 +34,10 @@ import { isQueryComplexityError } from '#/utils/errors/queryComplexity';
 const mockIsQueryComplexityError = isQueryComplexityError as jest.Mock;
 
 /** Helper to create a mock error conforming to Apollo's ErrorLike interface */
-function createError(message: string, graphQLErrors?: Array<{ extensions: { code: string }; message: string }>) {
+function createError(
+  message: string,
+  graphQLErrors?: Array<{ extensions: { code: string }; message: string }>,
+) {
   return {
     name: 'ApolloError',
     message,
@@ -85,7 +90,10 @@ describe('useQueryWithComplexityHandling', () => {
     mockIsQueryComplexityError.mockReturnValue(true);
 
     const complexityError = createError('Query too complex', [
-      { extensions: { code: 'QUERY_TOO_COMPLEX' }, message: 'Query too complex' },
+      {
+        extensions: { code: 'QUERY_TOO_COMPLEX' },
+        message: 'Query too complex',
+      },
     ]);
 
     const queryResult = {
@@ -97,7 +105,7 @@ describe('useQueryWithComplexityHandling', () => {
 
     renderHook(() => useQueryWithComplexityHandling(queryResult));
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Request Too Large',
       'The request was too complex. Please try with fewer items or simplify your request.',
       expect.any(Array),
@@ -116,7 +124,7 @@ describe('useQueryWithComplexityHandling', () => {
 
     renderHook(() => useQueryWithComplexityHandling(queryResult));
 
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('does not show alert when there is no error', () => {
@@ -129,7 +137,7 @@ describe('useQueryWithComplexityHandling', () => {
 
     renderHook(() => useQueryWithComplexityHandling(queryResult));
 
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('includes retry button in alert when onRetry is provided', () => {
@@ -137,7 +145,10 @@ describe('useQueryWithComplexityHandling', () => {
 
     const onRetry = jest.fn();
     const complexityError = createError('Query too complex', [
-      { extensions: { code: 'QUERY_TOO_COMPLEX' }, message: 'Query too complex' },
+      {
+        extensions: { code: 'QUERY_TOO_COMPLEX' },
+        message: 'Query too complex',
+      },
     ]);
 
     const queryResult = {
@@ -149,7 +160,7 @@ describe('useQueryWithComplexityHandling', () => {
 
     renderHook(() => useQueryWithComplexityHandling(queryResult, onRetry));
 
-    const alertCalls = (Alert.alert as jest.Mock).mock.calls;
+    const alertCalls = (alertService.alert as jest.Mock).mock.calls;
     const buttons = alertCalls[alertCalls.length - 1][2];
     const retryButton = buttons.find((b: any) => b.text === 'Retry');
 
@@ -162,7 +173,10 @@ describe('useQueryWithComplexityHandling', () => {
     mockIsQueryComplexityError.mockReturnValue(true);
 
     const complexityError = createError('Query too complex', [
-      { extensions: { code: 'QUERY_TOO_COMPLEX' }, message: 'Query too complex' },
+      {
+        extensions: { code: 'QUERY_TOO_COMPLEX' },
+        message: 'Query too complex',
+      },
     ]);
 
     const queryResult = {
@@ -180,7 +194,7 @@ describe('useQueryWithComplexityHandling', () => {
     rerender({});
 
     // Count calls that match the complexity alert
-    const complexityCalls = (Alert.alert as jest.Mock).mock.calls.filter(
+    const complexityCalls = (alertService.alert as jest.Mock).mock.calls.filter(
       (call: any[]) => call[0] === 'Request Too Large',
     );
     // Should be exactly 1 (deduped by same error reference)
@@ -191,7 +205,10 @@ describe('useQueryWithComplexityHandling', () => {
     mockIsQueryComplexityError.mockReturnValue(true);
 
     const complexityError = createError('Query too complex', [
-      { extensions: { code: 'QUERY_TOO_COMPLEX' }, message: 'Query too complex' },
+      {
+        extensions: { code: 'QUERY_TOO_COMPLEX' },
+        message: 'Query too complex',
+      },
     ]);
 
     let queryResult: any = {
@@ -213,12 +230,15 @@ describe('useQueryWithComplexityHandling', () => {
     // New complexity error appears
     mockIsQueryComplexityError.mockReturnValue(true);
     const newError = createError('Query too complex again', [
-      { extensions: { code: 'QUERY_TOO_COMPLEX' }, message: 'Query too complex again' },
+      {
+        extensions: { code: 'QUERY_TOO_COMPLEX' },
+        message: 'Query too complex again',
+      },
     ]);
     queryResult = { ...queryResult, error: newError };
     rerender({});
 
-    const complexityCalls = (Alert.alert as jest.Mock).mock.calls.filter(
+    const complexityCalls = (alertService.alert as jest.Mock).mock.calls.filter(
       (call: any[]) => call[0] === 'Request Too Large',
     );
     expect(complexityCalls.length).toBe(2);
@@ -239,11 +259,11 @@ describe('useQueryWithComplexityHandling', () => {
     );
 
     // Clear any previous alert calls from render
-    (Alert.alert as jest.Mock).mockClear();
+    (alertService.alert as jest.Mock).mockClear();
 
     result.current.handleComplexityError();
 
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 });
 
@@ -262,9 +282,7 @@ describe('useValidatedPagination', () => {
   });
 
   it('passes through values under the limit', () => {
-    const { result } = renderHook(() =>
-      useValidatedPagination({ first: 50 }),
-    );
+    const { result } = renderHook(() => useValidatedPagination({ first: 50 }));
 
     expect(result.current.first).toBe(50);
   });

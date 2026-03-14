@@ -19,7 +19,8 @@ import { ToastProvider } from '#components/atoms/Toast';
 import { OfflineBanner } from '#components/atoms/OfflineBanner';
 import { ThemedStatusBar } from '#components/atoms/ThemedStatusBar';
 import { Telemetry } from '#services/telemetry';
-import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
+import { HapticService } from '#services/haptic/HapticService';
+import { storage } from '#/storage/mmkv';
 import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#hooks/useNetworkStatus';
@@ -31,6 +32,7 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { toastService } from '#/services/toastService';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { NotificationProvider } from '#/components/notifications/NotificationProvider';
+import { AlertProvider } from '#/components/providers/AlertProvider';
 import { DataProvider } from '#/components/providers/DataProvider';
 import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
 import { OverlayBackdropProvider, GlobalBackdrop } from '#/components/providers/OverlayBackdropProvider';
@@ -176,6 +178,14 @@ const App = () => {
         setHasStoredCredentials(result);
       });
 
+      // Initialize offline mode from MMKV (transient Zustand state, not persisted via Zustand)
+      useStore.getState().setOfflineModeEnabled(
+        storage.getBoolean('user_offline_mode') ?? false,
+      );
+
+      // Initialize haptic feedback service (caches user preference from store)
+      HapticService.initialize();
+
       // Initialize telemetry service
       const telemetryConfig = getTelemetryConfig();
       if (detoxDisabled) {
@@ -216,21 +226,12 @@ const App = () => {
         timestamp: new Date().toISOString(),
       });
 
-      // Start memory monitoring (only in dev, skip when Detox disables background services)
-      if (__DEV__ && !detoxDisabled) {
-        MemoryMonitor.start(10000); // Sample every 10 seconds
-      }
-
       // Initialize AppState token refresh to handle background resume
       // This ensures tokens are refreshed before queries fire when app resumes
       initAppStateTokenRefresh(() => useStore.getState().accessToken);
     }
 
     return () => {
-      // Cleanup memory monitor on unmount
-      if (__DEV__ && !detoxDisabled) {
-        MemoryMonitor.stop();
-      }
       // Cleanup native performance observers
       if (!detoxDisabled) {
         NativePerformanceService.cleanup();
@@ -285,9 +286,11 @@ const App = () => {
                       <SafeAreaView mode = "padding" style={styles.container} edges={[ 'top','bottom']}>
                         <OfflineBanner />
                         <ToastProvider>
-                          <NotificationProvider>
-                            <Navigation />
-                          </NotificationProvider>
+                          <AlertProvider>
+                            <NotificationProvider>
+                              <Navigation />
+                            </NotificationProvider>
+                          </AlertProvider>
                         </ToastProvider>
                       </SafeAreaView>
                       <GlobalBackdrop />

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
@@ -32,15 +32,27 @@ type RouteParams = {
   initialItemName?: string;
 };
 
-export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route }) => {
+export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
+  route,
+}) => {
   const navigation = useAppNavigation();
   const { listId, itemId } = route.params;
   // Extract initialItemName (only present when navigating from AddItem route)
-  const initialItemName = 'initialItemName' in route.params ? route.params.initialItemName : undefined;
+  const initialItemName =
+    'initialItemName' in route.params
+      ? route.params.initialItemName
+      : undefined;
   const isEdit = !!itemId;
 
   const {
-    formState: { itemName, quantityInput, unit, notes, category, estimatedPrice },
+    formState: {
+      itemName,
+      quantityInput,
+      unit,
+      notes,
+      category,
+      estimatedPrice,
+    },
     updateField,
     setFromItem,
     buildUnitInput,
@@ -67,7 +79,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       addNewItemToShoppingListCache(cache, listId, newItem);
     },
     onError: error => {
-      errorService.reportError(error, { operation: 'ShoppingListItem.addItem' });
+      errorService.reportError(error, {
+        operation: 'ShoppingListItem.addItem',
+      });
     },
   });
 
@@ -78,7 +92,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       const updatedItem = data?.updateShoppingListItem?.shoppingListItem;
       if (updatedItem) {
         cache.writeFragment({
-          id: cache.identify({ __typename: 'ShoppingListItem', id: updatedItem.id }),
+          id: cache.identify({
+            __typename: 'ShoppingListItem',
+            id: updatedItem.id,
+          }),
           fragment: ShoppingListItemDisplayFragmentDoc,
           fragmentName: 'ShoppingListItemDisplayFragment',
           data: updatedItem,
@@ -86,7 +103,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       }
     },
     onError: error => {
-      errorService.reportError(error, { operation: 'ShoppingListItem.updateItem' });
+      errorService.reportError(error, {
+        operation: 'ShoppingListItem.updateItem',
+      });
     },
   });
 
@@ -128,12 +147,12 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
   // Handle form submission
   const handleSave = () => {
     if (!itemName.trim()) {
-      Alert.alert('Error', 'Please enter an item name');
+      alertService.alert('Error', 'Please enter an item name');
       return;
     }
 
     if (!quantityInput.trim()) {
-      Alert.alert('Error', 'Please enter a quantity');
+      alertService.alert('Error', 'Please enter a quantity');
       return;
     }
 
@@ -172,7 +191,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
                 ...unitData,
                 notes,
                 category,
-                ...(estimatedPrice && { pricing: { estimatedPrice: parseFloat(estimatedPrice) } }),
+                ...(estimatedPrice && {
+                  pricing: { estimatedPrice: parseFloat(estimatedPrice) },
+                }),
               },
             },
           });
@@ -192,7 +213,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
             navigation.goBack();
           } else {
             // PERFORMANCE: Specific error message - server returned success but no data
-            Alert.alert(
+            alertService.alert(
               'Error',
               `Server error: Item was not ${
                 isEdit ? 'updated' : 'added'
@@ -201,7 +222,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
           }
         } else {
           // PERFORMANCE: Specific error message - mutation failed without data
-          Alert.alert(
+          alertService.alert(
             'Error',
             `Failed to ${
               isEdit ? 'update' : 'add'
@@ -215,21 +236,17 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
 
         // Handle version conflict errors with user-friendly message
         if (handleVersionConflict(error)) {
-          Alert.alert(
-            'Item Updated',
-            getVersionConflictMessage(error),
-            [
-              {
-                text: 'Refresh',
-                onPress: () => {
-                  // Navigate back - the query will automatically refetch
-                  // when returning to the list view
-                  navigation.goBack();
-                },
+          alertService.alert('Item Updated', getVersionConflictMessage(error), [
+            {
+              text: 'Refresh',
+              onPress: () => {
+                // Navigate back - the query will automatically refetch
+                // when returning to the list view
+                navigation.goBack();
               },
-              { text: 'Cancel', style: 'cancel' },
-            ],
-          );
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
           return; // Don't show generic error alert
         }
 
@@ -251,14 +268,12 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
           errorMessage += 'Please try again.';
         }
 
-        Alert.alert('Error', errorMessage);
+        alertService.alert('Error', errorMessage);
       },
     );
   };
 
-  const modalTestID = isEdit
-    ? 'edit-item-modal'
-    : 'add-item-modal';
+  const modalTestID = isEdit ? 'edit-item-modal' : 'add-item-modal';
 
   return (
     <FormModal
@@ -267,7 +282,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       onSave={handleSave}
       loading={saving}
       testID={modalTestID}
-      submitButtonTestID={isEdit ? 'edit-item-submit-button' : 'add-item-submit-button'}
+      submitButtonTestID={
+        isEdit ? 'edit-item-submit-button' : 'add-item-submit-button'
+      }
     >
       {/* Item Name Field - Use autocomplete for new items only */}
       {isEdit ? (
@@ -311,7 +328,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
           value={quantityInput}
           onChangeText={text => updateField('quantityInput', text)}
           placeholder="1"
-          testID={isEdit ? 'edit-item-quantity-input' : 'add-item-quantity-input'}
+          testID={
+            isEdit ? 'edit-item-quantity-input' : 'add-item-quantity-input'
+          }
         />
         <UnitAutocompleteField
           variant="modal"

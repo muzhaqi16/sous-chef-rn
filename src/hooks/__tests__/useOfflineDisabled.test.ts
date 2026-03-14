@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useOfflineDisabled } from '../useOfflineDisabled';
 
 let mockCanUseNetwork = true;
@@ -8,7 +8,9 @@ jest.mock('#hooks/settings/useOfflineMode', () => ({
   useCanUseNetwork: jest.fn(() => mockCanUseNetwork),
 }));
 
-jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -37,7 +39,7 @@ describe('useOfflineDisabled', () => {
       result.current.showOfflineMessage();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Offline',
       'This feature requires an internet connection',
     );
@@ -52,7 +54,7 @@ describe('useOfflineDisabled', () => {
       result.current.showOfflineMessage();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Offline',
       'Sharing requires an active internet connection',
     );

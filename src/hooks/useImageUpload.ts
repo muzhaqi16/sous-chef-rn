@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { validateImageFile, getMimeTypeFromUri } from '#utils/imageValidation';
 import {
   useCreateImageUploadUrlMutation,
@@ -135,7 +135,7 @@ export const useImageUpload = () => {
         "You're offline. Image upload requires an internet connection.",
       );
       onError?.(offlineError);
-      Alert.alert(
+      alertService.alert(
         'No Internet Connection',
         "Image upload requires an internet connection. Please try again when you're online.",
       );
@@ -246,7 +246,7 @@ export const useImageUpload = () => {
         }
 
         options.onError?.(new Error(userErrorMessage));
-        Alert.alert('Upload Failed', userErrorMessage);
+        alertService.alert('Upload Failed', userErrorMessage);
       },
     );
     return result || null;
@@ -277,7 +277,7 @@ export const useImageUpload = () => {
         const errorMessage =
           error instanceof Error ? error.message : 'Upload failed';
         options.onError?.(new Error(errorMessage));
-        Alert.alert('Upload Failed', errorMessage);
+        alertService.alert('Upload Failed', errorMessage);
       },
     );
     return result || null;
@@ -310,7 +310,7 @@ export const useImageUpload = () => {
         }),
       error => {
         console.error('Update profile avatar failed:', error);
-        Alert.alert('Update Failed', 'Failed to update profile avatar');
+        alertService.alert('Update Failed', 'Failed to update profile avatar');
       },
     );
     if (!result) return null;
@@ -325,7 +325,7 @@ export const useImageUpload = () => {
         }),
       error => {
         console.error('Update profile cover failed:', error);
-        Alert.alert('Update Failed', 'Failed to update profile cover');
+        alertService.alert('Update Failed', 'Failed to update profile cover');
       },
     );
     if (!result) return null;
@@ -340,7 +340,7 @@ export const useImageUpload = () => {
         }),
       error => {
         console.error('Update item image failed:', error);
-        Alert.alert('Update Failed', 'Failed to update item image');
+        alertService.alert('Update Failed', 'Failed to update item image');
       },
     );
     if (!result) return null;

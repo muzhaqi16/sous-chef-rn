@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
+import { View, Text, Pressable } from 'react-native';
 import {
-  View,
-  Text,
-  Pressable,
-  Modal,
-  TextInput,
-  ActivityIndicator,
-} from 'react-native';
+  BottomSheetModal,
+  BottomSheetTextInput,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -14,6 +12,8 @@ import {
   executeWithLoadingState,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 
 const defaultTransform = (item: string) => item.trim();
 
@@ -146,6 +146,19 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const handleCancel = () => {
+    setIsAddingModal(false);
+    setNewItem('');
+    setError('');
+  };
+
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible: isAddingModal,
+    onDismiss: handleCancel,
+    snapPoints: ['30%'],
+    keyboardBehavior: 'interactive',
+  });
+
   const handleAddPress = () => {
     if (maxItems && items.length >= maxItems) {
       setError(`Maximum ${maxItems} items allowed`);
@@ -208,12 +221,6 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
     );
   };
 
-  const handleCancel = () => {
-    setIsAddingModal(false);
-    setNewItem('');
-    setError('');
-  };
-
   return (
     <View style={[commonStyles.card, containerStyle]}>
       {/* Header with title and add button */}
@@ -261,74 +268,33 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
         )}
       </View>
 
-      {/* Add modal */}
-      <Modal
-        visible={isAddingModal}
-        transparent
-        animationType="slide"
-        onRequestClose={handleCancel}
-        statusBarTranslucent
-        navigationBarTranslucent
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[commonStyles.card, styles.modalContent]}>
-            <Text style={commonStyles.h3}>{addButtonLabel}</Text>
+      {/* Add bottom sheet */}
+      <BottomSheetModal ref={ref} {...modalProps}>
+        <BottomSheetView style={[styles.sheetContent, contentContainerStyle]}>
+          <BottomSheetHeader
+            title={addButtonLabel}
+            onCancel={handleCancel}
+            onConfirm={handleAdd}
+            confirmLabel="Add"
+            confirmDisabled={loading}
+          />
 
-            <TextInput
-              style={[commonStyles.input, error && styles.inputError]}
-              value={newItem}
-              onChangeText={text => {
-                setNewItem(text);
-                setError(''); // Clear error on input
-              }}
-              placeholder={inputPlaceholder}
-              autoFocus
-              editable={!loading}
-            />
+          <BottomSheetTextInput
+            style={[styles.sheetInput, error && styles.inputError]}
+            value={newItem}
+            onChangeText={text => {
+              setNewItem(text);
+              setError('');
+            }}
+            placeholder={inputPlaceholder}
+            placeholderTextColor={theme.colors.inputPlaceholder}
+            autoFocus
+            editable={!loading}
+          />
 
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-            <View style={styles.modalButtons}>
-              <Pressable
-                style={({ pressed }) => [
-                  commonStyles.button,
-                  styles.modalButton,
-                  pressed && styles.pressed,
-                ]}
-                onPress={handleCancel}
-                disabled={loading}
-              >
-                <Text style={commonStyles.buttonText}>Cancel</Text>
-              </Pressable>
-
-              <Pressable
-                style={({ pressed }) => [
-                  commonStyles.button,
-                  commonStyles.buttonPrimary,
-                  styles.modalButton,
-                  loading && styles.buttonDisabled,
-                  pressed && styles.pressed,
-                ]}
-                onPress={handleAdd}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color={theme.colors.onPrimary} />
-                ) : (
-                  <Text
-                    style={[
-                      commonStyles.buttonText,
-                      commonStyles.buttonTextPrimary,
-                    ]}
-                  >
-                    Add
-                  </Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        </BottomSheetView>
+      </BottomSheetModal>
     </View>
   );
 };
@@ -381,38 +347,26 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.full,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: theme.colors.overlays.medium,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
+  sheetContent: {
+    paddingHorizontal: theme.spacing.lg,
   },
-  modalContent: {
-    width: '100%',
-    maxWidth: 400,
-    padding: theme.spacing.lg,
+  sheetInput: {
+    fontSize: theme.typography.fontSize.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceVariant,
+    color: theme.colors.textPrimary,
   },
   inputError: {
     borderColor: theme.colors.danger,
-    borderWidth: 1,
   },
   errorText: {
     color: theme.colors.danger,
     fontSize: theme.typography.fontSize.sm,
     marginTop: theme.spacing.xs,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-  },
-  modalButton: {
-    flex: 1,
-  },
-  buttonDisabled: {
-    opacity: theme.opacity.disabled,
   },
   pressed: {
     opacity: theme.opacity.pressed,

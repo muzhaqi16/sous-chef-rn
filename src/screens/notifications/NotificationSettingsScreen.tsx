@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Alert, Platform, Linking, AppState, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  Platform,
+  Linking,
+  AppState,
+  Pressable,
+} from 'react-native';
+import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useNavigation } from '@react-navigation/native';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
@@ -10,7 +18,10 @@ import { useNotificationPermissions } from '#hooks/notifications/useNotification
 import { ExpirationFrequency } from '#generated';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AlertBanner } from '#components/molecules/AlertBanner';
-import { executeWithLoadingState, executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+import {
+  executeWithLoadingState,
+  executeRefreshWithFinally,
+} from '#/utils/compilerSafeWrappers';
 
 const FREQUENCY_OPTIONS = [
   { label: 'Real-time (as items expire)', value: ExpirationFrequency.RealTime },
@@ -34,7 +45,8 @@ export const NotificationSettingsScreen: React.FC = () => {
   const [updating, setUpdating] = useState<string | null>(null);
   const [frequencyPickerVisible, setFrequencyPickerVisible] = useState(false);
   const [thresholdPickerVisible, setThresholdPickerVisible] = useState(false);
-  const { hasPermission, requestPermissions, checkPermissions } = useNotificationPermissions();
+  const { hasPermission, requestPermissions, checkPermissions } =
+    useNotificationPermissions();
 
   const {
     settings,
@@ -74,7 +86,7 @@ export const NotificationSettingsScreen: React.FC = () => {
 
   const handleSettingChange = (
     key: string,
-    value: boolean | string | number | ExpirationFrequency
+    value: boolean | string | number | ExpirationFrequency,
   ) => {
     // Special handling for push notification toggle
     if (key === 'pushEnabled' && value === true) {
@@ -83,7 +95,7 @@ export const NotificationSettingsScreen: React.FC = () => {
           const granted = await requestPermissions();
 
           if (!granted) {
-            Alert.alert(
+            alertService.alert(
               'Notification Permission Required',
               'To receive push notifications, you need to enable notification permissions in your device settings.\n\nWould you like to open settings now?',
               [
@@ -105,13 +117,16 @@ export const NotificationSettingsScreen: React.FC = () => {
 
           const success = await updateNotificationSetting(key as any, value);
           if (!success) {
-            Alert.alert('Error', 'Failed to update settings. Please try again.');
+            alertService.alert(
+              'Error',
+              'Failed to update settings. Please try again.',
+            );
           }
         },
-        (isLoading) => setUpdating(isLoading ? key : null),
-        (error) => {
+        isLoading => setUpdating(isLoading ? key : null),
+        error => {
           console.error('Error requesting notification permission:', error);
-          Alert.alert(
+          alertService.alert(
             'Permission Error',
             'Failed to request notification permission. Please try again or check your device settings.',
           );
@@ -125,15 +140,18 @@ export const NotificationSettingsScreen: React.FC = () => {
       async () => {
         const success = await updateNotificationSetting(key as any, value);
         if (!success) {
-          Alert.alert('Error', 'Failed to update settings. Please try again.');
+          alertService.alert(
+            'Error',
+            'Failed to update settings. Please try again.',
+          );
         }
       },
-      (isLoading) => setUpdating(isLoading ? key : null),
+      isLoading => setUpdating(isLoading ? key : null),
     );
   };
 
   const handleResetToDefaults = () => {
-    Alert.alert(
+    alertService.alert(
       'Reset to Defaults',
       'Are you sure you want to reset all notification settings to their default values?',
       [
@@ -146,15 +164,18 @@ export const NotificationSettingsScreen: React.FC = () => {
               async () => {
                 const success = await resetToDefaults();
                 if (success) {
-                  Alert.alert('Success', 'Settings have been reset to defaults.');
+                  alertService.alert(
+                    'Success',
+                    'Settings have been reset to defaults.',
+                  );
                 } else {
-                  Alert.alert(
+                  alertService.alert(
                     'Error',
                     'Failed to reset settings. Please try again.',
                   );
                 }
               },
-              (isLoading) => setUpdating(isLoading ? 'reset' : null),
+              isLoading => setUpdating(isLoading ? 'reset' : null),
             );
           },
         },
@@ -190,7 +211,7 @@ export const NotificationSettingsScreen: React.FC = () => {
           iconLibrary="Ionicons"
           variant="warning"
           onPress={() => {
-            Alert.alert(
+            alertService.alert(
               'Enable Notifications',
               'Notification permissions are required to receive push notifications. Would you like to open settings?',
               [
@@ -217,27 +238,21 @@ export const NotificationSettingsScreen: React.FC = () => {
           title="Push Notifications"
           description="Receive push notifications on your device"
           value={!!settings.pushEnabled && hasPermission === true}
-          onValueChange={value =>
-            handleSettingChange('pushEnabled', value)
-          }
+          onValueChange={value => handleSettingChange('pushEnabled', value)}
           loading={updating === 'pushEnabled'}
         />
         <SettingSwitch
           title="Email Notifications"
           description="Receive notifications via email"
           value={settings.emailEnabled}
-          onValueChange={value =>
-            handleSettingChange('emailEnabled', value)
-          }
+          onValueChange={value => handleSettingChange('emailEnabled', value)}
           loading={updating === 'emailEnabled'}
         />
         <SettingSwitch
           title="SMS Notifications"
           description="Receive text message notifications"
           value={settings.smsEnabled}
-          onValueChange={value =>
-            handleSettingChange('smsEnabled', value)
-          }
+          onValueChange={value => handleSettingChange('smsEnabled', value)}
           loading={updating === 'smsEnabled'}
         />
       </SettingSection>
@@ -253,14 +268,17 @@ export const NotificationSettingsScreen: React.FC = () => {
           loading={updating === 'expirationNotifications'}
         />
 
-        {!!settings.expirationNotifications && <>
+        {!!settings.expirationNotifications && (
+          <>
             <Pressable
               style={styles.pickerRow}
               onPress={() => setFrequencyPickerVisible(true)}
             >
               <Text style={styles.settingLabel}>Notification Frequency</Text>
               <Text style={styles.pickerValue}>
-                {FREQUENCY_OPTIONS.find(o => o.value === settings.expirationNotificationFrequency)?.label ?? 'Select'}
+                {FREQUENCY_OPTIONS.find(
+                  o => o.value === settings.expirationNotificationFrequency,
+                )?.label ?? 'Select'}
               </Text>
             </Pressable>
             <ModalPicker
@@ -268,7 +286,7 @@ export const NotificationSettingsScreen: React.FC = () => {
               visible={frequencyPickerVisible}
               options={FREQUENCY_OPTIONS}
               selected={settings.expirationNotificationFrequency}
-              onSelect={(value) => {
+              onSelect={value => {
                 handleSettingChange('expirationNotificationFrequency', value);
                 setFrequencyPickerVisible(false);
               }}
@@ -281,7 +299,9 @@ export const NotificationSettingsScreen: React.FC = () => {
             >
               <Text style={styles.settingLabel}>Alert Threshold</Text>
               <Text style={styles.pickerValue}>
-                {THRESHOLD_OPTIONS.find(o => o.value === String(settings.expirationDaysThreshold))?.label ?? 'Select'}
+                {THRESHOLD_OPTIONS.find(
+                  o => o.value === String(settings.expirationDaysThreshold),
+                )?.label ?? 'Select'}
               </Text>
             </Pressable>
             <ModalPicker
@@ -289,13 +309,14 @@ export const NotificationSettingsScreen: React.FC = () => {
               visible={thresholdPickerVisible}
               options={THRESHOLD_OPTIONS}
               selected={String(settings.expirationDaysThreshold)}
-              onSelect={(value) => {
+              onSelect={value => {
                 handleSettingChange('expirationDaysThreshold', Number(value));
                 setThresholdPickerVisible(false);
               }}
               onCancel={() => setThresholdPickerVisible(false)}
             />
-          </>}
+          </>
+        )}
 
         <SettingSwitch
           title="Low Stock Alerts"
@@ -405,13 +426,16 @@ export const NotificationSettingsScreen: React.FC = () => {
           title="Enable Quiet Hours"
           description="Mute notifications during specified hours"
           value={settings.quietHoursEnabled}
-          onValueChange={value => handleSettingChange('quietHoursEnabled', value)}
+          onValueChange={value =>
+            handleSettingChange('quietHoursEnabled', value)
+          }
           loading={updating === 'quietHoursEnabled'}
         />
         {!!settings.quietHoursEnabled && (
           <View style={styles.quietHoursInfo}>
             <Text style={styles.quietHoursText}>
-              Quiet hours: {settings.quietHoursStart || '22:00'} - {settings.quietHoursEnd || '08:00'}
+              Quiet hours: {settings.quietHoursStart || '22:00'} -{' '}
+              {settings.quietHoursEnd || '08:00'}
             </Text>
             <Text style={styles.quietHoursSubtext}>
               Notifications will be muted during these hours

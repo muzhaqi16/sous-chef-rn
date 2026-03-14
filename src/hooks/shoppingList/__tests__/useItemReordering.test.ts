@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useItemReordering } from '../useItemReordering';
 
 // Mock generatePosition
@@ -19,6 +19,10 @@ jest.mock('#/utils/errors/versionConflict', () => ({
 
 // Mock compilerSafeWrappers
 jest.mock('#/utils/compilerSafeWrappers');
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 // Mock SubscriptionService
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
@@ -95,9 +99,7 @@ describe('useItemReordering', () => {
     );
 
     await act(async () => {
-      await result.current.handleSortOrderUpdate(
-        'item-2', 'item-1', 'item-3',
-      );
+      await result.current.handleSortOrderUpdate('item-2', 'item-1', 'item-3');
     });
 
     expect(mockMoveItem).not.toHaveBeenCalled();
@@ -110,7 +112,9 @@ describe('useItemReordering', () => {
 
     await act(async () => {
       await result.current.handleSortOrderUpdate(
-        'non-existent', 'item-1', 'item-3',
+        'non-existent',
+        'item-1',
+        'item-3',
       );
     });
 
@@ -123,9 +127,7 @@ describe('useItemReordering', () => {
     );
 
     await act(async () => {
-      await result.current.handleSortOrderUpdate(
-        'item-2', 'item-1', 'item-3',
-      );
+      await result.current.handleSortOrderUpdate('item-2', 'item-1', 'item-3');
     });
 
     expect(mockGeneratePosition).toHaveBeenCalledWith('aaa', 'eee');
@@ -167,9 +169,7 @@ describe('useItemReordering', () => {
     );
 
     await act(async () => {
-      await result.current.handleSortOrderUpdate(
-        'item-2', 'item-1', 'item-3',
-      );
+      await result.current.handleSortOrderUpdate('item-2', 'item-1', 'item-3');
     });
 
     expect(callOrder).toEqual(['cache.batch', 'mutation']);
@@ -181,9 +181,7 @@ describe('useItemReordering', () => {
     );
 
     await act(async () => {
-      await result.current.handleSortOrderUpdate(
-        'item-2', null, 'item-1',
-      );
+      await result.current.handleSortOrderUpdate('item-2', null, 'item-1');
     });
 
     expect(mockGeneratePosition).toHaveBeenCalledWith(null, 'aaa');
@@ -204,9 +202,7 @@ describe('useItemReordering', () => {
     );
 
     await act(async () => {
-      await result.current.handleSortOrderUpdate(
-        'item-2', 'item-3', null,
-      );
+      await result.current.handleSortOrderUpdate('item-2', 'item-3', null);
     });
 
     expect(mockGeneratePosition).toHaveBeenCalledWith('eee', null);
@@ -225,9 +221,7 @@ describe('useItemReordering', () => {
     );
 
     await act(async () => {
-      await result.current.handleSortOrderUpdate(
-        'item-2', 'item-1', 'item-3',
-      );
+      await result.current.handleSortOrderUpdate('item-2', 'item-1', 'item-3');
     });
 
     expect(refetch).toHaveBeenCalled();
@@ -236,8 +230,6 @@ describe('useItemReordering', () => {
 
   it('handles GraphQL errors from mutation', async () => {
     const refetch = jest.fn();
-    const alertSpy = jest.spyOn(Alert, 'alert');
-
     mockMoveItem.mockResolvedValue({
       error: { message: 'Server error' },
     });
@@ -247,12 +239,10 @@ describe('useItemReordering', () => {
     );
 
     await act(async () => {
-      await result.current.handleSortOrderUpdate(
-        'item-2', 'item-1', 'item-3',
-      );
+      await result.current.handleSortOrderUpdate('item-2', 'item-1', 'item-3');
     });
 
-    expect(alertSpy).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       expect.stringContaining('Server error'),
     );

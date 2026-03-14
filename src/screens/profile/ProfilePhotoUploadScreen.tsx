@@ -3,11 +3,11 @@ import {
   View,
   Pressable,
   Text,
-  Alert,
   Image,
   Dimensions,
   Platform,
 } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, CommonActions } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
@@ -59,17 +59,17 @@ async function requestCameraAndLaunch(
   if (result === RESULTS.GRANTED) {
     launchCamera(DEFAULT_OPTIONS, handleImageResponse);
   } else if (result === RESULTS.DENIED) {
-    Alert.alert(
+    alertService.alert(
       'Camera Permission Denied',
       'Camera permission is required to take photos. Please enable it in your device settings.',
     );
   } else if (result === RESULTS.BLOCKED) {
-    Alert.alert(
+    alertService.alert(
       'Camera Permission Blocked',
       'Camera access is blocked. Please go to Settings > Apps > Sous Chef > Permissions to enable camera access.',
     );
   } else {
-    Alert.alert(
+    alertService.alert(
       'Camera Permission',
       'Camera permission is required to take photos. Please enable it in your device settings.',
     );
@@ -132,7 +132,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
       setCroppedImage(null); // Reset cropped image when new image is selected
     } catch (error) {
       const validationError = error as ImageValidationError;
-      Alert.alert('Invalid Image', validationError.message);
+      alertService.alert('Invalid Image', validationError.message);
     }
   };
 
@@ -143,7 +143,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
         errorService.reportError(error, {
           operation: 'ProfilePhotoUpload.cameraPermission',
         });
-        Alert.alert(
+        alertService.alert(
           'Permission Error',
           'Failed to request camera permission. Please try again or check your device settings.',
         );
@@ -176,7 +176,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           ImageUploadPurpose.ProfileAvatar,
           {
             onError: (error: Error) => {
-              Alert.alert('Upload Failed', error.message);
+              alertService.alert('Upload Failed', error.message);
             },
           },
         );
@@ -189,7 +189,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
       },
       setIsUploading,
       () => {
-        Alert.alert('Upload Failed', 'Failed to update profile photo');
+        alertService.alert('Upload Failed', 'Failed to update profile photo');
       },
     );
   };

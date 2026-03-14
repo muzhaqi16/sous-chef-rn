@@ -1,14 +1,24 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react-native';
+import { alertService } from '#/services/alertService';
 import { AddEditItem } from '../AddEditItem';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
+const mockNav = (
+  jest.requireMock('#hooks/navigation/useAppNavigation') as {
+    useAppNavigation: jest.Mock;
+  }
+).useAppNavigation();
 
 const mockUpdateField = jest.fn();
 jest.mock('#/hooks/shoppingList/useShoppingListItemForm', () => ({
@@ -31,8 +41,14 @@ jest.mock('#/hooks/shoppingList/useShoppingListItemForm', () => ({
 
 jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
-  useAddItemToShoppingListMutation: jest.fn(() => [jest.fn(() => Promise.resolve({ data: null })), { loading: false }]),
-  useUpdateShoppingListItemMutation: jest.fn(() => [jest.fn(() => Promise.resolve({ data: null })), { loading: false }]),
+  useAddItemToShoppingListMutation: jest.fn(() => [
+    jest.fn(() => Promise.resolve({ data: null })),
+    { loading: false },
+  ]),
+  useUpdateShoppingListItemMutation: jest.fn(() => [
+    jest.fn(() => Promise.resolve({ data: null })),
+    { loading: false },
+  ]),
   useGetShoppingListItemQuery: jest.fn(() => ({ data: null, loading: false })),
 }));
 
@@ -48,15 +64,30 @@ jest.mock('#/services/errorService', () => ({
 }));
 jest.mock('#/utils/compilerSafeWrappers');
 
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
+
 jest.mock('#components/organisms/FormModal', () => ({
-  FormModal: ({ title, children, onClose, onSave, testID, submitButtonTestID }: any) => {
+  FormModal: ({
+    title,
+    children,
+    onClose,
+    onSave,
+    testID,
+    submitButtonTestID,
+  }: any) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View testID={testID}>
         <Text>{title}</Text>
         {children}
-        <Pressable testID={submitButtonTestID} onPress={onSave}><Text>Submit</Text></Pressable>
-        <Pressable testID="close-button" onPress={onClose}><Text>Close</Text></Pressable>
+        <Pressable testID={submitButtonTestID} onPress={onSave}>
+          <Text>Submit</Text>
+        </Pressable>
+        <Pressable testID="close-button" onPress={onClose}>
+          <Text>Close</Text>
+        </Pressable>
       </View>
     );
   },
@@ -64,31 +95,61 @@ jest.mock('#components/organisms/FormModal', () => ({
 jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
   BaseInput: ({ label, testID, ...props }: any) => {
     const { View, Text, TextInput } = require('react-native');
-    return <View><Text>{label}</Text><TextInput testID={testID} {...props} /></View>;
+    return (
+      <View>
+        <Text>{label}</Text>
+        <TextInput testID={testID} {...props} />
+      </View>
+    );
   },
 }));
-jest.mock('#components/molecules/AutocompleteField/ItemAutocompleteField', () => ({
-  ItemAutocompleteField: ({ label, testID }: any) => {
-    const { View, Text } = require('react-native');
-    return <View testID={testID}><Text>{label}</Text></View>;
-  },
-}));
-jest.mock('#components/molecules/AutocompleteField/UnitAutocompleteField', () => ({
-  UnitAutocompleteField: ({ label, testID }: any) => {
-    const { View, Text } = require('react-native');
-    return <View testID={testID}><Text>{label}</Text></View>;
-  },
-}));
-jest.mock('#components/molecules/AutocompleteField/CategoryAutocompleteField', () => ({
-  CategoryAutocompleteField: ({ label }: any) => {
-    const { View, Text } = require('react-native');
-    return <View><Text>{label}</Text></View>;
-  },
-}));
+jest.mock(
+  '#components/molecules/AutocompleteField/ItemAutocompleteField',
+  () => ({
+    ItemAutocompleteField: ({ label, testID }: any) => {
+      const { View, Text } = require('react-native');
+      return (
+        <View testID={testID}>
+          <Text>{label}</Text>
+        </View>
+      );
+    },
+  }),
+);
+jest.mock(
+  '#components/molecules/AutocompleteField/UnitAutocompleteField',
+  () => ({
+    UnitAutocompleteField: ({ label, testID }: any) => {
+      const { View, Text } = require('react-native');
+      return (
+        <View testID={testID}>
+          <Text>{label}</Text>
+        </View>
+      );
+    },
+  }),
+);
+jest.mock(
+  '#components/molecules/AutocompleteField/CategoryAutocompleteField',
+  () => ({
+    CategoryAutocompleteField: ({ label }: any) => {
+      const { View, Text } = require('react-native');
+      return (
+        <View>
+          <Text>{label}</Text>
+        </View>
+      );
+    },
+  }),
+);
 jest.mock('#components/molecules/EditableCounter', () => ({
   EditableCounter: ({ label, testID }: any) => {
     const { View, Text } = require('react-native');
-    return <View testID={testID}><Text>{label}</Text></View>;
+    return (
+      <View testID={testID}>
+        <Text>{label}</Text>
+      </View>
+    );
   },
 }));
 jest.mock('#components/molecules/FieldRow', () => ({
@@ -196,7 +257,9 @@ describe('AddEditItem', () => {
   });
 
   it('renders with initialItemName route param', () => {
-    const routeWithInitial = { params: { listId: 'sl1', initialItemName: 'Bread' } };
+    const routeWithInitial = {
+      params: { listId: 'sl1', initialItemName: 'Bread' },
+    };
     render(<AddEditItem route={routeWithInitial} />);
     // updateField should be called with the initial item name
     expect(mockUpdateField).toHaveBeenCalledWith('itemName', 'Bread');
@@ -204,53 +267,67 @@ describe('AddEditItem', () => {
 
   it('handles save validation for empty item name', () => {
     // Default formState has itemName: '' so save should show alert
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
 
     render(<AddEditItem route={addRoute} />);
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
     // Should show error for empty item name
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith('Error', 'Please enter an item name');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Please enter an item name',
+    );
   });
 
   it('handles save validation for empty quantity', () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={addRoute} />);
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith('Error', 'Please enter a quantity');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Please enter a quantity',
+    );
   });
 
   it('navigates back when edit mode and no dirty fields', () => {
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '1',
-        unit: 'pcs',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '1',
+          unit: 'pcs',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={editRoute} />);
     fireEvent.press(screen.getByTestId('edit-item-submit-button'));
@@ -267,23 +344,31 @@ describe('AddEditItem', () => {
     });
 
     const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([mockAddItem, { loading: false }]);
+    useAddItemToShoppingListMutation.mockReturnValue([
+      mockAddItem,
+      { loading: false },
+    ]);
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '2',
-        unit: 'pcs',
-        notes: 'whole milk',
-        category: 'Dairy',
-        estimatedPrice: '4.99',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({ unitId: 'unit-1' })),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '2',
+          unit: 'pcs',
+          notes: 'whole milk',
+          category: 'Dairy',
+          estimatedPrice: '4.99',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({ unitId: 'unit-1' })),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={addRoute} />);
     await fireEvent.press(screen.getByTestId('add-item-submit-button'));
@@ -300,8 +385,14 @@ describe('AddEditItem', () => {
       },
     });
 
-    const { useUpdateShoppingListItemMutation, useGetShoppingListItemQuery } = require('#generated');
-    useUpdateShoppingListItemMutation.mockReturnValue([mockUpdateItem, { loading: false }]);
+    const {
+      useUpdateShoppingListItemMutation,
+      useGetShoppingListItemQuery,
+    } = require('#generated');
+    useUpdateShoppingListItemMutation.mockReturnValue([
+      mockUpdateItem,
+      { loading: false },
+    ]);
     useGetShoppingListItemQuery.mockReturnValue({
       data: {
         shoppingListItem: { id: 'item1', name: 'Milk', version: 1 },
@@ -309,21 +400,29 @@ describe('AddEditItem', () => {
       loading: false,
     });
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Updated Milk',
-        quantityInput: '3',
-        unit: 'pcs',
-        notes: '',
-        category: 'Dairy',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({ itemName: 'Updated Milk', quantity: '3' })),
-      hasDirtyFields: true,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Updated Milk',
+          quantityInput: '3',
+          unit: 'pcs',
+          notes: '',
+          category: 'Dairy',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({
+          itemName: 'Updated Milk',
+          quantity: '3',
+        })),
+        hasDirtyFields: true,
+      });
 
     render(<AddEditItem route={editRoute} />);
     await fireEvent.press(screen.getByTestId('edit-item-submit-button'));
@@ -338,102 +437,128 @@ describe('AddEditItem', () => {
   });
 
   it('shows error alert when addItem returns no data', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
-
     const mockAddItem = jest.fn().mockResolvedValue({ data: null });
     const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([mockAddItem, { loading: false }]);
+    useAddItemToShoppingListMutation.mockReturnValue([
+      mockAddItem,
+      { loading: false },
+    ]);
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '1',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '1',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={addRoute} />);
     await fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       expect.stringContaining('Failed to add item'),
     );
   });
 
   it('shows error alert when mutation returns data but no item', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
-
     const mockAddItem = jest.fn().mockResolvedValue({
       data: { addItemToShoppingList: { shoppingListItem: null } },
     });
     const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([mockAddItem, { loading: false }]);
+    useAddItemToShoppingListMutation.mockReturnValue([
+      mockAddItem,
+      { loading: false },
+    ]);
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '1',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '1',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={addRoute} />);
     await fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       expect.stringContaining('Server error'),
     );
   });
 
   it('handles version conflict error in edit mode', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
-    const { handleVersionConflict, getVersionConflictMessage } = require('#/utils/errors/versionConflict');
+    const {
+      handleVersionConflict,
+      getVersionConflictMessage,
+    } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(true);
-    getVersionConflictMessage.mockReturnValue('Item was updated by someone else');
+    getVersionConflictMessage.mockReturnValue(
+      'Item was updated by someone else',
+    );
 
-    const mockUpdateItem = jest.fn().mockRejectedValue(new Error('VERSION_CONFLICT'));
+    const mockUpdateItem = jest
+      .fn()
+      .mockRejectedValue(new Error('VERSION_CONFLICT'));
     const { useUpdateShoppingListItemMutation } = require('#generated');
-    useUpdateShoppingListItemMutation.mockReturnValue([mockUpdateItem, { loading: false }]);
+    useUpdateShoppingListItemMutation.mockReturnValue([
+      mockUpdateItem,
+      { loading: false },
+    ]);
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '1',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({ itemName: 'Milk' })),
-      hasDirtyFields: true,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '1',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({ itemName: 'Milk' })),
+        hasDirtyFields: true,
+      });
 
     render(<AddEditItem route={editRoute} />);
     fireEvent.press(screen.getByTestId('edit-item-submit-button'));
 
     await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Item Updated',
         'Item was updated by someone else',
         expect.any(Array),
@@ -442,35 +567,47 @@ describe('AddEditItem', () => {
   });
 
   it('handles network error in error handler', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
 
-    const mockAddItem = jest.fn().mockRejectedValue({ networkError: new Error('timeout'), message: 'Network error' });
+    const mockAddItem = jest
+      .fn()
+      .mockRejectedValue({
+        networkError: new Error('timeout'),
+        message: 'Network error',
+      });
     const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([mockAddItem, { loading: false }]);
+    useAddItemToShoppingListMutation.mockReturnValue([
+      mockAddItem,
+      { loading: false },
+    ]);
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '1',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '1',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={addRoute} />);
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
         expect.stringContaining('Network error'),
       );
@@ -478,37 +615,46 @@ describe('AddEditItem', () => {
   });
 
   it('handles VALIDATION_ERROR graphQL error', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
 
     const mockAddItem = jest.fn().mockRejectedValue({
-      graphQLErrors: [{ extensions: { code: 'VALIDATION_ERROR' }, message: 'Invalid' }],
+      graphQLErrors: [
+        { extensions: { code: 'VALIDATION_ERROR' }, message: 'Invalid' },
+      ],
     });
     const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([mockAddItem, { loading: false }]);
+    useAddItemToShoppingListMutation.mockReturnValue([
+      mockAddItem,
+      { loading: false },
+    ]);
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '1',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '1',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={addRoute} />);
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
         expect.stringContaining('Invalid input'),
       );
@@ -516,37 +662,46 @@ describe('AddEditItem', () => {
   });
 
   it('handles UNAUTHENTICATED graphQL error', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
 
     const mockAddItem = jest.fn().mockRejectedValue({
-      graphQLErrors: [{ extensions: { code: 'UNAUTHENTICATED' }, message: 'Unauthorized' }],
+      graphQLErrors: [
+        { extensions: { code: 'UNAUTHENTICATED' }, message: 'Unauthorized' },
+      ],
     });
     const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([mockAddItem, { loading: false }]);
+    useAddItemToShoppingListMutation.mockReturnValue([
+      mockAddItem,
+      { loading: false },
+    ]);
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '1',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '1',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={addRoute} />);
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
         expect.stringContaining('Session expired'),
       );
@@ -554,37 +709,46 @@ describe('AddEditItem', () => {
   });
 
   it('handles generic graphQL error with message', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
 
     const mockAddItem = jest.fn().mockRejectedValue({
-      graphQLErrors: [{ extensions: { code: 'INTERNAL_ERROR' }, message: 'Something broke' }],
+      graphQLErrors: [
+        { extensions: { code: 'INTERNAL_ERROR' }, message: 'Something broke' },
+      ],
     });
     const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([mockAddItem, { loading: false }]);
+    useAddItemToShoppingListMutation.mockReturnValue([
+      mockAddItem,
+      { loading: false },
+    ]);
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '1',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '1',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={addRoute} />);
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
         expect.stringContaining('Something broke'),
       );
@@ -592,35 +756,42 @@ describe('AddEditItem', () => {
   });
 
   it('handles generic error without graphQLErrors or networkError', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
     const { handleVersionConflict } = require('#/utils/errors/versionConflict');
     handleVersionConflict.mockReturnValue(false);
 
     const mockAddItem = jest.fn().mockRejectedValue(new Error('Unknown'));
     const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([mockAddItem, { loading: false }]);
+    useAddItemToShoppingListMutation.mockReturnValue([
+      mockAddItem,
+      { loading: false },
+    ]);
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '1',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '1',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={addRoute} />);
     fireEvent.press(screen.getByTestId('add-item-submit-button'));
 
     await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+      expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
         expect.stringContaining('Please try again'),
       );
@@ -630,27 +801,37 @@ describe('AddEditItem', () => {
   it('includes estimatedPrice in add mutation when provided', async () => {
     const mockAddItem = jest.fn().mockResolvedValue({
       data: {
-        addItemToShoppingList: { shoppingListItem: { id: 'new-item', name: 'Steak' } },
+        addItemToShoppingList: {
+          shoppingListItem: { id: 'new-item', name: 'Steak' },
+        },
       },
     });
     const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([mockAddItem, { loading: false }]);
+    useAddItemToShoppingListMutation.mockReturnValue([
+      mockAddItem,
+      { loading: false },
+    ]);
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Steak',
-        quantityInput: '1',
-        unit: 'lb',
-        notes: '',
-        category: 'Meat',
-        estimatedPrice: '12.99',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Steak',
+          quantityInput: '1',
+          unit: 'lb',
+          notes: '',
+          category: 'Meat',
+          estimatedPrice: '12.99',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={addRoute} />);
     await fireEvent.press(screen.getByTestId('add-item-submit-button'));
@@ -671,26 +852,36 @@ describe('AddEditItem', () => {
     const { useGetShoppingListItemQuery } = require('#generated');
     useGetShoppingListItemQuery.mockReturnValue({
       data: {
-        shoppingListItem: { id: 'item1', name: 'Bread', version: 2, quantity: '1' },
+        shoppingListItem: {
+          id: 'item1',
+          name: 'Bread',
+          version: 2,
+          quantity: '1',
+        },
       },
       loading: false,
     });
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Bread',
-        quantityInput: '1',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: mockSetFromItem,
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Bread',
+          quantityInput: '1',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: mockSetFromItem,
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={editRoute} />);
     expect(mockSetFromItem).toHaveBeenCalledWith(
@@ -699,34 +890,40 @@ describe('AddEditItem', () => {
   });
 
   it('shows server error alert when update returns no item data', async () => {
-    jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(jest.fn());
-
     const mockUpdateItem = jest.fn().mockResolvedValue({
       data: { updateShoppingListItem: { shoppingListItem: null } },
     });
     const { useUpdateShoppingListItemMutation } = require('#generated');
-    useUpdateShoppingListItemMutation.mockReturnValue([mockUpdateItem, { loading: false }]);
+    useUpdateShoppingListItemMutation.mockReturnValue([
+      mockUpdateItem,
+      { loading: false },
+    ]);
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '1',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({ itemName: 'Milk' })),
-      hasDirtyFields: true,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '1',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({ itemName: 'Milk' })),
+        hasDirtyFields: true,
+      });
 
     render(<AddEditItem route={editRoute} />);
     await fireEvent.press(screen.getByTestId('edit-item-submit-button'));
 
-    expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
+    expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       expect.stringContaining('Server error'),
     );
@@ -741,23 +938,31 @@ describe('AddEditItem', () => {
       },
     });
     const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([mockAddItem, { loading: false }]);
+    useAddItemToShoppingListMutation.mockReturnValue([
+      mockAddItem,
+      { loading: false },
+    ]);
 
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: 'Milk',
-        quantityInput: '1',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: 'Milk',
+          quantityInput: '1',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
     render(<AddEditItem route={addRoute} />);
     await fireEvent.press(screen.getByTestId('add-item-submit-button'));
@@ -766,23 +971,30 @@ describe('AddEditItem', () => {
   });
 
   it('does not prepopulate item name when in edit mode even with initialItemName', () => {
-    jest.spyOn(require('#/hooks/shoppingList/useShoppingListItemForm'), 'useShoppingListItemForm').mockReturnValue({
-      formState: {
-        itemName: '',
-        quantityInput: '1',
-        unit: '',
-        notes: '',
-        category: '',
-        estimatedPrice: '',
-      },
-      updateField: mockUpdateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      hasDirtyFields: false,
-    });
+    jest
+      .spyOn(
+        require('#/hooks/shoppingList/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue({
+        formState: {
+          itemName: '',
+          quantityInput: '1',
+          unit: '',
+          notes: '',
+          category: '',
+          estimatedPrice: '',
+        },
+        updateField: mockUpdateField,
+        setFromItem: jest.fn(),
+        buildUnitInput: jest.fn(() => ({})),
+        buildDirtyInput: jest.fn(() => ({})),
+        hasDirtyFields: false,
+      });
 
-    const routeWithBoth = { params: { listId: 'sl1', itemId: 'item1', initialItemName: 'Bread' } };
+    const routeWithBoth = {
+      params: { listId: 'sl1', itemId: 'item1', initialItemName: 'Bread' },
+    };
     render(<AddEditItem route={routeWithBoth} />);
     // In edit mode, initialItemName should not trigger updateField
     expect(mockUpdateField).not.toHaveBeenCalledWith('itemName', 'Bread');

@@ -17,6 +17,10 @@ jest.mock('#/styles/commonStyles', () => ({
   },
 }));
 
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
+
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(() => null),
   selectSelectedPantryId: jest.fn(),
@@ -89,17 +93,20 @@ jest.mock('#components/molecules/FormInput', () => ({
   },
 }));
 
-jest.mock('#components/molecules/AutocompleteField/UnitAutocompleteField', () => ({
-  UnitAutocompleteField: ({ label, placeholder }: any) => {
-    const { Text, View } = require('react-native');
-    return (
-      <View>
-        <Text>{label}</Text>
-        <Text>{placeholder}</Text>
-      </View>
-    );
-  },
-}));
+jest.mock(
+  '#components/molecules/AutocompleteField/UnitAutocompleteField',
+  () => ({
+    UnitAutocompleteField: ({ label, placeholder }: any) => {
+      const { Text, View } = require('react-native');
+      return (
+        <View>
+          <Text>{label}</Text>
+          <Text>{placeholder}</Text>
+        </View>
+      );
+    },
+  }),
+);
 
 jest.mock('#components/molecules/FieldRow', () => ({
   FieldRow: ({ children }: any) => {
@@ -301,7 +308,11 @@ describe('PantryItemForm', () => {
     expect(screen.getByText('Tags')).toBeTruthy();
     expect(screen.getByTestId('dynamic-form-fields')).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: null, loading: false, refetch: jest.fn() });
+    useGetPantryItemQuery.mockReturnValue({
+      data: null,
+      loading: false,
+      refetch: jest.fn(),
+    });
   });
 
   it('renders edit mode with storageLocation as string', () => {
@@ -333,7 +344,11 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: null, loading: false, refetch: jest.fn() });
+    useGetPantryItemQuery.mockReturnValue({
+      data: null,
+      loading: false,
+      refetch: jest.fn(),
+    });
   });
 
   it('renders edit mode with storageLocation as object', () => {
@@ -365,7 +380,11 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: null, loading: false, refetch: jest.fn() });
+    useGetPantryItemQuery.mockReturnValue({
+      data: null,
+      loading: false,
+      refetch: jest.fn(),
+    });
   });
 
   it('renders weight locked hint when item has lastUsedAt', () => {
@@ -397,7 +416,11 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.getByText(/Weight locked after use/)).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: null, loading: false, refetch: jest.fn() });
+    useGetPantryItemQuery.mockReturnValue({
+      data: null,
+      loading: false,
+      refetch: jest.fn(),
+    });
   });
 
   it('renders edit mode with no storageState defaults to AMBIENT', () => {
@@ -429,7 +452,11 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: null, loading: false, refetch: jest.fn() });
+    useGetPantryItemQuery.mockReturnValue({
+      data: null,
+      loading: false,
+      refetch: jest.fn(),
+    });
   });
 
   it('renders add mode with proper testIDs', () => {
@@ -467,7 +494,11 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.getByTestId('edit-pantry-item-quantity-input')).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: null, loading: false, refetch: jest.fn() });
+    useGetPantryItemQuery.mockReturnValue({
+      data: null,
+      loading: false,
+      refetch: jest.fn(),
+    });
   });
 
   it('does not render weight locked hint when item has no lastUsedAt', () => {
@@ -499,7 +530,11 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.queryByText(/Weight locked after use/)).toBeNull();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: null, loading: false, refetch: jest.fn() });
+    useGetPantryItemQuery.mockReturnValue({
+      data: null,
+      loading: false,
+      refetch: jest.fn(),
+    });
   });
 
   it('renders edit mode with existing item that has all fields populated', () => {
@@ -532,14 +567,22 @@ describe('PantryItemForm', () => {
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     expect(screen.getByText(/Weight locked after use/)).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({ data: null, loading: false, refetch: jest.fn() });
+    useGetPantryItemQuery.mockReturnValue({
+      data: null,
+      loading: false,
+      refetch: jest.fn(),
+    });
   });
 });
 
 // ─── Additional branch-coverage tests ────────────────────────────────────────
 
 describe('PantryItemForm – additional branch coverage', () => {
-  const { useGetPantryItemQuery, useGetHomeQuery, useGetPantryQuery } = require('#generated');
+  const {
+    useGetPantryItemQuery,
+    useGetHomeQuery,
+    useGetPantryQuery,
+  } = require('#generated');
   const { useAppStore } = require('#store/useAppStore');
   const { normalizeHome, normalizePantry } = require('#/utils/connectionUtils');
   const { parseFractionalInput } = require('#/utils/fractionUtils');
@@ -566,17 +609,27 @@ describe('PantryItemForm – additional branch coverage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    useGetPantryItemQuery.mockReturnValue({ data: null, loading: false, refetch: jest.fn() });
+    useGetPantryItemQuery.mockReturnValue({
+      data: null,
+      loading: false,
+      refetch: jest.fn(),
+    });
     useGetHomeQuery.mockReturnValue({ data: null });
     useGetPantryQuery.mockReturnValue({ data: null });
     useAppStore.mockReturnValue(null);
-    normalizeHome.mockReturnValue({ pantries: [{ id: 'p1', isDefault: true }] });
+    normalizeHome.mockReturnValue({
+      pantries: [{ id: 'p1', isDefault: true }],
+    });
     normalizePantry.mockReturnValue({ storageLocations: [] });
     parseFractionalInput.mockImplementation((v: string) => parseFloat(v) || 0);
   });
 
   afterEach(() => {
-    useGetPantryItemQuery.mockReturnValue({ data: null, loading: false, refetch: jest.fn() });
+    useGetPantryItemQuery.mockReturnValue({
+      data: null,
+      loading: false,
+      refetch: jest.fn(),
+    });
   });
 
   // ---------- getDefaultPantry branches ----------
@@ -822,22 +875,27 @@ describe('PantryItemForm – additional branch coverage', () => {
     const mockItemInfoSection = require('../ItemInformationSection');
     // Override the mock to capture onSelectItem
     let capturedOnSelectItem: any;
-    mockItemInfoSection.ItemInformationSection = jest.fn(({ mode, testID, onSelectItem }: any) => {
-      capturedOnSelectItem = onSelectItem;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'item-info-section'}>
-          <Text>Item Information ({mode})</Text>
-        </View>
-      );
-    });
+    mockItemInfoSection.ItemInformationSection = jest.fn(
+      ({ mode, testID, onSelectItem }: any) => {
+        capturedOnSelectItem = onSelectItem;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'item-info-section'}>
+            <Text>Item Information ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     expect(capturedOnSelectItem).toBeDefined();
     capturedOnSelectItem({
       id: 'i1',
       name: 'Bread',
-      brands: [{ id: 'b1', name: 'Pepperidge' }, { id: 'b2', name: 'Wonder' }],
+      brands: [
+        { id: 'b1', name: 'Pepperidge' },
+        { id: 'b2', name: 'Wonder' },
+      ],
       category: { name: 'Bakery' },
       defaultUnit: { id: 'du1', name: 'loaves', symbol: 'loaf' },
     });
@@ -845,28 +903,32 @@ describe('PantryItemForm – additional branch coverage', () => {
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
     // Restore mock
-    mockItemInfoSection.ItemInformationSection = jest.fn(({ mode, testID }: any) => {
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'item-info-section'}>
-          <Text>Item Information ({mode})</Text>
-        </View>
-      );
-    });
+    mockItemInfoSection.ItemInformationSection = jest.fn(
+      ({ mode, testID }: any) => {
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'item-info-section'}>
+            <Text>Item Information ({mode})</Text>
+          </View>
+        );
+      },
+    );
   });
 
   it('calls handleItemSelect without brands', () => {
     const mockItemInfoSection = require('../ItemInformationSection');
     let capturedOnSelectItem: any;
-    mockItemInfoSection.ItemInformationSection = jest.fn(({ mode, testID, onSelectItem }: any) => {
-      capturedOnSelectItem = onSelectItem;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'item-info-section'}>
-          <Text>Item Information ({mode})</Text>
-        </View>
-      );
-    });
+    mockItemInfoSection.ItemInformationSection = jest.fn(
+      ({ mode, testID, onSelectItem }: any) => {
+        capturedOnSelectItem = onSelectItem;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'item-info-section'}>
+            <Text>Item Information ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnSelectItem({
@@ -879,28 +941,32 @@ describe('PantryItemForm – additional branch coverage', () => {
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
     // Restore mock
-    mockItemInfoSection.ItemInformationSection = jest.fn(({ mode, testID }: any) => {
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'item-info-section'}>
-          <Text>Item Information ({mode})</Text>
-        </View>
-      );
-    });
+    mockItemInfoSection.ItemInformationSection = jest.fn(
+      ({ mode, testID }: any) => {
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'item-info-section'}>
+            <Text>Item Information ({mode})</Text>
+          </View>
+        );
+      },
+    );
   });
 
   it('calls handleItemSelect with category but no defaultUnit', () => {
     const mockItemInfoSection = require('../ItemInformationSection');
     let capturedOnSelectItem: any;
-    mockItemInfoSection.ItemInformationSection = jest.fn(({ mode, testID, onSelectItem }: any) => {
-      capturedOnSelectItem = onSelectItem;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'item-info-section'}>
-          <Text>Item Information ({mode})</Text>
-        </View>
-      );
-    });
+    mockItemInfoSection.ItemInformationSection = jest.fn(
+      ({ mode, testID, onSelectItem }: any) => {
+        capturedOnSelectItem = onSelectItem;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'item-info-section'}>
+            <Text>Item Information ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnSelectItem({
@@ -913,14 +979,16 @@ describe('PantryItemForm – additional branch coverage', () => {
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
     // Restore mock
-    mockItemInfoSection.ItemInformationSection = jest.fn(({ mode, testID }: any) => {
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'item-info-section'}>
-          <Text>Item Information ({mode})</Text>
-        </View>
-      );
-    });
+    mockItemInfoSection.ItemInformationSection = jest.fn(
+      ({ mode, testID }: any) => {
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'item-info-section'}>
+            <Text>Item Information ({mode})</Text>
+          </View>
+        );
+      },
+    );
   });
 
   // ---------- handleStorageLocationSelect branches ----------
@@ -928,15 +996,17 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls handleStorageLocationSelect with frozen temperature', () => {
     const mockStorageSection = require('../StorageDetailsSection');
     let capturedOnLocationSelect: any;
-    mockStorageSection.StorageDetailsSection = jest.fn(({ mode, onStorageLocationSelected }: any) => {
-      capturedOnLocationSelect = onStorageLocationSelected;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID="storage-details-section">
-          <Text>Storage Details ({mode})</Text>
-        </View>
-      );
-    });
+    mockStorageSection.StorageDetailsSection = jest.fn(
+      ({ mode, onStorageLocationSelected }: any) => {
+        capturedOnLocationSelect = onStorageLocationSelected;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID="storage-details-section">
+            <Text>Storage Details ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnLocationSelect('loc1', { temperature: 'FROZEN' });
@@ -956,15 +1026,17 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls handleStorageLocationSelect with refrigerated temperature', () => {
     const mockStorageSection = require('../StorageDetailsSection');
     let capturedOnLocationSelect: any;
-    mockStorageSection.StorageDetailsSection = jest.fn(({ mode, onStorageLocationSelected }: any) => {
-      capturedOnLocationSelect = onStorageLocationSelected;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID="storage-details-section">
-          <Text>Storage Details ({mode})</Text>
-        </View>
-      );
-    });
+    mockStorageSection.StorageDetailsSection = jest.fn(
+      ({ mode, onStorageLocationSelected }: any) => {
+        capturedOnLocationSelect = onStorageLocationSelected;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID="storage-details-section">
+            <Text>Storage Details ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnLocationSelect('loc2', { temperature: 'Refrigerated' });
@@ -984,15 +1056,17 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls handleStorageLocationSelect with ambient temperature', () => {
     const mockStorageSection = require('../StorageDetailsSection');
     let capturedOnLocationSelect: any;
-    mockStorageSection.StorageDetailsSection = jest.fn(({ mode, onStorageLocationSelected }: any) => {
-      capturedOnLocationSelect = onStorageLocationSelected;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID="storage-details-section">
-          <Text>Storage Details ({mode})</Text>
-        </View>
-      );
-    });
+    mockStorageSection.StorageDetailsSection = jest.fn(
+      ({ mode, onStorageLocationSelected }: any) => {
+        capturedOnLocationSelect = onStorageLocationSelected;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID="storage-details-section">
+            <Text>Storage Details ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnLocationSelect('loc3', { temperature: 'Ambient' });
@@ -1012,15 +1086,17 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls handleStorageLocationSelect with no temperature', () => {
     const mockStorageSection = require('../StorageDetailsSection');
     let capturedOnLocationSelect: any;
-    mockStorageSection.StorageDetailsSection = jest.fn(({ mode, onStorageLocationSelected }: any) => {
-      capturedOnLocationSelect = onStorageLocationSelected;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID="storage-details-section">
-          <Text>Storage Details ({mode})</Text>
-        </View>
-      );
-    });
+    mockStorageSection.StorageDetailsSection = jest.fn(
+      ({ mode, onStorageLocationSelected }: any) => {
+        capturedOnLocationSelect = onStorageLocationSelected;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID="storage-details-section">
+            <Text>Storage Details ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnLocationSelect('loc4', { temperature: null });
@@ -1040,15 +1116,17 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls handleStorageLocationSelect with null location object', () => {
     const mockStorageSection = require('../StorageDetailsSection');
     let capturedOnLocationSelect: any;
-    mockStorageSection.StorageDetailsSection = jest.fn(({ mode, onStorageLocationSelected }: any) => {
-      capturedOnLocationSelect = onStorageLocationSelected;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID="storage-details-section">
-          <Text>Storage Details ({mode})</Text>
-        </View>
-      );
-    });
+    mockStorageSection.StorageDetailsSection = jest.fn(
+      ({ mode, onStorageLocationSelected }: any) => {
+        capturedOnLocationSelect = onStorageLocationSelected;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID="storage-details-section">
+            <Text>Storage Details ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnLocationSelect(null, null);
@@ -1070,15 +1148,17 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls handleAddNewLocation setting location and clearing location id', () => {
     const mockStorageSection = require('../StorageDetailsSection');
     let capturedOnAddNewLocation: any;
-    mockStorageSection.StorageDetailsSection = jest.fn(({ mode, onAddNewLocation }: any) => {
-      capturedOnAddNewLocation = onAddNewLocation;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID="storage-details-section">
-          <Text>Storage Details ({mode})</Text>
-        </View>
-      );
-    });
+    mockStorageSection.StorageDetailsSection = jest.fn(
+      ({ mode, onAddNewLocation }: any) => {
+        capturedOnAddNewLocation = onAddNewLocation;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID="storage-details-section">
+            <Text>Storage Details ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnAddNewLocation('New Shelf');
@@ -1100,15 +1180,17 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls handleUnitSelected with all parameters', () => {
     const mockQuantitySection = require('../QuantitySection');
     let capturedOnUnitSelected: any;
-    mockQuantitySection.QuantitySection = jest.fn(({ mode, testID, onUnitSelected }: any) => {
-      capturedOnUnitSelected = onUnitSelected;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'quantity-section'}>
-          <Text>Quantity ({mode})</Text>
-        </View>
-      );
-    });
+    mockQuantitySection.QuantitySection = jest.fn(
+      ({ mode, testID, onUnitSelected }: any) => {
+        capturedOnUnitSelected = onUnitSelected;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'quantity-section'}>
+            <Text>Quantity ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnUnitSelected('u99', 'grams', 'MASS', 'g');
@@ -1128,15 +1210,17 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls handleUnitSelected with null parameters', () => {
     const mockQuantitySection = require('../QuantitySection');
     let capturedOnUnitSelected: any;
-    mockQuantitySection.QuantitySection = jest.fn(({ mode, testID, onUnitSelected }: any) => {
-      capturedOnUnitSelected = onUnitSelected;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'quantity-section'}>
-          <Text>Quantity ({mode})</Text>
-        </View>
-      );
-    });
+    mockQuantitySection.QuantitySection = jest.fn(
+      ({ mode, testID, onUnitSelected }: any) => {
+        capturedOnUnitSelected = onUnitSelected;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'quantity-section'}>
+            <Text>Quantity ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnUnitSelected(null, null, null, null);
@@ -1158,61 +1242,69 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls handleNetWeightUnitSelected with valid unitId and unitName', () => {
     const mockUnitField = require('#components/molecules/AutocompleteField/UnitAutocompleteField');
     let capturedOnUnitSelected: any;
-    mockUnitField.UnitAutocompleteField = jest.fn(({ label, placeholder, onUnitSelected }: any) => {
-      capturedOnUnitSelected = onUnitSelected;
-      const { Text, View } = require('react-native');
-      return (
-        <View>
-          <Text>{label}</Text>
-          <Text>{placeholder}</Text>
-        </View>
-      );
-    });
+    mockUnitField.UnitAutocompleteField = jest.fn(
+      ({ label, placeholder, onUnitSelected }: any) => {
+        capturedOnUnitSelected = onUnitSelected;
+        const { Text, View } = require('react-native');
+        return (
+          <View>
+            <Text>{label}</Text>
+            <Text>{placeholder}</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnUnitSelected('nwu1', 'grams');
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
     // Restore mock
-    mockUnitField.UnitAutocompleteField = jest.fn(({ label, placeholder }: any) => {
-      const { Text, View } = require('react-native');
-      return (
-        <View>
-          <Text>{label}</Text>
-          <Text>{placeholder}</Text>
-        </View>
-      );
-    });
+    mockUnitField.UnitAutocompleteField = jest.fn(
+      ({ label, placeholder }: any) => {
+        const { Text, View } = require('react-native');
+        return (
+          <View>
+            <Text>{label}</Text>
+            <Text>{placeholder}</Text>
+          </View>
+        );
+      },
+    );
   });
 
   it('calls handleNetWeightUnitSelected with null values', () => {
     const mockUnitField = require('#components/molecules/AutocompleteField/UnitAutocompleteField');
     let capturedOnUnitSelected: any;
-    mockUnitField.UnitAutocompleteField = jest.fn(({ label, placeholder, onUnitSelected }: any) => {
-      capturedOnUnitSelected = onUnitSelected;
-      const { Text, View } = require('react-native');
-      return (
-        <View>
-          <Text>{label}</Text>
-          <Text>{placeholder}</Text>
-        </View>
-      );
-    });
+    mockUnitField.UnitAutocompleteField = jest.fn(
+      ({ label, placeholder, onUnitSelected }: any) => {
+        capturedOnUnitSelected = onUnitSelected;
+        const { Text, View } = require('react-native');
+        return (
+          <View>
+            <Text>{label}</Text>
+            <Text>{placeholder}</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnUnitSelected(null, null);
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
     // Restore mock
-    mockUnitField.UnitAutocompleteField = jest.fn(({ label, placeholder }: any) => {
-      const { Text, View } = require('react-native');
-      return (
-        <View>
-          <Text>{label}</Text>
-          <Text>{placeholder}</Text>
-        </View>
-      );
-    });
+    mockUnitField.UnitAutocompleteField = jest.fn(
+      ({ label, placeholder }: any) => {
+        const { Text, View } = require('react-native');
+        return (
+          <View>
+            <Text>{label}</Text>
+            <Text>{placeholder}</Text>
+          </View>
+        );
+      },
+    );
   });
 
   // ---------- handleCategorySelect ----------
@@ -1220,63 +1312,70 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls handleCategorySelect with a category id', () => {
     const mockItemInfoSection = require('../ItemInformationSection');
     let capturedOnCategorySelected: any;
-    mockItemInfoSection.ItemInformationSection = jest.fn(({ mode, testID, onCategorySelected }: any) => {
-      capturedOnCategorySelected = onCategorySelected;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'item-info-section'}>
-          <Text>Item Information ({mode})</Text>
-        </View>
-      );
-    });
+    mockItemInfoSection.ItemInformationSection = jest.fn(
+      ({ mode, testID, onCategorySelected }: any) => {
+        capturedOnCategorySelected = onCategorySelected;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'item-info-section'}>
+            <Text>Item Information ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnCategorySelected('cat1');
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
     // Restore mock
-    mockItemInfoSection.ItemInformationSection = jest.fn(({ mode, testID }: any) => {
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'item-info-section'}>
-          <Text>Item Information ({mode})</Text>
-        </View>
-      );
-    });
+    mockItemInfoSection.ItemInformationSection = jest.fn(
+      ({ mode, testID }: any) => {
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'item-info-section'}>
+            <Text>Item Information ({mode})</Text>
+          </View>
+        );
+      },
+    );
   });
 
   it('calls handleCategorySelect with null', () => {
     const mockItemInfoSection = require('../ItemInformationSection');
     let capturedOnCategorySelected: any;
-    mockItemInfoSection.ItemInformationSection = jest.fn(({ mode, testID, onCategorySelected }: any) => {
-      capturedOnCategorySelected = onCategorySelected;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'item-info-section'}>
-          <Text>Item Information ({mode})</Text>
-        </View>
-      );
-    });
+    mockItemInfoSection.ItemInformationSection = jest.fn(
+      ({ mode, testID, onCategorySelected }: any) => {
+        capturedOnCategorySelected = onCategorySelected;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'item-info-section'}>
+            <Text>Item Information ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnCategorySelected(null);
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
     // Restore mock
-    mockItemInfoSection.ItemInformationSection = jest.fn(({ mode, testID }: any) => {
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'item-info-section'}>
-          <Text>Item Information ({mode})</Text>
-        </View>
-      );
-    });
+    mockItemInfoSection.ItemInformationSection = jest.fn(
+      ({ mode, testID }: any) => {
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'item-info-section'}>
+            <Text>Item Information ({mode})</Text>
+          </View>
+        );
+      },
+    );
   });
 
   // ---------- handleSave branches ----------
 
   it('shows alert when quantity is invalid (zero)', async () => {
-    const alertSpy = jest.spyOn(require('react-native').Alert, 'alert');
     parseFractionalInput.mockReturnValue(0);
 
     const mockHeader = require('#components/molecules/Header');
@@ -1297,7 +1396,6 @@ describe('PantryItemForm – additional branch coverage', () => {
     // The form validation will fire first - quantity is defaulted to '1'
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
-    alertSpy.mockRestore();
     // Restore mock
     mockHeader.Header = jest.fn(({ title }: any) => {
       const { Text, View } = require('react-native');
@@ -1310,7 +1408,6 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('shows alert when no pantry is selected', async () => {
-    const alertSpy = jest.spyOn(require('react-native').Alert, 'alert');
     normalizeHome.mockReturnValue(null);
     useAppStore.mockReturnValue(null);
     parseFractionalInput.mockReturnValue(5);
@@ -1331,7 +1428,6 @@ describe('PantryItemForm – additional branch coverage', () => {
     if (capturedSubmit) await capturedSubmit();
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
-    alertSpy.mockRestore();
     // Restore mock
     mockHeader.Header = jest.fn(({ title }: any) => {
       const { Text, View } = require('react-native');
@@ -1348,15 +1444,17 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls onStorageStateChange through StorageDetailsSection', () => {
     const mockStorageSection = require('../StorageDetailsSection');
     let capturedOnStorageStateChange: any;
-    mockStorageSection.StorageDetailsSection = jest.fn(({ mode, onStorageStateChange }: any) => {
-      capturedOnStorageStateChange = onStorageStateChange;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID="storage-details-section">
-          <Text>Storage Details ({mode})</Text>
-        </View>
-      );
-    });
+    mockStorageSection.StorageDetailsSection = jest.fn(
+      ({ mode, onStorageStateChange }: any) => {
+        capturedOnStorageStateChange = onStorageStateChange;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID="storage-details-section">
+            <Text>Storage Details ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnStorageStateChange('FROZEN');
@@ -1376,15 +1474,17 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls onDateChange with a Date through StorageDetailsSection', () => {
     const mockStorageSection = require('../StorageDetailsSection');
     let capturedOnDateChange: any;
-    mockStorageSection.StorageDetailsSection = jest.fn(({ mode, onDateChange }: any) => {
-      capturedOnDateChange = onDateChange;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID="storage-details-section">
-          <Text>Storage Details ({mode})</Text>
-        </View>
-      );
-    });
+    mockStorageSection.StorageDetailsSection = jest.fn(
+      ({ mode, onDateChange }: any) => {
+        capturedOnDateChange = onDateChange;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID="storage-details-section">
+            <Text>Storage Details ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnDateChange(new Date('2026-06-15'));
@@ -1404,15 +1504,17 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('calls onDateChange with null through StorageDetailsSection', () => {
     const mockStorageSection = require('../StorageDetailsSection');
     let capturedOnDateChange: any;
-    mockStorageSection.StorageDetailsSection = jest.fn(({ mode, onDateChange }: any) => {
-      capturedOnDateChange = onDateChange;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID="storage-details-section">
-          <Text>Storage Details ({mode})</Text>
-        </View>
-      );
-    });
+    mockStorageSection.StorageDetailsSection = jest.fn(
+      ({ mode, onDateChange }: any) => {
+        capturedOnDateChange = onDateChange;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID="storage-details-section">
+            <Text>Storage Details ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="add" />);
     capturedOnDateChange(null);
@@ -1633,7 +1735,9 @@ describe('PantryItemForm – additional branch coverage', () => {
     });
 
     renderWithProviders(<PantryItemForm mode="add" />);
-    expect(capturedRightActions![0].testID).toBe('add-pantry-item-submit-button');
+    expect(capturedRightActions![0].testID).toBe(
+      'add-pantry-item-submit-button',
+    );
 
     // Restore
     mockHeader.Header = jest.fn(({ title }: any) => {
@@ -1666,7 +1770,9 @@ describe('PantryItemForm – additional branch coverage', () => {
     });
 
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
-    expect(capturedRightActions![0].testID).toBe('edit-pantry-item-submit-button');
+    expect(capturedRightActions![0].testID).toBe(
+      'edit-pantry-item-submit-button',
+    );
 
     // Restore
     mockHeader.Header = jest.fn(({ title }: any) => {
@@ -1690,15 +1796,17 @@ describe('PantryItemForm – additional branch coverage', () => {
 
     const mockItemInfoSection = require('../ItemInformationSection');
     let capturedOnBrandSelected: any;
-    mockItemInfoSection.ItemInformationSection = jest.fn(({ mode, testID, onBrandSelected }: any) => {
-      capturedOnBrandSelected = onBrandSelected;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'item-info-section'}>
-          <Text>Item Information ({mode})</Text>
-        </View>
-      );
-    });
+    mockItemInfoSection.ItemInformationSection = jest.fn(
+      ({ mode, testID, onBrandSelected }: any) => {
+        capturedOnBrandSelected = onBrandSelected;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'item-info-section'}>
+            <Text>Item Information ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(capturedOnBrandSelected).toBeDefined();
@@ -1706,14 +1814,16 @@ describe('PantryItemForm – additional branch coverage', () => {
     expect(screen.getByTestId('edit-pantry-item-modal')).toBeTruthy();
 
     // Restore mock
-    mockItemInfoSection.ItemInformationSection = jest.fn(({ mode, testID }: any) => {
-      const { Text, View } = require('react-native');
-      return (
-        <View testID={testID || 'item-info-section'}>
-          <Text>Item Information ({mode})</Text>
-        </View>
-      );
-    });
+    mockItemInfoSection.ItemInformationSection = jest.fn(
+      ({ mode, testID }: any) => {
+        const { Text, View } = require('react-native');
+        return (
+          <View testID={testID || 'item-info-section'}>
+            <Text>Item Information ({mode})</Text>
+          </View>
+        );
+      },
+    );
   });
 
   // ---------- edit mode: storageState watchedValues ?? fallback ----------
@@ -1732,15 +1842,17 @@ describe('PantryItemForm – additional branch coverage', () => {
 
     const mockStorageSection = require('../StorageDetailsSection');
     let capturedStorageState: any;
-    mockStorageSection.StorageDetailsSection = jest.fn(({ mode, storageState }: any) => {
-      capturedStorageState = storageState;
-      const { Text, View } = require('react-native');
-      return (
-        <View testID="storage-details-section">
-          <Text>Storage Details ({mode})</Text>
-        </View>
-      );
-    });
+    mockStorageSection.StorageDetailsSection = jest.fn(
+      ({ mode, storageState }: any) => {
+        capturedStorageState = storageState;
+        const { Text, View } = require('react-native');
+        return (
+          <View testID="storage-details-section">
+            <Text>Storage Details ({mode})</Text>
+          </View>
+        );
+      },
+    );
 
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     // The fallback should be 'AMBIENT'

@@ -17,6 +17,11 @@ export interface ScannedItem {
   };
   brandName?: string;
   brandId?: string;
+  type?: string;
+  storageState?: string;
+  shelfLifeDays?: number;
+  tags?: string[];
+  categories?: Array<{ id: string; name: string; isPrimary?: boolean }>;
 }
 
 export interface BarcodeScannerState {

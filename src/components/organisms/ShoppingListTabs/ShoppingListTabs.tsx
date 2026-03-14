@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
-import { RefreshControl, Alert, useWindowDimensions, View, Platform } from 'react-native';
+import {
+  RefreshControl,
+  useWindowDimensions,
+  View,
+  Platform,
+} from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import { alertService } from '#/services/alertService';
 import { TabView, type Route } from 'react-native-tab-view';
 import { FilterTabBar } from './FilterTabBar';
 import type { FilterTabActionButton } from '#components/molecules/FilterTabs/types';
@@ -136,7 +142,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onBatchMoveToPantry,
   batchMoveToPantryLoading = false,
   // List header
-  listHeaderComponent }) => {
+  listHeaderComponent,
+}) => {
   const layout = useWindowDimensions();
 
   // TabView navigation state
@@ -144,9 +151,11 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   // PERFORMANCE: Use pre-filtered items when provided (stable references from useShoppingListScreen)
   // Fall back to internal filtering for backwards compatibility
-  const unpurchasedItems = preFilteredUnpurchased ?? (items?.filter(item => !item.isPurchased) || []);
+  const unpurchasedItems =
+    preFilteredUnpurchased ?? (items?.filter(item => !item.isPurchased) || []);
 
-  const purchasedItems = preFilteredPurchased ?? (items?.filter(item => item.isPurchased) || []);
+  const purchasedItems =
+    preFilteredPurchased ?? (items?.filter(item => item.isPurchased) || []);
 
   // Use GraphQL totalCount for accurate counts (handles pagination)
   // Fall back to array length for backwards compatibility
@@ -173,29 +182,34 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   };
 
   const confirmAction = (
-      title: string,
-      message: string,
-      confirmText: string,
-      onConfirm: () => void,
-      destructive = true,
-    ) => {
-      Alert.alert(title, message, [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: confirmText,
-          style: destructive ? 'destructive' : 'default',
-          onPress: onConfirm },
-      ]);
-    };
+    title: string,
+    message: string,
+    confirmText: string,
+    onConfirm: () => void,
+    destructive = true,
+  ) => {
+    alertService.alert(title, message, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: confirmText,
+        style: destructive ? 'destructive' : 'default',
+        onPress: onConfirm,
+      },
+    ]);
+  };
 
   const handleClearAllWithConfirmation = () => {
     if (purchasedItems.length === 0) return;
     const count = purchasedItems.length;
     confirmAction(
       'Clear All Purchased Items',
-      `Are you sure you want to remove ${count === 1 ? '1 purchased item' : `all ${count} purchased items`} from this list?`,
+      `Are you sure you want to remove ${
+        count === 1 ? '1 purchased item' : `all ${count} purchased items`
+      } from this list?`,
       'Clear All',
-      () => { onClearAllPurchased?.(); },
+      () => {
+        onClearAllPurchased?.();
+      },
     );
   };
 
@@ -204,7 +218,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     const count = purchasedItems.length;
     confirmAction(
       'Move All to Pantry',
-      `Move ${count === 1 ? '1 purchased item' : `all ${count} purchased items`} to your pantry?`,
+      `Move ${
+        count === 1 ? '1 purchased item' : `all ${count} purchased items`
+      } to your pantry?`,
       'Move All',
       onBatchMoveToPantry,
       false,
@@ -216,9 +232,13 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     const count = unpurchasedItems.length;
     confirmAction(
       'Clear All Shopping Items',
-      `Are you sure you want to remove ${count === 1 ? '1 item' : `all ${count} items`} from your shopping list?`,
+      `Are you sure you want to remove ${
+        count === 1 ? '1 item' : `all ${count} items`
+      } from your shopping list?`,
       'Clear All',
-      () => { onClearAllShopping?.(); },
+      () => {
+        onClearAllShopping?.();
+      },
     );
   };
 
@@ -268,13 +288,13 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Render FilterTabBar as the TabView's tab bar so it's always visible,
   // even when a tab's FlashList is replaced by an empty state
   const renderTabBar = () => (
-      <FilterTabBar
-        navigationState={{ index, routes: ROUTES }}
-        jumpTo={jumpTo}
-        counts={counts}
-        actionButtons={actionButtons.length > 0 ? actionButtons : undefined}
-      />
-    );
+    <FilterTabBar
+      navigationState={{ index, routes: ROUTES }}
+      jumpTo={jumpTo}
+      counts={counts}
+      actionButtons={actionButtons.length > 0 ? actionButtons : undefined}
+    />
+  );
 
   // Per-tab data for context — decoupled from renderScene so TabView doesn't
   // re-call renderScene on data changes (which would destroy FlashList recycling pools)
@@ -325,7 +345,12 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   return (
     <ShoppingListTabsActionsProvider actions={tabActions}>
       <ShoppingListDataProvider data={tabData}>
-        <View style={{ flex: 1, ...(Platform.OS === 'android' && { elevation: 0 }) }}>
+        <View
+          style={{
+            flex: 1,
+            ...(Platform.OS === 'android' && { elevation: 0 }),
+          }}
+        >
           {listHeaderComponent}
           {showEmptyState ? (
             <ScrollView

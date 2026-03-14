@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, Text, Pressable } from 'react-native';
+import { Text, Pressable } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormModal } from '#components/organisms/FormModal';
@@ -41,7 +42,8 @@ const PERSONAL_VALUE = '__personal__';
 export const CreateMealPlanScreen: React.FC = () => {
   const { goBack } = useAppNavigation();
   const { createMealPlan, creating } = useMealPlanActions();
-  const { createPlanFromTemplate, creatingFromTemplate } = useMealTemplateActions();
+  const { createPlanFromTemplate, creatingFromTemplate } =
+    useMealTemplateActions();
   const { homes } = useHomeQuery();
   const selectedHomeId = useAppStore(s => s.selectedHomeId);
 
@@ -50,7 +52,9 @@ export const CreateMealPlanScreen: React.FC = () => {
   const [planType, setPlanType] = useState<MealPlanType>(MealPlanType.Weekly);
   const [startDate, setStartDate] = useState<Date | null>(new Date());
   const [servings, setServings] = useState('2');
-  const [homeSelection, setHomeSelection] = useState<string>(selectedHomeId ?? PERSONAL_VALUE);
+  const [homeSelection, setHomeSelection] = useState<string>(
+    selectedHomeId ?? PERSONAL_VALUE,
+  );
 
   const homeOptions = (() => {
     const opts = [{ label: 'Personal', value: PERSONAL_VALUE }];
@@ -66,7 +70,8 @@ export const CreateMealPlanScreen: React.FC = () => {
 
   // Template state
   const [templateBrowserVisible, setTemplateBrowserVisible] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<MealTemplateDisplayFragment | null>(null);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<MealTemplateDisplayFragment | null>(null);
   const [templatePreviewVisible, setTemplatePreviewVisible] = useState(false);
 
   const handleSelectTemplate = (template: MealTemplateDisplayFragment) => {
@@ -75,28 +80,30 @@ export const CreateMealPlanScreen: React.FC = () => {
     setTemplatePreviewVisible(true);
   };
 
-  const handleCreateFromTemplate = 
-    async (config: {
-      templateId: string;
-      startDate: string;
-      name?: string;
-      servings?: number;
-    }) => {
-      const result = await createPlanFromTemplate(config);
-      if (result?.success) {
-        setTemplatePreviewVisible(false);
-        setSelectedTemplate(null);
-        goBack();
-      }
-    };
+  const handleCreateFromTemplate = async (config: {
+    templateId: string;
+    startDate: string;
+    name?: string;
+    servings?: number;
+  }) => {
+    const result = await createPlanFromTemplate(config);
+    if (result?.success) {
+      setTemplatePreviewVisible(false);
+      setSelectedTemplate(null);
+      goBack();
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Name Required', 'Please enter a name for your meal plan.');
+      alertService.alert(
+        'Name Required',
+        'Please enter a name for your meal plan.',
+      );
       return;
     }
     if (!startDate) {
-      Alert.alert('Start Date Required', 'Please select a start date.');
+      alertService.alert('Start Date Required', 'Please select a start date.');
       return;
     }
 
@@ -114,10 +121,11 @@ export const CreateMealPlanScreen: React.FC = () => {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         servings: servingsValue,
-        homeId });
+        homeId,
+      });
     } catch (error: any) {
       const errorMessage = error.message ?? 'Failed to create meal plan.';
-      Alert.alert('Error', errorMessage);
+      alertService.alert('Error', errorMessage);
       return;
     }
 
@@ -125,7 +133,7 @@ export const CreateMealPlanScreen: React.FC = () => {
       goBack();
     } else {
       const message = result?.message ?? 'Failed to create meal plan.';
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     }
   };
 
@@ -236,12 +244,17 @@ const createFromTemplateStyles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.lg,
-    marginTop: theme.spacing.sm },
+    marginTop: theme.spacing.sm,
+  },
   linkPressed: {
-    opacity: theme.opacity.pressed },
+    opacity: theme.opacity.pressed,
+  },
   linkIcon: {
-    color: theme.colors.primary },
+    color: theme.colors.primary,
+  },
   linkText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium } }));
+    fontWeight: theme.fonts.weight.medium,
+  },
+}));

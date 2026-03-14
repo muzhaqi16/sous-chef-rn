@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useHomeInvitations } from '../useHomeInvitations';
 
 const mockInviteUserMutation = jest.fn();
@@ -38,7 +38,9 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 const createOptions = () => ({
   homes: [] as any[],
@@ -53,9 +55,7 @@ beforeEach(() => {
 
 describe('useHomeInvitations', () => {
   it('returns invitation functions and loading states', () => {
-    const { result } = renderHook(() =>
-      useHomeInvitations(createOptions()),
-    );
+    const { result } = renderHook(() => useHomeInvitations(createOptions()));
 
     expect(typeof result.current.inviteUserToHome).toBe('function');
     expect(typeof result.current.joinHomeByCode).toBe('function');
@@ -72,9 +72,7 @@ describe('useHomeInvitations', () => {
         data: { inviteToHome: { homeInvite: { id: 'invite-1' } } },
       });
 
-      const { result } = renderHook(() =>
-        useHomeInvitations(createOptions()),
-      );
+      const { result } = renderHook(() => useHomeInvitations(createOptions()));
 
       await act(async () => {
         await result.current.inviteUserToHome('home-1', '  user@test.com  ');
@@ -97,9 +95,7 @@ describe('useHomeInvitations', () => {
       });
 
       const { MembershipRole } = jest.requireMock('#generated');
-      const { result } = renderHook(() =>
-        useHomeInvitations(createOptions()),
-      );
+      const { result } = renderHook(() => useHomeInvitations(createOptions()));
 
       await act(async () => {
         await result.current.inviteUserToHome(
@@ -122,17 +118,20 @@ describe('useHomeInvitations', () => {
 
     it('returns mutation data on success', async () => {
       const mockData = {
-        inviteToHome: { homeInvite: { id: 'invite-1', email: 'user@test.com' } },
+        inviteToHome: {
+          homeInvite: { id: 'invite-1', email: 'user@test.com' },
+        },
       };
       mockInviteUserMutation.mockResolvedValue({ data: mockData });
 
-      const { result } = renderHook(() =>
-        useHomeInvitations(createOptions()),
-      );
+      const { result } = renderHook(() => useHomeInvitations(createOptions()));
 
       let returnValue: any;
       await act(async () => {
-        returnValue = await result.current.inviteUserToHome('home-1', 'user@test.com');
+        returnValue = await result.current.inviteUserToHome(
+          'home-1',
+          'user@test.com',
+        );
       });
 
       expect(returnValue).toEqual(mockData);
@@ -141,9 +140,7 @@ describe('useHomeInvitations', () => {
 
   describe('joinHomeByCode', () => {
     it('shows alert for empty join code', async () => {
-      const { result } = renderHook(() =>
-        useHomeInvitations(createOptions()),
-      );
+      const { result } = renderHook(() => useHomeInvitations(createOptions()));
 
       let success: any;
       await act(async () => {
@@ -151,7 +148,10 @@ describe('useHomeInvitations', () => {
       });
 
       expect(success).toBe(false);
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Please enter a join code');
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Please enter a join code',
+      );
       expect(mockJoinHomeByCodeMutation).not.toHaveBeenCalled();
     });
 
@@ -161,9 +161,7 @@ describe('useHomeInvitations', () => {
         data: { joinHomeByCode: { membership } },
       });
 
-      const { result } = renderHook(() =>
-        useHomeInvitations(createOptions()),
-      );
+      const { result } = renderHook(() => useHomeInvitations(createOptions()));
 
       let returnValue: any;
       await act(async () => {
@@ -181,9 +179,7 @@ describe('useHomeInvitations', () => {
         data: { joinHomeByCode: { membership: null } },
       });
 
-      const { result } = renderHook(() =>
-        useHomeInvitations(createOptions()),
-      );
+      const { result } = renderHook(() => useHomeInvitations(createOptions()));
 
       let returnValue: any;
       await act(async () => {
@@ -196,9 +192,7 @@ describe('useHomeInvitations', () => {
 
   describe('previewHomeByCode', () => {
     it('returns null for empty code', async () => {
-      const { result } = renderHook(() =>
-        useHomeInvitations(createOptions()),
-      );
+      const { result } = renderHook(() => useHomeInvitations(createOptions()));
 
       let returnValue: any;
       await act(async () => {
@@ -215,9 +209,7 @@ describe('useHomeInvitations', () => {
         data: { homeByJoinCode: homeData },
       });
 
-      const { result } = renderHook(() =>
-        useHomeInvitations(createOptions()),
-      );
+      const { result } = renderHook(() => useHomeInvitations(createOptions()));
 
       let returnValue: any;
       await act(async () => {
@@ -235,9 +227,7 @@ describe('useHomeInvitations', () => {
         data: { homeByJoinCode: null },
       });
 
-      const { result } = renderHook(() =>
-        useHomeInvitations(createOptions()),
-      );
+      const { result } = renderHook(() => useHomeInvitations(createOptions()));
 
       let returnValue: any;
       await act(async () => {
@@ -250,9 +240,7 @@ describe('useHomeInvitations', () => {
     it('returns null on error', async () => {
       mockGetHomeByJoinCode.mockRejectedValue(new Error('Network error'));
 
-      const { result } = renderHook(() =>
-        useHomeInvitations(createOptions()),
-      );
+      const { result } = renderHook(() => useHomeInvitations(createOptions()));
 
       let returnValue: any;
       await act(async () => {

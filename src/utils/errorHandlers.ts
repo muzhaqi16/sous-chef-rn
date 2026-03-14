@@ -15,11 +15,15 @@
  * ```
  */
 
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from './errors/versionConflict';
+import {
+  isInvalidUnitError,
+  getInvalidUnitMessage,
+} from './errors/invalidUnit';
 import { errorService, getErrorMessage } from '#/services/errorService';
 
 /**
@@ -67,10 +71,9 @@ export const withVersionConflictHandling =
       return await fn(...args);
     } catch (error: any) {
       if (handleVersionConflict(error)) {
-        const message =
-          customMessage || getVersionConflictMessage(error);
+        const message = customMessage || getVersionConflictMessage(error);
 
-        Alert.alert(`${itemName} Updated`, message, [
+        alertService.alert(`${itemName} Updated`, message, [
           { text: 'Refresh', onPress: () => onRefresh?.() },
           { text: 'Cancel', style: 'cancel' },
         ]);
@@ -112,12 +115,10 @@ export const withMutationErrorHandling =
       return await fn(...args);
     } catch (error: any) {
       const errorMessage =
-        customMessage ||
-        error?.message ||
-        'An unexpected error occurred';
+        customMessage || error?.message || 'An unexpected error occurred';
 
       if (showAlert) {
-        Alert.alert('Error', errorMessage);
+        alertService.alert('Error', errorMessage);
       }
 
       errorService.reportError(error, { operation });
@@ -152,8 +153,10 @@ export const withGenericErrorHandling =
     try {
       return await fn(...args);
     } catch (error: any) {
-      Alert.alert('Error', errorMessage);
-      errorService.reportError(error, { operation: logMessage || errorMessage });
+      alertService.alert('Error', errorMessage);
+      errorService.reportError(error, {
+        operation: logMessage || errorMessage,
+      });
       return false as TReturn;
     }
   };
@@ -179,7 +182,11 @@ export const withGenericErrorHandling =
  */
 export const composeErrorHandlers = <TArgs extends any[], TReturn>(
   fn: (...args: TArgs) => Promise<TReturn>,
-  handlers: Array<(fn: (...args: TArgs) => Promise<TReturn | false>) => (...args: TArgs) => Promise<TReturn | false>>,
+  handlers: Array<
+    (
+      fn: (...args: TArgs) => Promise<TReturn | false>,
+    ) => (...args: TArgs) => Promise<TReturn | false>
+  >,
 ): ((...args: TArgs) => Promise<TReturn | false>) => {
   return handlers.reduce(
     (wrappedFn, handler) => handler(wrappedFn),
@@ -216,7 +223,7 @@ export const handleVersionConflictAlert = (
   if (handleVersionConflict(error)) {
     const message = customMessage || getVersionConflictMessage(error);
 
-    Alert.alert(`${itemName} Updated`, message, [
+    alertService.alert(`${itemName} Updated`, message, [
       { text: 'Refresh', onPress: () => onRefresh?.() },
       { text: 'Cancel', style: 'cancel' },
     ]);
@@ -256,8 +263,43 @@ export const handleMutationErrorAlert = (
   const errorMessage = customMessage || getErrorMessage(error);
 
   if (showAlert) {
-    Alert.alert('Error', errorMessage);
+    alertService.alert('Error', errorMessage);
   }
 
   errorService.reportError(error, { operation });
 };
+
+/**
+ * Creates an invalid unit alert without wrapping a function
+ * Useful for inline error handling in try/catch blocks
+ *
+ * @param error - The error object
+ * @returns true if invalid unit error was handled, false otherwise
+ */
+export const handleInvalidUnitAlert = (error: any): boolean => {
+  if (isInvalidUnitError(error)) {
+    alertService.alert('Invalid Unit', getInvalidUnitMessage(error));
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Higher-order function that adds invalid unit handling to a mutation
+ *
+ * @param fn - The mutation function to wrap
+ * @returns Wrapped function with invalid unit handling
+ */
+export const withInvalidUnitHandling =
+  <TArgs extends any[], TReturn>(fn: (...args: TArgs) => Promise<TReturn>) =>
+  async (...args: TArgs): Promise<TReturn | false> => {
+    try {
+      return await fn(...args);
+    } catch (error: any) {
+      if (isInvalidUnitError(error)) {
+        alertService.alert('Invalid Unit', getInvalidUnitMessage(error));
+        return false as TReturn;
+      }
+      throw error;
+    }
+  };

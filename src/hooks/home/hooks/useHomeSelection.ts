@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useShallow } from 'zustand/shallow';
 import { useSetDefaultHomeMutation } from '#generated';
 import {
@@ -167,7 +167,7 @@ export function useHomeSelection({
 
     // Validate homeId exists
     if (!homeId) {
-      Alert.alert('Error', 'Invalid home ID');
+      alertService.alert('Error', 'Invalid home ID');
       return false;
     }
 
@@ -175,7 +175,7 @@ export function useHomeSelection({
     // This prevents race condition where cache updates but Zustand hasn't
     const targetHome = homes?.find((home: any) => home.id === homeId);
     if (!targetHome) {
-      Alert.alert('Error', 'Home not found');
+      alertService.alert('Error', 'Home not found');
       return false;
     }
 
@@ -205,7 +205,7 @@ export function useHomeSelection({
         // Rollback on error and re-enable queries
         setHomeAndPantry(previousHomeId, previousPantryId);
         setIsHomeSelectionReady(true);
-        Alert.alert('Error', 'Failed to set default home');
+        alertService.alert('Error', 'Failed to set default home');
       },
     );
     if (!result) return false;

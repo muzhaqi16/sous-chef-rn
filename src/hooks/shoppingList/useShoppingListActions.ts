@@ -1,5 +1,5 @@
-import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
+import { alertService } from '#/services/alertService';
 import {
   ShoppingListItemDisplayFragmentDoc,
   useUpdateShoppingListItemQuantityMutation,
@@ -39,7 +39,7 @@ async function executeQuantityUpdate(
     clearPersistence();
 
     if (handleVersionConflict(error)) {
-      Alert.alert('Item Updated', getVersionConflictMessage(error), [
+      alertService.alert('Item Updated', getVersionConflictMessage(error), [
         { text: 'Refresh', onPress: () => refetchItems() },
         { text: 'Cancel', style: 'cancel' },
       ]);

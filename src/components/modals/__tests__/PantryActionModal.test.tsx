@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { PantryActionModal } from '../PantryActionModal';
 import type { PantryItemFragment } from '#generated';
+import { PantryOperation } from '#hooks/pantry/useOperationUnits';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -55,7 +56,11 @@ jest.mock('#components/atoms/FormattedItemSubtitle', () => {
   const RN = require('react-native');
   return {
     FormattedItemSubtitle: ({ quantity, unitSymbol }: any) =>
-      require('react').createElement(RN.Text, null, `${quantity} ${unitSymbol || ''}`),
+      require('react').createElement(
+        RN.Text,
+        null,
+        `${quantity} ${unitSymbol || ''}`,
+      ),
   };
 });
 
@@ -81,11 +86,14 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#hooks/pantry/useCompatibleUnits', () => ({
-  useCompatibleUnits: () => ({
+jest.mock('#hooks/pantry/useOperationUnits', () => ({
+  ...jest.requireActual('#hooks/pantry/useOperationUnits'),
+  useOperationUnits: () => ({
     groups: [],
     allUnits: [],
     defaultUnit: null,
+    defaultIncrement: null,
+    defaultCommonFractions: null,
     loading: false,
     error: undefined,
   }),
@@ -101,7 +109,13 @@ const makePantryItem = (overrides?: Partial<PantryItemFragment>) =>
     itemId: 'item-1',
     itemName: 'Flour',
     quantity: 5,
-    unit: { id: 'u1', symbol: 'lbs', name: 'Pounds', type: 'WEIGHT', displayAsFraction: false },
+    unit: {
+      id: 'u1',
+      symbol: 'lbs',
+      name: 'Pounds',
+      type: 'WEIGHT',
+      displayAsFraction: false,
+    },
     remainingNetWeight: null,
     netWeight: null,
     netWeightUnit: null,
@@ -110,7 +124,7 @@ const makePantryItem = (overrides?: Partial<PantryItemFragment>) =>
     lastUsedAt: null,
     item: { defaultConsumeUnitId: null, defaultConsumeIncrement: null },
     ...overrides,
-  }) as unknown as PantryItemFragment;
+  } as unknown as PantryItemFragment);
 
 describe('PantryActionModal', () => {
   const mockRenderActionFields = jest.fn<any, [any]>(() => {
@@ -128,6 +142,7 @@ describe('PantryActionModal', () => {
     onClose: jest.fn(),
     title: 'Test Action',
     confirmLabel: 'Confirm',
+    operation: PantryOperation.Consume,
     onConfirm: jest.fn(),
     renderActionFields: mockRenderActionFields,
   };
@@ -199,20 +214,37 @@ describe('PantryActionModal', () => {
       <PantryActionModal {...defaultProps} visible={false} pantryItem={null} />,
     );
     rerender(
-      <PantryActionModal {...defaultProps} visible={true} pantryItem={makePantryItem()} />,
+      <PantryActionModal
+        {...defaultProps}
+        visible={true}
+        pantryItem={makePantryItem()}
+      />,
     );
-    const shared = mockRenderActionFields.mock.calls[mockRenderActionFields.mock.calls.length - 1][0];
+    const shared =
+      mockRenderActionFields.mock.calls[
+        mockRenderActionFields.mock.calls.length - 1
+      ][0];
     expect(shared.notes).toBe('');
   });
 
   it('calls onReset when modal opens', () => {
     const onReset = jest.fn();
     const { rerender } = render(
-      <PantryActionModal {...defaultProps} visible={false} pantryItem={null} onReset={onReset} />,
+      <PantryActionModal
+        {...defaultProps}
+        visible={false}
+        pantryItem={null}
+        onReset={onReset}
+      />,
     );
     rerender(
-      <PantryActionModal {...defaultProps} visible={true} pantryItem={makePantryItem()} onReset={onReset} />,
+      <PantryActionModal
+        {...defaultProps}
+        visible={true}
+        pantryItem={makePantryItem()}
+        onReset={onReset}
+      />,
     );
-    expect(onReset).toHaveBeenCalledWith(expect.any(Object), null);
+    expect(onReset).toHaveBeenCalledWith(expect.any(Object), null, null);
   });
 });

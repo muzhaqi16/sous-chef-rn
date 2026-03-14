@@ -7,7 +7,7 @@
  * - Preview home by code
  */
 
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   useInviteToHomeMutation,
   useJoinHomeByCodeMutation,
@@ -72,7 +72,7 @@ export function useHomeInvitations({
       const { message } = handleApolloError(error, {
         operation: 'Invite User',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     },
   });
 
@@ -103,14 +103,17 @@ export function useHomeInvitations({
             });
           }
 
-          Alert.alert('Success', 'You have successfully joined the home!');
+          alertService.alert(
+            'Success',
+            'You have successfully joined the home!',
+          );
         }
       },
       onError: (error: any) => {
         const { message } = handleApolloError(error, {
           operation: 'Join Home By Code',
         });
-        Alert.alert('Error', message);
+        alertService.alert('Error', message);
       },
     });
 
@@ -140,7 +143,7 @@ export function useHomeInvitations({
 
   const joinHomeByCode = async (joinCode: string) => {
     if (!joinCode.trim()) {
-      Alert.alert('Error', 'Please enter a join code');
+      alertService.alert('Error', 'Please enter a join code');
       return false;
     }
 
@@ -170,7 +173,7 @@ export function useHomeInvitations({
         const { message } = handleApolloError(error, {
           operation: 'Preview Home',
         });
-        Alert.alert('Error', message);
+        alertService.alert('Error', message);
       },
     );
     if (!result) return null;

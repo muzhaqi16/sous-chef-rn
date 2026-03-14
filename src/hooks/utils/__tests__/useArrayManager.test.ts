@@ -1,10 +1,12 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import { useArrayManager } from '../useArrayManager';
 
-jest.spyOn(Alert, 'alert');
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 describe('useArrayManager', () => {
   const mockOnUpdate = jest.fn<Promise<boolean>, [string[]]>();
@@ -76,7 +78,10 @@ describe('useArrayManager', () => {
 
     expect(result.current.items).toEqual(['a', 'b']);
     expect(mockOnUpdate).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'This item already exists');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'This item already exists',
+    );
   });
 
   it('add() validates and rejects invalid items', async () => {
@@ -84,7 +89,8 @@ describe('useArrayManager', () => {
       useArrayManager<string>({
         initialValues: [],
         onUpdate: mockOnUpdate,
-        validate: (item: string) => (item.length === 0 ? 'Cannot be empty' : null),
+        validate: (item: string) =>
+          item.length === 0 ? 'Cannot be empty' : null,
       }),
     );
 
@@ -95,7 +101,7 @@ describe('useArrayManager', () => {
 
     expect(result.current.items).toEqual([]);
     expect(mockOnUpdate).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Cannot be empty');
+    expect(alertService.alert).toHaveBeenCalledWith('Error', 'Cannot be empty');
   });
 
   it('add() handles onUpdate returning false', async () => {
@@ -114,7 +120,10 @@ describe('useArrayManager', () => {
     });
 
     expect(result.current.items).toEqual(['a']);
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to add item');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Failed to add item',
+    );
   });
 
   it('remove() removes an item and calls onUpdate', async () => {
@@ -166,7 +175,10 @@ describe('useArrayManager', () => {
 
     expect(result.current.items).toEqual(['a', 'b', 'c']);
     expect(mockOnUpdate).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'This item already exists');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'This item already exists',
+    );
   });
 
   it('clear() empties the array', async () => {
@@ -216,7 +228,10 @@ describe('useArrayManager', () => {
   it('loading is true during async operations', async () => {
     let resolveUpdate!: (value: boolean) => void;
     const slowOnUpdate = jest.fn(
-      () => new Promise<boolean>((resolve) => { resolveUpdate = resolve; }),
+      () =>
+        new Promise<boolean>(resolve => {
+          resolveUpdate = resolve;
+        }),
     );
 
     const { result } = renderHook(() =>
@@ -270,7 +285,9 @@ describe('useArrayManager', () => {
   it('custom equals function works for object comparison', async () => {
     type IdItem = { id: number; name: string };
 
-    const objectOnUpdate = jest.fn<Promise<boolean>, [IdItem[]]>().mockResolvedValue(true);
+    const objectOnUpdate = jest
+      .fn<Promise<boolean>, [IdItem[]]>()
+      .mockResolvedValue(true);
 
     const { result } = renderHook(() =>
       useArrayManager<IdItem>({
@@ -288,6 +305,9 @@ describe('useArrayManager', () => {
       expect(success).toBe(false);
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith('Error', 'This item already exists');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'This item already exists',
+    );
   });
 });

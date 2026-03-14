@@ -8,7 +8,7 @@
  */
 
 import { useRef } from 'react';
-import { Alert } from 'react-native';
+import { alertService } from '#/services/alertService';
 import {
   useAddItemToShoppingListMutation,
   type AddItemToShoppingListMutation,
@@ -36,7 +36,10 @@ interface UseAddShoppingItemOptions {
  * await addItem({ itemName: 'Milk', quantity: 2 });
  * ```
  */
-export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOptions) {
+export function useAddShoppingItem({
+  listId,
+  refetch,
+}: UseAddShoppingItemOptions) {
   const { handleApolloError } = useErrorService();
   const { createAddOperation } = useCrudOperations();
   // Track the most recently generated temp ID for cleanup in update()
@@ -74,7 +77,10 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
       // once for the server response (real ID). On the server response, evict the stale temp entity.
       if (lastTempIdRef.current && !item.id.startsWith('temp-')) {
         cache.evict({
-          id: cache.identify({ __typename: 'ShoppingListItem', id: lastTempIdRef.current }),
+          id: cache.identify({
+            __typename: 'ShoppingListItem',
+            id: lastTempIdRef.current,
+          }),
         });
         cache.gc();
         lastTempIdRef.current = null;
@@ -91,7 +97,7 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
       const { message } = handleApolloError(error, {
         operation: 'Add Shopping List Item',
       });
-      Alert.alert('Error', message);
+      alertService.alert('Error', message);
     },
   });
 
@@ -111,7 +117,8 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
       ...(input.notes && { notes: input.notes }),
       ...(input.category && { category: input.category }),
     }),
-    onSuccess: (data: AddItemToShoppingListMutation) => data?.addItemToShoppingList,
+    onSuccess: (data: AddItemToShoppingListMutation) =>
+      data?.addItemToShoppingList,
     operationName: 'Add Shopping List Item',
   });
 

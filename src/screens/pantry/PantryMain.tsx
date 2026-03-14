@@ -8,13 +8,20 @@ import { usePantrySelectorConfig } from '#hooks/pantry/usePantrySelectorConfig';
 import { useScannerSetup } from '#hooks/scanner/useScannerSetup';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
-import { useFeatureHint, getLoginCount } from '#hooks/useFeatureHint';
-import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
+import {
+  useFeatureHint,
+  getScreenVisitCount,
+  incrementScreenVisitCount,
+} from '#hooks/useFeatureHint';
+import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { Telemetry } from '#services/telemetry';
 import { useStore } from '#store';
 import { usePantryScreen } from '#hooks/pantry/usePantryScreen';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
-import { PantryModalsProvider, usePantryModals } from '#/context/PantryModalsContext';
+import {
+  PantryModalsProvider,
+  usePantryModals,
+} from '#/context/PantryModalsContext';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import {
   PantryContent,
@@ -56,7 +63,8 @@ const PantryMainInner: React.FC = () => {
   });
 
   // ── Feature hint for home switch button ──
-  const loginCount = getLoginCount(screen.authUser?.id ?? '');
+  const userId = screen.authUser?.id;
+  const visitCount = getScreenVisitCount('PantryMain', userId);
   const homeSwitchHint = useFeatureHint({
     featureId: 'pantry_home_switch',
     showOnMount: false,
@@ -66,14 +74,17 @@ const PantryMainInner: React.FC = () => {
   const selectorRef = useRef<ItemSelectorRef>(null);
   const pantryContentRef = useRef<PantryContentRef>(null);
 
-  // ── Scroll-to-top on focus (from barcode scanner returning) ──
-  // Read pendingPantryScrollToTop from Zustand getState() to avoid stale closure + refs
+  // ── Tab focus tracking + scroll-to-top on focus ──
+  const [isPantryFocused, setIsPantryFocused] = useState(true);
   const [onPantryFocus] = useState(() => () => {
+    setIsPantryFocused(true);
+    // Scroll-to-top from barcode scanner returning
     const store = useStore.getState();
     if (store.pendingPantryScrollToTop) {
       pantryContentRef.current?.scrollToTop();
       store.setPendingPantryScrollToTop(false);
     }
+    return () => setIsPantryFocused(false);
   });
   useFocusEffect(onPantryFocus);
 
@@ -98,10 +109,16 @@ const PantryMainInner: React.FC = () => {
     navigate,
   });
 
-  // ── Feature hint effect ──
+  // ── Track screen visits & show feature hint on 2nd visit ──
+  useEffect(() => {
+    if (userId) {
+      incrementScreenVisitCount('PantryMain', userId);
+    }
+  }, [userId]);
+
   useEffect(() => {
     if (
-      loginCount >= 2 &&
+      visitCount >= 2 &&
       screen.selectedHomeId &&
       screen.pantryItems.length > 0 &&
       !homeSwitchHint.hasBeenShown &&
@@ -113,7 +130,7 @@ const PantryMainInner: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [
-    loginCount,
+    visitCount,
     screen.pantryItems.length,
     screen.selectedHomeId,
     homeSwitchHint.hasBeenShown,
@@ -165,6 +182,7 @@ const PantryMainInner: React.FC = () => {
         onOverlayOpen={handleOverlayOpen}
         onOverlayClose={handleOverlayClose}
         homeSwitchHint={homeSwitchHint}
+        isPantryFocused={isPantryFocused}
       />
     </PantryModalsProvider>
   );
@@ -190,6 +208,7 @@ interface PantryMainContentProps {
   onOverlayOpen: () => void;
   onOverlayClose: () => void;
   homeSwitchHint: ReturnType<typeof useFeatureHint>;
+  isPantryFocused: boolean;
 }
 
 function PantryMainContent({
@@ -208,6 +227,7 @@ function PantryMainContent({
   onOverlayOpen,
   onOverlayClose,
   homeSwitchHint,
+  isPantryFocused,
 }: PantryMainContentProps) {
   const {
     handleConsumeItem,
@@ -218,6 +238,14 @@ function PantryMainContent({
     setAddSheetVisible,
     setAddLocationSheetVisible,
   } = usePantryModals();
+
+  // Track home badge position for spotlight coach-mark
+  const [homeBadgeRect, setHomeBadgeRect] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   // Register add button action via tab bar
   useTabBarAddButton(
@@ -281,6 +309,7 @@ function PantryMainContent({
         hasMore={screen.searchActive ? false : screen.hasMore}
         refreshing={screen.isRefreshing}
         loading={screen.isLoadingInitial}
+        onHomeBadgeLayout={setHomeBadgeRect}
       />
       <AnimatedItemSelector
         ref={selectorRef}
@@ -288,18 +317,19 @@ function PantryMainContent({
         onOpen={onOverlayOpen}
         onClose={onOverlayClose}
       />
-      {/* Home switch hint overlay */}
-      {!!homeSwitchHint.isVisible && (
-        <FeatureHintOverlay
-          config={{
-            title: 'Tap to manage homes',
-            subtitle:
-              'Click the home icon to switch between homes or manage home settings',
-            icon: { name: 'swap-horizontal-outline', size: 40 },
-            onDismiss: homeSwitchHint.actions.dismiss,
+      {/* Home switch spotlight coach-mark */}
+      {homeSwitchHint.isVisible && homeBadgeRect && isPantryFocused ? (
+        <SpotlightCoachMark
+          targetRect={homeBadgeRect}
+          title="Tap to manage homes"
+          subtitle="Switch between homes or manage home settings"
+          onDismiss={homeSwitchHint.actions.dismiss}
+          onTargetPress={() => {
+            homeSwitchHint.actions.dismiss();
+            onHomePress();
           }}
         />
-      )}
+      ) : null}
     </View>
   );
 }
