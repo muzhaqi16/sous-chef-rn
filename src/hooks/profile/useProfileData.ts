@@ -1,12 +1,12 @@
-import {useGetUserProfileQuery} from '#generated';
-import {useAppStore} from '#store/useAppStore';
-import {useAuthUser} from '#hooks/auth/useAuthUser';
+import { useGetUserProfileQuery } from '#generated';
+import { useAppStore } from '#store/useAppStore';
+import { useAuthUser } from '#hooks/auth/useAuthUser';
 
 export const useProfileData = () => {
   const user = useAuthUser();
   const isLoggingOut = useAppStore(state => state.isLoggingOut);
 
-  const {data, loading} = useGetUserProfileQuery({
+  const { data, loading, refetch } = useGetUserProfileQuery({
     // ✅ OPTIMIZED: Use cache-first for instant loading
     // First load shows cached data immediately, then updates in background if needed
     fetchPolicy: 'cache-first',
@@ -23,5 +23,6 @@ export const useProfileData = () => {
     user,
     profile,
     loading,
+    refetch,
   };
 };

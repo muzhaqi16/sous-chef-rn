@@ -151,7 +151,9 @@ describe('useRecipeForm', () => {
       result.current.updateField('name', 'Test Recipe');
     });
 
-    expect(result.current.validate()).toBe('At least one ingredient is required');
+    expect(result.current.validate()).toBe(
+      'At least one ingredient is required',
+    );
   });
 
   it('validate returns error when no steps', () => {
@@ -162,7 +164,9 @@ describe('useRecipeForm', () => {
       result.current.addIngredient({ name: 'Egg' });
     });
 
-    expect(result.current.validate()).toBe('At least one instruction step is required');
+    expect(result.current.validate()).toBe(
+      'At least one instruction step is required',
+    );
   });
 
   it('validate returns error for empty ingredient names', () => {
@@ -237,7 +241,19 @@ describe('useRecipeForm', () => {
       category: 'MAIN_COURSE',
       cuisine: 'Italian',
       status: 'PUBLISHED',
-      ingredients: [{ name: 'Salt', quantity: 1, unit: null, item: null, preparation: null, section: null, notes: null, isOptional: false, sortOrder: 0 }],
+      ingredients: [
+        {
+          name: 'Salt',
+          quantity: 1,
+          unit: null,
+          item: null,
+          preparation: null,
+          section: null,
+          notes: null,
+          isOptional: false,
+          sortOrder: 0,
+        },
+      ],
       instructions: [{ text: 'Add salt' }],
       notes: 'A note',
     } as any;
@@ -250,6 +266,39 @@ describe('useRecipeForm', () => {
     expect(result.current.state.servings).toBe('2');
     expect(result.current.state.ingredients).toHaveLength(1);
     expect(result.current.state.steps).toHaveLength(1);
+    expect(result.current.state.steps[0].instruction).toBe('Add salt');
+  });
+
+  it('populateFromRecipe handles { number, step } instruction format', () => {
+    const { result } = renderHook(() => useRecipeForm());
+
+    const recipe = {
+      name: 'External Recipe',
+      description: '',
+      imageUrl: null,
+      servings: 4,
+      prepTimeMinutes: null,
+      cookTimeMinutes: null,
+      caloriesPerServing: null,
+      difficulty: null,
+      category: null,
+      cuisine: null,
+      status: 'PUBLISHED',
+      ingredients: [],
+      instructions: [
+        { number: 1, step: 'Boil the water' },
+        { number: 2, step: 'Cook the pasta' },
+      ],
+      notes: null,
+    } as any;
+
+    act(() => {
+      result.current.populateFromRecipe(recipe);
+    });
+
+    expect(result.current.state.steps).toHaveLength(2);
+    expect(result.current.state.steps[0].instruction).toBe('Boil the water');
+    expect(result.current.state.steps[1].instruction).toBe('Cook the pasta');
   });
 
   it('setDiets, setHealthGoals, setIntolerances update tags', () => {

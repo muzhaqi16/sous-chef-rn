@@ -14,7 +14,12 @@ import {
   useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
 } from '#generated';
-import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
+import {
+  useAppStore,
+  selectSelectedShoppingListId,
+  selectSelectedPantryId,
+} from '#store/useAppStore';
+import { removeFromPantryItemsCache } from '#hooks/home/pantry/utils';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -76,6 +81,7 @@ export const PantryItemDetail: React.FC<
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
+  const selectedPantryId = useAppStore(selectSelectedPantryId);
   const { getCachedSuggestions, setCachedSuggestions } =
     useRecipeSuggestionsStore();
 
@@ -112,7 +118,32 @@ export const PantryItemDetail: React.FC<
     executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
-  const [deleteItem] = useDeletePantryItemMutation();
+  const [deleteItem] = useDeletePantryItemMutation({
+    update: (cache, { data: mutationData }, { variables }) => {
+      if (
+        !mutationData?.deletePantryItem?.pantryItem ||
+        !selectedPantryId ||
+        !variables
+      ) {
+        return;
+      }
+      removeFromPantryItemsCache(cache, selectedPantryId, variables.id, {
+        evictItem: true,
+      });
+      cache.modify({
+        id: cache.identify({ __typename: 'Pantry', id: selectedPantryId }),
+        fields: {
+          stats(existingStats: any) {
+            if (!existingStats) return existingStats;
+            return {
+              ...existingStats,
+              totalItems: Math.max(0, (existingStats.totalItems || 0) - 1),
+            };
+          },
+        },
+      });
+    },
+  });
   const [addToShoppingList] = useAddItemToShoppingListMutation({
     update: (cache, { data: mutationData }) => {
       const shoppingListItem =
@@ -208,18 +239,21 @@ export const PantryItemDetail: React.FC<
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteItem({
-                variables: { id: itemId },
-              });
-              goBack();
-            } catch (error) {
-              errorService.reportError(error, {
-                operation: 'PantryItemDetail.deleteItem',
-              });
-              alertService.alert('Error', 'Failed to delete item');
-            }
+          onPress: () => {
+            executeMutation(
+              async () => {
+                await deleteItem({
+                  variables: { id: itemId },
+                });
+                goBack();
+              },
+              error => {
+                errorService.reportError(error, {
+                  operation: 'PantryItemDetail.deleteItem',
+                });
+                alertService.alert('Error', 'Failed to delete item');
+              },
+            );
           },
         },
       ],

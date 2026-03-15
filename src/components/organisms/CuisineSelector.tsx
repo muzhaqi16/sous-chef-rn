@@ -111,7 +111,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.sm,
-    justifyContent: 'space-around',
+    justifyContent: 'space-evenly',
   },
   showMoreButton: {
     flexDirection: 'row',

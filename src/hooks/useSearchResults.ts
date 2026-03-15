@@ -6,6 +6,7 @@ import {
   useCreateItemMutation,
   useFlagItemForReviewMutation,
   CreateItemMutation,
+  CreateItemInput,
   UpcFormat,
 } from '#generated';
 import {
@@ -440,7 +441,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
 
   const handleAddItem = async (formData: any) => {
     // Store brand name for use in mutation callback
-    pendingBrandNameRef.current = formData.brand?.brandName;
+    pendingBrandNameRef.current = formData.brandName;
 
     // Store the selected images in MMKV for post-creation upload
     if (formData.selectedImages && formData.selectedImages.length > 0) {
@@ -456,17 +457,55 @@ export const useSearchResults = (barcode: string, format?: string) => {
       );
     }
 
-    // Process the form data to match the new nested CreateItemInput structure
-    const processedInput = {
+    // Map flat form fields to the nested CreateItemInput structure
+    const processedInput: CreateItemInput = {
       name: formData.name,
       description: formData.description || undefined,
       type: formData.type || undefined,
-      brand: formData.brand || undefined,
-      classification: formData.classification || undefined,
-      productDetails: formData.productDetails || undefined,
-      media: formData.media || undefined,
-      netWeights: formData.netWeights || undefined,
-      unitConfig: formData.unitConfig || undefined,
+      brand:
+        formData.brandId || formData.brandName
+          ? { brandId: formData.brandId, brandName: formData.brandName }
+          : undefined,
+      classification:
+        formData.storageState ||
+        formData.tags?.length ||
+        formData.categoryIds?.length
+          ? {
+              storageState: formData.storageState || undefined,
+              tags: formData.tags?.length ? formData.tags : undefined,
+              categoryIds: formData.categoryIds?.length
+                ? formData.categoryIds
+                : undefined,
+            }
+          : undefined,
+      productDetails:
+        formData.primaryUpc || formData.vendor || formData.shelfLifeDays
+          ? {
+              primaryUpc: formData.primaryUpc || undefined,
+              vendor: formData.vendor || undefined,
+              shelfLifeDays: formData.shelfLifeDays || undefined,
+            }
+          : undefined,
+      packageInfo:
+        formData.baseDimension ||
+        formData.defaultConsumeIncrement ||
+        formData.defaultConsumeUnitId
+          ? {
+              baseDimension: formData.baseDimension || undefined,
+              defaultConsumeIncrement:
+                formData.defaultConsumeIncrement || undefined,
+              defaultConsumeUnitId: formData.defaultConsumeUnitId || undefined,
+            }
+          : undefined,
+      netWeights: formData.netWeights?.length ? formData.netWeights : undefined,
+      unitConfig: formData.units?.length
+        ? { units: formData.units }
+        : undefined,
+      media: formData.imageUrl ? { imageUrl: formData.imageUrl } : undefined,
+      storeSkus:
+        formData.sku && formData.storeId
+          ? [{ sku: formData.sku, storeId: formData.storeId }]
+          : undefined,
     };
 
     await executeMutation(

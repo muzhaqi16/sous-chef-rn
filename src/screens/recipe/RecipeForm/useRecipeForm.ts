@@ -9,7 +9,8 @@ import {
   type HealthGoal,
   type Intolerance,
   type RecipeFragment,
-  RecipeStatus } from '#generated';
+  RecipeStatus,
+} from '#generated';
 
 export interface IngredientFormState {
   id: string; // local temp id
@@ -78,14 +79,20 @@ export function useRecipeForm() {
     intolerances: [],
     ingredients: [],
     steps: [],
-    notes: '' });
+    notes: '',
+  });
 
-  const [initialState, setInitialState] = useState<RecipeFormState | null>(null);
+  const [initialState, setInitialState] = useState<RecipeFormState | null>(
+    null,
+  );
 
   // Field updaters
-  const updateField = <K extends keyof RecipeFormState>(field: K, value: RecipeFormState[K]) => {
-      setState(prev => ({ ...prev, [field]: value }));
-    };
+  const updateField = <K extends keyof RecipeFormState>(
+    field: K,
+    value: RecipeFormState[K],
+  ) => {
+    setState(prev => ({ ...prev, [field]: value }));
+  };
 
   // Ingredient management
   const addIngredient = (ingredient?: Partial<IngredientFormState>) => {
@@ -104,22 +111,29 @@ export function useRecipeForm() {
           notes: '',
           isOptional: false,
           sortOrder: prev.ingredients.length,
-          ...ingredient },
-      ] }));
+          ...ingredient,
+        },
+      ],
+    }));
   };
 
-  const updateIngredient = (id: string, updates: Partial<IngredientFormState>) => {
-      setState(prev => ({
-        ...prev,
-        ingredients: prev.ingredients.map(ing =>
-          ing.id === id ? { ...ing, ...updates } : ing,
-        ) }));
-    };
+  const updateIngredient = (
+    id: string,
+    updates: Partial<IngredientFormState>,
+  ) => {
+    setState(prev => ({
+      ...prev,
+      ingredients: prev.ingredients.map(ing =>
+        ing.id === id ? { ...ing, ...updates } : ing,
+      ),
+    }));
+  };
 
   const removeIngredient = (id: string) => {
     setState(prev => ({
       ...prev,
-      ingredients: prev.ingredients.filter(ing => ing.id !== id) }));
+      ingredients: prev.ingredients.filter(ing => ing.id !== id),
+    }));
   };
 
   // Step management
@@ -131,8 +145,10 @@ export function useRecipeForm() {
         {
           id: generateTempId(),
           instruction: instruction ?? '',
-          sortOrder: prev.steps.length },
-      ] }));
+          sortOrder: prev.steps.length,
+        },
+      ],
+    }));
   };
 
   const updateStep = (id: string, instruction: string) => {
@@ -140,13 +156,15 @@ export function useRecipeForm() {
       ...prev,
       steps: prev.steps.map(step =>
         step.id === id ? { ...step, instruction } : step,
-      ) }));
+      ),
+    }));
   };
 
   const removeStep = (id: string) => {
     setState(prev => ({
       ...prev,
-      steps: prev.steps.filter(step => step.id !== id) }));
+      steps: prev.steps.filter(step => step.id !== id),
+    }));
   };
 
   const moveStep = (fromIndex: number, toIndex: number) => {
@@ -156,7 +174,8 @@ export function useRecipeForm() {
       newSteps.splice(toIndex, 0, moved);
       return {
         ...prev,
-        steps: newSteps.map((step, i) => ({ ...step, sortOrder: i })) };
+        steps: newSteps.map((step, i) => ({ ...step, sortOrder: i })),
+      };
     });
   };
 
@@ -176,8 +195,10 @@ export function useRecipeForm() {
   // Validation
   const validate = (): string | null => {
     if (!state.name.trim()) return 'Recipe name is required';
-    if (state.ingredients.length === 0) return 'At least one ingredient is required';
-    if (state.steps.length === 0) return 'At least one instruction step is required';
+    if (state.ingredients.length === 0)
+      return 'At least one ingredient is required';
+    if (state.steps.length === 0)
+      return 'At least one instruction step is required';
     // Check all ingredients have names
     const emptyIngredient = state.ingredients.find(i => !i.name.trim());
     if (emptyIngredient) return 'All ingredients must have a name';
@@ -198,7 +219,8 @@ export function useRecipeForm() {
       section: ing.section?.trim() || undefined,
       notes: ing.notes?.trim() || undefined,
       isOptional: ing.isOptional,
-      sortOrder: index }));
+      sortOrder: index,
+    }));
   };
 
   // Build CreateRecipeInput
@@ -207,7 +229,8 @@ export function useRecipeForm() {
 
     const instructions = state.steps.map((step, index) => ({
       step: index + 1,
-      text: step.instruction.trim() }));
+      text: step.instruction.trim(),
+    }));
 
     return {
       name: state.name.trim(),
@@ -223,10 +246,12 @@ export function useRecipeForm() {
       status: state.status,
       diets: state.diets.length > 0 ? state.diets : undefined,
       healthGoals: state.healthGoals.length > 0 ? state.healthGoals : undefined,
-      intolerances: state.intolerances.length > 0 ? state.intolerances : undefined,
+      intolerances:
+        state.intolerances.length > 0 ? state.intolerances : undefined,
       notes: state.notes.trim() || undefined,
       ingredients,
-      instructions };
+      instructions,
+    };
   };
 
   // Build UpdateRecipeInput
@@ -244,8 +269,10 @@ export function useRecipeForm() {
       status: state.status,
       instructions: state.steps.map((step, index) => ({
         step: index + 1,
-        text: step.instruction.trim() })),
-      notes: state.notes.trim() || undefined };
+        text: step.instruction.trim(),
+      })),
+      notes: state.notes.trim() || undefined,
+    };
   };
 
   // Populate from existing recipe (edit mode)
@@ -255,9 +282,15 @@ export function useRecipeForm() {
       description: recipe.description ?? '',
       imageUrl: recipe.imageUrl ?? '',
       servings: String(recipe.servings ?? 4),
-      prepTimeMinutes: recipe.prepTimeMinutes ? String(recipe.prepTimeMinutes) : '',
-      cookTimeMinutes: recipe.cookTimeMinutes ? String(recipe.cookTimeMinutes) : '',
-      caloriesPerServing: recipe.caloriesPerServing ? String(recipe.caloriesPerServing) : '',
+      prepTimeMinutes: recipe.prepTimeMinutes
+        ? String(recipe.prepTimeMinutes)
+        : '',
+      cookTimeMinutes: recipe.cookTimeMinutes
+        ? String(recipe.cookTimeMinutes)
+        : '',
+      caloriesPerServing: recipe.caloriesPerServing
+        ? String(recipe.caloriesPerServing)
+        : '',
       difficulty: recipe.difficulty ?? null,
       category: recipe.category ?? null,
       cuisine: recipe.cuisine ?? '',
@@ -275,14 +308,33 @@ export function useRecipeForm() {
         section: ing.section ?? '',
         notes: ing.notes ?? '',
         isOptional: ing.isOptional ?? false,
-        sortOrder: ing.sortOrder ?? 0 })),
+        sortOrder: ing.sortOrder ?? 0,
+      })),
       steps: Array.isArray(recipe.instructions)
-        ? (recipe.instructions as unknown[]).map((step: unknown, i: number) => ({
-            id: generateTempId(),
-            instruction: typeof step === 'string' ? step : (step && typeof step === 'object' && 'text' in step ? String((step as { text: unknown }).text) : ''),
-            sortOrder: i }))
+        ? (recipe.instructions as unknown[]).map(
+            (step: unknown, i: number) => ({
+              id: generateTempId(),
+              instruction:
+                typeof step === 'string'
+                  ? step
+                  : step && typeof step === 'object'
+                  ? String(
+                      ('text' in step
+                        ? (step as { text: unknown }).text
+                        : null) ??
+                        ('step' in step &&
+                        typeof (step as { step: unknown }).step === 'string'
+                          ? (step as { step: string }).step
+                          : null) ??
+                        '',
+                    )
+                  : '',
+              sortOrder: i,
+            }),
+          )
         : [],
-      notes: recipe.notes ?? '' };
+      notes: recipe.notes ?? '',
+    };
     setState(formState);
     setInitialState(formState);
   };
@@ -310,5 +362,6 @@ export function useRecipeForm() {
     buildUpdateInput,
     buildIngredientsInput,
     populateFromRecipe,
-    hasDirtyFields };
+    hasDirtyFields,
+  };
 }

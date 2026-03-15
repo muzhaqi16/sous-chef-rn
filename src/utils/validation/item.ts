@@ -90,7 +90,18 @@ export const vendorRule = string()
   .optional();
 
 // Tags validation (array of strings)
+// Transform handles the case where the form value is still a comma-separated
+// string (onChange validation fires before the blur transform runs).
 export const tagsRule = array()
+  .transform((value, originalValue) => {
+    if (typeof originalValue === 'string') {
+      return originalValue
+        .split(',')
+        .map((tag: string) => tag.trim())
+        .filter((tag: string) => tag.length > 0);
+    }
+    return value;
+  })
   .of(string().trim().max(30, 'Each tag cannot exceed 30 characters'))
   .max(10, 'Cannot have more than 10 tags')
   .optional();

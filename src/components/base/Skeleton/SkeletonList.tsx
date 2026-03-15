@@ -30,6 +30,7 @@ export const SkeletonList: React.FC<SkeletonListProps> = ({
   containerStyle,
 }) => (
   <ScrollView
+    style={styles.fill}
     contentContainerStyle={[styles.container, containerStyle]}
     showsVerticalScrollIndicator={false}
   >
@@ -40,8 +41,12 @@ export const SkeletonList: React.FC<SkeletonListProps> = ({
 );
 
 const styles = StyleSheet.create(theme => ({
+  fill: {
+    flex: 1,
+  },
   container: {
     padding: theme.spacing.md,
     gap: theme.spacing.sm,
+    flexGrow: 1,
   },
 }));

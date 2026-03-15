@@ -24,11 +24,17 @@ const mockNav = (
 // --- Store ---
 jest.mock('#store/useAppStore', () => {
   const selectSelectedShoppingListId = (s: any) => s.selectedShoppingListId;
-  const fn = (selector: any) => selector({ selectedShoppingListId: 'sl1' });
-  fn.getState = () => ({ selectedShoppingListId: 'sl1' });
+  const selectSelectedPantryId = (s: any) => s.selectedPantryId;
+  const mockState = { selectedShoppingListId: 'sl1', selectedPantryId: 'p1' };
+  const fn = (selector: any) => selector(mockState);
+  fn.getState = () => mockState;
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn, selectSelectedShoppingListId };
+  return {
+    useAppStore: fn,
+    selectSelectedShoppingListId,
+    selectSelectedPantryId,
+  };
 });
 
 const mockGetCachedSuggestions = jest.fn(() => null);

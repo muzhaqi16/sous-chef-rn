@@ -1138,9 +1138,11 @@ export type CreateItemInput = {
   media?: InputMaybe<MediaAssetsInput>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
   name: Scalars['String']['input'];
+  netWeights?: InputMaybe<Array<ItemNetWeightInput>>;
   nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
   packageInfo?: InputMaybe<PackageInfoInput>;
   productDetails?: InputMaybe<ProductDetailsInput>;
+  storeSkus?: InputMaybe<Array<StoreSkuInput>>;
   type?: InputMaybe<ItemType>;
   unitConfig?: InputMaybe<ItemUnitConfigInput>;
 };
@@ -13491,6 +13493,14 @@ export type SetDefaultStorageLocationMutationVariables = Exact<{
 
 export type SetDefaultStorageLocationMutation = { __typename: 'Mutation', setDefaultStorageLocation: { __typename: 'StorageLocationPayload', success: boolean, message: string, code: string, storageLocation: { __typename: 'StorageLocation', id: string, name: string, isDefault: boolean } | null } };
 
+export type SearchStoresQueryVariables = Exact<{
+  search: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type SearchStoresQuery = { __typename: 'Query', stores: { __typename: 'StoreConnection', totalCount: number | null, edges: Array<{ __typename: 'StoreEdge', node: { __typename: 'Store', id: string, name: string, address: string | null } }> } };
+
 export type GetNotificationPreferencesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -18682,6 +18692,44 @@ export function useSetDefaultStorageLocationMutation(baseOptions?: ApolloReactHo
 export type SetDefaultStorageLocationMutationHookResult = ReturnType<typeof useSetDefaultStorageLocationMutation>;
 export type SetDefaultStorageLocationMutationResult = ApolloReactCommon.MutationResult<SetDefaultStorageLocationMutation>;
 export type SetDefaultStorageLocationMutationOptions = ApolloReactCommon.BaseMutationOptions<SetDefaultStorageLocationMutation, SetDefaultStorageLocationMutationVariables>;
+export const SearchStoresDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"SearchStores"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"search"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"limit"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"stores"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"search"},"value":{"kind":"Variable","name":{"kind":"Name","value":"search"}}}]}},{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"Variable","name":{"kind":"Name","value":"limit"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"address"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]} as unknown as DocumentNode;
+
+/**
+ * __useSearchStoresQuery__
+ *
+ * To run a query within a React component, call `useSearchStoresQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSearchStoresQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSearchStoresQuery({
+ *   variables: {
+ *      search: // value for 'search'
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useSearchStoresQuery(baseOptions: ApolloReactHooks.QueryHookOptions<SearchStoresQuery, SearchStoresQueryVariables> & ({ variables: SearchStoresQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<SearchStoresQuery, SearchStoresQueryVariables>(SearchStoresDocument, options);
+      }
+export function useSearchStoresLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<SearchStoresQuery, SearchStoresQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<SearchStoresQuery, SearchStoresQueryVariables>(SearchStoresDocument, options);
+        }
+// @ts-ignore
+export function useSearchStoresSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<SearchStoresQuery, SearchStoresQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<SearchStoresQuery, SearchStoresQueryVariables>;
+export function useSearchStoresSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<SearchStoresQuery, SearchStoresQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<SearchStoresQuery | undefined, SearchStoresQueryVariables>;
+export function useSearchStoresSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<SearchStoresQuery, SearchStoresQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<SearchStoresQuery, SearchStoresQueryVariables>(SearchStoresDocument, options);
+        }
+export type SearchStoresQueryHookResult = ReturnType<typeof useSearchStoresQuery>;
+export type SearchStoresLazyQueryHookResult = ReturnType<typeof useSearchStoresLazyQuery>;
+export type SearchStoresSuspenseQueryHookResult = ReturnType<typeof useSearchStoresSuspenseQuery>;
+export type SearchStoresQueryResult = ApolloReactCommon.QueryResult<SearchStoresQuery, SearchStoresQueryVariables>;
 export const GetNotificationPreferencesDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetNotificationPreferences"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"notificationPreferences"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"emailEnabled"}},{"kind":"Field","name":{"kind":"Name","value":"pushEnabled"}},{"kind":"Field","name":{"kind":"Name","value":"smsEnabled"}},{"kind":"Field","name":{"kind":"Name","value":"expirationNotifications"}},{"kind":"Field","name":{"kind":"Name","value":"expirationNotificationFrequency"}},{"kind":"Field","name":{"kind":"Name","value":"expirationDaysThreshold"}},{"kind":"Field","name":{"kind":"Name","value":"lowStockAlerts"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListUpdates"}},{"kind":"Field","name":{"kind":"Name","value":"pantryChanges"}},{"kind":"Field","name":{"kind":"Name","value":"recipeRecommendations"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlanReminders"}},{"kind":"Field","name":{"kind":"Name","value":"cookingReminders"}},{"kind":"Field","name":{"kind":"Name","value":"collaborationInvites"}},{"kind":"Field","name":{"kind":"Name","value":"homeInvites"}},{"kind":"Field","name":{"kind":"Name","value":"sharedListUpdates"}},{"kind":"Field","name":{"kind":"Name","value":"weeklyDigest"}},{"kind":"Field","name":{"kind":"Name","value":"monthlyReport"}},{"kind":"Field","name":{"kind":"Name","value":"quietHoursEnabled"}},{"kind":"Field","name":{"kind":"Name","value":"quietHoursStart"}},{"kind":"Field","name":{"kind":"Name","value":"quietHoursEnd"}},{"kind":"Field","name":{"kind":"Name","value":"quietHoursTimezone"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**

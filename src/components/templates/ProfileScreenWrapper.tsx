@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, RefreshControlProps } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Header } from '#components/molecules/Header';
@@ -10,6 +10,7 @@ interface ProfileScreenWrapperProps {
   showBackButton?: boolean;
   testID?: string;
   scrollEnabled?: boolean;
+  refreshControl?: React.ReactElement<RefreshControlProps>;
 }
 
 /**
@@ -22,6 +23,7 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
   showBackButton = true,
   testID,
   scrollEnabled = true,
+  refreshControl,
 }) => {
   const { goBack } = useAppNavigation();
   const { theme } = useUnistyles();
@@ -38,6 +40,7 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
         <ScrollView
           style={styles.scrollView}
           contentInsetAdjustmentBehavior="automatic"
+          refreshControl={refreshControl}
         >
           {children}
         </ScrollView>

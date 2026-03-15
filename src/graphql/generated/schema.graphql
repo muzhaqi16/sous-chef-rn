@@ -1180,9 +1180,11 @@ input CreateItemInput {
   media: MediaAssetsInput
   metadata: JSON
   name: String!
+  netWeights: [ItemNetWeightInput!]
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
   productDetails: ProductDetailsInput
+  storeSkus: [StoreSkuInput!]
   type: ItemType
   unitConfig: ItemUnitConfigInput
 }

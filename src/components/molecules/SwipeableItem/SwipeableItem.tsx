@@ -165,8 +165,10 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
         friction={friction}
         leftThreshold={computedLeftThreshold}
         rightThreshold={computedRightThreshold}
-        renderLeftActions={renderLeftActions}
-        renderRightActions={renderRightActions}
+        renderLeftActions={leftButtonCount > 0 ? renderLeftActions : undefined}
+        renderRightActions={
+          rightButtonCount > 0 ? renderRightActions : undefined
+        }
         onSwipeableWillOpen={handleSwipeableWillOpen}
         onSwipeableClose={handleSwipeableClose}
         onSwipeableOpenStartDrag={handleSwipeOpenStartDrag}

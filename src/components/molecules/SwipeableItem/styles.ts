@@ -16,11 +16,11 @@ export const styles = StyleSheet.create(theme => {
     },
 
     // Container style for Swipeable component
-    // No backgroundColor here — action containers handle their own dark backgrounds.
-    // A dark bg here causes anti-aliasing fringe at the childrenContainer's rounded edges.
+    // Dark bg fills the overshoot gap when content slides past the action container width.
     swipeableContainer: {
       overflow: 'visible',
       borderRadius: SWIPEABLE_RADIUS,
+      backgroundColor: theme.colors.charade['950'],
     },
 
     // Children container style for Swipeable component

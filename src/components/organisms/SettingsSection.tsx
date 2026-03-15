@@ -31,7 +31,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   section: {
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
   },
   sectionTitle: {
@@ -39,7 +39,7 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textTransform: 'uppercase',
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
     marginTop: theme.spacing.md,
   },
   sectionBody: {

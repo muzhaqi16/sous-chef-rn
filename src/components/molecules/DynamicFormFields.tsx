@@ -16,6 +16,7 @@ import { BrandAutocompleteField } from './AutocompleteField/BrandAutocompleteFie
 import { UnitAutocompleteField } from './AutocompleteField/UnitAutocompleteField';
 import { CategoryAutocompleteField } from './AutocompleteField/CategoryAutocompleteField';
 import { StorageLocationAutocompleteField } from './AutocompleteField/StorageLocationAutocompleteField';
+import { StoreAutocompleteField } from './AutocompleteField/StoreAutocompleteField';
 import { FormInput } from './FormInput';
 
 const MemoizedItemAutocomplete = ItemAutocompleteField;
@@ -23,6 +24,7 @@ const MemoizedBrandAutocomplete = BrandAutocompleteField;
 const MemoizedUnitsAutocomplete = UnitAutocompleteField;
 const MemoizedCategoryAutocomplete = CategoryAutocompleteField;
 const MemoizedStorageLocationAutocomplete = StorageLocationAutocompleteField;
+const MemoizedStoreAutocomplete = StoreAutocompleteField;
 
 export type FieldDef<T extends FieldValues> = {
   name: Path<T>;
@@ -34,7 +36,8 @@ export type FieldDef<T extends FieldValues> = {
     | 'brandAutocomplete'
     | 'unitAutocomplete'
     | 'categoryAutocomplete'
-    | 'storageLocationAutocomplete';
+    | 'storageLocationAutocomplete'
+    | 'storeAutocomplete';
   props?: Record<string, any>;
   // For select fields
   options?: Array<{ label: string; value: string }>;
@@ -54,6 +57,7 @@ export type FieldDef<T extends FieldValues> = {
     locationId: string | null,
     location: any,
   ) => void;
+  onStoreSelected?: (storeId: string | null, storeName: string | null) => void;
   onAddNewLocation?: (name: string) => void;
   storageLocations?: any[];
   testID?: string;
@@ -89,6 +93,7 @@ export function DynamicFormFields<T extends FieldValues>({
           onUnitSelected,
           onCategorySelected,
           onStorageLocationSelected,
+          onStoreSelected,
           onAddNewLocation,
           storageLocations,
           testID,
@@ -109,6 +114,7 @@ export function DynamicFormFields<T extends FieldValues>({
         onUnitSelected,
         onCategorySelected,
         onStorageLocationSelected,
+        onStoreSelected,
         onAddNewLocation,
         storageLocations,
         testID,
@@ -134,6 +140,7 @@ export function DynamicFormFields<T extends FieldValues>({
           onUnitSelected,
           onCategorySelected,
           onStorageLocationSelected,
+          onStoreSelected,
           onAddNewLocation,
           storageLocations,
           testID,
@@ -247,6 +254,22 @@ export function DynamicFormFields<T extends FieldValues>({
                   );
                 }
 
+                if (Input === 'storeAutocomplete') {
+                  return (
+                    <MemoizedStoreAutocomplete
+                      variant="modal"
+                      label={label}
+                      value={displayValue || ''}
+                      onChangeText={handleChange}
+                      placeholder={placeholder}
+                      required={props?.required}
+                      error={errors[name]?.message?.toString()}
+                      onStoreSelected={onStoreSelected}
+                      {...props}
+                    />
+                  );
+                }
+
                 // Handle regular components
                 if (Input && typeof Input !== 'string') {
                   // Check if it's a component that takes no props (render function)
@@ -318,11 +341,18 @@ export function DynamicFormFields<T extends FieldValues>({
                 return <></>;
               }}
             />
-            {!!errors[name] && props?.componentType !== 'checkbox' && Input !== FormInput && Input !== 'itemAutocomplete' && Input !== 'brandAutocomplete' && Input !== 'unitAutocomplete' && Input !== 'categoryAutocomplete' && (
+            {!!errors[name] &&
+              props?.componentType !== 'checkbox' &&
+              Input !== FormInput &&
+              Input !== 'itemAutocomplete' &&
+              Input !== 'brandAutocomplete' &&
+              Input !== 'unitAutocomplete' &&
+              Input !== 'categoryAutocomplete' &&
+              Input !== 'storeAutocomplete' && (
                 <Text
                   style={styles.errorText}
                   testID={
-                    (props?.testID || testID)
+                    props?.testID || testID
                       ? `${props?.testID || testID}-error`
                       : undefined
                   }
