@@ -19,7 +19,7 @@ import TurboImage from 'react-native-turbo-image';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { BackButton } from '#components/atoms/BackButton';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import {
   BottomSheetFlatList,
   BottomSheetTextInput,
@@ -129,7 +129,7 @@ const getSelectableIngredientItemType = () => 'item';
 const RecipeDetailScreen: React.FC = () => {
   useScreenTransition('RecipeDetail');
   const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
+
   const { navigate } = useAppNavigation();
   const user = useAuthUser();
   const {
@@ -457,10 +457,7 @@ const RecipeDetailScreen: React.FC = () => {
         )}
         {!displayData.image && (
           <View
-            style={[
-              styles.noImageHeader,
-              { paddingTop: insets.top + theme.spacing.sm },
-            ]}
+            style={[styles.noImageHeader, { paddingTop: theme.spacing.sm }]}
           >
             <BackButton onPress={goBack} />
             <View style={styles.noImageRightButtons}>

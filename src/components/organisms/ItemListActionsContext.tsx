@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
+import React, { createContext, useContext, type ReactNode } from 'react';
 
 /**
  * Actions available for item list items
@@ -18,7 +18,8 @@ interface ItemListActionsContextValue {
   actions: ItemListActions;
 }
 
-const ItemListActionsContext = createContext<ItemListActionsContextValue | null>(null);
+const ItemListActionsContext =
+  createContext<ItemListActionsContextValue | null>(null);
 
 interface ItemListActionsProviderProps {
   children: ReactNode;
@@ -39,29 +40,13 @@ interface ItemListActionsProviderProps {
  * </ItemListActionsProvider>
  * ```
  */
-export const ItemListActionsProvider: React.FC<ItemListActionsProviderProps> = ({
-  children,
-  actions,
-}) => {
-  // Store latest actions in ref (effect updates — no re-renders)
-  const actionsRef = useRef(actions);
-  useEffect(() => { actionsRef.current = actions; });
-
-  // Stable delegating callbacks — compiler sees only ref captures (not reactive),
-  // so it auto-memoizes these with empty reactive deps. Context value stays stable.
-  const stableActions: ItemListActions = {
-    onItemPress: (id: string) => actionsRef.current.onItemPress(id),
-    onItemEdit: (id: string) => actionsRef.current.onItemEdit?.(id),
-    onItemDelete: (id: string) => actionsRef.current.onItemDelete?.(id),
-    onItemConsume: (id: string) => actionsRef.current.onItemConsume?.(id),
-    onItemWaste: (id: string) => actionsRef.current.onItemWaste?.(id),
-    onItemRestock: (id: string) => actionsRef.current.onItemRestock?.(id),
-    onSwipeableWillOpen: (ref: any) => actionsRef.current.onSwipeableWillOpen?.(ref),
-    testIDPrefix: actions.testIDPrefix,
-  };
-
-  // value only captures stableActions (auto-memoized) — stable
-  const value: ItemListActionsContextValue = { actions: stableActions };
+export const ItemListActionsProvider: React.FC<
+  ItemListActionsProviderProps
+> = ({ children, actions }) => {
+  // React Compiler auto-memoizes `value` based on `actions` identity —
+  // no manual ref/effect/wrapper needed. Optional actions that are `undefined`
+  // stay `undefined`, so downstream truthiness checks correctly gate rendering.
+  const value: ItemListActionsContextValue = { actions };
 
   return (
     <ItemListActionsContext.Provider value={value}>
@@ -78,7 +63,9 @@ export const ItemListActionsProvider: React.FC<ItemListActionsProviderProps> = (
 export const useItemListActions = (): ItemListActionsContextValue => {
   const context = useContext(ItemListActionsContext);
   if (!context) {
-    throw new Error('useItemListActions must be used within an ItemListActionsProvider');
+    throw new Error(
+      'useItemListActions must be used within an ItemListActionsProvider',
+    );
   }
   return context;
 };

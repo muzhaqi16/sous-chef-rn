@@ -5,45 +5,54 @@ import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { commonStyles } from '#/styles/commonStyles';
 import { ListTemplate } from '#components/templates/ListTemplate';
-import { SearchBar, type SearchBarAction } from '#components/molecules/SearchBar';
+import {
+  SearchBar,
+  type SearchBarAction,
+} from '#components/molecules/SearchBar';
 import { Header } from '#components/molecules/Header';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { ItemList } from '#components/organisms/ItemList';
 import { RecipeCardSkeleton } from '#components/base/Skeleton/RecipeCardSkeleton';
-import { ScrollView } from 'react-native-gesture-handler';
+import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
+import { TIMING } from '#constants/animations';
+import Animated, { FadeOut } from 'react-native-reanimated';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { createPropsComparator } from '#utils/memoUtils';
 import { useRecipeSearch } from './useRecipeSearch';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { IngredientSelectorProvider, useIngredientSelector } from './IngredientSelectorContext';
+import {
+  IngredientSelectorProvider,
+  useIngredientSelector,
+} from './IngredientSelectorContext';
 
 const IngredientItemComponent: React.FC<{
-    name: string;
-    selected: boolean;
-    onToggle: (name: string) => void;
-    primaryColor: string;
-    textSecondary: string;
-  }> = ({
-    name,
-    selected,
-    onToggle,
-    primaryColor,
-    textSecondary }) => {
-    const handlePress = () => onToggle(name);
+  name: string;
+  selected: boolean;
+  onToggle: (name: string) => void;
+  primaryColor: string;
+  textSecondary: string;
+}> = ({ name, selected, onToggle, primaryColor, textSecondary }) => {
+  const handlePress = () => onToggle(name);
 
-    return (
-      <Pressable style={({pressed}) => [styles.ingredientItem, pressed && styles.pressed]} onPress={handlePress}>
-        <Ionicons
-          name={selected ? 'checkbox' : 'square-outline'}
-          size={24}
-          color={selected ? primaryColor : textSecondary}
-        />
-        <Text style={styles.ingredientText}>{name}</Text>
-      </Pressable>
-    );
-  };
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.ingredientItem,
+        pressed && styles.pressed,
+      ]}
+      onPress={handlePress}
+    >
+      <Ionicons
+        name={selected ? 'checkbox' : 'square-outline'}
+        size={24}
+        color={selected ? primaryColor : textSecondary}
+      />
+      <Text style={styles.ingredientText}>{name}</Text>
+    </Pressable>
+  );
+};
 
 const areIngredientItemPropsEqual = createPropsComparator<{
   name: string;
@@ -55,7 +64,10 @@ const areIngredientItemPropsEqual = createPropsComparator<{
   referenceKeys: ['name', 'selected', 'primaryColor', 'textSecondary'],
 });
 
-const IngredientItem = React.memo(IngredientItemComponent, areIngredientItemPropsEqual);
+const IngredientItem = React.memo(
+  IngredientItemComponent,
+  areIngredientItemPropsEqual,
+);
 
 const ingredientKeyExtractor = (item: any) => item.id;
 
@@ -89,24 +101,39 @@ const RecipeSearchContent: React.FC<{
   onItemPress: (id: string) => void;
   onRefresh?: () => Promise<void>;
   emptyState?: any;
-}> = ({ items, loading, searchPerformed, onItemPress, onRefresh, emptyState }) => {
-  if (loading && searchPerformed) {
-    return (
-      <ScrollView contentContainerStyle={styles.skeletonContainer}>
-        {[1, 2, 3, 4, 5].map(key => (
-          <RecipeCardSkeleton key={key} />
-        ))}
-      </ScrollView>
-    );
-  }
+}> = ({
+  items,
+  loading,
+  searchPerformed,
+  onItemPress,
+  onRefresh,
+  emptyState,
+}) => {
+  const showSkeletons = !!(loading && searchPerformed);
 
   return (
-    <ItemList
-      items={items}
-      onItemPress={onItemPress}
-      onRefresh={onRefresh}
-      emptyState={emptyState}
-    />
+    <View style={styles.contentContainer}>
+      <View
+        style={styles.contentFill}
+        pointerEvents={showSkeletons ? 'none' : 'auto'}
+      >
+        <ItemList
+          items={items}
+          onItemPress={onItemPress}
+          onRefresh={onRefresh}
+          emptyState={emptyState}
+        />
+      </View>
+      {showSkeletons ? (
+        <Animated.View
+          exiting={FadeOut.duration(TIMING.STANDARD)}
+          style={styles.absoluteFill}
+          pointerEvents="none"
+        >
+          <SkeletonList SkeletonComponent={RecipeCardSkeleton} count={10} />
+        </Animated.View>
+      ) : null}
+    </View>
   );
 };
 
@@ -135,7 +162,8 @@ export const RecipeSearch: React.FC = () => {
     applyFilters,
     activeFilterCount,
     items,
-    handleItemPress } = useRecipeSearch();
+    handleItemPress,
+  } = useRecipeSearch();
 
   // Transform items to add leftElement
   const displayItems = (() => {
@@ -143,46 +171,80 @@ export const RecipeSearch: React.FC = () => {
       ...item,
       leftElement: item.imageUrl ? (
         <View style={commonStyles.listItemImageContainerCompact}>
-          <CachedImage uri={item.imageUrl} style={commonStyles.listItemImageCompact} displaySize={48} />
+          <CachedImage
+            uri={item.imageUrl}
+            style={commonStyles.listItemImageCompact}
+            displaySize={48}
+          />
         </View>
-      ) : undefined }));
+      ) : undefined,
+    }));
   })();
 
   // Search bar right actions
   const searchBarRightActions = [
-        ...(hasPantryItems ? [{
-          icon: 'restaurant',
-          onPress: openIngredientSelector,
-          color: selectedIngredients.size > 0 ? theme.colors.white : theme.colors.primary,
-          backgroundColor: selectedIngredients.size > 0 ? theme.colors.primary : theme.colors.surface,
-          badge: selectedIngredients.size > 0 ? String(selectedIngredients.size) : undefined }] : []),
-        {
-          icon: 'options',
-          onPress: openFilterSheet,
-          color: activeFilterCount > 0 ? theme.colors.white : theme.colors.primary,
-          backgroundColor: activeFilterCount > 0 ? theme.colors.primary : theme.colors.surface,
-          badge: activeFilterCount > 0 ? String(activeFilterCount) : undefined },
-        {
-          icon: 'search',
-          onPress: handleTextSearch,
-          color: theme.colors.primary,
-          backgroundColor: theme.colors.surface,
-          testID: 'recipe-search-submit' },
-      ] as SearchBarAction[];
+    ...(hasPantryItems
+      ? [
+          {
+            icon: 'restaurant',
+            onPress: openIngredientSelector,
+            color:
+              selectedIngredients.size > 0
+                ? theme.colors.white
+                : theme.colors.primary,
+            backgroundColor:
+              selectedIngredients.size > 0
+                ? theme.colors.primary
+                : theme.colors.surface,
+            badge:
+              selectedIngredients.size > 0
+                ? String(selectedIngredients.size)
+                : undefined,
+          },
+        ]
+      : []),
+    {
+      icon: 'options',
+      onPress: openFilterSheet,
+      color: activeFilterCount > 0 ? theme.colors.white : theme.colors.primary,
+      backgroundColor:
+        activeFilterCount > 0 ? theme.colors.primary : theme.colors.surface,
+      badge: activeFilterCount > 0 ? String(activeFilterCount) : undefined,
+    },
+    {
+      icon: 'search',
+      onPress: handleTextSearch,
+      color: theme.colors.primary,
+      backgroundColor: theme.colors.surface,
+      testID: 'recipe-search-submit',
+    },
+  ] as SearchBarAction[];
 
   const emptyStateConfig = searchPerformed
     ? {
         icon: 'search-outline',
         title: 'No recipes found',
         description: 'Try a different search term or different ingredients',
-        ...(hasPantryItems && { action: { label: 'Search by Ingredients', onPress: openIngredientSelector } }) }
+        ...(hasPantryItems && {
+          action: {
+            label: 'Search by Ingredients',
+            onPress: openIngredientSelector,
+          },
+        }),
+      }
     : {
         icon: 'search',
         title: 'Search for Recipes',
         description: hasPantryItems
           ? 'Enter a search term or select pantry ingredients'
           : 'Enter a search term to find recipes',
-        ...(hasPantryItems && { action: { label: 'Search by Ingredients', onPress: openIngredientSelector } }) };
+        ...(hasPantryItems && {
+          action: {
+            label: 'Search by Ingredients',
+            onPress: openIngredientSelector,
+          },
+        }),
+      };
 
   return (
     <View style={styles.container} testID="recipe-search-screen">
@@ -190,10 +252,7 @@ export const RecipeSearch: React.FC = () => {
         message="Recipe search requires internet"
         description="Connect to the internet to search for recipes from our database."
       >
-        <Header
-          title="Search Recipes"
-          onBack={goBack}
-        />
+        <Header title="Search Recipes" onBack={goBack} />
         <View style={{ paddingHorizontal: theme.spacing.md }}>
           <SearchBar
             value={searchQuery}
@@ -212,180 +271,256 @@ export const RecipeSearch: React.FC = () => {
           customListProps={{ loading, searchPerformed }}
         />
 
-      {/* Ingredient Selector Bottom Sheet */}
-      <BottomSheetAction
-        sheetRef={ingredientSheetRef}
-        sheetTitle="Select Ingredients"
-        snapPoints={['50%', '75%', '90%']}
-        scrollable={false}
-        headerRight={
-          <Pressable
-            style={({pressed}) => [
-              styles.headerSearchButton,
-              { backgroundColor: theme.colors.primary },
-              selectedIngredients.size === 0 && styles.headerSearchButtonDisabled,
-              pressed && styles.pressed,
-            ]}
-            onPress={handleIngredientSearch}
-            disabled={selectedIngredients.size === 0}
-          >
-            <Text style={styles.headerSearchButtonText}>Search ({selectedIngredients.size})</Text>
-          </Pressable>
-        }
-      >
-        <IngredientSelectorProvider
-          selectedIngredients={selectedIngredients}
-          toggleIngredient={toggleIngredient}
+        {/* Ingredient Selector Bottom Sheet */}
+        <BottomSheetAction
+          sheetRef={ingredientSheetRef}
+          sheetTitle="Select Ingredients"
+          snapPoints={['50%', '75%', '90%']}
+          scrollable={false}
+          headerRight={
+            <Pressable
+              style={({ pressed }) => [
+                styles.headerSearchButton,
+                { backgroundColor: theme.colors.primary },
+                selectedIngredients.size === 0 &&
+                  styles.headerSearchButtonDisabled,
+                pressed && styles.pressed,
+              ]}
+              onPress={handleIngredientSearch}
+              disabled={selectedIngredients.size === 0}
+            >
+              <Text style={styles.headerSearchButtonText}>
+                Search ({selectedIngredients.size})
+              </Text>
+            </Pressable>
+          }
         >
-          <FlashList
-            data={pantryItems}
-            keyExtractor={ingredientKeyExtractor}
-            renderItem={renderIngredientItem}
-            getItemType={getIngredientItemType}
-            extraData={selectedIngredients.size}
-            {...FLASHLIST_DEFAULTS.bottomSheet}
-            style={styles.ingredientList}
-            contentContainerStyle={styles.ingredientListContent}
-            ListEmptyComponent={<Text style={styles.emptyText}>No pantry items available</Text>}
-          />
-        </IngredientSelectorProvider>
-      </BottomSheetAction>
+          <IngredientSelectorProvider
+            selectedIngredients={selectedIngredients}
+            toggleIngredient={toggleIngredient}
+          >
+            <FlashList
+              data={pantryItems}
+              keyExtractor={ingredientKeyExtractor}
+              renderItem={renderIngredientItem}
+              getItemType={getIngredientItemType}
+              extraData={selectedIngredients.size}
+              {...FLASHLIST_DEFAULTS.bottomSheet}
+              style={styles.ingredientList}
+              contentContainerStyle={styles.ingredientListContent}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>No pantry items available</Text>
+              }
+            />
+          </IngredientSelectorProvider>
+        </BottomSheetAction>
 
-      {/* Filter Bottom Sheet */}
-      <BottomSheetAction sheetRef={filterSheetRef} sheetTitle="Filters" snapPoints={['75%', '90%']}>
-        {/* Diet Filter */}
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>🍽️ Diet</Text>
-          <Text style={styles.filterSectionSubtitle}>Select one</Text>
-          <View style={styles.chipRow}>
-            {['Vegan', 'Vegetarian', 'Keto', 'Paleo', 'Whole30'].map(diet => (
-              <Pressable
-                key={diet}
-                style={({pressed}) => [styles.filterChip, activeFilters.diet === diet.toLowerCase() && styles.filterChipActive, pressed && styles.pressed]}
-                onPress={() =>
-                  setActiveFilters(prev => ({
-                    ...prev,
-                    diet: prev.diet === diet.toLowerCase() ? null : diet.toLowerCase() }))
-                }
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    activeFilters.diet === diet.toLowerCase() && styles.filterChipTextActive,
-                  ]}
-                >
-                  {diet}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* Intolerances Filter */}
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>⚠️ Allergies & Intolerances</Text>
-          <Text style={styles.filterSectionSubtitle}>Select all that apply</Text>
-          <View style={styles.checkboxGrid}>
-            {['Gluten', 'Dairy', 'Egg', 'Peanut', 'Tree Nut', 'Soy', 'Shellfish', 'Seafood'].map(intolerance => {
-              const isSelected = activeFilters.intolerances.includes(intolerance.toLowerCase());
-              return (
+        {/* Filter Bottom Sheet */}
+        <BottomSheetAction
+          sheetRef={filterSheetRef}
+          sheetTitle="Filters"
+          snapPoints={['75%', '90%']}
+        >
+          {/* Diet Filter */}
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>🍽️ Diet</Text>
+            <Text style={styles.filterSectionSubtitle}>Select one</Text>
+            <View style={styles.chipRow}>
+              {['Vegan', 'Vegetarian', 'Keto', 'Paleo', 'Whole30'].map(diet => (
                 <Pressable
-                  key={intolerance}
-                  style={({pressed}) => [styles.checkboxItem, pressed && styles.pressed]}
+                  key={diet}
+                  style={({ pressed }) => [
+                    styles.filterChip,
+                    activeFilters.diet === diet.toLowerCase() &&
+                      styles.filterChipActive,
+                    pressed && styles.pressed,
+                  ]}
                   onPress={() =>
                     setActiveFilters(prev => ({
                       ...prev,
-                      intolerances: isSelected
-                        ? prev.intolerances.filter(i => i !== intolerance.toLowerCase())
-                        : [...prev.intolerances, intolerance.toLowerCase()] }))
+                      diet:
+                        prev.diet === diet.toLowerCase()
+                          ? null
+                          : diet.toLowerCase(),
+                    }))
                   }
                 >
-                  <Ionicons
-                    name={isSelected ? 'checkbox' : 'square-outline'}
-                    size={24}
-                    color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
-                  />
-                  <Text style={styles.checkboxText}>{intolerance}</Text>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      activeFilters.diet === diet.toLowerCase() &&
+                        styles.filterChipTextActive,
+                    ]}
+                  >
+                    {diet}
+                  </Text>
                 </Pressable>
-              );
-            })}
+              ))}
+            </View>
           </View>
-        </View>
 
-        {/* Meal Type Filter */}
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>🍳 Meal Type</Text>
-          <Text style={styles.filterSectionSubtitle}>Select one</Text>
-          <View style={styles.chipRow}>
-            {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(type => (
-              <Pressable
-                key={type}
-                style={({pressed}) => [styles.filterChip, activeFilters.mealType === type.toLowerCase() && styles.filterChipActive, pressed && styles.pressed]}
-                onPress={() =>
-                  setActiveFilters(prev => ({
-                    ...prev,
-                    mealType: prev.mealType === type.toLowerCase() ? null : type.toLowerCase() }))
-                }
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    activeFilters.mealType === type.toLowerCase() && styles.filterChipTextActive,
+          {/* Intolerances Filter */}
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>
+              ⚠️ Allergies & Intolerances
+            </Text>
+            <Text style={styles.filterSectionSubtitle}>
+              Select all that apply
+            </Text>
+            <View style={styles.checkboxGrid}>
+              {[
+                'Gluten',
+                'Dairy',
+                'Egg',
+                'Peanut',
+                'Tree Nut',
+                'Soy',
+                'Shellfish',
+                'Seafood',
+              ].map(intolerance => {
+                const isSelected = activeFilters.intolerances.includes(
+                  intolerance.toLowerCase(),
+                );
+                return (
+                  <Pressable
+                    key={intolerance}
+                    style={({ pressed }) => [
+                      styles.checkboxItem,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() =>
+                      setActiveFilters(prev => ({
+                        ...prev,
+                        intolerances: isSelected
+                          ? prev.intolerances.filter(
+                              i => i !== intolerance.toLowerCase(),
+                            )
+                          : [...prev.intolerances, intolerance.toLowerCase()],
+                      }))
+                    }
+                  >
+                    <Ionicons
+                      name={isSelected ? 'checkbox' : 'square-outline'}
+                      size={24}
+                      color={
+                        isSelected
+                          ? theme.colors.primary
+                          : theme.colors.textSecondary
+                      }
+                    />
+                    <Text style={styles.checkboxText}>{intolerance}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Meal Type Filter */}
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>🍳 Meal Type</Text>
+            <Text style={styles.filterSectionSubtitle}>Select one</Text>
+            <View style={styles.chipRow}>
+              {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(
+                type => (
+                  <Pressable
+                    key={type}
+                    style={({ pressed }) => [
+                      styles.filterChip,
+                      activeFilters.mealType === type.toLowerCase() &&
+                        styles.filterChipActive,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() =>
+                      setActiveFilters(prev => ({
+                        ...prev,
+                        mealType:
+                          prev.mealType === type.toLowerCase()
+                            ? null
+                            : type.toLowerCase(),
+                      }))
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        activeFilters.mealType === type.toLowerCase() &&
+                          styles.filterChipTextActive,
+                      ]}
+                    >
+                      {type}
+                    </Text>
+                  </Pressable>
+                ),
+              )}
+            </View>
+          </View>
+
+          {/* Max Cook Time Filter */}
+          <View style={styles.filterSection}>
+            <Text style={styles.filterSectionTitle}>⏱️ Max Cook Time</Text>
+            <Text style={styles.filterSectionSubtitle}>Select one</Text>
+            <View style={styles.chipRow}>
+              {[
+                { label: '15 min', value: 15 },
+                { label: '30 min', value: 30 },
+                { label: '45 min', value: 45 },
+                { label: '60 min', value: 60 },
+              ].map(time => (
+                <Pressable
+                  key={time.value}
+                  style={({ pressed }) => [
+                    styles.filterChip,
+                    activeFilters.maxReadyTime === time.value &&
+                      styles.filterChipActive,
+                    pressed && styles.pressed,
                   ]}
+                  onPress={() =>
+                    setActiveFilters(prev => ({
+                      ...prev,
+                      maxReadyTime:
+                        prev.maxReadyTime === time.value ? null : time.value,
+                    }))
+                  }
                 >
-                  {type}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      activeFilters.maxReadyTime === time.value &&
+                        styles.filterChipTextActive,
+                    ]}
+                  >
+                    {time.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
 
-        {/* Max Cook Time Filter */}
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>⏱️ Max Cook Time</Text>
-          <Text style={styles.filterSectionSubtitle}>Select one</Text>
-          <View style={styles.chipRow}>
-            {[
-              { label: '15 min', value: 15 },
-              { label: '30 min', value: 30 },
-              { label: '45 min', value: 45 },
-              { label: '60 min', value: 60 },
-            ].map(time => (
-              <Pressable
-                key={time.value}
-                style={({pressed}) => [styles.filterChip, activeFilters.maxReadyTime === time.value && styles.filterChipActive, pressed && styles.pressed]}
-                onPress={() =>
-                  setActiveFilters(prev => ({
-                    ...prev,
-                    maxReadyTime: prev.maxReadyTime === time.value ? null : time.value }))
-                }
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    activeFilters.maxReadyTime === time.value && styles.filterChipTextActive,
-                  ]}
-                >
-                  {time.label}
-                </Text>
-              </Pressable>
-            ))}
+          {/* Action Buttons */}
+          <View style={styles.filterActions}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.filterActionButton,
+                styles.clearButton,
+                pressed && styles.pressed,
+              ]}
+              onPress={clearFilters}
+            >
+              <Text style={styles.clearButtonText}>Clear All</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.filterActionButton,
+                styles.applyButton,
+                { backgroundColor: theme.colors.primary },
+                pressed && styles.pressed,
+              ]}
+              onPress={applyFilters}
+            >
+              <Text style={styles.applyButtonText}>Apply Filters</Text>
+            </Pressable>
           </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.filterActions}>
-          <Pressable style={({pressed}) => [styles.filterActionButton, styles.clearButton, pressed && styles.pressed]} onPress={clearFilters}>
-            <Text style={styles.clearButtonText}>Clear All</Text>
-          </Pressable>
-          <Pressable
-            style={({pressed}) => [styles.filterActionButton, styles.applyButton, { backgroundColor: theme.colors.primary }, pressed && styles.pressed]}
-            onPress={applyFilters}
-          >
-            <Text style={styles.applyButtonText}>Apply Filters</Text>
-          </Pressable>
-        </View>
-      </BottomSheetAction>
+        </BottomSheetAction>
       </OfflineGate>
     </View>
   );
@@ -394,107 +529,145 @@ export const RecipeSearch: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background },
-  skeletonContainer: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.sm },
+    backgroundColor: theme.colors.background,
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  contentFill: {
+    flex: 1,
+  },
+  absoluteFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: theme.colors.background,
+  },
   ingredientList: {
-    flex: 1 },
+    flex: 1,
+  },
   ingredientListContent: {
-    paddingBottom: theme.spacing.xl },
+    paddingBottom: theme.spacing.xl,
+  },
   ingredientItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border },
+    borderBottomColor: theme.colors.border,
+  },
   ingredientText: {
     marginLeft: theme.spacing.md,
     fontSize: theme.fonts.size.md,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   emptyText: {
     textAlign: 'center',
     color: theme.colors.textSecondary,
     fontSize: theme.fonts.size.md,
-    marginTop: theme.spacing.xl },
+    marginTop: theme.spacing.xl,
+  },
   headerSearchButton: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.full },
+    borderRadius: theme.radii.full,
+  },
   headerSearchButtonDisabled: {
-    opacity: theme.opacity.disabled },
+    opacity: theme.opacity.disabled,
+  },
   headerSearchButtonText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   filterSection: {
-    marginBottom: theme.spacing.xl },
+    marginBottom: theme.spacing.xl,
+  },
   filterSectionTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs },
+    marginBottom: theme.spacing.xs,
+  },
   filterSectionSubtitle: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   filterChip: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.full,
     borderWidth: 1.5,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background },
+    backgroundColor: theme.colors.background,
+  },
   filterChipActive: {
     backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary },
+    borderColor: theme.colors.primary,
+  },
   filterChipText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   filterChipTextActive: {
-    color: theme.colors.white },
+    color: theme.colors.white,
+  },
   checkboxGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   checkboxItem: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '48%',
     padding: theme.spacing.sm,
     borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.surface },
+    backgroundColor: theme.colors.surface,
+  },
   checkboxText: {
     marginLeft: theme.spacing.sm,
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   filterActions: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
     marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   filterActionButton: {
     flex: 1,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   clearButton: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border },
+    borderColor: theme.colors.border,
+  },
   clearButtonText: {
     color: theme.colors.textPrimary,
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   applyButton: {},
   applyButtonText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

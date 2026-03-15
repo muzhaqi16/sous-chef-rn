@@ -73,7 +73,10 @@ const arePropsEqual = createPropsComparator<ListRenderItemInfo<Item>>({
   },
 });
 
-const ItemListRenderItem = React.memo(ItemListRenderItemComponent, arePropsEqual);
+const ItemListRenderItem = React.memo(
+  ItemListRenderItemComponent,
+  arePropsEqual,
+);
 
 // Module-scope renderItem — zero runtime overhead (no compiler tracking/comparison)
 const renderItem = (info: ListRenderItemInfo<Item>) => (
@@ -121,13 +124,15 @@ export const ItemList: React.FC<ItemListProps> = ({
   ListHeaderComponent,
   ListFooterComponent,
   testIDPrefix,
-  emptyState }) => {
+  emptyState,
+}) => {
   const [refreshing, setRefreshing] = useState(false);
-  const { bottom: safeBottom} = useSafeAreaInsets();
+  const { bottom: safeBottom } = useSafeAreaInsets();
 
   // Dynamic content style with proper bottom padding for tab bar
-  const contentStyle = ({
-      paddingBottom: getTabBarBottomPadding(safeBottom) });
+  const contentStyle = {
+    paddingBottom: getTabBarBottomPadding(safeBottom),
+  };
 
   const handleRefresh = async () => {
     if (onRefresh) {
@@ -155,14 +160,18 @@ export const ItemList: React.FC<ItemListProps> = ({
   if (items.length === 0 && emptyState) {
     return (
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: contentStyle.paddingBottom }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingBottom: contentStyle.paddingBottom,
+        }}
         refreshControl={
           onRefresh ? (
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           ) : undefined
         }
       >
-        {!!ListHeaderComponent && (typeof ListHeaderComponent === 'function' ? (
+        {!!ListHeaderComponent &&
+          (typeof ListHeaderComponent === 'function' ? (
             <ListHeaderComponent />
           ) : (
             ListHeaderComponent
@@ -178,6 +187,7 @@ export const ItemList: React.FC<ItemListProps> = ({
         data={items}
         keyExtractor={keyExtractor}
         contentContainerStyle={contentStyle}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           onRefresh ? (
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
@@ -191,18 +201,22 @@ export const ItemList: React.FC<ItemListProps> = ({
         onEndReached={onEndReached}
         onEndReachedThreshold={onEndReachedThreshold}
         ListHeaderComponent={
-          ListHeaderComponent ? (typeof ListHeaderComponent === 'function' ? (
-            <ListHeaderComponent />
-          ) : (
-            ListHeaderComponent
-          )) : null
+          ListHeaderComponent ? (
+            typeof ListHeaderComponent === 'function' ? (
+              <ListHeaderComponent />
+            ) : (
+              ListHeaderComponent
+            )
+          ) : null
         }
         ListFooterComponent={
-          ListFooterComponent ? (typeof ListFooterComponent === 'function' ? (
-            <ListFooterComponent />
-          ) : (
-            ListFooterComponent
-          )) : null
+          ListFooterComponent ? (
+            typeof ListFooterComponent === 'function' ? (
+              <ListFooterComponent />
+            ) : (
+              ListFooterComponent
+            )
+          ) : null
         }
       />
     </ItemListActionsProvider>
