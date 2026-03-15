@@ -82,6 +82,7 @@ const detectScanType = (value: string): 'barcode' | 'sku' => {
 
 const getFormSections = (
   setSelectedBrandId: (id: string | null) => void,
+  setSelectedStoreId: (id: string | null) => void,
   mode: AddItemFormMode = 'create',
 ): Array<{
   title: string;
@@ -107,6 +108,17 @@ const getFormSections = (
       label: 'SKU',
       placeholder: 'Enter SKU (optional)',
       component: FormInput,
+    },
+    {
+      name: 'storeName' as any,
+      label: 'Store (for SKU)',
+      placeholder: 'Search for store',
+      component: 'storeAutocomplete',
+      props: {
+        componentType: 'autocomplete',
+        onStoreSelected: (storeId: string | null) =>
+          setSelectedStoreId(storeId),
+      },
     },
     {
       name: 'upc',
@@ -287,8 +299,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   mode = 'create',
   initialData,
 }) => {
-  // Track selected brand ID separately from the display name
+  // Track selected brand/store IDs separately from the display names
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
 
   // Multi-image, unit entry, and net weight entry state (managed outside react-hook-form)
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
@@ -317,6 +330,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       defaultConsumeIncrement: undefined,
       defaultConsumeUnitId: '',
       vendor: '',
+      storeName: '',
       isFoodStampItem: false,
       isFsaEligible: false,
       editReason: '',
@@ -360,7 +374,11 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   }
 
   // Get form sections with access to setSelectedBrandId
-  const FORM_SECTIONS = getFormSections(setSelectedBrandId, mode);
+  const FORM_SECTIONS = getFormSections(
+    setSelectedBrandId,
+    setSelectedStoreId,
+    mode,
+  );
 
   const {
     control,
@@ -456,6 +474,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       units: units.length > 0 ? units : undefined,
       // Pass through for form-level processing
       sku: data.sku || undefined,
+      storeId: selectedStoreId || undefined,
       baseDimension: data.baseDimension || undefined,
       defaultConsumeIncrement: data.defaultConsumeIncrement || undefined,
       defaultConsumeUnitId: data.defaultConsumeUnitId || undefined,

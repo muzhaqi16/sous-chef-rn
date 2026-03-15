@@ -1,0 +1,12 @@
+query SearchStores($search: String!, $limit: Int) {
+  stores(filters: { search: $search }, first: $limit) {
+    edges {
+      node {
+        id
+        name
+        address
+      }
+    }
+    totalCount
+  }
+}
