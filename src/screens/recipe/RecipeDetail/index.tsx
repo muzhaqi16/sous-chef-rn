@@ -5,20 +5,25 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
-  Linking } from 'react-native';
+  Linking,
+} from 'react-native';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
   useAnimatedStyle,
   interpolate,
-  Extrapolation } from 'react-native-reanimated';
+  Extrapolation,
+} from 'react-native-reanimated';
 import TurboImage from 'react-native-turbo-image';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { BackButton } from '#components/atoms/BackButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetFlatList,
+  BottomSheetTextInput,
+} from '@gorhom/bottom-sheet';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { FolderPicker } from '#components/molecules/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
@@ -35,7 +40,10 @@ import { createPropsComparator } from '#utils/memoUtils';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useRecipeDetail } from './useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
-import { SelectableIngredientProvider, useSelectableIngredients } from './SelectableIngredientContext';
+import {
+  SelectableIngredientProvider,
+  useSelectableIngredients,
+} from './SelectableIngredientContext';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAuthUser } from '#hooks/auth/useAuthUser';
@@ -61,28 +69,26 @@ const ingredientKeyExtractor = (item: { id: string }) => item.id;
 
 // Bridge component — reads selection state from context, receives theme colors via props
 const SelectableIngredientItemComponent: React.FC<
-  ListRenderItemInfo<SelectableIngredientItemProps['item']> & { primaryColor: string; textSecondary: string }
-> = ({
-  item,
-  primaryColor,
-  textSecondary,
-}) => {
+  ListRenderItemInfo<SelectableIngredientItemProps['item']> & {
+    primaryColor: string;
+    textSecondary: string;
+  }
+> = ({ item, primaryColor, textSecondary }) => {
   const { selectedIngredients, toggleIngredient } = useSelectableIngredients();
   const isSelected = selectedIngredients.has(item.id);
 
   return (
     <Pressable
-      style={({pressed}) => [styles.ingredientItem, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.ingredientItem,
+        pressed && styles.pressed,
+      ]}
       onPress={() => toggleIngredient(item.id)}
     >
       <Ionicons
         name={isSelected ? 'checkbox' : 'square-outline'}
         size={24}
-        color={
-          isSelected
-            ? primaryColor
-            : textSecondary
-        }
+        color={isSelected ? primaryColor : textSecondary}
       />
       <View style={styles.ingredientInfo}>
         <Text style={styles.ingredientName}>{item.name}</Text>
@@ -95,19 +101,26 @@ const SelectableIngredientItemComponent: React.FC<
 };
 
 // PERFORMANCE: Custom comparator for React.memo — value-equality on nested item fields
-type SelectableItemRenderInfo = ListRenderItemInfo<SelectableIngredientItemProps['item']> & {
+type SelectableItemRenderInfo = ListRenderItemInfo<
+  SelectableIngredientItemProps['item']
+> & {
   primaryColor: string;
   textSecondary: string;
 };
 
-const areIngredientPropsEqual = createPropsComparator<SelectableItemRenderInfo>({
-  referenceKeys: ['primaryColor', 'textSecondary'],
-  nestedComparisons: {
-    item: ['id', 'name', 'quantity'],
+const areIngredientPropsEqual = createPropsComparator<SelectableItemRenderInfo>(
+  {
+    referenceKeys: ['primaryColor', 'textSecondary'],
+    nestedComparisons: {
+      item: ['id', 'name', 'quantity'],
+    },
   },
-});
+);
 
-const SelectableIngredientItem = React.memo(SelectableIngredientItemComponent, areIngredientPropsEqual);
+const SelectableIngredientItem = React.memo(
+  SelectableIngredientItemComponent,
+  areIngredientPropsEqual,
+);
 
 const getSelectableIngredientItemType = () => 'item';
 
@@ -143,6 +156,8 @@ const RecipeDetailScreen: React.FC = () => {
     handleListSelected,
     toggleIngredient,
     openIngredientSelector,
+    creatingList,
+    handleCreateListAndAddIngredients,
     shoppingListOptionsRef,
     ingredientSelectorRef,
     listPickerRef,
@@ -165,7 +180,8 @@ const RecipeDetailScreen: React.FC = () => {
     savedNotes,
     savedRating,
     cookedCount,
-    handleUnfavoriteRecipe } = useRecipeDetail();
+    handleUnfavoriteRecipe,
+  } = useRecipeDetail();
 
   // Get available folders and tags for picker and autocomplete
   const { folders } = useRecipeFolders();
@@ -174,11 +190,13 @@ const RecipeDetailScreen: React.FC = () => {
   // Recipe reviews
   const { state: reviewState, actions: reviewActions } = useRecipeReviews({
     recipeId: recipeId ?? '',
-    backendRecipe: backendRecipe ?? null });
+    backendRecipe: backendRecipe ?? null,
+  });
 
   // Derive icon visibility state
   const isInFavorites = isSaved && savedFolder === 'Favorites';
-  const isInOtherFolder = isSaved && !!savedFolder && savedFolder !== 'Favorites';
+  const isInOtherFolder =
+    isSaved && !!savedFolder && savedFolder !== 'Favorites';
   const showHeartIcon = !isSaved || isInFavorites || !savedFolder;
   const showFolderIcon = !isSaved || isInOtherFolder || !savedFolder;
 
@@ -195,6 +213,9 @@ const RecipeDetailScreen: React.FC = () => {
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [showManageSheet, setShowManageSheet] = useState(false);
   const [showAddToMealPlanSheet, setShowAddToMealPlanSheet] = useState(false);
+
+  // State for inline "Create New List" in list picker
+  const [newListName, setNewListName] = useState(displayData?.title ?? '');
 
   // Handle heart icon press - quick save to Favorites or manage if already in Favorites
   const handleHeartPress = () => {
@@ -223,14 +244,14 @@ const RecipeDetailScreen: React.FC = () => {
   };
 
   // Handle save from SaveRecipeSheet
-  const handleConfirmSave = async (options: { folder?: string; tags?: string[]; notes?: string }) => {
-      await handleSaveRecipe(
-        options.folder ?? null,
-        options.tags,
-        options.notes,
-      );
-      setShowSaveSheet(false);
-    };
+  const handleConfirmSave = async (options: {
+    folder?: string;
+    tags?: string[];
+    notes?: string;
+  }) => {
+    await handleSaveRecipe(options.folder ?? null, options.tags, options.notes);
+    setShowSaveSheet(false);
+  };
 
   // Handle close save sheet
   const handleCloseSaveSheet = () => {
@@ -242,48 +263,51 @@ const RecipeDetailScreen: React.FC = () => {
     setShowManageSheet(false);
   };
 
-  const renderShoppingListItem = ({ item }: { item: (typeof shoppingLists)[number] }) => (
-      <Pressable
-        style={({pressed}) => [styles.listPickerItem, pressed && styles.pressed]}
-        onPress={() => handleListSelected(item.id)}
-      >
-        <View style={styles.listPickerInfo}>
-          <Text style={styles.listPickerName}>{item.name}</Text>
-          <Text style={styles.listPickerCount}>
-            {item.totalItems ?? 0} items
+  const renderShoppingListItem = ({
+    item,
+  }: {
+    item: (typeof shoppingLists)[number];
+  }) => (
+    <Pressable
+      style={({ pressed }) => [
+        styles.listPickerItem,
+        pressed && styles.pressed,
+      ]}
+      onPress={() => handleListSelected(item.id)}
+    >
+      <View style={styles.listPickerInfo}>
+        <Text style={styles.listPickerName}>{item.name}</Text>
+        <Text style={styles.listPickerCount}>{item.totalItems ?? 0} items</Text>
+      </View>
+      {!!item.isDefault && (
+        <View
+          style={[
+            styles.defaultBadge,
+            { backgroundColor: theme.colors.primary + '20' },
+          ]}
+        >
+          <Text
+            style={[styles.defaultBadgeText, { color: theme.colors.primary }]}
+          >
+            Default
           </Text>
         </View>
-        {!!item.isDefault && (
-          <View
-            style={[
-              styles.defaultBadge,
-              { backgroundColor: theme.colors.primary + '20' },
-            ]}
-          >
-            <Text
-              style={[
-                styles.defaultBadgeText,
-                { color: theme.colors.primary },
-              ]}
-            >
-              Default
-            </Text>
-          </View>
-        )}
-        <Ionicons
-          name="chevron-forward"
-          size={20}
-          color={theme.colors.textSecondary}
-        />
-      </Pressable>
-    );
+      )}
+      <Ionicons
+        name="chevron-forward"
+        size={20}
+        color={theme.colors.textSecondary}
+      />
+    </Pressable>
+  );
 
   // Scroll animation for parallax effect
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: event => {
       scrollY.set(event.contentOffset.y);
-    } });
+    },
+  });
 
   const imageAnimatedStyle = useAnimatedStyle(() => {
     const scale = interpolate(
@@ -298,7 +322,11 @@ const RecipeDetailScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <SousChefLoader size="small" showBrand={false} message="Loading recipe..." />
+        <SousChefLoader
+          size="small"
+          showBrand={false}
+          message="Loading recipe..."
+        />
       </View>
     );
   }
@@ -339,35 +367,58 @@ const RecipeDetailScreen: React.FC = () => {
               cachePolicy="dataCache"
               resizeMode="cover"
               style={[styles.recipeImage, imageAnimatedStyle]}
-              sharedTransitionTag={externalId ? `recipe-image-${externalId}` : undefined}
+              sharedTransitionTag={
+                externalId ? `recipe-image-${externalId}` : undefined
+              }
             />
-            <BackButton onPress={goBack} color={theme.colors.textPrimary} style={styles.backButton} />
+            <BackButton
+              onPress={goBack}
+              color={theme.colors.textPrimary}
+              style={styles.backButton}
+            />
             {/* Right side buttons container */}
             <View style={styles.rightButtons}>
               {/* Meal plan button - shown when recipe exists in backend */}
               {!!recipeId && (
                 <Pressable
                   onPress={() => setShowAddToMealPlanSheet(true)}
-                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    pressed && styles.pressed,
+                  ]}
                   accessibilityLabel="Add to meal plan"
                 >
-                  <Ionicons name="calendar-outline" size={22} color={theme.colors.primary} />
+                  <Ionicons
+                    name="calendar-outline"
+                    size={22}
+                    color={theme.colors.primary}
+                  />
                 </Pressable>
               )}
               {/* Edit button - shown when user is recipe creator */}
               {!!isOwner && (
                 <Pressable
                   onPress={handleEditRecipe}
-                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    pressed && styles.pressed,
+                  ]}
                 >
-                  <Ionicons name="create-outline" size={22} color={theme.colors.primary} />
+                  <Ionicons
+                    name="create-outline"
+                    size={22}
+                    color={theme.colors.primary}
+                  />
                 </Pressable>
               )}
               {/* Folder button - shown when not saved or saved to non-Favorites folder */}
               {!!showFolderIcon && (
                 <Pressable
                   onPress={handleFolderPress}
-                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    pressed && styles.pressed,
+                  ]}
                   disabled={saving || updatingFolderTags}
                 >
                   <Ionicons
@@ -381,11 +432,17 @@ const RecipeDetailScreen: React.FC = () => {
               {!!showHeartIcon && (
                 <Pressable
                   onPress={handleHeartPress}
-                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    pressed && styles.pressed,
+                  ]}
                   disabled={saving || updatingFolderTags}
                 >
                   {saving || updatingFolderTags ? (
-                    <ActivityIndicator size="small" color={theme.colors.favorite} />
+                    <ActivityIndicator
+                      size="small"
+                      color={theme.colors.favorite}
+                    />
                   ) : (
                     <Ionicons
                       name={isInFavorites ? 'heart' : 'heart-outline'}
@@ -399,30 +456,52 @@ const RecipeDetailScreen: React.FC = () => {
           </View>
         )}
         {!displayData.image && (
-          <View style={[styles.noImageHeader, { paddingTop: insets.top + theme.spacing.sm }]}>
+          <View
+            style={[
+              styles.noImageHeader,
+              { paddingTop: insets.top + theme.spacing.sm },
+            ]}
+          >
             <BackButton onPress={goBack} />
             <View style={styles.noImageRightButtons}>
               {!!recipeId && (
                 <Pressable
                   onPress={() => setShowAddToMealPlanSheet(true)}
-                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    pressed && styles.pressed,
+                  ]}
                   accessibilityLabel="Add to meal plan"
                 >
-                  <Ionicons name="calendar-outline" size={22} color={theme.colors.primary} />
+                  <Ionicons
+                    name="calendar-outline"
+                    size={22}
+                    color={theme.colors.primary}
+                  />
                 </Pressable>
               )}
               {!!isOwner && (
                 <Pressable
                   onPress={handleEditRecipe}
-                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    pressed && styles.pressed,
+                  ]}
                 >
-                  <Ionicons name="create-outline" size={22} color={theme.colors.primary} />
+                  <Ionicons
+                    name="create-outline"
+                    size={22}
+                    color={theme.colors.primary}
+                  />
                 </Pressable>
               )}
               {!!showFolderIcon && (
                 <Pressable
                   onPress={handleFolderPress}
-                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    pressed && styles.pressed,
+                  ]}
                   disabled={saving || updatingFolderTags}
                 >
                   <Ionicons
@@ -435,11 +514,17 @@ const RecipeDetailScreen: React.FC = () => {
               {!!showHeartIcon && (
                 <Pressable
                   onPress={handleHeartPress}
-                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    pressed && styles.pressed,
+                  ]}
                   disabled={saving || updatingFolderTags}
                 >
                   {saving || updatingFolderTags ? (
-                    <ActivityIndicator size="small" color={theme.colors.favorite} />
+                    <ActivityIndicator
+                      size="small"
+                      color={theme.colors.favorite}
+                    />
                   ) : (
                     <Ionicons
                       name={isInFavorites ? 'heart' : 'heart-outline'}
@@ -477,7 +562,10 @@ const RecipeDetailScreen: React.FC = () => {
             {/* Cooked count - inline with metadata */}
             {!!isBackendRecipe && !!recipeId && !!isSaved && (
               <Pressable
-                style={({pressed}) => [styles.cookedMetadata, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.cookedMetadata,
+                  pressed && styles.pressed,
+                ]}
                 onPress={() => setCookedModalVisible(true)}
                 disabled={markingAsCooked}
               >
@@ -527,12 +615,18 @@ const RecipeDetailScreen: React.FC = () => {
                   {[1, 2, 3, 4, 5].map(star => (
                     <Pressable
                       key={star}
-                      onPress={() => handleUpdateRating(star === savedRating ? null : star)}
+                      onPress={() =>
+                        handleUpdateRating(star === savedRating ? null : star)
+                      }
                       hitSlop={4}
                       disabled={updatingFolderTags}
                     >
                       <Ionicons
-                        name={savedRating !== null && star <= savedRating ? 'star' : 'star-outline'}
+                        name={
+                          savedRating !== null && star <= savedRating
+                            ? 'star'
+                            : 'star-outline'
+                        }
                         size={18}
                         color={
                           savedRating !== null && star <= savedRating
@@ -639,7 +733,7 @@ const RecipeDetailScreen: React.FC = () => {
                 <Pressable
                   onPress={handleAddAllIngredientsToList}
                   disabled={addingToList}
-                  style={({pressed}) => pressed && styles.pressed}
+                  style={({ pressed }) => pressed && styles.pressed}
                 >
                   <Text style={styles.addAllButton}>
                     {addingToList ? 'Adding...' : 'Add All'}
@@ -692,12 +786,16 @@ const RecipeDetailScreen: React.FC = () => {
             return (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Instructions</Text>
-                {!!hasBackendInstructions && displayData.instructions.map((step: any, index: number) => {
+                {!!hasBackendInstructions &&
+                  displayData.instructions.map((step: any, index: number) => {
                     // Support both formats:
                     // User-created: { step: number, text: string }
                     // Preloaded external: { number: number, step: string }
                     const stepText = step.text ?? step.step;
-                    const stepNum = step.text != null ? (step.step ?? index + 1) : (step.number ?? index + 1);
+                    const stepNum =
+                      step.text != null
+                        ? step.step ?? index + 1
+                        : step.number ?? index + 1;
                     return (
                       <View key={index} style={styles.instructionStep}>
                         <Text style={styles.stepNumber}>{stepNum}.</Text>
@@ -705,7 +803,8 @@ const RecipeDetailScreen: React.FC = () => {
                       </View>
                     );
                   })}
-                {!!hasAnalyzedInstructions && displayData.instructions[0].steps.map(
+                {!!hasAnalyzedInstructions &&
+                  displayData.instructions[0].steps.map(
                     (step: any, index: number) => (
                       <View key={index} style={styles.instructionStep}>
                         <Text style={styles.stepNumber}>{step.number}.</Text>
@@ -713,9 +812,12 @@ const RecipeDetailScreen: React.FC = () => {
                       </View>
                     ),
                   )}
-                {!hasBackendInstructions && !hasAnalyzedInstructions && !!hasHtmlInstructions && (() => {
-                    const steps = displayData.instructionsHtml!
-                      .replace(/<li[^>]*>/gi, '\n<STEP>')
+                {!hasBackendInstructions &&
+                  !hasAnalyzedInstructions &&
+                  !!hasHtmlInstructions &&
+                  (() => {
+                    const steps = displayData
+                      .instructionsHtml!.replace(/<li[^>]*>/gi, '\n<STEP>')
                       .replace(/<\/li>/gi, '')
                       .replace(/<[^>]*>/g, '\n')
                       .split('\n')
@@ -734,12 +836,17 @@ const RecipeDetailScreen: React.FC = () => {
           })()}
 
           {/* Reviews Section */}
-          {!!isBackendRecipe && !!recipeId && <ReviewSection {...reviewState} {...reviewActions} />}
+          {!!isBackendRecipe && !!recipeId && (
+            <ReviewSection {...reviewState} {...reviewActions} />
+          )}
 
           {/* Source Attribution */}
           {!!(displayData.sourceName || displayData.sourceUrl) && (
             <Pressable
-              style={({pressed}) => [styles.attribution, displayData.sourceUrl && pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.attribution,
+                displayData.sourceUrl && pressed && styles.pressed,
+              ]}
               onPress={() =>
                 displayData.sourceUrl && Linking.openURL(displayData.sourceUrl)
               }
@@ -774,7 +881,7 @@ const RecipeDetailScreen: React.FC = () => {
       >
         <View style={styles.shoppingListOptions}>
           <Pressable
-            style={({pressed}) => [
+            style={({ pressed }) => [
               styles.optionButton,
               { borderBottomWidth: 1, borderBottomColor: theme.colors.border },
               pressed && styles.pressed,
@@ -790,7 +897,10 @@ const RecipeDetailScreen: React.FC = () => {
             </View>
           </Pressable>
           <Pressable
-            style={({pressed}) => [styles.optionButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.optionButton,
+              pressed && styles.pressed,
+            ]}
             onPress={openIngredientSelector}
           >
             <Ionicons
@@ -822,7 +932,9 @@ const RecipeDetailScreen: React.FC = () => {
           <FlashList
             data={backendRecipe?.ingredients || []}
             keyExtractor={ingredientKeyExtractor}
-            renderItem={(info: ListRenderItemInfo<SelectableIngredientItemProps['item']>) => (
+            renderItem={(
+              info: ListRenderItemInfo<SelectableIngredientItemProps['item']>,
+            ) => (
               <SelectableIngredientItem
                 {...info}
                 primaryColor={theme.colors.primary}
@@ -838,7 +950,7 @@ const RecipeDetailScreen: React.FC = () => {
           />
         </SelectableIngredientProvider>
         <Pressable
-          style={({pressed}) => [
+          style={({ pressed }) => [
             styles.addSelectedButton,
             { backgroundColor: theme.colors.primary },
             pressed && styles.pressed,
@@ -861,21 +973,81 @@ const RecipeDetailScreen: React.FC = () => {
       <BottomSheetAction
         sheetRef={listPickerRef}
         sheetTitle="Add to Shopping List"
-        snapPoints={['50%']}
+        snapPoints={['60%']}
         scrollable={false}
+        onDismiss={() => {
+          setNewListName(displayData?.title ?? '');
+          handleSheetDismiss();
+        }}
       >
         <BottomSheetFlatList
           data={shoppingLists}
           keyExtractor={(item: (typeof shoppingLists)[number]) => item.id}
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: theme.spacing.md, paddingBottom: theme.spacing['2xl'] }}
+          contentContainerStyle={{
+            paddingHorizontal: theme.spacing.md,
+            paddingBottom: theme.spacing['2xl'],
+          }}
           renderItem={renderShoppingListItem}
+          ListFooterComponent={
+            <View style={styles.createListFooter}>
+              <View style={styles.createListInputRow}>
+                <BottomSheetTextInput
+                  style={[
+                    styles.createListInput,
+                    {
+                      borderColor: theme.colors.border,
+                      color: theme.colors.textPrimary,
+                      backgroundColor: theme.colors.surface,
+                    },
+                  ]}
+                  value={newListName}
+                  onChangeText={setNewListName}
+                  placeholder="New list name"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  autoCapitalize="words"
+                  maxLength={100}
+                />
+                {!!newListName && (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.clearNameButton,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => setNewListName('')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons
+                      name="close-circle"
+                      size={20}
+                      color={theme.colors.textSecondary}
+                    />
+                  </Pressable>
+                )}
+              </View>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.createListButton,
+                  { backgroundColor: theme.colors.primary },
+                  pressed && styles.pressed,
+                  !newListName.trim() && { opacity: 0.5 },
+                ]}
+                onPress={() => handleCreateListAndAddIngredients(newListName)}
+                disabled={!newListName.trim() || creatingList}
+              >
+                {creatingList ? (
+                  <ActivityIndicator color={theme.colors.onPrimary} />
+                ) : (
+                  <Text style={styles.createListButtonText}>
+                    Create & Add Ingredients
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          }
           ListEmptyComponent={
             <View style={styles.emptyListPicker}>
-              <Text style={styles.emptyText}>No shopping lists found</Text>
-              <Text style={styles.emptySubtext}>
-                Create a shopping list first
-              </Text>
+              <Text style={styles.emptyText}>No existing lists</Text>
             </View>
           }
         />
@@ -962,32 +1134,40 @@ export const RecipeDetail: React.FC = () => (
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background },
+    backgroundColor: theme.colors.background,
+  },
   centerContainer: {
     flex: 1,
     backgroundColor: theme.colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl },
+    padding: theme.spacing.xl,
+  },
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   scrollContent: {
-    paddingBottom: theme.spacing.xl },
+    paddingBottom: theme.spacing.xl,
+  },
   errorText: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.error,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   errorDetails: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
     fontFamily: 'monospace',
-    textAlign: 'left' },
+    textAlign: 'left',
+  },
   imageContainer: {
-    position: 'relative' },
+    position: 'relative',
+  },
   recipeImage: {
     width: '100%',
-    height: 300 },
+    height: 300,
+  },
   backButton: {
     position: 'absolute',
     top: 48,
@@ -998,13 +1178,23 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.background,
-    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 2.22, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.22)' }] },
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 1,
+        blurRadius: 2.22,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.22)',
+      },
+    ],
+  },
   rightButtons: {
     position: 'absolute',
     top: 48,
     right: 12,
     flexDirection: 'row',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   actionButton: {
     width: 40,
     height: 40,
@@ -1012,201 +1202,257 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.background,
-    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 2.22, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.22)' }] },
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 1,
+        blurRadius: 2.22,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.22)',
+      },
+    ],
+  },
   noImageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.md },
+    paddingHorizontal: theme.spacing.md,
+  },
   noImageRightButtons: {
     flexDirection: 'row',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   content: {
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.background,
     borderTopLeftRadius: theme.radii.xl,
     borderTopRightRadius: theme.radii.xl,
-    marginTop: -20 },
+    marginTop: -20,
+  },
   title: {
     fontSize: theme.fonts.size['2xl'],
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   metadata: {
     flexDirection: 'row',
     gap: theme.spacing.md,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   metadataText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   cookedMetadata: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   cookedMetadataTextActive: {
-    color: theme.colors.success },
+    color: theme.colors.success,
+  },
   folderTagsSection: {
     marginBottom: theme.spacing.lg,
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.xs },
+    paddingVertical: theme.spacing.xs,
+  },
   detailLabel: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   detailValue: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   detailValueText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   detailValueTextActive: {
-    color: theme.colors.primary },
+    color: theme.colors.primary,
+  },
   ratingStars: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2 },
+    gap: 2,
+  },
   tagsDisplayRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.xs },
+    paddingVertical: theme.spacing.xs,
+  },
   tagsChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'flex-end',
     gap: theme.spacing.xs,
     flex: 1,
-    marginLeft: theme.spacing.md },
+    marginLeft: theme.spacing.md,
+  },
   tagChip: {
     backgroundColor: theme.colors.primary + '15',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 2,
-    borderRadius: theme.radii.full },
+    borderRadius: theme.radii.full,
+  },
   tagChipText: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   notesDisplayRow: {
     paddingVertical: theme.spacing.xs,
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   notesText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     lineHeight: 18,
-    fontStyle: 'italic' },
+    fontStyle: 'italic',
+  },
   tags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   tag: {
     backgroundColor: theme.colors.primary + '20',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.sm },
+    borderRadius: theme.radii.sm,
+  },
   tagText: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   section: {
-    marginBottom: theme.spacing.xl },
+    marginBottom: theme.spacing.xl,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   sectionTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   addAllButton: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary },
+    color: theme.colors.primary,
+  },
   description: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textSecondary,
-    lineHeight: 22 },
+    lineHeight: 22,
+  },
   ingredientsList: {
     paddingVertical: theme.spacing.sm,
-    paddingLeft: theme.spacing.lg },
+    paddingLeft: theme.spacing.lg,
+  },
   instructionStep: {
     flexDirection: 'row',
     marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   stepNumber: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
-    minWidth: 24 },
+    minWidth: 24,
+  },
   stepText: {
     flex: 1,
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    lineHeight: 22 },
+    lineHeight: 22,
+  },
   attribution: {
     paddingTop: theme.spacing.md,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
-    marginTop: theme.spacing.xl },
+    marginTop: theme.spacing.xl,
+  },
   attributionText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   viewOriginalLink: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.xs,
-    marginTop: theme.spacing.sm },
+    marginTop: theme.spacing.sm,
+  },
   viewOriginalText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   shoppingListOptions: {
-    padding: theme.spacing.md },
+    padding: theme.spacing.md,
+  },
   optionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.lg,
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   optionTextContainer: {
-    flex: 1 },
+    flex: 1,
+  },
   optionTitle: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs },
+    marginBottom: theme.spacing.xs,
+  },
   optionDescription: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   ingredientItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   ingredientInfo: {
-    flex: 1 },
+    flex: 1,
+  },
   ingredientName: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs },
+    marginBottom: theme.spacing.xs,
+  },
   ingredientAmount: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   emptyText: {
     textAlign: 'center',
     color: theme.colors.textSecondary,
     fontSize: theme.fonts.size.md,
-    marginTop: theme.spacing.xl },
+    marginTop: theme.spacing.xl,
+  },
   addSelectedButton: {
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
@@ -1214,11 +1460,13 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
     minHeight: 48,
-    justifyContent: 'center' },
+    justifyContent: 'center',
+  },
   addSelectedButtonText: {
     color: theme.colors.onPrimary,
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   // List picker styles
   listPickerItem: {
     flexDirection: 'row',
@@ -1226,31 +1474,74 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   listPickerInfo: {
-    flex: 1 },
+    flex: 1,
+  },
   listPickerName: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs },
+    marginBottom: theme.spacing.xs,
+  },
   listPickerCount: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   defaultBadge: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.sm },
+    borderRadius: theme.radii.sm,
+  },
   defaultBadgeText: {
     fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   emptyListPicker: {
     padding: theme.spacing.xl,
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   emptySubtext: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.sm,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
+  createListFooter: {
+    paddingTop: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+  },
+  createListInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  createListInput: {
+    flex: 1,
+    fontSize: theme.fonts.size.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+  },
+  clearNameButton: {
+    padding: theme.spacing.xs,
+    marginLeft: theme.spacing.xs,
+  },
+  createListButton: {
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  createListButtonText: {
+    color: theme.colors.onPrimary,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

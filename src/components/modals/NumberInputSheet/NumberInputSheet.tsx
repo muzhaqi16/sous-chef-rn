@@ -38,7 +38,6 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
       visible,
       onDismiss: onClose,
       snapPoints: ['30%'],
-      keyboardAware: true,
     });
 
   const [inputValue, setInputValue] = useState('');

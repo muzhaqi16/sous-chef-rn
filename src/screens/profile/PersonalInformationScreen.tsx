@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { RefreshControl } from 'react-native';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#hooks/profile/useProfileData';
@@ -9,7 +10,11 @@ import { useApolloClient } from '@apollo/client/react';
 import { GetUserProfileQuery, GetUserProfileDocument } from '#generated';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { errorService } from '#/services/errorService';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  executeMutation,
+  executeRefreshWithFinally,
+} from '#/utils/compilerSafeWrappers';
+import { useUnistyles } from 'react-native-unistyles';
 
 /** Module-level function for profile updates with optimistic cache.
  *  Extracted to avoid try-catch inside component body (React Compiler bailout). */
@@ -40,19 +45,26 @@ async function performProfileUpdate(
     });
   }
 
-  // Then perform the actual mutation
+  // Then perform the actual mutation, refetching the profile query to ensure UI stays in sync
   await updateProfileMutation({
     variables: {
       input,
     },
+    refetchQueries: [{ query: GetUserProfileDocument }],
   });
 }
 
 export const PersonalInformationScreen: React.FC = () => {
-  const { profile } = useProfileData();
+  const { profile, refetch } = useProfileData();
   const user = useAuthUser();
   const client = useApolloClient();
+  const { theme } = useUnistyles();
   const [updateProfileMutation] = useUpdateUserProfileMutation();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    executeRefreshWithFinally(() => refetch(), setRefreshing);
+  };
 
   const updateProfile = (input: Partial<Record<any, any>>) => {
     executeMutation(
@@ -81,19 +93,39 @@ export const PersonalInformationScreen: React.FC = () => {
         return { ...baseItem, value: user?.email || '' };
 
       case 'firstName':
-        return { ...baseItem, value: profile?.firstName || '', onSave: (v: string) => updateProfile({ firstName: v }) };
+        return {
+          ...baseItem,
+          value: profile?.firstName || '',
+          onSave: (v: string) => updateProfile({ firstName: v }),
+        };
 
       case 'lastName':
-        return { ...baseItem, value: profile?.lastName || '', onSave: (v: string) => updateProfile({ lastName: v }) };
+        return {
+          ...baseItem,
+          value: profile?.lastName || '',
+          onSave: (v: string) => updateProfile({ lastName: v }),
+        };
 
       case 'displayName':
-        return { ...baseItem, value: profile?.displayName || '', onSave: (v: string) => updateProfile({ displayName: v }) };
+        return {
+          ...baseItem,
+          value: profile?.displayName || '',
+          onSave: (v: string) => updateProfile({ displayName: v }),
+        };
 
       case 'bio':
-        return { ...baseItem, value: profile?.bio || '', onSave: (v: string) => updateProfile({ bio: v }) };
+        return {
+          ...baseItem,
+          value: profile?.bio || '',
+          onSave: (v: string) => updateProfile({ bio: v }),
+        };
 
       case 'phone':
-        return { ...baseItem, value: profile?.phone || '', onSave: (v: string) => updateProfile({ phone: v }) };
+        return {
+          ...baseItem,
+          value: profile?.phone || '',
+          onSave: (v: string) => updateProfile({ phone: v }),
+        };
 
       case 'dateOfBirth':
         return {
@@ -106,16 +138,34 @@ export const PersonalInformationScreen: React.FC = () => {
         };
 
       case 'gender':
-        return { ...baseItem, value: profile?.gender || '', options: config.options, onSave: (v: string) => updateProfile({ gender: v }) };
+        return {
+          ...baseItem,
+          value: profile?.gender || '',
+          options: config.options,
+          onSave: (v: string) => updateProfile({ gender: v }),
+        };
 
       case 'profileVisibility':
-        return { ...baseItem, value: profile?.profileVisibility || ProfileVisibility.Public, options: config.options, onSave: (v: string) => updateProfile({ profileVisibility: v }) };
+        return {
+          ...baseItem,
+          value: profile?.profileVisibility || ProfileVisibility.Public,
+          options: config.options,
+          onSave: (v: string) => updateProfile({ profileVisibility: v }),
+        };
 
       case 'showEmail':
-        return { ...baseItem, value: profile?.showEmail || false, onPress: () => updateProfile({ showEmail: !profile?.showEmail }) };
+        return {
+          ...baseItem,
+          value: profile?.showEmail || false,
+          onPress: () => updateProfile({ showEmail: !profile?.showEmail }),
+        };
 
       case 'showPhone':
-        return { ...baseItem, value: profile?.showPhone || false, onPress: () => updateProfile({ showPhone: !profile?.showPhone }) };
+        return {
+          ...baseItem,
+          value: profile?.showPhone || false,
+          onPress: () => updateProfile({ showPhone: !profile?.showPhone }),
+        };
     }
 
     return baseItem;
@@ -129,7 +179,17 @@ export const PersonalInformationScreen: React.FC = () => {
   })();
 
   return (
-    <ProfileScreenWrapper title="Personal Information">
+    <ProfileScreenWrapper
+      title="Personal Information"
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={theme.colors.primary}
+          colors={[theme.colors.primary]}
+        />
+      }
+    >
       {sections.map((section, index) => (
         <SettingsSection
           key={`section-${index}`}

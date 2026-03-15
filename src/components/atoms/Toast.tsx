@@ -8,7 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { ToastContext } from '../../hooks/useToast';
@@ -189,6 +189,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  const { theme } = useUnistyles();
+
   const type = toastState?.type ?? 'default';
   const iconName = TOAST_ICONS[type];
   const bgStyle =
@@ -201,6 +203,31 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
       : type === 'info'
       ? styles.bg_info
       : styles.bg_default;
+  const borderStyle =
+    type === 'success'
+      ? styles.border_success
+      : type === 'error'
+      ? styles.border_error
+      : type === 'warning'
+      ? styles.border_warning
+      : type === 'info'
+      ? styles.border_info
+      : undefined;
+  const textStyle =
+    type === 'success'
+      ? styles.text_success
+      : type === 'error'
+      ? styles.text_error
+      : type === 'warning'
+      ? styles.text_warning
+      : type === 'info'
+      ? styles.text_info
+      : styles.text_default;
+  const toastIconColor =
+    type !== 'default' && type in theme.colors.alertBanner
+      ? theme.colors.alertBanner[type as keyof typeof theme.colors.alertBanner]
+          .text
+      : theme.colors.textInverse;
 
   return (
     <ToastContext.Provider value={showToast}>
@@ -209,18 +236,18 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
         <Animated.View
           testID={`toast-${type}`}
           pointerEvents={toastState ? 'auto' : 'box-none'}
-          style={[styles.toastContainer, bgStyle, animatedStyle]}
+          style={[styles.toastContainer, bgStyle, borderStyle, animatedStyle]}
         >
           {iconName ? (
             <Ionicons
               name={iconName as any}
               size={18}
-              color="#fff"
+              color={toastIconColor}
               style={styles.icon}
             />
           ) : null}
           <Text
-            style={styles.toastText}
+            style={[styles.toastText, textStyle]}
             testID="toast-message"
             numberOfLines={2}
           >
@@ -228,7 +255,9 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
           </Text>
           {toastState?.action ? (
             <Pressable onPress={handleActionPress} style={styles.actionButton}>
-              <Text style={styles.actionText}>{toastState.action.label}</Text>
+              <Text style={[styles.actionText, textStyle]}>
+                {toastState.action.label}
+              </Text>
             </Pressable>
           ) : null}
         </Animated.View>
@@ -252,16 +281,36 @@ const styles = StyleSheet.create(theme => ({
     ...theme.shadows.md,
   },
   bg_default: { backgroundColor: theme.colors.textPrimary },
-  bg_success: { backgroundColor: theme.colors.success },
-  bg_error: { backgroundColor: theme.colors.error },
-  bg_warning: { backgroundColor: theme.colors.warning },
-  bg_info: { backgroundColor: theme.colors.info },
+  bg_success: { backgroundColor: theme.colors.alertBanner.success.bg },
+  bg_error: { backgroundColor: theme.colors.alertBanner.error.bg },
+  bg_warning: { backgroundColor: theme.colors.alertBanner.warning.bg },
+  bg_info: { backgroundColor: theme.colors.alertBanner.info.bg },
+  border_success: {
+    borderWidth: 1,
+    borderColor: theme.colors.alertBanner.success.border,
+  },
+  border_error: {
+    borderWidth: 1,
+    borderColor: theme.colors.alertBanner.error.border,
+  },
+  border_warning: {
+    borderWidth: 1,
+    borderColor: theme.colors.alertBanner.warning.border,
+  },
+  border_info: {
+    borderWidth: 1,
+    borderColor: theme.colors.alertBanner.info.border,
+  },
+  text_default: { color: theme.colors.textInverse },
+  text_success: { color: theme.colors.alertBanner.success.text },
+  text_error: { color: theme.colors.alertBanner.error.text },
+  text_warning: { color: theme.colors.alertBanner.warning.text },
+  text_info: { color: theme.colors.alertBanner.info.text },
   icon: {
     marginRight: theme.spacing.xs,
   },
   toastText: {
     flex: 1,
-    color: theme.colors.white,
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.medium,
   },
@@ -271,7 +320,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
   },
   actionText: {
-    color: theme.colors.white,
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.bold,
     textDecorationLine: 'underline',
