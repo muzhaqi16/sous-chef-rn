@@ -18,11 +18,12 @@ import { createRemoveFromParentConnectionUpdater } from './cacheUpdaters';
  * Remove item from ShoppingList.itemsConnection (all variants).
  * Correct for deletion — runs on every storeFieldName variant.
  */
-export const removeFromShoppingListItemsConnection = createRemoveFromParentConnectionUpdater(
-  'ShoppingList',
-  'itemsConnection',
-  'ShoppingListItem',
-);
+export const removeFromShoppingListItemsConnection =
+  createRemoveFromParentConnectionUpdater(
+    'ShoppingList',
+    'itemsConnection',
+    'ShoppingListItem',
+  );
 
 /**
  * Clear ALL items of a given purchase status from cache in a single atomic operation.
@@ -72,9 +73,13 @@ function clearItemsFromCache(
 
   // Evict all deleted items from cache
   itemIds.forEach(itemId => {
-    cache.evict({
-      id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+    const cacheId = cache.identify({
+      __typename: 'ShoppingListItem',
+      id: itemId,
     });
+    if (cacheId) {
+      cache.evict({ id: cacheId });
+    }
   });
 
   cache.gc();
@@ -118,10 +123,15 @@ function updateItemsConnectionForPurchaseStatusChange(
     cache.modify({
       id: parentCacheId,
       fields: {
-        itemsConnection(existing: any, { readField, storeFieldName, toReference }: any) {
+        itemsConnection(
+          existing: any,
+          { readField, storeFieldName, toReference }: any,
+        ) {
           // Detect which filtered variant this is by checking storeFieldName
-          const isUnpurchasedConnection = storeFieldName.includes('isPurchased":false');
-          const isPurchasedConnection = storeFieldName.includes('isPurchased":true');
+          const isUnpurchasedConnection =
+            storeFieldName.includes('isPurchased":false');
+          const isPurchasedConnection =
+            storeFieldName.includes('isPurchased":true');
 
           if (!existing?.edges) return existing;
 
@@ -147,7 +157,10 @@ function updateItemsConnectionForPurchaseStatusChange(
                   {
                     __typename: 'ShoppingListItemEdge',
                     cursor: itemId,
-                    node: toReference({ __typename: 'ShoppingListItem', id: itemId }),
+                    node: toReference({
+                      __typename: 'ShoppingListItem',
+                      id: itemId,
+                    }),
                   },
                   ...existing.edges,
                 ],
@@ -176,7 +189,10 @@ function updateItemsConnectionForPurchaseStatusChange(
                   {
                     __typename: 'ShoppingListItemEdge',
                     cursor: itemId,
-                    node: toReference({ __typename: 'ShoppingListItem', id: itemId }),
+                    node: toReference({
+                      __typename: 'ShoppingListItem',
+                      id: itemId,
+                    }),
                   },
                   ...existing.edges,
                 ],
@@ -188,14 +204,15 @@ function updateItemsConnectionForPurchaseStatusChange(
           return existing;
         },
         completedItems(existing: number = 0) {
-          return movingToPurchased
-            ? existing + 1
-            : Math.max(0, existing - 1);
+          return movingToPurchased ? existing + 1 : Math.max(0, existing - 1);
         },
       },
     });
   } catch (error) {
-    console.warn('Failed to update itemsConnection for purchase status change:', error);
+    console.warn(
+      'Failed to update itemsConnection for purchase status change:',
+      error,
+    );
   }
 }
 
@@ -245,10 +262,14 @@ export function addNewItemToShoppingListCache(
     cache.modify({
       id: parentCacheId,
       fields: {
-        itemsConnection(existing: any, { readField, storeFieldName, toReference }: any) {
+        itemsConnection(
+          existing: any,
+          { readField, storeFieldName, toReference }: any,
+        ) {
           if (!existing?.edges) return existing;
 
-          const isPurchasedConnection = storeFieldName.includes('isPurchased":true');
+          const isPurchasedConnection =
+            storeFieldName.includes('isPurchased":true');
 
           if (isPurchasedConnection) {
             // REMOVE from purchased variant (handles re-add of previously purchased item)
@@ -277,7 +298,10 @@ export function addNewItemToShoppingListCache(
               {
                 __typename: 'ShoppingListItemEdge',
                 cursor: item.id,
-                node: toReference({ __typename: 'ShoppingListItem', id: item.id }, true),
+                node: toReference(
+                  { __typename: 'ShoppingListItem', id: item.id },
+                  true,
+                ),
               },
               ...existing.edges,
             ],

@@ -1,19 +1,21 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
-import { useUnistyles, StyleSheet } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { usePantrySelectorConfig } from '#hooks/pantry/usePantrySelectorConfig';
 import { useScannerSetup } from '#hooks/scanner/useScannerSetup';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
-import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import {
-  useFeatureHint,
-  getScreenVisitCount,
-  incrementScreenVisitCount,
-} from '#hooks/useFeatureHint';
+  useTabBarSetters,
+  useTabBarState,
+} from '#/context/TabBarActionsContext';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import {
+  useTutorialSequence,
+  type TutorialStep,
+} from '#hooks/ui/useTutorialSequence';
 import { Telemetry } from '#services/telemetry';
 import { useStore } from '#store';
 import { usePantryScreen } from '#hooks/pantry/usePantryScreen';
@@ -38,13 +40,34 @@ import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import { SectionHeader } from '#components/molecules/SectionHeader';
 
+// ── Pantry tutorial steps (data-driven, add entries to extend) ──
+const PANTRY_TUTORIAL_STEPS: TutorialStep[] = [
+  {
+    featureId: 'pantry_tutorial_home',
+    title: 'Tap to manage homes',
+    subtitle: 'Switch between homes or manage home settings',
+    rectKey: 'homeBadge',
+  },
+  {
+    featureId: 'pantry_tutorial_settings',
+    title: 'Pantry settings',
+    subtitle: 'Switch between pantry lists and create new pantries',
+    rectKey: 'settingsIcon',
+  },
+  {
+    featureId: 'pantry_tutorial_add',
+    title: 'Add items quickly',
+    subtitle: 'Tap + to add items to your pantry',
+    rectKey: 'addButton',
+  },
+];
+
 /**
  * Inner component that runs all heavy hooks.
  * Only mounts after DeferredScreen gates rendering, so the skeleton paints instantly.
  */
 const PantryMainInner: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
-  useUnistyles();
   const { setOverlayOpen } = useTabBarSetters();
 
   // ── Facade hook: all data-fetching & state ──
@@ -60,14 +83,6 @@ const PantryMainInner: React.FC = () => {
       item_count: screen.pantryItems.length,
       has_pantries: screen.pantries.length > 0,
     }),
-  });
-
-  // ── Feature hint for home switch button ──
-  const userId = screen.authUser?.id;
-  const visitCount = getScreenVisitCount('PantryMain', userId);
-  const homeSwitchHint = useFeatureHint({
-    featureId: 'pantry_home_switch',
-    showOnMount: false,
   });
 
   // ── Refs ──
@@ -109,34 +124,9 @@ const PantryMainInner: React.FC = () => {
     navigate,
   });
 
-  // ── Track screen visits & show feature hint on 2nd visit ──
-  useEffect(() => {
-    if (userId) {
-      incrementScreenVisitCount('PantryMain', userId);
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    if (
-      visitCount >= 2 &&
-      screen.selectedHomeId &&
-      screen.pantryItems.length > 0 &&
-      !homeSwitchHint.hasBeenShown &&
-      !screen.showBiometricSetup
-    ) {
-      const timer = setTimeout(() => {
-        homeSwitchHint.actions.show();
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [
-    visitCount,
-    screen.pantryItems.length,
-    screen.selectedHomeId,
-    homeSwitchHint.hasBeenShown,
-    homeSwitchHint.actions,
-    screen.showBiometricSetup,
-  ]);
+  // Tutorial trigger conditions (passed to usePantryTutorial in PantryMainContent)
+  const canStartTutorial =
+    !!screen.selectedHomeId && !screen.showBiometricSetup;
 
   // ── Navigation callbacks ──
   const handleItemPress = (id: string) =>
@@ -165,6 +155,8 @@ const PantryMainInner: React.FC = () => {
       createLocation={screen.createLocation}
       creatingLocation={screen.creatingLocation}
       onScrollToTop={() => pantryContentRef.current?.scrollToTop()}
+      searchQuery={screen.searchQuery}
+      onSearchQueryClear={() => screen.setSearchQuery('')}
     >
       <PantryMainContent
         screen={screen}
@@ -181,7 +173,7 @@ const PantryMainInner: React.FC = () => {
         onSelectHome={handleSelectHome}
         onOverlayOpen={handleOverlayOpen}
         onOverlayClose={handleOverlayClose}
-        homeSwitchHint={homeSwitchHint}
+        canStartTutorial={canStartTutorial}
         isPantryFocused={isPantryFocused}
       />
     </PantryModalsProvider>
@@ -207,7 +199,7 @@ interface PantryMainContentProps {
   onSelectHome: () => void;
   onOverlayOpen: () => void;
   onOverlayClose: () => void;
-  homeSwitchHint: ReturnType<typeof useFeatureHint>;
+  canStartTutorial: boolean;
   isPantryFocused: boolean;
 }
 
@@ -226,7 +218,7 @@ function PantryMainContent({
   onSelectHome,
   onOverlayOpen,
   onOverlayClose,
-  homeSwitchHint,
+  canStartTutorial,
   isPantryFocused,
 }: PantryMainContentProps) {
   const {
@@ -239,13 +231,42 @@ function PantryMainContent({
     setAddLocationSheetVisible,
   } = usePantryModals();
 
-  // Track home badge position for spotlight coach-mark
+  // Track element positions for tutorial spotlight coach-marks
   const [homeBadgeRect, setHomeBadgeRect] = useState<{
     x: number;
     y: number;
     width: number;
     height: number;
   } | null>(null);
+  const [settingsIconRect, setSettingsIconRect] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const { addButtonRect, isOverlayOpen } = useTabBarState();
+
+  // ── Tutorial orchestration ──
+  const tutorial = useTutorialSequence({
+    steps: PANTRY_TUTORIAL_STEPS,
+    targetRects: {
+      homeBadge: homeBadgeRect,
+      settingsIcon: settingsIconRect,
+      addButton: addButtonRect,
+    },
+    canStart: canStartTutorial,
+    isPaused: !isPantryFocused || isOverlayOpen,
+  });
+
+  // Target press actions per tutorial step
+  const tutorialTargetActions: Record<number, () => void> = {
+    0: onHomePress,
+    1: onSettingsPress,
+    2: () => {
+      Telemetry.trackEvent('add_pantry_item_clicked');
+      setAddSheetVisible(true);
+    },
+  };
 
   // Register add button action via tab bar
   useTabBarAddButton(
@@ -310,6 +331,7 @@ function PantryMainContent({
         refreshing={screen.isRefreshing}
         loading={screen.isLoadingInitial}
         onHomeBadgeLayout={setHomeBadgeRect}
+        onSettingsIconLayout={setSettingsIconRect}
       />
       <AnimatedItemSelector
         ref={selectorRef}
@@ -317,16 +339,20 @@ function PantryMainContent({
         onOpen={onOverlayOpen}
         onClose={onOverlayClose}
       />
-      {/* Home switch spotlight coach-mark */}
-      {homeSwitchHint.isVisible && homeBadgeRect && isPantryFocused ? (
+      {/* Tutorial spotlight coach-marks */}
+      {tutorial.currentStep ? (
         <SpotlightCoachMark
-          targetRect={homeBadgeRect}
-          title="Tap to manage homes"
-          subtitle="Switch between homes or manage home settings"
-          onDismiss={homeSwitchHint.actions.dismiss}
+          targetRect={tutorial.currentStep.targetRect}
+          title={tutorial.currentStep.title}
+          subtitle={tutorial.currentStep.subtitle}
+          stepIndex={tutorial.currentStep.stepIndex}
+          totalSteps={tutorial.currentStep.totalSteps}
+          onDismiss={tutorial.skipAll}
           onTargetPress={() => {
-            homeSwitchHint.actions.dismiss();
-            onHomePress();
+            const action =
+              tutorialTargetActions[tutorial.currentStep!.stepIndex];
+            action?.();
+            tutorial.advance();
           }}
         />
       ) : null}

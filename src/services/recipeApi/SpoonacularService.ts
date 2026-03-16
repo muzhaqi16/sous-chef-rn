@@ -125,12 +125,16 @@ class SpoonacularService {
       ignorePantry = true,
     } = params;
 
-    return this.fetch<RecipeSearchResult[]>('/recipes/findByIngredients', {
-      ingredients,
-      number: Math.min(number, 10), // Limit to 10 to save API calls
-      ranking,
-      ignorePantry,
-    }, signal);
+    return this.fetch<RecipeSearchResult[]>(
+      '/recipes/findByIngredients',
+      {
+        ingredients,
+        number: Math.min(number, 10), // Limit to 10 to save API calls
+        ranking,
+        ignorePantry,
+      },
+      signal,
+    );
   }
 
   /**
@@ -146,9 +150,13 @@ class SpoonacularService {
   ): Promise<RecipeInformation> {
     const { id, includeNutrition = true } = params;
 
-    return this.fetch<RecipeInformation>(`/recipes/${id}/information`, {
-      includeNutrition,
-    }, signal);
+    return this.fetch<RecipeInformation>(
+      `/recipes/${id}/information`,
+      {
+        includeNutrition,
+      },
+      signal,
+    );
   }
 
   /**
@@ -164,12 +172,16 @@ class SpoonacularService {
   ): Promise<SearchRecipesResponse> {
     const { query, number = 10, offset = 0, ...restParams } = params;
 
-    return this.fetch<SearchRecipesResponse>('/recipes/complexSearch', {
-      query,
-      number: Math.min(number, 10), // Limit to 10 to save API calls
-      offset,
-      ...restParams,
-    }, signal);
+    return this.fetch<SearchRecipesResponse>(
+      '/recipes/complexSearch',
+      {
+        query,
+        number: Math.min(number, 10), // Limit to 10 to save API calls
+        offset,
+        ...restParams,
+      },
+      signal,
+    );
   }
 
   /**
@@ -189,7 +201,7 @@ class SpoonacularService {
       '/recipes/random',
       {
         number: Math.min(number, 10), // Limit to 10 to save API calls
-        tags,
+        'include-tags': tags,
         includeNutrition,
       },
       signal,
@@ -205,14 +217,21 @@ class SpoonacularService {
    * @param ids - Array of recipe IDs
    * @returns Array of recipe information
    */
-  async getBulkRecipeInformation(ids: number[], signal?: AbortSignal): Promise<RecipeInformation[]> {
+  async getBulkRecipeInformation(
+    ids: number[],
+    signal?: AbortSignal,
+  ): Promise<RecipeInformation[]> {
     // Note: This is more efficient than individual calls
     // but still counts as 1 request per recipe
     const idsString = ids.join(',');
 
-    return this.fetch<RecipeInformation[]>('/recipes/informationBulk', {
-      ids: idsString,
-    }, signal);
+    return this.fetch<RecipeInformation[]>(
+      '/recipes/informationBulk',
+      {
+        ids: idsString,
+      },
+      signal,
+    );
   }
 
   /**

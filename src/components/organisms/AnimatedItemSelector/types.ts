@@ -29,9 +29,11 @@ export interface SelectorConfig<T extends SelectableItem> {
   renderCustomItem?: (
     item: T,
     isSelected: boolean,
-    onPress: () => void
+    onPress: () => void,
   ) => React.ReactElement;
   extraData?: any;
+  /** Cap the visible list area to this many items, then scroll */
+  maxVisibleItems?: number;
 }
 
 export interface AnimatedItemSelectorProps<T extends SelectableItem> {
@@ -56,7 +58,7 @@ export interface SelectorItemProps<T extends SelectableItem> {
   renderCustomItem?: (
     item: T,
     isSelected: boolean,
-    onPress: () => void
+    onPress: () => void,
   ) => React.ReactElement;
   extraData?: any;
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   RefreshControl,
   useWindowDimensions,
@@ -81,6 +81,15 @@ interface ShoppingListTabsProps {
   batchMoveToPantryLoading?: boolean;
   // List header (e.g. SearchBar) rendered inside FlashList for correct RefreshControl position
   listHeaderComponent?: React.ReactElement | null;
+  // Current search query for search-aware empty states in tabs
+  searchQuery?: string;
+  /** Callback with screen-coordinate rect when the filter tab bar lays out */
+  onFilterTabBarLayout?: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
 }
 
 const ROUTES: TabRoute[] = [
@@ -143,7 +152,12 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   batchMoveToPantryLoading = false,
   // List header
   listHeaderComponent,
+  // Search query
+  searchQuery,
+  // Tutorial layout measurement
+  onFilterTabBarLayout,
 }) => {
+  const tabBarRef = useRef<View>(null);
   const layout = useWindowDimensions();
 
   // TabView navigation state
@@ -288,12 +302,33 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Render FilterTabBar as the TabView's tab bar so it's always visible,
   // even when a tab's FlashList is replaced by an empty state
   const renderTabBar = () => (
-    <FilterTabBar
-      navigationState={{ index, routes: ROUTES }}
-      jumpTo={jumpTo}
-      counts={counts}
-      actionButtons={actionButtons.length > 0 ? actionButtons : undefined}
-    />
+    <View
+      ref={tabBarRef}
+      collapsable={false}
+      onLayout={() => {
+        if (onFilterTabBarLayout) {
+          requestAnimationFrame(() => {
+            tabBarRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+              if (w > 0 && h > 0) {
+                onFilterTabBarLayout({
+                  x: pageX,
+                  y: pageY,
+                  width: w,
+                  height: h,
+                });
+              }
+            });
+          });
+        }
+      }}
+    >
+      <FilterTabBar
+        navigationState={{ index, routes: ROUTES }}
+        jumpTo={jumpTo}
+        counts={counts}
+        actionButtons={actionButtons.length > 0 ? actionButtons : undefined}
+      />
+    </View>
   );
 
   // Per-tab data for context — decoupled from renderScene so TabView doesn't
@@ -330,14 +365,20 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     isTransitioning,
   };
 
-  const tabData = { shopping: shoppingTabData, purchased: purchasedTabData };
+  const tabData = {
+    shopping: shoppingTabData,
+    purchased: purchasedTabData,
+    searchQuery: searchQuery ?? '',
+  };
 
   // Empty state: shown after loading completes with zero items across both tabs.
   // During transitions (list switches), items may briefly be empty — skip empty state.
+  // When search is active, let per-tab empty states handle messaging instead.
   const showEmptyState =
     !loading &&
     !refreshing &&
     !isTransitioning &&
+    !searchQuery?.trim() &&
     unpurchasedItems.length === 0 &&
     purchasedItems.length === 0 &&
     !!emptyState;

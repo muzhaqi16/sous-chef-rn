@@ -106,7 +106,10 @@ module.exports = {
     'react/no-unstable-nested-components': ['warn', { allowAsProps: true }],
 
     // Prevent falsy values (0, "", NaN) from leaking into JSX rendering
-    'react/jsx-no-leaked-render': ['error', { validStrategies: ['ternary', 'coerce'] }],
+    'react/jsx-no-leaked-render': [
+      'error',
+      { validStrategies: ['ternary', 'coerce'] },
+    ],
 
     // Prevent inline import() types — use top-level imports instead
     // Prevent inline functions passed to scheduleOnRN — causes native crashes on Android
@@ -114,23 +117,38 @@ module.exports = {
       'error',
       {
         selector: 'TSImportType',
-        message: 'Avoid inline import() types. Import the type at the top of the file instead.',
+        message:
+          'Avoid inline import() types. Import the type at the top of the file instead.',
       },
       {
-        selector: 'CallExpression[callee.name="scheduleOnRN"] > :matches(ArrowFunctionExpression, FunctionExpression)',
-        message: 'Do not pass inline functions to scheduleOnRN — define the callback in RN runtime scope first. Inline functions inside worklets cause native crashes on Android.',
+        selector:
+          'CallExpression[callee.name="scheduleOnRN"] > :matches(ArrowFunctionExpression, FunctionExpression)',
+        message:
+          'Do not pass inline functions to scheduleOnRN — define the callback in RN runtime scope first. Inline functions inside worklets cause native crashes on Android.',
       },
       {
-        selector: ':matches(Property[key.name="shadowColor"], Property[key.name="shadowOffset"], Property[key.name="shadowOpacity"], Property[key.name="shadowRadius"])',
-        message: 'Use CSS boxShadow syntax instead of individual shadow properties. See src/styles/listStyles.ts for the correct pattern.',
+        selector:
+          ':matches(Property[key.name="shadowColor"], Property[key.name="shadowOffset"], Property[key.name="shadowOpacity"], Property[key.name="shadowRadius"])',
+        message:
+          'Use CSS boxShadow syntax instead of individual shadow properties. See src/styles/listStyles.ts for the correct pattern.',
       },
       {
-        selector: 'AssignmentExpression[left.type="MemberExpression"][left.property.name="value"]',
-        message: 'Use .set() instead of .value assignment for SharedValues (React Compiler compatibility). If this is not a SharedValue, refactor to avoid .value mutation.',
+        selector:
+          'AssignmentExpression[left.type="MemberExpression"][left.property.name="value"]',
+        message:
+          'Use .set() instead of .value assignment for SharedValues (React Compiler compatibility). If this is not a SharedValue, refactor to avoid .value mutation.',
       },
       {
-        selector: 'TSAsExpression[typeAnnotation.type="TSTypeReference"][typeAnnotation.typeName.name="const"]',
-        message: 'Avoid `as const` — let TypeScript infer literal types naturally. Use `as const` only for union type derivation or discriminated unions.',
+        selector:
+          'TSAsExpression[typeAnnotation.type="TSTypeReference"][typeAnnotation.typeName.name="const"]',
+        message:
+          'Avoid `as const` — let TypeScript infer literal types naturally. Use `as const` only for union type derivation or discriminated unions.',
+      },
+      {
+        selector:
+          'ExpressionStatement > CallExpression[callee.name="useUnistyles"]',
+        message:
+          'useUnistyles() called without using its return value has no effect. Destructure what you need: `const { theme } = useUnistyles()`.',
       },
     ],
   },

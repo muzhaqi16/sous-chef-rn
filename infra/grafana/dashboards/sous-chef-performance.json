@@ -27,7 +27,7 @@
       "title": "Overview",
       "tooltip": "",
       "type": "link",
-      "url": "/d/sous-chef-overview/sous-chef-executive-overview"
+      "url": "/d/sous-chef-exec-overview/sous-chef-executive-overview"
     },
     {
       "asDropdown": false,
@@ -96,7 +96,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(slow_component_renders_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(slow_component_renders_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "refId": "A",
           "legendFormat": "Slow Renders"
         }
@@ -145,7 +145,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(slow_screen_transitions_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(slow_screen_transitions_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "refId": "A",
           "legendFormat": "Slow Transitions"
         }
@@ -199,7 +199,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "avg(app_memory_usage_percent{job=\"sous-chef-app\"})",
+          "expr": "avg(app_memory_usage_percent{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
           "refId": "A",
           "legendFormat": "Memory Usage %"
         }
@@ -248,7 +248,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(app_memory_warnings_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(app_memory_warnings_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "refId": "A",
           "legendFormat": "Warnings"
         }
@@ -296,7 +296,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(app_memory_critical_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(app_memory_critical_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "refId": "A",
           "legendFormat": "Critical"
         }
@@ -339,9 +339,7 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "unit": "ms"
         }
@@ -366,12 +364,12 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(screen_transition_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (screen, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(screen_transition_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (screen, le))",
           "refId": "A",
           "legendFormat": "Screen: {{screen}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(component_render_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (component, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(component_render_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (component, le))",
           "refId": "B",
           "legendFormat": "Component: {{component}}"
         }
@@ -443,12 +441,12 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(screen_mount_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (screen, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(screen_mount_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (screen, le))",
           "refId": "A",
           "legendFormat": "Mount: {{screen}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(screen_interactive_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (screen, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(screen_interactive_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (screen, le))",
           "refId": "B",
           "legendFormat": "Interactive: {{screen}}"
         }
@@ -491,9 +489,7 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "unit": "bytes"
         }
@@ -518,12 +514,12 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "avg(app_memory_used_bytes{job=\"sous-chef-app\"})",
+          "expr": "avg(app_memory_used_bytes{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
           "refId": "A",
           "legendFormat": "Memory Used"
         },
         {
-          "expr": "avg(app_memory_limit_bytes{job=\"sous-chef-app\"})",
+          "expr": "avg(app_memory_limit_bytes{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
           "refId": "B",
           "legendFormat": "Memory Limit"
         }
@@ -576,37 +572,37 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(increase(recipe_detail_errors_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(recipe_detail_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "format": "table",
           "instant": true,
           "refId": "A"
         },
         {
-          "expr": "sum(increase(shopping_list_errors_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(shopping_list_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "format": "table",
           "instant": true,
           "refId": "B"
         },
         {
-          "expr": "sum(increase(pantry_errors_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(pantry_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "format": "table",
           "instant": true,
           "refId": "C"
         },
         {
-          "expr": "sum(increase(onboarding_errors_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(onboarding_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "format": "table",
           "instant": true,
           "refId": "D"
         },
         {
-          "expr": "sum(increase(navigation_errors_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(navigation_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "format": "table",
           "instant": true,
           "refId": "E"
         },
         {
-          "expr": "sum(increase(auth_errors_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(auth_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "format": "table",
           "instant": true,
           "refId": "F"
@@ -704,9 +700,7 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           }
         }
       },
@@ -767,9 +761,7 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           }
         }
       },
@@ -796,7 +788,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "count(count by(__name__)({job=\"sous-chef-app\"}))",
+          "expr": "count(count by(__name__)({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}))",
           "refId": "A",
           "legendFormat": "Total Metrics"
         }
@@ -918,7 +910,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "time() - push_time_seconds{job=\"sous-chef-app\"}",
+          "expr": "time() - push_time_seconds{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}",
           "refId": "A",
           "legendFormat": "{{instance}}"
         }
@@ -990,27 +982,27 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "JS→Hydrated P50"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "B",
           "legendFormat": "JS→Hydrated P95"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "C",
           "legendFormat": "Native Launch P95"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "D",
           "legendFormat": "Bundle Load P95"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "E",
           "legendFormat": "Content Appeared P95"
         }
@@ -1057,9 +1049,7 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "unit": "ms"
         }
@@ -1084,22 +1074,22 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "Native Launch"
         },
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "B",
           "legendFormat": "Bundle Load"
         },
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "C",
           "legendFormat": "JS→Hydrated"
         },
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "D",
           "legendFormat": "Content Appeared"
         }
@@ -1153,7 +1143,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "Avg Startup"
         }
@@ -1207,7 +1197,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "Native Launch P95"
         }
@@ -1261,7 +1251,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "Bundle Load P95"
         }
@@ -1315,7 +1305,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "Content Appeared P95"
         }
@@ -1387,12 +1377,12 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(http_request_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (host, le))",
+          "expr": "histogram_quantile(0.5, sum(rate(http_request_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (host, le))",
           "refId": "A",
           "legendFormat": "P50: {{host}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (host, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (host, le))",
           "refId": "B",
           "legendFormat": "P95: {{host}}"
         }
@@ -1446,7 +1436,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "HTTP P95"
         }
@@ -1495,7 +1485,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(increase(apollo_client_errors_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(apollo_client_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "refId": "A",
           "legendFormat": "Apollo Errors"
         }
@@ -1544,7 +1534,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(increase(app_unhandled_exceptions_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(app_unhandled_exceptions_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "refId": "A",
           "legendFormat": "Unhandled Exceptions"
         }
@@ -1593,7 +1583,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(increase(app_level_errors_total{job=\"sous-chef-app\"}[1h]))",
+          "expr": "sum(increase(app_level_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "refId": "A",
           "legendFormat": "Error Boundary"
         }
@@ -1605,7 +1595,13 @@
   "refresh": "10s",
   "schemaVersion": 30,
   "style": "dark",
-  "tags": ["react-native", "mobile", "sous-chef", "performance", "infrastructure"],
+  "tags": [
+    "react-native",
+    "mobile",
+    "sous-chef",
+    "performance",
+    "infrastructure"
+  ],
   "templating": {
     "list": [
       {
@@ -1656,7 +1652,7 @@
           "type": "prometheus",
           "uid": "${prometheus_datasource}"
         },
-        "definition": "label_values({job=\"sous-chef-app\"}, env)",
+        "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}, env)",
         "hide": 0,
         "includeAll": true,
         "label": "Environment",
@@ -1664,7 +1660,7 @@
         "name": "environment",
         "options": [],
         "query": {
-          "query": "label_values({job=\"sous-chef-app\"}, env)",
+          "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}, env)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -1683,7 +1679,7 @@
           "type": "prometheus",
           "uid": "${prometheus_datasource}"
         },
-        "definition": "label_values({job=\"sous-chef-app\"}, platform)",
+        "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}, platform)",
         "hide": 0,
         "includeAll": true,
         "label": "Platform",
@@ -1691,7 +1687,7 @@
         "name": "platform",
         "options": [],
         "query": {
-          "query": "label_values({job=\"sous-chef-app\"}, platform)",
+          "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}, platform)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -1707,7 +1703,18 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
   },
   "timezone": "",
   "title": "Sous Chef - Performance & Infrastructure",

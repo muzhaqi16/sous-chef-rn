@@ -628,6 +628,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
             {/* Net Weight Section */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Net Weight</Text>
+              <Text style={styles.sectionDescription}>
+                Net weight is used for consumption tracking and is optional.
+              </Text>
               <View
                 pointerEvents={isWeightLocked ? 'none' : 'auto'}
                 style={isWeightLocked ? styles.lockedSection : undefined}
@@ -723,6 +726,12 @@ const styles = StyleSheet.create(theme => ({
   errorText: {
     fontSize: theme.fonts.size.lg,
     color: theme.colors.error,
+  },
+  sectionDescription: {
+    fontSize: theme.fonts.size.sm,
+    fontStyle: 'italic',
+    color: theme.colors.textTertiary,
+    marginBottom: theme.spacing.sm,
   },
   lockedSection: {
     opacity: theme.opacity.disabled,

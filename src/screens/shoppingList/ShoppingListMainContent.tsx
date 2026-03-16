@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Pressable } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // Components
@@ -9,19 +10,27 @@ import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { ShoppingListTabs } from '#components/organisms/ShoppingListTabs/ShoppingListTabs';
 import { InteractiveSwipeHint } from '#components/organisms/InteractiveSwipeHint/InteractiveSwipeHint';
+import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { Icon } from '#utils/iconUtils';
 
 // Hooks & Context
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useFeatureHint } from '#hooks/useFeatureHint';
+import {
+  useTutorialSequence,
+  type TutorialStep,
+} from '#hooks/ui/useTutorialSequence';
 import type { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
 import { useShoppingListActions } from '#hooks/shoppingList/useShoppingListActions';
 import { useBatchMoveToPantry } from '#hooks/shoppingList/useBatchMoveToPantry';
 import { useShoppingListSelectorModal } from '#hooks/shoppingList/useShoppingListSelectorModal';
 import { useItemReordering } from '#hooks/shoppingList/useItemReordering';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
-import { useTabBarSetters } from '#/context/TabBarActionsContext';
+import {
+  useTabBarSetters,
+  useTabBarState,
+} from '#/context/TabBarActionsContext';
 import { useShoppingListModals } from '#/context/ShoppingListModalsContext';
 import { useAuthUser } from '#/hooks/auth/useAuthUser';
 
@@ -30,6 +39,28 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { Telemetry } from '#/services/telemetry';
 import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+
+// ── Shopping list tutorial steps (data-driven, add entries to extend) ──
+const SHOPPING_LIST_TUTORIAL_STEPS: TutorialStep[] = [
+  {
+    featureId: 'shopping_tutorial_selector',
+    title: 'Manage your lists',
+    subtitle: 'Create new lists and switch between them',
+    rectKey: 'selectorIcon',
+  },
+  {
+    featureId: 'shopping_tutorial_tabs',
+    title: 'Switch between tabs',
+    subtitle: 'View your shopping items or purchased items',
+    rectKey: 'filterTabBar',
+  },
+  {
+    featureId: 'shopping_tutorial_add',
+    title: 'Add items quickly',
+    subtitle: 'Tap + to add items to your shopping list',
+    rectKey: 'addButton',
+  },
+];
 
 /**
  * Inner content component that uses modal context.
@@ -89,7 +120,26 @@ export const ShoppingListMainContent: React.FC<
 
   const { navigate, navigateTo } = useAppNavigation();
   const { setScannerProps } = useTabBarSetters();
+  const { addButtonRect, isOverlayOpen } = useTabBarState();
   const { theme } = useUnistyles();
+
+  // ── Screen focus tracking ──
+  const [isScreenFocused, setIsScreenFocused] = useState(true);
+  const [onScreenFocus] = useState(() => () => {
+    setIsScreenFocused(true);
+    return () => setIsScreenFocused(false);
+  });
+  useFocusEffect(onScreenFocus);
+
+  // ── Element position tracking for tutorial spotlight ──
+  type LayoutRect = { x: number; y: number; width: number; height: number };
+  const selectorIconRef = useRef<View>(null);
+  const [selectorIconRect, setSelectorIconRect] = useState<LayoutRect | null>(
+    null,
+  );
+  const [filterTabBarRect, setFilterTabBarRect] = useState<LayoutRect | null>(
+    null,
+  );
 
   // Get current user for permission calculations
   const user = useAuthUser();
@@ -150,6 +200,32 @@ export const ShoppingListMainContent: React.FC<
   const { handleSwipeableWillOpen, handleSwipeableClose, closeAll } =
     useSwipeableCoordinator();
 
+  // ── Tutorial orchestration ──
+  const tutorial = useTutorialSequence({
+    steps: SHOPPING_LIST_TUTORIAL_STEPS,
+    targetRects: {
+      selectorIcon: selectorIconRect,
+      filterTabBar: filterTabBarRect,
+      addButton: addButtonRect,
+    },
+    canStart: lists.length > 0,
+    isPaused: !isScreenFocused || isOverlayOpen || swipeHint.isVisible,
+  });
+
+  // Target press actions per tutorial step
+  const tutorialTargetActions: Record<number, () => void> = {
+    0: handleOpenSelector,
+    1: () => {
+      // No specific navigation — the spotlight highlights the tab bar
+    },
+    2: () => {
+      Telemetry.trackEvent('add_item_from_tab_bar', {
+        list_id: currentListId,
+      });
+      addItemSheet.open();
+    },
+  };
+
   // Show swipe hint after items load
   useEffect(() => {
     if (unpurchasedItems.length > 0 && !swipeHint.hasBeenShown) {
@@ -192,17 +268,31 @@ export const ShoppingListMainContent: React.FC<
     );
   })();
 
-  // Header right action - list selector button
+  // Header right action - list selector button (wrapped for tutorial measurement)
   const headerRight = (
-    <Pressable
-      onPress={handleOpenSelector}
-      hitSlop={8}
-      testID="shopping-list-selector"
-      accessibilityRole="button"
-      accessibilityLabel="Switch shopping list"
+    <View
+      ref={selectorIconRef}
+      collapsable={false}
+      onLayout={() => {
+        requestAnimationFrame(() => {
+          selectorIconRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+            if (w > 0 && h > 0) {
+              setSelectorIconRect({ x: pageX, y: pageY, width: w, height: h });
+            }
+          });
+        });
+      }}
     >
-      <Icon name="list" size={24} color={theme.colors.textSecondary} />
-    </Pressable>
+      <Pressable
+        onPress={handleOpenSelector}
+        hitSlop={8}
+        testID="shopping-list-selector"
+        accessibilityRole="button"
+        accessibilityLabel="Switch shopping list"
+      >
+        <Icon name="list" size={24} color={theme.colors.textSecondary} />
+      </Pressable>
+    </View>
   );
 
   // SearchBar rendered above tab pills (positioned above TabView in ShoppingListTabs)
@@ -256,6 +346,10 @@ export const ShoppingListMainContent: React.FC<
     canReorderItems: permissions.canEditItems,
     // Header
     listHeaderComponent: searchBarHeader,
+    // Search query for search-aware empty states
+    searchQuery,
+    // Tutorial layout measurement
+    onFilterTabBarLayout: setFilterTabBarRect,
   };
 
   // Set up scanner button
@@ -361,6 +455,24 @@ export const ShoppingListMainContent: React.FC<
           onDismiss={swipeHint.actions.dismiss}
         />
       )}
+
+      {/* Tutorial spotlight coach-marks */}
+      {tutorial.currentStep ? (
+        <SpotlightCoachMark
+          targetRect={tutorial.currentStep.targetRect}
+          title={tutorial.currentStep.title}
+          subtitle={tutorial.currentStep.subtitle}
+          stepIndex={tutorial.currentStep.stepIndex}
+          totalSteps={tutorial.currentStep.totalSteps}
+          onDismiss={tutorial.skipAll}
+          onTargetPress={() => {
+            const action =
+              tutorialTargetActions[tutorial.currentStep!.stepIndex];
+            action?.();
+            tutorial.advance();
+          }}
+        />
+      ) : null}
 
       {/* Modals are rendered inside ShoppingListModalsProvider */}
     </View>

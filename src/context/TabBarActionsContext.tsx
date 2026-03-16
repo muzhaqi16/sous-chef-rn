@@ -7,6 +7,7 @@ import React, {
   ReactNode,
 } from 'react';
 import type { IconLibrary } from '#/utils/iconUtils';
+import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 
 /**
  * TabBarActionsContext - Split into State and Setters contexts
@@ -43,6 +44,7 @@ interface TabBarSettersContextType {
   ) => void;
   setActiveTab: (tabName: string) => void;
   setOverlayOpen: (isOpen: boolean) => void;
+  setAddButtonRect: (rect: TargetRect) => void;
 }
 
 interface TabBarStateContextType {
@@ -60,15 +62,16 @@ interface TabBarStateContextType {
   // Shared state
   activeTab: string;
   isOverlayOpen: boolean;
+  addButtonRect: TargetRect | null;
 }
 
 // Combined type for backwards compatibility
 type TabBarActionsContextType = TabBarSettersContextType &
   TabBarStateContextType;
 
-const TabBarSettersContext = createContext<TabBarSettersContextType | undefined>(
-  undefined,
-);
+const TabBarSettersContext = createContext<
+  TabBarSettersContextType | undefined
+>(undefined);
 
 const TabBarStateContext = createContext<TabBarStateContextType | undefined>(
   undefined,
@@ -99,6 +102,7 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   // Shared state
   const [activeTab, setActiveTab] = useState<string>('');
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+  const [addButtonRect, setAddButtonRect] = useState<TargetRect | null>(null);
 
   // Ref to track activeTab for use in callbacks without causing re-renders
   const activeTabRef = useRef(activeTab);
@@ -117,7 +121,10 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     {},
   );
 
-  const setScannerProps = (scanPress?: () => void, showButton: boolean = false) => {
+  const setScannerProps = (
+    scanPress?: () => void,
+    showButton: boolean = false,
+  ) => {
     // Only update if values have changed to prevent unnecessary re-renders
     setOnScanPress(prev => {
       // Compare function references - only update if different
@@ -177,6 +184,7 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     setAddProps,
     setActiveTab: handleSetActiveTab,
     setOverlayOpen: setOverlayOpenCb,
+    setAddButtonRect,
   };
 
   // Only show buttons if the current tab is in the allowed list and button is enabled
@@ -191,7 +199,10 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   const effectiveAddPress =
     onAddPress || (activeTab ? tabHandlers[activeTab] : undefined);
 
-  const addButtonConfig: AddButtonConfig = { icon: 'add', iconLibrary: 'Ionicons' };
+  const addButtonConfig: AddButtonConfig = {
+    icon: 'add',
+    iconLibrary: 'Ionicons',
+  };
 
   const stateValue: TabBarStateContextType = {
     onScanPress,
@@ -203,6 +214,7 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     addButtonDisabledMessage,
     activeTab,
     isOverlayOpen,
+    addButtonRect,
   };
 
   return (

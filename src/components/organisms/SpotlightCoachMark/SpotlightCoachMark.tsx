@@ -32,6 +32,10 @@ export interface SpotlightCoachMarkProps {
   onDismiss: () => void;
   /** Called when the user taps the highlighted target area */
   onTargetPress?: () => void;
+  /** Current step index (0-based) for multi-step tutorials */
+  stepIndex?: number;
+  /** Total number of steps in the tutorial sequence */
+  totalSteps?: number;
 }
 
 const HOLE_PADDING = 8;
@@ -52,6 +56,8 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   subtitle,
   onDismiss,
   onTargetPress,
+  stepIndex,
+  totalSteps,
 }) => {
   const { theme } = useUnistyles();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
@@ -119,9 +125,13 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
     ),
   );
 
-  // Arrow horizontal position relative to tooltip
-  const arrowLeft =
+  // Arrow horizontal position relative to tooltip, clamped within bounds
+  const arrowLeftRaw =
     targetRect.x + targetRect.width / 2 - tooltipLeft - ARROW_SIZE / 2;
+  const arrowLeft = Math.max(
+    theme.spacing.lg,
+    Math.min(arrowLeftRaw, TOOLTIP_WIDTH - ARROW_SIZE - theme.spacing.lg),
+  );
 
   return (
     <Modal
@@ -220,17 +230,45 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           {subtitle ? (
             <Text style={styles.tooltipSubtitle}>{subtitle}</Text>
           ) : null}
+          {totalSteps != null && stepIndex != null && totalSteps > 1 ? (
+            <View style={styles.stepIndicator}>
+              {Array.from({ length: totalSteps }, (_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.stepDot,
+                    {
+                      backgroundColor:
+                        i === stepIndex
+                          ? theme.colors.primary
+                          : theme.colors.border,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          ) : null}
         </Animated.View>
 
-        {/* Skip button — rendered last so it's on top of dim overlays */}
+        {/* Skip button — position adapts to avoid overlapping the target hole */}
         <Pressable
           onPress={onDismiss}
-          style={styles.skipButton}
+          style={[
+            styles.skipButton,
+            // If hole overlaps the default skip position (top-right),
+            // move skip to the left side
+            holeTop < theme.spacing.xl * 3 &&
+            holeLeft + holeWidth > screenWidth / 2
+              ? { right: undefined, left: theme.spacing.lg }
+              : undefined,
+          ]}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="Skip tutorial"
         >
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>
+            {totalSteps != null && totalSteps > 1 ? 'Skip all' : 'Skip'}
+          </Text>
         </Pressable>
       </View>
     </Modal>
@@ -285,6 +323,17 @@ const styles = StyleSheet.create(theme => ({
   tooltipSubtitle: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textSecondary,
+  },
+  stepIndicator: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.md,
+  },
+  stepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   skipButton: {
     position: 'absolute',

@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList/SortableList';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
+import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 
 interface StaggeredTabContentProps {
   items: SortableShoppingListItem[];
@@ -57,7 +58,12 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   listEmptyComponent,
 }) => {
   const footerComponent = (
-    <PaginationFooter hasMore={!!hasMore} itemCount={items.length} />
+    <PaginationFooter
+      hasMore={!!hasMore}
+      itemCount={items.length}
+      SkeletonComponent={ShoppingListItemSkeleton}
+      skeletonCount={3}
+    />
   );
 
   return (

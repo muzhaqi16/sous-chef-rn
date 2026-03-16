@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
-import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
+import {
+  FlashList,
+  type FlashListRef,
+  type ListRenderItemInfo,
+} from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../base/EmptyState';
 import { ItemCard } from './ItemCard';
+import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { IconName } from '#/utils/iconUtils';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { createPropsComparator } from '#utils/memoUtils';
@@ -127,6 +132,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   emptyState,
 }) => {
   const [refreshing, setRefreshing] = useState(false);
+  const flashListRef = useRef<FlashListRef<Item>>(null);
   const { bottom: safeBottom } = useSafeAreaInsets();
 
   // Dynamic content style with proper bottom padding for tab bar
@@ -146,7 +152,12 @@ export const ItemList: React.FC<ItemListProps> = ({
   const actions: ItemListActions = {
     onItemPress,
     onItemEdit,
-    onItemDelete,
+    onItemDelete: onItemDelete
+      ? (id: string) => {
+          flashListRef.current?.prepareForLayoutAnimationRender();
+          onItemDelete(id);
+        }
+      : undefined,
     onItemConsume,
     onItemWaste,
     onItemRestock,
@@ -184,8 +195,10 @@ export const ItemList: React.FC<ItemListProps> = ({
   return (
     <ItemListActionsProvider actions={actions}>
       <FlashList
+        ref={flashListRef}
         data={items}
         keyExtractor={keyExtractor}
+        CellRendererComponent={AnimatedCellRenderer}
         contentContainerStyle={contentStyle}
         showsVerticalScrollIndicator={false}
         refreshControl={

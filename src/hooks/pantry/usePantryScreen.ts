@@ -268,6 +268,8 @@ export function usePantryScreen() {
   );
   if (prevPantryId !== pantry?.id) {
     setPrevPantryId(pantry?.id);
+    setLocationFilter('all');
+    setSearchQuery('');
     if (prevPantryId && pantry?.id) {
       refetch();
     }

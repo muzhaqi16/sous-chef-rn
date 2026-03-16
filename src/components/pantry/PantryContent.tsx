@@ -40,6 +40,7 @@ import { PantryAlertBar } from '#components/pantry/PantryAlertBar';
 import { EmptyState } from '#components/base/EmptyState';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
+import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
 import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
@@ -145,6 +146,14 @@ interface PantryContentProps {
 
   /** Callback with screen-coordinate rect when the home badge lays out */
   onHomeBadgeLayout?: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
+
+  /** Callback with screen-coordinate rect when the settings gear icon lays out */
+  onSettingsIconLayout?: (rect: {
     x: number;
     y: number;
     width: number;
@@ -441,6 +450,7 @@ interface PantryEmptyStateProps {
   showSkeletons: boolean;
   searchQuery: string;
   itemCount: number;
+  totalCount?: number;
   locationFilter: LocationFilter;
   tabs: FilterTabConfig<LocationFilter>[];
   onAddItem?: () => void;
@@ -453,6 +463,7 @@ function PantryEmptyState({
   showSkeletons,
   searchQuery,
   itemCount,
+  totalCount,
   locationFilter,
   tabs,
   onAddItem,
@@ -495,17 +506,22 @@ function PantryEmptyState({
   }
 
   if (searchQuery) {
+    const displayQuery =
+      searchQuery.length > 30 ? searchQuery.slice(0, 30) + '...' : searchQuery;
     return (
       <EmptyState
         testID="pantry-empty-state"
         icon="search-outline"
-        title="No items found"
-        description="Try a different search term"
+        title={`No results for "${displayQuery}"`}
+        description="Would you like to add it to your pantry?"
+        action={
+          onAddItem ? { label: 'Add Item', onPress: onAddItem } : undefined
+        }
       />
     );
   }
 
-  if (locationFilter !== 'all' && itemCount === 0) {
+  if (locationFilter !== 'all' && itemCount === 0 && (totalCount ?? 0) > 0) {
     const activeTab = tabs.find(tab => tab.id === locationFilter);
     const tabName = activeTab?.label ?? 'this location';
     return (
@@ -579,12 +595,14 @@ export const PantryContent = React.forwardRef<
       noHomes,
       onSelectHome,
       onHomeBadgeLayout,
+      onSettingsIconLayout,
     },
     ref,
   ) => {
     useRenderTime('PantryContent', { slowThreshold: 1000 });
     const { theme } = useUnistyles();
     const flashListRef = useRef<FlashListRef<PantryItem>>(null);
+    const settingsIconRef = useRef<View>(null);
 
     const perfCallbacks = useFlashListPerformance(flashListRef, {
       componentName: 'PantryContent',
@@ -786,18 +804,41 @@ export const PantryContent = React.forwardRef<
                 showSearchIcon={true}
                 testID="pantry-search-input"
                 innerRightIcon={
-                  <Pressable
-                    onPress={onSettingsPress}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel="Pantry settings"
+                  <View
+                    ref={settingsIconRef}
+                    collapsable={false}
+                    onLayout={() => {
+                      if (onSettingsIconLayout) {
+                        requestAnimationFrame(() => {
+                          settingsIconRef.current?.measure(
+                            (_x, _y, w, h, pageX, pageY) => {
+                              if (w > 0 && h > 0) {
+                                onSettingsIconLayout({
+                                  x: pageX,
+                                  y: pageY,
+                                  width: w,
+                                  height: h,
+                                });
+                              }
+                            },
+                          );
+                        });
+                      }
+                    }}
                   >
-                    <Icon
-                      name="settings-outline"
-                      size={18}
-                      color={theme.colors.textTertiary}
-                    />
-                  </Pressable>
+                    <Pressable
+                      onPress={onSettingsPress}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Pantry settings"
+                    >
+                      <Icon
+                        name="settings-outline"
+                        size={18}
+                        color={theme.colors.textTertiary}
+                      />
+                    </Pressable>
+                  </View>
                 }
               />
               {!!stats && (
@@ -857,6 +898,7 @@ export const PantryContent = React.forwardRef<
                       showSkeletons={showSkeletons}
                       searchQuery={searchQuery}
                       itemCount={items.length}
+                      totalCount={totalCount}
                       locationFilter={locationFilter}
                       tabs={tabs}
                       onAddItem={onAddItem}
@@ -869,10 +911,12 @@ export const PantryContent = React.forwardRef<
                     <PaginationFooter
                       hasMore={hasMore}
                       itemCount={deferredSortedItems.length}
+                      SkeletonComponent={PantryItemSkeleton}
+                      skeletonCount={3}
                     />
                   }
                   onEndReached={onEndReached}
-                  onEndReachedThreshold={0.5}
+                  onEndReachedThreshold={0.8}
                   onLoad={perfCallbacks.onLoad}
                   onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
                   maintainVisibleContentPosition={MVCP_DISABLED}

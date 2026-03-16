@@ -10,7 +10,11 @@ import { ShoppingEmptyIllustration } from '#components/base/ShoppingEmptyIllustr
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { StaggeredTabContent } from './StaggeredTabContent';
 import { useShoppingListTabsActions } from './ShoppingListTabsActionsContext';
-import { useShoppingListData } from './ShoppingListDataContext';
+import {
+  useShoppingListData,
+  useShoppingListSearchQuery,
+} from './ShoppingListDataContext';
+import { useShoppingListModals } from '#/context/ShoppingListModalsContext';
 
 // Module-level flag: once shopping tab content has been shown, skip skeletons on remount.
 // Persists across component unmount/remount (stack navigation), resets on app restart.
@@ -48,7 +52,20 @@ const ShoppingTabComponent: React.FC = () => {
   const showSkeletons =
     !hasShoppingTabShownContent && (!isReady || isTransitioning || !!loading);
 
-  const emptyComponent = (
+  const searchQuery = useShoppingListSearchQuery();
+  const { addItemSheet } = useShoppingListModals();
+
+  const displayQuery =
+    searchQuery.length > 30 ? searchQuery.slice(0, 30) + '...' : searchQuery;
+
+  const emptyComponent = searchQuery.trim() ? (
+    <EmptyState
+      icon="search-outline"
+      title={`No results for "${displayQuery}"`}
+      description="Would you like to add it to your list?"
+      action={{ label: 'Add Item', onPress: addItemSheet.open }}
+    />
+  ) : (
     <EmptyState
       icon={<ShoppingEmptyIllustration size="medium" />}
       title="Your list is empty"

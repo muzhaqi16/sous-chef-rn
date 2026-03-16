@@ -1,10 +1,11 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 interface FieldRowProps {
   children: React.ReactNode;
   gap?: number;
+  containerStyle?: ViewStyle;
 }
 
 /**
@@ -20,9 +21,13 @@ interface FieldRowProps {
  *   <FormInput label="Unit" />
  * </FieldRow>
  */
-export const FieldRow: React.FC<FieldRowProps> = ({ children, gap = 12 }) => {
+export const FieldRow: React.FC<FieldRowProps> = ({
+  children,
+  gap = 12,
+  containerStyle,
+}) => {
   return (
-    <View style={[styles.container, { gap }]}>
+    <View style={[styles.container, { gap }, containerStyle]}>
       {React.Children.map(children, child =>
         child ? <View style={styles.field}>{child}</View> : null,
       )}

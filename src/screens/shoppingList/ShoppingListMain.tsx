@@ -31,7 +31,9 @@ const ShoppingListMainInner: React.FC = () => {
     optimisticTypes: ['ShoppingList', 'ShoppingListItem'],
     telemetryProperties: () => ({
       list_id: screenData.state.currentListId,
-      item_count: (screenData.state.totalCountUnpurchased ?? 0) + (screenData.state.totalCountPurchased ?? 0),
+      item_count:
+        (screenData.state.totalCountUnpurchased ?? 0) +
+        (screenData.state.totalCountPurchased ?? 0),
       purchased_count: screenData.state.totalCountPurchased ?? 0,
       has_lists: screenData.state.lists.length > 0,
     }),
@@ -40,7 +42,10 @@ const ShoppingListMainInner: React.FC = () => {
   return (
     <ShoppingListModalsProvider
       currentListId={screenData.state.currentListId}
-      items={[...screenData.state.rawUnpurchasedItems, ...screenData.state.rawPurchasedItems]}
+      items={[
+        ...(screenData.state.rawUnpurchasedItems ?? []),
+        ...(screenData.state.rawPurchasedItems ?? []),
+      ]}
       searchQuery={screenData.state.searchQuery}
       onSearchQueryClear={() => screenData.actions.setSearchQuery('')}
       onNavigateToListSettings={() => navigate('ListSettings')}
