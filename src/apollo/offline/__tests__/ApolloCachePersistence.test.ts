@@ -7,7 +7,7 @@ const CACHE_KEY = 'apollo-cache-v1';
 const CRITICAL_KEY = 'apollo-cache-v1-critical';
 const DEFERRED_KEY = 'apollo-cache-v1-deferred';
 const VERSION_KEY = 'apollo-cache-version';
-const CURRENT_VERSION = '1.1.4';
+const CURRENT_VERSION = '1.1.5';
 
 describe('ApolloCachePersistence', () => {
   beforeEach(() => {
@@ -48,7 +48,10 @@ describe('ApolloCachePersistence', () => {
     });
 
     it('returns parsed cache when version matches and data exists', () => {
-      const cacheData = { ROOT_QUERY: { __typename: 'Query' }, 'User:1': { id: '1' } };
+      const cacheData = {
+        ROOT_QUERY: { __typename: 'Query' },
+        'User:1': { id: '1' },
+      };
       storage.set(VERSION_KEY, CURRENT_VERSION);
       storage.set(CACHE_KEY, JSON.stringify(cacheData));
 
@@ -358,7 +361,8 @@ describe('ApolloCachePersistence', () => {
         ROOT_QUERY: { __typename: 'Query' },
         'PantryItem:1': { id: '1' },
       };
-      const { critical, deferred } = apolloCachePersistence.partitionCache(cache);
+      const { critical, deferred } =
+        apolloCachePersistence.partitionCache(cache);
       expect(critical).toHaveProperty('ROOT_QUERY');
       expect(deferred).not.toHaveProperty('ROOT_QUERY');
     });
@@ -370,9 +374,14 @@ describe('ApolloCachePersistence', () => {
         __META: { extraRootIds: [] },
         'Recipe:1': { id: '1' },
       };
-      const { critical, deferred } = apolloCachePersistence.partitionCache(cache);
+      const { critical, deferred } =
+        apolloCachePersistence.partitionCache(cache);
       expect(Object.keys(critical)).toEqual(
-        expect.arrayContaining(['ROOT_MUTATION', 'ROOT_SUBSCRIPTION', '__META']),
+        expect.arrayContaining([
+          'ROOT_MUTATION',
+          'ROOT_SUBSCRIPTION',
+          '__META',
+        ]),
       );
       expect(deferred).toEqual({ 'Recipe:1': { id: '1' } });
     });
@@ -385,7 +394,8 @@ describe('ApolloCachePersistence', () => {
         'DietaryProfile:1': { __typename: 'DietaryProfile' },
         'ShoppingListItem:5': { id: '5' },
       };
-      const { critical, deferred } = apolloCachePersistence.partitionCache(cache);
+      const { critical, deferred } =
+        apolloCachePersistence.partitionCache(cache);
       expect(Object.keys(critical).sort()).toEqual([
         'DietaryProfile:1',
         'Home:1',
@@ -403,7 +413,8 @@ describe('ApolloCachePersistence', () => {
         'Brand:4': { id: '4' },
         'Category:5': { id: '5' },
       };
-      const { critical, deferred } = apolloCachePersistence.partitionCache(cache);
+      const { critical, deferred } =
+        apolloCachePersistence.partitionCache(cache);
       expect(Object.keys(critical)).toHaveLength(0);
       expect(Object.keys(deferred)).toHaveLength(5);
     });
@@ -413,7 +424,8 @@ describe('ApolloCachePersistence', () => {
         'SomeNewType:1': { id: '1' },
         ROOT_QUERY: {},
       };
-      const { critical, deferred } = apolloCachePersistence.partitionCache(cache);
+      const { critical, deferred } =
+        apolloCachePersistence.partitionCache(cache);
       expect(critical).toEqual({ ROOT_QUERY: {} });
       expect(deferred).toEqual({ 'SomeNewType:1': { id: '1' } });
     });
