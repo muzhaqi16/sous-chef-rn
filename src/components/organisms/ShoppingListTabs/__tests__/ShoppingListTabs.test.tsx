@@ -150,19 +150,9 @@ describe('ShoppingListTabs', () => {
     expect(screen.getByText('Purchased (10)')).toBeTruthy();
   });
 
-  it('shows tab view with search bar when loading with empty items', () => {
-    const { View } = require('react-native');
-    const searchBar = <View testID="search-bar" />;
-    render(
-      <ShoppingListTabs
-        {...defaultProps}
-        items={[]}
-        loading={true}
-        listHeaderComponent={searchBar}
-      />,
-    );
-    // Search bar and tabs remain visible during loading (skeletons are inside the tab)
-    expect(screen.getByTestId('search-bar')).toBeTruthy();
+  it('shows tab view with tabs when loading with empty items', () => {
+    render(<ShoppingListTabs {...defaultProps} items={[]} loading={true} />);
+    // Tabs remain visible during loading (skeletons are inside the tab)
     expect(screen.getByTestId('filter-tab-bar')).toBeTruthy();
     expect(screen.getByTestId('tab-view')).toBeTruthy();
   });

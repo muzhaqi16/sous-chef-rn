@@ -99,6 +99,13 @@ jest.mock('#hooks/pantry/useOperationUnits', () => ({
   }),
 }));
 
+jest.mock('#hooks/pantry/useConvertAvailableQuantity', () => ({
+  useConvertAvailableQuantity: jest.fn(() => ({
+    availableInSelectedUnit: null,
+    availableLoading: false,
+  })),
+}));
+
 jest.mock('#components/molecules/UnitPicker', () => ({
   UnitPicker: () => null,
 }));

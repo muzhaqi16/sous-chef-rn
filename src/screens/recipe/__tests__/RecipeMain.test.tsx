@@ -93,8 +93,18 @@ jest.mock('#/utils/recipeTransform', () => ({
   })),
 }));
 jest.mock('@gorhom/bottom-sheet', () => ({
-  BottomSheetModal: 'BottomSheetModal',
+  BottomSheetModal: () => null,
+  useBottomSheetScrollableCreator: jest.fn(
+    () => require('react-native').ScrollView,
+  ),
+  useBottomSheetSpringConfigs: jest.fn(() => ({})),
 }));
+jest.mock('../RecipeSearch/IngredientSelectorSheet', () => {
+  const R = require('react');
+  return {
+    IngredientSelectorSheet: R.forwardRef(() => null),
+  };
+});
 
 type AnyProps = Record<string, any>;
 let mockItemListImpl: (props: AnyProps) => React.ReactElement | null = () =>
