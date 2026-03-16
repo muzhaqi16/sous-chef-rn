@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { alertService } from '#/services/alertService';
+import { useDeferredSearch } from '#hooks/performance/useDeferredSearch';
+import { pantryItemSearch } from '#utils/searchUtils';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type {
   SearchRecipesResult,
@@ -155,6 +157,19 @@ export function useRecipeScreen() {
     new Set(),
   );
 
+  // ── Ingredient search (local filtering for bottom sheet) ──
+  const [ingredientSearchQuery, setIngredientSearchQuery] = useState('');
+
+  const { results: filteredPantryItems } = useDeferredSearch({
+    items: discovery.pantryItems,
+    searchQuery: ingredientSearchQuery,
+    searchFn: pantryItemSearch,
+  });
+
+  const resetIngredientSearch = () => {
+    setIngredientSearchQuery('');
+  };
+
   // ── Filter state (initialized from dietary profile) ──
   // Map GraphQL enum values to Spoonacular API values
   const dietMap: Record<string, string> = {
@@ -296,6 +311,10 @@ export function useRecipeScreen() {
     });
   };
 
+  const clearSelectedIngredients = () => {
+    setSelectedIngredients(new Set());
+  };
+
   const handleTextSearch = async () => {
     if (!searchQuery.trim()) {
       if (discovery.hasPantryItems) {
@@ -402,6 +421,9 @@ export function useRecipeScreen() {
     discovery,
     pantryItems: discovery.pantryItems,
     hasPantryItems: discovery.hasPantryItems,
+    pantryHasMore: discovery.pantryHasMore,
+    pantryLoadingMore: discovery.pantryLoadingMore,
+    loadMorePantryItems: discovery.loadMorePantryItems,
     items,
 
     // Search state
@@ -411,6 +433,10 @@ export function useRecipeScreen() {
     searchPerformed,
     searchLoading,
     selectedIngredients,
+    ingredientSearchQuery,
+    setIngredientSearchQuery,
+    filteredPantryItems,
+    resetIngredientSearch,
 
     // Display
     showSearchResults,
@@ -429,5 +455,6 @@ export function useRecipeScreen() {
     handleRefresh,
     clearSearch,
     toggleIngredient,
+    clearSelectedIngredients,
   };
 }

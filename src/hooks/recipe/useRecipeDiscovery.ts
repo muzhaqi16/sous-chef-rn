@@ -34,6 +34,9 @@ interface UseRecipeDiscoveryResult {
   refresh: () => void;
   pantryItems: any[];
   hasPantryItems: boolean;
+  pantryHasMore: boolean;
+  pantryLoadingMore: boolean;
+  loadMorePantryItems: () => void;
 }
 
 /** Transforms a RecipeInformation (random recipe) into a DiscoveryItem */
@@ -153,7 +156,13 @@ export function useRecipeDiscovery(): UseRecipeDiscoveryResult {
 
   const defaultPantry = getDefaultPantry(homeData);
   const {
-    state: { items: pantryItems, loading: pantryLoading },
+    state: {
+      items: pantryItems,
+      loading: pantryLoading,
+      hasMore: pantryHasMore,
+      isLoadingMore: pantryLoadingMore,
+    },
+    actions: { loadMore: loadMorePantryItems },
   } = usePantryManagement(defaultPantry?.id);
 
   const hasPantryItems = (pantryItems?.length ?? 0) > 0;
@@ -173,7 +182,7 @@ export function useRecipeDiscovery(): UseRecipeDiscoveryResult {
 
   const [discoveryItems, setDiscoveryItems] = useState<DiscoveryItem[]>([]);
   const [mode, setMode] = useState<DiscoveryMode>('none');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Fetch-key pattern: compute a stable key that changes when we should re-fetch.
   // This avoids putting `loading` in useEffect deps (which causes an abort cycle).
@@ -184,7 +193,7 @@ export function useRecipeDiscovery(): UseRecipeDiscoveryResult {
   const currentKey = shouldFetch ? `fetch|${pantryItems?.length ?? 0}` : '';
 
   // Adjusting state during render: trigger fetch when conditions are met and key changed
-  if (currentKey && currentKey !== fetchKey && !loading) {
+  if (currentKey && currentKey !== fetchKey) {
     setFetchKey(currentKey);
   }
 
@@ -256,5 +265,8 @@ export function useRecipeDiscovery(): UseRecipeDiscoveryResult {
     refresh,
     pantryItems: pantryItems ?? [],
     hasPantryItems,
+    pantryHasMore,
+    pantryLoadingMore,
+    loadMorePantryItems,
   };
 }

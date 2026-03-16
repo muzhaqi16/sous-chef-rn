@@ -17,6 +17,13 @@ interface FilterTabBarProps {
   counts?: Record<string, number>;
   actionButtons?: FilterTabActionButton[];
   testIDPrefix?: string;
+  /** Optional: measure a specific tab's rect for tutorial spotlight */
+  onTabMeasure?: (
+    key: string,
+    rect: { x: number; y: number; width: number; height: number },
+  ) => void;
+  /** Which tab key(s) should be measured */
+  measureTabKeys?: string[];
 }
 
 const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
@@ -24,12 +31,15 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
   jumpTo,
   counts,
   actionButtons,
-  testIDPrefix = 'filter-tab' }) => {
+  testIDPrefix = 'filter-tab',
+  onTabMeasure,
+  measureTabKeys,
+}) => {
   const { theme } = useUnistyles();
 
   const handleTabPress = (key: string) => {
-      jumpTo(key);
-    };
+    jumpTo(key);
+  };
 
   return (
     <View style={styles.container}>
@@ -48,6 +58,11 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
             count={counts?.[route.key]}
             onPress={() => handleTabPress(route.key)}
             testID={`${testIDPrefix}-${route.key}`}
+            onMeasure={
+              onTabMeasure && measureTabKeys?.includes(route.key)
+                ? rect => onTabMeasure(route.key, rect)
+                : undefined
+            }
           />
         ))}
       </ScrollView>
@@ -65,9 +80,7 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
               ]}
             >
               {btn.label ? (
-                <Text style={styles.actionLabel}>
-                  {btn.label}
-                </Text>
+                <Text style={styles.actionLabel}>{btn.label}</Text>
               ) : btn.icon ? (
                 <Icon
                   name={btn.icon}
@@ -93,31 +106,41 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md },
+    paddingHorizontal: theme.spacing.md,
+  },
   scrollView: {
-    flexShrink: 1 },
+    flexShrink: 1,
+  },
   scrollContent: {
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   actionButton: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.sm + 2,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.xl },
+    borderRadius: theme.radii.xl,
+  },
   actionButtonWithBg: {
-    backgroundColor: theme.colors.filterTab.inactiveBg },
+    backgroundColor: theme.colors.filterTab.inactiveBg,
+  },
   actionLabelButton: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm },
+    paddingVertical: theme.spacing.sm,
+  },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   actionDisabled: {
-    opacity: 0.4 },
+    opacity: 0.4,
+  },
   actionLabel: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary } }));
+    color: theme.colors.primary,
+  },
+}));

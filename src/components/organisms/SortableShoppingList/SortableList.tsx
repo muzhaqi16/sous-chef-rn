@@ -64,6 +64,8 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onEndReached,
   onEndReachedThreshold = 0.5,
   ListEmptyComponent,
+  onScroll,
+  scrollEventThrottle,
 }) => {
   useRenderTime('SortableShoppingList', { slowThreshold: 1000 });
   const flashListRef = useRef<FlashListRef<SortableShoppingListItem>>(null);
@@ -161,6 +163,8 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             onLoad={perfCallbacks.onLoad}
             onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
             drawDistance={DRAW_DISTANCE}
+            onScroll={onScroll}
+            scrollEventThrottle={scrollEventThrottle}
             onRefresh={onRefresh}
             refreshing={refreshing}
             maintainVisibleContentPosition={MVCP_DISABLED}

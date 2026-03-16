@@ -1,7 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Pressable } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Pressable, type LayoutChangeEvent } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 
 // Components
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
@@ -17,10 +20,6 @@ import { Icon } from '#utils/iconUtils';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useFeatureHint } from '#hooks/useFeatureHint';
-import {
-  useTutorialSequence,
-  type TutorialStep,
-} from '#hooks/ui/useTutorialSequence';
 import type { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
 import { useShoppingListActions } from '#hooks/shoppingList/useShoppingListActions';
 import { useBatchMoveToPantry } from '#hooks/shoppingList/useBatchMoveToPantry';
@@ -33,34 +32,18 @@ import {
 } from '#/context/TabBarActionsContext';
 import { useShoppingListModals } from '#/context/ShoppingListModalsContext';
 import { useAuthUser } from '#/hooks/auth/useAuthUser';
+import {
+  useShoppingListTutorial,
+  ShoppingListTutorialStep,
+  TUTORIAL_STEP_CONFIG,
+  TUTORIAL_TOTAL_STEPS,
+} from '#/context/ShoppingListTutorialContext';
 
 // Utils
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { Telemetry } from '#/services/telemetry';
 import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
-
-// ── Shopping list tutorial steps (data-driven, add entries to extend) ──
-const SHOPPING_LIST_TUTORIAL_STEPS: TutorialStep[] = [
-  {
-    featureId: 'shopping_tutorial_selector',
-    title: 'Manage your lists',
-    subtitle: 'Create new lists and switch between them',
-    rectKey: 'selectorIcon',
-  },
-  {
-    featureId: 'shopping_tutorial_tabs',
-    title: 'Switch between tabs',
-    subtitle: 'View your shopping items or purchased items',
-    rectKey: 'filterTabBar',
-  },
-  {
-    featureId: 'shopping_tutorial_add',
-    title: 'Add items quickly',
-    subtitle: 'Tap + to add items to your shopping list',
-    rectKey: 'addButton',
-  },
-];
 
 /**
  * Inner content component that uses modal context.
@@ -119,27 +102,51 @@ export const ShoppingListMainContent: React.FC<
   });
 
   const { navigate, navigateTo } = useAppNavigation();
-  const { setScannerProps } = useTabBarSetters();
+  const { setScannerProps, scrollTabBarHidden } = useTabBarSetters();
   const { addButtonRect, isOverlayOpen } = useTabBarState();
   const { theme } = useUnistyles();
+
+  // ── Collapsible header ──
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const {
+    scrollHandler,
+    collapsibleStyle,
+    collapsibleHeightStyle,
+    isScrolledDown,
+  } = useCollapsibleScroll({ headerHeight });
+
+  useAnimatedReaction(
+    () => isScrolledDown.value,
+    hidden => {
+      scrollTabBarHidden.set(hidden);
+    },
+  );
+
+  const handleCollapsibleLayout = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    if (height > 0) {
+      setHeaderHeight(height);
+    }
+  };
+
+  // ── Interactive tutorial context ──
+  const tutorial = useShoppingListTutorial();
+
+  // Register the tab bar add button rect with the tutorial context
+  useEffect(() => {
+    tutorial?.registerRect('addButton', addButtonRect ?? null);
+  }, [tutorial, addButtonRect]);
 
   // ── Screen focus tracking ──
   const [isScreenFocused, setIsScreenFocused] = useState(true);
   const [onScreenFocus] = useState(() => () => {
     setIsScreenFocused(true);
-    return () => setIsScreenFocused(false);
+    return () => {
+      setIsScreenFocused(false);
+      scrollTabBarHidden.set(false);
+    };
   });
   useFocusEffect(onScreenFocus);
-
-  // ── Element position tracking for tutorial spotlight ──
-  type LayoutRect = { x: number; y: number; width: number; height: number };
-  const selectorIconRef = useRef<View>(null);
-  const [selectorIconRect, setSelectorIconRect] = useState<LayoutRect | null>(
-    null,
-  );
-  const [filterTabBarRect, setFilterTabBarRect] = useState<LayoutRect | null>(
-    null,
-  );
 
   // Get current user for permission calculations
   const user = useAuthUser();
@@ -200,32 +207,6 @@ export const ShoppingListMainContent: React.FC<
   const { handleSwipeableWillOpen, handleSwipeableClose, closeAll } =
     useSwipeableCoordinator();
 
-  // ── Tutorial orchestration ──
-  const tutorial = useTutorialSequence({
-    steps: SHOPPING_LIST_TUTORIAL_STEPS,
-    targetRects: {
-      selectorIcon: selectorIconRect,
-      filterTabBar: filterTabBarRect,
-      addButton: addButtonRect,
-    },
-    canStart: lists.length > 0,
-    isPaused: !isScreenFocused || isOverlayOpen || swipeHint.isVisible,
-  });
-
-  // Target press actions per tutorial step
-  const tutorialTargetActions: Record<number, () => void> = {
-    0: handleOpenSelector,
-    1: () => {
-      // No specific navigation — the spotlight highlights the tab bar
-    },
-    2: () => {
-      Telemetry.trackEvent('add_item_from_tab_bar', {
-        list_id: currentListId,
-      });
-      addItemSheet.open();
-    },
-  };
-
   // Show swipe hint after items load
   useEffect(() => {
     if (unpurchasedItems.length > 0 && !swipeHint.hasBeenShown) {
@@ -268,31 +249,17 @@ export const ShoppingListMainContent: React.FC<
     );
   })();
 
-  // Header right action - list selector button (wrapped for tutorial measurement)
+  // Header right action - list selector button
   const headerRight = (
-    <View
-      ref={selectorIconRef}
-      collapsable={false}
-      onLayout={() => {
-        requestAnimationFrame(() => {
-          selectorIconRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-            if (w > 0 && h > 0) {
-              setSelectorIconRect({ x: pageX, y: pageY, width: w, height: h });
-            }
-          });
-        });
-      }}
+    <Pressable
+      onPress={handleOpenSelector}
+      hitSlop={8}
+      testID="shopping-list-selector"
+      accessibilityRole="button"
+      accessibilityLabel="Switch shopping list"
     >
-      <Pressable
-        onPress={handleOpenSelector}
-        hitSlop={8}
-        testID="shopping-list-selector"
-        accessibilityRole="button"
-        accessibilityLabel="Switch shopping list"
-      >
-        <Icon name="list" size={24} color={theme.colors.textSecondary} />
-      </Pressable>
-    </View>
+      <Icon name="list" size={24} color={theme.colors.textSecondary} />
+    </Pressable>
   );
 
   // SearchBar rendered above tab pills (positioned above TabView in ShoppingListTabs)
@@ -344,12 +311,11 @@ export const ShoppingListMainContent: React.FC<
     canEditItems: permissions.canEditItems,
     canMarkPurchased: permissions.canMarkPurchased,
     canReorderItems: permissions.canEditItems,
-    // Header
-    listHeaderComponent: searchBarHeader,
     // Search query for search-aware empty states
     searchQuery,
-    // Tutorial layout measurement
-    onFilterTabBarLayout: setFilterTabBarRect,
+    // Collapsible scroll handler — threaded to FlashList via data context
+    onScroll: scrollHandler,
+    scrollEventThrottle: 16,
   };
 
   // Set up scanner button
@@ -419,11 +385,20 @@ export const ShoppingListMainContent: React.FC<
 
   return (
     <View style={styles.container} testID="shopping-list-screen">
-      <TabScreenHeader
-        label="Shopping list"
-        title={currentList?.name || 'Shopping List'}
-        headerRight={headerRight}
-      />
+      {/* Collapsible header zone — collapses on scroll, reclaims space */}
+      <Animated.View style={collapsibleHeightStyle}>
+        <Animated.View
+          style={collapsibleStyle}
+          onLayout={handleCollapsibleLayout}
+        >
+          <TabScreenHeader
+            label="Shopping list"
+            title={currentList?.name || 'Shopping List'}
+            headerRight={headerRight}
+          />
+          {searchBarHeader}
+        </Animated.View>
+      </Animated.View>
       <ListTemplate
         items={[]}
         loading={isLoadingInitial}
@@ -456,23 +431,46 @@ export const ShoppingListMainContent: React.FC<
         />
       )}
 
-      {/* Tutorial spotlight coach-marks */}
-      {tutorial.currentStep ? (
-        <SpotlightCoachMark
-          targetRect={tutorial.currentStep.targetRect}
-          title={tutorial.currentStep.title}
-          subtitle={tutorial.currentStep.subtitle}
-          stepIndex={tutorial.currentStep.stepIndex}
-          totalSteps={tutorial.currentStep.totalSteps}
-          onDismiss={tutorial.skipAll}
-          onTargetPress={() => {
-            const action =
-              tutorialTargetActions[tutorial.currentStep!.stepIndex];
-            action?.();
-            tutorial.advance();
-          }}
-        />
-      ) : null}
+      {/* Interactive tutorial spotlight coach-marks (steps 1, 4, 5, 6) */}
+      {(() => {
+        if (!tutorial?.isActive) return null;
+        if (!isScreenFocused || isOverlayOpen || swipeHint.isVisible)
+          return null;
+
+        const stepConfig = TUTORIAL_STEP_CONFIG[tutorial.currentStep];
+        if (!stepConfig) return null;
+
+        const targetRect = tutorial.rects[stepConfig.rectKey];
+        if (!targetRect) return null;
+
+        const handleTargetPress = () => {
+          if (
+            tutorial.currentStep ===
+            ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON
+          ) {
+            Telemetry.trackEvent('add_item_from_tab_bar', {
+              list_id: currentListId,
+            });
+            addItemSheet.open();
+            tutorial.notifyAddButtonPressed();
+          }
+          // Steps 4, 5, 6: the actual action + notification happens in the
+          // child components (SortableItem, ShoppingListTabs) that call
+          // notifyCheckboxTapped / notifyPurchasedTabTapped / notifyMoveToPantryTapped
+        };
+
+        return (
+          <SpotlightCoachMark
+            targetRect={targetRect}
+            title={stepConfig.title}
+            subtitle={stepConfig.subtitle}
+            stepIndex={stepConfig.stepIndex}
+            totalSteps={TUTORIAL_TOTAL_STEPS}
+            onDismiss={tutorial.skipAll}
+            onTargetPress={handleTargetPress}
+          />
+        );
+      })()}
 
       {/* Modals are rendered inside ShoppingListModalsProvider */}
     </View>

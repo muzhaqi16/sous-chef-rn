@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type React from 'react';
+import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 
 /**
@@ -21,6 +22,9 @@ export interface ShoppingListTabData {
   canMarkPurchased: boolean;
   canReorderItems: boolean;
   isTransitioning: boolean;
+  // Collapsible scroll handler — threaded from screen to FlashList
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  scrollEventThrottle?: number;
 }
 
 interface ShoppingListDataState {

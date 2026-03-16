@@ -1,5 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { View } from 'react-native';
+import {
+  View,
+  type LayoutChangeEvent,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+  type ViewStyle,
+} from 'react-native';
+import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
@@ -11,6 +18,7 @@ import {
   useTabBarSetters,
   useTabBarState,
 } from '#/context/TabBarActionsContext';
+import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import {
   useTutorialSequence,
@@ -68,7 +76,31 @@ const PANTRY_TUTORIAL_STEPS: TutorialStep[] = [
  */
 const PantryMainInner: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
-  const { setOverlayOpen } = useTabBarSetters();
+  const { setOverlayOpen, scrollTabBarHidden } = useTabBarSetters();
+
+  // ── Collapsible header ──
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const {
+    scrollHandler,
+    collapsibleStyle,
+    collapsibleHeightStyle,
+    isScrolledDown,
+  } = useCollapsibleScroll({ headerHeight });
+
+  // Sync scroll direction → tab bar visibility (UI thread only)
+  useAnimatedReaction(
+    () => isScrolledDown.value,
+    hidden => {
+      scrollTabBarHidden.set(hidden);
+    },
+  );
+
+  const handleCollapsibleLayout = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    if (height > 0) {
+      setHeaderHeight(height);
+    }
+  };
 
   // ── Facade hook: all data-fetching & state ──
   const screen = usePantryScreen();
@@ -99,7 +131,11 @@ const PantryMainInner: React.FC = () => {
       pantryContentRef.current?.scrollToTop();
       store.setPendingPantryScrollToTop(false);
     }
-    return () => setIsPantryFocused(false);
+    return () => {
+      setIsPantryFocused(false);
+      // Reset scroll-driven tab bar hide so tab bar reappears on other tabs
+      scrollTabBarHidden.set(false);
+    };
   });
   useFocusEffect(onPantryFocus);
 
@@ -175,6 +211,10 @@ const PantryMainInner: React.FC = () => {
         onOverlayClose={handleOverlayClose}
         canStartTutorial={canStartTutorial}
         isPantryFocused={isPantryFocused}
+        scrollHandler={scrollHandler}
+        collapsibleStyle={collapsibleStyle}
+        collapsibleHeightStyle={collapsibleHeightStyle}
+        onCollapsibleLayout={handleCollapsibleLayout}
       />
     </PantryModalsProvider>
   );
@@ -201,6 +241,11 @@ interface PantryMainContentProps {
   onOverlayClose: () => void;
   canStartTutorial: boolean;
   isPantryFocused: boolean;
+  // Collapsible scroll props
+  scrollHandler: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  collapsibleStyle: ViewStyle;
+  collapsibleHeightStyle: ViewStyle;
+  onCollapsibleLayout: (event: LayoutChangeEvent) => void;
 }
 
 function PantryMainContent({
@@ -220,6 +265,10 @@ function PantryMainContent({
   onOverlayClose,
   canStartTutorial,
   isPantryFocused,
+  scrollHandler,
+  collapsibleStyle,
+  collapsibleHeightStyle,
+  onCollapsibleLayout,
 }: PantryMainContentProps) {
   const {
     handleConsumeItem,
@@ -332,6 +381,10 @@ function PantryMainContent({
         loading={screen.isLoadingInitial}
         onHomeBadgeLayout={setHomeBadgeRect}
         onSettingsIconLayout={setSettingsIconRect}
+        scrollHandler={scrollHandler}
+        collapsibleStyle={collapsibleStyle}
+        collapsibleHeightStyle={collapsibleHeightStyle}
+        onCollapsibleLayout={onCollapsibleLayout}
       />
       <AnimatedItemSelector
         ref={selectorRef}

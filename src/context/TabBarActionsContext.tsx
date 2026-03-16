@@ -6,6 +6,7 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
+import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import type { IconLibrary } from '#/utils/iconUtils';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 
@@ -45,6 +46,12 @@ interface TabBarSettersContextType {
   setActiveTab: (tabName: string) => void;
   setOverlayOpen: (isOpen: boolean) => void;
   setAddButtonRect: (rect: TargetRect) => void;
+  /**
+   * SharedValue that screens can write to from scroll handler worklets
+   * to hide/show the tab bar based on scroll direction.
+   * Written on UI thread — zero JS re-renders.
+   */
+  scrollTabBarHidden: SharedValue<boolean>;
 }
 
 interface TabBarStateContextType {
@@ -103,6 +110,9 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   const [activeTab, setActiveTab] = useState<string>('');
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [addButtonRect, setAddButtonRect] = useState<TargetRect | null>(null);
+
+  // Scroll-driven tab bar hide — SharedValue written by screens from UI thread worklets
+  const scrollTabBarHidden = useSharedValue(false);
 
   // Ref to track activeTab for use in callbacks without causing re-renders
   const activeTabRef = useRef(activeTab);
@@ -185,6 +195,7 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     setActiveTab: handleSetActiveTab,
     setOverlayOpen: setOverlayOpenCb,
     setAddButtonRect,
+    scrollTabBarHidden,
   };
 
   // Only show buttons if the current tab is in the allowed list and button is enabled

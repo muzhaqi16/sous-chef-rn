@@ -69,9 +69,28 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       return;
     }
 
-    // When using a converted unit, validate against converted available quantity
-    // When using tracking unit, validate against tracking quantity
-    if (!shared.isConvertedUnit && quantityValue > shared.trackingQuantity) {
+    // Validate against available quantity in the active unit
+    if (shared.isConvertedUnit) {
+      if (shared.availableLoading) {
+        alertService.alert(
+          'Please Wait',
+          'Still calculating available quantity...',
+        );
+        return;
+      }
+      if (
+        shared.availableInSelectedUnit != null &&
+        quantityValue > shared.availableInSelectedUnit
+      ) {
+        alertService.alert(
+          'Error',
+          `Cannot consume more than available quantity (${formatQuantity(
+            shared.availableInSelectedUnit,
+          )} ${shared.activeUnitSymbol})`,
+        );
+        return;
+      }
+    } else if (quantityValue > shared.trackingQuantity) {
       alertService.alert(
         'Error',
         `Cannot consume more than available quantity (${shared.trackingQuantity} ${shared.activeUnitSymbol})`,
@@ -144,11 +163,13 @@ const ConsumeActionFields: React.FC<{
     trackingUnitSymbol: shared.trackingUnitSymbol,
     availableInTrackingUnit: shared.trackingQuantity,
     conversionRatio: shared.selectedUnitInfo?.conversionRatio ?? null,
+    externalAvailableInSelectedUnit: shared.availableInSelectedUnit,
+    externalAvailableLoading: shared.availableLoading,
   });
 
   // Use converted available quantity when using a non-tracking unit
   const availableInUnit = shared.isConvertedUnit
-    ? conversion.availableInSelectedUnit
+    ? shared.availableInSelectedUnit
     : shared.trackingQuantity;
 
   const remaining =
@@ -183,8 +204,13 @@ const ConsumeActionFields: React.FC<{
               remaining < 0 && commonStyles.bottomSheetHelperTextError,
             ]}
           >
-            Remaining: {remaining >= 0 ? formatQuantity(remaining) : 'Invalid'}{' '}
-            {shared.activeUnitSymbol}
+            {remaining >= 0
+              ? `Remaining: ${formatQuantity(remaining)} ${
+                  shared.activeUnitSymbol
+                }`
+              : `Exceeds available (${formatQuantity(availableInUnit!)} ${
+                  shared.activeUnitSymbol
+                })`}
           </Text>
         ) : null}
         {shared.commonFractions != null && shared.commonFractions.length > 0 ? (

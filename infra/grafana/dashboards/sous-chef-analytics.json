@@ -1,4 +1,46 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Prometheus datasource for metrics",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "piechart",
+      "name": "Pie chart",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -58,7 +100,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "App launches by platform",
       "fieldConfig": {
@@ -113,7 +155,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Environment distribution of app usage",
       "fieldConfig": {
@@ -168,7 +210,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Screen views by screen name",
       "fieldConfig": {
@@ -235,7 +277,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "User events tracked in the app",
       "fieldConfig": {
@@ -302,7 +344,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Login attempts vs successes by authentication method",
       "fieldConfig": {
@@ -374,7 +416,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Shopping list item operations (add, delete, toggle purchase)",
       "fieldConfig": {
@@ -451,7 +493,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Pantry item operations and management actions",
       "fieldConfig": {
@@ -523,7 +565,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Feature usage: barcode scanner, avatar uploads, etc.",
       "fieldConfig": {
@@ -600,7 +642,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Top 15 user actions by frequency in the last hour",
       "fieldConfig": {
@@ -663,30 +705,11 @@
     }
   ],
   "refresh": "1m",
-  "schemaVersion": 30,
+  "schemaVersion": 41,
   "style": "dark",
   "tags": ["react-native", "mobile", "sous-chef", "analytics", "user-behavior"],
   "templating": {
     "list": [
-      {
-        "current": {
-          "selected": false,
-          "text": "Prometheus",
-          "value": "Prometheus"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": "Prometheus",
-        "multi": false,
-        "name": "prometheus_datasource",
-        "options": [],
-        "query": "prometheus",
-        "queryValue": "",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      },
       {
         "current": {
           "selected": false,
@@ -695,7 +718,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus_datasource}"
+          "uid": "${DS_PROMETHEUS}"
         },
         "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}, env)",
         "hide": 0,
@@ -722,7 +745,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus_datasource}"
+          "uid": "${DS_PROMETHEUS}"
         },
         "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}, platform)",
         "hide": 0,

@@ -6,7 +6,17 @@ import React, {
   useRef,
   useImperativeHandle,
 } from 'react';
-import { View, Pressable, RefreshControl, Dimensions } from 'react-native';
+import {
+  View,
+  Pressable,
+  RefreshControl,
+  Dimensions,
+  type LayoutChangeEvent,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+  type ViewStyle,
+} from 'react-native';
+import Animated from 'react-native-reanimated';
 import {
   FlashList,
   type FlashListRef,
@@ -159,6 +169,16 @@ interface PantryContentProps {
     width: number;
     height: number;
   }) => void;
+
+  // Collapsible header scroll props
+  /** Scroll handler for FlashList (regular JS callback, FlashList v2 compatible). */
+  scrollHandler?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /** Animated style for the inner collapsible wrapper (translateY + opacity). */
+  collapsibleStyle?: ViewStyle;
+  /** Animated style for the outer collapsible wrapper (animated height). */
+  collapsibleHeightStyle?: ViewStyle;
+  /** Callback to measure the collapsible header height at runtime. */
+  onCollapsibleLayout?: (event: LayoutChangeEvent) => void;
 }
 
 export interface PantryContentRef {
@@ -596,6 +616,10 @@ export const PantryContent = React.forwardRef<
       onSelectHome,
       onHomeBadgeLayout,
       onSettingsIconLayout,
+      scrollHandler,
+      collapsibleStyle,
+      collapsibleHeightStyle,
+      onCollapsibleLayout,
     },
     ref,
   ) => {
@@ -780,75 +804,85 @@ export const PantryContent = React.forwardRef<
     return (
       <PantryActionsProvider actions={itemActions}>
         <View style={styles.container}>
-          {/* Header Section - only PantryHeader stays fixed */}
-          <View style={styles.header}>
-            <PantryHeader
-              userName={userName}
-              householdName={householdName}
-              avatarUrl={avatarUrl}
-              notificationCount={notificationCount}
-              onAvatarPress={onAvatarPress}
-              onHomePress={onHomePress}
-              onNotificationPress={onNotificationPress}
-              onHomeBadgeLayout={onHomeBadgeLayout}
-            />
-          </View>
-
-          {/* Sticky section — SearchBar + AlertBar + FilterTabs pinned above list */}
-          <View style={styles.stickySection}>
-            <View style={styles.searchContainer}>
-              <SearchBar
-                value={searchQuery}
-                onChangeText={onSearchChange}
-                placeholder="Search your pantry..."
-                showSearchIcon={true}
-                testID="pantry-search-input"
-                innerRightIcon={
-                  <View
-                    ref={settingsIconRef}
-                    collapsable={false}
-                    onLayout={() => {
-                      if (onSettingsIconLayout) {
-                        requestAnimationFrame(() => {
-                          settingsIconRef.current?.measure(
-                            (_x, _y, w, h, pageX, pageY) => {
-                              if (w > 0 && h > 0) {
-                                onSettingsIconLayout({
-                                  x: pageX,
-                                  y: pageY,
-                                  width: w,
-                                  height: h,
-                                });
-                              }
-                            },
-                          );
-                        });
-                      }
-                    }}
-                  >
-                    <Pressable
-                      onPress={onSettingsPress}
-                      hitSlop={8}
-                      accessibilityRole="button"
-                      accessibilityLabel="Pantry settings"
-                    >
-                      <Icon
-                        name="settings-outline"
-                        size={18}
-                        color={theme.colors.textTertiary}
-                      />
-                    </Pressable>
-                  </View>
-                }
-              />
-              {!!stats && (
-                <PantryAlertBar
-                  stats={stats}
-                  onAnalyticsPress={onAnalyticsPress}
-                  onLowStockNavigate={onLowStockNavigate}
+          {/* Collapsible header zone — collapses on scroll, reclaims space */}
+          <Animated.View style={collapsibleHeightStyle}>
+            <Animated.View
+              style={collapsibleStyle}
+              onLayout={onCollapsibleLayout}
+            >
+              {/* Header Section — greeting, avatar, notifications */}
+              <View style={styles.header}>
+                <PantryHeader
+                  userName={userName}
+                  householdName={householdName}
+                  avatarUrl={avatarUrl}
+                  notificationCount={notificationCount}
+                  onAvatarPress={onAvatarPress}
+                  onHomePress={onHomePress}
+                  onNotificationPress={onNotificationPress}
+                  onHomeBadgeLayout={onHomeBadgeLayout}
                 />
-              )}
-            </View>
+              </View>
+
+              {/* SearchBar + AlertBar */}
+              <View style={styles.searchContainer}>
+                <SearchBar
+                  value={searchQuery}
+                  onChangeText={onSearchChange}
+                  placeholder="Search your pantry..."
+                  showSearchIcon={true}
+                  testID="pantry-search-input"
+                  innerRightIcon={
+                    <View
+                      ref={settingsIconRef}
+                      collapsable={false}
+                      onLayout={() => {
+                        if (onSettingsIconLayout) {
+                          requestAnimationFrame(() => {
+                            settingsIconRef.current?.measure(
+                              (_x, _y, w, h, pageX, pageY) => {
+                                if (w > 0 && h > 0) {
+                                  onSettingsIconLayout({
+                                    x: pageX,
+                                    y: pageY,
+                                    width: w,
+                                    height: h,
+                                  });
+                                }
+                              },
+                            );
+                          });
+                        }
+                      }}
+                    >
+                      <Pressable
+                        onPress={onSettingsPress}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Pantry settings"
+                      >
+                        <Icon
+                          name="settings-outline"
+                          size={18}
+                          color={theme.colors.textTertiary}
+                        />
+                      </Pressable>
+                    </View>
+                  }
+                />
+                {!!stats && (
+                  <PantryAlertBar
+                    stats={stats}
+                    onAnalyticsPress={onAnalyticsPress}
+                    onLowStockNavigate={onLowStockNavigate}
+                  />
+                )}
+              </View>
+            </Animated.View>
+          </Animated.View>
+
+          {/* FilterTabs — always visible / sticky */}
+          <View style={styles.stickySection}>
             <FilterTabs<LocationFilter>
               tabs={tabsWithAddButton}
               activeTabId={locationFilter}
@@ -873,6 +907,8 @@ export const PantryContent = React.forwardRef<
                   extraData={extraData}
                   contentContainerStyle={listContentStyle}
                   showsVerticalScrollIndicator={false}
+                  onScroll={scrollHandler}
+                  scrollEventThrottle={16}
                   refreshControl={
                     onRefresh ? (
                       <RefreshControl

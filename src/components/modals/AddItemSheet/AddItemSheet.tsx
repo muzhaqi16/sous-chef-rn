@@ -49,6 +49,7 @@ export function AddItemSheet({
   onExitComplete,
   initialSearchQuery = '',
   showImages = true,
+  tutorialHint,
   children,
 }: AddItemSheetProps) {
   const { theme } = useUnistyles();
@@ -224,6 +225,9 @@ export function AddItemSheet({
                 showImages={showImages}
               />
             )}
+
+            {/* Tutorial hint (e.g. "Tap + next to an item to add it") */}
+            {!!tutorialHint && !showSearchResults && tutorialHint}
 
             {/* Action Buttons - hidden when showing search results */}
             {!showSearchResults && (

@@ -133,6 +133,8 @@ export interface AddItemSheetProps {
   searchBarRef?: RefObject<BottomSheetSearchBarRef>;
   /** Optional: When false, hide product images in suggestions (default: true) */
   showImages?: boolean;
+  /** Optional: Tutorial hint element rendered above action buttons */
+  tutorialHint?: React.ReactNode;
   /** Optional: Child component (e.g., AddDetailsSheet) */
   children?: React.ReactNode;
 }

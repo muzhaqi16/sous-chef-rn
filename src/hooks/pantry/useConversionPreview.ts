@@ -16,6 +16,10 @@ interface UseConversionPreviewOptions {
   availableInTrackingUnit: number;
   /** Conversion ratio: selectedUnit = trackingUnit * ratio */
   conversionRatio: number | null;
+  /** Pre-computed available quantity in selected unit (from PantryActionModal shared state) */
+  externalAvailableInSelectedUnit?: number | null;
+  /** Whether the external available quantity is still loading */
+  externalAvailableLoading?: boolean;
 }
 
 interface ConversionPreviewResult {
@@ -54,13 +58,25 @@ export function useConversionPreview({
   trackingUnitSymbol,
   availableInTrackingUnit,
   conversionRatio,
+  externalAvailableInSelectedUnit,
+  externalAvailableLoading,
 }: UseConversionPreviewOptions): ConversionPreviewResult {
   const [previewText, setPreviewText] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [availableInSelectedUnit, setAvailableInSelectedUnit] = useState<
-    number | null
-  >(null);
-  const [availableLoading, setAvailableLoading] = useState(false);
+
+  // Use external available quantity when provided (from PantryActionModal shared state)
+  const hasExternalAvailable = externalAvailableInSelectedUnit !== undefined;
+  const [internalAvailableInSelectedUnit, setInternalAvailableInSelectedUnit] =
+    useState<number | null>(null);
+  const [internalAvailableLoading, setInternalAvailableLoading] =
+    useState(false);
+
+  const availableInSelectedUnit = hasExternalAvailable
+    ? externalAvailableInSelectedUnit
+    : internalAvailableInSelectedUnit;
+  const availableLoading = hasExternalAvailable
+    ? externalAvailableLoading ?? false
+    : internalAvailableLoading;
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -74,20 +90,23 @@ export function useConversionPreview({
     !isSameUnit && inputQuantity != null && inputQuantity > 0;
 
   // Convert available quantity when selected unit changes (render-time state update)
+  // Skipped when external available quantity is provided
   const [prevUnitId, setPrevUnitId] = useState(selectedUnitId);
-  if (selectedUnitId !== prevUnitId) {
+  if (!hasExternalAvailable && selectedUnitId !== prevUnitId) {
     setPrevUnitId(selectedUnitId);
 
     if (isSameUnit) {
-      setAvailableInSelectedUnit(null);
-      setAvailableLoading(false);
+      setInternalAvailableInSelectedUnit(null);
+      setInternalAvailableLoading(false);
     } else if (conversionRatio != null) {
       // Local conversion — instant, no network call
-      setAvailableInSelectedUnit(availableInTrackingUnit * conversionRatio);
-      setAvailableLoading(false);
+      setInternalAvailableInSelectedUnit(
+        availableInTrackingUnit * conversionRatio,
+      );
+      setInternalAvailableLoading(false);
     } else {
       // Network fallback
-      setAvailableLoading(true);
+      setInternalAvailableLoading(true);
       queueMicrotask(() => {
         executeQuery(
           () =>
@@ -102,8 +121,8 @@ export function useConversionPreview({
           'Error converting available quantity:',
         ).then(result => {
           const value = result?.data?.convertQuantity?.value ?? null;
-          setAvailableInSelectedUnit(value);
-          setAvailableLoading(false);
+          setInternalAvailableInSelectedUnit(value);
+          setInternalAvailableLoading(false);
         });
       });
     }

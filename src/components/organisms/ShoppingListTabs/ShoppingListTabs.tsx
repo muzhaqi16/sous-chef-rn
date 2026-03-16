@@ -22,6 +22,10 @@ import {
   ShoppingListDataProvider,
   type ShoppingListTabData,
 } from './ShoppingListDataContext';
+import {
+  useShoppingListTutorial,
+  ShoppingListTutorialStep,
+} from '#/context/ShoppingListTutorialContext';
 
 type ShoppingListTabId = 'shopping' | 'purchased';
 
@@ -83,13 +87,9 @@ interface ShoppingListTabsProps {
   listHeaderComponent?: React.ReactElement | null;
   // Current search query for search-aware empty states in tabs
   searchQuery?: string;
-  /** Callback with screen-coordinate rect when the filter tab bar lays out */
-  onFilterTabBarLayout?: (rect: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }) => void;
+  // Collapsible scroll handler — threaded to FlashList via data context
+  onScroll?: (event: any) => void;
+  scrollEventThrottle?: number;
 }
 
 const ROUTES: TabRoute[] = [
@@ -150,15 +150,15 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Batch move to pantry
   onBatchMoveToPantry,
   batchMoveToPantryLoading = false,
-  // List header
-  listHeaderComponent,
   // Search query
   searchQuery,
-  // Tutorial layout measurement
-  onFilterTabBarLayout,
+  // Collapsible scroll
+  onScroll,
+  scrollEventThrottle,
 }) => {
   const tabBarRef = useRef<View>(null);
   const layout = useWindowDimensions();
+  const tutorial = useShoppingListTutorial();
 
   // TabView navigation state
   const [index, setIndex] = useState(0);
@@ -180,6 +180,24 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   const handleIndexChange = (newIndex: number) => {
     onCloseAllSwipeables?.();
     setIndex(newIndex);
+    // Notify tutorial when user switches to Purchased tab
+    if (newIndex === 1) {
+      tutorial?.notifyPurchasedTabTapped();
+    }
+  };
+
+  // Determine if we need to measure the purchased tab for tutorial spotlight
+  const shouldMeasurePurchasedTab =
+    tutorial?.isActive &&
+    tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB;
+
+  const handleTabMeasure = (
+    key: string,
+    rect: { x: number; y: number; width: number; height: number },
+  ) => {
+    if (key === 'purchased') {
+      tutorial?.registerRect('purchasedTab', rect);
+    }
   };
 
   // Action callbacks for context provider — consumed by ShoppingTab/PurchasedTab
@@ -302,31 +320,14 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Render FilterTabBar as the TabView's tab bar so it's always visible,
   // even when a tab's FlashList is replaced by an empty state
   const renderTabBar = () => (
-    <View
-      ref={tabBarRef}
-      collapsable={false}
-      onLayout={() => {
-        if (onFilterTabBarLayout) {
-          requestAnimationFrame(() => {
-            tabBarRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-              if (w > 0 && h > 0) {
-                onFilterTabBarLayout({
-                  x: pageX,
-                  y: pageY,
-                  width: w,
-                  height: h,
-                });
-              }
-            });
-          });
-        }
-      }}
-    >
+    <View ref={tabBarRef} collapsable={false}>
       <FilterTabBar
         navigationState={{ index, routes: ROUTES }}
         jumpTo={jumpTo}
         counts={counts}
         actionButtons={actionButtons.length > 0 ? actionButtons : undefined}
+        onTabMeasure={shouldMeasurePurchasedTab ? handleTabMeasure : undefined}
+        measureTabKeys={shouldMeasurePurchasedTab ? ['purchased'] : undefined}
       />
     </View>
   );
@@ -347,6 +348,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     canMarkPurchased,
     canReorderItems,
     isTransitioning,
+    onScroll,
+    scrollEventThrottle,
   };
 
   const purchasedTabData: ShoppingListTabData = {
@@ -363,6 +366,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     canMarkPurchased,
     canReorderItems: false,
     isTransitioning,
+    onScroll,
+    scrollEventThrottle,
   };
 
   const tabData = {
@@ -392,7 +397,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
             ...(Platform.OS === 'android' && { elevation: 0 }),
           }}
         >
-          {listHeaderComponent}
           {showEmptyState ? (
             <ScrollView
               contentContainerStyle={{ flex: 1 }}

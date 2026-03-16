@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
@@ -44,6 +44,13 @@ export interface HeaderAction {
   library?: IconLibrary;
   /** Test ID for automation */
   testID?: string;
+  /** Layout measurement callback for positioning spotlight tutorials */
+  onMeasure?: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
 }
 
 interface HeaderProps {
@@ -68,6 +75,39 @@ interface HeaderProps {
 }
 
 // ============================================
+// Measurement wrapper for spotlight tutorials
+// ============================================
+
+const MeasuredHeaderAction: React.FC<{
+  onMeasure: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
+  children: React.ReactNode;
+}> = ({ onMeasure, children }) => {
+  const ref = useRef<View>(null);
+  return (
+    <View
+      ref={ref}
+      collapsable={false}
+      onLayout={() => {
+        requestAnimationFrame(() => {
+          ref.current?.measure((_x, _y, w, h, pageX, pageY) => {
+            if (w > 0 && h > 0) {
+              onMeasure({ x: pageX, y: pageY, width: w, height: h });
+            }
+          });
+        });
+      }}
+    >
+      {children}
+    </View>
+  );
+};
+
+// ============================================
 // Component
 // ============================================
 
@@ -85,7 +125,9 @@ export const Header: React.FC<HeaderProps> = ({
   const { theme } = useUnistyles();
 
   // Variant color mapping
-  const getVariantColor = (actionVariant: ActionVariant = 'default'): string => {
+  const getVariantColor = (
+    actionVariant: ActionVariant = 'default',
+  ): string => {
     const colorMap: Record<ActionVariant, string> = {
       default: theme.colors.textPrimary,
       primary: theme.colors.primary,
@@ -98,7 +140,8 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   // Apply variant presets
-  const shouldCenterTitle = centerTitle ?? (variant === 'form' || variant === 'modal');
+  const shouldCenterTitle =
+    centerTitle ?? (variant === 'form' || variant === 'modal');
   const showTitle = title !== undefined && title !== '';
   const showBackButton = onBack && !onClose;
   const showCloseButton = onClose !== undefined;
@@ -107,10 +150,10 @@ export const Header: React.FC<HeaderProps> = ({
   const renderAction = (action: HeaderAction, index: number) => {
     const iconColor = action.color || getVariantColor(action.variant);
 
-    return (
+    const pressable = (
       <Pressable
-        key={index}
-        style={({pressed}) => [styles.action, pressed && styles.pressed]}
+        key={action.onMeasure ? undefined : index}
+        style={({ pressed }) => [styles.action, pressed && styles.pressed]}
         onPress={action.onPress}
         disabled={action.disabled || action.loading}
         testID={action.testID}
@@ -133,6 +176,16 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </Pressable>
     );
+
+    if (action.onMeasure) {
+      return (
+        <MeasuredHeaderAction key={index} onMeasure={action.onMeasure}>
+          {pressable}
+        </MeasuredHeaderAction>
+      );
+    }
+
+    return pressable;
   };
 
   return (
@@ -147,7 +200,7 @@ export const Header: React.FC<HeaderProps> = ({
       <View style={styles.actions}>
         {!!showCloseButton && (
           <Pressable
-            style={({pressed}) => [styles.action, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.action, pressed && styles.pressed]}
             onPress={onClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="header-close-button"
@@ -157,12 +210,16 @@ export const Header: React.FC<HeaderProps> = ({
         )}
         {!!showBackButton && (
           <Pressable
-            style={({pressed}) => [styles.action, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.action, pressed && styles.pressed]}
             onPress={onBack}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="header-back-button"
           >
-            <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
+            <Icon
+              name="arrow-back"
+              size={24}
+              color={theme.colors.textPrimary}
+            />
           </Pressable>
         )}
         {leftActions.map(renderAction)}

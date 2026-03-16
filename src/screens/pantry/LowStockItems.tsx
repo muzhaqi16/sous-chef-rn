@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, RefreshControl } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -8,11 +9,16 @@ import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
 import { Header } from '#components/molecules/Header';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
+import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAddItemToShoppingListMutation } from '#generated';
 import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#hooks/pantry/useAddLowStockToShoppingList';
+import {
+  useTutorialSequence,
+  type TutorialStep,
+} from '#hooks/ui/useTutorialSequence';
 import { commonStyles } from '#/styles/commonStyles';
 import { createPropsComparator } from '#utils/memoUtils';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
@@ -22,6 +28,25 @@ import {
 } from './LowStockActionsContext';
 
 const keyExtractor = (item: { id: string }) => item.id;
+
+type LayoutRect = { x: number; y: number; width: number; height: number };
+
+// ── Tutorial steps ──
+
+const LOW_STOCK_TUTORIAL_STEPS: TutorialStep[] = [
+  {
+    featureId: 'low_stock_tutorial_item_cart',
+    title: 'Add to shopping list',
+    subtitle: 'Tap to add this item to your shopping list',
+    rectKey: 'itemCart',
+  },
+  {
+    featureId: 'low_stock_tutorial_header_cart',
+    title: 'Add all at once',
+    subtitle: 'Add all low stock items to your shopping list at once',
+    rectKey: 'headerCart',
+  },
+];
 
 interface LowStockItem {
   id: string;
@@ -36,13 +61,25 @@ interface LowStockItem {
 interface LowStockRenderItemProps {
   item: LowStockItem;
   primaryColor: string;
+  onCartMeasure?: (rect: LayoutRect) => void;
 }
 
 const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({
   item,
   primaryColor,
+  onCartMeasure,
 }) => {
   const { navigateTo, handleAddToList } = useLowStockActions();
+  const cartRef = useRef<View>(null);
+
+  const cartButton = (
+    <Pressable
+      onPress={() => handleAddToList(item.id)}
+      style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
+    >
+      <Icon name="cart-outline" size={20} color={primaryColor} />
+    </Pressable>
+  );
 
   return (
     <SwipeableItem onPress={() => navigateTo({ itemId: item.id })}>
@@ -53,22 +90,32 @@ const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({
             {item.quantity} {item.unit?.symbol} remaining
           </Text>
         </View>
-        <Pressable
-          onPress={() => handleAddToList(item.id)}
-          style={({ pressed }) => [
-            styles.actionButton,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Icon name="cart-outline" size={20} color={primaryColor} />
-        </Pressable>
+        {onCartMeasure ? (
+          <View
+            ref={cartRef}
+            collapsable={false}
+            onLayout={() => {
+              requestAnimationFrame(() => {
+                cartRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+                  if (w > 0 && h > 0) {
+                    onCartMeasure({ x: pageX, y: pageY, width: w, height: h });
+                  }
+                });
+              });
+            }}
+          >
+            {cartButton}
+          </View>
+        ) : (
+          cartButton
+        )}
       </View>
     </SwipeableItem>
   );
 };
 
 const arePropsEqual = createPropsComparator<LowStockRenderItemProps>({
-  referenceKeys: ['primaryColor'],
+  referenceKeys: ['primaryColor', 'onCartMeasure'],
   nestedComparisons: {
     item: ['id', 'itemName', 'quantity'],
     'item.unit': ['symbol'],
@@ -121,6 +168,14 @@ export const LowStockItems: React.FC = () => {
 
   const [refreshing, setRefreshing] = React.useState(false);
 
+  // ── Focus tracking for tutorial pausing ──
+  const [isScreenFocused, setIsScreenFocused] = useState(true);
+  const [onScreenFocus] = useState(() => () => {
+    setIsScreenFocused(true);
+    return () => setIsScreenFocused(false);
+  });
+  useFocusEffect(onScreenFocus);
+
   // Use cache-only hook for pantry resolution (no network requests)
   // This prevents query cascade when switching between pantry screens
   const { pantry, selectedHomeId } = useCurrentPantry();
@@ -146,6 +201,20 @@ export const LowStockItems: React.FC = () => {
 
     return allItems.filter(item => item.isLowStock);
   })();
+
+  // ── Tutorial measurement state ──
+  const [itemCartRect, setItemCartRect] = useState<LayoutRect | null>(null);
+  const [headerCartRect, setHeaderCartRect] = useState<LayoutRect | null>(null);
+
+  const tutorial = useTutorialSequence({
+    steps: LOW_STOCK_TUTORIAL_STEPS,
+    targetRects: {
+      itemCart: itemCartRect,
+      headerCart: headerCartRect,
+    },
+    canStart: lowStockItems.length > 0 && !loading,
+    isPaused: !isScreenFocused,
+  });
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -181,6 +250,7 @@ export const LowStockItems: React.FC = () => {
             onPress: addLowStockToShoppingList,
             loading: addAllLoading,
             testID: 'add-all-low-stock',
+            onMeasure: setHeaderCartRect,
           },
         ]}
       />
@@ -204,14 +274,33 @@ export const LowStockItems: React.FC = () => {
           ListEmptyComponent={
             <LowStockEmpty loading={loading} hasItems={!!allItems} />
           }
-          renderItem={({ item }: { item: LowStockItem }) => (
+          renderItem={({
+            item,
+            index,
+          }: {
+            item: LowStockItem;
+            index: number;
+          }) => (
             <LowStockRenderItem
               item={item}
               primaryColor={theme.colors.primary}
+              onCartMeasure={index === 0 ? setItemCartRect : undefined}
             />
           )}
         />
       </LowStockActionsProvider>
+
+      {tutorial.currentStep ? (
+        <SpotlightCoachMark
+          targetRect={tutorial.currentStep.targetRect}
+          title={tutorial.currentStep.title}
+          subtitle={tutorial.currentStep.subtitle}
+          stepIndex={tutorial.currentStep.stepIndex}
+          totalSteps={tutorial.currentStep.totalSteps}
+          onDismiss={tutorial.skipAll}
+          onTargetPress={tutorial.advance}
+        />
+      ) : null}
     </View>
   );
 };
@@ -222,6 +311,7 @@ const styles = StyleSheet.create(theme => ({
   },
   scrollContent: {
     padding: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   emptyState: {
     padding: theme.spacing['2xl'],
@@ -239,7 +329,7 @@ const styles = StyleSheet.create(theme => ({
   },
   itemCard: {
     ...commonStyles.rowSpaceBetween,
-    marginBottom: theme.spacing.sm,
+    marginBottom: 0,
   },
   itemInfo: {
     flex: 1,

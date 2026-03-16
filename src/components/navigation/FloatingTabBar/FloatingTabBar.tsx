@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useAnimatedReaction,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -40,7 +41,8 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     addButtonDisabledMessage,
     isOverlayOpen,
   } = useTabBarState();
-  const { setActiveTab, setAddButtonRect } = useTabBarSetters();
+  const { setActiveTab, setAddButtonRect, scrollTabBarHidden } =
+    useTabBarSetters();
 
   // Ref for measuring add button position (for tutorial spotlight)
   const addButtonRef = useRef<View>(null);
@@ -92,7 +94,9 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     'display' in focusedOptions.tabBarStyle &&
     focusedOptions.tabBarStyle.display === 'none';
 
-  // Animate tab bar visibility
+  // Animate tab bar visibility (overlay/navigation-driven — React state)
+  // Takes priority over scroll-driven hide: resets scrollTabBarHidden so the
+  // scroll reaction won't revert the hide when overlay is open.
   useLayoutEffect(() => {
     const shouldHide = isOverlayOpen || shouldHideFromNavigation;
 
@@ -101,7 +105,30 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
 
     // Snappy spring with subtle bounce (higher damping = less bounce)
     translateY.set(withSpring(shouldHide ? 150 : 0, SPRING.HEAVY));
-  }, [isOverlayOpen, shouldHideFromNavigation, translateY, opacity]);
+
+    // Reset scroll state when overlay/nav takes priority — prevents the scroll
+    // reaction from showing the tab bar while an overlay is still open.
+    if (shouldHide) {
+      scrollTabBarHidden.set(false);
+    }
+  }, [
+    isOverlayOpen,
+    shouldHideFromNavigation,
+    translateY,
+    opacity,
+    scrollTabBarHidden,
+  ]);
+
+  // Scroll-driven tab bar hide (SharedValue from screen scroll handlers).
+  // Overlay/nav priority is handled above by resetting scrollTabBarHidden.
+  useAnimatedReaction(
+    () => scrollTabBarHidden.value,
+    (hidden, prevHidden) => {
+      if (hidden === prevHidden) return;
+      translateY.set(withSpring(hidden ? 150 : 0, SPRING.HEAVY));
+      opacity.set(withTiming(hidden ? 0 : 1, { duration: TIMING.FAST }));
+    },
+  );
 
   // Animated style for smooth transitions
   const animatedStyle = useAnimatedStyle(() => ({

@@ -36,6 +36,8 @@ const ShoppingTabComponent: React.FC = () => {
     canMarkPurchased,
     canReorderItems,
     isTransitioning,
+    onScroll,
+    scrollEventThrottle,
   } = useShoppingListData('shopping');
   // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
   // This ensures smooth screen transitions by showing skeletons during navigation animation
@@ -100,6 +102,8 @@ const ShoppingTabComponent: React.FC = () => {
           canMarkPurchased={canMarkPurchased}
           canReorderItems={canReorderItems}
           listEmptyComponent={emptyComponent}
+          onScroll={onScroll}
+          scrollEventThrottle={scrollEventThrottle}
         />
       </View>
 

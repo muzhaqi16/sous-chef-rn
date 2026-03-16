@@ -1,4 +1,40 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Prometheus datasource for metrics",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "gauge",
+      "name": "Gauge",
+      "version": ""
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -58,7 +94,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Total number of app launches across all platforms",
       "gridPos": {
@@ -95,7 +131,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Current GraphQL request rate per minute",
       "gridPos": {
@@ -133,7 +169,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Percentage of failed GraphQL requests",
       "gridPos": {
@@ -184,7 +220,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Number of app crashes in the last hour",
       "gridPos": {
@@ -233,7 +269,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Login success rate by authentication method",
       "fieldConfig": {
@@ -290,7 +326,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Current memory usage percentage",
       "gridPos": {
@@ -344,7 +380,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Unhandled promise rejections",
       "fieldConfig": {
@@ -397,7 +433,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Active app instances reporting metrics",
       "fieldConfig": {
@@ -446,7 +482,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${prometheus_datasource}"
+        "uid": "${DS_PROMETHEUS}"
       },
       "description": "Median (P50) end-to-end app startup time",
       "fieldConfig": {
@@ -499,30 +535,11 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 30,
+  "schemaVersion": 41,
   "style": "dark",
   "tags": ["react-native", "mobile", "sous-chef", "overview"],
   "templating": {
     "list": [
-      {
-        "current": {
-          "selected": false,
-          "text": "Prometheus",
-          "value": "Prometheus"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": "Prometheus",
-        "multi": false,
-        "name": "prometheus_datasource",
-        "options": [],
-        "query": "prometheus",
-        "queryValue": "",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      },
       {
         "current": {
           "selected": false,
@@ -531,7 +548,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus_datasource}"
+          "uid": "${DS_PROMETHEUS}"
         },
         "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}, env)",
         "hide": 0,
@@ -558,7 +575,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "${prometheus_datasource}"
+          "uid": "${DS_PROMETHEUS}"
         },
         "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}, platform)",
         "hide": 0,

@@ -3,9 +3,19 @@ import type { ShoppingListItemDisplayFragment } from '#generated';
 import { MoveToPantryModal } from '#/components/modals/MoveToPantryModal';
 import { AddToShoppingListSheet } from '#/components/modals/AddToShoppingListSheet/AddToShoppingListSheet';
 import { QuantityEditSheet } from '#/components/modals/QuantityEditSheet/QuantityEditSheet';
-import { useAddItemSheet, type UseAddItemSheetResult } from '#/hooks/shoppingList/useAddItemSheet';
-import { useQuantityEditModal, type UseQuantityEditModalResult } from '#/hooks/shoppingList/useQuantityEditModal';
-import { useMoveToPantryModal, type UseMoveToPantryModalResult } from '#/hooks/shoppingList/useMoveToPantryModal';
+import {
+  useAddItemSheet,
+  type UseAddItemSheetResult,
+} from '#/hooks/shoppingList/useAddItemSheet';
+import {
+  useQuantityEditModal,
+  type UseQuantityEditModalResult,
+} from '#/hooks/shoppingList/useQuantityEditModal';
+import {
+  useMoveToPantryModal,
+  type UseMoveToPantryModalResult,
+} from '#/hooks/shoppingList/useMoveToPantryModal';
+import { useShoppingListTutorial } from '#/context/ShoppingListTutorialContext';
 
 /**
  * Context value for shopping list modals.
@@ -20,7 +30,8 @@ interface ShoppingListModalsContextValue {
   moveToPantry: UseMoveToPantryModalResult;
 }
 
-const ShoppingListModalsContext = createContext<ShoppingListModalsContextValue | null>(null);
+const ShoppingListModalsContext =
+  createContext<ShoppingListModalsContextValue | null>(null);
 
 /**
  * Hook to access shopping list modals from context.
@@ -43,7 +54,9 @@ const ShoppingListModalsContext = createContext<ShoppingListModalsContextValue |
 export function useShoppingListModals() {
   const context = useContext(ShoppingListModalsContext);
   if (!context) {
-    throw new Error('useShoppingListModals must be used within ShoppingListModalsProvider');
+    throw new Error(
+      'useShoppingListModals must be used within ShoppingListModalsProvider',
+    );
   }
   return context;
 }
@@ -106,6 +119,8 @@ export function ShoppingListModalsProvider({
   onSearchQueryClear,
   onNavigateToListSettings,
 }: ShoppingListModalsProviderProps) {
+  const tutorial = useShoppingListTutorial();
+
   // Initialize all modal hooks
   const addItemSheet = useAddItemSheet({
     currentListId,
@@ -145,7 +160,10 @@ export function ShoppingListModalsProvider({
       <AddToShoppingListSheet
         visible={addItemSheet.visible}
         shoppingListId={currentListId}
-        onClose={addItemSheet.close}
+        onClose={() => {
+          addItemSheet.close();
+          tutorial?.notifySheetClosed();
+        }}
         initialSearchQuery={searchQuery}
         onItemAdded={onSearchQueryClear}
       />

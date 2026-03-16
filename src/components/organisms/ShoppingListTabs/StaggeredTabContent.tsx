@@ -1,6 +1,10 @@
 import React from 'react';
 import type { ReactElement, ComponentType } from 'react';
-import { View } from 'react-native';
+import {
+  View,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+} from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList/SortableList';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
@@ -33,6 +37,9 @@ interface StaggeredTabContentProps {
   canReorderItems?: boolean;
   onMoveToPantry?: (id: string) => void;
   listEmptyComponent?: ReactElement | ComponentType<any> | null;
+  // Collapsible scroll handler
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  scrollEventThrottle?: number;
 }
 
 export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
@@ -56,6 +63,8 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   canReorderItems,
   onMoveToPantry,
   listEmptyComponent,
+  onScroll,
+  scrollEventThrottle,
 }) => {
   const footerComponent = (
     <PaginationFooter
@@ -89,6 +98,8 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
         canEditItems={canEditItems}
         canMarkPurchased={canMarkPurchased}
         canReorderItems={canReorderItems}
+        onScroll={onScroll}
+        scrollEventThrottle={scrollEventThrottle}
       />
     </View>
   );

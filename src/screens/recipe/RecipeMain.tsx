@@ -1,13 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { FlashList } from '@shopify/flash-list';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { ItemList } from '#components/organisms/ItemList';
 import {
   SearchBar,
@@ -15,7 +13,6 @@ import {
 } from '#components/molecules/SearchBar';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
-import { createPropsComparator } from '#utils/memoUtils';
 import { Icon } from '#/utils/iconUtils';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
@@ -27,9 +24,9 @@ import {
   type TutorialStep,
 } from '#hooks/ui/useTutorialSequence';
 import {
-  IngredientSelectorProvider,
-  useIngredientSelector,
-} from './RecipeSearch/IngredientSelectorContext';
+  IngredientSelectorSheet,
+  type IngredientSelectorSheetRef,
+} from './RecipeSearch/IngredientSelectorSheet';
 import { useRecipeScreen } from '#/hooks/recipe/useRecipeScreen';
 
 // ── Filter options — synced with DietaryRestrictionSelector + Spoonacular API values ──
@@ -92,72 +89,6 @@ const RECIPE_TUTORIAL_STEPS: TutorialStep[] = [
   },
 ];
 
-// ── Module-scope ingredient list item components (FlashList compatible) ──
-
-const IngredientItemComponent: React.FC<{
-  name: string;
-  selected: boolean;
-  onToggle: (name: string) => void;
-  primaryColor: string;
-  textSecondary: string;
-}> = ({ name, selected, onToggle, primaryColor, textSecondary }) => {
-  const handlePress = () => onToggle(name);
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.ingredientItem,
-        pressed && styles.pressed,
-      ]}
-      onPress={handlePress}
-    >
-      <Ionicons
-        name={selected ? 'checkbox' : 'square-outline'}
-        size={24}
-        color={selected ? primaryColor : textSecondary}
-      />
-      <Text style={styles.ingredientText}>{name}</Text>
-    </Pressable>
-  );
-};
-
-const areIngredientItemPropsEqual = createPropsComparator<{
-  name: string;
-  selected: boolean;
-  onToggle: (name: string) => void;
-  primaryColor: string;
-  textSecondary: string;
-}>({
-  referenceKeys: ['name', 'selected', 'primaryColor', 'textSecondary'],
-});
-
-const IngredientItem = React.memo(
-  IngredientItemComponent,
-  areIngredientItemPropsEqual,
-);
-
-const ingredientKeyExtractor = (item: any) => item.id;
-
-const IngredientRenderItem = ({ item }: { item: any }) => {
-  const { selectedIngredients, toggleIngredient } = useIngredientSelector();
-  const { theme } = useUnistyles();
-  const itemName = item.itemName || '';
-  return (
-    <IngredientItem
-      name={itemName}
-      selected={selectedIngredients.has(itemName)}
-      onToggle={toggleIngredient}
-      primaryColor={theme.colors.primary}
-      textSecondary={theme.colors.textSecondary}
-    />
-  );
-};
-
-const getIngredientItemType = () => 'item';
-
-const renderIngredientItem = ({ item }: { item: any }) => (
-  <IngredientRenderItem item={item} />
-);
-
 // ── Inner component (thin — delegates to useRecipeScreen facade) ──
 
 const RecipeMainInner: React.FC = () => {
@@ -191,8 +122,8 @@ const RecipeMainInner: React.FC = () => {
     null,
   );
 
-  const ingredientSheetRef = useRef<BottomSheetModal>(null);
   const filterSheetRef = useRef<BottomSheetModal>(null);
+  const ingredientSheetRef = useRef<IngredientSelectorSheetRef>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const tutorial = useTutorialSequence({
@@ -229,11 +160,6 @@ const RecipeMainInner: React.FC = () => {
   // Track sheet open/close via BottomSheetModal's onChange (-1 = closed, 0+ = open)
   const handleSheetChange = (index: number) => {
     setIsSheetOpen(index >= 0);
-  };
-
-  const handleIngredientSearchAndClose = async () => {
-    ingredientSheetRef.current?.close();
-    await screen.handleIngredientSearch();
   };
 
   const handleItemPress = (id: string | number) => {
@@ -471,49 +397,11 @@ const RecipeMainInner: React.FC = () => {
         />
       )}
 
-      <BottomSheetAction
-        sheetRef={ingredientSheetRef}
-        sheetTitle="Select Ingredients"
-        snapPoints={['50%', '75%', '90%']}
-        scrollable={false}
-        onChange={handleSheetChange}
-        headerRight={
-          <Pressable
-            style={({ pressed }) => [
-              styles.headerSearchButton,
-              { backgroundColor: theme.colors.primary },
-              screen.selectedIngredients.size === 0 &&
-                styles.headerSearchButtonDisabled,
-              pressed && styles.pressed,
-            ]}
-            onPress={handleIngredientSearchAndClose}
-            disabled={screen.selectedIngredients.size === 0}
-          >
-            <Text style={styles.headerSearchButtonText}>
-              Search ({screen.selectedIngredients.size})
-            </Text>
-          </Pressable>
-        }
-      >
-        <IngredientSelectorProvider
-          selectedIngredients={screen.selectedIngredients}
-          toggleIngredient={screen.toggleIngredient}
-        >
-          <FlashList
-            data={screen.pantryItems}
-            keyExtractor={ingredientKeyExtractor}
-            renderItem={renderIngredientItem}
-            getItemType={getIngredientItemType}
-            extraData={screen.selectedIngredients.size}
-            {...FLASHLIST_DEFAULTS.bottomSheet}
-            style={styles.ingredientList}
-            contentContainerStyle={styles.ingredientListContent}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>No pantry items available</Text>
-            }
-          />
-        </IngredientSelectorProvider>
-      </BottomSheetAction>
+      <IngredientSelectorSheet
+        ref={ingredientSheetRef}
+        screen={screen}
+        onSheetChange={open => setIsSheetOpen(open)}
+      />
 
       {/* Filter Bottom Sheet */}
       <BottomSheetAction
@@ -807,37 +695,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
-  },
-  ingredientItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  ingredientText: {
-    marginLeft: theme.spacing.md,
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textPrimary,
-  },
-  ingredientList: { flex: 1 },
-  ingredientListContent: { paddingBottom: theme.spacing.xl },
-  headerSearchButton: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-  },
-  headerSearchButtonDisabled: { opacity: theme.opacity.disabled },
-  headerSearchButtonText: {
-    color: theme.colors.white,
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: theme.colors.textSecondary,
-    fontSize: theme.fonts.size.md,
-    marginTop: theme.spacing.xl,
   },
   filterSection: { marginBottom: theme.spacing.xl },
   filterSectionTitle: {
