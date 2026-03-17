@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Pressable } from 'react-native';
+import { useAnimatedReaction } from 'react-native-reanimated';
+import { useFocusEffect } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 
 // Components
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
@@ -9,6 +12,7 @@ import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { ShoppingListTabs } from '#components/organisms/ShoppingListTabs/ShoppingListTabs';
 import { InteractiveSwipeHint } from '#components/organisms/InteractiveSwipeHint/InteractiveSwipeHint';
+import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { Icon } from '#utils/iconUtils';
 
 // Hooks & Context
@@ -21,9 +25,18 @@ import { useBatchMoveToPantry } from '#hooks/shoppingList/useBatchMoveToPantry';
 import { useShoppingListSelectorModal } from '#hooks/shoppingList/useShoppingListSelectorModal';
 import { useItemReordering } from '#hooks/shoppingList/useItemReordering';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
-import { useTabBarSetters } from '#/context/TabBarActionsContext';
+import {
+  useTabBarSetters,
+  useTabBarState,
+} from '#/context/TabBarActionsContext';
 import { useShoppingListModals } from '#/context/ShoppingListModalsContext';
 import { useAuthUser } from '#/hooks/auth/useAuthUser';
+import {
+  useShoppingListTutorial,
+  ShoppingListTutorialStep,
+  TUTORIAL_STEP_CONFIG,
+  TUTORIAL_TOTAL_STEPS,
+} from '#/context/ShoppingListTutorialContext';
 
 // Utils
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -88,8 +101,38 @@ export const ShoppingListMainContent: React.FC<
   });
 
   const { navigate, navigateTo } = useAppNavigation();
-  const { setScannerProps } = useTabBarSetters();
+  const { setScannerProps, scrollTabBarHidden } = useTabBarSetters();
+  const { addButtonRect, isOverlayOpen } = useTabBarState();
   const { theme } = useUnistyles();
+
+  // ── Scroll direction tracking (tab bar hide on scroll down) ──
+  const { scrollHandler, isScrolledDown } = useCollapsibleScroll();
+
+  useAnimatedReaction(
+    () => isScrolledDown.value,
+    hidden => {
+      scrollTabBarHidden.set(hidden);
+    },
+  );
+
+  // ── Interactive tutorial context ──
+  const tutorial = useShoppingListTutorial();
+
+  // Register the tab bar add button rect with the tutorial context
+  useEffect(() => {
+    tutorial?.registerRect('addButton', addButtonRect ?? null);
+  }, [tutorial, addButtonRect]);
+
+  // ── Screen focus tracking ──
+  const [isScreenFocused, setIsScreenFocused] = useState(true);
+  const [onScreenFocus] = useState(() => () => {
+    setIsScreenFocused(true);
+    return () => {
+      setIsScreenFocused(false);
+      scrollTabBarHidden.set(false);
+    };
+  });
+  useFocusEffect(onScreenFocus);
 
   // Get current user for permission calculations
   const user = useAuthUser();
@@ -254,8 +297,11 @@ export const ShoppingListMainContent: React.FC<
     canEditItems: permissions.canEditItems,
     canMarkPurchased: permissions.canMarkPurchased,
     canReorderItems: permissions.canEditItems,
-    // Header
-    listHeaderComponent: searchBarHeader,
+    // Search query for search-aware empty states
+    searchQuery,
+    // Scroll direction tracking — threaded to FlashList via data context
+    onScroll: scrollHandler,
+    scrollEventThrottle: 16,
   };
 
   // Set up scanner button
@@ -293,8 +339,8 @@ export const ShoppingListMainContent: React.FC<
       : "You don't have permission to add items to this list",
   );
 
-  // Empty state when no lists exist
-  if (lists.length === 0) {
+  // Empty state when no lists exist (gated on loading to prevent flash)
+  if (!isLoadingInitial && lists.length === 0) {
     const noListsEmptyState = {
       icon: 'cart-outline',
       title: 'No shopping lists',
@@ -330,6 +376,7 @@ export const ShoppingListMainContent: React.FC<
         title={currentList?.name || 'Shopping List'}
         headerRight={headerRight}
       />
+      {searchBarHeader}
       <ListTemplate
         items={[]}
         loading={isLoadingInitial}
@@ -344,7 +391,9 @@ export const ShoppingListMainContent: React.FC<
         testIDPrefix="shopping-list-item"
         emptyState={emptyStateConfig}
         customListComponent={ShoppingListTabs}
-        customListProps={customListProps}
+        customListProps={{
+          ...customListProps,
+        }}
       />
 
       <AnimatedItemSelector
@@ -361,6 +410,47 @@ export const ShoppingListMainContent: React.FC<
           onDismiss={swipeHint.actions.dismiss}
         />
       )}
+
+      {/* Interactive tutorial spotlight coach-marks (steps 1, 4, 5, 6) */}
+      {(() => {
+        if (!tutorial?.isActive) return null;
+        if (!isScreenFocused || isOverlayOpen || swipeHint.isVisible)
+          return null;
+
+        const stepConfig = TUTORIAL_STEP_CONFIG[tutorial.currentStep];
+        if (!stepConfig) return null;
+
+        const targetRect = tutorial.rects[stepConfig.rectKey];
+        if (!targetRect) return null;
+
+        const handleTargetPress = () => {
+          if (
+            tutorial.currentStep ===
+            ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON
+          ) {
+            Telemetry.trackEvent('add_item_from_tab_bar', {
+              list_id: currentListId,
+            });
+            addItemSheet.open();
+            tutorial.notifyAddButtonPressed();
+          }
+          // Steps 4, 5, 6: the actual action + notification happens in the
+          // child components (SortableItem, ShoppingListTabs) that call
+          // notifyCheckboxTapped / notifyPurchasedTabTapped / notifyMoveToPantryTapped
+        };
+
+        return (
+          <SpotlightCoachMark
+            targetRect={targetRect}
+            title={stepConfig.title}
+            subtitle={stepConfig.subtitle}
+            stepIndex={stepConfig.stepIndex}
+            totalSteps={TUTORIAL_TOTAL_STEPS}
+            onDismiss={tutorial.skipAll}
+            onTargetPress={handleTargetPress}
+          />
+        );
+      })()}
 
       {/* Modals are rendered inside ShoppingListModalsProvider */}
     </View>

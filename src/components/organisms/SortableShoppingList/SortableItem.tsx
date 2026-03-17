@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Pressable } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
@@ -19,6 +19,10 @@ import {
   TIMING,
 } from '#constants/animations';
 import { useStaggeredEntry } from '#context/StaggeredEntryContext';
+import {
+  useShoppingListTutorial,
+  ShoppingListTutorialStep,
+} from '#/context/ShoppingListTutorialContext';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useSortableListTheme } from './SortableListThemeContext';
@@ -90,12 +94,96 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     canMarkPurchased = true,
   } = permissions;
 
+  // ── Interactive tutorial (only active for first item during relevant steps) ──
+  const tutorial = useShoppingListTutorial();
+  const checkboxRef = useRef<View>(null);
+  const archiveIconRef = useRef<View>(null);
+
+  const isTutorialCheckboxTarget =
+    tutorial?.isActive &&
+    tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX &&
+    index === 0 &&
+    !item.isPurchased;
+
+  // Check currentStep directly (not isActive) so the archive icon gets measured
+  // during the 400ms transition period when the purchased tab first mounts.
+  // isActive is false during transitions, but we need the rect ready for when
+  // the spotlight renders after the transition completes.
+  const isTutorialArchiveTarget =
+    tutorial?.currentStep ===
+      ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY &&
+    index === 0 &&
+    !!item.isPurchased;
+
+  // Measure checkbox position for tutorial spotlight
+  const handleCheckboxLayout = () => {
+    if (!isTutorialCheckboxTarget) return;
+    requestAnimationFrame(() => {
+      checkboxRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+        if (w > 0 && h > 0) {
+          tutorial?.registerRect('checkbox', {
+            x: pageX,
+            y: pageY,
+            width: w,
+            height: h,
+          });
+        }
+      });
+    });
+  };
+
+  // Measure archive icon position for tutorial spotlight
+  const handleArchiveIconLayout = () => {
+    if (!isTutorialArchiveTarget) return;
+    requestAnimationFrame(() => {
+      archiveIconRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+        if (w > 0 && h > 0) {
+          tutorial?.registerRect('archiveIcon', {
+            x: pageX,
+            y: pageY,
+            width: w,
+            height: h,
+          });
+        }
+      });
+    });
+  };
+
   // === ELEMENT CREATION ===
 
   // Create rightElement from config or use provided element
   const rightElement = (() => {
     if (item.rightElementConfig?.type === 'quantity') {
       const config = item.rightElementConfig;
+
+      const archiveIcon = !!item.isPurchased && !!onMoveToPantry && (
+        <View
+          ref={isTutorialArchiveTarget ? archiveIconRef : undefined}
+          collapsable={false}
+          onLayout={
+            isTutorialArchiveTarget ? handleArchiveIconLayout : undefined
+          }
+        >
+          <Pressable
+            onPress={() => {
+              onMoveToPantry(item.id);
+              tutorial?.notifyMoveToPantryTapped();
+            }}
+            style={({ pressed }) => [
+              styles.moveToPantryButton,
+              pressed && styles.pressed,
+            ]}
+            hitSlop={HIT_SLOP}
+          >
+            <Icon
+              name="archive-outline"
+              size={24}
+              color={themeColors?.primary}
+            />
+          </Pressable>
+        </View>
+      );
+
       return (
         <View style={styles.rightElementContainer}>
           <QuantityBadge
@@ -107,19 +195,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             isPurchased={item.isPurchased}
             themeColors={themeColors}
           />
-          {!!item.isPurchased && !!onMoveToPantry && (
-            <Pressable
-              onPress={() => onMoveToPantry(item.id)}
-              style={({pressed}) => [styles.moveToPantryButton, pressed && styles.pressed]}
-              hitSlop={HIT_SLOP}
-            >
-              <Icon
-                name="archive-outline"
-                size={24}
-                color={themeColors?.primary}
-              />
-            </Pressable>
-          )}
+          {archiveIcon}
         </View>
       );
     }
@@ -153,7 +229,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // Slide animation triggers state change via callback AFTER animation completes
   const checkboxElement = (() => {
     if (!onTogglePurchase || !canMarkPurchased) return null;
-    return (
+
+    const checkbox = (
       <AnimatedCheckbox
         checked={!!item.isPurchased}
         itemId={item.id}
@@ -163,12 +240,28 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           // Trigger slide animation with callback for state change AFTER animation
           triggerSlide(direction, () => {
             onTogglePurchase(item.id);
+            tutorial?.notifyCheckboxTapped();
           });
         }}
         size={28}
         testID={`shopping-item-checkbox-${item.id}`}
       />
     );
+
+    // Wrap first item's checkbox in a measured View for tutorial spotlight
+    if (isTutorialCheckboxTarget) {
+      return (
+        <View
+          ref={checkboxRef}
+          collapsable={false}
+          onLayout={handleCheckboxLayout}
+        >
+          {checkbox}
+        </View>
+      );
+    }
+
+    return checkbox;
   })();
 
   // Render the item

@@ -1,4 +1,4 @@
-import type { FC, ReactNode } from 'react';
+import { useRef, type FC, type ReactNode } from 'react';
 import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
@@ -20,6 +20,13 @@ export interface SearchBarAction {
   animated?: boolean;
   isHighlighted?: boolean;
   testID?: string; // Optional testID for E2E testing
+  /** Callback with screen-coordinate rect when the button lays out (for spotlight tutorials) */
+  onButtonLayout?: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
 }
 
 type SearchBarProps = Omit<TextInputProps, 'style'> & {
@@ -36,6 +43,48 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
   showSearchIcon?: boolean;
   /** Custom icon/element to show inside the input field (right side, when not showing clear) */
   innerRightIcon?: ReactNode;
+};
+
+/**
+ * Wrapper that measures an action button's screen position for spotlight tutorials.
+ * ActionButton has marginLeft which shifts the visual button right of the layout
+ * origin. We measure the wrapper then trim the margin so the reported rect
+ * matches only the visible button area.
+ */
+const MeasuredAction: FC<{
+  onButtonLayout: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
+  children: ReactNode;
+}> = ({ onButtonLayout, children }) => {
+  const ref = useRef<View>(null);
+  const { theme } = useUnistyles();
+  const margin = theme.spacing.sm; // matches ActionButton's marginLeft
+  return (
+    <View
+      ref={ref}
+      collapsable={false}
+      onLayout={() => {
+        requestAnimationFrame(() => {
+          ref.current?.measure((_x, _y, w, h, pageX, pageY) => {
+            if (w > 0 && h > 0) {
+              onButtonLayout({
+                x: pageX + margin,
+                y: pageY,
+                width: w - margin,
+                height: h,
+              });
+            }
+          });
+        });
+      }}
+    >
+      {children}
+    </View>
+  );
 };
 
 export const SearchBar: FC<SearchBarProps> = ({
@@ -62,33 +111,30 @@ export const SearchBar: FC<SearchBarProps> = ({
     return (
       <View style={[styles.actionsContainer]}>
         {actions.map((action, index) => {
-          if (action.animated) {
-            return (
-              <AnimatedActionButton
-                key={`${side}-${index}-${action.icon}`}
-                name={action.icon}
-                onPress={action.onPress}
-                style={[
-                  {
-                    ...commonStyles.shadow,
-                  },
-                  action.style,
-                ]}
-                color={action.color || theme.colors.white}
-                backgroundColor={action.backgroundColor || theme.colors.primary}
-                size={action.size}
-                accessibilityLabel={
-                  action.accessibilityLabel || `${action.icon} button`
-                }
-                isHighlighted={action.isHighlighted}
-                testID={action.testID}
-              />
-            );
-          }
-
-          return (
+          const key = `${side}-${index}-${action.icon}`;
+          const button = action.animated ? (
+            <AnimatedActionButton
+              key={key}
+              name={action.icon}
+              onPress={action.onPress}
+              style={[
+                {
+                  ...commonStyles.shadow,
+                },
+                action.style,
+              ]}
+              color={action.color || theme.colors.white}
+              backgroundColor={action.backgroundColor || theme.colors.primary}
+              size={action.size}
+              accessibilityLabel={
+                action.accessibilityLabel || `${action.icon} button`
+              }
+              isHighlighted={action.isHighlighted}
+              testID={action.testID}
+            />
+          ) : (
             <ActionButton
-              key={`${side}-${index}-${action.icon}`}
+              key={key}
               name={action.icon}
               onPress={action.onPress}
               style={[
@@ -107,6 +153,16 @@ export const SearchBar: FC<SearchBarProps> = ({
               testID={action.testID}
             />
           );
+
+          if (action.onButtonLayout) {
+            return (
+              <MeasuredAction key={key} onButtonLayout={action.onButtonLayout}>
+                {button}
+              </MeasuredAction>
+            );
+          }
+
+          return button;
         })}
       </View>
     );
@@ -126,11 +182,7 @@ export const SearchBar: FC<SearchBarProps> = ({
         onClear={() => onChangeText('')}
         leftIcon={
           showSearchIcon ? (
-            <Icon
-              name="search"
-              size={16}
-              color={theme.colors.textTertiary}
-            />
+            <Icon name="search" size={16} color={theme.colors.textTertiary} />
           ) : undefined
         }
         rightIcon={!value ? innerRightIcon : undefined}

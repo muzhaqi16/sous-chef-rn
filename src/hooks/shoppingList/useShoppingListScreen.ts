@@ -125,12 +125,15 @@ export function useShoppingListScreen() {
     }
   }, [rawUnpurchasedItems, rawPurchasedItems, displayedShowImages]);
 
-  // Derived: Initial loading state (loading with no data)
-  const isLoadingInitial =
-    (listsLoading || itemsLoading) &&
-    rawUnpurchasedItems.length === 0 &&
-    rawPurchasedItems.length === 0;
+  // Derived loading states — single source of truth for all downstream components
   const loading = listsLoading || itemsLoading;
+  const hasUIItems = unpurchasedItems.length > 0 || purchasedItems.length > 0;
+  const hasRawData =
+    rawUnpurchasedItems.length > 0 || rawPurchasedItems.length > 0;
+
+  // True until deferred UI items are ready for first display.
+  // Covers: queries in flight AND useDeferredValue gap (raw data arrived but UI lags a frame).
+  const isLoadingInitial = !hasUIItems && (loading || hasRawData);
 
   return {
     state: {

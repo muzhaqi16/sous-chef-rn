@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, type LayoutChangeEvent } from 'react-native';
 import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
@@ -19,6 +19,7 @@ interface FilterTabsItemProps<T extends string> {
   isCompact: boolean;
   onPress: (tabId: T) => void;
   testID: string;
+  onLayout?: (event: LayoutChangeEvent) => void;
 }
 
 function getIconColor(isActive: boolean, isFiltered: boolean): string {
@@ -37,6 +38,7 @@ function FilterTabsItemComponent<T extends string>({
   isCompact,
   onPress,
   testID,
+  onLayout,
 }: FilterTabsItemProps<T>): React.ReactElement {
   const hasCount = showCounts && count !== undefined;
   const iconColor = tab.isAction
@@ -51,6 +53,7 @@ function FilterTabsItemComponent<T extends string>({
   return (
     <Pressable
       onPress={handlePress}
+      onLayout={onLayout}
       testID={testID}
       style={[
         styles.tab,

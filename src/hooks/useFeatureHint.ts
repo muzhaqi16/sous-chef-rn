@@ -204,25 +204,3 @@ export const incrementLoginCount = (userId: string): void => {
   const key = `${LOGIN_COUNT_PREFIX}${userId}`;
   storage.set(key, (storage.getNumber(key) ?? 0) + 1);
 };
-
-const SCREEN_VISIT_PREFIX = 'screen_visit_';
-
-export const getScreenVisitCount = (
-  screenId: string,
-  userId?: string,
-): number => {
-  const key = userId
-    ? `${SCREEN_VISIT_PREFIX}${userId}_${screenId}`
-    : `${SCREEN_VISIT_PREFIX}${screenId}`;
-  return storage.getNumber(key) ?? 0;
-};
-
-export const incrementScreenVisitCount = (
-  screenId: string,
-  userId?: string,
-): void => {
-  const key = userId
-    ? `${SCREEN_VISIT_PREFIX}${userId}_${screenId}`
-    : `${SCREEN_VISIT_PREFIX}${screenId}`;
-  storage.set(key, (storage.getNumber(key) ?? 0) + 1);
-};

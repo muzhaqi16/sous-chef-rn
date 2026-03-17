@@ -11,6 +11,7 @@ import {
   type SelectedUnitInfo,
   type PantryOperation,
 } from '#hooks/pantry/useOperationUnits';
+import { useConvertAvailableQuantity } from '#hooks/pantry/useConvertAvailableQuantity';
 import type { PantryItemFragment, UnitType } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
 
@@ -39,6 +40,10 @@ export interface PantryActionSharedState {
   defaultIncrement: number | null;
   /** Common fractions from the ranked unit API for the selected unit */
   commonFractions: number[] | null;
+  /** Available quantity converted to the selected unit (null if same unit or failed) */
+  availableInSelectedUnit: number | null;
+  /** Whether the available quantity conversion is still loading */
+  availableLoading: boolean;
 }
 
 interface PantryActionModalProps {
@@ -138,6 +143,16 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   const isConvertedUnit =
     selectedUnitInfo != null && !selectedUnitInfo.isTrackingUnit;
 
+  // Convert available quantity to the selected unit for display & validation
+  const { availableInSelectedUnit, availableLoading } =
+    useConvertAvailableQuantity({
+      pantryItemId: pantryItem?.id,
+      selectedUnitId: activeUnitId,
+      trackingUnitId,
+      availableInTrackingUnit: trackingQuantity,
+      conversionRatio: selectedUnitInfo?.conversionRatio ?? null,
+    });
+
   // Reset state when modal opens (render-time state update)
   const [prevVisible, setPrevVisible] = useState(visible);
   const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItem?.id);
@@ -197,6 +212,8 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     defaultIncrement: selectedRankedUnit?.defaultIncrement ?? defaultIncrement,
     commonFractions:
       selectedRankedUnit?.commonFractions ?? defaultCommonFractions,
+    availableInSelectedUnit,
+    availableLoading,
   };
 
   return (

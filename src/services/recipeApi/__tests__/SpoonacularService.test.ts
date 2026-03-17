@@ -47,7 +47,7 @@ describe('SpoonacularService', () => {
       expect(calledUrl.searchParams.get('ignorePantry')).toBe('true');
     });
 
-    it('limits number to 10', async () => {
+    it('caps number at 100', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve([]),
@@ -55,11 +55,11 @@ describe('SpoonacularService', () => {
 
       await spoonacularService.searchRecipesByIngredients({
         ingredients: 'chicken',
-        number: 50,
+        number: 150,
       });
 
       const calledUrl = new URL(mockFetch.mock.calls[0][0]);
-      expect(calledUrl.searchParams.get('number')).toBe('10');
+      expect(calledUrl.searchParams.get('number')).toBe('100');
     });
   });
 
@@ -79,17 +79,22 @@ describe('SpoonacularService', () => {
   });
 
   describe('searchRecipes', () => {
-    it('limits number to 10', async () => {
+    it('caps number at 100', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         json: () =>
-          Promise.resolve({ results: [], offset: 0, number: 10, totalResults: 0 }),
+          Promise.resolve({
+            results: [],
+            offset: 0,
+            number: 100,
+            totalResults: 0,
+          }),
       });
 
-      await spoonacularService.searchRecipes({ query: 'pasta', number: 25 });
+      await spoonacularService.searchRecipes({ query: 'pasta', number: 150 });
 
       const calledUrl = new URL(mockFetch.mock.calls[0][0]);
-      expect(calledUrl.searchParams.get('number')).toBe('10');
+      expect(calledUrl.searchParams.get('number')).toBe('100');
     });
   });
 
@@ -160,7 +165,9 @@ describe('SpoonacularService', () => {
       });
 
       await expect(
-        spoonacularService.searchRecipesByIngredients({ ingredients: 'chicken' }),
+        spoonacularService.searchRecipesByIngredients({
+          ingredients: 'chicken',
+        }),
       ).rejects.toThrow('Spoonacular API error');
     });
 

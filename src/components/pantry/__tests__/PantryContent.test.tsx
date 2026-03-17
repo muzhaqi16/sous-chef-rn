@@ -19,7 +19,28 @@ function createMockPantryItem(overrides: Partial<PantryItem> = {}): PantryItem {
     storageState: 'AMBIENT',
     storageLocation: null,
     storageNotes: null,
-    item: { __typename: 'Item', id: 'item-1', name: 'Mock Item', category: null, brand: null, upc: null, imageUrl: null, images: [], nutrition: null, averageShelfLife: null, defaultUnit: null, displayUnit: null, createdAt: '2024-01-01T00:00:00Z', updatedAt: null, isVerified: false, verifiedAt: null, aliases: [], netWeight: null, netWeightUnit: null, packageBreakdown: null } as any,
+    item: {
+      __typename: 'Item',
+      id: 'item-1',
+      name: 'Mock Item',
+      category: null,
+      brand: null,
+      upc: null,
+      imageUrl: null,
+      images: [],
+      nutrition: null,
+      averageShelfLife: null,
+      defaultUnit: null,
+      displayUnit: null,
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: null,
+      isVerified: false,
+      verifiedAt: null,
+      aliases: [],
+      netWeight: null,
+      netWeightUnit: null,
+      packageBreakdown: null,
+    } as any,
     itemId: 'item-1',
     unit: null,
     unitId: null,
@@ -55,8 +76,24 @@ function createMockPantryItem(overrides: Partial<PantryItem> = {}): PantryItem {
     pantry: { __typename: 'Pantry', id: 'pantry-1' } as any,
     pantryId: 'pantry-1',
     version: 1,
-    changeHistory: { __typename: 'PantryItemChangeConnection', edges: [], pageInfo: { __typename: 'PageInfo', hasNextPage: false, hasPreviousPage: false } } as any,
-    usageRecords: { __typename: 'PantryItemUsageConnection', edges: [], pageInfo: { __typename: 'PageInfo', hasNextPage: false, hasPreviousPage: false } } as any,
+    changeHistory: {
+      __typename: 'PantryItemChangeConnection',
+      edges: [],
+      pageInfo: {
+        __typename: 'PageInfo',
+        hasNextPage: false,
+        hasPreviousPage: false,
+      },
+    } as any,
+    usageRecords: {
+      __typename: 'PantryItemUsageConnection',
+      edges: [],
+      pageInfo: {
+        __typename: 'PageInfo',
+        hasNextPage: false,
+        hasPreviousPage: false,
+      },
+    } as any,
     ledger: { __typename: 'LedgerSummary' } as any,
     ...overrides,
   } as PantryItem;
@@ -195,14 +232,19 @@ jest.mock('../PantryAlertBar', () => ({
 }));
 
 jest.mock('#hooks/pantry/usePantryItemTransformation', () => ({
-  getExpirationStatus: jest.fn(() => ({ text: '3 days left', type: 'warning' })),
+  getExpirationStatus: jest.fn(() => ({
+    text: '3 days left',
+    type: 'warning',
+  })),
   formatPackageBreakdown: jest.fn(() => null),
   formatRemainingNetWeight: jest.fn(() => null),
   formatQuantityBreakdown: jest.fn(() => null),
 }));
 
 jest.mock('#/utils/formatQuantity', () => ({
-  formatQuantityDisplay: jest.fn((qty, unit) => `${qty}${unit ? ` ${unit}` : ''}`),
+  formatQuantityDisplay: jest.fn(
+    (qty, unit) => `${qty}${unit ? ` ${unit}` : ''}`,
+  ),
 }));
 
 jest.mock('../hooks/usePantrySorting', () => ({
@@ -271,13 +313,26 @@ describe('PantryContent', () => {
   it('shows empty state when no items and no search query', () => {
     render(<PantryContent {...defaultProps} items={[]} />);
     expect(screen.getByText('Your pantry is empty')).toBeTruthy();
-    expect(screen.getByText('Start tracking your food to reduce waste')).toBeTruthy();
+    expect(
+      screen.getByText('Start tracking your food to reduce waste'),
+    ).toBeTruthy();
   });
 
-  it('shows search empty state when search query has no results', () => {
-    render(<PantryContent {...defaultProps} items={[]} searchQuery="nonexistent" />);
-    expect(screen.getByText('No items found')).toBeTruthy();
-    expect(screen.getByText('Try a different search term')).toBeTruthy();
+  it('shows search empty state with add action when search query has no results', () => {
+    const onAddItem = jest.fn();
+    render(
+      <PantryContent
+        {...defaultProps}
+        items={[]}
+        searchQuery="nonexistent"
+        onAddItem={onAddItem}
+      />,
+    );
+    expect(screen.getByText('No results for "nonexistent"')).toBeTruthy();
+    expect(
+      screen.getByText('Would you like to add it to your pantry?'),
+    ).toBeTruthy();
+    expect(screen.getByText('Add Item')).toBeTruthy();
   });
 
   it('shows location-specific empty state when filter is active with existing items and loading is false', () => {
@@ -285,7 +340,14 @@ describe('PantryContent', () => {
     const { unmount } = render(
       <PantryContent
         {...defaultProps}
-        items={[createMockPantryItem({ id: '1', itemName: 'X', quantity: 1, expiresAt: null })]}
+        items={[
+          createMockPantryItem({
+            id: '1',
+            itemName: 'X',
+            quantity: 1,
+            expiresAt: null,
+          }),
+        ]}
       />,
     );
     unmount();
@@ -333,7 +395,9 @@ describe('PantryContent', () => {
 
   it('renders empty state with action when onAddItem is provided', () => {
     const onAddItem = jest.fn();
-    render(<PantryContent {...defaultProps} items={[]} onAddItem={onAddItem} />);
+    render(
+      <PantryContent {...defaultProps} items={[]} onAddItem={onAddItem} />,
+    );
     // The empty state is rendered (onAddItem creates an action object, but text may not be directly in the tree)
     expect(screen.getByTestId('pantry-empty-state')).toBeTruthy();
   });
@@ -376,7 +440,12 @@ describe('PantryContent', () => {
   it('renders items with expiration dates', () => {
     const futureDate = new Date(Date.now() + 2 * 86400000).toISOString();
     const items = [
-      createMockPantryItem({ id: '1', itemName: 'Yogurt', quantity: 1, expiresAt: futureDate }),
+      createMockPantryItem({
+        id: '1',
+        itemName: 'Yogurt',
+        quantity: 1,
+        expiresAt: futureDate,
+      }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Yogurt')).toBeTruthy();
@@ -385,7 +454,12 @@ describe('PantryContent', () => {
   it('renders items with expired dates', () => {
     const pastDate = new Date(Date.now() - 2 * 86400000).toISOString();
     const items = [
-      createMockPantryItem({ id: '1', itemName: 'Old Milk', quantity: 1, expiresAt: pastDate }),
+      createMockPantryItem({
+        id: '1',
+        itemName: 'Old Milk',
+        quantity: 1,
+        expiresAt: pastDate,
+      }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Old Milk')).toBeTruthy();
@@ -430,7 +504,9 @@ describe('PantryContent', () => {
     // The module-level hasEverShownContent flag may already be true from prior tests,
     // which means skeletons won't be shown even with loading=true.
     // We can only verify the component renders without crashing when loading is true.
-    const { useDeferredRender } = require('#hooks/performance/useDeferredRender');
+    const {
+      useDeferredRender,
+    } = require('#hooks/performance/useDeferredRender');
     useDeferredRender.mockReturnValue(false);
 
     render(<PantryContent {...defaultProps} loading={true} items={[]} />);
@@ -441,22 +517,12 @@ describe('PantryContent', () => {
   });
 
   it('renders section header with specific location label', () => {
-    render(
-      <PantryContent
-        {...defaultProps}
-        locationFilter={'fridge'}
-      />,
-    );
+    render(<PantryContent {...defaultProps} locationFilter={'fridge'} />);
     expect(screen.getByText('FRIDGE ITEMS')).toBeTruthy();
   });
 
   it('renders section header with default All label for unknown filter', () => {
-    render(
-      <PantryContent
-        {...defaultProps}
-        locationFilter={'unknown-loc'}
-      />,
-    );
+    render(<PantryContent {...defaultProps} locationFilter={'unknown-loc'} />);
     // Falls back to 'All' when activeTab is not found
     expect(screen.getByText('ALL ITEMS')).toBeTruthy();
   });
@@ -537,34 +603,55 @@ describe('PantryContent', () => {
     it('shows "No home yet" when noHomes is true', () => {
       render(<PantryContent {...defaultProps} items={[]} noHomes={true} />);
       expect(screen.getByText('No home yet')).toBeTruthy();
-      expect(screen.getByText('Create or join a home to start tracking food')).toBeTruthy();
+      expect(
+        screen.getByText('Create or join a home to start tracking food'),
+      ).toBeTruthy();
     });
 
     it('shows "Get Started" action when noHomes and onSelectHome provided', () => {
       const onSelectHome = jest.fn();
       render(
-        <PantryContent {...defaultProps} items={[]} noHomes={true} onSelectHome={onSelectHome} />,
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          noHomes={true}
+          onSelectHome={onSelectHome}
+        />,
       );
       expect(screen.getByText('Get Started')).toBeTruthy();
     });
 
     it('shows "No home selected" when noHomeSelected is true', () => {
-      render(<PantryContent {...defaultProps} items={[]} noHomeSelected={true} />);
+      render(
+        <PantryContent {...defaultProps} items={[]} noHomeSelected={true} />,
+      );
       expect(screen.getByText('No home selected')).toBeTruthy();
-      expect(screen.getByText('Select a home to view your pantry')).toBeTruthy();
+      expect(
+        screen.getByText('Select a home to view your pantry'),
+      ).toBeTruthy();
     });
 
     it('shows "Go to My Homes" action when noHomeSelected and onSelectHome provided', () => {
       const onSelectHome = jest.fn();
       render(
-        <PantryContent {...defaultProps} items={[]} noHomeSelected={true} onSelectHome={onSelectHome} />,
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          noHomeSelected={true}
+          onSelectHome={onSelectHome}
+        />,
       );
       expect(screen.getByText('Go to My Homes')).toBeTruthy();
     });
 
     it('prioritizes noHomes over noHomeSelected', () => {
       render(
-        <PantryContent {...defaultProps} items={[]} noHomes={true} noHomeSelected={true} />,
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          noHomes={true}
+          noHomeSelected={true}
+        />,
       );
       expect(screen.getByText('No home yet')).toBeTruthy();
       expect(screen.queryByText('No home selected')).toBeNull();
@@ -572,7 +659,12 @@ describe('PantryContent', () => {
 
     it('prioritizes no-home states over search empty state', () => {
       render(
-        <PantryContent {...defaultProps} items={[]} noHomeSelected={true} searchQuery="test" />,
+        <PantryContent
+          {...defaultProps}
+          items={[]}
+          noHomeSelected={true}
+          searchQuery="test"
+        />,
       );
       expect(screen.getByText('No home selected')).toBeTruthy();
       expect(screen.queryByText('No items found')).toBeNull();

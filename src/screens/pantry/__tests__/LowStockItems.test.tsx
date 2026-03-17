@@ -7,7 +7,27 @@ import { LowStockItems } from '../LowStockItems';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn(),
+}));
+
 jest.mock('#hooks/navigation/useAppNavigation');
+
+jest.mock('#hooks/ui/useTutorialSequence', () => ({
+  useTutorialSequence: () => ({
+    isActive: false,
+    currentStep: null,
+    advance: jest.fn(),
+    skipAll: jest.fn(),
+  }),
+}));
+
+jest.mock(
+  '#components/organisms/SpotlightCoachMark/SpotlightCoachMark',
+  () => ({
+    SpotlightCoachMark: () => null,
+  }),
+);
 
 jest.mock('#hooks/pantry/useCurrentPantry', () => ({
   useCurrentPantry: () => ({
@@ -24,8 +44,20 @@ jest.mock('#hooks/pantry/useAddLowStockToShoppingList', () => ({
 }));
 
 const mockLowStockItems = [
-  { id: 'ls1', itemName: 'Eggs', quantity: 2, unit: { symbol: 'pcs' }, isLowStock: true },
-  { id: 'ls2', itemName: 'Butter', quantity: 1, unit: { symbol: 'stk' }, isLowStock: true },
+  {
+    id: 'ls1',
+    itemName: 'Eggs',
+    quantity: 2,
+    unit: { symbol: 'pcs' },
+    isLowStock: true,
+  },
+  {
+    id: 'ls2',
+    itemName: 'Butter',
+    quantity: 1,
+    unit: { symbol: 'stk' },
+    isLowStock: true,
+  },
 ];
 
 let mockAllItems: any[] | null = mockLowStockItems;
@@ -48,7 +80,10 @@ jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
 
 jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
-  useAddItemToShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+  useAddItemToShoppingListMutation: jest.fn(() => [
+    jest.fn(),
+    { loading: false },
+  ]),
 }));
 
 jest.mock('#components/molecules/Header', () => ({
@@ -116,7 +151,9 @@ describe('LowStockItems', () => {
   it('shows empty state when all items are stocked', () => {
     mockAllItems = [];
     render(<LowStockItems />);
-    expect(screen.getByText('All items are above minimum stock levels')).toBeTruthy();
+    expect(
+      screen.getByText('All items are above minimum stock levels'),
+    ).toBeTruthy();
   });
 
   it('renders without crashing during loading', () => {

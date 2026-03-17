@@ -15,3 +15,34 @@ export const FLASHLIST_DEFAULTS: Record<string, FlashListPerformanceProps> = {
     maxItemsInRecyclePool: 10,
   },
 };
+
+// ── Sticky header sentinel pattern ──
+// Used to prepend a "sticky tab" item to FlashList data arrays so that
+// stickyHeaderIndices pins it at the top natively (UI thread, no JS bridge).
+// Screens provide their own renderItem that checks isStickyHeaderSentinel()
+// and renders their specific tab component for sentinel items.
+
+/** Discriminator for sentinel items prepended to FlashList data arrays. */
+export interface StickyHeaderSentinel {
+  __sentinel: 'stickyHeader';
+}
+
+/** Singleton sentinel instance — prepend to data[0] for stickyHeaderIndices. */
+export const STICKY_HEADER_SENTINEL: StickyHeaderSentinel = {
+  __sentinel: 'stickyHeader',
+};
+
+/** Type guard for sentinel items in a mixed data array. */
+export const isStickyHeaderSentinel = (
+  item: unknown,
+): item is StickyHeaderSentinel =>
+  typeof item === 'object' &&
+  item !== null &&
+  '__sentinel' in item &&
+  (item as StickyHeaderSentinel).__sentinel === 'stickyHeader';
+
+/** Stable stickyHeaderIndices array — data[0] is always the sticky sentinel. */
+export const STICKY_HEADER_INDICES = [0];
+
+/** Default sticky header config — native driver for smooth Android performance. */
+export const STICKY_HEADER_CONFIG = { useNativeDriver: true };

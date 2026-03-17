@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type React from 'react';
+import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 
 /**
@@ -21,15 +22,22 @@ export interface ShoppingListTabData {
   canMarkPurchased: boolean;
   canReorderItems: boolean;
   isTransitioning: boolean;
+  // Scroll direction tracking — threaded from screen to FlashList
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  scrollEventThrottle?: number;
+  // Scrollable header content — rendered above the list as ListHeaderComponent
+  listHeaderComponent?: React.ReactElement | null;
 }
 
 interface ShoppingListDataState {
   shopping: ShoppingListTabData;
   purchased: ShoppingListTabData;
+  searchQuery: string;
 }
 
-const ShoppingListDataContext =
-  createContext<ShoppingListDataState | null>(null);
+const ShoppingListDataContext = createContext<ShoppingListDataState | null>(
+  null,
+);
 
 interface ProviderProps {
   children: React.ReactNode;
@@ -45,7 +53,9 @@ export const ShoppingListDataProvider: React.FC<ProviderProps> = ({
   </ShoppingListDataContext.Provider>
 );
 
-export function useShoppingListData(tab: 'shopping' | 'purchased'): ShoppingListTabData {
+export function useShoppingListData(
+  tab: 'shopping' | 'purchased',
+): ShoppingListTabData {
   const ctx = useContext(ShoppingListDataContext);
   if (!ctx) {
     throw new Error(
@@ -53,4 +63,14 @@ export function useShoppingListData(tab: 'shopping' | 'purchased'): ShoppingList
     );
   }
   return ctx[tab];
+}
+
+export function useShoppingListSearchQuery(): string {
+  const ctx = useContext(ShoppingListDataContext);
+  if (!ctx) {
+    throw new Error(
+      'useShoppingListSearchQuery must be used within ShoppingListDataProvider',
+    );
+  }
+  return ctx.searchQuery;
 }

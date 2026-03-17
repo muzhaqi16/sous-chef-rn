@@ -6,7 +6,7 @@ const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CRITICAL_CACHE_KEY = 'apollo-cache-v1-critical';
 const DEFERRED_CACHE_KEY = 'apollo-cache-v1-deferred';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
-const CURRENT_CACHE_VERSION = '1.1.4'; // Purge stale convertQuantity cache entries
+const CURRENT_CACHE_VERSION = '1.1.5'; // Purge stale entities after fragment field removals
 
 /**
  * Typenames restored synchronously at startup (~30 entities, ~5KB).
@@ -126,7 +126,9 @@ class ApolloCachePersistence {
 
       if (__DEV__) {
         console.log(
-          `📦 Cache: Loaded ${Object.keys(cache).length} critical entities from storage`,
+          `📦 Cache: Loaded ${
+            Object.keys(cache).length
+          } critical entities from storage`,
         );
       }
       return cache;
@@ -151,7 +153,9 @@ class ApolloCachePersistence {
 
       if (__DEV__) {
         console.log(
-          `📦 Cache: Deferred restore ${Object.keys(cache).length} entities in ${elapsed.toFixed(1)}ms`,
+          `📦 Cache: Deferred restore ${
+            Object.keys(cache).length
+          } entities in ${elapsed.toFixed(1)}ms`,
         );
       }
       return cache;
@@ -293,13 +297,17 @@ class ApolloCachePersistence {
             // Also check if keys were added or removed
             if (!hasChanges) {
               const cacheKeys = Object.keys(cache).length;
-              const snapshotKeys = Object.keys(this.lastPersistedSnapshot).length;
+              const snapshotKeys = Object.keys(
+                this.lastPersistedSnapshot,
+              ).length;
               hasChanges = cacheKeys !== snapshotKeys;
             }
             if (!hasChanges) {
               this.dirtyKeys.clear();
               if (__DEV__) {
-                console.log('💾 [CachePersist] skipped — no changes in dirty keys');
+                console.log(
+                  '💾 [CachePersist] skipped — no changes in dirty keys',
+                );
               }
               return;
             }
@@ -327,10 +335,15 @@ class ApolloCachePersistence {
             const stringifyMs = (tStringify - tExtract).toFixed(2);
             const totalMs = (tStringify - t0).toFixed(2);
             console.log(
-              `💾 [CachePersist] extract=${extractMs}ms stringify=${stringifyMs}ms total=${totalMs}ms size=${sizeKB}KB critical=${Object.keys(critical).length} deferred=${Object.keys(deferred).length}`
+              `💾 [CachePersist] extract=${extractMs}ms stringify=${stringifyMs}ms total=${totalMs}ms size=${sizeKB}KB critical=${
+                Object.keys(critical).length
+              } deferred=${Object.keys(deferred).length}`,
             );
             Telemetry.histogram('cache_persist_extract_ms', tExtract - t0);
-            Telemetry.histogram('cache_persist_stringify_ms', tStringify - tExtract);
+            Telemetry.histogram(
+              'cache_persist_stringify_ms',
+              tStringify - tExtract,
+            );
             Telemetry.gauge('cache_persist_size_kb', sizeKB);
           }
         } catch (error) {

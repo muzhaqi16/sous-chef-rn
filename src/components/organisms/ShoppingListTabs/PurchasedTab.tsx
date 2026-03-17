@@ -9,7 +9,10 @@ import { EmptyState } from '#components/base/EmptyState';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { StaggeredTabContent } from './StaggeredTabContent';
 import { useShoppingListTabsActions } from './ShoppingListTabsActionsContext';
-import { useShoppingListData } from './ShoppingListDataContext';
+import {
+  useShoppingListData,
+  useShoppingListSearchQuery,
+} from './ShoppingListDataContext';
 
 // Module-level flag: once purchased tab content has been shown, skip skeletons on remount.
 // Persists across component unmount/remount (stack navigation), resets on app restart.
@@ -30,6 +33,9 @@ const PurchasedTabComponent: React.FC = () => {
     canEditItems,
     canMarkPurchased,
     isTransitioning,
+    onScroll,
+    scrollEventThrottle,
+    listHeaderComponent,
   } = useShoppingListData('purchased');
   // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
   // This ensures smooth screen transitions by showing skeletons during navigation animation
@@ -46,7 +52,18 @@ const PurchasedTabComponent: React.FC = () => {
   const showSkeletons =
     !hasPurchasedTabShownContent && (!isReady || isTransitioning || !!loading);
 
-  const emptyComponent = (
+  const searchQuery = useShoppingListSearchQuery();
+
+  const displayQuery =
+    searchQuery.length > 30 ? searchQuery.slice(0, 30) + '...' : searchQuery;
+
+  const emptyComponent = searchQuery.trim() ? (
+    <EmptyState
+      icon="search-outline"
+      title={`No results for "${displayQuery}"`}
+      description="No purchased items match your search"
+    />
+  ) : (
     <EmptyState
       icon="cart-outline"
       title="No purchased items yet"
@@ -80,6 +97,9 @@ const PurchasedTabComponent: React.FC = () => {
           canEditItems={canEditItems}
           canMarkPurchased={canMarkPurchased}
           listEmptyComponent={emptyComponent}
+          onScroll={onScroll}
+          scrollEventThrottle={scrollEventThrottle}
+          listHeaderComponent={listHeaderComponent}
         />
       </View>
 

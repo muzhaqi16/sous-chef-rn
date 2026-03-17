@@ -31,14 +31,39 @@ describe('extractItems structural stability', () => {
     expect(first).toBe(second);
   });
 
-  it('returns same reference for structurally identical edges with different array identity', () => {
-    const edges1 = [makeEdge('1', 'Milk'), makeEdge('2', 'Bread')] as any;
-    const edges2 = [makeEdge('1', 'Milk'), makeEdge('2', 'Bread')] as any;
+  it('returns same reference when edges share the same node objects', () => {
+    const node1 = { __typename: 'ShoppingListItem', id: '1', itemName: 'Milk' };
+    const node2 = {
+      __typename: 'ShoppingListItem',
+      id: '2',
+      itemName: 'Bread',
+    };
+    const edges1 = [
+      { __typename: 'ShoppingListItemEdge', node: node1 },
+      { __typename: 'ShoppingListItemEdge', node: node2 },
+    ] as any;
+    const edges2 = [
+      { __typename: 'ShoppingListItemEdge', node: node1 },
+      { __typename: 'ShoppingListItemEdge', node: node2 },
+    ] as any;
 
     const first = extractItems(edges1);
     const second = extractItems(edges2);
-    // Different array references, but same node IDs in same order → stable reference
+    // Same node object references → stable reference
     expect(first).toBe(second);
+  });
+
+  it('returns new reference when node objects differ (e.g. quantity update)', () => {
+    const edges1 = [makeEdge('1', 'Milk'), makeEdge('2', 'Bread')] as any;
+    const first = extractItems(edges1);
+
+    // Simulate Apollo creating new node objects after a mutation updates a field
+    const edges2 = [makeEdge('1', 'Milk'), makeEdge('2', 'Bread')] as any;
+    const second = extractItems(edges2);
+
+    // Different node object references → new array so UI picks up changes
+    expect(first).not.toBe(second);
+    expect(second).toStrictEqual(first);
   });
 
   it('returns new reference when node IDs change', () => {
@@ -64,8 +89,14 @@ describe('extractItems structural stability', () => {
   it('filters out edges with missing node id or itemName', () => {
     const edges = [
       makeEdge('1', 'Milk'),
-      { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: '', itemName: 'Bad' } },
-      { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: '3', itemName: '' } },
+      {
+        __typename: 'ShoppingListItemEdge',
+        node: { __typename: 'ShoppingListItem', id: '', itemName: 'Bad' },
+      },
+      {
+        __typename: 'ShoppingListItemEdge',
+        node: { __typename: 'ShoppingListItem', id: '3', itemName: '' },
+      },
       makeEdge('4', 'Eggs'),
     ] as any;
 

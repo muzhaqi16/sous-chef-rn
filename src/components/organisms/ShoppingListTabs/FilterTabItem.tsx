@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { HapticService } from '#services/haptic/HapticService';
@@ -10,6 +10,13 @@ interface FilterTabItemProps {
   count?: number;
   onPress: () => void;
   testID: string;
+  /** Optional: measure this tab's screen-coordinate rect for tutorial spotlight */
+  onMeasure?: (rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
 }
 
 const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
@@ -19,30 +26,53 @@ const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
   count,
   onPress,
   testID,
+  onMeasure,
 }) => {
   const hasCount = count !== undefined;
+  const tabRef = useRef<View>(null);
+
+  const handleLayout = () => {
+    if (!onMeasure) return;
+    requestAnimationFrame(() => {
+      tabRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+        if (w > 0 && h > 0) {
+          onMeasure({ x: pageX, y: pageY, width: w, height: h });
+        }
+      });
+    });
+  };
 
   return (
-    <Pressable
-      key={routeKey}
-      onPress={() => {
-        HapticService.selection();
-        onPress();
-      }}
-      testID={testID}
-      style={[styles.tab, isActive && styles.tabActive]}
+    <View
+      ref={onMeasure ? tabRef : undefined}
+      collapsable={false}
+      onLayout={onMeasure ? handleLayout : undefined}
     >
-      <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-        {title}
-      </Text>
-      {!!hasCount && (
-        <View style={[styles.countBadge, isActive && styles.countBadgeActive]}>
-          <Text style={[styles.countText, isActive && styles.countTextActive]}>
-            {count}
-          </Text>
-        </View>
-      )}
-    </Pressable>
+      <Pressable
+        key={routeKey}
+        onPress={() => {
+          HapticService.selection();
+          onPress();
+        }}
+        testID={testID}
+        style={[styles.tab, isActive && styles.tabActive]}
+      >
+        <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+          {title}
+        </Text>
+        {!!hasCount && (
+          <View
+            style={[styles.countBadge, isActive && styles.countBadgeActive]}
+          >
+            <Text
+              style={[styles.countText, isActive && styles.countTextActive]}
+            >
+              {count}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    </View>
   );
 };
 

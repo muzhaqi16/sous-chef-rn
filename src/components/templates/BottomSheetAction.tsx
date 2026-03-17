@@ -1,9 +1,6 @@
 import React, { ReactNode, Ref } from 'react';
 import { Keyboard, View } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Title } from '../atoms/Title';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -20,6 +17,8 @@ interface BottomSheetActionProps {
   headerRight?: ReactNode;
   /** Called when the sheet is dismissed (after close animation completes) */
   onDismiss?: () => void;
+  /** Called when the sheet snap point changes (-1 = closed, 0+ = open) */
+  onChange?: (index: number) => void;
 }
 
 export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
@@ -30,8 +29,13 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   scrollable = true,
   headerRight,
   onDismiss: onDismissProp,
+  onChange: onChangeProp,
 }) => {
-  const { ref: bottomSheetModalRef, modalProps, insets } = useStandardBottomSheet({
+  const {
+    ref: bottomSheetModalRef,
+    modalProps,
+    insets,
+  } = useStandardBottomSheet({
     onDismiss: () => {
       Keyboard.dismiss();
       onDismissProp?.();
@@ -44,7 +48,9 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
     <>
       {!!(sheetTitle || headerRight) && (
         <View style={styles.headerRow}>
-          {sheetTitle ? <Title style={styles.sheetTitle}>{sheetTitle}</Title> : null}
+          {sheetTitle ? (
+            <Title style={styles.sheetTitle}>{sheetTitle}</Title>
+          ) : null}
           {headerRight}
         </View>
       )}
@@ -58,11 +64,15 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
       {...modalProps}
       index={0}
       handleIndicatorStyle={{ backgroundColor: 'gray' }}
+      onChange={onChangeProp}
     >
       {scrollable ? (
         <BottomSheetScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom }]}
+          contentContainerStyle={[
+            styles.contentContainer,
+            { paddingBottom: insets.bottom },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {content}
@@ -71,7 +81,9 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
         <>
           {!!(sheetTitle || headerRight) && (
             <View style={styles.nonScrollableHeader}>
-              {sheetTitle ? <Title style={styles.sheetTitle}>{sheetTitle}</Title> : null}
+              {sheetTitle ? (
+                <Title style={styles.sheetTitle}>{sheetTitle}</Title>
+              ) : null}
               {headerRight}
             </View>
           )}

@@ -18,6 +18,11 @@ import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes'
 import { createOptimisticShoppingListItem } from '#/hooks/shoppingList/mutations/utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
+import {
+  useShoppingListTutorial,
+  ShoppingListTutorialStep,
+} from '#/context/ShoppingListTutorialContext';
+import { SheetTutorialHint } from '#components/molecules/SheetTutorialHint';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type {
@@ -46,6 +51,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const { navigate, navigateTo } = useAppNavigation();
   const client = useApolloClient();
   const showImages = useShowShoppingListImages();
+  const tutorial = useShoppingListTutorial();
 
   // Shared state management for sheet visibility and deferred data fetching
   const state = useAddItemSheetState({
@@ -184,6 +190,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     })
       .then(() => {
         onItemAdded?.();
+        tutorial?.notifyItemAdded();
       })
       .catch(() => {
         toastService.error('Failed to add item. Please try again.');
@@ -227,6 +234,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     })
       .then(() => {
         onItemAdded?.();
+        tutorial?.notifyItemAdded();
       })
       .catch(() => {
         // On error: remove from exiting, show error toast
@@ -240,6 +248,37 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     removeFromSuggestionsCache(itemId);
     state.completeExitAnimation(itemId);
   };
+
+  // Build tutorial hint for the add item sheet (steps 2 and 3)
+  const tutorialHintElement = (() => {
+    if (!tutorial?.isActive) return undefined;
+
+    if (tutorial.currentStep === ShoppingListTutorialStep.GUIDE_ADD_ITEM) {
+      return (
+        <SheetTutorialHint
+          variant="inline"
+          text={
+            suggestions.hasSuggestions
+              ? 'Tap + next to an item to add it'
+              : 'Tap "Add Manually" to add an item'
+          }
+          onSkip={tutorial.skipAll}
+        />
+      );
+    }
+
+    if (tutorial.currentStep === ShoppingListTutorialStep.HINT_DISMISS_SHEET) {
+      return (
+        <SheetTutorialHint
+          variant="handle"
+          text="Pull down to close"
+          onSkip={tutorial.skipAll}
+        />
+      );
+    }
+
+    return undefined;
+  })();
 
   return (
     <AddItemSheet
@@ -258,6 +297,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       shouldFetch={state.shouldFetch}
       initialSearchQuery={initialSearchQuery}
       showImages={showImages}
+      tutorialHint={tutorialHintElement}
     />
   );
 };

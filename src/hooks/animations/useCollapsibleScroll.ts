@@ -1,0 +1,52 @@
+import { useSharedValue } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
+import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+
+/**
+ * Distance (px) past which scrolling-down hides the tab bar.
+ */
+const COLLAPSE_DISTANCE = 120;
+
+/**
+ * Minimum scroll delta to register a direction change.
+ * Prevents jitter from tiny touch movements.
+ */
+const DIRECTION_THRESHOLD = 10;
+
+export interface UseCollapsibleScrollReturn {
+  /** Attach to FlashList onScroll (regular JS callback, compatible with FlashList v2). */
+  scrollHandler: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /** true when scrolling down past the threshold — drive tab bar hide. */
+  isScrolledDown: SharedValue<boolean>;
+  /** Current scroll offset. */
+  scrollY: SharedValue<number>;
+}
+
+/**
+ * Direction-based tab bar hide on scroll.
+ *
+ * Stripped-down version: no animated height/collapse styles. The collapsible
+ * header is handled by the FlashList's native scroll + stickyHeaderIndices.
+ * This hook only tracks scroll direction to drive tab bar visibility.
+ */
+export function useCollapsibleScroll(): UseCollapsibleScrollReturn {
+  const scrollY = useSharedValue(0);
+  const prevScrollY = useSharedValue(0);
+  const isScrolledDown = useSharedValue(false);
+
+  const scrollHandler = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = Math.max(0, event.nativeEvent.contentOffset.y);
+    const delta = y - prevScrollY.value;
+
+    scrollY.set(y);
+
+    if (Math.abs(delta) > DIRECTION_THRESHOLD) {
+      isScrolledDown.set(delta > 0 && y > COLLAPSE_DISTANCE);
+      prevScrollY.set(y);
+    } else if (y <= COLLAPSE_DISTANCE && isScrolledDown.value) {
+      isScrolledDown.set(false);
+    }
+  };
+
+  return { scrollHandler, isScrolledDown, scrollY };
+}

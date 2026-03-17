@@ -11,6 +11,7 @@ import { ShoppingListSkeleton } from '#components/base/Skeleton/ShoppingListSkel
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
 import { ShoppingListModalsProvider } from '#/context/ShoppingListModalsContext';
+import { ShoppingListTutorialProvider } from '#/context/ShoppingListTutorialContext';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 
 import { ShoppingListMainContent } from './ShoppingListMainContent';
@@ -31,22 +32,29 @@ const ShoppingListMainInner: React.FC = () => {
     optimisticTypes: ['ShoppingList', 'ShoppingListItem'],
     telemetryProperties: () => ({
       list_id: screenData.state.currentListId,
-      item_count: (screenData.state.totalCountUnpurchased ?? 0) + (screenData.state.totalCountPurchased ?? 0),
+      item_count:
+        (screenData.state.totalCountUnpurchased ?? 0) +
+        (screenData.state.totalCountPurchased ?? 0),
       purchased_count: screenData.state.totalCountPurchased ?? 0,
       has_lists: screenData.state.lists.length > 0,
     }),
   });
 
   return (
-    <ShoppingListModalsProvider
-      currentListId={screenData.state.currentListId}
-      items={[...screenData.state.rawUnpurchasedItems, ...screenData.state.rawPurchasedItems]}
-      searchQuery={screenData.state.searchQuery}
-      onSearchQueryClear={() => screenData.actions.setSearchQuery('')}
-      onNavigateToListSettings={() => navigate('ListSettings')}
-    >
-      <ShoppingListMainContent screenData={screenData} />
-    </ShoppingListModalsProvider>
+    <ShoppingListTutorialProvider canStart={screenData.state.lists.length > 0}>
+      <ShoppingListModalsProvider
+        currentListId={screenData.state.currentListId}
+        items={[
+          ...(screenData.state.rawUnpurchasedItems ?? []),
+          ...(screenData.state.rawPurchasedItems ?? []),
+        ]}
+        searchQuery={screenData.state.searchQuery}
+        onSearchQueryClear={() => screenData.actions.setSearchQuery('')}
+        onNavigateToListSettings={() => navigate('ListSettings')}
+      >
+        <ShoppingListMainContent screenData={screenData} />
+      </ShoppingListModalsProvider>
+    </ShoppingListTutorialProvider>
   );
 };
 

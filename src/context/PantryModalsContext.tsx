@@ -85,6 +85,10 @@ interface PantryModalsProviderProps {
   creatingLocation: boolean;
   /** Optional callback to scroll list to top (called when items added and sheet closes) */
   onScrollToTop?: () => void;
+  /** Current search query to pre-populate add sheet */
+  searchQuery?: string;
+  /** Callback to clear search query after item is added */
+  onSearchQueryClear?: () => void;
 }
 
 /**
@@ -105,6 +109,8 @@ export function PantryModalsProvider({
   createLocation,
   creatingLocation,
   onScrollToTop,
+  searchQuery,
+  onSearchQueryClear,
 }: PantryModalsProviderProps) {
   // Add sheet visibility state
   const [addSheetVisible, setAddSheetVisible] = useState(false);
@@ -161,6 +167,7 @@ export function PantryModalsProvider({
 
   const handleItemAdded = () => {
     setItemsAdded(true);
+    onSearchQueryClear?.();
   };
 
   const handleAddSheetClose = () => {
@@ -213,6 +220,7 @@ export function PantryModalsProvider({
           pantryId={pantryId}
           onClose={handleAddSheetClose}
           onItemAdded={handleItemAdded}
+          initialSearchQuery={searchQuery}
         />
       )}
 

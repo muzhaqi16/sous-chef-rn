@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "3.2.3",
+  "version": "3.2.6",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -183,7 +183,8 @@
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
       "eslint --fix",
-      "prettier --write"
+      "prettier --write",
+      "jest --bail --findRelatedTests --passWithNoTests"
     ],
     "*.{json,js,mjs}": [
       "prettier --write"

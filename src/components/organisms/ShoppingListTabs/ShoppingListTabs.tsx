@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   RefreshControl,
   useWindowDimensions,
@@ -22,6 +22,10 @@ import {
   ShoppingListDataProvider,
   type ShoppingListTabData,
 } from './ShoppingListDataContext';
+import {
+  useShoppingListTutorial,
+  ShoppingListTutorialStep,
+} from '#/context/ShoppingListTutorialContext';
 
 type ShoppingListTabId = 'shopping' | 'purchased';
 
@@ -81,6 +85,11 @@ interface ShoppingListTabsProps {
   batchMoveToPantryLoading?: boolean;
   // List header (e.g. SearchBar) rendered inside FlashList for correct RefreshControl position
   listHeaderComponent?: React.ReactElement | null;
+  // Current search query for search-aware empty states in tabs
+  searchQuery?: string;
+  // Collapsible scroll handler — threaded to FlashList via data context
+  onScroll?: (event: any) => void;
+  scrollEventThrottle?: number;
 }
 
 const ROUTES: TabRoute[] = [
@@ -141,10 +150,17 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Batch move to pantry
   onBatchMoveToPantry,
   batchMoveToPantryLoading = false,
-  // List header
+  // Search query
+  searchQuery,
+  // Scroll direction tracking
+  onScroll,
+  scrollEventThrottle,
+  // Scrollable header content
   listHeaderComponent,
 }) => {
+  const tabBarRef = useRef<View>(null);
   const layout = useWindowDimensions();
+  const tutorial = useShoppingListTutorial();
 
   // TabView navigation state
   const [index, setIndex] = useState(0);
@@ -166,6 +182,39 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   const handleIndexChange = (newIndex: number) => {
     onCloseAllSwipeables?.();
     setIndex(newIndex);
+    // Notify tutorial when user switches to Purchased tab
+    if (newIndex === 1) {
+      tutorial?.notifyPurchasedTabTapped();
+    }
+  };
+
+  // Auto-switch to purchased tab when tutorial advances to move-to-pantry step.
+  // Uses the "adjusting state during render" pattern to avoid setState-in-effect.
+  const [prevTutorialStep, setPrevTutorialStep] = useState(
+    tutorial?.currentStep,
+  );
+  if (tutorial?.currentStep !== prevTutorialStep) {
+    setPrevTutorialStep(tutorial?.currentStep);
+    if (
+      tutorial?.currentStep ===
+      ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY
+    ) {
+      setIndex(1);
+    }
+  }
+
+  // Determine if we need to measure the purchased tab for tutorial spotlight
+  const shouldMeasurePurchasedTab =
+    tutorial?.isActive &&
+    tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB;
+
+  const handleTabMeasure = (
+    key: string,
+    rect: { x: number; y: number; width: number; height: number },
+  ) => {
+    if (key === 'purchased') {
+      tutorial?.registerRect('purchasedTab', rect);
+    }
   };
 
   // Action callbacks for context provider — consumed by ShoppingTab/PurchasedTab
@@ -288,12 +337,16 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Render FilterTabBar as the TabView's tab bar so it's always visible,
   // even when a tab's FlashList is replaced by an empty state
   const renderTabBar = () => (
-    <FilterTabBar
-      navigationState={{ index, routes: ROUTES }}
-      jumpTo={jumpTo}
-      counts={counts}
-      actionButtons={actionButtons.length > 0 ? actionButtons : undefined}
-    />
+    <View ref={tabBarRef} collapsable={false}>
+      <FilterTabBar
+        navigationState={{ index, routes: ROUTES }}
+        jumpTo={jumpTo}
+        counts={counts}
+        actionButtons={actionButtons.length > 0 ? actionButtons : undefined}
+        onTabMeasure={shouldMeasurePurchasedTab ? handleTabMeasure : undefined}
+        measureTabKeys={shouldMeasurePurchasedTab ? ['purchased'] : undefined}
+      />
+    </View>
   );
 
   // Per-tab data for context — decoupled from renderScene so TabView doesn't
@@ -312,6 +365,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     canMarkPurchased,
     canReorderItems,
     isTransitioning,
+    onScroll,
+    scrollEventThrottle,
+    listHeaderComponent,
   };
 
   const purchasedTabData: ShoppingListTabData = {
@@ -328,16 +384,25 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     canMarkPurchased,
     canReorderItems: false,
     isTransitioning,
+    onScroll,
+    scrollEventThrottle,
+    listHeaderComponent,
   };
 
-  const tabData = { shopping: shoppingTabData, purchased: purchasedTabData };
+  const tabData = {
+    shopping: shoppingTabData,
+    purchased: purchasedTabData,
+    searchQuery: searchQuery ?? '',
+  };
 
   // Empty state: shown after loading completes with zero items across both tabs.
   // During transitions (list switches), items may briefly be empty — skip empty state.
+  // When search is active, let per-tab empty states handle messaging instead.
   const showEmptyState =
     !loading &&
     !refreshing &&
     !isTransitioning &&
+    !searchQuery?.trim() &&
     unpurchasedItems.length === 0 &&
     purchasedItems.length === 0 &&
     !!emptyState;
@@ -351,7 +416,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
             ...(Platform.OS === 'android' && { elevation: 0 }),
           }}
         >
-          {listHeaderComponent}
           {showEmptyState ? (
             <ScrollView
               contentContainerStyle={{ flex: 1 }}

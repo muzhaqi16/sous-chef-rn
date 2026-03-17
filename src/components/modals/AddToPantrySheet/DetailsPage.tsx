@@ -17,7 +17,10 @@ export interface DetailsPageProps {
   setPantryNetWeight: (value: string) => void;
   pantryNetWeightUnit: string;
   setPantryNetWeightUnit: (value: string) => void;
-  handlePantryNetWeightUnitSelected: (id: string | null, name: string | null) => void;
+  handlePantryNetWeightUnitSelected: (
+    id: string | null,
+    name: string | null,
+  ) => void;
   showPackageDetails: boolean;
   setShowPackageDetails: (value: boolean) => void;
   packageSize: string;
@@ -95,7 +98,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
 
       {/* Net Weight */}
       <View style={{ zIndex: 5 }}>
-        <FieldRow>
+        <FieldRow containerStyle={{ marginBottom: 4 }}>
           <FormInput
             label="Net Weight"
             value={pantryNetWeight}
@@ -114,16 +117,24 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
             placeholder="oz, g, ml"
           />
         </FieldRow>
+        <Text style={styles.netWeightHint}>
+          Net weight is used for consumption tracking and is optional.
+        </Text>
       </View>
 
       {/* Package Details - Progressive Disclosure */}
       <View style={styles.section}>
         <Pressable
           onPress={() => setShowPackageDetails(!showPackageDetails)}
-          style={({pressed}) => [styles.toggleButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.toggleButton,
+            pressed && styles.pressed,
+          ]}
         >
           <Text style={styles.toggleButtonText}>
-            {showPackageDetails ? 'Hide Package Details' : 'Add Package Details'}
+            {showPackageDetails
+              ? 'Hide Package Details'
+              : 'Add Package Details'}
           </Text>
         </Pressable>
 
@@ -213,6 +224,12 @@ const styles = StyleSheet.create(theme => ({
   },
   packageDetailsContainer: {
     marginTop: theme.spacing.sm,
+  },
+  netWeightHint: {
+    fontSize: theme.fonts.size.sm,
+    fontStyle: 'italic',
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
   },
   pressed: {
     opacity: theme.opacity.pressed,

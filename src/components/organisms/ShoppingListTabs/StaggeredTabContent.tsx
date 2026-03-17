@@ -1,10 +1,15 @@
 import React from 'react';
 import type { ReactElement, ComponentType } from 'react';
-import { View } from 'react-native';
+import {
+  View,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+} from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList/SortableList';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
+import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 
 interface StaggeredTabContentProps {
   items: SortableShoppingListItem[];
@@ -32,6 +37,11 @@ interface StaggeredTabContentProps {
   canReorderItems?: boolean;
   onMoveToPantry?: (id: string) => void;
   listEmptyComponent?: ReactElement | ComponentType<any> | null;
+  // Scroll direction tracking
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  scrollEventThrottle?: number;
+  // Scrollable header content
+  listHeaderComponent?: React.ReactElement | null;
 }
 
 export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
@@ -55,9 +65,17 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   canReorderItems,
   onMoveToPantry,
   listEmptyComponent,
+  onScroll,
+  scrollEventThrottle,
+  listHeaderComponent,
 }) => {
   const footerComponent = (
-    <PaginationFooter hasMore={!!hasMore} itemCount={items.length} />
+    <PaginationFooter
+      hasMore={!!hasMore}
+      itemCount={items.length}
+      SkeletonComponent={ShoppingListItemSkeleton}
+      skeletonCount={3}
+    />
   );
 
   return (
@@ -83,6 +101,9 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
         canEditItems={canEditItems}
         canMarkPurchased={canMarkPurchased}
         canReorderItems={canReorderItems}
+        onScroll={onScroll}
+        scrollEventThrottle={scrollEventThrottle}
+        ListHeaderComponent={listHeaderComponent}
       />
     </View>
   );

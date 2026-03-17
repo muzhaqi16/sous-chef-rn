@@ -60,7 +60,9 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   const content = (
     <>
       {/* Optional checkbox element (for shopping list items) */}
-      {!!checkboxElement && <View style={styles.checkboxContainer}>{checkboxElement}</View>}
+      {!!checkboxElement && (
+        <View style={styles.checkboxContainer}>{checkboxElement}</View>
+      )}
       {/* Optional left element for image or icon */}
       {leftElement}
       {!!leftIcon && (
@@ -69,14 +71,11 @@ const ListItemComponent: React.FC<ListItemProps> = ({
         </View>
       )}
       <View style={styles.content}>
-        <Text
-          style={styles.title}
-          numberOfLines={2}
-          ellipsizeMode="tail"
-        >
+        <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
           {title}
         </Text>
-        {!!subtitle && (typeof subtitle === 'string' ? (
+        {!!subtitle &&
+          (typeof subtitle === 'string' ? (
             <Text
               style={styles.subtitle}
               numberOfLines={1}
@@ -85,14 +84,14 @@ const ListItemComponent: React.FC<ListItemProps> = ({
               {subtitle}
             </Text>
           ) : (
-            <View style={styles.subtitleContainer}>
-              {subtitle}
-            </View>
+            <View style={styles.subtitleContainer}>{subtitle}</View>
           ))}
       </View>
       {!!badge && <Badge variant={badge.variant}>{badge.text}</Badge>}
       {rightElement}
-      {!!rightIcon && !rightElement && <Icon name={rightIcon} size={24} color={iconColor} />}
+      {!!rightIcon && !rightElement && (
+        <Icon name={rightIcon} size={24} color={iconColor} />
+      )}
       {/* Optional drag handle element (for reordering) - on right side */}
       {dragHandleElement}
     </>
@@ -101,12 +100,17 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   if (onPress) {
     // Build accessible label from content
     const subtitleText = typeof subtitle === 'string' ? subtitle : '';
-    const accessibilityLabel = [title, subtitleText, badge?.text].filter(Boolean).join(', ');
+    const accessibilityLabel = [title, subtitleText, badge?.text]
+      .filter(Boolean)
+      .join(', ');
 
     return (
       <View style={styles.container}>
         <Pressable
-          style={({pressed}) => [styles.contentContainer, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.contentContainer,
+            pressed && styles.pressed,
+          ]}
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={accessibilityLabel}
@@ -126,7 +130,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   );
 };
 
-export const ListItem = ListItemComponent;
+export const ListItem = React.memo(ListItemComponent);
 
 const styles = StyleSheet.create(theme => ({
   container: {

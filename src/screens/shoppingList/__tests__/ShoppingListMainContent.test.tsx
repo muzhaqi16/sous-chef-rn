@@ -66,6 +66,23 @@ jest.mock('#/context/TabBarActionsContext', () => ({
     setOverlayOpen: jest.fn(),
     setScannerProps: jest.fn(),
   })),
+  useTabBarState: jest.fn(() => ({
+    addButtonRect: null,
+    isOverlayOpen: false,
+  })),
+}));
+
+jest.mock('#hooks/ui/useTutorialSequence', () => ({
+  useTutorialSequence: jest.fn(() => ({
+    isActive: false,
+    currentStep: null,
+    advance: jest.fn(),
+    skipAll: jest.fn(),
+  })),
+}));
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: jest.fn(),
 }));
 
 jest.mock('#/context/ShoppingListModalsContext', () => ({
@@ -129,6 +146,13 @@ jest.mock(
   '#components/organisms/InteractiveSwipeHint/InteractiveSwipeHint',
   () => ({
     InteractiveSwipeHint: () => null,
+  }),
+);
+
+jest.mock(
+  '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark',
+  () => ({
+    SpotlightCoachMark: () => null,
   }),
 );
 

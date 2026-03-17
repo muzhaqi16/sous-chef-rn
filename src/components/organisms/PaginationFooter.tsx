@@ -7,23 +7,39 @@ export interface PaginationFooterProps {
   hasMore: boolean;
   /** Current number of items */
   itemCount: number;
+  /** Number of skeleton placeholders to show (default: 3) */
+  skeletonCount?: number;
+  /** Skeleton component to render. Falls back to ActivityIndicator if not provided. */
+  SkeletonComponent?: React.ComponentType<{ animated?: boolean }>;
 }
 
 /**
  * Reusable pagination footer component for infinite scroll lists
  *
- * Shows a compact spinner when more items are available (loading is
- * auto-triggered by onEndReached). Shows nothing when all items are
- * loaded or the list is empty.
+ * When a SkeletonComponent is provided, renders skeleton placeholders that
+ * blend seamlessly with the list — the standard pattern for production
+ * infinite scroll UX. Falls back to a compact spinner otherwise.
  */
 export const PaginationFooter: React.FC<PaginationFooterProps> = ({
   hasMore,
   itemCount,
+  skeletonCount = 3,
+  SkeletonComponent,
 }) => {
   const { theme } = useUnistyles();
 
   if (!hasMore || itemCount <= 0) {
     return null;
+  }
+
+  if (SkeletonComponent) {
+    return (
+      <View>
+        {Array.from({ length: skeletonCount }, (_, index) => (
+          <SkeletonComponent key={index} animated />
+        ))}
+      </View>
+    );
   }
 
   return (

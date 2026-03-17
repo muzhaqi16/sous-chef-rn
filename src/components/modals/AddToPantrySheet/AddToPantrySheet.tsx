@@ -37,6 +37,7 @@ interface AddToPantrySheetProps {
   pantryId: string | undefined;
   onClose: () => void;
   onItemAdded?: () => void;
+  initialSearchQuery?: string;
 }
 
 export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
@@ -44,6 +45,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   pantryId,
   onClose,
   onItemAdded,
+  initialSearchQuery = '',
 }) => {
   const { navigateTo } = useAppNavigation();
   const client = useApolloClient();
@@ -86,21 +88,21 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       const pantryItem = data?.createPantryItem?.pantryItem;
       if (!pantryItem || !pantryId) return;
 
-      executeCacheUpdate(
-        () => {
-          addToPantryItemsCache(cache, pantryId, pantryItem);
-          cache.modify({
-            id: cache.identify({ __typename: 'Pantry', id: pantryId }),
-            fields: {
-              stats(existingStats: any) {
-                if (!existingStats) return existingStats;
-                return { ...existingStats, totalItems: (existingStats.totalItems || 0) + 1 };
-              },
+      executeCacheUpdate(() => {
+        addToPantryItemsCache(cache, pantryId, pantryItem);
+        cache.modify({
+          id: cache.identify({ __typename: 'Pantry', id: pantryId }),
+          fields: {
+            stats(existingStats: any) {
+              if (!existingStats) return existingStats;
+              return {
+                ...existingStats,
+                totalItems: (existingStats.totalItems || 0) + 1,
+              };
             },
-          });
-        },
-        'Cache update failed for createPantryItem:',
-      );
+          },
+        });
+      }, 'Cache update failed for createPantryItem:');
     },
   });
 
@@ -311,6 +313,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       exitingItems={state.exitingItems}
       onExitComplete={handleExitComplete}
       shouldFetch={state.shouldFetch}
+      initialSearchQuery={initialSearchQuery}
     >
       {/* Nested Add Details Sheet */}
       <AddDetailsSheet

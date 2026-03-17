@@ -1,474 +1,342 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { alertService } from '#/services/alertService';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAnimatedReaction } from 'react-native-reanimated';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useTabBarSetters } from '#/context/TabBarActionsContext';
+import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles/commonStyles';
 import { ItemList } from '#components/organisms/ItemList';
-import { SearchBar } from '#components/molecules/SearchBar';
-import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
-import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import { FolderPicker } from '#components/molecules/FolderPicker';
-import { TagPicker } from '#components/molecules/TagPicker';
-import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
-import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import {
-  useUnfavoriteRecipeMutation,
-  useDeleteRecipeMutation,
-  MySavedRecipesDocument,
-  MyRecipesDocument,
-  type MySavedRecipesQuery,
-  type MyRecipesQuery,
-} from '#generated';
-import { useSavedRecipes } from '#/hooks/recipe/useSavedRecipes';
-import { useRecipeManagement } from '#/hooks/recipe/useRecipeManagement';
-import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
-import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
-import { useFolderActions } from '#/hooks/recipe/useFolderActions';
-import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
-import type { RecipeInformation } from '#/services/recipeApi/types';
-import { Icon, type IconName } from '#/utils/iconUtils';
+  SearchBar,
+  type SearchBarAction,
+} from '#components/molecules/SearchBar';
+import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import { BottomSheetAction } from '#components/templates/BottomSheetAction';
+import { Icon } from '#/utils/iconUtils';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { RecipeSkeleton } from '#components/base/Skeleton/RecipeSkeleton';
-import { CachedImage } from '#components/atoms/CachedImage';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { PaginationFooter } from '#components/organisms/PaginationFooter';
+import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import {
+  useTutorialSequence,
+  type TutorialStep,
+} from '#hooks/ui/useTutorialSequence';
+import {
+  IngredientSelectorSheet,
+  type IngredientSelectorSheetRef,
+} from './RecipeSearch/IngredientSelectorSheet';
+import { useRecipeScreen } from '#/hooks/recipe/useRecipeScreen';
 
-const viewOptions: ('saved' | 'myRecipes')[] = ['saved', 'myRecipes'];
+// ── Filter options — synced with DietaryRestrictionSelector + Spoonacular API values ──
 
-/** Module-level helper to clear random recipes when user has saved recipes */
-function clearRandomRecipesIfNeeded(
-  savedCount: number,
-  randomCount: number,
-  setRandomRecipes: (v: RecipeInformation[]) => void,
-  hasFetchedRandom: React.RefObject<boolean>,
-) {
-  if (savedCount > 0 && randomCount > 0) {
-    setRandomRecipes([]);
-    hasFetchedRandom.current = false;
-  }
-}
+const DIET_OPTIONS = [
+  { label: 'Vegetarian', value: 'vegetarian' },
+  { label: 'Vegan', value: 'vegan' },
+  { label: 'Gluten Free', value: 'gluten free' },
+  { label: 'Ketogenic', value: 'ketogenic' },
+  { label: 'Paleo', value: 'paleo' },
+  { label: 'Pescetarian', value: 'pescetarian' },
+  { label: 'Lacto-Vegetarian', value: 'lacto-vegetarian' },
+  { label: 'Ovo-Vegetarian', value: 'ovo-vegetarian' },
+  { label: 'Primal', value: 'primal' },
+  { label: 'Low FODMAP', value: 'low fodmap' },
+  { label: 'Whole30', value: 'whole30' },
+];
 
-/**
- * Inner component that runs all heavy hooks.
- * Only mounts after isReady is true, so the skeleton paints instantly.
- */
+const INTOLERANCE_OPTIONS = [
+  { label: 'Dairy', value: 'dairy' },
+  { label: 'Egg', value: 'egg' },
+  { label: 'Gluten', value: 'gluten' },
+  { label: 'Grain', value: 'grain' },
+  { label: 'Peanut', value: 'peanut' },
+  { label: 'Seafood', value: 'seafood' },
+  { label: 'Sesame', value: 'sesame' },
+  { label: 'Shellfish', value: 'shellfish' },
+  { label: 'Soy', value: 'soy' },
+  { label: 'Sulfite', value: 'sulfite' },
+  { label: 'Tree Nut', value: 'tree nut' },
+  { label: 'Wheat', value: 'wheat' },
+  { label: 'Fish', value: 'fish' },
+];
+
+// ── Recipe tutorial steps ──
+const RECIPE_TUTORIAL_STEPS: TutorialStep[] = [
+  {
+    featureId: 'recipe_tutorial_saved',
+    title: 'Saved recipes',
+    subtitle: 'View all your saved and favorited recipes in one place',
+    rectKey: 'savedButton',
+  },
+  {
+    featureId: 'recipe_tutorial_my_recipes',
+    title: 'My recipes',
+    subtitle: 'Create and manage your own custom recipes',
+    rectKey: 'myRecipesButton',
+  },
+  {
+    featureId: 'recipe_tutorial_dietary',
+    title: 'Dietary restrictions',
+    subtitle: 'Set your dietary preferences to filter recipe results',
+    rectKey: 'dietaryButton',
+  },
+  {
+    featureId: 'recipe_tutorial_pantry',
+    title: 'Cook with what you have',
+    subtitle: 'Search for recipes based on ingredients in your pantry',
+    rectKey: 'pantryButton',
+  },
+];
+
+// ── Inner component (thin — delegates to useRecipeScreen facade) ──
+
 const RecipeMainInner: React.FC = () => {
   useRenderTime('RecipeMain');
   const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeView, setActiveView] = useState<'saved' | 'myRecipes'>('saved');
 
-  // Filter state
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [showFolderPicker, setShowFolderPicker] = useState(false);
-  const [showTagPicker, setShowTagPicker] = useState(false);
+  // Single facade hook for all data + state
+  const screen = useRecipeScreen();
 
-  // Fetch folders and tags for filtering
-  const { folders } = useRecipeFolders();
-  const { tags: availableTags } = useRecipeTags();
+  // ── Scroll direction tracking (tab bar hide on scroll down) ──
+  const { scrollTabBarHidden } = useTabBarSetters();
+  const { scrollHandler, isScrolledDown } = useCollapsibleScroll();
 
-  // Folder management actions
-  const {
-    renameFolder,
-    deleteFolder,
-    loading: folderActionLoading,
-  } = useFolderActions();
+  useAnimatedReaction(
+    () => isScrolledDown.value,
+    hidden => {
+      scrollTabBarHidden.set(hidden);
+    },
+  );
 
-  // State for random recipes (shown when user has no saved recipes)
-  const [randomRecipes, setRandomRecipes] = useState<RecipeInformation[]>([]);
-  const [loadingRandom, setLoadingRandom] = useState(false);
+  const [isRecipeFocused, setIsRecipeFocused] = useState(true);
+  const [onRecipeFocus] = useState(() => () => {
+    setIsRecipeFocused(true);
+    return () => {
+      setIsRecipeFocused(false);
+      // Reset scroll-driven tab bar hide so tab bar reappears on other tabs
+      scrollTabBarHidden.set(false);
+    };
+  });
+  useFocusEffect(onRecipeFocus);
 
-  // Ref to track if we've already fetched random recipes (prevents infinite loop)
-  const hasFetchedRandom = useRef(false);
+  type LayoutRect = { x: number; y: number; width: number; height: number };
+  const savedButtonRef = useRef<View>(null);
+  const myRecipesButtonRef = useRef<View>(null);
+  const dietaryButtonRef = useRef<View>(null);
 
-  // Fetch user's saved/favorited recipes from backend
-  const {
-    state: { recipes, loading },
-    actions: { refetch },
-  } = useSavedRecipes();
+  // Single state for all layout rects — avoids 4 separate re-renders
+  const [buttonRects, setButtonRects] = useState<
+    Record<string, LayoutRect | null>
+  >({});
+  const setButtonRect = (key: string, rect: LayoutRect) => {
+    setButtonRects(prev => ({ ...prev, [key]: rect }));
+  };
 
-  // Lifecycle: optimistic restoration, cache persistence, perf tracking
+  const filterSheetRef = useRef<BottomSheetModal>(null);
+  const ingredientSheetRef = useRef<IngredientSelectorSheetRef>(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  const tutorial = useTutorialSequence({
+    steps: RECIPE_TUTORIAL_STEPS,
+    targetRects: {
+      savedButton: buttonRects.savedButton ?? null,
+      myRecipesButton: buttonRects.myRecipesButton ?? null,
+      dietaryButton: buttonRects.dietaryButton ?? null,
+      pantryButton: buttonRects.pantryButton ?? null,
+    },
+    canStart: true,
+    isPaused: !isRecipeFocused || isSheetOpen,
+  });
+
   useTabScreenLifecycle({
     screenName: 'RecipeMain',
     optimisticTypes: ['Recipe', 'SavedRecipe'],
     telemetryProperties: () => ({
-      recipe_count: recipes.length,
-      view: activeView,
+      discovery_count: screen.discovery.items.length,
+      view: 'discovery',
     }),
   });
 
-  // Fetch user-created recipes
-  const {
-    state: { recipes: myRecipes },
-    actions: { refetch: myRecipesRefetch },
-  } = useRecipeManagement();
-
-  // Fetch random recipes ONLY ONCE when user has no saved recipes
-  useEffect(() => {
-    const controller = new AbortController();
-
-    // Only fetch if:
-    // 1. User has no saved recipes
-    // 2. Initial loading is complete
-    // 3. We haven't already fetched random recipes
-    // 4. We're not currently loading random recipes
-    if (
-      recipes.length > 0 ||
-      loading ||
-      hasFetchedRandom.current ||
-      loadingRandom
-    ) {
-      return () => controller.abort();
-    }
-
-    hasFetchedRandom.current = true;
-    executeWithLoadingState(
-      async () => {
-        const random = await spoonacularService.getRandomRecipes(
-          {
-            number: 10,
-          },
-          controller.signal,
-        );
-        setRandomRecipes(random);
-      },
-      setLoadingRandom,
-      (error: unknown) => {
-        if ((error as any).name === 'AbortError') return;
-        console.error('Failed to fetch random recipes:', error);
-        // Reset flag so user can retry
-        hasFetchedRandom.current = false;
-      },
-    );
-
-    return () => controller.abort();
-  }, [recipes.length, loading, loadingRandom]);
-
-  // Clear random recipes when user saves their first recipe
-  useEffect(() => {
-    clearRandomRecipesIfNeeded(
-      recipes.length,
-      randomRecipes.length,
-      setRandomRecipes,
-      hasFetchedRandom,
-    );
-  }, [recipes.length, randomRecipes.length]);
-
-  // Register add button action - navigate to recipe creation
   useTabBarAddButton(() => navigate('RecipeCreate'));
 
-  // Manual refresh to get new random recipes
-  const handleRefreshRandom = () => {
-    if (loadingRandom) return;
-
-    executeWithLoadingState(
-      async () => {
-        const random = await spoonacularService.getRandomRecipes({
-          number: 10,
-        });
-        setRandomRecipes(random);
-      },
-      setLoadingRandom,
-      error => {
-        console.error('Failed to fetch random recipes:', error);
-        alertService.alert(
-          'Error',
-          'Failed to load recipe suggestions. Please try again.',
-        );
-      },
-    );
+  const openIngredientSelector = () => {
+    ingredientSheetRef.current?.present();
   };
 
-  // Determine if we should show random recipes
-  const showRandomRecipes =
-    activeView === 'saved' && recipes.length === 0 && randomRecipes.length > 0;
-
-  // Filter recipes based on search query, folder, and tags
-  const filteredRecipes = (() => {
-    let result = recipes;
-
-    // Filter by folder
-    if (selectedFolder) {
-      result = result.filter(recipe => recipe.folder === selectedFolder);
-    }
-
-    // Filter by tags (recipe must have ANY of the selected tags)
-    if (selectedTags.length > 0) {
-      result = result.filter(recipe => {
-        const recipeTags = recipe.tags || [];
-        return selectedTags.some(tag => recipeTags.includes(tag));
-      });
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(recipe => {
-        const name = recipe.name?.toLowerCase() || '';
-        const description = recipe.description?.toLowerCase() || '';
-        return name.includes(query) || description.includes(query);
-      });
-    }
-
-    return result;
-  })();
-
-  // Clear all filters
-  const handleClearFilters = () => {
-    setSelectedFolder(null);
-    setSelectedTags([]);
-    setSearchQuery('');
+  const openFilterSheet = () => {
+    filterSheetRef.current?.present();
   };
 
-  // Unfavorite (remove from saved) recipe mutation
-  const [unfavoriteRecipeMutation] = useUnfavoriteRecipeMutation({
-    // Use cache updates instead of refetchQueries for better performance and offline support
-    update: (cache, { data }, { variables }) => {
-      if (!data?.unfavoriteRecipe?.success || !variables?.recipeId) return;
+  // Track sheet open/close via BottomSheetModal's onChange (-1 = closed, 0+ = open)
+  const handleSheetChange = (index: number) => {
+    setIsSheetOpen(index >= 0);
+  };
 
-      // Remove from mySavedRecipes connection
-      cache.updateQuery<MySavedRecipesQuery>(
-        { query: MySavedRecipesDocument },
-        existing => {
-          if (!existing?.me) return existing;
-          return {
-            ...existing,
-            me: {
-              ...existing.me,
-              savedRecipesConnection: {
-                ...existing.me.savedRecipesConnection,
-                edges: existing.me.savedRecipesConnection.edges.filter(
-                  edge => edge.node.recipe.id !== variables.recipeId,
-                ),
-                totalCount:
-                  (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
-              },
-            },
-          };
-        },
-      );
+  const handleItemPress = (id: string | number) => {
+    const idStr = String(id);
+    const externalId = idStr.startsWith('spoonacular-')
+      ? idStr.replace('spoonacular-', '')
+      : idStr;
+    navigate('RecipeDetail', { externalSource: 'SPOONACULAR', externalId });
+  };
 
-      // Persist optimistic unfavorite state to survive cache-and-network refetches while offline
-      optimisticDataPersistence.save(
-        'SavedRecipe',
-        variables.recipeId,
-        'isFavorited',
-        false,
-      );
+  const searchBarRightActions: SearchBarAction[] = [
+    ...(screen.hasPantryItems
+      ? [
+          {
+            icon: 'restaurant',
+            onPress: openIngredientSelector,
+            color:
+              screen.selectedIngredients.size > 0
+                ? theme.colors.white
+                : theme.colors.primary,
+            backgroundColor:
+              screen.selectedIngredients.size > 0
+                ? theme.colors.primary
+                : theme.colors.surface,
+            badge:
+              screen.selectedIngredients.size > 0
+                ? screen.selectedIngredients.size
+                : undefined,
+            onButtonLayout: (rect: LayoutRect) =>
+              setButtonRect('pantryButton', rect),
+          },
+        ]
+      : []),
+    {
+      icon: 'search',
+      onPress: screen.handleTextSearch,
+      color: theme.colors.primary,
+      backgroundColor: theme.colors.surface,
+      testID: 'recipe-main-search-submit',
     },
-  });
+  ];
 
-  // Delete recipe mutation (for user-created recipes)
-  const [deleteRecipeMutation] = useDeleteRecipeMutation({
-    update: (cache, { data }, { variables }) => {
-      if (!data?.deleteRecipe?.success || !variables?.id) return;
-
-      cache.updateQuery<MyRecipesQuery>(
-        { query: MyRecipesDocument },
-        existing => {
-          if (!existing?.recipes) return existing;
-          return {
-            ...existing,
-            recipes: {
-              ...existing.recipes,
-              edges: existing.recipes.edges.filter(
-                edge => edge.node.id !== variables.id,
-              ),
-              totalCount: (existing.recipes.totalCount ?? 0) - 1,
-            },
-          };
-        },
-      );
-    },
-  });
-
-  // Filter myRecipes by search query
-  const filteredMyRecipes = (() => {
-    if (activeView !== 'myRecipes') return [];
-    if (!searchQuery.trim()) return myRecipes;
-    const query = searchQuery.toLowerCase();
-    return myRecipes.filter((recipe: any) => {
-      const name = recipe.name?.toLowerCase() || '';
-      const description = recipe.description?.toLowerCase() || '';
-      return name.includes(query) || description.includes(query);
-    });
-  })();
-
-  // Transform filtered recipes to list items format (handles saved, random, and my recipes)
-  const items = (() => {
-    if (activeView === 'myRecipes') {
-      return filteredMyRecipes.map((recipe: any) => {
-        const totalTime =
-          recipe.totalTimeMinutes ||
-          (recipe.prepTimeMinutes && recipe.cookTimeMinutes
-            ? recipe.prepTimeMinutes + recipe.cookTimeMinutes
-            : recipe.prepTimeMinutes || recipe.cookTimeMinutes || null);
-
-        return {
-          id: String(recipe.id),
-          title: recipe.name,
-          subtitle: `${recipe.servings} servings${
-            totalTime ? ` • ${totalTime} min` : ''
-          }`,
-          leftElement: recipe.imageUrl ? (
-            <View style={commonStyles.listItemImageContainerCompact}>
-              <CachedImage
-                uri={recipe.imageUrl}
-                style={commonStyles.listItemImageCompact}
-                displaySize={48}
-              />
-            </View>
-          ) : undefined,
-        };
-      });
-    }
-
-    // Use random recipes if showing them, otherwise use filtered saved recipes
-    const recipesToShow = showRandomRecipes ? randomRecipes : filteredRecipes;
-
-    return recipesToShow.map((recipe: any) => {
-      const name = recipe.name || recipe.title;
-      const imageUrl = recipe.imageUrl || recipe.image;
-      const servings = recipe.servings;
-
-      // Calculate total time with fallback logic
-      const totalTime =
-        recipe.totalTimeMinutes ||
-        recipe.readyInMinutes ||
-        (recipe.prepTimeMinutes && recipe.cookTimeMinutes
-          ? recipe.prepTimeMinutes + recipe.cookTimeMinutes
-          : recipe.prepTimeMinutes || recipe.cookTimeMinutes || null);
-
-      return {
-        // For saved recipes, use recipeId for navigation; for external, use id
-        id: String(showRandomRecipes ? recipe.id : recipe.recipeId),
-        title: name,
-        subtitle: `${servings} servings${
-          totalTime ? ` • ${totalTime} min` : ''
-        }`,
-        badge: showRandomRecipes ? { text: 'Suggested' } : undefined,
-        leftElement: imageUrl ? (
-          <View style={commonStyles.listItemImageContainerCompact}>
-            <CachedImage
-              uri={imageUrl}
-              style={commonStyles.listItemImageCompact}
-              displaySize={48}
-            />
-          </View>
-        ) : undefined,
-      };
-    });
-  })();
-
-  const handleSearchRecipes = () => {
-    navigate('RecipeSearch', { initialQuery: searchQuery });
-  };
-
-  const handleRefresh = async () => {
-    if (activeView === 'myRecipes') {
-      await myRecipesRefetch();
-    } else if (showRandomRecipes) {
-      await handleRefreshRandom();
-    } else {
-      await refetch();
-    }
-  };
-
-  const handleRemoveRecipe = async (recipeId: string) => {
-    try {
-      await unfavoriteRecipeMutation({
-        variables: { recipeId },
-      });
-      // Clear persisted optimistic favorite state on server confirmation
-      optimisticDataPersistence.clear('SavedRecipe', recipeId, 'isFavorited');
-    } catch (error) {
-      console.error('Failed to remove recipe:', error);
-      alertService.alert('Error', 'Failed to remove recipe. Please try again.');
-    }
-  };
-
-  const handleDeleteMyRecipe = async (id: string) => {
-    try {
-      await deleteRecipeMutation({ variables: { id } });
-    } catch (error) {
-      console.error('Failed to delete recipe:', error);
-      alertService.alert('Error', 'Failed to delete recipe. Please try again.');
-    }
-  };
-
-  // Header right action - navigate to recipe search
   const headerRight = (
-    <Pressable
-      onPress={handleSearchRecipes}
-      hitSlop={8}
-      accessibilityRole="button"
-      accessibilityLabel="Search recipes"
-    >
-      <Icon
-        name="search-outline"
-        size={24}
-        color={theme.colors.textSecondary}
-      />
-    </Pressable>
+    <View style={styles.headerActions}>
+      <View
+        ref={savedButtonRef}
+        collapsable={false}
+        onLayout={() => {
+          requestAnimationFrame(() => {
+            savedButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+              if (w > 0 && h > 0)
+                setButtonRect('savedButton', {
+                  x: pageX,
+                  y: pageY,
+                  width: w,
+                  height: h,
+                });
+            });
+          });
+        }}
+      >
+        <Pressable
+          onPress={() => navigate('SavedRecipes')}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Saved recipes"
+        >
+          <Icon
+            name="bookmark-outline"
+            size={24}
+            color={theme.colors.textSecondary}
+          />
+        </Pressable>
+      </View>
+      <View
+        ref={myRecipesButtonRef}
+        collapsable={false}
+        onLayout={() => {
+          requestAnimationFrame(() => {
+            myRecipesButtonRef.current?.measure(
+              (_x, _y, w, h, pageX, pageY) => {
+                if (w > 0 && h > 0)
+                  setButtonRect('myRecipesButton', {
+                    x: pageX,
+                    y: pageY,
+                    width: w,
+                    height: h,
+                  });
+              },
+            );
+          });
+        }}
+      >
+        <Pressable
+          onPress={() => navigate('MyRecipes')}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="My recipes"
+        >
+          <Icon
+            name="create-outline"
+            size={24}
+            color={theme.colors.textSecondary}
+          />
+        </Pressable>
+      </View>
+      <View
+        ref={dietaryButtonRef}
+        collapsable={false}
+        onLayout={() => {
+          requestAnimationFrame(() => {
+            dietaryButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+              if (w > 0 && h > 0)
+                setButtonRect('dietaryButton', {
+                  x: pageX,
+                  y: pageY,
+                  width: w,
+                  height: h,
+                });
+            });
+          });
+        }}
+      >
+        <Pressable
+          onPress={
+            screen.selectedIngredients.size === 0 ? openFilterSheet : undefined
+          }
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Dietary restrictions"
+          disabled={screen.selectedIngredients.size > 0}
+        >
+          <Icon
+            name="options-outline"
+            size={24}
+            color={
+              screen.selectedIngredients.size > 0
+                ? theme.colors.textTertiary
+                : screen.activeFilterCount > 0
+                ? theme.colors.primary
+                : theme.colors.textSecondary
+            }
+          />
+        </Pressable>
+      </View>
+    </View>
   );
 
-  const emptyStateConfig: {
-    icon: IconName;
-    title: string;
-    description: string;
-    action: { label: string; onPress: () => void };
-  } =
-    activeView === 'myRecipes'
-      ? {
-          icon: 'create-outline',
-          title: 'No recipes yet',
-          description: 'Create your first recipe',
-          action: {
-            label: 'Create Recipe',
-            onPress: () => navigate('RecipeCreate'),
-          },
-        }
-      : {
-          icon: 'book',
-          title: 'No saved recipes',
-          description: 'Search for recipes and save your favorites',
-          action: {
-            label: 'Search Recipes',
-            onPress: handleSearchRecipes,
-          },
-        };
-
-  // Handle item press - navigate differently for saved vs random vs my recipes
-  const handleItemPress = (id: string | number) => {
-    if (activeView === 'myRecipes') {
-      navigate('RecipeDetail', { recipeId: String(id) });
-    } else if (showRandomRecipes) {
-      // Random recipe from Spoonacular - navigate with external source params
-      navigate('RecipeDetail', {
-        externalSource: 'SPOONACULAR',
-        externalId: String(id),
-      });
-    } else {
-      // Saved recipe - navigate with recipeId
-      navigate('RecipeDetail', { recipeId: String(id) });
-    }
-  };
-
-  // Suggested Recipes Header Component - shown when displaying random recipes
-  const SuggestedHeader = (() => {
-    if (!showRandomRecipes) return null;
+  const DiscoveryHeader = (() => {
+    if (!screen.showDiscovery) return null;
+    const isPantry = screen.discovery.mode === 'pantry';
     return (
       <View style={styles.suggestedHeader}>
         <View style={styles.suggestedTextContainer}>
-          <Text style={styles.suggestedTitle}>Need inspiration?</Text>
+          <Text style={styles.suggestedTitle}>
+            {isPantry ? 'Based on your pantry' : 'Need inspiration?'}
+          </Text>
           <Text style={styles.suggestedSubtitle}>
-            Here are some recipe ideas to try
+            {isPantry
+              ? 'Recipes you can make with your ingredients'
+              : 'Here are some recipe ideas to try'}
           </Text>
         </View>
         <Pressable
@@ -476,8 +344,8 @@ const RecipeMainInner: React.FC = () => {
             styles.refreshButton,
             pressed && styles.pressed,
           ]}
-          onPress={handleRefreshRandom}
-          disabled={loadingRandom}
+          onPress={screen.discovery.refresh}
+          disabled={screen.discovery.loading}
           accessibilityRole="button"
           accessibilityLabel="Refresh recipe suggestions"
         >
@@ -485,7 +353,9 @@ const RecipeMainInner: React.FC = () => {
             name="refresh"
             size={20}
             color={
-              loadingRandom ? theme.colors.textSecondary : theme.colors.primary
+              screen.discovery.loading
+                ? theme.colors.textSecondary
+                : theme.colors.primary
             }
           />
         </Pressable>
@@ -493,114 +363,34 @@ const RecipeMainInner: React.FC = () => {
     );
   })();
 
-  const formatViewLabel = (value: 'saved' | 'myRecipes') =>
-    value === 'saved' ? 'Saved' : 'My Recipes';
-
-  const handleEditRecipe = (id: string) => {
-    navigate('RecipeEdit', { recipeId: id });
-  };
-
-  // Determine the delete handler based on active view
-  const handleItemDelete = (() => {
-    if (activeView === 'myRecipes') return handleDeleteMyRecipe;
-    if (showRandomRecipes) return undefined;
-    return handleRemoveRecipe;
-  })();
-
-  // Check if any filters are active
-  const hasActiveFilters = selectedFolder !== null || selectedTags.length > 0;
-
-  // Define filter tabs with modal triggers
-  const filterTabs = (() => {
-    const tabs: FilterTabConfig<string>[] = [
-      {
-        id: 'all',
-        label: 'All',
-      },
-    ];
-
-    // Add folder pill if folders exist
-    if (folders.length > 0) {
-      tabs.push({
-        id: 'folder',
-        label: selectedFolder || 'Folders',
-        icon: 'folder',
-        onPress: () => setShowFolderPicker(true),
-        showDropdownIndicator: true,
-      });
-    }
-
-    // Add tags pill if tags exist
-    if (availableTags.length > 0) {
-      tabs.push({
-        id: 'tags',
-        label:
-          selectedTags.length > 0
-            ? `${selectedTags.length} Tag${selectedTags.length > 1 ? 's' : ''}`
-            : 'Tags',
-        icon: 'pricetag-outline',
-        onPress: () => setShowTagPicker(true),
-        showDropdownIndicator: true,
-      });
-    }
-
-    return tabs;
-  })();
-
-  // Calculate counts for filter tabs
-  const filterCounts = {
-    all: recipes.length,
-    folder: folders.length,
-    tags: availableTags.length,
-  };
-
-  // Compute which tabs have active filters (shown with subtle filtered styling)
-  const filteredTabs = (() => {
-    const filtered: string[] = [];
-    if (selectedFolder) filtered.push('folder');
-    if (selectedTags.length > 0) filtered.push('tags');
-    return filtered;
-  })();
-
-  // "All" is only active when no filters are applied; otherwise no tab is active
-  const activeFilterTab = filteredTabs.length === 0 ? 'all' : '';
-
-  // Filter Header Component - shown when user has saved recipes
-  const FilterHeader = (() => {
-    // Show suggested header when showing random recipes
-    if (showRandomRecipes) {
-      return SuggestedHeader;
-    }
-
-    // Don't show filter tabs if no folders/tags available
-    if (folders.length === 0 && availableTags.length === 0) {
-      return null;
-    }
-
+  const SearchResultsHeader = (() => {
+    if (!screen.showSearchResults) return null;
     return (
-      <FilterTabs
-        tabs={filterTabs}
-        activeTabId={activeFilterTab}
-        filteredTabIds={filteredTabs}
-        onTabChange={tabId => {
-          if (tabId === 'all') {
-            handleClearFilters();
-          }
-        }}
-        counts={filterCounts}
-        actionButton={{
-          icon: 'close',
-          onPress: handleClearFilters,
-          testID: 'recipe-clear-filters',
-          disabled: !hasActiveFilters,
-        }}
-        testIDPrefix="recipe-filter-tab"
-      />
+      <View style={styles.searchResultsHeader}>
+        <Text style={styles.searchResultsText}>
+          {screen.searchResults.length} result
+          {screen.searchResults.length !== 1 ? 's' : ''}
+        </Text>
+        <Pressable
+          onPress={screen.clearSearch}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search results"
+        >
+          <Icon name="close" size={20} color={theme.colors.textSecondary} />
+        </Pressable>
+      </View>
     );
   })();
 
-  return (
-    <View style={styles.container} testID="recipes-screen">
+  const ListHeader = screen.showSearchResults
+    ? SearchResultsHeader
+    : screen.showDiscovery
+    ? DiscoveryHeader
+    : null;
+
+  const recipeListHeader = (
+    <>
       <TabScreenHeader
         label="What to cook?"
         title="Recipes"
@@ -608,82 +398,282 @@ const RecipeMainInner: React.FC = () => {
       />
       <View style={styles.searchBarContainer}>
         <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
+          value={screen.searchQuery}
+          onChangeText={screen.setSearchQuery}
+          onSubmitEditing={screen.handleTextSearch}
+          returnKeyType="search"
           placeholder="Search recipes..."
-          showSearchIcon
+          rightActions={searchBarRightActions}
+          testID="recipe-main-search-input"
         />
       </View>
-      <View style={styles.segmentContainer}>
-        <SegmentedControl
-          options={viewOptions}
-          value={activeView}
-          onChange={setActiveView}
-          formatLabel={formatViewLabel}
-          size="compact"
-          testID="recipe-view-toggle"
+      {ListHeader}
+    </>
+  );
+
+  return (
+    <View style={styles.container} testID="recipes-screen">
+      {screen.discovery.loading && screen.items.length === 0 ? (
+        <>
+          {recipeListHeader}
+          <RecipeSkeleton />
+        </>
+      ) : (
+        <ItemList
+          items={screen.items}
+          onItemPress={handleItemPress}
+          onRefresh={screen.handleRefresh}
+          emptyState={screen.emptyStateConfig}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          ListHeaderComponent={recipeListHeader}
+          onEndReached={
+            screen.searchHasMore
+              ? screen.loadMoreSearch
+              : screen.discoveryHasMore
+              ? screen.loadMoreDiscovery
+              : undefined
+          }
+          ListFooterComponent={
+            <PaginationFooter
+              hasMore={screen.searchHasMore || screen.discoveryHasMore}
+              itemCount={screen.items.length}
+              SkeletonComponent={RecipeSkeleton}
+              skeletonCount={2}
+            />
+          }
         />
-      </View>
-      {activeView === 'saved' && FilterHeader}
-      <ItemList
-        items={items}
-        onItemPress={handleItemPress}
-        onItemDelete={handleItemDelete}
-        onItemEdit={activeView === 'myRecipes' ? handleEditRecipe : undefined}
-        onRefresh={handleRefresh}
-        emptyState={emptyStateConfig}
+      )}
+
+      <IngredientSelectorSheet
+        ref={ingredientSheetRef}
+        screen={screen}
+        onSheetChange={open => setIsSheetOpen(open)}
       />
 
-      {/* Folder Picker Modal - filter only, no folder creation, with rename/delete */}
-      {activeView === 'saved' && (
-        <FolderPicker
-          visible={showFolderPicker}
-          folders={folders}
-          selectedFolder={selectedFolder}
-          onSelect={folder => {
-            setSelectedFolder(folder);
-            setShowFolderPicker(false);
-          }}
-          onCancel={() => setShowFolderPicker(false)}
-          allowCreate={false}
-          onRenameFolder={async (oldName, newName) => {
-            const success = await renameFolder(oldName, newName);
-            if (success && selectedFolder === oldName) {
-              setSelectedFolder(newName);
-            }
-            return success;
-          }}
-          onDeleteFolder={async folderName => {
-            const success = await deleteFolder(folderName);
-            if (success && selectedFolder === folderName) {
-              setSelectedFolder(null);
-            }
-            return success;
-          }}
-          folderActionLoading={folderActionLoading}
-        />
-      )}
+      {/* Filter Bottom Sheet */}
+      <BottomSheetAction
+        sheetRef={filterSheetRef}
+        sheetTitle="Filters"
+        snapPoints={['75%', '90%']}
+        onChange={handleSheetChange}
+      >
+        {/* Diet Filter */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>Diet</Text>
+          <Text style={styles.filterSectionSubtitle}>
+            Select all that apply
+          </Text>
+          <View style={styles.chipRow}>
+            {DIET_OPTIONS.map(diet => {
+              const isSelected = screen.activeFilters.diet.includes(diet.value);
+              return (
+                <Pressable
+                  key={diet.value}
+                  style={({ pressed }) => [
+                    styles.filterChip,
+                    isSelected && styles.filterChipActive,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() =>
+                    screen.setActiveFilters(prev => ({
+                      ...prev,
+                      diet: isSelected
+                        ? prev.diet.filter(d => d !== diet.value)
+                        : [...prev.diet, diet.value],
+                    }))
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      isSelected && styles.filterChipTextActive,
+                    ]}
+                  >
+                    {diet.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
 
-      {/* Tag Picker Modal - multi-select filter */}
-      {activeView === 'saved' && (
-        <TagPicker
-          visible={showTagPicker}
-          tags={availableTags}
-          selectedTags={selectedTags}
-          onSelect={setSelectedTags}
-          onCancel={() => setShowTagPicker(false)}
+        {/* Intolerances Filter */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>
+            Allergies & Intolerances
+          </Text>
+          <Text style={styles.filterSectionSubtitle}>
+            Select all that apply
+          </Text>
+          <View style={styles.checkboxGrid}>
+            {INTOLERANCE_OPTIONS.map(intolerance => {
+              const isSelected = screen.activeFilters.intolerances.includes(
+                intolerance.value,
+              );
+              return (
+                <Pressable
+                  key={intolerance.value}
+                  style={({ pressed }) => [
+                    styles.checkboxItem,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() =>
+                    screen.setActiveFilters(prev => ({
+                      ...prev,
+                      intolerances: isSelected
+                        ? prev.intolerances.filter(i => i !== intolerance.value)
+                        : [...prev.intolerances, intolerance.value],
+                    }))
+                  }
+                >
+                  <Ionicons
+                    name={isSelected ? 'checkbox' : 'square-outline'}
+                    size={24}
+                    color={
+                      isSelected
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary
+                    }
+                  />
+                  <Text style={styles.checkboxText}>{intolerance.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Meal Type Filter */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>Meal Type</Text>
+          <Text style={styles.filterSectionSubtitle}>Select one</Text>
+          <View style={styles.chipRow}>
+            {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(type => (
+              <Pressable
+                key={type}
+                style={({ pressed }) => [
+                  styles.filterChip,
+                  screen.activeFilters.mealType === type.toLowerCase() &&
+                    styles.filterChipActive,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() =>
+                  screen.setActiveFilters(prev => ({
+                    ...prev,
+                    mealType:
+                      prev.mealType === type.toLowerCase()
+                        ? null
+                        : type.toLowerCase(),
+                  }))
+                }
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    screen.activeFilters.mealType === type.toLowerCase() &&
+                      styles.filterChipTextActive,
+                  ]}
+                >
+                  {type}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* Max Cook Time Filter */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>Max Cook Time</Text>
+          <Text style={styles.filterSectionSubtitle}>Select one</Text>
+          <View style={styles.chipRow}>
+            {[
+              { label: '15 min', value: 15 },
+              { label: '30 min', value: 30 },
+              { label: '45 min', value: 45 },
+              { label: '60 min', value: 60 },
+            ].map(time => (
+              <Pressable
+                key={time.value}
+                style={({ pressed }) => [
+                  styles.filterChip,
+                  screen.activeFilters.maxReadyTime === time.value &&
+                    styles.filterChipActive,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() =>
+                  screen.setActiveFilters(prev => ({
+                    ...prev,
+                    maxReadyTime:
+                      prev.maxReadyTime === time.value ? null : time.value,
+                  }))
+                }
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    screen.activeFilters.maxReadyTime === time.value &&
+                      styles.filterChipTextActive,
+                  ]}
+                >
+                  {time.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.filterActions}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.filterActionButton,
+              styles.clearButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={screen.clearFilters}
+          >
+            <Text style={styles.clearButtonText}>Clear All</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.filterActionButton,
+              styles.applyButton,
+              { backgroundColor: theme.colors.primary },
+              pressed && styles.pressed,
+            ]}
+            onPress={() => filterSheetRef.current?.close()}
+          >
+            <Text style={styles.applyButtonText}>Apply Filters</Text>
+          </Pressable>
+        </View>
+      </BottomSheetAction>
+
+      {tutorial.currentStep ? (
+        <SpotlightCoachMark
+          targetRect={tutorial.currentStep.targetRect}
+          title={tutorial.currentStep.title}
+          subtitle={tutorial.currentStep.subtitle}
+          stepIndex={tutorial.currentStep.stepIndex}
+          totalSteps={tutorial.currentStep.totalSteps}
+          onDismiss={tutorial.skipAll}
+          onTargetPress={() => {
+            const actions: Record<number, () => void> = {
+              0: () => navigate('SavedRecipes'),
+              1: () => navigate('MyRecipes'),
+              2: openFilterSheet,
+              3: openIngredientSelector,
+            };
+            actions[tutorial.currentStep!.stepIndex]?.();
+            tutorial.advance();
+          }}
         />
-      )}
+      ) : null}
     </View>
   );
 };
 
 const noop = () => {};
 
-/**
- * Outer component that gates heavy work behind DeferredScreen.
- * Skeleton paints instantly; RecipeMainInner mounts on the deferred re-render.
- */
 export const RecipeMain: React.FC = () => (
   <DeferredScreen
     fallback={
@@ -698,17 +688,6 @@ export const RecipeMain: React.FC = () => (
             editable={false}
           />
         </View>
-        <View style={styles.segmentContainer}>
-          <SegmentedControl
-            options={viewOptions}
-            value="saved"
-            onChange={noop}
-            formatLabel={(v: string) =>
-              v === 'saved' ? 'Saved' : 'My Recipes'
-            }
-            size="compact"
-          />
-        </View>
         <RecipeSkeleton />
       </View>
     }
@@ -717,16 +696,12 @@ export const RecipeMain: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  searchBarContainer: {
-    paddingHorizontal: theme.spacing.md,
-  },
-  segmentContainer: {
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  searchBarContainer: { paddingHorizontal: theme.spacing.md },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
   },
   suggestedHeader: {
     flexDirection: 'row',
@@ -739,9 +714,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
     borderRadius: theme.radii.md,
   },
-  suggestedTextContainer: {
-    flex: 1,
-  },
+  suggestedTextContainer: { flex: 1 },
   suggestedTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
@@ -757,7 +730,96 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.background,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
+  searchResultsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
+  searchResultsText: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textSecondary,
+  },
+  filterSection: { marginBottom: theme.spacing.xl },
+  filterSectionTitle: {
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  filterSectionSubtitle: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md,
+  },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
+  filterChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.full,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+  },
+  filterChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  filterChipText: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+  },
+  filterChipTextActive: { color: theme.colors.white },
+  checkboxGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
+  checkboxItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '48%',
+    padding: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.surface,
+  },
+  checkboxText: {
+    marginLeft: theme.spacing.sm,
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textPrimary,
+  },
+  filterActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+  },
+  filterActionButton: {
+    flex: 1,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+  },
+  clearButton: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  clearButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+  },
+  applyButton: {},
+  applyButtonText: {
+    color: theme.colors.white,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+  },
+  pressed: { opacity: theme.opacity.pressed },
 }));

@@ -1,12 +1,26 @@
-import React, { useState } from 'react';
-import { RefreshControl, ScrollView } from 'react-native';
-import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
+import React, { useDeferredValue, useRef, useState } from 'react';
+import {
+  View,
+  RefreshControl,
+  ScrollView,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+} from 'react-native';
+import {
+  FlashList,
+  type FlashListRef,
+  type ListRenderItemInfo,
+} from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../base/EmptyState';
 import { ItemCard } from './ItemCard';
+import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { IconName } from '#/utils/iconUtils';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { createPropsComparator } from '#utils/memoUtils';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { CachedImage } from '#components/atoms/CachedImage';
+import { commonStyles } from '#/styles/commonStyles';
 import {
   ItemListActionsProvider,
   useItemListActions,
@@ -25,7 +39,8 @@ interface Item {
     variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
   };
   rightElement?: React.ReactNode;
-  leftElement?: React.ReactNode; // Optional left element for image or icon
+  leftElement?: React.ReactNode;
+  imageUrl?: string; // Pass URL as data — renderItem creates CachedImage (avoids JSX in transforms)
 }
 
 // Bridge component — reads actions from context, renders ItemCard
@@ -45,13 +60,26 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
     testIDPrefix,
   } = actions;
 
+  // Render CachedImage from imageUrl data — avoids creating JSX in parent transforms
+  const leftElement =
+    item.leftElement ??
+    (item.imageUrl ? (
+      <View style={commonStyles.listItemImageContainerCompact}>
+        <CachedImage
+          uri={item.imageUrl}
+          style={commonStyles.listItemImageCompact}
+          displaySize={48}
+        />
+      </View>
+    ) : undefined);
+
   return (
     <ItemCard
       id={item.id}
       title={item.title}
       subtitle={item.subtitle}
       badge={item.badge}
-      leftElement={item.leftElement}
+      leftElement={leftElement}
       rightElement={item.rightElement}
       onPress={() => onItemPress(item.id)}
       onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
@@ -68,7 +96,7 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
 // PERFORMANCE: Custom comparator for React.memo — value-equality on nested item fields
 const arePropsEqual = createPropsComparator<ListRenderItemInfo<Item>>({
   nestedComparisons: {
-    item: ['id', 'title', 'subtitle'],
+    item: ['id', 'title', 'subtitle', 'imageUrl'],
     'item.badge': ['text', 'variant'],
   },
 });
@@ -82,6 +110,9 @@ const ItemListRenderItem = React.memo(
 const renderItem = (info: ListRenderItemInfo<Item>) => (
   <ItemListRenderItem {...info} />
 );
+
+// Module-scope getItemType — all items are the same type for optimal recycler pooling
+const getItemType = () => 'item';
 
 interface ItemListProps {
   items: Item[];
@@ -98,6 +129,8 @@ interface ItemListProps {
   ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null;
   ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
   testIDPrefix?: string;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  scrollEventThrottle?: number;
   emptyState?: {
     icon: IconName;
     title: string;
@@ -124,10 +157,14 @@ export const ItemList: React.FC<ItemListProps> = ({
   ListHeaderComponent,
   ListFooterComponent,
   testIDPrefix,
+  onScroll,
+  scrollEventThrottle,
   emptyState,
 }) => {
   const [refreshing, setRefreshing] = useState(false);
+  const flashListRef = useRef<FlashListRef<Item>>(null);
   const { bottom: safeBottom } = useSafeAreaInsets();
+  const deferredItems = useDeferredValue(items);
 
   // Dynamic content style with proper bottom padding for tab bar
   const contentStyle = {
@@ -146,7 +183,12 @@ export const ItemList: React.FC<ItemListProps> = ({
   const actions: ItemListActions = {
     onItemPress,
     onItemEdit,
-    onItemDelete,
+    onItemDelete: onItemDelete
+      ? (id: string) => {
+          flashListRef.current?.prepareForLayoutAnimationRender();
+          onItemDelete(id);
+        }
+      : undefined,
     onItemConsume,
     onItemWaste,
     onItemRestock,
@@ -157,13 +199,15 @@ export const ItemList: React.FC<ItemListProps> = ({
   // extraData encodes action availability — FlashList re-renders items when this changes
   const extraData = `${!!onItemEdit}-${!!onItemDelete}-${!!onItemConsume}-${!!onItemWaste}-${!!onItemRestock}`;
 
-  if (items.length === 0 && emptyState) {
+  if (deferredItems.length === 0 && emptyState) {
     return (
       <ScrollView
         contentContainerStyle={{
           flexGrow: 1,
           paddingBottom: contentStyle.paddingBottom,
         }}
+        onScroll={onScroll}
+        scrollEventThrottle={scrollEventThrottle}
         refreshControl={
           onRefresh ? (
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
@@ -184,10 +228,15 @@ export const ItemList: React.FC<ItemListProps> = ({
   return (
     <ItemListActionsProvider actions={actions}>
       <FlashList
-        data={items}
+        ref={flashListRef}
+        data={deferredItems}
         keyExtractor={keyExtractor}
+        getItemType={getItemType}
+        CellRendererComponent={AnimatedCellRenderer}
         contentContainerStyle={contentStyle}
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={scrollEventThrottle}
         refreshControl={
           onRefresh ? (
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
@@ -195,9 +244,7 @@ export const ItemList: React.FC<ItemListProps> = ({
         }
         renderItem={renderItem}
         extraData={extraData}
-        // FlashList v2: Pre-render items 200px outside viewport for smoother scrolling
-        drawDistance={200}
-        // Native onEndReached support
+        drawDistance={FLASHLIST_DEFAULTS.fullScreen.drawDistance}
         onEndReached={onEndReached}
         onEndReachedThreshold={onEndReachedThreshold}
         ListHeaderComponent={

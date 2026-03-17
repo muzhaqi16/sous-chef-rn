@@ -20,6 +20,7 @@ jest.mock('@react-navigation/native', () => ({
 // --- Tab bar ---
 jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarSetters: () => ({ setOverlayOpen: jest.fn() }),
+  useTabBarState: () => ({ addButtonRect: null, isOverlayOpen: false }),
 }));
 jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
   useTabBarAddButton: jest.fn(),
@@ -180,8 +181,6 @@ jest.mock('#hooks/useFeatureHint', () => ({
     hasBeenShown: true,
     actions: { show: jest.fn(), dismiss: jest.fn() },
   }),
-  getScreenVisitCount: () => 1,
-  incrementScreenVisitCount: jest.fn(),
 }));
 jest.mock('#services/telemetry', () => ({
   Telemetry: { trackEvent: jest.fn(), trackScreen: jest.fn() },
