@@ -35,7 +35,11 @@ jest.mock('@apollo/client/errors', () => ({
   CombinedProtocolErrors: { is: jest.fn() },
 }));
 
-import { errorService, getErrorMessage, useErrorService } from '../errorService';
+import {
+  errorService,
+  getErrorMessage,
+  useErrorService,
+} from '../errorService';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
 import {
@@ -53,10 +57,12 @@ import {
   CombinedProtocolErrors,
 } from '@apollo/client/errors';
 
-const mockCombinedGraphQLErrorsIs = CombinedGraphQLErrors.is as unknown as jest.Mock;
+const mockCombinedGraphQLErrorsIs =
+  CombinedGraphQLErrors.is as unknown as jest.Mock;
 const mockServerErrorIs = ServerError.is as unknown as jest.Mock;
 const mockServerParseErrorIs = ServerParseError.is as unknown as jest.Mock;
-const mockCombinedProtocolErrorsIs = CombinedProtocolErrors.is as unknown as jest.Mock;
+const mockCombinedProtocolErrorsIs =
+  CombinedProtocolErrors.is as unknown as jest.Mock;
 
 describe('errorService', () => {
   beforeEach(() => {
@@ -121,9 +127,7 @@ describe('errorService', () => {
     });
 
     it('returns Unknown for unrecognized prefix', () => {
-      expect(errorService.getErrorCategory('FOOBAR_SOMETHING')).toBe(
-        'Unknown',
-      );
+      expect(errorService.getErrorCategory('FOOBAR_SOMETHING')).toBe('Unknown');
     });
   });
 
@@ -137,7 +141,7 @@ describe('errorService', () => {
       'SERVICE_OVERLOADED',
       'RATE_LIMIT_EXCEEDED',
       'AUTH_TOKEN_EXPIRED',
-    ])('returns true for %s', (code) => {
+    ])('returns true for %s', code => {
       expect(errorService.shouldRetry(code)).toBe(true);
     });
 
@@ -177,12 +181,7 @@ describe('errorService', () => {
 
       expect(Telemetry.trackError).toHaveBeenCalledWith(
         'Something broke',
-        expect.objectContaining({ operation: 'TestOp' }),
-      );
-      expect(Telemetry.increment).toHaveBeenCalledWith(
-        'app_errors_total',
-        1,
-        expect.objectContaining({ category: 'reported', operation: 'TestOp' }),
+        expect.objectContaining({ component: 'reported', operation: 'TestOp' }),
       );
     });
 
@@ -320,17 +319,20 @@ describe('errorService', () => {
       [500, 'SERVICE_UNAVAILABLE'],
       [503, 'SERVICE_UNAVAILABLE'],
       [418, 'NETWORK_ERROR'],
-    ])('handles ServerError with status %i as %s', (statusCode, expectedCode) => {
-      const error = { statusCode, message: `Error ${statusCode}` };
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(false);
-      mockCombinedGraphQLErrorsIs.mockReturnValue(false);
-      mockServerErrorIs.mockReturnValue(true);
+    ])(
+      'handles ServerError with status %i as %s',
+      (statusCode, expectedCode) => {
+        const error = { statusCode, message: `Error ${statusCode}` };
+        (isQueryComplexityError as jest.Mock).mockReturnValue(false);
+        (isVersionConflictError as jest.Mock).mockReturnValue(false);
+        mockCombinedGraphQLErrorsIs.mockReturnValue(false);
+        mockServerErrorIs.mockReturnValue(true);
 
-      const result = errorService.parseApolloError(error);
+        const result = errorService.parseApolloError(error);
 
-      expect(result.error?.code).toBe(expectedCode);
-    });
+        expect(result.error?.code).toBe(expectedCode);
+      },
+    );
 
     it('uses fallback message for ServerError when message is empty', () => {
       const error = { statusCode: 502, message: '' };
@@ -464,14 +466,7 @@ describe('errorService', () => {
       expect(Telemetry.trackError).toHaveBeenCalledWith(
         'telemetry test',
         expect.objectContaining({
-          code: 'UNKNOWN_ERROR',
-          operation: 'TelemetryOp',
-        }),
-      );
-      expect(Telemetry.increment).toHaveBeenCalledWith(
-        'app_errors_total',
-        1,
-        expect.objectContaining({
+          component: 'Unknown',
           code: 'UNKNOWN_ERROR',
           operation: 'TelemetryOp',
         }),

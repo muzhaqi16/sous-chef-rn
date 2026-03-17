@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   ScrollView,
   RefreshControl,
   Pressable,
@@ -10,6 +9,7 @@ import {
 } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
+import { EmailInput } from '#components/atoms/EmailInput';
 import { useNavigation } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
 import { LoadingInline } from '#components/base/Loading';
@@ -367,13 +367,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             <View style={styles.inviteSection}>
               <Text style={styles.sectionTitle}>Invite Members</Text>
               <View style={styles.inputRow}>
-                <TextInput
-                  style={styles.input}
+                <EmailInput
+                  containerStyle={styles.emailInputContainer}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="Enter email address"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
                 />
                 <Pressable
                   style={({ pressed }) => [
@@ -647,15 +644,8 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  input: {
+  emailInputContainer: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.sm,
-    paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing.sm,
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
   },
   sendButton: {
     marginLeft: theme.spacing['3'],

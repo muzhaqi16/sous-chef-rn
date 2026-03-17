@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  Switch,
-  TextInput,
-} from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
+import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { ScreenHeader } from '#components/molecules/ScreenHeader';
@@ -396,16 +390,12 @@ export const ListSettings: React.FC<
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>General</Text>
 
-            <View style={commonStyles.settingsInputGroup}>
-              <Text style={commonStyles.settingsLabel}>List Name</Text>
-              <TextInput
-                style={commonStyles.settingsInput}
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter list name"
-                placeholderTextColor={theme.colors.textSecondary}
-              />
-            </View>
+            <BaseInput
+              label="List Name"
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter list name"
+            />
 
             {/* Home selector - only show for new lists */}
             {!listId && (

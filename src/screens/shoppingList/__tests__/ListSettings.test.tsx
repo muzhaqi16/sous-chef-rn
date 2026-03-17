@@ -10,9 +10,10 @@ jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
-  const fn = (selector: any) => selector({
-    setSelectedShoppingListId: jest.fn(),
-  });
+  const fn = (selector: any) =>
+    selector({
+      setSelectedShoppingListId: jest.fn(),
+    });
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
@@ -40,7 +41,11 @@ jest.mock('#hooks/auth/useAuthUser', () => ({
 }));
 
 jest.mock('#/hooks/home/useLazyHomeData', () => ({
-  useLazyHomeData: () => ({ homes: [], fetchHomeData: jest.fn(), isLoaded: false }),
+  useLazyHomeData: () => ({
+    homes: [],
+    fetchHomeData: jest.fn(),
+    isLoaded: false,
+  }),
 }));
 
 jest.mock('#hooks/shoppingList/useShoppingListsQuery', () => ({
@@ -61,13 +66,18 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 }));
 
 jest.mock('#/services/errorService', () => ({
-  useErrorService: () => ({ handleApolloError: jest.fn(() => ({ message: 'err' })) }),
+  useErrorService: () => ({
+    handleApolloError: jest.fn(() => ({ message: 'err' })),
+  }),
 }));
 jest.mock('#/services/toastService', () => ({
   toastService: { error: jest.fn(), success: jest.fn() },
 }));
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
-  subscriptionService: { registerParentDeletion: jest.fn(), unregisterParentDeletion: jest.fn() },
+  subscriptionService: {
+    registerParentDeletion: jest.fn(),
+    unregisterParentDeletion: jest.fn(),
+  },
 }));
 jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#utils/ownershipHelpers', () => ({
@@ -80,17 +90,38 @@ jest.mock('#utils/ownershipHelpers', () => ({
 jest.mock('#components/molecules/ScreenHeader', () => ({
   ScreenHeader: ({ title, rightElement }: any) => {
     const { View, Text } = require('react-native');
-    return <View testID="screen-header"><Text>{title}</Text>{rightElement}</View>;
+    return (
+      <View testID="screen-header">
+        <Text>{title}</Text>
+        {rightElement}
+      </View>
+    );
   },
 }));
 jest.mock('#components/molecules/InfoRow', () => ({
   InfoRow: ({ label, value }: any) => {
     const { View, Text } = require('react-native');
-    return <View><Text>{label}</Text><Text>{value}</Text></View>;
+    return (
+      <View>
+        <Text>{label}</Text>
+        <Text>{value}</Text>
+      </View>
+    );
   },
 }));
 jest.mock('#components/molecules/ModalPicker', () => ({
   ModalPicker: () => null,
+}));
+jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
+  BaseInput: ({ label, ...props }: any) => {
+    const { View, Text, TextInput } = require('react-native');
+    return (
+      <View>
+        {label ? <Text>{label}</Text> : null}
+        <TextInput {...props} />
+      </View>
+    );
+  },
 }));
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: {
@@ -98,7 +129,6 @@ jest.mock('#/styles/commonStyles', () => ({
     settingsSectionTitle: {},
     settingsInputGroup: {},
     settingsLabel: {},
-    settingsInput: {},
     settingsRow: {},
     settingsRowInfo: {},
     settingsRowLabel: {},
@@ -190,7 +220,11 @@ describe('ListSettings', () => {
   });
 
   it('shows role display for non-owner', () => {
-    const { isShoppingListOwner, getShoppingListRole, formatRoleDisplay } = require('#utils/ownershipHelpers');
+    const {
+      isShoppingListOwner,
+      getShoppingListRole,
+      formatRoleDisplay,
+    } = require('#utils/ownershipHelpers');
     isShoppingListOwner.mockReturnValue(false);
     getShoppingListRole.mockReturnValue('EDITOR');
     formatRoleDisplay.mockReturnValue('Editor');
@@ -216,7 +250,9 @@ describe('ListSettings', () => {
         collaboratorsConnection: { edges: [], totalCount: 0 },
       },
       isShared: false,
-      collaborators: [{ id: 'c1', email: 'test@test.com', collaboratorId: 'u1' }],
+      collaborators: [
+        { id: 'c1', email: 'test@test.com', collaboratorId: 'u1' },
+      ],
     }));
 
     render(<ListSettings route={editRoute} />);
@@ -262,7 +298,10 @@ describe('ListSettings', () => {
         collaboratorsConnection: { edges: [], totalCount: 2 },
       },
       isShared: true,
-      collaborators: [{ id: 'c1', email: 'a@test.com' }, { id: 'c2', email: 'b@test.com' }],
+      collaborators: [
+        { id: 'c1', email: 'a@test.com' },
+        { id: 'c2', email: 'b@test.com' },
+      ],
     }));
 
     render(<ListSettings route={editRoute} />);

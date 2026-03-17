@@ -96,8 +96,23 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
   // ── Interactive tutorial (only active for first item during relevant steps) ──
   const tutorial = useShoppingListTutorial();
+  const itemCardRef = useRef<View>(null);
   const checkboxRef = useRef<View>(null);
   const archiveIconRef = useRef<View>(null);
+
+  const isTutorialSwipeTarget =
+    tutorial?.currentStep ===
+      ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS &&
+    index === 0 &&
+    !item.isPurchased;
+
+  // Disable swipe gestures during non-swipe spotlight steps so users can't
+  // accidentally swipe items while the tutorial overlay is showing.
+  // During the swipe step itself, swiping is allowed so the user can
+  // interact with the real item.
+  const swipeEnabled =
+    !tutorial?.isActive ||
+    tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS;
 
   const isTutorialCheckboxTarget =
     tutorial?.isActive &&
@@ -139,6 +154,23 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       archiveIconRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
         if (w > 0 && h > 0) {
           tutorial?.registerRect('archiveIcon', {
+            x: pageX,
+            y: pageY,
+            width: w,
+            height: h,
+          });
+        }
+      });
+    });
+  };
+
+  // Measure entire item card for swipe actions tutorial spotlight
+  const handleItemCardLayout = () => {
+    if (!isTutorialSwipeTarget) return;
+    requestAnimationFrame(() => {
+      itemCardRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+        if (w > 0 && h > 0) {
+          tutorial?.registerRect('itemCard', {
             x: pageX,
             y: pageY,
             width: w,
@@ -271,6 +303,15 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       entering={entering}
       style={[styles.container, animatedSlideStyle]}
     >
+      {isTutorialSwipeTarget ? (
+        <View
+          ref={itemCardRef}
+          collapsable={false}
+          onLayout={handleItemCardLayout}
+          style={styles.measureOverlay}
+          pointerEvents="none"
+        />
+      ) : null}
       <SwipeableItem
         itemId={item.id}
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}
@@ -285,9 +326,16 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         }
         isPurchased={item.isPurchased}
         friction={1}
-        onSwipeableWillOpen={onSwipeableWillOpen}
+        onSwipeableWillOpen={ref => {
+          onSwipeableWillOpen?.(ref);
+          // Detect swipe during tutorial swipe step → advance tutorial
+          if (isTutorialSwipeTarget) {
+            tutorial?.notifySwipeActionsSeen();
+          }
+        }}
         onSwipeableClose={onSwipeableClose}
         swipeMode="shopping"
+        enabled={swipeEnabled}
       >
         <ListItem
           title={item.title}
@@ -320,6 +368,9 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
+  },
+  measureOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   dimmed: {
     opacity: 0.5,

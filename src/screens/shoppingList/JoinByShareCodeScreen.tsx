@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { useNavigation } from '@react-navigation/native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
@@ -81,8 +82,9 @@ export const JoinByShareCodeScreen: React.FC<
           Enter the share code you received to join a shopping list.
         </Text>
 
-        <TextInput
-          style={styles.input}
+        <BaseInput
+          containerStyle={styles.inputContainer}
+          style={styles.inputText}
           value={code}
           onChangeText={setCode}
           placeholder="Enter share code"
@@ -136,18 +138,14 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xl,
     lineHeight: theme.typography.fontSize.md * 1.5,
   },
-  input: {
+  inputContainer: {
     width: '100%',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.sm,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    fontSize: theme.typography.fontSize.lg,
-    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.lg,
+  },
+  inputText: {
     textAlign: 'center',
     letterSpacing: 2,
-    marginBottom: theme.spacing.lg,
+    fontSize: theme.typography.fontSize.lg,
   },
   joinButton: {
     width: '100%',

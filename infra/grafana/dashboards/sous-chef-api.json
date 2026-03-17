@@ -501,7 +501,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "time() - push_time_seconds{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}",
+          "expr": "time() - push_time_seconds{job=\"sous-chef-app\"}",
           "refId": "A",
           "legendFormat": "{{instance}}"
         }

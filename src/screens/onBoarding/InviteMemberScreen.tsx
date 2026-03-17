@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Text, View, TextInput, Pressable } from 'react-native';
+import { Text, View, Pressable } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
+import { EmailInput } from '#components/atoms/EmailInput';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   useInviteToHomeMutation,
@@ -19,7 +20,6 @@ import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 type InviteEntry = {
   id: string;
   email: string;
-  type: 'home' | 'shopping' | 'both';
 };
 
 export const InviteMemberScreen = () => {
@@ -37,13 +37,6 @@ export const InviteMemberScreen = () => {
   const hasShoppingList = !!selectedShoppingListId;
   const hasBoth = hasHome && hasShoppingList;
   const hasNeither = !hasHome && !hasShoppingList;
-
-  // Determine the default invite type based on available resources
-  const getDefaultInviteType = (): 'home' | 'shopping' | 'both' => {
-    if (hasBoth) return 'both';
-    if (hasHome) return 'home';
-    return 'shopping';
-  };
 
   const [invites, setInvites] = useState<InviteEntry[]>([]);
   const [currentEmail, setCurrentEmail] = useState('');
@@ -92,7 +85,6 @@ export const InviteMemberScreen = () => {
       {
         id: Date.now().toString(),
         email: trimmedEmail,
-        type: getDefaultInviteType(),
       },
     ]);
     setCurrentEmail('');
@@ -102,26 +94,6 @@ export const InviteMemberScreen = () => {
     setInvites(invites.filter(invite => invite.id !== id));
   };
 
-  const toggleInviteType = (id: string) => {
-    // Only allow toggling if user has both resources
-    if (!hasBoth) return;
-
-    setInvites(
-      invites.map(invite => {
-        if (invite.id === id) {
-          // Cycle through: both -> home -> shopping -> both
-          let newType: 'home' | 'shopping' | 'both';
-          if (invite.type === 'both') newType = 'home';
-          else if (invite.type === 'home') newType = 'shopping';
-          else newType = 'both';
-
-          return { ...invite, type: newType };
-        }
-        return invite;
-      }),
-    );
-  };
-
   const sendInvites = () => {
     if (invites.length > 0) {
       executeWithLoadingState(
@@ -129,10 +101,8 @@ export const InviteMemberScreen = () => {
           const invitePromises = [];
 
           for (const invite of invites) {
-            if (
-              (invite.type === 'home' || invite.type === 'both') &&
-              selectedHomeId
-            ) {
+            if (selectedHomeId) {
+              // Home membership covers home-linked shopping lists
               invitePromises.push(
                 inviteToHome({
                   variables: {
@@ -147,12 +117,8 @@ export const InviteMemberScreen = () => {
                   },
                 }),
               );
-            }
-
-            if (
-              (invite.type === 'shopping' || invite.type === 'both') &&
-              selectedShoppingListId
-            ) {
+            } else if (selectedShoppingListId) {
+              // Standalone shopping list (not home-linked)
               invitePromises.push(
                 addCollaborator({
                   variables: {
@@ -190,30 +156,13 @@ export const InviteMemberScreen = () => {
     navigateToNextStep('InviteMembers');
   };
 
-  const getInviteTypeLabel = (type: 'home' | 'shopping' | 'both') => {
-    // If user only has one resource, show a simpler label
-    if (!hasBoth) {
-      if (hasHome) return '🏠 Home';
-      if (hasShoppingList) return '🛒 Shopping List';
-    }
-
-    switch (type) {
-      case 'both':
-        return '🏠 Home & 🛒 Shopping';
-      case 'home':
-        return '🏠 Home Only';
-      case 'shopping':
-        return '🛒 Shopping Only';
-    }
-  };
-
   const getSubtitle = () => {
     if (hasNeither)
       return 'Create a home or shopping list first to invite others';
     if (hasBoth)
-      return 'Share your home and shopping lists with others (optional)';
-    if (hasHome) return 'Share your home with others (optional)';
-    return 'Share your shopping list with others (optional)';
+      return 'Invite others to your home and shopping lists (optional)';
+    if (hasHome) return 'Invite others to your home (optional)';
+    return 'Invite others to your shopping list (optional)';
   };
 
   // If user has neither home nor shopping list, show message and skip button
@@ -255,14 +204,10 @@ export const InviteMemberScreen = () => {
     >
       <View style={styles.container}>
         <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.emailInput}
-            placeholder="Enter email address"
+          <EmailInput
+            containerStyle={styles.emailInputContainer}
             value={currentEmail}
             onChangeText={setCurrentEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
             onSubmitEditing={addInvite}
           />
           <Pressable
@@ -295,24 +240,7 @@ export const InviteMemberScreen = () => {
               </Text>
               {invites.map(invite => (
                 <View key={invite.id} style={styles.inviteItem}>
-                  <View style={styles.inviteInfo}>
-                    <Text style={styles.inviteEmail}>{invite.email}</Text>
-                    <Pressable
-                      onPress={() => toggleInviteType(invite.id)}
-                      style={({ pressed }) => [
-                        styles.typeButton,
-                        pressed && styles.pressed,
-                      ]}
-                      disabled={!hasBoth}
-                    >
-                      <Text style={styles.typeText}>
-                        {getInviteTypeLabel(invite.type)}
-                        {!!hasBoth && (
-                          <Text style={styles.typeHint}> (tap to change)</Text>
-                        )}
-                      </Text>
-                    </Pressable>
-                  </View>
+                  <Text style={styles.inviteEmail}>{invite.email}</Text>
                   <Pressable
                     onPress={() => removeInvite(invite.id)}
                     style={({ pressed }) => [
@@ -361,15 +289,8 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
     gap: theme.spacing.sm,
   },
-  emailInput: {
+  emailInputContainer: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.sm,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
-    fontSize: theme.typography.fontSize.md,
-    backgroundColor: theme.colors.surface,
   },
   addButton: {
     backgroundColor: theme.colors.primary,
@@ -414,26 +335,10 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing['3'],
     marginBottom: theme.spacing.sm,
   },
-  inviteInfo: {
-    flex: 1,
-  },
   inviteEmail: {
+    flex: 1,
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  typeButton: {
-    marginTop: theme.spacing.xs,
-  },
-  typeText: {
-    fontSize: theme.typography.fontSize.sm - 1,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  typeHint: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.regular,
   },
   removeButton: {
     width: 32,

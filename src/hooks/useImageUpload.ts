@@ -314,6 +314,9 @@ export const useImageUpload = () => {
       },
     );
     if (!result) return null;
+    // Sync avatar to Zustand store so screens reading from the store
+    // (e.g. Pantry header) reflect the change immediately.
+    useStore.getState().updateUser({ profilePicture: avatarUrl });
     return result.data?.updateProfile?.userProfile || null;
   };
 

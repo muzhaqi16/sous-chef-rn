@@ -69,7 +69,9 @@ describe('TelemetryService', () => {
 
     it('sets up http transport when transports.http is true', () => {
       const { HttpTransport } = jest.requireMock('../transports/HttpTransport');
-      const service = new TelemetryService({ transports: { http: true, console: false } });
+      const service = new TelemetryService({
+        transports: { http: true, console: false },
+      });
       expect(HttpTransport).toHaveBeenCalled();
       expect(service).toBeDefined();
     });
@@ -170,7 +172,10 @@ describe('TelemetryService', () => {
   // ------------------------------------------------------------------ log
   describe('log', () => {
     it('is a no-op when enabled is false', () => {
-      const service = new TelemetryService({ enabled: false, enableLogs: true });
+      const service = new TelemetryService({
+        enabled: false,
+        enableLogs: true,
+      });
       service.log('info', 'ignored');
       // Nothing buffered, flush should send nothing
       service.flush();
@@ -209,7 +214,10 @@ describe('TelemetryService', () => {
       service.log('error', 'critical failure');
       expect(mockSendLogs).toHaveBeenCalledWith(
         expect.arrayContaining([
-          expect.objectContaining({ level: 'error', message: 'critical failure' }),
+          expect.objectContaining({
+            level: 'error',
+            message: 'critical failure',
+          }),
         ]),
       );
     });
@@ -227,7 +235,7 @@ describe('TelemetryService', () => {
           expect.objectContaining({
             extra: expect.objectContaining({
               platform: 'ios',
-              environment: 'test-env',
+              env: 'test-env',
               custom: 'data',
             }),
           }),
@@ -279,7 +287,7 @@ describe('TelemetryService', () => {
           expect.objectContaining({
             labels: expect.objectContaining({
               platform: 'ios',
-              environment: 'production',
+              env: 'production',
               region: 'us',
             }),
             value: 5,
@@ -352,9 +360,7 @@ describe('TelemetryService', () => {
       );
 
       // Buckets: 10,25,50 are < 75 so skipped; 100,250,500,1000,2500,5000,10000 + Inf
-      const les = buckets.map(
-        (b: { labels: { le: string } }) => b.labels.le,
-      );
+      const les = buckets.map((b: { labels: { le: string } }) => b.labels.le);
       expect(les).not.toContain('10');
       expect(les).not.toContain('25');
       expect(les).not.toContain('50');

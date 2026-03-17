@@ -42,6 +42,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   onSwipeableClose,
   testIDPrefix,
   swipeMode,
+  enabled = true,
 }) => {
   // Calculate thresholds based on number of actions
   // Fewer actions = smaller threshold for more natural swipe feel
@@ -162,6 +163,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     >
       <Swipeable
         ref={swipeableRef}
+        enabled={enabled}
         friction={friction}
         leftThreshold={computedLeftThreshold}
         rightThreshold={computedRightThreshold}

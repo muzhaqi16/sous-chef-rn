@@ -1,5 +1,5 @@
 import type { SharedValue } from 'react-native-reanimated';
-import {Icon} from '#/utils/iconUtils';
+import { Icon } from '#/utils/iconUtils';
 
 /**
  * Swipe mode controls the behavior of swipe actions:
@@ -31,6 +31,8 @@ export interface SwipeableItemProps {
   testIDPrefix?: string;
   /** Controls swipe action layout - 'shopping' puts edit on left, 'pantry' uses original layout */
   swipeMode?: SwipeMode;
+  /** Disables swipe gestures when false (e.g. during tutorial spotlight steps) */
+  enabled?: boolean;
 }
 
 export interface ActionButtonProps {

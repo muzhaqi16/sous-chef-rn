@@ -11,14 +11,12 @@ import { ListTemplate } from '#components/templates/ListTemplate';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { ShoppingListTabs } from '#components/organisms/ShoppingListTabs/ShoppingListTabs';
-import { InteractiveSwipeHint } from '#components/organisms/InteractiveSwipeHint/InteractiveSwipeHint';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { Icon } from '#utils/iconUtils';
 
 // Hooks & Context
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
-import { useFeatureHint } from '#hooks/useFeatureHint';
 import type { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
 import { useShoppingListActions } from '#hooks/shoppingList/useShoppingListActions';
 import { useBatchMoveToPantry } from '#hooks/shoppingList/useBatchMoveToPantry';
@@ -93,12 +91,6 @@ export const ShoppingListMainContent: React.FC<
 
   // Get modal actions from context (provided by ShoppingListModalsProvider)
   const { addItemSheet, quantityEdit, moveToPantry } = useShoppingListModals();
-
-  // Feature hint for swipe gesture (shows once, after items load)
-  const swipeHint = useFeatureHint({
-    featureId: 'shopping_list_swipe',
-    showOnMount: false,
-  });
 
   const { navigate, navigateTo } = useAppNavigation();
   const { setScannerProps, scrollTabBarHidden } = useTabBarSetters();
@@ -192,16 +184,6 @@ export const ShoppingListMainContent: React.FC<
   // Coordinate swipeable items so only one is open at a time
   const { handleSwipeableWillOpen, handleSwipeableClose, closeAll } =
     useSwipeableCoordinator();
-
-  // Show swipe hint after items load
-  useEffect(() => {
-    if (unpurchasedItems.length > 0 && !swipeHint.hasBeenShown) {
-      const timer = setTimeout(() => {
-        swipeHint.actions.show();
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [unpurchasedItems, swipeHint.hasBeenShown, swipeHint.actions]);
 
   // Handle refresh
   const handleRefresh = () => {
@@ -403,19 +385,10 @@ export const ShoppingListMainContent: React.FC<
         onClose={handleOverlayClose}
       />
 
-      {/* Interactive swipe tutorial */}
-      {!!swipeHint.isVisible && (
-        <InteractiveSwipeHint
-          mode="shopping"
-          onDismiss={swipeHint.actions.dismiss}
-        />
-      )}
-
-      {/* Interactive tutorial spotlight coach-marks (steps 1, 4, 5, 6) */}
+      {/* Interactive tutorial spotlight coach-marks */}
       {(() => {
         if (!tutorial?.isActive) return null;
-        if (!isScreenFocused || isOverlayOpen || swipeHint.isVisible)
-          return null;
+        if (!isScreenFocused || isOverlayOpen) return null;
 
         const stepConfig = TUTORIAL_STEP_CONFIG[tutorial.currentStep];
         if (!stepConfig) return null;
@@ -433,10 +406,36 @@ export const ShoppingListMainContent: React.FC<
             });
             addItemSheet.open();
             tutorial.notifyAddButtonPressed();
+          } else if (
+            tutorial.currentStep ===
+            ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS
+          ) {
+            // Also handled by swipe detection in SortableItem, but
+            // tap-to-advance serves as fallback
+            tutorial.notifySwipeActionsSeen();
+          } else if (
+            tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX
+          ) {
+            const firstItemId = rawUnpurchasedItems?.[0]?.id;
+            if (firstItemId) {
+              handleTogglePurchase(firstItemId);
+              tutorial.notifyCheckboxTapped();
+            }
+          } else if (
+            tutorial.currentStep ===
+            ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB
+          ) {
+            tutorial.notifyPurchasedTabTapped();
+          } else if (
+            tutorial.currentStep ===
+            ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY
+          ) {
+            const firstItemId = rawPurchasedItems?.[0]?.id;
+            if (firstItemId) {
+              moveToPantry.openForItem(firstItemId);
+              tutorial.notifyMoveToPantryTapped();
+            }
           }
-          // Steps 4, 5, 6: the actual action + notification happens in the
-          // child components (SortableItem, ShoppingListTabs) that call
-          // notifyCheckboxTapped / notifyPurchasedTabTapped / notifyMoveToPantryTapped
         };
 
         return (

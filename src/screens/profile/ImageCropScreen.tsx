@@ -46,6 +46,13 @@ export const ImageCropScreen: React.FC<
     setImageLoaded(true);
 
     Image.getSize(imageFile.uri, (width, height) => {
+      if (__DEV__) {
+        console.log('[ImageCrop] Image.getSize raw:', {
+          width,
+          height,
+          uri: imageFile.uri,
+        });
+      }
       const aspectRatio = width / height;
 
       // Make sure the image fills the crop area
@@ -61,6 +68,13 @@ export const ImageCropScreen: React.FC<
         displayHeight = displayWidth / aspectRatio;
       }
 
+      if (__DEV__) {
+        console.log('[ImageCrop] Computed display size:', {
+          displayWidth,
+          displayHeight,
+          aspectRatio,
+        });
+      }
       setImageSize({ width: displayWidth, height: displayHeight });
 
       // Reset transforms
@@ -127,6 +141,17 @@ export const ImageCropScreen: React.FC<
       return;
     }
 
+    if (__DEV__) {
+      console.log('[ImageCrop] handleCrop called:', {
+        imageFileUri: imageFile.uri,
+        imageFileType: imageFile.type,
+        imageFileSize: imageFile.fileSize,
+        imageSize,
+        scale: scale.get(),
+        offset: offset.get(),
+      });
+    }
+
     executeWithLoadingState(
       async () => {
         // Get the original image dimensions
@@ -140,6 +165,10 @@ export const ImageCropScreen: React.FC<
             error => reject(error),
           );
         });
+
+        if (__DEV__) {
+          console.log('[ImageCrop] Original image size:', originalImageSize);
+        }
 
         // Calculate the center position of the crop area relative to the image
         const cropCenterX = CROP_SIZE / 2;
@@ -174,40 +203,69 @@ export const ImageCropScreen: React.FC<
         // Calculate crop size in original image coordinates
         const cropSizeInOriginal = (CROP_SIZE * scaleRatio) / scale.get();
 
+        // On Android, Image.getSize() may return EXIF-rotated dimensions
+        // (e.g. 1120x2000 for portrait) while ImageEditor.cropImage() operates
+        // on the raw bitmap (e.g. 2000x1120). Clamp the crop square to the
+        // smallest dimension so it fits regardless of bitmap orientation.
+        const minDimension = Math.min(
+          originalImageSize.width,
+          originalImageSize.height,
+        );
+        const safeCropSizeInOriginal = Math.min(
+          cropSizeInOriginal,
+          minDimension,
+        );
+
         // Ensure crop doesn't go outside image boundaries
         const finalCropX = Math.max(
           0,
-          Math.min(
-            cropX - cropSizeInOriginal / 2,
-            originalImageSize.width - cropSizeInOriginal,
+          Math.floor(
+            Math.min(
+              cropX - safeCropSizeInOriginal / 2,
+              minDimension - safeCropSizeInOriginal,
+            ),
           ),
         );
         const finalCropY = Math.max(
           0,
-          Math.min(
-            cropY - cropSizeInOriginal / 2,
-            originalImageSize.height - cropSizeInOriginal,
+          Math.floor(
+            Math.min(
+              cropY - safeCropSizeInOriginal / 2,
+              minDimension - safeCropSizeInOriginal,
+            ),
           ),
         );
-        const finalCropSize = Math.min(
-          cropSizeInOriginal,
-          originalImageSize.width - finalCropX,
-          originalImageSize.height - finalCropY,
+        const finalCropSize = Math.max(
+          1,
+          Math.floor(
+            Math.min(
+              safeCropSizeInOriginal,
+              minDimension - finalCropX,
+              minDimension - finalCropY,
+            ),
+          ),
         );
 
+        const cropOffset = { x: finalCropX, y: finalCropY };
+        const cropSize = { width: finalCropSize, height: finalCropSize };
+        const displaySize = { width: CROP_SIZE, height: CROP_SIZE };
+
+        if (__DEV__) {
+          console.log('[ImageCrop] Crop params:', {
+            uri: imageFile.uri,
+            cropOffset,
+            cropSize,
+            displaySize,
+            scaleRatio,
+            minDimension,
+            originalImageSize,
+          });
+        }
+
         const { uri: croppedUri } = await ImageEditor.cropImage(imageFile.uri, {
-          offset: {
-            x: finalCropX,
-            y: finalCropY,
-          },
-          size: {
-            width: finalCropSize,
-            height: finalCropSize,
-          },
-          displaySize: {
-            width: CROP_SIZE,
-            height: CROP_SIZE,
-          },
+          offset: cropOffset,
+          size: cropSize,
+          displaySize,
           resizeMode: 'contain',
         });
 
@@ -241,6 +299,9 @@ export const ImageCropScreen: React.FC<
       },
       setIsCropping,
       error => {
+        if (__DEV__) {
+          console.error('[ImageCrop] cropImage failed:', error);
+        }
         errorService.reportError(error, { operation: 'ImageCrop.cropImage' });
         alertService.alert('Error', 'Failed to crop image. Please try again.');
       },

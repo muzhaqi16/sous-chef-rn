@@ -92,13 +92,23 @@ jest.mock('#components/molecules/InfoRow', () => ({
     );
   },
 }));
+jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
+  BaseInput: ({ label, ...props }: any) => {
+    const { View, Text, TextInput } = require('react-native');
+    return (
+      <View>
+        {label ? <Text>{label}</Text> : null}
+        <TextInput {...props} />
+      </View>
+    );
+  },
+}));
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: {
     settingsSection: {},
     settingsSectionTitle: {},
     settingsInputGroup: {},
     settingsLabel: {},
-    settingsInput: {},
     settingsRow: {},
     settingsRowInfo: {},
     settingsRowLabel: {},

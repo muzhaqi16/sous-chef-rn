@@ -89,7 +89,8 @@ class ErrorService {
     AUTHZ_INSUFFICIENT_PERMISSIONS: "You don't have sufficient permissions",
     AUTHZ_RESOURCE_ACCESS_DENIED: 'Access denied to this resource',
     AUTHZ_ADMIN_REQUIRED: "You don't have permission to perform this action.",
-    AUTHZ_MODERATOR_REQUIRED: "You don't have permission to perform this action.",
+    AUTHZ_MODERATOR_REQUIRED:
+      "You don't have permission to perform this action.",
 
     // API Key Errors
     API_KEY_MISSING: 'Something went wrong. Please try again later.',
@@ -119,8 +120,7 @@ class ErrorService {
       "This action couldn't be completed. Please try again.",
     BUSINESS_STATE_INVALID:
       "This action couldn't be completed right now. Please try again.",
-    BUSINESS_OPERATION_NOT_ALLOWED:
-      "This action isn't available right now.",
+    BUSINESS_OPERATION_NOT_ALLOWED: "This action isn't available right now.",
     BUSINESS_QUOTA_EXCEEDED: "You've exceeded your quota limit",
     BUSINESS_FEATURE_DISABLED: 'This feature is currently disabled',
 
@@ -134,8 +134,7 @@ class ErrorService {
       'Too many requests. Please wait a moment and try again.',
 
     // Service Errors
-    SERVICE_UNAVAILABLE:
-      "We're experiencing issues. Please try again shortly.",
+    SERVICE_UNAVAILABLE: "We're experiencing issues. Please try again shortly.",
     SERVICE_TIMEOUT: 'Request timed out. Please try again',
     SERVICE_MAINTENANCE:
       "We're performing maintenance. Please try again shortly.",
@@ -252,14 +251,10 @@ class ErrorService {
     }
 
     Telemetry.trackError(errorMessage, {
+      component: 'reported',
       operation,
       serialized_error: JSON.stringify(serialized),
       ...context,
-    });
-
-    Telemetry.increment('app_errors_total', 1, {
-      category: 'reported',
-      operation,
     });
   }
 
@@ -336,16 +331,10 @@ class ErrorService {
 
       // Report to telemetry so errors flow to Loki in production
       Telemetry.trackError(errorMessage, {
-        code: errorCode,
-        category,
+        component: category,
         operation,
+        code: errorCode,
         serialized_error: JSON.stringify(serializeError(error)),
-      });
-
-      Telemetry.increment('app_errors_total', 1, {
-        category,
-        code: errorCode,
-        operation,
       });
 
       return {
@@ -442,18 +431,18 @@ export const getErrorMessage = (error: unknown): string => {
 // Export hook for use in components
 // Returns an object matching the legacy useErrorHandler shape for easy migration
 export const useErrorService = () => {
-  return ({
-      handleApolloError: errorService.handleApolloError.bind(errorService),
-      parseApolloError: errorService.parseApolloError.bind(errorService),
-      handleMutation: errorService.handleMutation.bind(errorService),
-      handleMutationWithVersionConflict:
-        errorService.handleMutationWithVersionConflict.bind(errorService),
-      getUserFriendlyMessage:
-        errorService.getUserFriendlyMessage.bind(errorService),
-      getErrorCategory: errorService.getErrorCategory.bind(errorService),
-      shouldRetry: errorService.shouldRetry.bind(errorService),
-      isAuthError: errorService.isAuthError.bind(errorService),
-      reportError: errorService.reportError.bind(errorService),
-      getErrorMessage,
-    });
+  return {
+    handleApolloError: errorService.handleApolloError.bind(errorService),
+    parseApolloError: errorService.parseApolloError.bind(errorService),
+    handleMutation: errorService.handleMutation.bind(errorService),
+    handleMutationWithVersionConflict:
+      errorService.handleMutationWithVersionConflict.bind(errorService),
+    getUserFriendlyMessage:
+      errorService.getUserFriendlyMessage.bind(errorService),
+    getErrorCategory: errorService.getErrorCategory.bind(errorService),
+    shouldRetry: errorService.shouldRetry.bind(errorService),
+    isAuthError: errorService.isAuthError.bind(errorService),
+    reportError: errorService.reportError.bind(errorService),
+    getErrorMessage,
+  };
 };

@@ -53,6 +53,12 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
+jest.mock('#components/atoms/EmailInput', () => ({
+  EmailInput: (props: any) => {
+    const { TextInput } = require('react-native');
+    return <TextInput placeholder="Enter email address" {...props} />;
+  },
+}));
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
   OnBoardingWrapper: ({ title, subtitle, children }: any) => {
     const { View, Text } = require('react-native');
@@ -90,7 +96,9 @@ describe('InviteMemberScreen', () => {
 
   it('shows subtitle for both resources', () => {
     render(<InviteMemberScreen />);
-    expect(screen.getByText(/Share your home and shopping lists/)).toBeTruthy();
+    expect(
+      screen.getByText(/Invite others to your home and shopping lists/),
+    ).toBeTruthy();
   });
 
   it('shows email input', () => {
@@ -177,56 +185,17 @@ describe('InviteMemberScreen', () => {
     expect(screen.getByText('No invitations added yet')).toBeTruthy();
   });
 
-  it('toggles invite type when hasBoth and type button is pressed', () => {
-    render(<InviteMemberScreen />);
-    const input = screen.getByPlaceholderText('Enter email address');
-    fireEvent.changeText(input, 'friend@test.com');
-    fireEvent.press(screen.getByText('Add'));
-    // Default type with hasBoth is 'both' => shows Home & Shopping
-    expect(screen.getByText(/Home & .* Shopping/)).toBeTruthy();
-    // Press the type button to cycle: both -> home
-    const typeButton = screen.getByText(/(tap to change)/);
-    fireEvent.press(typeButton);
-    expect(screen.getByText(/Home Only/)).toBeTruthy();
-  });
-
-  it('cycles through all invite types: both -> home -> shopping -> both', () => {
-    render(<InviteMemberScreen />);
-    const input = screen.getByPlaceholderText('Enter email address');
-    fireEvent.changeText(input, 'friend@test.com');
-    fireEvent.press(screen.getByText('Add'));
-
-    const typeButton = screen.getByText(/(tap to change)/);
-    // Start: both
-    fireEvent.press(typeButton); // -> home
-    expect(screen.getByText(/Home Only/)).toBeTruthy();
-    fireEvent.press(typeButton); // -> shopping
-    expect(screen.getByText(/Shopping Only/)).toBeTruthy();
-    fireEvent.press(typeButton); // -> both
-    expect(screen.getByText(/Home & .* Shopping/)).toBeTruthy();
-  });
-
-  it('does not toggle invite type when only home is available', () => {
-    mockSelectedShoppingListId = null;
-    render(<InviteMemberScreen />);
-    const input = screen.getByPlaceholderText('Enter email address');
-    fireEvent.changeText(input, 'friend@test.com');
-    fireEvent.press(screen.getByText('Add'));
-    // Should show "Home" label (not both)
-    expect(screen.getByText(/Home/)).toBeTruthy();
-  });
-
   it('shows subtitle when only home available', () => {
     mockSelectedShoppingListId = null;
     render(<InviteMemberScreen />);
-    expect(screen.getByText(/Share your home with others/)).toBeTruthy();
+    expect(screen.getByText(/Invite others to your home/)).toBeTruthy();
   });
 
   it('shows subtitle when only shopping list available', () => {
     mockSelectedHomeId = null;
     render(<InviteMemberScreen />);
     expect(
-      screen.getByText(/Share your shopping list with others/),
+      screen.getByText(/Invite others to your shopping list/),
     ).toBeTruthy();
   });
 
@@ -293,15 +262,6 @@ describe('InviteMemberScreen', () => {
     fireEvent.press(screen.getByText('Add'));
     // Input should be cleared
     expect(input.props.value).toBe('');
-  });
-
-  it('shows invite type label for shopping only when no home', () => {
-    mockSelectedHomeId = null;
-    render(<InviteMemberScreen />);
-    const input = screen.getByPlaceholderText('Enter email address');
-    fireEvent.changeText(input, 'friend@test.com');
-    fireEvent.press(screen.getByText('Add'));
-    expect(screen.getByText(/Shopping List/)).toBeTruthy();
   });
 
   it('adds invite on submit editing (keyboard return)', () => {
