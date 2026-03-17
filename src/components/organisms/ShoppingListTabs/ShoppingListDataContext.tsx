@@ -22,9 +22,11 @@ export interface ShoppingListTabData {
   canMarkPurchased: boolean;
   canReorderItems: boolean;
   isTransitioning: boolean;
-  // Collapsible scroll handler — threaded from screen to FlashList
+  // Scroll direction tracking — threaded from screen to FlashList
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   scrollEventThrottle?: number;
+  // Scrollable header content — rendered above the list as ListHeaderComponent
+  listHeaderComponent?: React.ReactElement | null;
 }
 
 interface ShoppingListDataState {

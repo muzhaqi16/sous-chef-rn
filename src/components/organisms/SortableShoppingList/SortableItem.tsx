@@ -105,9 +105,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     index === 0 &&
     !item.isPurchased;
 
+  // Check currentStep directly (not isActive) so the archive icon gets measured
+  // during the 400ms transition period when the purchased tab first mounts.
+  // isActive is false during transitions, but we need the rect ready for when
+  // the spotlight renders after the transition completes.
   const isTutorialArchiveTarget =
-    tutorial?.isActive &&
-    tutorial.currentStep ===
+    tutorial?.currentStep ===
       ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY &&
     index === 0 &&
     !!item.isPurchased;

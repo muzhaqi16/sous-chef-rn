@@ -3,7 +3,7 @@
  * Inlined here to avoid circular imports while providing a single source of truth
  * for layout calculations that depend on the tab bar.
  */
-const TAB_BAR_HEIGHT = 65;
+export const TAB_BAR_HEIGHT = 65;
 
 /**
  * Calculate bottom padding that accounts for the floating tab bar + safe area.

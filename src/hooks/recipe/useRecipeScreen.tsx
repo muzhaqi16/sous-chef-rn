@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { View } from 'react-native';
+import { useState, useEffect } from 'react';
 
 import { alertService } from '#/services/alertService';
 import { useDeferredSearch } from '#hooks/performance/useDeferredSearch';
@@ -13,8 +12,12 @@ import { useRecipeDiscovery } from '#/hooks/recipe/useRecipeDiscovery';
 import { useDietaryProfile } from '#hooks/profile/useDietaryProfile';
 import { transformRecipeForDisplay } from '#/utils/recipeTransform';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
-import { commonStyles } from '#/styles/commonStyles';
-import { CachedImage } from '#components/atoms/CachedImage';
+import {
+  useRecipeCacheStore,
+  textSearchCacheKey,
+  ingredientCacheKey,
+} from '#/store/useRecipeCacheStore';
+import { preloadImages } from '#components/atoms/CachedImage';
 import { useAppStore } from '#store/useAppStore';
 import type { IconName } from '#/utils/iconUtils';
 
@@ -60,6 +63,9 @@ function handleSearchError(error: unknown, label: string): void {
   }
 }
 
+const SEARCH_FETCH_SIZE = 25;
+const SEARCH_PAGE_SIZE = 15;
+
 async function executeRecipeTextSearch(
   query: string,
   filters: RecipeFilters,
@@ -70,11 +76,22 @@ async function executeRecipeTextSearch(
   setLoading(true);
   setSearchPerformed(true);
 
+  // Check cache first
+  const cacheKey = textSearchCacheKey(query, filters);
+  const cacheStore = useRecipeCacheStore.getState();
+  const cached = cacheStore.getCached(cacheKey);
+
+  if (cached) {
+    setSearchResults(cached.results);
+    setLoading(false);
+    return;
+  }
+
   await executeMutation(
     async () => {
       const data = await spoonacularService.searchRecipes({
         query,
-        number: 10,
+        number: SEARCH_FETCH_SIZE,
         addRecipeInformation: true,
         ...(filters.diet.length > 0 && { diet: filters.diet.join('|') }),
         ...(filters.intolerances.length > 0 && {
@@ -85,7 +102,9 @@ async function executeRecipeTextSearch(
           maxReadyTime: filters.maxReadyTime,
         }),
       });
-      setSearchResults(data.results || []);
+      const results = data.results || [];
+      setSearchResults(results);
+      cacheStore.setCached(cacheKey, results);
       return data;
     },
     error => handleSearchError(error, 'Search error'),
@@ -103,16 +122,28 @@ async function executeRecipeIngredientSearch(
   setLoading(true);
   setSearchPerformed(true);
 
+  // Check cache first
+  const cacheKey = ingredientCacheKey(ingredientString);
+  const cacheStore = useRecipeCacheStore.getState();
+  const cached = cacheStore.getCached(cacheKey);
+
+  if (cached) {
+    setSearchResults(cached.results);
+    setLoading(false);
+    return;
+  }
+
   await executeMutation(
     async () => {
       // Note: findByIngredients API does NOT support diet/intolerance/mealType filters
       const results = await spoonacularService.searchRecipesByIngredients({
         ingredients: ingredientString,
-        number: 10,
+        number: SEARCH_FETCH_SIZE,
         ranking: 1,
         ignorePantry: true,
       });
       setSearchResults(results);
+      cacheStore.setCached(cacheKey, results);
       return results;
     },
     error => handleSearchError(error, 'Ingredient search error'),
@@ -131,7 +162,7 @@ interface DisplayItem {
     text: string;
     variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
   };
-  leftElement?: React.ReactElement;
+  imageUrl?: string;
 }
 
 // ── Facade hook ──
@@ -153,6 +184,8 @@ export function useRecipeScreen() {
   >([]);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [visibleSearchCount, setVisibleSearchCount] =
+    useState(SEARCH_PAGE_SIZE);
   const [selectedIngredients, setSelectedIngredients] = useState<Set<string>>(
     new Set(),
   );
@@ -249,29 +282,33 @@ export function useRecipeScreen() {
   const showSearchResults = searchPerformed && searchResults.length > 0;
   const showDiscovery = !searchPerformed && discovery.items.length > 0;
 
-  // Transform search results
-  const searchItems: DisplayItem[] = showSearchResults
-    ? searchResults.map(recipe => {
-        const transformed = transformRecipeForDisplay(recipe);
-        return {
-          id: transformed.id,
-          title: transformed.title,
-          subtitle: transformed.subtitle,
-          badge: transformed.badge
-            ? { text: transformed.badge.text, variant: 'primary' as 'primary' }
-            : undefined,
-          leftElement: transformed.imageUrl ? (
-            <View style={commonStyles.listItemImageContainerCompact}>
-              <CachedImage
-                uri={transformed.imageUrl}
-                style={commonStyles.listItemImageCompact}
-                displaySize={48}
-              />
-            </View>
-          ) : undefined,
-        };
-      })
+  // Transform search results (client-side paginated)
+  const visibleSearchResults = showSearchResults
+    ? searchResults.slice(0, visibleSearchCount)
     : [];
+
+  const searchItems: DisplayItem[] = visibleSearchResults.map(recipe => {
+    const transformed = transformRecipeForDisplay(recipe);
+    return {
+      id: transformed.id,
+      title: transformed.title,
+      subtitle: transformed.subtitle,
+      badge: transformed.badge
+        ? { text: transformed.badge.text, variant: 'primary' as 'primary' }
+        : undefined,
+      imageUrl: transformed.imageUrl,
+    };
+  });
+
+  const searchHasMore =
+    showSearchResults && visibleSearchCount < searchResults.length;
+
+  const loadMoreSearch = () => {
+    if (!searchHasMore) return;
+    setVisibleSearchCount(prev =>
+      Math.min(prev + SEARCH_PAGE_SIZE, searchResults.length),
+    );
+  };
 
   // Transform discovery items
   const discoveryDisplayItems: DisplayItem[] = showDiscovery
@@ -280,15 +317,7 @@ export function useRecipeScreen() {
         title: item.title,
         subtitle: item.subtitle,
         badge: item.badge,
-        leftElement: item.imageUrl ? (
-          <View style={commonStyles.listItemImageContainerCompact}>
-            <CachedImage
-              uri={item.imageUrl}
-              style={commonStyles.listItemImageCompact}
-              displaySize={48}
-            />
-          </View>
-        ) : undefined,
+        imageUrl: item.imageUrl,
       }))
     : [];
 
@@ -297,6 +326,20 @@ export function useRecipeScreen() {
     : showDiscovery
     ? discoveryDisplayItems
     : [];
+
+  // Preload recipe images for the visible page
+  const imageSourceItems = showSearchResults
+    ? visibleSearchResults
+    : discovery.items;
+  useEffect(() => {
+    const urls = imageSourceItems
+      .slice(0, SEARCH_PAGE_SIZE)
+      .map((item: any) => item.imageUrl ?? item.image)
+      .filter(Boolean) as string[];
+    if (urls.length > 0) {
+      preloadImages(urls);
+    }
+  }, [imageSourceItems]);
 
   // ── Actions ──
   const toggleIngredient = (name: string) => {
@@ -329,7 +372,7 @@ export function useRecipeScreen() {
             ingredientNames,
             setSearchLoading,
             setSearchPerformed,
-            setSearchResults,
+            setSearchResultsAndResetPage,
           );
           return;
         }
@@ -346,7 +389,7 @@ export function useRecipeScreen() {
       activeFilters,
       setSearchLoading,
       setSearchPerformed,
-      setSearchResults,
+      setSearchResultsAndResetPage,
     );
   };
 
@@ -365,7 +408,7 @@ export function useRecipeScreen() {
       ingredientString,
       setSearchLoading,
       setSearchPerformed,
-      setSearchResults,
+      setSearchResultsAndResetPage,
     );
   };
 
@@ -377,7 +420,7 @@ export function useRecipeScreen() {
           activeFilters,
           setSearchLoading,
           setSearchPerformed,
-          setSearchResults,
+          setSearchResultsAndResetPage,
         );
       }
     } else {
@@ -385,10 +428,19 @@ export function useRecipeScreen() {
     }
   };
 
+  // Wrapper that resets visible count when search results change
+  const setSearchResultsAndResetPage = (
+    results: (SearchRecipesResult | RecipeSearchResult)[],
+  ) => {
+    setSearchResults(results);
+    setVisibleSearchCount(SEARCH_PAGE_SIZE);
+  };
+
   const clearSearch = () => {
     setSearchQuery('');
     setSearchResults([]);
     setSearchPerformed(false);
+    setVisibleSearchCount(SEARCH_PAGE_SIZE);
   };
 
   // ── Empty state ──
@@ -424,6 +476,8 @@ export function useRecipeScreen() {
     pantryHasMore: discovery.pantryHasMore,
     pantryLoadingMore: discovery.pantryLoadingMore,
     loadMorePantryItems: discovery.loadMorePantryItems,
+    discoveryHasMore: discovery.discoveryHasMore,
+    loadMoreDiscovery: discovery.loadMoreDiscovery,
     items,
 
     // Search state
@@ -432,6 +486,8 @@ export function useRecipeScreen() {
     searchResults,
     searchPerformed,
     searchLoading,
+    searchHasMore,
+    loadMoreSearch,
     selectedIngredients,
     ingredientSearchQuery,
     setIngredientSearchQuery,

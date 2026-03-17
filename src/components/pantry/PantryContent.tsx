@@ -11,12 +11,9 @@ import {
   Pressable,
   RefreshControl,
   Dimensions,
-  type LayoutChangeEvent,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
-  type ViewStyle,
 } from 'react-native';
-import Animated from 'react-native-reanimated';
 import {
   FlashList,
   type FlashListRef,
@@ -60,9 +57,6 @@ import { differenceInCalendarDays } from 'date-fns';
 import { PantryItem } from '#generated';
 import type { ExpirationVariant } from './PantryItemCard';
 
-// Stable empty array reference to avoid FlashList re-renders when showing skeletons
-const EMPTY_ARRAY: PantryItem[] = [];
-
 // Screen-relative draw distance: 2× viewport gives ~17 items of buffer at
 // ~95px/item. useDeferredValue on FlashList data makes pagination non-blocking,
 // so the extra buffer is affordable. Previous testing showed 1.5× had too few
@@ -71,6 +65,16 @@ const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
 
 // Module-level constant — avoids creating a new object reference per render
 const MVCP_DISABLED = { disabled: true };
+
+import {
+  type StickyHeaderSentinel,
+  STICKY_HEADER_SENTINEL,
+  isStickyHeaderSentinel,
+  STICKY_HEADER_INDICES,
+  STICKY_HEADER_CONFIG,
+} from '#utils/flashListDefaults';
+
+type PantryListItem = PantryItem | StickyHeaderSentinel;
 
 // Module-level flag: once pantry content has been shown, skip skeletons on remount.
 // Persists across component unmount/remount (stack navigation), resets on app restart.
@@ -170,15 +174,8 @@ interface PantryContentProps {
     height: number;
   }) => void;
 
-  // Collapsible header scroll props
-  /** Scroll handler for FlashList (regular JS callback, FlashList v2 compatible). */
+  /** Scroll handler for tab bar direction tracking */
   scrollHandler?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
-  /** Animated style for the inner collapsible wrapper (translateY + opacity). */
-  collapsibleStyle?: ViewStyle;
-  /** Animated style for the outer collapsible wrapper (animated height). */
-  collapsibleHeightStyle?: ViewStyle;
-  /** Callback to measure the collapsible header height at runtime. */
-  onCollapsibleLayout?: (event: LayoutChangeEvent) => void;
 }
 
 export interface PantryContentRef {
@@ -416,9 +413,6 @@ const getLocationString = (
   return null;
 };
 
-// Module-scope keyExtractor — zero runtime overhead (no compiler tracking/comparison)
-const keyExtractor = (item: PantryItem) => item.id;
-
 // Module-scope renderItem — stable reference, no closure recreation per render
 const renderItem = ({ item }: ListRenderItemInfo<PantryItem>) => {
   if (!item) return null;
@@ -617,15 +611,12 @@ export const PantryContent = React.forwardRef<
       onHomeBadgeLayout,
       onSettingsIconLayout,
       scrollHandler,
-      collapsibleStyle,
-      collapsibleHeightStyle,
-      onCollapsibleLayout,
     },
     ref,
   ) => {
     useRenderTime('PantryContent', { slowThreshold: 1000 });
     const { theme } = useUnistyles();
-    const flashListRef = useRef<FlashListRef<PantryItem>>(null);
+    const flashListRef = useRef<FlashListRef<PantryListItem>>(null);
     const settingsIconRef = useRef<View>(null);
 
     const perfCallbacks = useFlashListPerformance(flashListRef, {
@@ -712,6 +703,10 @@ export const PantryContent = React.forwardRef<
     // ready before FlashList mounts new cells.
     const deferredSortedItems = useDeferredValue(sortedItems);
 
+    const listData: PantryListItem[] = showSkeletons
+      ? [STICKY_HEADER_SENTINEL]
+      : [STICKY_HEADER_SENTINEL, ...deferredSortedItems];
+
     useDataReferenceTracker(
       sortedItems,
       'PantryContent.sortedItems',
@@ -795,94 +790,40 @@ export const PantryContent = React.forwardRef<
 
     const isEmpty = !showSkeletons && sortedItems.length === 0;
 
-    // Use flexGrow when empty so ListEmptyComponent can center properly;
+    // Use flexGrow when empty so footer empty state can center properly;
     // drop the large paddingBottom that creates excess space below the empty state
     const listContentStyle = isEmpty
       ? styles.listContentEmpty
       : styles.listContent;
 
-    return (
-      <PantryActionsProvider actions={itemActions}>
-        <View style={styles.container}>
-          {/* Collapsible header zone — collapses on scroll, reclaims space */}
-          <Animated.View style={collapsibleHeightStyle}>
-            <Animated.View
-              style={collapsibleStyle}
-              onLayout={onCollapsibleLayout}
-            >
-              {/* Header Section — greeting, avatar, notifications */}
-              <View style={styles.header}>
-                <PantryHeader
-                  userName={userName}
-                  householdName={householdName}
-                  avatarUrl={avatarUrl}
-                  notificationCount={notificationCount}
-                  onAvatarPress={onAvatarPress}
-                  onHomePress={onHomePress}
-                  onNotificationPress={onNotificationPress}
-                  onHomeBadgeLayout={onHomeBadgeLayout}
-                />
-              </View>
+    // Item type discriminator for FlashList recycling
+    const getListItemType = (item: PantryListItem) => {
+      if (isStickyHeaderSentinel(item)) return 'stickyHeader';
+      return 'item';
+    };
 
-              {/* SearchBar + AlertBar */}
-              <View style={styles.searchContainer}>
-                <SearchBar
-                  value={searchQuery}
-                  onChangeText={onSearchChange}
-                  placeholder="Search your pantry..."
-                  showSearchIcon={true}
-                  testID="pantry-search-input"
-                  innerRightIcon={
-                    <View
-                      ref={settingsIconRef}
-                      collapsable={false}
-                      onLayout={() => {
-                        if (onSettingsIconLayout) {
-                          requestAnimationFrame(() => {
-                            settingsIconRef.current?.measure(
-                              (_x, _y, w, h, pageX, pageY) => {
-                                if (w > 0 && h > 0) {
-                                  onSettingsIconLayout({
-                                    x: pageX,
-                                    y: pageY,
-                                    width: w,
-                                    height: h,
-                                  });
-                                }
-                              },
-                            );
-                          });
-                        }
-                      }}
-                    >
-                      <Pressable
-                        onPress={onSettingsPress}
-                        hitSlop={8}
-                        accessibilityRole="button"
-                        accessibilityLabel="Pantry settings"
-                      >
-                        <Icon
-                          name="settings-outline"
-                          size={18}
-                          color={theme.colors.textTertiary}
-                        />
-                      </Pressable>
-                    </View>
-                  }
-                />
-                {!!stats && (
-                  <PantryAlertBar
-                    stats={stats}
-                    onAnalyticsPress={onAnalyticsPress}
-                    onLowStockNavigate={onLowStockNavigate}
-                  />
-                )}
-              </View>
-            </Animated.View>
-          </Animated.View>
+    // Key extractor for the mixed data array
+    const listKeyExtractor = (item: PantryListItem) => {
+      if (isStickyHeaderSentinel(item)) return '__stickyHeader__';
+      return item.id;
+    };
 
-          {/* FilterTabs — always visible / sticky */}
-          <View style={styles.stickySection}>
+    // Render function for the mixed data array
+    const renderListItem = ({
+      item,
+      index,
+      target,
+      extraData: extra,
+    }: ListRenderItemInfo<PantryListItem>) => {
+      // FilterTabs sentinel — renders as sticky header
+      if (isStickyHeaderSentinel(item)) {
+        return (
+          <View
+            style={[
+              styles.stickySection,
+              target === 'StickyHeader' && styles.stickyHeaderActive,
+            ]}
+          >
             <FilterTabs<LocationFilter>
               tabs={tabsWithAddButton}
               activeTabId={locationFilter}
@@ -891,18 +832,30 @@ export const PantryContent = React.forwardRef<
               testIDPrefix="pantry-location-tab"
             />
           </View>
+        );
+      }
 
-          {/* Content List */}
+      // Regular pantry item — delegate to module-scope renderItem
+      return renderItem({ item, index: index - 1, target, extraData: extra });
+    };
+
+    return (
+      <PantryActionsProvider actions={itemActions}>
+        <View style={styles.container}>
+          {/* Content List — header scrolls naturally, FilterTabs sticks via stickyHeaderIndices */}
           <View style={styles.listContainer}>
             <View style={styles.contentFill}>
               <DisplayMapContext.Provider value={displayMap}>
-                <FlashList<PantryItem>
+                <FlashList<PantryListItem>
                   ref={flashListRef}
                   CellRendererComponent={AnimatedCellRenderer}
                   testID="pantry-list"
-                  data={showSkeletons ? EMPTY_ARRAY : deferredSortedItems}
-                  renderItem={renderItem}
-                  keyExtractor={keyExtractor}
+                  data={listData}
+                  renderItem={renderListItem}
+                  keyExtractor={listKeyExtractor}
+                  getItemType={getListItemType}
+                  stickyHeaderIndices={STICKY_HEADER_INDICES}
+                  stickyHeaderConfig={STICKY_HEADER_CONFIG}
                   drawDistance={DRAW_DISTANCE}
                   extraData={extraData}
                   contentContainerStyle={listContentStyle}
@@ -915,41 +868,116 @@ export const PantryContent = React.forwardRef<
                         testID="pantry-refresh-control"
                         refreshing={refreshing}
                         onRefresh={onRefresh}
+                        progressViewOffset={100}
                       />
                     ) : undefined
                   }
                   ListHeaderComponent={
-                    <SectionHeader
-                      title={sectionTitle}
-                      variant="default"
-                      actionLabel={`Sort ${
-                        sortDirection === 'asc' ? '↑' : '↓'
-                      }`}
-                      onActionPress={openSortModal}
-                      testID="pantry-sort-button"
-                    />
-                  }
-                  ListEmptyComponent={
-                    <PantryEmptyState
-                      showSkeletons={showSkeletons}
-                      searchQuery={searchQuery}
-                      itemCount={items.length}
-                      totalCount={totalCount}
-                      locationFilter={locationFilter}
-                      tabs={tabs}
-                      onAddItem={onAddItem}
-                      noHomeSelected={noHomeSelected}
-                      noHomes={noHomes}
-                      onSelectHome={onSelectHome}
-                    />
+                    <>
+                      {/* Header Section — scrolls naturally with the list */}
+                      <View style={styles.header}>
+                        <PantryHeader
+                          userName={userName}
+                          householdName={householdName}
+                          avatarUrl={avatarUrl}
+                          notificationCount={notificationCount}
+                          onAvatarPress={onAvatarPress}
+                          onHomePress={onHomePress}
+                          onNotificationPress={onNotificationPress}
+                          onHomeBadgeLayout={onHomeBadgeLayout}
+                        />
+                      </View>
+                      {/* SearchBar + AlertBar */}
+                      <View style={styles.searchContainer}>
+                        <SearchBar
+                          value={searchQuery}
+                          onChangeText={onSearchChange}
+                          placeholder="Search your pantry..."
+                          showSearchIcon={true}
+                          testID="pantry-search-input"
+                          innerRightIcon={
+                            <View
+                              ref={settingsIconRef}
+                              collapsable={false}
+                              onLayout={() => {
+                                if (onSettingsIconLayout) {
+                                  requestAnimationFrame(() => {
+                                    settingsIconRef.current?.measure(
+                                      (_x, _y, w, h, pageX, pageY) => {
+                                        if (w > 0 && h > 0) {
+                                          onSettingsIconLayout({
+                                            x: pageX,
+                                            y: pageY,
+                                            width: w,
+                                            height: h,
+                                          });
+                                        }
+                                      },
+                                    );
+                                  });
+                                }
+                              }}
+                            >
+                              <Pressable
+                                onPress={onSettingsPress}
+                                hitSlop={8}
+                                accessibilityRole="button"
+                                accessibilityLabel="Pantry settings"
+                              >
+                                <Icon
+                                  name="settings-outline"
+                                  size={18}
+                                  color={theme.colors.textTertiary}
+                                />
+                              </Pressable>
+                            </View>
+                          }
+                        />
+                        {!!stats && (
+                          <PantryAlertBar
+                            stats={stats}
+                            onAnalyticsPress={onAnalyticsPress}
+                            onLowStockNavigate={onLowStockNavigate}
+                          />
+                        )}
+                      </View>
+                      {/* Section header — trim excess bottom padding for uniform spacing */}
+                      <View style={styles.sectionHeaderTrim}>
+                        <SectionHeader
+                          title={sectionTitle}
+                          variant="default"
+                          actionLabel={`Sort ${
+                            sortDirection === 'asc' ? '↑' : '↓'
+                          }`}
+                          onActionPress={openSortModal}
+                          testID="pantry-sort-button"
+                        />
+                      </View>
+                    </>
                   }
                   ListFooterComponent={
-                    <PaginationFooter
-                      hasMore={hasMore}
-                      itemCount={deferredSortedItems.length}
-                      SkeletonComponent={PantryItemSkeleton}
-                      skeletonCount={3}
-                    />
+                    isEmpty ? (
+                      /* Empty state — rendered as footer since ListEmptyComponent won't fire with sentinel */
+                      <PantryEmptyState
+                        showSkeletons={showSkeletons}
+                        searchQuery={searchQuery}
+                        itemCount={items.length}
+                        totalCount={totalCount}
+                        locationFilter={locationFilter}
+                        tabs={tabs}
+                        onAddItem={onAddItem}
+                        noHomeSelected={noHomeSelected}
+                        noHomes={noHomes}
+                        onSelectHome={onSelectHome}
+                      />
+                    ) : (
+                      <PaginationFooter
+                        hasMore={hasMore}
+                        itemCount={deferredSortedItems.length}
+                        SkeletonComponent={PantryItemSkeleton}
+                        skeletonCount={3}
+                      />
+                    )
                   }
                   onEndReached={onEndReached}
                   onEndReachedThreshold={0.8}
@@ -991,10 +1019,17 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     zIndex: theme.zIndex.sticky,
     paddingBottom: theme.spacing.sm,
-    marginBottom: -theme.spacing.sm,
+  },
+  stickyHeaderActive: {
+    backgroundColor: theme.colors.background,
   },
   searchContainer: {
     paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+  },
+  sectionHeaderTrim: {
+    marginTop: -theme.spacing.sm,
+    marginBottom: -(theme.spacing.md - theme.spacing.sm),
   },
   listContainer: {
     flex: 1,

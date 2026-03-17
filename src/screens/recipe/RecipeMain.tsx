@@ -1,10 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useAnimatedReaction } from 'react-native-reanimated';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useTabBarSetters } from '#/context/TabBarActionsContext';
+import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { ItemList } from '#components/organisms/ItemList';
 import {
@@ -18,6 +21,7 @@ import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle'
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { RecipeSkeleton } from '#components/base/Skeleton/RecipeSkeleton';
+import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import {
   useTutorialSequence,
@@ -99,10 +103,25 @@ const RecipeMainInner: React.FC = () => {
   // Single facade hook for all data + state
   const screen = useRecipeScreen();
 
+  // ── Scroll direction tracking (tab bar hide on scroll down) ──
+  const { scrollTabBarHidden } = useTabBarSetters();
+  const { scrollHandler, isScrolledDown } = useCollapsibleScroll();
+
+  useAnimatedReaction(
+    () => isScrolledDown.value,
+    hidden => {
+      scrollTabBarHidden.set(hidden);
+    },
+  );
+
   const [isRecipeFocused, setIsRecipeFocused] = useState(true);
   const [onRecipeFocus] = useState(() => () => {
     setIsRecipeFocused(true);
-    return () => setIsRecipeFocused(false);
+    return () => {
+      setIsRecipeFocused(false);
+      // Reset scroll-driven tab bar hide so tab bar reappears on other tabs
+      scrollTabBarHidden.set(false);
+    };
   });
   useFocusEffect(onRecipeFocus);
 
@@ -110,17 +129,14 @@ const RecipeMainInner: React.FC = () => {
   const savedButtonRef = useRef<View>(null);
   const myRecipesButtonRef = useRef<View>(null);
   const dietaryButtonRef = useRef<View>(null);
-  const [savedButtonRect, setSavedButtonRect] = useState<LayoutRect | null>(
-    null,
-  );
-  const [myRecipesButtonRect, setMyRecipesButtonRect] =
-    useState<LayoutRect | null>(null);
-  const [dietaryButtonRect, setDietaryButtonRect] = useState<LayoutRect | null>(
-    null,
-  );
-  const [pantryButtonRect, setPantryButtonRect] = useState<LayoutRect | null>(
-    null,
-  );
+
+  // Single state for all layout rects — avoids 4 separate re-renders
+  const [buttonRects, setButtonRects] = useState<
+    Record<string, LayoutRect | null>
+  >({});
+  const setButtonRect = (key: string, rect: LayoutRect) => {
+    setButtonRects(prev => ({ ...prev, [key]: rect }));
+  };
 
   const filterSheetRef = useRef<BottomSheetModal>(null);
   const ingredientSheetRef = useRef<IngredientSelectorSheetRef>(null);
@@ -129,10 +145,10 @@ const RecipeMainInner: React.FC = () => {
   const tutorial = useTutorialSequence({
     steps: RECIPE_TUTORIAL_STEPS,
     targetRects: {
-      savedButton: savedButtonRect,
-      myRecipesButton: myRecipesButtonRect,
-      dietaryButton: dietaryButtonRect,
-      pantryButton: pantryButtonRect,
+      savedButton: buttonRects.savedButton ?? null,
+      myRecipesButton: buttonRects.myRecipesButton ?? null,
+      dietaryButton: buttonRects.dietaryButton ?? null,
+      pantryButton: buttonRects.pantryButton ?? null,
     },
     canStart: true,
     isPaused: !isRecipeFocused || isSheetOpen,
@@ -188,7 +204,8 @@ const RecipeMainInner: React.FC = () => {
               screen.selectedIngredients.size > 0
                 ? screen.selectedIngredients.size
                 : undefined,
-            onButtonLayout: setPantryButtonRect,
+            onButtonLayout: (rect: LayoutRect) =>
+              setButtonRect('pantryButton', rect),
           },
         ]
       : []),
@@ -210,7 +227,12 @@ const RecipeMainInner: React.FC = () => {
           requestAnimationFrame(() => {
             savedButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
               if (w > 0 && h > 0)
-                setSavedButtonRect({ x: pageX, y: pageY, width: w, height: h });
+                setButtonRect('savedButton', {
+                  x: pageX,
+                  y: pageY,
+                  width: w,
+                  height: h,
+                });
             });
           });
         }}
@@ -236,7 +258,7 @@ const RecipeMainInner: React.FC = () => {
             myRecipesButtonRef.current?.measure(
               (_x, _y, w, h, pageX, pageY) => {
                 if (w > 0 && h > 0)
-                  setMyRecipesButtonRect({
+                  setButtonRect('myRecipesButton', {
                     x: pageX,
                     y: pageY,
                     width: w,
@@ -267,7 +289,7 @@ const RecipeMainInner: React.FC = () => {
           requestAnimationFrame(() => {
             dietaryButtonRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
               if (w > 0 && h > 0)
-                setDietaryButtonRect({
+                setButtonRect('dietaryButton', {
                   x: pageX,
                   y: pageY,
                   width: w,
@@ -367,8 +389,8 @@ const RecipeMainInner: React.FC = () => {
     ? DiscoveryHeader
     : null;
 
-  return (
-    <View style={styles.container} testID="recipes-screen">
+  const recipeListHeader = (
+    <>
       <TabScreenHeader
         label="What to cook?"
         title="Recipes"
@@ -386,14 +408,40 @@ const RecipeMainInner: React.FC = () => {
         />
       </View>
       {ListHeader}
+    </>
+  );
+
+  return (
+    <View style={styles.container} testID="recipes-screen">
       {screen.discovery.loading && screen.items.length === 0 ? (
-        <RecipeSkeleton />
+        <>
+          {recipeListHeader}
+          <RecipeSkeleton />
+        </>
       ) : (
         <ItemList
           items={screen.items}
           onItemPress={handleItemPress}
           onRefresh={screen.handleRefresh}
           emptyState={screen.emptyStateConfig}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          ListHeaderComponent={recipeListHeader}
+          onEndReached={
+            screen.searchHasMore
+              ? screen.loadMoreSearch
+              : screen.discoveryHasMore
+              ? screen.loadMoreDiscovery
+              : undefined
+          }
+          ListFooterComponent={
+            <PaginationFooter
+              hasMore={screen.searchHasMore || screen.discoveryHasMore}
+              itemCount={screen.items.length}
+              SkeletonComponent={RecipeSkeleton}
+              skeletonCount={2}
+            />
+          }
         />
       )}
 

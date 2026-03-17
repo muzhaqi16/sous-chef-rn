@@ -23,6 +23,16 @@ jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/navigation/useTabBarAddButton', () => ({
   useTabBarAddButton: jest.fn(),
 }));
+jest.mock('#/context/TabBarActionsContext', () => ({
+  useTabBarSetters: jest.fn(() => ({
+    scrollTabBarHidden: { value: false, set: jest.fn() },
+    setScannerProps: jest.fn(),
+    setAddProps: jest.fn(),
+    setActiveTab: jest.fn(),
+    setOverlayOpen: jest.fn(),
+    setAddButtonRect: jest.fn(),
+  })),
+}));
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
   useTabScreenLifecycle: jest.fn(),
@@ -196,7 +206,7 @@ function mockScreenWith(overrides: Record<string, any>) {
 describe('RecipeMain', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockItemListImpl = () => null;
+    mockItemListImpl = (props: AnyProps) => props.ListHeaderComponent ?? null;
     mockScreenWith({});
   });
 

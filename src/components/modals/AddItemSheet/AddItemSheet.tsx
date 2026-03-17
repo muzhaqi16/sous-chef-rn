@@ -136,7 +136,7 @@ export function AddItemSheet({
         subtitle={item.category}
         placeholderIcon={config.placeholderIcon}
         onQuickAdd={() => onQuickAddSuggestion(item)}
-        quickAddDisabled={isMutating || isExiting}
+        quickAddDisabled={isExiting}
         isExiting={isExiting}
         onExitComplete={
           onExitComplete ? () => onExitComplete(itemId) : undefined

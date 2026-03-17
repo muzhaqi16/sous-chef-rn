@@ -152,9 +152,11 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   batchMoveToPantryLoading = false,
   // Search query
   searchQuery,
-  // Collapsible scroll
+  // Scroll direction tracking
   onScroll,
   scrollEventThrottle,
+  // Scrollable header content
+  listHeaderComponent,
 }) => {
   const tabBarRef = useRef<View>(null);
   const layout = useWindowDimensions();
@@ -185,6 +187,21 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       tutorial?.notifyPurchasedTabTapped();
     }
   };
+
+  // Auto-switch to purchased tab when tutorial advances to move-to-pantry step.
+  // Uses the "adjusting state during render" pattern to avoid setState-in-effect.
+  const [prevTutorialStep, setPrevTutorialStep] = useState(
+    tutorial?.currentStep,
+  );
+  if (tutorial?.currentStep !== prevTutorialStep) {
+    setPrevTutorialStep(tutorial?.currentStep);
+    if (
+      tutorial?.currentStep ===
+      ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY
+    ) {
+      setIndex(1);
+    }
+  }
 
   // Determine if we need to measure the purchased tab for tutorial spotlight
   const shouldMeasurePurchasedTab =
@@ -350,6 +367,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     isTransitioning,
     onScroll,
     scrollEventThrottle,
+    listHeaderComponent,
   };
 
   const purchasedTabData: ShoppingListTabData = {
@@ -368,6 +386,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     isTransitioning,
     onScroll,
     scrollEventThrottle,
+    listHeaderComponent,
   };
 
   const tabData = {

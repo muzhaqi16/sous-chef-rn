@@ -88,12 +88,14 @@ export function extractItems(
     })
     .map(edge => edge.node);
 
-  // Structural stability: if node IDs in the same order match the last result,
-  // reuse the previous array reference to prevent unnecessary FlashList diffing.
+  // Structural stability: reuse previous array reference only when
+  // node IDs are in the same order AND every node is the same object
+  // (no field-level changes like quantity updates).
   const fingerprint = result.map(n => n.id).join(',');
   if (
     fingerprint === _lastFingerprint &&
-    _lastResult.length === result.length
+    _lastResult.length === result.length &&
+    result.every((node, i) => node === _lastResult[i])
   ) {
     extractItemsCache.set(edges, _lastResult);
     return _lastResult;

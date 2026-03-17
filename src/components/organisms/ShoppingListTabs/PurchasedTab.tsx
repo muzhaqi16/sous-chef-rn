@@ -35,6 +35,7 @@ const PurchasedTabComponent: React.FC = () => {
     isTransitioning,
     onScroll,
     scrollEventThrottle,
+    listHeaderComponent,
   } = useShoppingListData('purchased');
   // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
   // This ensures smooth screen transitions by showing skeletons during navigation animation
@@ -98,6 +99,7 @@ const PurchasedTabComponent: React.FC = () => {
           listEmptyComponent={emptyComponent}
           onScroll={onScroll}
           scrollEventThrottle={scrollEventThrottle}
+          listHeaderComponent={listHeaderComponent}
         />
       </View>
 

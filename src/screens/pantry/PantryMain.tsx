@@ -1,10 +1,8 @@
 import React, { useRef, useState } from 'react';
 import {
   View,
-  type LayoutChangeEvent,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
-  type ViewStyle,
 } from 'react-native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
@@ -78,14 +76,8 @@ const PantryMainInner: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
   const { setOverlayOpen, scrollTabBarHidden } = useTabBarSetters();
 
-  // ── Collapsible header ──
-  const [headerHeight, setHeaderHeight] = useState(0);
-  const {
-    scrollHandler,
-    collapsibleStyle,
-    collapsibleHeightStyle,
-    isScrolledDown,
-  } = useCollapsibleScroll({ headerHeight });
+  // ── Scroll direction tracking (tab bar hide on scroll down) ──
+  const { scrollHandler, isScrolledDown } = useCollapsibleScroll();
 
   // Sync scroll direction → tab bar visibility (UI thread only)
   useAnimatedReaction(
@@ -94,13 +86,6 @@ const PantryMainInner: React.FC = () => {
       scrollTabBarHidden.set(hidden);
     },
   );
-
-  const handleCollapsibleLayout = (event: LayoutChangeEvent) => {
-    const { height } = event.nativeEvent.layout;
-    if (height > 0) {
-      setHeaderHeight(height);
-    }
-  };
 
   // ── Facade hook: all data-fetching & state ──
   const screen = usePantryScreen();
@@ -212,9 +197,6 @@ const PantryMainInner: React.FC = () => {
         canStartTutorial={canStartTutorial}
         isPantryFocused={isPantryFocused}
         scrollHandler={scrollHandler}
-        collapsibleStyle={collapsibleStyle}
-        collapsibleHeightStyle={collapsibleHeightStyle}
-        onCollapsibleLayout={handleCollapsibleLayout}
       />
     </PantryModalsProvider>
   );
@@ -241,11 +223,8 @@ interface PantryMainContentProps {
   onOverlayClose: () => void;
   canStartTutorial: boolean;
   isPantryFocused: boolean;
-  // Collapsible scroll props
+  // Scroll handler for tab bar direction tracking
   scrollHandler: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
-  collapsibleStyle: ViewStyle;
-  collapsibleHeightStyle: ViewStyle;
-  onCollapsibleLayout: (event: LayoutChangeEvent) => void;
 }
 
 function PantryMainContent({
@@ -266,9 +245,6 @@ function PantryMainContent({
   canStartTutorial,
   isPantryFocused,
   scrollHandler,
-  collapsibleStyle,
-  collapsibleHeightStyle,
-  onCollapsibleLayout,
 }: PantryMainContentProps) {
   const {
     handleConsumeItem,
@@ -382,9 +358,6 @@ function PantryMainContent({
         onHomeBadgeLayout={setHomeBadgeRect}
         onSettingsIconLayout={setSettingsIconRect}
         scrollHandler={scrollHandler}
-        collapsibleStyle={collapsibleStyle}
-        collapsibleHeightStyle={collapsibleHeightStyle}
-        onCollapsibleLayout={onCollapsibleLayout}
       />
       <AnimatedItemSelector
         ref={selectorRef}

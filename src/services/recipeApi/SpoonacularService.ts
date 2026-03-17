@@ -129,7 +129,7 @@ class SpoonacularService {
       '/recipes/findByIngredients',
       {
         ingredients,
-        number: Math.min(number, 10), // Limit to 10 to save API calls
+        number: Math.min(number, 100),
         ranking,
         ignorePantry,
       },
@@ -176,7 +176,7 @@ class SpoonacularService {
       '/recipes/complexSearch',
       {
         query,
-        number: Math.min(number, 10), // Limit to 10 to save API calls
+        number: Math.min(number, 100),
         offset,
         ...restParams,
       },

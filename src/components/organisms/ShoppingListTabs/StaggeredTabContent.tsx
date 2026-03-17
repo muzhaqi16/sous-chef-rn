@@ -37,9 +37,11 @@ interface StaggeredTabContentProps {
   canReorderItems?: boolean;
   onMoveToPantry?: (id: string) => void;
   listEmptyComponent?: ReactElement | ComponentType<any> | null;
-  // Collapsible scroll handler
+  // Scroll direction tracking
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   scrollEventThrottle?: number;
+  // Scrollable header content
+  listHeaderComponent?: React.ReactElement | null;
 }
 
 export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
@@ -65,6 +67,7 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   listEmptyComponent,
   onScroll,
   scrollEventThrottle,
+  listHeaderComponent,
 }) => {
   const footerComponent = (
     <PaginationFooter
@@ -100,6 +103,7 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
         canReorderItems={canReorderItems}
         onScroll={onScroll}
         scrollEventThrottle={scrollEventThrottle}
+        ListHeaderComponent={listHeaderComponent}
       />
     </View>
   );

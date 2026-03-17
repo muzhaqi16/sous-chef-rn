@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Pressable, type LayoutChangeEvent } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { View, Pressable } from 'react-native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -106,14 +105,8 @@ export const ShoppingListMainContent: React.FC<
   const { addButtonRect, isOverlayOpen } = useTabBarState();
   const { theme } = useUnistyles();
 
-  // ── Collapsible header ──
-  const [headerHeight, setHeaderHeight] = useState(0);
-  const {
-    scrollHandler,
-    collapsibleStyle,
-    collapsibleHeightStyle,
-    isScrolledDown,
-  } = useCollapsibleScroll({ headerHeight });
+  // ── Scroll direction tracking (tab bar hide on scroll down) ──
+  const { scrollHandler, isScrolledDown } = useCollapsibleScroll();
 
   useAnimatedReaction(
     () => isScrolledDown.value,
@@ -121,13 +114,6 @@ export const ShoppingListMainContent: React.FC<
       scrollTabBarHidden.set(hidden);
     },
   );
-
-  const handleCollapsibleLayout = (event: LayoutChangeEvent) => {
-    const { height } = event.nativeEvent.layout;
-    if (height > 0) {
-      setHeaderHeight(height);
-    }
-  };
 
   // ── Interactive tutorial context ──
   const tutorial = useShoppingListTutorial();
@@ -313,7 +299,7 @@ export const ShoppingListMainContent: React.FC<
     canReorderItems: permissions.canEditItems,
     // Search query for search-aware empty states
     searchQuery,
-    // Collapsible scroll handler — threaded to FlashList via data context
+    // Scroll direction tracking — threaded to FlashList via data context
     onScroll: scrollHandler,
     scrollEventThrottle: 16,
   };
@@ -353,8 +339,8 @@ export const ShoppingListMainContent: React.FC<
       : "You don't have permission to add items to this list",
   );
 
-  // Empty state when no lists exist
-  if (lists.length === 0) {
+  // Empty state when no lists exist (gated on loading to prevent flash)
+  if (!isLoadingInitial && lists.length === 0) {
     const noListsEmptyState = {
       icon: 'cart-outline',
       title: 'No shopping lists',
@@ -385,20 +371,12 @@ export const ShoppingListMainContent: React.FC<
 
   return (
     <View style={styles.container} testID="shopping-list-screen">
-      {/* Collapsible header zone — collapses on scroll, reclaims space */}
-      <Animated.View style={collapsibleHeightStyle}>
-        <Animated.View
-          style={collapsibleStyle}
-          onLayout={handleCollapsibleLayout}
-        >
-          <TabScreenHeader
-            label="Shopping list"
-            title={currentList?.name || 'Shopping List'}
-            headerRight={headerRight}
-          />
-          {searchBarHeader}
-        </Animated.View>
-      </Animated.View>
+      <TabScreenHeader
+        label="Shopping list"
+        title={currentList?.name || 'Shopping List'}
+        headerRight={headerRight}
+      />
+      {searchBarHeader}
       <ListTemplate
         items={[]}
         loading={isLoadingInitial}
@@ -413,7 +391,9 @@ export const ShoppingListMainContent: React.FC<
         testIDPrefix="shopping-list-item"
         emptyState={emptyStateConfig}
         customListComponent={ShoppingListTabs}
-        customListProps={customListProps}
+        customListProps={{
+          ...customListProps,
+        }}
       />
 
       <AnimatedItemSelector
