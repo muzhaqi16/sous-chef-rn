@@ -30,7 +30,7 @@ jest.mock('#utils/imageValidation', () => ({
 
 jest.mock('#store', () => ({
   useStore: {
-    getState: () => ({ isOnline: true }),
+    getState: () => ({ isOnline: true, updateUser: jest.fn() }),
   },
 }));
 
@@ -67,7 +67,7 @@ beforeEach(() => {
   mockXhr.onabort = null;
 
   const { useStore } = require('#store');
-  useStore.getState = () => ({ isOnline: true });
+  useStore.getState = () => ({ isOnline: true, updateUser: jest.fn() });
 });
 
 describe('useImageUpload', () => {

@@ -55,7 +55,11 @@ export class TelemetryService {
     }
   }
 
-  log(level: LogEntry['level'], message: string, extra?: Record<string, any>): void {
+  log(
+    level: LogEntry['level'],
+    message: string,
+    extra?: Record<string, any>,
+  ): void {
     if (!this.config.enabled || !this.config.enableLogs) {
       return;
     }
@@ -66,7 +70,7 @@ export class TelemetryService {
       timestamp: new Date().toISOString(),
       extra: {
         platform: Platform.OS,
-        environment: this.config.environment,
+        env: this.config.environment,
         ...extra,
       },
     };
@@ -78,7 +82,11 @@ export class TelemetryService {
     }
   }
 
-  incrementCounter(name: string, value = 1, labels: Record<string, string> = {}): void {
+  incrementCounter(
+    name: string,
+    value = 1,
+    labels: Record<string, string> = {},
+  ): void {
     if (!this.config.enabled || !this.config.enableMetrics) {
       return;
     }
@@ -88,7 +96,7 @@ export class TelemetryService {
       value,
       labels: {
         platform: Platform.OS,
-        environment: this.config.environment,
+        env: this.config.environment,
         ...labels,
       },
       timestamp: Date.now(),
@@ -96,7 +104,11 @@ export class TelemetryService {
     });
   }
 
-  recordGauge(name: string, value: number, labels: Record<string, string> = {}): void {
+  recordGauge(
+    name: string,
+    value: number,
+    labels: Record<string, string> = {},
+  ): void {
     if (!this.config.enabled || !this.config.enableMetrics) {
       return;
     }
@@ -106,7 +118,7 @@ export class TelemetryService {
       value,
       labels: {
         platform: Platform.OS,
-        environment: this.config.environment,
+        env: this.config.environment,
         ...labels,
       },
       timestamp: Date.now(),
@@ -114,14 +126,18 @@ export class TelemetryService {
     });
   }
 
-  recordHistogram(name: string, value: number, labels: Record<string, string> = {}): void {
+  recordHistogram(
+    name: string,
+    value: number,
+    labels: Record<string, string> = {},
+  ): void {
     if (!this.config.enabled || !this.config.enableMetrics) {
       return;
     }
 
     const baseLabels = {
       platform: Platform.OS,
-      environment: this.config.environment,
+      env: this.config.environment,
       ...labels,
     };
 
@@ -131,6 +147,7 @@ export class TelemetryService {
       labels: baseLabels,
       timestamp: Date.now(),
       type: 'counter',
+      histogramFamily: name,
     });
 
     this.addMetric({
@@ -139,6 +156,7 @@ export class TelemetryService {
       labels: baseLabels,
       timestamp: Date.now(),
       type: 'counter',
+      histogramFamily: name,
     });
 
     const buckets = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
@@ -150,6 +168,7 @@ export class TelemetryService {
           labels: { ...baseLabels, le: bucket.toString() },
           timestamp: Date.now(),
           type: 'counter',
+          histogramFamily: name,
         });
       }
     }
@@ -160,6 +179,7 @@ export class TelemetryService {
       labels: { ...baseLabels, le: '+Inf' },
       timestamp: Date.now(),
       type: 'counter',
+      histogramFamily: name,
     });
   }
 
@@ -195,14 +215,22 @@ export class TelemetryService {
     this.incrementCounter('app_events_total', 1, labels);
   }
 
-  trackScreenView(screenName: string, properties: Record<string, any> = {}): void {
+  trackScreenView(
+    screenName: string,
+    properties: Record<string, any> = {},
+  ): void {
     this.log('info', `Screen: ${screenName}`, properties);
     this.incrementCounter('screen_views_total', 1, {
       screen_name: screenName,
     });
   }
 
-  trackTiming(category: string, variable: string, duration: number, label?: string): void {
+  trackTiming(
+    category: string,
+    variable: string,
+    duration: number,
+    label?: string,
+  ): void {
     this.recordHistogram(`app_timing_${category}_ms`, duration, {
       variable,
       label: label || 'default',
@@ -210,17 +238,16 @@ export class TelemetryService {
   }
 
   async flush(): Promise<void> {
-    await Promise.all([
-      this.flushLogs(),
-      this.flushMetrics(),
-    ]);
+    await Promise.all([this.flushLogs(), this.flushMetrics()]);
   }
 
   private setupTransports(): void {
     this.transports = [];
 
     if (this.config.transports.console) {
-      this.transports.push(new ConsoleTransport(this.config.enableConsoleInDev));
+      this.transports.push(
+        new ConsoleTransport(this.config.enableConsoleInDev),
+      );
     }
 
     if (this.config.transports.http) {
@@ -234,14 +261,14 @@ export class TelemetryService {
     if (this.config.enableLogs) {
       this.flushTimers.logs = setInterval(
         () => this.flushLogs(),
-        this.config.flushIntervals.logs
+        this.config.flushIntervals.logs,
       );
     }
 
     if (this.config.enableMetrics) {
       this.flushTimers.metrics = setInterval(
         () => this.flushMetrics(),
-        this.config.flushIntervals.metrics
+        this.config.flushIntervals.metrics,
       );
     }
   }
@@ -275,10 +302,13 @@ export class TelemetryService {
     await Promise.allSettled(
       availableTransports.map(transport =>
         transport.sendLogs(logs).catch(error => {
-          logger.error(`Failed to send logs via ${transport.getName()}:`, error);
+          logger.error(
+            `Failed to send logs via ${transport.getName()}:`,
+            error,
+          );
           this.logBuffer.unshift(...logs);
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -295,10 +325,13 @@ export class TelemetryService {
     await Promise.allSettled(
       availableTransports.map(transport =>
         transport.sendMetrics(metrics).catch(error => {
-          logger.error(`Failed to send metrics via ${transport.getName()}:`, error);
+          logger.error(
+            `Failed to send metrics via ${transport.getName()}:`,
+            error,
+          );
           this.metricBuffer.unshift(...metrics);
-        })
-      )
+        }),
+      ),
     );
   }
 

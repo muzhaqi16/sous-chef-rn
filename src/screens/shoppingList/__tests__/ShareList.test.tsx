@@ -11,7 +11,8 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
   const selectUser = (s: any) => s.user;
-  const fn = (selector: any) => selector({ user: { id: 'u1', email: 'owner@test.com' } });
+  const fn = (selector: any) =>
+    selector({ user: { id: 'u1', email: 'owner@test.com' } });
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
@@ -19,8 +20,22 @@ jest.mock('#store/useAppStore', () => {
 });
 
 const mockCollaborators = [
-  { id: 'c1', email: 'owner@test.com', collaboratorId: 'u1', role: 'OWNER', status: 'ACTIVE', invitedAt: '2024-01-01T00:00:00Z' },
-  { id: 'c2', email: 'member@test.com', collaboratorId: 'u2', role: 'CONTRIBUTOR', status: 'ACCEPTED', invitedAt: '2024-01-05T00:00:00Z' },
+  {
+    id: 'c1',
+    email: 'owner@test.com',
+    collaboratorId: 'u1',
+    role: 'OWNER',
+    status: 'ACTIVE',
+    invitedAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'c2',
+    email: 'member@test.com',
+    collaboratorId: 'u2',
+    role: 'CONTRIBUTOR',
+    status: 'ACCEPTED',
+    invitedAt: '2024-01-05T00:00:00Z',
+  },
 ];
 
 jest.mock('#hooks/shoppingList/useShoppingListDetails', () => ({
@@ -52,10 +67,20 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 }));
 jest.mock('#/utils/compilerSafeWrappers');
 
+jest.mock('#components/atoms/EmailInput', () => ({
+  EmailInput: (props: any) => {
+    const { TextInput } = require('react-native');
+    return <TextInput placeholder="Enter email address" {...props} />;
+  },
+}));
 jest.mock('#components/molecules/Header', () => ({
   Header: ({ title }: any) => {
     const { View, Text } = require('react-native');
-    return <View testID="header"><Text>{title}</Text></View>;
+    return (
+      <View testID="header">
+        <Text>{title}</Text>
+      </View>
+    );
   },
 }));
 jest.mock('#components/base/Loading', () => ({
@@ -64,7 +89,11 @@ jest.mock('#components/base/Loading', () => ({
 jest.mock('#components/base/Button', () => ({
   Button: ({ title, onPress }: any) => {
     const { Pressable, Text } = require('react-native');
-    return <Pressable onPress={onPress}><Text>{title}</Text></Pressable>;
+    return (
+      <Pressable onPress={onPress}>
+        <Text>{title}</Text>
+      </Pressable>
+    );
   },
 }));
 jest.mock('#components/atoms/OfflineGate', () => ({
@@ -108,8 +137,12 @@ describe('ShareList', () => {
 
   it('shows member emails', () => {
     render(<ShareList route={route} />);
-    expect(screen.getAllByText('owner@test.com').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('member@test.com').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('owner@test.com').length).toBeGreaterThanOrEqual(
+      1,
+    );
+    expect(
+      screen.getAllByText('member@test.com').length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it('shows member statuses', () => {

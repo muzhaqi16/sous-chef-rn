@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   KeyboardAvoidingView,
   ScrollView,
@@ -13,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { Header } from '#components/molecules/Header';
+import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { LoadingInline } from '#components/base/Loading';
 import { useDeleteAccountMutation, useCanDeleteAccountQuery } from '#generated';
 import { authService } from '#/services/authService';
@@ -223,12 +223,10 @@ export const DeleteAccountScreen: React.FC = () => {
           <Text style={styles.confirmationLabel}>
             Type <Text style={styles.bold}>DELETE</Text> to confirm:
           </Text>
-          <TextInput
-            style={styles.input}
+          <BaseInput
             value={confirmText}
             onChangeText={setConfirmText}
             placeholder="Type DELETE"
-            placeholderTextColor={theme.colors.textSecondary}
             autoCapitalize="characters"
             autoCorrect={false}
             editable={!isDeleting}
@@ -457,15 +455,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
     marginBottom: 12,
-  },
-  input: {
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    padding: theme.spacing.md,
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface,
   },
   deleteButton: {
     backgroundColor: theme.colors.error,

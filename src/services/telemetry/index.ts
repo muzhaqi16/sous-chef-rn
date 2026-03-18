@@ -14,7 +14,7 @@ const createTelemetryConfig = (): TelemetryConfig => {
     enableMetrics:
       Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
     enableLogs: true,
-    enableConsoleInDev: false, 
+    enableConsoleInDev: false,
     appName: 'sous-chef-app',
     environment: env.isProduction
       ? 'production'
@@ -43,7 +43,7 @@ const createTelemetryConfig = (): TelemetryConfig => {
       http:
         (env.isDevelopment || env.isStaging || env.isProduction) &&
         !!(Config.PROMETHEUS_ENDPOINT || Config.LOKI_ENDPOINT),
-      console: false, 
+      console: false,
     },
   };
 };
@@ -92,18 +92,16 @@ export const Telemetry = {
   ) => telemetryService.trackTiming(category, variable, duration, label),
 
   trackError: (error: Error | string, context?: Record<string, any>) => {
-    if (typeof error === 'string') {
-      telemetryService.trackError({
-        message: error,
-        context,
-      });
-    } else {
-      telemetryService.trackError({
-        message: error.message,
-        stack: error.stack,
-        context,
-      });
-    }
+    const { component, operation, isFatal, ...rest } = context || {};
+    const details = {
+      message: typeof error === 'string' ? error : error.message,
+      stack: typeof error === 'string' ? undefined : error.stack,
+      component: typeof component === 'string' ? component : undefined,
+      operation: typeof operation === 'string' ? operation : undefined,
+      isFatal: typeof isFatal === 'boolean' ? isFatal : undefined,
+      context: Object.keys(rest).length > 0 ? rest : undefined,
+    };
+    telemetryService.trackError(details);
   },
 
   flush: () => telemetryService.flush(),
@@ -113,6 +111,5 @@ export const Telemetry = {
 
   initialize: () => telemetryService.initialize(),
 };
-
 
 export default telemetryService;

@@ -1,19 +1,27 @@
 import React from 'react';
 import { View } from 'react-native';
-import {useUnistyles} from 'react-native-unistyles';
-import {getFocusedRouteNameFromRoute, type RouteProp, type ParamListBase} from '@react-navigation/native';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import { useUnistyles } from 'react-native-unistyles';
+import {
+  getFocusedRouteNameFromRoute,
+  type RouteProp,
+  type ParamListBase,
+} from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 // Helper to get focused route name with proper typing for tab navigator routes
 // Tab navigator provides `params: unknown` but getFocusedRouteNameFromRoute expects `params: object`
-const getTabRouteName = (route: { params?: unknown; state?: unknown; name: string; key: string }) =>
-  getFocusedRouteNameFromRoute(route as RouteProp<ParamListBase>);
-import {PantryStack} from './PantryStack';
-import {ShoppingListStack} from './ShoppingListStack';
-import {RecipeStack} from './RecipeStack';
-import {MealPlanStack} from './MealPlanStack';
-import {TabBarActionsProvider} from '#/context/TabBarActionsContext';
-import {FloatingTabBar} from '#components/navigation/FloatingTabBar/FloatingTabBar';
+const getTabRouteName = (route: {
+  params?: unknown;
+  state?: unknown;
+  name: string;
+  key: string;
+}) => getFocusedRouteNameFromRoute(route as RouteProp<ParamListBase>);
+import { PantryStack } from './PantryStack';
+import { ShoppingListStack } from './ShoppingListStack';
+import { RecipeStack } from './RecipeStack';
+import { MealPlanStack } from './MealPlanStack';
+import { TabBarActionsProvider } from '#/context/TabBarActionsContext';
+import { FloatingTabBar } from '#components/navigation/FloatingTabBar/FloatingTabBar';
 
 function HomeTabsLayout({ children }: { children: React.ReactNode }) {
   const { theme } = useUnistyles();
@@ -27,53 +35,56 @@ function HomeTabsLayout({ children }: { children: React.ReactNode }) {
 }
 
 export const HomeTabs = createBottomTabNavigator({
-  tabBar: (props) => <FloatingTabBar {...props} />,
+  tabBar: props => <FloatingTabBar {...props} />,
   layout: HomeTabsLayout,
   screenOptions: {
     headerShown: false,
     tabBarHideOnKeyboard: true,
     lazy: true,
     animation: 'none',
-    inactiveBehavior: 'pause',
   },
   screens: {
     Pantry: {
       screen: PantryStack,
-      options: ({route}) => {
+      options: ({ route }) => {
         const routeName = getTabRouteName(route) ?? 'PantryMain';
         return {
           title: 'Pantry',
-          tabBarStyle: routeName !== 'PantryMain' ? {display: 'none'} : undefined,
+          tabBarStyle:
+            routeName !== 'PantryMain' ? { display: 'none' } : undefined,
         };
       },
     },
     ShoppingList: {
       screen: ShoppingListStack,
-      options: ({route}) => {
+      options: ({ route }) => {
         const routeName = getTabRouteName(route) ?? 'ShoppingListMain';
         return {
           title: 'List',
-          tabBarStyle: routeName !== 'ShoppingListMain' ? {display: 'none'} : undefined,
+          tabBarStyle:
+            routeName !== 'ShoppingListMain' ? { display: 'none' } : undefined,
         };
       },
     },
     Recipe: {
       screen: RecipeStack,
-      options: ({route}) => {
+      options: ({ route }) => {
         const routeName = getTabRouteName(route) ?? 'RecipeMain';
         return {
           title: 'Recipes',
-          tabBarStyle: routeName !== 'RecipeMain' ? {display: 'none'} : undefined,
+          tabBarStyle:
+            routeName !== 'RecipeMain' ? { display: 'none' } : undefined,
         };
       },
     },
     MealPlan: {
       screen: MealPlanStack,
-      options: ({route}) => {
+      options: ({ route }) => {
         const routeName = getTabRouteName(route) ?? 'MealPlanMain';
         return {
           title: 'Meal Plan',
-          tabBarStyle: routeName !== 'MealPlanMain' ? {display: 'none'} : undefined,
+          tabBarStyle:
+            routeName !== 'MealPlanMain' ? { display: 'none' } : undefined,
         };
       },
     },

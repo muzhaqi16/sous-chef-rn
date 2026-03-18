@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  Switch,
-  TextInput,
-} from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#/utils/iconUtils';
+import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { ScreenHeader } from '#components/molecules/ScreenHeader';
@@ -413,31 +407,21 @@ export const PantrySettings: React.FC<
         <View style={commonStyles.settingsSection}>
           <Text style={commonStyles.settingsSectionTitle}>General</Text>
 
-          <View style={commonStyles.settingsInputGroup}>
-            <Text style={commonStyles.settingsLabel}>Pantry Name</Text>
-            <TextInput
-              style={commonStyles.settingsInput}
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter pantry name (e.g., Kitchen Pantry)"
-              placeholderTextColor={theme.colors.textSecondary}
-            />
-          </View>
+          <BaseInput
+            label="Pantry Name"
+            value={name}
+            onChangeText={setName}
+            placeholder="Enter pantry name (e.g., Kitchen Pantry)"
+          />
 
-          <View style={commonStyles.settingsInputGroup}>
-            <Text style={commonStyles.settingsLabel}>
-              Description (Optional)
-            </Text>
-            <TextInput
-              style={commonStyles.settingsInput}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Enter description"
-              placeholderTextColor={theme.colors.textSecondary}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
+          <BaseInput
+            label="Description (Optional)"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Enter description"
+            multiline
+            numberOfLines={3}
+          />
 
           <View style={commonStyles.settingsRow}>
             <View style={commonStyles.settingsRowInfo}>

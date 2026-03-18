@@ -33,7 +33,6 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const user = useAuthUser();
   const isLoggingOut = useAppStore(state => state.isLoggingOut);
   const updateUser = useAppStore(state => state.updateUser);
-  const hasName = !!(user?.name || user?.firstName);
 
   // Preload units and other reference data when authenticated
   // The hook handles authentication checking internally
@@ -43,14 +42,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // This ensures users can accept invitations even if they missed the notification
   useAllPendingInvites(user?.id);
 
-  // Fallback: fetch profile only when name is missing from auth store
-  // (e.g., profile was updated externally, or migration didn't cover an edge case).
-  // skip: hasName means this does NOT fire on normal cold starts where the
-  // migration already populated the fields — it only fires as a safety net.
+  // Fetch profile on every app load to keep Zustand store in sync
+  // (e.g., profilePicture is only set at login/register and goes stale).
+  // Uses cache-first so there's no extra network cost when data is cached.
   const { data: profileData } = useGetUserProfileQuery({
     fetchPolicy: 'cache-first',
     nextFetchPolicy: 'cache-and-network',
-    skip: !user || isLoggingOut || hasName,
+    skip: !user || isLoggingOut,
     notifyOnNetworkStatusChange: false,
   });
 

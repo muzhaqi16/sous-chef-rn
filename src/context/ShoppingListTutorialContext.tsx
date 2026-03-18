@@ -35,6 +35,7 @@ export enum ShoppingListTutorialStep {
   SPOTLIGHT_ADD_BUTTON = 'SPOTLIGHT_ADD_BUTTON',
   GUIDE_ADD_ITEM = 'GUIDE_ADD_ITEM',
   HINT_DISMISS_SHEET = 'HINT_DISMISS_SHEET',
+  SPOTLIGHT_SWIPE_ACTIONS = 'SPOTLIGHT_SWIPE_ACTIONS',
   SPOTLIGHT_CHECKBOX = 'SPOTLIGHT_CHECKBOX',
   SPOTLIGHT_PURCHASED_TAB = 'SPOTLIGHT_PURCHASED_TAB',
   SPOTLIGHT_MOVE_TO_PANTRY = 'SPOTLIGHT_MOVE_TO_PANTRY',
@@ -43,11 +44,12 @@ export enum ShoppingListTutorialStep {
 
 export type TutorialRectKey =
   | 'addButton'
+  | 'itemCard'
   | 'checkbox'
   | 'purchasedTab'
   | 'archiveIcon';
 
-export const TUTORIAL_TOTAL_STEPS = 6;
+export const TUTORIAL_TOTAL_STEPS = 7;
 
 export const TUTORIAL_STEP_CONFIG: Record<
   string,
@@ -64,23 +66,29 @@ export const TUTORIAL_STEP_CONFIG: Record<
     rectKey: 'addButton',
     stepIndex: 0,
   },
+  [ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS]: {
+    title: 'Swipe to manage items',
+    subtitle: 'Swipe any item left to edit, or right to delete',
+    rectKey: 'itemCard',
+    stepIndex: 3,
+  },
   [ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX]: {
     title: 'Mark as purchased',
     subtitle: 'Tap the checkbox to mark this item as purchased',
     rectKey: 'checkbox',
-    stepIndex: 3,
+    stepIndex: 4,
   },
   [ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB]: {
     title: 'View purchased items',
     subtitle: 'Tap to see your purchased items',
     rectKey: 'purchasedTab',
-    stepIndex: 4,
+    stepIndex: 5,
   },
   [ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY]: {
     title: 'Move to pantry',
     subtitle: 'Tap to move this item to your pantry',
     rectKey: 'archiveIcon',
-    stepIndex: 5,
+    stepIndex: 6,
   },
 };
 
@@ -94,6 +102,7 @@ interface ShoppingListTutorialContextValue {
   notifyAddButtonPressed: () => void;
   notifyItemAdded: () => void;
   notifySheetClosed: () => void;
+  notifySwipeActionsSeen: () => void;
   notifyCheckboxTapped: () => void;
   notifyPurchasedTabTapped: () => void;
   notifyMoveToPantryTapped: () => void;
@@ -182,6 +191,11 @@ export function ShoppingListTutorialProvider({
 
   const markComplete = () => {
     storage.set(buildStorageKey(userIdRef.current, FEATURE_ID), true);
+    // Also mark the standalone swipe hint as shown so it never fires independently
+    storage.set(
+      buildStorageKey(userIdRef.current, 'shopping_list_swipe'),
+      true,
+    );
     setIsCompleted(true);
     setCurrentStep(ShoppingListTutorialStep.COMPLETED);
   };
@@ -200,11 +214,17 @@ export function ShoppingListTutorialProvider({
 
   const notifySheetClosed = () => {
     if (currentStep === ShoppingListTutorialStep.HINT_DISMISS_SHEET) {
-      advanceTo(ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX);
+      advanceTo(ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS);
     } else if (currentStep === ShoppingListTutorialStep.GUIDE_ADD_ITEM) {
       // User dismissed sheet without adding — go back to spotlight add button
       advanceTo(ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON);
     }
+  };
+
+  const notifySwipeActionsSeen = () => {
+    if (currentStep !== ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS)
+      return;
+    advanceTo(ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX);
   };
 
   const notifyCheckboxTapped = () => {
@@ -265,6 +285,7 @@ export function ShoppingListTutorialProvider({
     notifyAddButtonPressed,
     notifyItemAdded,
     notifySheetClosed,
+    notifySwipeActionsSeen,
     notifyCheckboxTapped,
     notifyPurchasedTabTapped,
     notifyMoveToPantryTapped,

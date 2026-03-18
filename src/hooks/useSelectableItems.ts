@@ -1,8 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 export interface SelectableItem {
   id: string;
   selected: boolean;
+}
+
+function itemsFingerprint(items: SelectableItem[]): string {
+  let key = '';
+  for (let i = 0; i < items.length; i++) {
+    if (i > 0) key += ',';
+    key += items[i].id;
+    key += items[i].selected ? ':1' : ':0';
+  }
+  return key;
 }
 
 interface UseSelectableItemsOptions<T extends SelectableItem> {
@@ -33,49 +43,50 @@ interface UseSelectableItemsReturn<T extends SelectableItem> {
  */
 export function useSelectableItems<T extends SelectableItem>({
   initialItems,
-  maxSelection }: UseSelectableItemsOptions<T>): UseSelectableItemsReturn<T> {
+  maxSelection,
+}: UseSelectableItemsOptions<T>): UseSelectableItemsReturn<T> {
   const [items, setItems] = useState<T[]>(initialItems);
 
-  // Sync internal state when initialItems prop changes
-  useEffect(() => {
+  // "Adjusting state during render" — replaces useEffect([initialItems])
+  // to avoid infinite re-render loops when the caller creates new array
+  // references with the same content on every render.
+  const incomingKey = itemsFingerprint(initialItems);
+  const [prevKey, setPrevKey] = useState(incomingKey);
+  if (incomingKey !== prevKey) {
+    setPrevKey(incomingKey);
     setItems(initialItems);
-  }, [initialItems]);
+  }
 
   // Memoized toggle function to prevent unnecessary re-renders
   const toggleItem = (itemId: string) => {
-      setItems(prevItems => {
-        const itemToToggle = prevItems.find(item => item.id === itemId);
+    setItems(prevItems => {
+      const itemToToggle = prevItems.find(item => item.id === itemId);
 
-        // If item not found, return unchanged
-        if (!itemToToggle) {
+      // If item not found, return unchanged
+      if (!itemToToggle) {
+        return prevItems;
+      }
+
+      // If trying to select but max is reached, prevent selection
+      if (!itemToToggle.selected && maxSelection !== undefined) {
+        const currentSelectedCount = prevItems.filter(
+          item => item.selected,
+        ).length;
+
+        if (currentSelectedCount >= maxSelection) {
+          console.warn(`Maximum selection of ${maxSelection} items reached`);
           return prevItems;
         }
+      }
 
-        // If trying to select but max is reached, prevent selection
-        if (
-          !itemToToggle.selected &&
-          maxSelection !== undefined
-        ) {
-          const currentSelectedCount = prevItems.filter(
-            item => item.selected,
-          ).length;
-
-          if (currentSelectedCount >= maxSelection) {
-            console.warn(
-              `Maximum selection of ${maxSelection} items reached`,
-            );
-            return prevItems;
-          }
-        }
-
-        // Toggle the item's selected state immutably
-        return prevItems.map(item =>
-          item.id === itemId
-            ? ({ ...item, selected: !item.selected } as T)
-            : item,
-        );
-      });
-    };
+      // Toggle the item's selected state immutably
+      return prevItems.map(item =>
+        item.id === itemId
+          ? ({ ...item, selected: !item.selected } as T)
+          : item,
+      );
+    });
+  };
 
   // Memoized function to clear all selections
   const clearSelection = () => {
@@ -94,5 +105,6 @@ export function useSelectableItems<T extends SelectableItem>({
     selectedItems,
     toggleItem,
     isMaxReached,
-    clearSelection };
+    clearSelection,
+  };
 }

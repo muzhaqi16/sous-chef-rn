@@ -10,7 +10,11 @@ const mockDeleteAccount = jest.fn().mockResolvedValue({});
 const mockRefetch = jest.fn();
 
 jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
+const mockNav = (
+  jest.requireMock('#hooks/navigation/useAppNavigation') as {
+    useAppNavigation: jest.Mock;
+  }
+).useAppNavigation();
 
 jest.mock('#hooks/auth/useAuth', () => ({
   useAuth: () => ({
@@ -70,10 +74,23 @@ jest.mock('#components/molecules/Header', () => {
   };
 });
 
+jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
+  BaseInput: ({ label, ...props }: any) => {
+    const { View, Text, TextInput } = require('react-native');
+    return (
+      <View>
+        {label ? <Text>{label}</Text> : null}
+        <TextInput {...props} />
+      </View>
+    );
+  },
+}));
 jest.mock('#components/base/Loading', () => {
   const { Text } = require('react-native');
   return {
-    LoadingInline: ({ message }: any) => <Text testID="loading">{message}</Text>,
+    LoadingInline: ({ message }: any) => (
+      <Text testID="loading">{message}</Text>
+    ),
   };
 });
 
@@ -95,8 +112,12 @@ describe('DeleteAccountScreen - delete form', () => {
   it('renders what will be deleted section', () => {
     render(<DeleteAccountScreen />);
     expect(screen.getByText('What will be deleted:')).toBeTruthy();
-    expect(screen.getByText('Your profile and account information')).toBeTruthy();
-    expect(screen.getByText('All your pantry items and inventory')).toBeTruthy();
+    expect(
+      screen.getByText('Your profile and account information'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('All your pantry items and inventory'),
+    ).toBeTruthy();
     expect(screen.getByText('Your shopping lists')).toBeTruthy();
   });
 
