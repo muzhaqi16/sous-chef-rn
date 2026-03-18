@@ -2,10 +2,12 @@ import React, { useRef } from 'react';
 import { Pressable, Text } from 'react-native';
 import Animated, {
   useSharedValue,
-  useAnimatedScrollHandler } from 'react-native-reanimated';
+  useAnimatedScrollHandler,
+} from 'react-native-reanimated';
 import {
   SafeAreaView,
-  useSafeAreaInsets } from 'react-native-safe-area-context';
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { ProfileHeader } from '#components/organisms/ProfileHeader';
 import { SettingsSection } from '#components/organisms/SettingsSection';
@@ -20,15 +22,14 @@ import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { ProfileSkeleton } from '#components/base/Skeleton/ProfileSkeleton';
-import { useAppStore, selectIsAdminUser } from '#/store/useAppStore';
+import { useAppStore, selectCanAccessDevTools } from '#/store/useAppStore';
 
 export const ProfileScreen = () => {
   useScreenTransition('ProfileScreen');
-  const isAdminUser = useAppStore(selectIsAdminUser);
+  const canAccessDevTools = useAppStore(selectCanAccessDevTools);
   const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
-  const { sections, BiometricModal } =
-    useConfigurableSettings(profile);
+  const { sections, BiometricModal } = useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { theme } = useUnistyles();
   const actionTrayRef = useRef<ActionTrayRef>(null);
@@ -36,13 +37,15 @@ export const ProfileScreen = () => {
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: event => {
       scrollY.set(event.contentOffset.y);
-    } });
+    },
+  });
 
   // Track screen view on mount
   useEffect(() => {
     Telemetry.trackScreen('ProfileScreen', {
       has_profile: !!profile,
-      has_avatar: !!profile?.avatar });
+      has_avatar: !!profile?.avatar,
+    });
   }, [profile]);
 
   const handleAvatarPress = () => {
@@ -92,12 +95,15 @@ export const ProfileScreen = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={['top', 'left', 'right']}
+      edges={['left', 'right']}
       testID="profile-screen"
     >
       <ProfileHeader
         avatarUrl={profile?.avatar}
-        name={profile?.displayName || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim()}
+        name={
+          profile?.displayName ||
+          `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim()
+        }
         subtitle={user?.email || ''}
         onBack={() => goBack()}
         onMore={handleMorePress}
@@ -118,7 +124,9 @@ export const ProfileScreen = () => {
           .filter(section => {
             // Filter out Developer section if debug features are not enabled
             if (section.title === 'Developer') {
-              return Environment.shouldEnableDebugFeatures() || isAdminUser;
+              return (
+                Environment.shouldEnableDebugFeatures() || canAccessDevTools
+              );
             }
             return true;
           })
@@ -132,7 +140,8 @@ export const ProfileScreen = () => {
                   return {
                     ...item,
                     testID: 'profile-logout-button',
-                    onPress: handleLogout };
+                    onPress: handleLogout,
+                  };
                 }
                 // Handle navigation items
                 if (item.type === 'navigation') {
@@ -155,7 +164,8 @@ export const ProfileScreen = () => {
                       } else if (item.key === 'changePassword') {
                         navigate('ChangePassword');
                       }
-                    } };
+                    },
+                  };
                 }
                 return item;
               })}
@@ -170,12 +180,11 @@ export const ProfileScreen = () => {
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       >
-        <Pressable style={({pressed}) => [styles.menuItem, pressed && styles.pressed]} onPress={handleDeleteAccount}>
-          <Icon
-            name="trash-outline"
-            size={20}
-            color={theme.colors.error}
-          />
+        <Pressable
+          style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
+          onPress={handleDeleteAccount}
+        >
+          <Icon name="trash-outline" size={20} color={theme.colors.error} />
           <Text style={styles.menuItemTextDestructive}>Delete Account</Text>
         </Pressable>
       </ActionTray>
@@ -186,9 +195,11 @@ export const ProfileScreen = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background },
+    backgroundColor: theme.colors.background,
+  },
   scrollContent: {
-    paddingVertical: theme.spacing.lg },
+    paddingBottom: theme.spacing.lg,
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -197,11 +208,15 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.error,
-    backgroundColor: 'transparent' },
+    backgroundColor: 'transparent',
+  },
   menuItemTextDestructive: {
     marginLeft: theme.spacing.md,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.error },
+    color: theme.colors.error,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

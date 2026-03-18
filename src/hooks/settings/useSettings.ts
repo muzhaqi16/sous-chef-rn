@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '#/store/useAppStore';
 import { useAppSettings } from '#hooks/profile/useAppSettings';
 import { storage } from '#/storage/mmkv';
+import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
 /**
  * Unified settings interface combining local (Zustand) and server (GraphQL) settings
@@ -59,17 +60,24 @@ export const useSettings = () => {
     settings: serverSettings,
     loading: serverLoading,
     updateAppSetting,
-    resetToDefaults: resetServerDefaults } = useAppSettings();
+    resetToDefaults: resetServerDefaults,
+  } = useAppSettings();
 
   // Local settings from Zustand
-  const hapticFeedbackEnabled = useAppStore(state => state.hapticFeedbackEnabled);
-  const setHapticFeedbackEnabled = useAppStore(state => state.setHapticFeedbackEnabled);
+  const hapticFeedbackEnabled = useAppStore(
+    state => state.hapticFeedbackEnabled,
+  );
+  const setHapticFeedbackEnabled = useAppStore(
+    state => state.setHapticFeedbackEnabled,
+  );
   const showNavigationLabels = useAppStore(state => state.showNavigationLabels);
-  const setShowNavigationLabels = useAppStore(state => state.setShowNavigationLabels);
+  const setShowNavigationLabels = useAppStore(
+    state => state.setShowNavigationLabels,
+  );
   const resetPreferences = useAppStore(state => state.resetPreferences);
 
   // Unified settings object
-  const settings = ({
+  const settings = {
     // Server settings
     showTutorials: serverSettings.showTutorials,
     autoSync: serverSettings.autoSync,
@@ -77,14 +85,18 @@ export const useSettings = () => {
 
     // Local settings
     hapticFeedbackEnabled,
-    showNavigationLabels });
+    showNavigationLabels,
+  };
 
   // Settings actions
-  const setShowTutorials = (enabled: boolean) => updateAppSetting('showTutorials', enabled);
+  const setShowTutorials = (enabled: boolean) =>
+    updateAppSetting('showTutorials', enabled);
 
-  const setAutoSync = (enabled: boolean) => updateAppSetting('autoSync', enabled);
+  const setAutoSync = (enabled: boolean) =>
+    updateAppSetting('autoSync', enabled);
 
-  const setOfflineMode = (enabled: boolean) => updateAppSetting('offlineMode', enabled);
+  const setOfflineMode = (enabled: boolean) =>
+    updateAppSetting('offlineMode', enabled);
 
   const resetToDefaults = async () => {
     // Reset both server and local settings
@@ -93,18 +105,20 @@ export const useSettings = () => {
     return serverSuccess;
   };
 
-  const actions = ({
+  const actions = {
     setShowTutorials,
     setAutoSync,
     setOfflineMode,
     setHapticFeedbackEnabled,
     setShowNavigationLabels,
-    resetToDefaults });
+    resetToDefaults,
+  };
 
   return {
     settings,
     actions,
-    loading: serverLoading };
+    loading: serverLoading,
+  };
 };
 
 /**
@@ -113,9 +127,16 @@ export const useSettings = () => {
  *
  * PERFORMANCE: Reads from MMKV instead of triggering the GetUserSettings GraphQL query.
  * The MMKV value is synced whenever useAppSettings loads fresh data (see useAppSettings).
+ * Re-reads on tutorial reset so hooks see the updated value immediately.
  */
 export const useShowTutorials = (): boolean => {
-  const [value] = useState(() => storage.getBoolean('user_show_tutorials') ?? true);
+  const wasReset = useTutorialResetSignal();
+  const [value, setValue] = useState(
+    () => storage.getBoolean('user_show_tutorials') ?? true,
+  );
+  if (wasReset) {
+    setValue(storage.getBoolean('user_show_tutorials') ?? true);
+  }
   return value;
 };
 

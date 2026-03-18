@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
 import { useAppStore } from '#store/useAppStore';
+import { useStore } from '#store/index';
+import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
 const FEATURE_HINT_PREFIX = 'feature_hint_shown_';
 
@@ -89,6 +91,13 @@ export const useFeatureHint = ({
   const [isVisible, setIsVisible] = useState(
     () => showOnMount && !hasBeenShown && tutorialsEnabled && delay === 0,
   );
+
+  // React to external resets (centralized signal hook)
+  const wasReset = useTutorialResetSignal();
+  if (wasReset) {
+    setHasBeenShown(storage.getBoolean(storageKey) ?? false);
+    setIsVisible(false);
+  }
 
   // Show hint with delay if configured, not shown before, and tutorials are enabled globally
   useEffect(() => {
@@ -190,6 +199,11 @@ export const resetAllFeatureHints = (): void => {
       storage.remove(key);
     }
   });
+  // Ensure tutorials-enabled is immediately consistent for hooks that re-read MMKV
+  // (the GraphQL → MMKV sync is async via useEffect, so set it synchronously here)
+  storage.set('user_show_tutorials', true);
+  // Signal all mounted tutorial hooks to re-read from MMKV
+  useStore.getState().bumpTutorialResetGeneration();
 };
 
 // --- Login count tracking (used to space out post-login modals) ---

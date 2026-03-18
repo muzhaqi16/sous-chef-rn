@@ -6049,10 +6049,45 @@ type Query {
   """
   adminGetImageDeletionJobStatus(jobId: String!): ImageDeletionJobStatus
   """
+  Admin: List all homes with optional filters.
+  Returns homes across all users. Use filters.userId to scope to a specific user.
+  """
+  adminHomes(after: String, before: String, filters: HomeFilters, first: Int, last: Int, orderBy: HomeOrderBy): HomeConnection!
+  """
   List item unit conversions with optional filters (admin)
   Supports filtering by item, source, verification status, and units
   """
   adminItemUnitConversions(fromUnitId: ID, isVerified: Boolean, itemId: ID, limit: Int, offset: Int, source: ConversionSource, toUnitId: ID): AdminItemUnitConversionsResult!
+  """
+  Admin: List all login histories with comprehensive filtering.
+  Supports filtering by userId, ipAddress, date range, device, success/failure, and search.
+  """
+  adminLoginHistories(after: String, before: String, filters: LoginHistoryQueryFilters, first: Int, last: Int, orderBy: LoginHistoryOrderBy, orderDirection: SortOrder): LoginHistoryConnection!
+  """
+  Admin: List all meal plans with optional filters.
+  Returns meal plans across all users.
+  """
+  adminMealPlans(after: String, before: String, filters: MealPlanFilters, first: Int, last: Int, orderBy: MealPlanOrderBy): MealPlanConnection!
+  """
+  Admin: List all meal templates with optional filters.
+  Returns meal templates across all users.
+  """
+  adminMealTemplates(after: String, before: String, filters: MealTemplateFilters, first: Int, last: Int, orderBy: MealTemplateOrderBy): MealTemplateConnection!
+  """
+  Admin: List all pantries with optional filters.
+  Returns pantries across all homes. homeId is optional.
+  """
+  adminPantries(after: String, before: String, filters: PantryFilters, first: Int, homeId: ID, last: Int, orderBy: PantryOrderBy): PantryConnection!
+  """
+  Admin: List all recipes with optional filters.
+  Returns recipes across all users.
+  """
+  adminRecipes(after: String, before: String, category: RecipeCategory, difficulty: Difficulty, first: Int, includeDeleted: Boolean, last: Int): RecipeConnection!
+  """
+  Admin: List all shopping lists with optional filters.
+  Returns lists across all users. Use filters.userId to scope to a specific user.
+  """
+  adminShoppingLists(after: String, before: String, filters: ShoppingListFilters, first: Int, last: Int, orderBy: ShoppingListOrderBy): ShoppingListConnection!
   """
   Aggregate multiple quantities of the same item
   Useful for calculating total needed across multiple recipes
@@ -6147,11 +6182,7 @@ type Query {
   homeByJoinCode(joinCode: String!): Home
   """Fetch a home invite by its token for the acceptance flow."""
   homeInviteByToken(token: String!): HomeInvite
-  """
-  Get homes accessible to the current user.
-  For admins: Returns all homes with optional filters.
-  For regular users: Returns only homes where user is a member.
-  """
+  """Get homes where the current user is a member."""
   homes(after: String, before: String, filters: HomeFilters, first: Int, last: Int, orderBy: HomeOrderBy): HomeConnection!
   """Fetch invite usage statistics for a specific invite (admin only)."""
   inviteStats(inviteId: String!): InviteStats!
@@ -6171,8 +6202,8 @@ type Query {
   """
   items(after: String, before: String, filters: ItemFilters, first: Int, last: Int, sort: ItemSortInput): ItemConnection!
   """
-  Consolidated login history query with comprehensive filtering.
-  Supports filtering by userId, ipAddress, date range, device, success/failure, and search.
+  Get login history for the current user.
+  Supports filtering by date range, device, success/failure, and method.
   """
   loginHistories(after: String, before: String, filters: LoginHistoryQueryFilters, first: Int, last: Int, orderBy: LoginHistoryOrderBy, orderDirection: SortOrder): LoginHistoryConnection!
   matchRecipeIngredientsToPantry(pantryId: ID!, recipeId: ID!, servings: Int): [RecipeIngredientMatch!]!
@@ -6196,9 +6227,7 @@ type Query {
   """Fetch notification statistics with optional filtering."""
   notificationStats(filters: NotificationFilters): NotificationStats!
   """
-  Get pantries.
-  For admins: Returns all pantries with optional filters (homeId is optional).
-  For regular users: Requires homeId and returns pantries from that home only.
+  Get pantries for a specific home. Requires homeId.
   Replaces: defaultPantry (use filters: { isDefault: true })
   """
   pantries(after: String, before: String, filters: PantryFilters, first: Int, homeId: ID, last: Int, orderBy: PantryOrderBy): PantryConnection!
@@ -6249,9 +6278,7 @@ type Query {
   """Fetch a single shopping list item by its ID."""
   shoppingListItem(id: ID!): ShoppingListItem
   """
-  Get shopping lists accessible to the current user.
-  For admins: Returns all lists with optional filters (including userId filter).
-  For regular users: Returns only user's lists (owned, collaborated, or home-based).
+  Get shopping lists accessible to the current user (owned, collaborated, or home-based).
   Replaces: defaultShoppingList (use filters: { isDefault: true }),
   searchShoppingLists (use filters: { search: "query" }),
   shoppingListCollaborators (use ShoppingList.collaboratorsConnection)
@@ -8844,6 +8871,8 @@ Cache: 5 minutes - user data changes occasionally, always private
 """
 type User {
   addresses: [UserAddress!]!
+  """Whether this user can access developer tools and internal dashboards"""
+  canAccessDevTools: Boolean!
   collaboratedShoppingLists: [ShoppingList!]!
   cookingLogsConnection(after: String, before: String, first: Int, last: Int, orderBy: CookingLogOrderBy): CookingLogConnection!
   cookingStats: CookingStats

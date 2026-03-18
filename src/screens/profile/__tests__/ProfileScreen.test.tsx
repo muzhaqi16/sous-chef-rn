@@ -6,7 +6,11 @@ import { ProfileScreen } from '../ProfileScreen';
 // --- Mocks ---
 
 jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
+const mockNav = (
+  jest.requireMock('#hooks/navigation/useAppNavigation') as {
+    useAppNavigation: jest.Mock;
+  }
+).useAppNavigation();
 
 jest.mock('#hooks/profile/useProfileData', () => ({
   useProfileData: () => ({
@@ -28,14 +32,26 @@ jest.mock('#hooks/profile/useConfigurableSettings', () => ({
       {
         title: 'Account',
         items: [
-          { key: 'personalInformation', label: 'Personal Information', type: 'navigation' },
-          { key: 'changePassword', label: 'Change Password', type: 'navigation' },
+          {
+            key: 'personalInformation',
+            label: 'Personal Information',
+            type: 'navigation',
+          },
+          {
+            key: 'changePassword',
+            label: 'Change Password',
+            type: 'navigation',
+          },
         ],
       },
       {
         title: 'Preferences',
         items: [
-          { key: 'dietaryProfile', label: 'Dietary Profile', type: 'navigation' },
+          {
+            key: 'dietaryProfile',
+            label: 'Dietary Profile',
+            type: 'navigation',
+          },
           { key: 'appSettings', label: 'App Settings', type: 'navigation' },
           { key: 'notifications', label: 'Notifications', type: 'navigation' },
         ],
@@ -43,7 +59,12 @@ jest.mock('#hooks/profile/useConfigurableSettings', () => ({
       {
         title: '',
         items: [
-          { key: 'logout', label: 'Logout', type: 'action', onPress: jest.fn() },
+          {
+            key: 'logout',
+            label: 'Logout',
+            type: 'action',
+            onPress: jest.fn(),
+          },
         ],
       },
     ],
@@ -53,10 +74,10 @@ jest.mock('#hooks/profile/useConfigurableSettings', () => ({
 
 jest.mock('#/store/useAppStore', () => ({
   useAppStore: (selector: any) => {
-    const state = { isAdminUser: false };
+    const state = { canAccessDevTools: false };
     return selector(state);
   },
-  selectIsAdminUser: (state: any) => state.isAdminUser,
+  selectCanAccessDevTools: (state: any) => state.canAccessDevTools,
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');
@@ -122,7 +143,10 @@ jest.mock('#components/organisms/SettingsSection', () => {
 jest.mock('#/components/templates/ActionTray/ActionTray', () => {
   const R = require('react');
   const RN = require('react-native');
-  const ActionTray = R.forwardRef(function MockActionTray(props: any, ref: any) {
+  const ActionTray = R.forwardRef(function MockActionTray(
+    props: any,
+    ref: any,
+  ) {
     R.useImperativeHandle(ref, () => ({
       open: jest.fn(),
       close: jest.fn(),
@@ -216,10 +240,7 @@ describe('ProfileScreen - loading state', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest
-      .spyOn(
-        require('#hooks/profile/useProfileData'),
-        'useProfileData',
-      )
+      .spyOn(require('#hooks/profile/useProfileData'), 'useProfileData')
       .mockReturnValue({
         profile: null,
         user: null,

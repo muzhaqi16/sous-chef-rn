@@ -92,6 +92,7 @@ export interface User {
   emailVerified: boolean;
   onBoarded: boolean;
   role?: string;
+  canAccessDevTools?: boolean;
   firstName?: string;
   lastName?: string;
   profilePicture?: string;

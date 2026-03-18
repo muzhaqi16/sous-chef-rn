@@ -279,7 +279,7 @@ export const DeleteAccountScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <Header title="Delete Account" onBack={goBack} centerTitle />
 
       {renderContent()}

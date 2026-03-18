@@ -11,7 +11,7 @@ import { SkeletonLine } from './SkeletonLine';
  */
 export const ProfileSkeleton: React.FC = () => {
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       {/* Header row: back button, avatar, more button */}
       <View style={styles.header}>
         <SkeletonCircle size={44} />

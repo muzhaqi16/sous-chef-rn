@@ -4,6 +4,7 @@ import {
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
   addNewItemToShoppingListCache,
+  removeItemFromShoppingListForMoveToPantry,
 } from '../shoppingListCacheUpdaters';
 
 // Also test the unexported clearAllUnpurchasedItemsFromCache indirectly
@@ -20,7 +21,8 @@ function createMockCache() {
     evict: jest.fn(),
     gc: jest.fn(),
     identify: jest.fn(
-      (obj: { __typename: string; id: string }) => `${obj.__typename}:${obj.id}`,
+      (obj: { __typename: string; id: string }) =>
+        `${obj.__typename}:${obj.id}`,
     ),
   } as any;
 }
@@ -789,7 +791,211 @@ describe('addNewItemToShoppingListCache', () => {
     ).not.toThrow();
 
     expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to update cache for new shopping list item'),
+      expect.stringContaining(
+        'Failed to update cache for new shopping list item',
+      ),
+      expect.any(Error),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// removeItemFromShoppingListForMoveToPantry
+// ---------------------------------------------------------------------------
+
+describe('removeItemFromShoppingListForMoveToPantry', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('does nothing when parent entity is not found', () => {
+    const cache = createMockCache();
+    cache.identify.mockReturnValue(undefined);
+
+    removeItemFromShoppingListForMoveToPantry(
+      cache,
+      'sl-missing',
+      'sli-1',
+      true,
+    );
+
+    expect(cache.modify).not.toHaveBeenCalled();
+  });
+
+  it('removes edge and decrements totalCount on purchased variant when wasPurchased=true', () => {
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
+
+    const helpers = createFieldHelpers({
+      storeFieldName: 'itemsConnection:{"isPurchased":true}',
+    });
+    helpers.readField.mockImplementation((field: string, ref: any) => {
+      if (field === 'id') {
+        if (ref?.__ref === 'ShoppingListItem:sli-1') return 'sli-1';
+        if (ref?.__ref === 'ShoppingListItem:sli-2') return 'sli-2';
+      }
+      return undefined;
+    });
+
+    const existing = {
+      edges: [
+        { node: { __ref: 'ShoppingListItem:sli-1' } },
+        { node: { __ref: 'ShoppingListItem:sli-2' } },
+      ],
+      totalCount: 2,
+    };
+    const result = invokeFieldModifier(
+      cache,
+      'itemsConnection',
+      existing,
+      helpers,
+    );
+
+    expect(result.edges).toHaveLength(1);
+    expect(result.totalCount).toBe(1);
+  });
+
+  it('does NOT modify unpurchased variant when wasPurchased=true', () => {
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
+
+    const helpers = createFieldHelpers({
+      storeFieldName: 'itemsConnection:{"isPurchased":false}',
+    });
+    const existing = {
+      edges: [{ node: { __ref: 'ShoppingListItem:sli-3' } }],
+      totalCount: 3,
+    };
+    const result = invokeFieldModifier(
+      cache,
+      'itemsConnection',
+      existing,
+      helpers,
+    );
+
+    expect(result).toBe(existing);
+  });
+
+  it('removes edge and decrements totalCount on unpurchased variant when wasPurchased=false', () => {
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', false);
+
+    const helpers = createFieldHelpers({
+      storeFieldName: 'itemsConnection:{"isPurchased":false}',
+    });
+    helpers.readField.mockImplementation((field: string, ref: any) => {
+      if (field === 'id') {
+        if (ref?.__ref === 'ShoppingListItem:sli-1') return 'sli-1';
+      }
+      return undefined;
+    });
+
+    const existing = {
+      edges: [{ node: { __ref: 'ShoppingListItem:sli-1' } }],
+      totalCount: 1,
+    };
+    const result = invokeFieldModifier(
+      cache,
+      'itemsConnection',
+      existing,
+      helpers,
+    );
+
+    expect(result.edges).toHaveLength(0);
+    expect(result.totalCount).toBe(0);
+  });
+
+  it('does NOT modify purchased variant when wasPurchased=false', () => {
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', false);
+
+    const helpers = createFieldHelpers({
+      storeFieldName: 'itemsConnection:{"isPurchased":true}',
+    });
+    const existing = {
+      edges: [{ node: { __ref: 'ShoppingListItem:sli-2' } }],
+      totalCount: 1,
+    };
+    const result = invokeFieldModifier(
+      cache,
+      'itemsConnection',
+      existing,
+      helpers,
+    );
+
+    expect(result).toBe(existing);
+  });
+
+  it('decrements completedItems when wasPurchased=true', () => {
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
+
+    const result = invokeFieldModifier(cache, 'completedItems', 3, {});
+
+    expect(result).toBe(2);
+  });
+
+  it('does NOT have completedItems modifier when wasPurchased=false', () => {
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', false);
+
+    const modifyCall = cache.modify.mock.calls[0];
+    const fields = modifyCall[0].fields;
+
+    expect(fields.completedItems).toBeUndefined();
+  });
+
+  it('decrements totalItems', () => {
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
+
+    const result = invokeFieldModifier(cache, 'totalItems', 5, {});
+
+    expect(result).toBe(4);
+  });
+
+  it('clamps totalItems to 0', () => {
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
+
+    const result = invokeFieldModifier(cache, 'totalItems', 0, {});
+
+    expect(result).toBe(0);
+  });
+
+  it('evicts item entity and calls gc', () => {
+    const cache = createMockCache();
+
+    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
+
+    expect(cache.evict).toHaveBeenCalledWith({
+      id: 'ShoppingListItem:sli-1',
+    });
+    expect(cache.gc).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not throw when cache.modify throws', () => {
+    const cache = createMockCache();
+    cache.modify.mockImplementation(() => {
+      throw new Error('cache error');
+    });
+
+    expect(() =>
+      removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true),
+    ).not.toThrow();
+
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'Failed to remove item from ShoppingList for move to pantry',
+      ),
       expect.any(Error),
     );
   });

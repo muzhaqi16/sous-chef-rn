@@ -1,8 +1,10 @@
 import { useMovePurchasedItemsToPantryMutation } from '#generated';
-import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { executeCacheUpdate, executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
 
 interface UseBatchMoveToPantryOptions {
   currentListId: string | undefined;
@@ -16,51 +18,81 @@ interface UseBatchMoveToPantryReturn {
 
 export function useBatchMoveToPantry({
   currentListId,
-  onSuccess }: UseBatchMoveToPantryOptions): UseBatchMoveToPantryReturn {
+  onSuccess,
+}: UseBatchMoveToPantryOptions): UseBatchMoveToPantryReturn {
   const [movePurchasedMutation, { loading }] =
     useMovePurchasedItemsToPantryMutation({
       update: (cache, { data }) => {
         const result = data?.movePurchasedItemsToPantry;
         if (!result || !currentListId) return;
 
-        executeCacheUpdate(
-          () => {
-            const removeFromList = createRemoveFromParentConnectionUpdater(
-              'ShoppingList',
-              'itemsConnection',
-              'ShoppingListItem',
-            );
+        executeCacheUpdate(() => {
+          const movedCount = result.movedItems.length;
+          if (movedCount === 0) return;
 
-            // Remove each moved item from the shopping list cache
-            for (const item of result.movedItems) {
-              removeFromList(cache, currentListId, item.shoppingListItemId);
-            }
+          const movedIds = new Set(
+            result.movedItems.map(item => item.shoppingListItemId),
+          );
 
-            // Update totalItems and completedItems counters
-            const movedCount = result.movedItems.length;
-            if (movedCount > 0) {
-              const parentCacheId = cache.identify({
-                __typename: 'ShoppingList',
-                id: currentListId });
-              if (parentCacheId) {
-                cache.modify({
-                  id: parentCacheId,
-                  fields: {
-                    totalItems(existing: number = 0) {
-                      return Math.max(0, existing - movedCount);
-                    },
-                    completedItems(existing: number = 0) {
-                      return Math.max(0, existing - movedCount);
-                    } } });
-              }
+          const parentCacheId = cache.identify({
+            __typename: 'ShoppingList',
+            id: currentListId,
+          });
+          if (!parentCacheId) return;
+
+          // Single cache.modify: remove from purchased variant only + update counters
+          const purchasedFilterKey = 'isPurchased":true';
+          cache.modify({
+            id: parentCacheId,
+            fields: {
+              itemsConnection(
+                existing: any,
+                { readField, storeFieldName }: any,
+              ) {
+                if (
+                  !storeFieldName.includes(purchasedFilterKey) ||
+                  !existing?.edges
+                )
+                  return existing;
+
+                return {
+                  ...existing,
+                  edges: existing.edges.filter(
+                    (edge: any) =>
+                      !movedIds.has(readField('id', edge.node) as string),
+                  ),
+                  totalCount: Math.max(
+                    0,
+                    (existing.totalCount || 0) - movedCount,
+                  ),
+                };
+              },
+              totalItems(existing: number = 0) {
+                return Math.max(0, existing - movedCount);
+              },
+              completedItems(existing: number = 0) {
+                return Math.max(0, existing - movedCount);
+              },
+            },
+          });
+
+          // Evict all moved items from cache
+          for (const item of result.movedItems) {
+            const cacheId = cache.identify({
+              __typename: 'ShoppingListItem',
+              id: item.shoppingListItemId,
+            });
+            if (cacheId) {
+              cache.evict({ id: cacheId });
             }
-          },
-          'Cache update failed for batch move to pantry:',
-        );
+          }
+          cache.gc();
+        }, 'Cache update failed for batch move to pantry:');
       },
       onError: error => {
         toastService.error(error.message || 'Failed to move items to pantry');
-      } });
+      },
+    });
 
   const batchMoveToPantry = async () => {
     if (!currentListId) {
@@ -69,8 +101,10 @@ export function useBatchMoveToPantry({
     }
 
     const result = await executeMutation(
-      () => movePurchasedMutation({
-        variables: { shoppingListId: currentListId } }),
+      () =>
+        movePurchasedMutation({
+          variables: { shoppingListId: currentListId },
+        }),
       'Batch move to pantry error:',
     );
     if (!result) return;
@@ -83,7 +117,9 @@ export function useBatchMoveToPantry({
     if (movedCount > 0) {
       const skippedText = skippedCount > 0 ? ` (${skippedCount} skipped)` : '';
       toastService.success(
-        `Moved ${movedCount} item${movedCount !== 1 ? 's' : ''} to ${targetPantryName}${skippedText}`,
+        `Moved ${movedCount} item${
+          movedCount !== 1 ? 's' : ''
+        } to ${targetPantryName}${skippedText}`,
       );
     } else {
       toastService.info('No items could be moved to pantry');
@@ -92,12 +128,14 @@ export function useBatchMoveToPantry({
     Telemetry.trackEvent('batch_move_purchased_to_pantry', {
       shopping_list_id: currentListId,
       moved_count: movedCount,
-      skipped_count: skippedCount });
+      skipped_count: skippedCount,
+    });
 
     onSuccess?.();
   };
 
   return {
     batchMoveToPantry,
-    loading };
+    loading,
+  };
 }

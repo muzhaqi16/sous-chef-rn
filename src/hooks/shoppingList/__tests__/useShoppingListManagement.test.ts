@@ -41,12 +41,16 @@ const mockPurchasedItems = [
   }),
 ];
 
+let mockShoppingListResult: any = mockShoppingList;
+
 jest.mock('../useShoppingListItemsQuery', () => ({
   useShoppingListItemsQuery: () => ({
-    shoppingList: mockShoppingList,
+    shoppingList: mockShoppingListResult,
     error: null,
   }),
 }));
+
+let mockPurchasedTotalCount: number | undefined = 1;
 
 jest.mock('../usePaginatedShoppingItems', () => ({
   usePaginatedShoppingItems: () => ({
@@ -60,7 +64,7 @@ jest.mock('../usePaginatedShoppingItems', () => ({
       },
       purchased: {
         items: mockPurchasedItems,
-        totalCount: 1,
+        totalCount: mockPurchasedTotalCount,
         hasMore: false,
         isLoadingMore: false,
         loadMore: jest.fn(),
@@ -100,13 +104,13 @@ jest.mock('#/utils/searchUtils', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockPurchasedTotalCount = 1;
+  mockShoppingListResult = mockShoppingList;
 });
 
 describe('useShoppingListManagement', () => {
   it('returns all expected properties', () => {
-    const { result } = renderHook(() =>
-      useShoppingListManagement('list-1'),
-    );
+    const { result } = renderHook(() => useShoppingListManagement('list-1'));
 
     // Data
     expect(result.current.unpurchasedItems).toBeDefined();
@@ -141,20 +145,34 @@ describe('useShoppingListManagement', () => {
   });
 
   it('returns unpurchasedItems and purchasedItems separately', () => {
-    const { result } = renderHook(() =>
-      useShoppingListManagement('list-1'),
-    );
+    const { result } = renderHook(() => useShoppingListManagement('list-1'));
 
     expect(result.current.unpurchasedItems).toHaveLength(2);
     expect(result.current.purchasedItems).toHaveLength(1);
   });
 
   it('returns raw (unfiltered) arrays', () => {
-    const { result } = renderHook(() =>
-      useShoppingListManagement('list-1'),
-    );
+    const { result } = renderHook(() => useShoppingListManagement('list-1'));
 
     expect(result.current.rawUnpurchasedItems).toHaveLength(2);
     expect(result.current.rawPurchasedItems).toHaveLength(1);
+  });
+
+  it('uses 0 for totalCountPurchased when purchased.totalCount is 0 (not stale completedItems)', () => {
+    mockPurchasedTotalCount = 0;
+    mockShoppingListResult = { ...mockShoppingList, completedItems: 5 };
+
+    const { result } = renderHook(() => useShoppingListManagement('list-1'));
+
+    expect(result.current.totalCountPurchased).toBe(0);
+  });
+
+  it('falls back to completedItems when purchased.totalCount is undefined', () => {
+    mockPurchasedTotalCount = undefined;
+    mockShoppingListResult = { ...mockShoppingList, completedItems: 5 };
+
+    const { result } = renderHook(() => useShoppingListManagement('list-1'));
+
+    expect(result.current.totalCountPurchased).toBe(5);
   });
 });

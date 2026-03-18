@@ -8,8 +8,10 @@ import Config from 'react-native-config';
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { useAppStore, selectCanAccessDevTools } from '#/store/useAppStore';
 
 export const DebugInfo: React.FC = () => {
+  const canAccessDevTools = useAppStore(selectCanAccessDevTools);
   const config = Environment.getConfig();
   const apiConfig = Environment.getApiConfig();
 
@@ -80,8 +82,8 @@ export const DebugInfo: React.FC = () => {
     alertService.alert('Copied', `${sectionName} copied to clipboard`);
   };
 
-  // Only show in development, local, or staging builds
-  if (!Environment.shouldEnableDebugFeatures()) {
+  // Only show in development, local, or staging builds — or for users with dev tools access
+  if (!Environment.shouldEnableDebugFeatures() && !canAccessDevTools) {
     return (
       <ProfileScreenWrapper title="Debug Info">
         <View style={styles.notAvailableContainer}>

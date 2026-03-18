@@ -5,10 +5,22 @@ import { render, screen } from '@testing-library/react-native';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
+
+jest.mock('#/store/useAppStore', () => ({
+  useAppStore: jest.fn((selector: any) =>
+    selector({ canAccessDevTools: false }),
+  ),
+  selectCanAccessDevTools: (s: any) => s.canAccessDevTools,
+}));
 jest.mock('#components/templates/ProfileScreenWrapper', () => ({
   ProfileScreenWrapper: ({ title, children }: any) => {
     const { View, Text } = require('react-native');
-    return <View><Text>{title}</Text>{children}</View>;
+    return (
+      <View>
+        <Text>{title}</Text>
+        {children}
+      </View>
+    );
   },
 }));
 

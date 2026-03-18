@@ -70,8 +70,10 @@ jest.mock('#/utils/environment', () => ({
 }));
 
 jest.mock('#/store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: any) => selector({ isAdminUser: true })),
-  selectIsAdminUser: (s: any) => s.isAdminUser,
+  useAppStore: jest.fn((selector: any) =>
+    selector({ canAccessDevTools: true }),
+  ),
+  selectCanAccessDevTools: (s: any) => s.canAccessDevTools,
 }));
 
 jest.mock('#components/settings/SettingSwitch', () => ({
@@ -138,7 +140,7 @@ beforeEach(() => {
 
   const { useAppStore } = require('#/store/useAppStore');
   useAppStore.mockImplementation((selector: any) =>
-    selector({ isAdminUser: true }),
+    selector({ canAccessDevTools: true }),
   );
 
   const { usePerformanceStore } = require('#/store/performanceStore');
@@ -190,7 +192,7 @@ describe('PerformanceDashboard', () => {
 
     const { useAppStore } = require('#/store/useAppStore');
     useAppStore.mockImplementation((selector: any) =>
-      selector({ isAdminUser: false }),
+      selector({ canAccessDevTools: false }),
     );
 
     const { getByText } = render(<PerformanceDashboard />);

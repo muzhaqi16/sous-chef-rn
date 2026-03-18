@@ -51,7 +51,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   });
 
   const avatarAnimatedStyle = useAnimatedStyle(() => {
-    if (!scrollY) return { width: AVATAR_LARGE, height: AVATAR_LARGE, borderRadius: AVATAR_LARGE / 2 };
+    if (!scrollY)
+      return {
+        width: AVATAR_LARGE,
+        height: AVATAR_LARGE,
+        borderRadius: AVATAR_LARGE / 2,
+      };
     const size = interpolate(
       scrollY.value,
       [0, SCROLL_DISTANCE],
@@ -72,14 +77,46 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     return { opacity };
   });
 
+  const userInfoAnimatedStyle = useAnimatedStyle(() => {
+    if (!scrollY) return {};
+    const opacity = interpolate(
+      scrollY.value,
+      [0, SCROLL_DISTANCE / 2],
+      [1, 0],
+      Extrapolation.CLAMP,
+    );
+    const maxHeight = interpolate(
+      scrollY.value,
+      [0, SCROLL_DISTANCE],
+      [60, 0],
+      Extrapolation.CLAMP,
+    );
+    const marginTop = interpolate(
+      scrollY.value,
+      [0, SCROLL_DISTANCE],
+      [8, 0],
+      Extrapolation.CLAMP,
+    );
+    const marginBottom = interpolate(
+      scrollY.value,
+      [0, SCROLL_DISTANCE],
+      [4, 0],
+      Extrapolation.CLAMP,
+    );
+    return { opacity, maxHeight, marginTop, marginBottom };
+  });
+
   return (
     <View>
       <Animated.View style={[styles.header, headerAnimatedStyle]}>
-        <BackButton
-          onPress={onBack}
-          color={theme.colors.textPrimary}
-        />
-        <Pressable onPress={onAvatarPress} style={({pressed}) => [styles.avatarContainer, pressed && styles.pressed]}>
+        <BackButton onPress={onBack} color={theme.colors.textPrimary} />
+        <Pressable
+          onPress={onAvatarPress}
+          style={({ pressed }) => [
+            styles.avatarContainer,
+            pressed && styles.pressed,
+          ]}
+        >
           {avatarUrl ? (
             <Animated.View style={[styles.avatarBase, avatarAnimatedStyle]}>
               <CachedImage
@@ -92,7 +129,13 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               />
             </Animated.View>
           ) : (
-            <Animated.View style={[styles.avatarBase, styles.avatarPlaceholder, avatarAnimatedStyle]}>
+            <Animated.View
+              style={[
+                styles.avatarBase,
+                styles.avatarPlaceholder,
+                avatarAnimatedStyle,
+              ]}
+            >
               <Icon
                 name="person"
                 size={32}
@@ -101,11 +144,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             </Animated.View>
           )}
           <Animated.View style={[styles.profileAction, fadeAnimatedStyle]}>
-            <Icon
-              color={theme.colors.iconOnPrimary}
-              name="create"
-              size={15}
-            />
+            <Icon color={theme.colors.iconOnPrimary} name="create" size={15} />
           </Animated.View>
         </Pressable>
         <IconButton
@@ -116,7 +155,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         />
       </Animated.View>
       {(!!name || !!subtitle) && (
-        <Animated.View style={[styles.userInfo, fadeAnimatedStyle]}>
+        <Animated.View style={[styles.userInfo, userInfoAnimatedStyle]}>
           {!!name && <Text style={styles.nameText}>{name}</Text>}
           {!!subtitle && <Text style={styles.subtitleText}>{subtitle}</Text>}
         </Animated.View>
@@ -132,6 +171,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: 0,
+    marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.sm,
   },
   avatarContainer: {},
@@ -162,8 +202,7 @@ const styles = StyleSheet.create(theme => ({
   },
   userInfo: {
     alignItems: 'center',
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
+    overflow: 'hidden',
   },
   nameText: {
     fontSize: theme.fonts.size.lg,

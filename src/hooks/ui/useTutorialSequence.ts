@@ -3,6 +3,7 @@ import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
 import { useAppStore } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
 // Same prefix used by useFeatureHint — keeps storage compatible with
 // resetAllFeatureHints() and hasFeatureHintBeenShown().
@@ -71,6 +72,14 @@ export const useTutorialSequence = ({
 
   const [hasStarted, setHasStarted] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // React to external resets (centralized signal hook)
+  const wasReset = useTutorialResetSignal();
+  if (wasReset) {
+    setGeneration(0);
+    setHasStarted(false);
+    setIsTransitioning(false);
+  }
 
   // Derive the first incomplete step from MMKV (synchronous, sub-ms read).
   // `generation` is referenced so the compiler sees this code depends on it.

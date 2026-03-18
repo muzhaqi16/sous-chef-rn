@@ -138,6 +138,8 @@ export function mockAppStore(state: Partial<RootState>) {
     }),
     selectIsAdminUser: (s: any) =>
       s.user?.role === 'ADMIN' || s.user?.role === 'SUPER_ADMIN',
+    selectCanAccessDevTools: (s: any) =>
+      s.user?.canAccessDevTools === true,
     selectIsOnline: (s: any) => s.isOnline,
   };
 }

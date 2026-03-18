@@ -155,6 +155,7 @@ fragment AuthUser on User {
   email
   emailVerified
   role
+  canAccessDevTools
   onBoarded
   createdAt
   updatedAt
@@ -197,6 +198,7 @@ fragment PartialUser on User {
   email
   emailVerified
   role
+  canAccessDevTools
   onBoarded
   timezone
   defaultShoppingListId

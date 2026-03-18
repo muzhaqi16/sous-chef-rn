@@ -27,7 +27,8 @@ import { useShoppingListItemMutations } from './mutations/useShoppingListItemMut
  */
 export function useShoppingListManagement(currentListId: string | undefined) {
   // 1. Query shopping list details (for permissions, collaborators)
-  const { shoppingList, error: listError } = useShoppingListItemsQuery(currentListId);
+  const { shoppingList, error: listError } =
+    useShoppingListItemsQuery(currentListId);
 
   // 2. Single query fetches BOTH unpurchased and purchased items (no cache collision)
   const {
@@ -49,23 +50,23 @@ export function useShoppingListManagement(currentListId: string | undefined) {
   const totalCountUnpurchased = unpurchased.totalCount;
   // Fallback to completedItems from GetShoppingListDetails so the tab badge
   // shows immediately before the deferred purchased query completes
-  const totalCountPurchased = purchased.totalCount || shoppingList?.completedItems || 0;
+  const totalCountPurchased =
+    purchased.totalCount ?? shoppingList?.completedItems ?? 0;
 
   // Combined loading/error state
   const loading = itemsLoading;
   const error = listError || itemsError;
 
   // 3. Mutations: CRUD operations
-  const { addItem, updateItem, removeItem, toggleItem } = useShoppingListItemMutations(
-    currentListId,
-    refetch,
-  );
+  const { addItem, updateItem, removeItem, toggleItem } =
+    useShoppingListItemMutations(currentListId, refetch);
 
   // 4. Search: Client-side filtering (only using query/setQuery for debounced state)
-  const {
-    query: searchQuery,
-    setQuery: setSearchQuery,
-  } = useSearchableList([], shoppingListItemSearch, { debounceMs: 300 });
+  const { query: searchQuery, setQuery: setSearchQuery } = useSearchableList(
+    [],
+    shoppingListItemSearch,
+    { debounceMs: 300 },
+  );
 
   // Filter unpurchased/purchased items by search query
   const filteredUnpurchasedItems = !searchQuery.trim()
@@ -76,9 +77,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
 
   const filteredPurchasedItems = !searchQuery.trim()
     ? purchasedItems
-    : purchasedItems.filter(item =>
-        shoppingListItemSearch(item, searchQuery),
-      );
+    : purchasedItems.filter(item => shoppingListItemSearch(item, searchQuery));
 
   return {
     // Data
