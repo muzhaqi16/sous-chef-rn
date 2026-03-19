@@ -8,6 +8,7 @@ export interface TelemetryConfig {
   appName: string;
   environment: string;
   platform: string;
+  instanceId?: string;
   flushIntervals: {
     metrics: number;
     logs: number;
@@ -39,7 +40,6 @@ export interface MetricEntry {
   labels: Record<string, string>;
   timestamp: number;
   type: 'counter' | 'gauge' | 'histogram';
-  histogramFamily?: string;
 }
 
 export interface ErrorDetails {

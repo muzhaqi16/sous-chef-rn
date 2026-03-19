@@ -18,8 +18,9 @@ const makeConfig = (overrides?: Partial<TelemetryConfig>): TelemetryConfig => ({
   appName: 'test-app',
   environment: 'test',
   platform: 'ios',
+  instanceId: 'ios_device_test123',
   flushIntervals: { metrics: 10000, logs: 5000 },
-  endpoints: { prometheus: 'http://prom.test', loki: 'http://loki.test' },
+  endpoints: { prometheus: 'http://otlp.test/otlp', loki: 'http://loki.test' },
   auth: { username: 'user', password: 'pass' },
   transports: { http: true, console: false },
   ...overrides,
@@ -38,6 +39,14 @@ const makeMetrics = (type: MetricEntry['type'] = 'counter'): MetricEntry[] => [
     type,
   },
 ];
+
+function parseOtlpBody(call: any): any {
+  return JSON.parse(call[1].body);
+}
+
+function getOtlpMetrics(body: any): any[] {
+  return body.resourceMetrics[0].scopeMetrics[0].metrics;
+}
 
 describe('HttpTransport', () => {
   beforeEach(() => {
@@ -112,7 +121,7 @@ describe('HttpTransport', () => {
 
     it('does nothing when loki endpoint missing', async () => {
       const transport = new HttpTransport(
-        makeConfig({ endpoints: { prometheus: 'http://prom.test' } }),
+        makeConfig({ endpoints: { prometheus: 'http://otlp.test/otlp' } }),
       );
 
       await transport.sendLogs(makeLogs());
@@ -122,46 +131,185 @@ describe('HttpTransport', () => {
   });
 
   describe('sendMetrics()', () => {
-    it('accumulates counters and replaces gauges', async () => {
+    it('sends to OTLP endpoint with correct URL', async () => {
       const transport = new HttpTransport(makeConfig());
 
-      // Send counter twice -- values should accumulate
+      await transport.sendMetrics(makeMetrics());
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://otlp.test/otlp/v1/metrics',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+          }),
+        }),
+      );
+    });
+
+    it('includes resource attributes in OTLP payload', async () => {
+      const transport = new HttpTransport(makeConfig());
+
+      await transport.sendMetrics(makeMetrics());
+
+      const body = parseOtlpBody(mockFetch.mock.calls[0]);
+      const resource = body.resourceMetrics[0].resource;
+
+      const attrs = Object.fromEntries(
+        resource.attributes.map((a: any) => [a.key, a.value.stringValue]),
+      );
+
+      expect(attrs['service.name']).toBe('test-app');
+      expect(attrs['deployment.environment.name']).toBe('test');
+      expect(attrs['os.type']).toBe('ios');
+      expect(attrs['service.instance.id']).toBe('ios_device_test123');
+    });
+
+    it('serializes counters as OTLP Sum with DELTA temporality', async () => {
+      const transport = new HttpTransport(makeConfig());
+
+      await transport.sendMetrics([
+        {
+          name: 'requests_total',
+          value: 3,
+          labels: { method: 'GET' },
+          timestamp: Date.now(),
+          type: 'counter',
+        },
+      ]);
+
+      const body = parseOtlpBody(mockFetch.mock.calls[0]);
+      const metrics = getOtlpMetrics(body);
+
+      const counter = metrics.find((m: any) => m.name === 'requests_total');
+      expect(counter).toBeDefined();
+      expect(counter.sum).toBeDefined();
+      expect(counter.sum.isMonotonic).toBe(true);
+      expect(counter.sum.aggregationTemporality).toBe(1); // DELTA
+      expect(counter.sum.dataPoints).toHaveLength(1);
+      expect(counter.sum.dataPoints[0].asDouble).toBe(3);
+    });
+
+    it('serializes gauges as OTLP Gauge', async () => {
+      const transport = new HttpTransport(makeConfig());
+
+      await transport.sendMetrics([
+        {
+          name: 'memory_bytes',
+          value: 1024,
+          labels: {},
+          timestamp: Date.now(),
+          type: 'gauge',
+        },
+      ]);
+
+      const body = parseOtlpBody(mockFetch.mock.calls[0]);
+      const metrics = getOtlpMetrics(body);
+
+      const gauge = metrics.find((m: any) => m.name === 'memory_bytes');
+      expect(gauge).toBeDefined();
+      expect(gauge.gauge).toBeDefined();
+      expect(gauge.gauge.dataPoints).toHaveLength(1);
+      expect(gauge.gauge.dataPoints[0].asDouble).toBe(1024);
+    });
+
+    it('serializes histograms as OTLP Histogram with correct bucket counts', async () => {
+      const transport = new HttpTransport(makeConfig());
+
+      // Send multiple histogram observations
+      await transport.sendMetrics([
+        {
+          name: 'request_duration_ms',
+          value: 15,
+          labels: { host: 'api.test' },
+          timestamp: Date.now(),
+          type: 'histogram',
+        },
+        {
+          name: 'request_duration_ms',
+          value: 75,
+          labels: { host: 'api.test' },
+          timestamp: Date.now(),
+          type: 'histogram',
+        },
+        {
+          name: 'request_duration_ms',
+          value: 300,
+          labels: { host: 'api.test' },
+          timestamp: Date.now(),
+          type: 'histogram',
+        },
+      ]);
+
+      const body = parseOtlpBody(mockFetch.mock.calls[0]);
+      const metrics = getOtlpMetrics(body);
+
+      const histogram = metrics.find(
+        (m: any) => m.name === 'request_duration_ms',
+      );
+      expect(histogram).toBeDefined();
+      expect(histogram.histogram).toBeDefined();
+      expect(histogram.histogram.aggregationTemporality).toBe(1); // DELTA
+
+      const dp = histogram.histogram.dataPoints[0];
+      expect(dp.count).toBe('3');
+      expect(dp.sum).toBe(390); // 15 + 75 + 300
+      expect(dp.explicitBounds).toEqual([
+        10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000,
+      ]);
+
+      // bucketCounts: 11 entries (10 bounds + 1)
+      // 15 → bucket[1] (10, 25]
+      // 75 → bucket[3] (50, 100]
+      // 300 → bucket[5] (250, 500]
+      const counts = dp.bucketCounts.map(Number);
+      expect(counts).toHaveLength(11);
+      expect(counts[0]).toBe(0); // (-Inf, 10]
+      expect(counts[1]).toBe(1); // (10, 25] → 15
+      expect(counts[2]).toBe(0); // (25, 50]
+      expect(counts[3]).toBe(1); // (50, 100] → 75
+      expect(counts[4]).toBe(0); // (100, 250]
+      expect(counts[5]).toBe(1); // (250, 500] → 300
+      expect(counts.slice(6)).toEqual([0, 0, 0, 0, 0]); // rest empty
+    });
+
+    it('accumulates counters across calls before flush', async () => {
+      const transport = new HttpTransport(makeConfig());
+
+      // First batch — send succeeds and clears accumulator
       await transport.sendMetrics(makeMetrics('counter'));
 
-      // Reset fetch mock to capture second call independently
       mockFetch.mockClear();
       mockFetch.mockResolvedValue({ ok: true, status: 200, text: jest.fn() });
 
+      // Second batch — fresh accumulation after clear
       await transport.sendMetrics(makeMetrics('counter'));
 
-      // Second call body should contain accumulated value (5 + 5 = 10)
-      const body = mockFetch.mock.calls[0][1].body as string;
-      expect(body).toContain('test_metric_total');
-      // After first successful send the accumulator clears, so it should be 5 again
-      // unless first send also cleared it. Let's check:
-      // The first send succeeded (ok: true), so accumulator cleared.
-      // Second send adds 5, so value should be 5.
-      expect(body).toContain(' 5');
+      const body = parseOtlpBody(mockFetch.mock.calls[0]);
+      const metrics = getOtlpMetrics(body);
+      const counter = metrics.find(
+        (m: any) => m.name === 'test_metric_total',
+      );
+      expect(counter.sum.dataPoints[0].asDouble).toBe(5);
     });
 
-    it('clears accumulator after successful send', async () => {
+    it('clears accumulators after successful send', async () => {
       const transport = new HttpTransport(makeConfig());
 
       await transport.sendMetrics(makeMetrics('gauge'));
 
-      // First send succeeds, accumulator should be cleared
+      // First send succeeds, accumulators cleared
       mockFetch.mockClear();
       mockFetch.mockResolvedValue({ ok: true, status: 200, text: jest.fn() });
 
-      // Send empty metrics to trigger a body build from accumulator (should be empty)
+      // Send empty metrics — nothing accumulated
       await transport.sendMetrics([]);
 
-      // With empty accumulator and no new metrics, body is empty so no fetch
       expect(mockFetch).not.toHaveBeenCalled();
       expect(logger.debug).toHaveBeenCalledWith('No metrics to send');
     });
 
-    it('does NOT clear accumulator on failed send', async () => {
+    it('does NOT clear accumulators on failed send', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
@@ -173,18 +321,20 @@ describe('HttpTransport', () => {
 
       await transport.sendMetrics(makeMetrics('gauge'));
 
-      // Failed send -- accumulator should still have data
-      // Send again with fetch succeeding to verify the value persists
+      // Failed send — accumulators retained
       mockFetch.mockClear();
       mockFetch.mockResolvedValue({ ok: true, status: 200, text: jest.fn() });
 
       await transport.sendMetrics([]);
 
-      // The accumulated metric from the failed send should still be sent
+      // Retained metric from failed send should still be present
       expect(mockFetch).toHaveBeenCalled();
-      const body = mockFetch.mock.calls[0][1].body as string;
-      expect(body).toContain('test_metric_total');
-      expect(body).toContain(' 5');
+      const body = parseOtlpBody(mockFetch.mock.calls[0]);
+      const metrics = getOtlpMetrics(body);
+      const gauge = metrics.find(
+        (m: any) => m.name === 'test_metric_total',
+      );
+      expect(gauge.gauge.dataPoints[0].asDouble).toBe(5);
     });
 
     it('handles fetch errors gracefully', async () => {
@@ -198,6 +348,85 @@ describe('HttpTransport', () => {
         expect.stringContaining('Failed to send metrics'),
         expect.any(Error),
       );
+    });
+
+    it('groups multiple label sets under the same metric name', async () => {
+      const transport = new HttpTransport(makeConfig());
+
+      await transport.sendMetrics([
+        {
+          name: 'http_requests',
+          value: 10,
+          labels: { method: 'GET' },
+          timestamp: Date.now(),
+          type: 'counter',
+        },
+        {
+          name: 'http_requests',
+          value: 5,
+          labels: { method: 'POST' },
+          timestamp: Date.now(),
+          type: 'counter',
+        },
+      ]);
+
+      const body = parseOtlpBody(mockFetch.mock.calls[0]);
+      const metrics = getOtlpMetrics(body);
+
+      // Should be one metric with two data points
+      const httpRequests = metrics.filter(
+        (m: any) => m.name === 'http_requests',
+      );
+      expect(httpRequests).toHaveLength(1);
+      expect(httpRequests[0].sum.dataPoints).toHaveLength(2);
+    });
+
+    it('includes auth header', async () => {
+      const transport = new HttpTransport(makeConfig());
+
+      await transport.sendMetrics(makeMetrics());
+
+      const headers = mockFetch.mock.calls[0][1].headers;
+      const expected = btoa('user:pass');
+      expect(headers.Authorization).toBe(`Basic ${expected}`);
+    });
+
+    it('places boundary values in correct buckets', async () => {
+      const transport = new HttpTransport(makeConfig());
+
+      // Test exact boundary values
+      await transport.sendMetrics([
+        {
+          name: 'timing_ms',
+          value: 10, // Exactly at first bound → bucket[0] (≤10)
+          labels: {},
+          timestamp: Date.now(),
+          type: 'histogram',
+        },
+        {
+          name: 'timing_ms',
+          value: 10000, // Exactly at last bound → bucket[9] (5000, 10000]
+          labels: {},
+          timestamp: Date.now(),
+          type: 'histogram',
+        },
+        {
+          name: 'timing_ms',
+          value: 99999, // Above all bounds → bucket[10] (overflow)
+          labels: {},
+          timestamp: Date.now(),
+          type: 'histogram',
+        },
+      ]);
+
+      const body = parseOtlpBody(mockFetch.mock.calls[0]);
+      const metrics = getOtlpMetrics(body);
+      const histogram = metrics.find((m: any) => m.name === 'timing_ms');
+      const counts = histogram.histogram.dataPoints[0].bucketCounts.map(Number);
+
+      expect(counts[0]).toBe(1); // 10 → (-Inf, 10]
+      expect(counts[9]).toBe(1); // 10000 → (5000, 10000]
+      expect(counts[10]).toBe(1); // 99999 → (10000, +Inf)
     });
   });
 });

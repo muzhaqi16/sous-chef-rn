@@ -3,6 +3,7 @@ import Config from 'react-native-config';
 import { TelemetryService } from './TelemetryService';
 import { TelemetryConfig } from './types';
 import { Environment } from '#/utils/environment';
+import { getDeviceId } from '#/utils/deviceId';
 
 const createTelemetryConfig = (): TelemetryConfig => {
   const env = Environment.getConfig();
@@ -22,6 +23,7 @@ const createTelemetryConfig = (): TelemetryConfig => {
       ? 'staging'
       : 'development',
     platform: Platform.OS,
+    instanceId: `${Platform.OS}_${getDeviceId()}`,
     flushIntervals: {
       metrics: env.isDevelopment ? 5000 : 10000,
       logs: env.isDevelopment ? 2000 : 5000,
