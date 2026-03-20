@@ -678,7 +678,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "{app=\"sous-chef-app\"} |= \"GraphQL\" | json | line_format \"{{.operation_name}}: {{.message}} ({{.duration_ms}}ms)\"",
+          "expr": "{service_name=\"sous-chef-app\"} |= \"GraphQL\" | json | line_format \"{{.operation_name}}: {{.message}} ({{.duration_ms}}ms)\"",
           "refId": "A"
         }
       ],

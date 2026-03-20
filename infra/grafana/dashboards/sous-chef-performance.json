@@ -722,7 +722,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "{app=\"sous-chef-app\"} |= \"error\"",
+          "expr": "{service_name=\"sous-chef-app\"} | json | level=\"error\"",
           "refId": "A"
         }
       ],
@@ -792,22 +792,22 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate({app=\"sous-chef-app\"} | json | level=\"error\" [5m]))",
+          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"error\" [5m]))",
           "refId": "A",
           "legendFormat": "Errors"
         },
         {
-          "expr": "sum(rate({app=\"sous-chef-app\"} | json | level=\"warn\" [5m]))",
+          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"warn\" [5m]))",
           "refId": "B",
           "legendFormat": "Warnings"
         },
         {
-          "expr": "sum(rate({app=\"sous-chef-app\"} | json | level=\"info\" [5m]))",
+          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"info\" [5m]))",
           "refId": "C",
           "legendFormat": "Info"
         },
         {
-          "expr": "sum(rate({app=\"sous-chef-app\"} | json | level=\"debug\" [5m]))",
+          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"debug\" [5m]))",
           "refId": "D",
           "legendFormat": "Debug"
         }
