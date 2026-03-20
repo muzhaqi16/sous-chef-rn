@@ -9,7 +9,7 @@
 #   source .env && AUTH_PASSWORD=$OTLP_METRICS_AUTH_PASSWORD AUTH_USERNAME=$OTLP_METRICS_AUTH_USERNAME ./infra/grafana/test-otlp.sh
 #
 # After running, query in Grafana Explore (Prometheus datasource):
-#   {__name__="test_otlp_ping_total", job="sous-chef-app"}
+#   {__name__="test_otlp_ping_total", service_name="sous-chef-app"}
 
 set -euo pipefail
 
@@ -102,8 +102,8 @@ if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "204" ]; then
   echo "SUCCESS! Metrics ingested."
   echo ""
   echo "Query in Grafana Explore (Prometheus datasource):"
-  echo '  {__name__="test_otlp_ping_total", job="sous-chef-app"}'
-  echo '  {__name__="test_otlp_gauge", job="sous-chef-app"}'
+  echo '  {__name__="test_otlp_ping_total", service_name="sous-chef-app"}'
+  echo '  {__name__="test_otlp_gauge", service_name="sous-chef-app"}'
   echo ""
   echo "Note: It may take 30-60 seconds for metrics to appear."
 else

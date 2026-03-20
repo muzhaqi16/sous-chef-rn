@@ -196,7 +196,7 @@ export function ShoppingListTutorialProvider({
   const advanceTo = (nextStep: ShoppingListTutorialStep) => {
     setIsTransitioning(true);
     setCurrentStep(nextStep);
-    setTimeout(() => setIsTransitioning(false), 400);
+    setTimeout(() => setIsTransitioning(false), 800);
   };
 
   const markComplete = () => {

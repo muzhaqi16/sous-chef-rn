@@ -90,13 +90,14 @@ export const ShoppingListItemDetail: React.FC<{
                 imageHeight={160}
               />
             ) : imageUrl ? (
-              <CachedImage
-                uri={imageUrl}
-                style={styles.itemImage}
-              />
+              <CachedImage uri={imageUrl} style={styles.itemImage} />
             ) : (
               <View style={styles.imagePlaceholder}>
-                <Icon name="basket-outline" size={48} color={theme.colors.textSecondary} />
+                <Icon
+                  name="basket-outline"
+                  size={48}
+                  color={theme.colors.textSecondary}
+                />
               </View>
             )}
           </View>
@@ -116,7 +117,11 @@ export const ShoppingListItemDetail: React.FC<{
           {/* Status Badge */}
           {item.purchaseInfo?.isPurchased ? (
             <View style={styles.statusBadge}>
-              <Icon name="checkmark-circle" size={20} color={theme.colors.success} />
+              <Icon
+                name="checkmark-circle"
+                size={20}
+                color={theme.colors.success}
+              />
               <Text style={styles.statusBadgeText}>Purchased</Text>
             </View>
           ) : null}
@@ -160,10 +165,8 @@ export const ShoppingListItemDetail: React.FC<{
           ) : null}
 
           {item.notes ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Notes
-              </Text>
+            <View style={styles.notesRow}>
+              <Text style={commonStyles.caption}>Notes</Text>
               <Text style={styles.detailValue}>{item.notes}</Text>
             </View>
           ) : null}
@@ -184,7 +187,8 @@ export const ShoppingListItemDetail: React.FC<{
 
   // Purchase History section - Clickable panel
   // Extract purchases from paginated connection
-  const purchases = item.purchasesConnection?.edges?.map(edge => edge.node) || [];
+  const purchases =
+    item.purchasesConnection?.edges?.map(edge => edge.node) || [];
   const purchaseCount = item.purchasesConnection?.totalCount || 0;
   const hasPurchases = purchaseCount > 0;
 
@@ -347,6 +351,13 @@ const styles = StyleSheet.create(theme => ({
   },
   detailLabel: {
     flex: 1,
+  },
+  notesRow: {
+    flexDirection: 'column',
+    paddingVertical: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    gap: theme.spacing.xs,
   },
   detailValue: {
     fontSize: theme.fonts.size.sm,

@@ -19,6 +19,29 @@ jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => null,
 }));
 
+jest.mock('#components/molecules/BottomSheetSearchBar', () => {
+  const { TextInput } = require('react-native');
+  const React = require('react');
+  return {
+    BottomSheetSearchBar: React.forwardRef((props: any, ref: any) => {
+      React.useImperativeHandle(ref, () => ({
+        clear: jest.fn(),
+        focus: jest.fn(),
+        blur: jest.fn(),
+        getValue: jest.fn(() => ''),
+        setValue: jest.fn(),
+      }));
+      return (
+        <TextInput
+          placeholder={props.placeholder}
+          onChangeText={props.onChangeText}
+          testID="search-bar"
+        />
+      );
+    }),
+  };
+});
+
 jest.mock('#hooks/recipe/useSavedRecipes', () => ({
   useSavedRecipes: jest.fn(() => ({
     state: {
@@ -68,6 +91,16 @@ jest.mock('#/services/toastService', () => ({
     error: jest.fn(),
     success: jest.fn(),
   },
+}));
+
+jest.mock('#store/useRecipeCacheStore', () => ({
+  useRecipeCacheStore: {
+    getState: jest.fn(() => ({
+      getCached: jest.fn(() => null),
+      setCached: jest.fn(),
+    })),
+  },
+  textSearchCacheKey: jest.fn((q: string) => `text:${q}`),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');

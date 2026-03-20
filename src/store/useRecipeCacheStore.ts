@@ -8,7 +8,7 @@ import type {
 } from '#/services/recipeApi/types';
 
 interface CachedRecipeSearch {
-  results: (RecipeSearchResult | SearchRecipesResult)[];
+  results: (RecipeSearchResult | SearchRecipesResult | RecipeInformation)[];
   enrichment: Record<number, RecipeInformation>;
   cachedAt: number;
 }
@@ -19,7 +19,7 @@ interface RecipeCacheState {
   getCached: (key: string) => CachedRecipeSearch | null;
   setCached: (
     key: string,
-    results: (RecipeSearchResult | SearchRecipesResult)[],
+    results: (RecipeSearchResult | SearchRecipesResult | RecipeInformation)[],
     enrichment?: Record<number, RecipeInformation>,
   ) => void;
   updateEnrichment: (
@@ -61,6 +61,18 @@ export function textSearchCacheKey(
   if (filters?.mealType) parts.push(`type:${filters.mealType}`);
   if (filters?.maxReadyTime) parts.push(`time:${filters.maxReadyTime}`);
   return parts.join('|');
+}
+
+/** Build a normalized cache key for random recipe discovery */
+export function randomCacheKey(tags?: string): string {
+  if (!tags) return 'random:none';
+  const sorted = tags
+    .split(',')
+    .map(s => s.toLowerCase().trim())
+    .filter(Boolean)
+    .sort()
+    .join(',');
+  return `random:${sorted}`;
 }
 
 export const useRecipeCacheStore = create<RecipeCacheState>()(

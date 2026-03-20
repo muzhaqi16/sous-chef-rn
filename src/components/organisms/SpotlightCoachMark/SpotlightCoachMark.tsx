@@ -1,4 +1,4 @@
-import React, { useLayoutEffect } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -36,6 +36,9 @@ export interface SpotlightCoachMarkProps {
   stepIndex?: number;
   /** Total number of steps in the tutorial sequence */
   totalSteps?: number;
+  /** When true, renders as an overlay View instead of a Modal so gestures
+   *  pass through the hole area to the underlying content (e.g. swipeable items). */
+  allowGesturePassthrough?: boolean;
 }
 
 const HOLE_PADDING = 8;
@@ -58,21 +61,65 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   onTargetPress,
   stepIndex,
   totalSteps,
+  allowGesturePassthrough,
 }) => {
   const { theme } = useUnistyles();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
 
+  // In passthrough mode the overlay is a View inside the screen container,
+  // not a full-screen Modal. Page coordinates from measure() must be converted
+  // to overlay-local coordinates by subtracting the overlay's own page offset.
+  const overlayRef = useRef<View>(null);
+  const [overlayPageOffset, setOverlayPageOffset] = useState<{
+    x: number;
+    y: number;
+  } | null>(allowGesturePassthrough ? null : { x: 0, y: 0 });
+
+  // Reset offset when passthrough mode activates so we re-measure.
+  // Uses "adjusting state during render" pattern (no effect needed).
+  const [prevPassthrough, setPrevPassthrough] = useState(
+    allowGesturePassthrough,
+  );
+  if (prevPassthrough !== allowGesturePassthrough) {
+    setPrevPassthrough(allowGesturePassthrough);
+    if (allowGesturePassthrough) {
+      setOverlayPageOffset(null);
+    } else {
+      setOverlayPageOffset({ x: 0, y: 0 });
+    }
+  }
+
+  const handleOverlayLayout = () => {
+    if (!allowGesturePassthrough) return;
+    requestAnimationFrame(() => {
+      overlayRef.current?.measure((_x, _y, _w, _h, pageX, pageY) => {
+        setOverlayPageOffset({ x: pageX, y: pageY });
+      });
+    });
+  };
+
+  // Adjust target rect: page coords → overlay-local coords
+  const adjustedRect =
+    overlayPageOffset != null
+      ? {
+          x: targetRect.x - overlayPageOffset.x,
+          y: targetRect.y - overlayPageOffset.y,
+          width: targetRect.width,
+          height: targetRect.height,
+        }
+      : targetRect;
+
   const borderRadius = theme.radii.md;
 
   // Padded hole dimensions
-  const holeTop = targetRect.y - HOLE_PADDING;
-  const holeLeft = targetRect.x - HOLE_PADDING;
-  const holeWidth = targetRect.width + HOLE_PADDING * 2;
-  const holeHeight = targetRect.height + HOLE_PADDING * 2;
+  const holeTop = adjustedRect.y - HOLE_PADDING;
+  const holeLeft = adjustedRect.x - HOLE_PADDING;
+  const holeWidth = adjustedRect.width + HOLE_PADDING * 2;
+  const holeHeight = adjustedRect.height + HOLE_PADDING * 2;
   const holeBottom = holeTop + holeHeight;
 
   // Determine if tooltip goes above or below
-  const showAbove = targetRect.y > screenHeight / 2;
+  const showAbove = adjustedRect.y > screenHeight / 2;
 
   // Pulse animation — opacity-only breathing (no scale to stay within hole bounds)
   const pulseOpacity = useSharedValue(1);
@@ -120,49 +167,53 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const tooltipLeft = Math.max(
     theme.spacing.md,
     Math.min(
-      targetRect.x + targetRect.width / 2 - tooltipHalf,
+      adjustedRect.x + adjustedRect.width / 2 - tooltipHalf,
       screenWidth - TOOLTIP_WIDTH - theme.spacing.md,
     ),
   );
 
   // Arrow horizontal position relative to tooltip, clamped within bounds
   const arrowLeftRaw =
-    targetRect.x + targetRect.width / 2 - tooltipLeft - ARROW_SIZE / 2;
+    adjustedRect.x + adjustedRect.width / 2 - tooltipLeft - ARROW_SIZE / 2;
   const arrowLeft = Math.max(
     theme.spacing.lg,
     Math.min(arrowLeftRaw, TOOLTIP_WIDTH - ARROW_SIZE - theme.spacing.lg),
   );
 
-  return (
-    <Modal
-      visible
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      navigationBarTranslucent
-      onRequestClose={onDismiss}
+  const overlay = (
+    <View
+      ref={allowGesturePassthrough ? overlayRef : undefined}
+      collapsable={!allowGesturePassthrough}
+      style={[
+        styles.fullScreen,
+        allowGesturePassthrough && styles.passthroughContainer,
+      ]}
+      pointerEvents={allowGesturePassthrough ? 'box-none' : undefined}
     >
-      <View style={styles.fullScreen}>
-        {/* Dismiss overlay — covers entire screen, handles taps outside the hole */}
+      {/* Dismiss overlay — covers entire screen, handles taps outside the hole */}
+      {!allowGesturePassthrough && (
         <Pressable style={styles.dismissArea} onPress={onDismiss} />
+      )}
 
-        {/* Dim overlay with rounded hole — uses a massive border to dim the screen */}
-        <View
-          style={[
-            styles.dimWithHole,
-            {
-              top: holeTop - DIM_BORDER,
-              left: holeLeft - DIM_BORDER,
-              width: holeWidth + DIM_BORDER * 2,
-              height: holeHeight + DIM_BORDER * 2,
-              borderWidth: DIM_BORDER,
-              borderRadius: DIM_BORDER + borderRadius,
-            },
-          ]}
-          pointerEvents="none"
-        />
+      {/* Dim overlay with rounded hole — uses a massive border to dim the screen */}
+      <View
+        style={[
+          styles.dimWithHole,
+          {
+            top: holeTop - DIM_BORDER,
+            left: holeLeft - DIM_BORDER,
+            width: holeWidth + DIM_BORDER * 2,
+            height: holeHeight + DIM_BORDER * 2,
+            borderWidth: DIM_BORDER,
+            borderRadius: DIM_BORDER + borderRadius,
+          },
+        ]}
+        pointerEvents="none"
+      />
 
-        {/* Transparent hole tap target */}
+      {/* Transparent hole tap target — omitted in passthrough mode so
+          gestures reach the underlying content (e.g. swipeable items) */}
+      {!allowGesturePassthrough && (
         <Pressable
           style={[
             styles.holeTap,
@@ -177,100 +228,130 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           onPress={handleTargetTap}
           testID="spotlight-target"
         />
+      )}
 
-        {/* Pulsing ring */}
-        <Animated.View
+      {/* Pulsing ring */}
+      <Animated.View
+        style={[
+          styles.pulseRing,
+          {
+            top: holeTop,
+            left: holeLeft,
+            width: holeWidth,
+            height: holeHeight,
+            borderRadius,
+            borderColor: theme.colors.primary,
+          },
+          pulseAnimatedStyle,
+        ]}
+        pointerEvents="none"
+      />
+
+      {/* Tooltip card */}
+      <Animated.View
+        style={[
+          styles.tooltip,
+          {
+            left: tooltipLeft,
+            width: TOOLTIP_WIDTH,
+            ...(showAbove
+              ? {
+                  bottom: screenHeight - holeTop + TOOLTIP_MARGIN + ARROW_SIZE,
+                }
+              : { top: holeBottom + TOOLTIP_MARGIN + ARROW_SIZE }),
+          },
+          tooltipAnimatedStyle,
+        ]}
+        pointerEvents={allowGesturePassthrough ? 'none' : undefined}
+      >
+        {/* Arrow */}
+        <View
           style={[
-            styles.pulseRing,
+            styles.arrow,
             {
-              top: holeTop,
-              left: holeLeft,
-              width: holeWidth,
-              height: holeHeight,
-              borderRadius,
-              borderColor: theme.colors.primary,
+              left: arrowLeft,
+              backgroundColor: theme.colors.surface,
+              ...(showAbove
+                ? { bottom: -ARROW_SIZE / 2 }
+                : { top: -ARROW_SIZE / 2 }),
             },
-            pulseAnimatedStyle,
           ]}
-          pointerEvents="none"
         />
 
-        {/* Tooltip card */}
-        <Animated.View
-          style={[
-            styles.tooltip,
-            {
-              left: tooltipLeft,
-              width: TOOLTIP_WIDTH,
-              ...(showAbove
-                ? {
-                    bottom:
-                      screenHeight - holeTop + TOOLTIP_MARGIN + ARROW_SIZE,
-                  }
-                : { top: holeBottom + TOOLTIP_MARGIN + ARROW_SIZE }),
-            },
-            tooltipAnimatedStyle,
-          ]}
-        >
-          {/* Arrow */}
-          <View
-            style={[
-              styles.arrow,
-              {
-                left: arrowLeft,
-                backgroundColor: theme.colors.surface,
-                ...(showAbove
-                  ? { bottom: -ARROW_SIZE / 2 }
-                  : { top: -ARROW_SIZE / 2 }),
-              },
-            ]}
-          />
+        <Text style={styles.tooltipTitle}>{title}</Text>
+        {subtitle ? (
+          <Text style={styles.tooltipSubtitle}>{subtitle}</Text>
+        ) : null}
+        {totalSteps != null && stepIndex != null && totalSteps > 1 ? (
+          <View style={styles.stepIndicator}>
+            {Array.from({ length: totalSteps }, (_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.stepDot,
+                  {
+                    backgroundColor:
+                      i === stepIndex
+                        ? theme.colors.primary
+                        : theme.colors.border,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        ) : null}
+      </Animated.View>
 
-          <Text style={styles.tooltipTitle}>{title}</Text>
-          {subtitle ? (
-            <Text style={styles.tooltipSubtitle}>{subtitle}</Text>
-          ) : null}
-          {totalSteps != null && stepIndex != null && totalSteps > 1 ? (
-            <View style={styles.stepIndicator}>
-              {Array.from({ length: totalSteps }, (_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.stepDot,
-                    {
-                      backgroundColor:
-                        i === stepIndex
-                          ? theme.colors.primary
-                          : theme.colors.border,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-          ) : null}
-        </Animated.View>
+      {/* Skip button — position adapts to avoid overlapping the target hole */}
+      <Pressable
+        onPress={onDismiss}
+        style={[
+          styles.skipButton,
+          // If hole overlaps the default skip position (top-right),
+          // move skip to the left side
+          holeTop < theme.spacing.xl * 3 &&
+          holeLeft + holeWidth > screenWidth / 2
+            ? { right: undefined, left: theme.spacing.lg }
+            : undefined,
+        ]}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel="Skip tutorial"
+      >
+        <Text style={styles.skipText}>
+          {totalSteps != null && totalSteps > 1 ? 'Skip all' : 'Skip'}
+        </Text>
+      </Pressable>
+    </View>
+  );
 
-        {/* Skip button — position adapts to avoid overlapping the target hole */}
-        <Pressable
-          onPress={onDismiss}
-          style={[
-            styles.skipButton,
-            // If hole overlaps the default skip position (top-right),
-            // move skip to the left side
-            holeTop < theme.spacing.xl * 3 &&
-            holeLeft + holeWidth > screenWidth / 2
-              ? { right: undefined, left: theme.spacing.lg }
-              : undefined,
-          ]}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Skip tutorial"
-        >
-          <Text style={styles.skipText}>
-            {totalSteps != null && totalSteps > 1 ? 'Skip all' : 'Skip'}
-          </Text>
-        </Pressable>
-      </View>
+  if (allowGesturePassthrough) {
+    // Wait for the overlay to measure its page offset before showing content
+    // to avoid a single-frame flash at the wrong position
+    if (overlayPageOffset === null) {
+      return (
+        <View
+          ref={overlayRef}
+          collapsable={false}
+          style={[styles.fullScreen, styles.passthroughContainer]}
+          pointerEvents="box-none"
+          onLayout={handleOverlayLayout}
+        />
+      );
+    }
+    return overlay;
+  }
+
+  return (
+    <Modal
+      visible
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={onDismiss}
+    >
+      {overlay}
     </Modal>
   );
 };
@@ -278,6 +359,9 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
 const styles = StyleSheet.create(theme => ({
   fullScreen: {
     ...StyleSheet.absoluteFillObject,
+  },
+  passthroughContainer: {
+    zIndex: 9999,
   },
   dismissArea: {
     ...StyleSheet.absoluteFillObject,

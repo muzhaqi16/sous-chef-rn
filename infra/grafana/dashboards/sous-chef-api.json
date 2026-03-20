@@ -1,22 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "Prometheus datasource for metrics",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    },
-    {
-      "name": "DS_LOKI",
-      "label": "Loki",
-      "description": "Loki datasource for logs",
-      "type": "datasource",
-      "pluginId": "loki",
-      "pluginName": "Loki"
-    }
-  ],
   "__requires": [
     {
       "type": "grafana",
@@ -183,7 +165,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(graphql_requests_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (name)",
+          "expr": "sum(rate(graphql_requests_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (name)",
           "refId": "A",
           "legendFormat": "{{name}}"
         }
@@ -255,12 +237,12 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(graphql_request_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (name, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(graphql_request_duration_ms_bucket{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (name, le))",
           "refId": "A",
           "legendFormat": "P95 {{name}}"
         },
         {
-          "expr": "sum(rate(graphql_request_duration_ms_sum{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (name) / sum(rate(graphql_request_duration_ms_count{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (name)",
+          "expr": "sum(rate(graphql_request_duration_ms_sum{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (name) / sum(rate(graphql_request_duration_ms_count{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (name)",
           "refId": "B",
           "legendFormat": "Avg {{name}}"
         }
@@ -315,7 +297,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum by (type) (increase(graphql_requests_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
+          "expr": "sum by (type) (increase(graphql_requests_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "refId": "A",
           "legendFormat": "{{type}}"
         }
@@ -364,7 +346,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "topk(10, sum by (name) (increase(graphql_requests_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h])))",
+          "expr": "topk(10, sum by (name) (increase(graphql_requests_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h])))",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -447,7 +429,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "count(count by(__name__)({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})) > 0 or vector(0)",
+          "expr": "count(count by(__name__)({service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})) > 0 or vector(0)",
           "refId": "A",
           "legendFormat": "Metrics Active"
         }
@@ -501,7 +483,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "time() - max(timestamp(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}))",
+          "expr": "time() - max(timestamp(app_events_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}))",
           "refId": "A",
           "legendFormat": "Last Seen"
         }
@@ -572,7 +554,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(app_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (component)",
+          "expr": "sum(rate(app_errors_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (component)",
           "refId": "A",
           "legendFormat": "{{component}}"
         }
@@ -639,17 +621,17 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(graphql_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m]))",
+          "expr": "sum(rate(graphql_errors_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m]))",
           "refId": "A",
           "legendFormat": "GraphQL Errors"
         },
         {
-          "expr": "sum(rate(graphql_network_errors_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m]))",
+          "expr": "sum(rate(graphql_network_errors_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m]))",
           "refId": "B",
           "legendFormat": "Network Errors"
         },
         {
-          "expr": "sum(rate(graphql_slow_queries_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m]))",
+          "expr": "sum(rate(graphql_slow_queries_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m]))",
           "refId": "C",
           "legendFormat": "Slow Queries (>1s)"
         }
@@ -693,6 +675,34 @@
   "templating": {
     "list": [
       {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Prometheus",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Loki",
+        "multi": false,
+        "name": "DS_LOKI",
+        "options": [],
+        "query": "loki",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
         "current": {
           "selected": false,
           "text": "All",
@@ -702,7 +712,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}, env)",
+        "definition": "label_values({service_name=\"sous-chef-app\"}, env)",
         "hide": 0,
         "includeAll": true,
         "label": "Environment",
@@ -710,7 +720,7 @@
         "name": "environment",
         "options": [],
         "query": {
-          "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}, env)",
+          "query": "label_values({service_name=\"sous-chef-app\"}, env)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -729,7 +739,7 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}, platform)",
+        "definition": "label_values({service_name=\"sous-chef-app\",env=~\"$environment\"}, platform)",
         "hide": 0,
         "includeAll": true,
         "label": "Platform",
@@ -737,7 +747,7 @@
         "name": "platform",
         "options": [],
         "query": {
-          "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}, platform)",
+          "query": "label_values({service_name=\"sous-chef-app\",env=~\"$environment\"}, platform)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

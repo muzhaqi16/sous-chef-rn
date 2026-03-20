@@ -63,6 +63,12 @@ import type { ExpirationVariant } from './PantryItemCard';
 // pre-rendered cells (12.2% sustained blanks) while 3×+ was excessive.
 const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
 
+// Minimum height for structural empty states (no home / no home selected)
+// so EmptyState's justifyContent:'center' works inside FlashList footer
+const EMPTY_STATE_MIN_HEIGHT = Math.round(
+  Dimensions.get('window').height * 0.45,
+);
+
 // Module-level constant — avoids creating a new object reference per render
 const MVCP_DISABLED = { disabled: true };
 
@@ -464,26 +470,26 @@ interface PantryEmptyStateProps {
   showSkeletons: boolean;
   searchQuery: string;
   itemCount: number;
-  totalCount?: number;
   locationFilter: LocationFilter;
   tabs: FilterTabConfig<LocationFilter>[];
   onAddItem?: () => void;
   noHomeSelected?: boolean;
   noHomes?: boolean;
   onSelectHome?: () => void;
+  overallItemCount: number;
 }
 
 function PantryEmptyState({
   showSkeletons,
   searchQuery,
   itemCount,
-  totalCount,
   locationFilter,
   tabs,
   onAddItem,
   noHomeSelected,
   noHomes,
   onSelectHome,
+  overallItemCount,
 }: PantryEmptyStateProps) {
   if (showSkeletons) return <PantryScreenSkeleton />;
 
@@ -494,6 +500,7 @@ function PantryEmptyState({
         icon="home-outline"
         title="No home yet"
         description="Create or join a home to start tracking food"
+        style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
         action={
           onSelectHome
             ? { label: 'Get Started', onPress: onSelectHome }
@@ -510,6 +517,7 @@ function PantryEmptyState({
         icon="home-outline"
         title="No home selected"
         description="Select a home to view your pantry"
+        style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
         action={
           onSelectHome
             ? { label: 'Go to My Homes', onPress: onSelectHome }
@@ -528,6 +536,7 @@ function PantryEmptyState({
         icon="search-outline"
         title={`No results for "${displayQuery}"`}
         description="Would you like to add it to your pantry?"
+        style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
         action={
           onAddItem ? { label: 'Add Item', onPress: onAddItem } : undefined
         }
@@ -535,7 +544,7 @@ function PantryEmptyState({
     );
   }
 
-  if (locationFilter !== 'all' && itemCount === 0 && (totalCount ?? 0) > 0) {
+  if (locationFilter !== 'all' && itemCount === 0 && overallItemCount > 0) {
     const activeTab = tabs.find(tab => tab.id === locationFilter);
     const tabName = activeTab?.label ?? 'this location';
     return (
@@ -544,6 +553,7 @@ function PantryEmptyState({
         icon="basket-outline"
         title={`No items in ${tabName}`}
         description="Items stored here will appear in this tab"
+        style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
       />
     );
   }
@@ -554,6 +564,7 @@ function PantryEmptyState({
       icon="basket-outline"
       title="Your pantry is empty"
       description="Start tracking your food to reduce waste"
+      style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
       action={
         onAddItem ? { label: 'Add Items', onPress: onAddItem } : undefined
       }
@@ -962,13 +973,13 @@ export const PantryContent = React.forwardRef<
                         showSkeletons={showSkeletons}
                         searchQuery={searchQuery}
                         itemCount={items.length}
-                        totalCount={totalCount}
                         locationFilter={locationFilter}
                         tabs={tabs}
                         onAddItem={onAddItem}
                         noHomeSelected={noHomeSelected}
                         noHomes={noHomes}
                         onSelectHome={onSelectHome}
+                        overallItemCount={locationCounts.all ?? 0}
                       />
                     ) : (
                       <PaginationFooter
