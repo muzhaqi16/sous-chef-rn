@@ -34,68 +34,109 @@ export class HttpTransport implements TelemetryTransport {
   isAvailable(): boolean {
     return (
       this.config.transports.http &&
-      (!!this.config.endpoints.prometheus || !!this.config.endpoints.loki)
+      !!(this.config.endpoints.metrics || this.config.endpoints.logs)
     );
   }
 
   async sendLogs(logs: LogEntry[]): Promise<void> {
-    if (!this.isAvailable() || !this.config.endpoints.loki) {
+    if (!this.isAvailable() || !this.config.endpoints.logs) {
       return;
     }
-
     try {
-      const streams = [
-        {
-          stream: {
-            job: this.config.appName,
-            app: this.config.appName,
-            environment: this.config.environment,
-            platform: this.config.platform,
+      const nowNano = `${Date.now()}000000`;
+      const payload = {
+        resourceLogs: [
+          {
+            resource: {
+              attributes: [
+                {
+                  key: 'service.name',
+                  value: { stringValue: this.config.appName },
+                },
+                {
+                  key: 'deployment.environment.name',
+                  value: { stringValue: this.config.environment },
+                },
+                {
+                  key: 'os.type',
+                  value: { stringValue: this.config.platform },
+                },
+              ],
+            },
+            scopeLogs: [
+              {
+                scope: { name: 'sous-chef-telemetry', version: '1.0.0' },
+                logRecords: logs.map(log => ({
+                  timeUnixNano: nowNano,
+                  body: {
+                    stringValue: JSON.stringify({
+                      message: log.message,
+                      ...log.extra,
+                    }),
+                  },
+                  severityText: log.level.toUpperCase(),
+                  attributes: [
+                    {
+                      key: 'level',
+                      value: { stringValue: log.level },
+                    },
+                    {
+                      key: 'environment',
+                      value: { stringValue: this.config.environment },
+                    },
+                    {
+                      key: 'platform',
+                      value: { stringValue: this.config.platform },
+                    },
+                  ],
+                })),
+              },
+            ],
           },
-          values: logs.map(log => [
-            `${Date.now()}000000`,
-            JSON.stringify({
-              level: log.level,
-              message: log.message,
-              timestamp: log.timestamp,
-              ...log.extra,
-            }),
-          ]),
-        },
-      ];
+        ],
+      };
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
 
-      if (this.config.auth?.username && this.config.auth?.password) {
+      if (this.config.logsAuth?.username && this.config.logsAuth?.password) {
         const credentials = btoa(
-          `${this.config.auth.username}:${this.config.auth.password}`,
+          `${this.config.logsAuth.username}:${this.config.logsAuth.password}`,
         );
         headers.Authorization = `Basic ${credentials}`;
       }
 
-      const response = await fetch(
-        `${this.ensureProtocol(this.config.endpoints.loki!)}/loki/api/v1/push`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ streams }),
-        },
-      );
+      const otlpUrl = `${this.ensureProtocol(
+        this.config.endpoints.logs!,
+      )}/v1/logs`;
+
+      const response = await fetch(otlpUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
 
       if (!response.ok) {
-        logger.warn('Failed to send logs to Loki:', response.status);
+        const responseText = await response
+          .text()
+          .catch(() => 'Unable to read response');
+        logger.warn('Failed to send logs via OTLP:', {
+          status: response.status,
+          statusText: response.statusText,
+          response: responseText,
+          url: otlpUrl,
+        });
       } else {
-        logger.debug(`✅ Logs sent to Loki (${logs.length} entries)`);
+        logger.debug(`✅ Logs sent via OTLP (${logs.length} entries)`);
       }
     } catch (error) {
-      logger.error('Failed to send logs to Loki:', error);
+      logger.error('Failed to send logs via OTLP:', error);
     }
   }
 
   async sendMetrics(metrics: MetricEntry[]): Promise<void> {
-    if (!this.isAvailable() || !this.config.endpoints.prometheus) {
+    if (!this.isAvailable() || !this.config.endpoints.metrics) {
       return;
     }
 
@@ -140,15 +181,18 @@ export class HttpTransport implements TelemetryTransport {
         'Content-Type': 'application/json',
       };
 
-      if (this.config.auth?.username && this.config.auth?.password) {
+      if (
+        this.config.metricsAuth?.username &&
+        this.config.metricsAuth?.password
+      ) {
         const credentials = btoa(
-          `${this.config.auth.username}:${this.config.auth.password}`,
+          `${this.config.metricsAuth.username}:${this.config.metricsAuth.password}`,
         );
         headers.Authorization = `Basic ${credentials}`;
       }
 
       const otlpUrl = `${this.ensureProtocol(
-        this.config.endpoints.prometheus!,
+        this.config.endpoints.metrics!,
       )}/v1/metrics`;
 
       logger.debug('📤 Sending metrics via OTLP:', {
@@ -182,10 +226,7 @@ export class HttpTransport implements TelemetryTransport {
     }
   }
 
-  private buildKey(
-    name: string,
-    labels: Record<string, string>,
-  ): string {
+  private buildKey(name: string, labels: Record<string, string>): string {
     const labelStr = Object.entries(labels)
       .filter(([, v]) => v !== undefined && v !== null)
       .sort()
@@ -222,7 +263,7 @@ export class HttpTransport implements TelemetryTransport {
             timeUnixNano: nowNano,
             attributes: this.toOtlpAttributes(dp.labels),
           })),
-          aggregationTemporality: 1, // DELTA
+          aggregationTemporality: 2, // CUMULATIVE
           isMonotonic: true,
         },
       });
@@ -259,7 +300,7 @@ export class HttpTransport implements TelemetryTransport {
               attributes: this.toOtlpAttributes(dp.labels),
             };
           }),
-          aggregationTemporality: 1, // DELTA
+          aggregationTemporality: 2, // CUMULATIVE
         },
       });
     }

@@ -20,8 +20,12 @@ const makeConfig = (overrides?: Partial<TelemetryConfig>): TelemetryConfig => ({
   platform: 'ios',
   instanceId: 'ios_device_test123',
   flushIntervals: { metrics: 10000, logs: 5000 },
-  endpoints: { prometheus: 'http://otlp.test/otlp', loki: 'http://loki.test' },
-  auth: { username: 'user', password: 'pass' },
+  endpoints: {
+    metrics: 'http://otlp.test/otlp',
+    logs: 'http://otlp.test/otlp',
+  },
+  metricsAuth: { username: 'user', password: 'pass' },
+  logsAuth: { username: 'user', password: 'pass' },
   transports: { http: true, console: false },
   ...overrides,
 });
@@ -68,21 +72,19 @@ describe('HttpTransport', () => {
     });
 
     it('returns false when no endpoints', () => {
-      const transport = new HttpTransport(
-        makeConfig({ endpoints: {} }),
-      );
+      const transport = new HttpTransport(makeConfig({ endpoints: {} }));
       expect(transport.isAvailable()).toBe(false);
     });
   });
 
   describe('sendLogs()', () => {
-    it('sends to Loki endpoint with proper format', async () => {
+    it('sends logs via OTLP /v1/logs endpoint', async () => {
       const transport = new HttpTransport(makeConfig());
 
       await transport.sendLogs(makeLogs());
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://loki.test/loki/api/v1/push',
+        'http://otlp.test/otlp/v1/logs',
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
@@ -92,20 +94,20 @@ describe('HttpTransport', () => {
       );
 
       const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(body.streams).toHaveLength(1);
-      expect(body.streams[0].stream).toEqual({
-        job: 'test-app',
-        app: 'test-app',
-        environment: 'test',
-        platform: 'ios',
-      });
+      expect(body.resourceLogs).toHaveLength(1);
 
-      // Values should be [nanosecond-timestamp-string, json-string]
-      const values = body.streams[0].values;
-      expect(values).toHaveLength(1);
-      expect(values[0][0]).toMatch(/^\d+000000$/); // nanosecond timestamp
-      const parsed = JSON.parse(values[0][1]);
-      expect(parsed.level).toBe('info');
+      const resource = body.resourceLogs[0].resource;
+      expect(resource.attributes).toEqual(
+        expect.arrayContaining([
+          { key: 'service.name', value: { stringValue: 'test-app' } },
+        ]),
+      );
+
+      const logRecords = body.resourceLogs[0].scopeLogs[0].logRecords;
+      expect(logRecords).toHaveLength(1);
+      expect(logRecords[0].severityText).toBe('INFO');
+
+      const parsed = JSON.parse(logRecords[0].body.stringValue);
       expect(parsed.message).toBe('test log');
     });
 
@@ -119,10 +121,8 @@ describe('HttpTransport', () => {
       expect(headers.Authorization).toBe(`Basic ${expected}`);
     });
 
-    it('does nothing when loki endpoint missing', async () => {
-      const transport = new HttpTransport(
-        makeConfig({ endpoints: { prometheus: 'http://otlp.test/otlp' } }),
-      );
+    it('does nothing when prometheus endpoint missing', async () => {
+      const transport = new HttpTransport(makeConfig({ endpoints: {} }));
 
       await transport.sendLogs(makeLogs());
 
@@ -185,7 +185,7 @@ describe('HttpTransport', () => {
       expect(counter).toBeDefined();
       expect(counter.sum).toBeDefined();
       expect(counter.sum.isMonotonic).toBe(true);
-      expect(counter.sum.aggregationTemporality).toBe(1); // DELTA
+      expect(counter.sum.aggregationTemporality).toBe(2); // CUMULATIVE
       expect(counter.sum.dataPoints).toHaveLength(1);
       expect(counter.sum.dataPoints[0].asDouble).toBe(3);
     });
@@ -249,7 +249,7 @@ describe('HttpTransport', () => {
       );
       expect(histogram).toBeDefined();
       expect(histogram.histogram).toBeDefined();
-      expect(histogram.histogram.aggregationTemporality).toBe(1); // DELTA
+      expect(histogram.histogram.aggregationTemporality).toBe(2); // CUMULATIVE
 
       const dp = histogram.histogram.dataPoints[0];
       expect(dp.count).toBe('3');
@@ -287,9 +287,7 @@ describe('HttpTransport', () => {
 
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
-      const counter = metrics.find(
-        (m: any) => m.name === 'test_metric_total',
-      );
+      const counter = metrics.find((m: any) => m.name === 'test_metric_total');
       expect(counter.sum.dataPoints[0].asDouble).toBe(5);
     });
 
@@ -331,9 +329,7 @@ describe('HttpTransport', () => {
       expect(mockFetch).toHaveBeenCalled();
       const body = parseOtlpBody(mockFetch.mock.calls[0]);
       const metrics = getOtlpMetrics(body);
-      const gauge = metrics.find(
-        (m: any) => m.name === 'test_metric_total',
-      );
+      const gauge = metrics.find((m: any) => m.name === 'test_metric_total');
       expect(gauge.gauge.dataPoints[0].asDouble).toBe(5);
     });
 
@@ -342,7 +338,9 @@ describe('HttpTransport', () => {
 
       const transport = new HttpTransport(makeConfig());
 
-      await expect(transport.sendMetrics(makeMetrics())).resolves.toBeUndefined();
+      await expect(
+        transport.sendMetrics(makeMetrics()),
+      ).resolves.toBeUndefined();
 
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to send metrics'),

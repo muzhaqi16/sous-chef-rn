@@ -14,10 +14,14 @@ export interface TelemetryConfig {
     logs: number;
   };
   endpoints: {
-    prometheus?: string;
-    loki?: string;
+    metrics?: string;
+    logs?: string;
   };
-  auth?: {
+  metricsAuth?: {
+    username?: string;
+    password?: string;
+  };
+  logsAuth?: {
     username?: string;
     password?: string;
   };
@@ -98,7 +102,6 @@ export const DEFAULT_CONFIG: TelemetryConfig = {
     logs: 5000,
   },
   endpoints: {},
-  auth: undefined,
   transports: {
     http: false,
     console: true,

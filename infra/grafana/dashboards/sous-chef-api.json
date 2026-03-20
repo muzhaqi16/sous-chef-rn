@@ -392,7 +392,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Push Gateway health status",
+      "description": "Whether metrics are being ingested into Grafana Cloud",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -404,12 +404,12 @@
                 "0": {
                   "color": "red",
                   "index": 0,
-                  "text": "DOWN"
+                  "text": "INACTIVE"
                 },
                 "1": {
                   "color": "green",
                   "index": 1,
-                  "text": "UP"
+                  "text": "ACTIVE"
                 }
               },
               "type": "value"
@@ -447,12 +447,12 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "up{job=\"pushgateway\"}",
+          "expr": "count(count by(__name__)({job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})) > 0 or vector(0)",
           "refId": "A",
-          "legendFormat": "Push Gateway Status"
+          "legendFormat": "Metrics Active"
         }
       ],
-      "title": "Push Gateway",
+      "title": "OTLP Ingestion",
       "type": "stat"
     },
     {
@@ -460,7 +460,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Last time metrics were pushed",
+      "description": "Time since last metric was ingested",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -501,12 +501,12 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "time() - push_time_seconds{job=\"sous-chef-app\"}",
+          "expr": "time() - max(timestamp(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}))",
           "refId": "A",
-          "legendFormat": "{{instance}}"
+          "legendFormat": "Last Seen"
         }
       ],
-      "title": "Last Push (seconds ago)",
+      "title": "Last Metric (seconds ago)",
       "type": "stat"
     },
     {

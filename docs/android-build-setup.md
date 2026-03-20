@@ -104,13 +104,15 @@ Create three environments in **Settings** → **Environments**:
 Environment variables:
 - API_URL: http://localhost:4000/graphql (or your dev API)
 - WEB_SOCKET_URL: ws://localhost:4000/graphql
-- LOKI_ENDPOINT: (your Loki endpoint)
-- PROMETHEUS_ENDPOINT: (your Prometheus endpoint)
+- OTLP_METRICS_ENDPOINT: (your OTLP endpoint, e.g. https://otlp-gateway-prod-us-east-2.grafana.net/otlp)
+- OTLP_LOGS_ENDPOINT: (your OTLP endpoint, same as above for Grafana Cloud)
 
 Secrets:
 - API_KEY
-- TELEMETRY_AUTH_USERNAME
-- TELEMETRY_AUTH_PASSWORD
+- OTLP_METRICS_AUTH_USERNAME
+- OTLP_METRICS_AUTH_PASSWORD
+- OTLP_LOGS_AUTH_USERNAME
+- OTLP_LOGS_AUTH_PASSWORD
 - SPOONACULAR_API_KEY
 ```
 
@@ -119,13 +121,15 @@ Secrets:
 Environment variables:
 - API_URL: https://stg-api.souschef.dev/graphql
 - WEB_SOCKET_URL: wss://stg-api.souschef.dev/graphql
-- LOKI_ENDPOINT: (your Loki endpoint)
-- PROMETHEUS_ENDPOINT: (your Prometheus endpoint)
+- OTLP_METRICS_ENDPOINT: (your OTLP endpoint)
+- OTLP_LOGS_ENDPOINT: (your OTLP endpoint)
 
 Secrets:
 - API_KEY
-- TELEMETRY_AUTH_USERNAME
-- TELEMETRY_AUTH_PASSWORD
+- OTLP_METRICS_AUTH_USERNAME
+- OTLP_METRICS_AUTH_PASSWORD
+- OTLP_LOGS_AUTH_USERNAME
+- OTLP_LOGS_AUTH_PASSWORD
 - SPOONACULAR_API_KEY
 ```
 
@@ -134,13 +138,15 @@ Secrets:
 Environment variables:
 - API_URL: https://api.souschef.dev/graphql
 - WEB_SOCKET_URL: wss://api.souschef.dev/graphql
-- LOKI_ENDPOINT: (your Loki endpoint)
-- PROMETHEUS_ENDPOINT: (your Prometheus endpoint)
+- OTLP_METRICS_ENDPOINT: (your OTLP endpoint)
+- OTLP_LOGS_ENDPOINT: (your OTLP endpoint)
 
 Secrets:
 - API_KEY
-- TELEMETRY_AUTH_USERNAME
-- TELEMETRY_AUTH_PASSWORD
+- OTLP_METRICS_AUTH_USERNAME
+- OTLP_METRICS_AUTH_PASSWORD
+- OTLP_LOGS_AUTH_USERNAME
+- OTLP_LOGS_AUTH_PASSWORD
 - SPOONACULAR_API_KEY
 ```
 

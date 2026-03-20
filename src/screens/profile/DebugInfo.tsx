@@ -37,9 +37,10 @@ export const DebugInfo: React.FC = () => {
       'Max Retries': apiConfig.retries.toString(),
     },
     Telemetry: {
-      'Prometheus Endpoint': Config.PROMETHEUS_ENDPOINT || 'Not set',
-      'Loki Endpoint': Config.LOKI_ENDPOINT || 'Not set',
-      'Auth Username': Config.TELEMETRY_AUTH_USERNAME || 'Not set',
+      'Metrics Endpoint': Config.OTLP_METRICS_ENDPOINT || 'Not set',
+      'Logs Endpoint': Config.OTLP_LOGS_ENDPOINT || 'Not set',
+      'Metrics Auth': Config.OTLP_METRICS_AUTH_USERNAME || 'Not set',
+      'Logs Auth': Config.OTLP_LOGS_AUTH_USERNAME || 'Not set',
     },
     'Device Info': {
       Platform: Platform.OS,

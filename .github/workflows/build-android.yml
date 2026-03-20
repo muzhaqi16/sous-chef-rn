@@ -143,20 +143,24 @@ jobs:
           echo "API_URL=${{ vars.API_URL }}" > "$ENV_FILE"
           echo "API_KEY=${{ secrets.API_KEY }}" >> "$ENV_FILE"
           echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> "$ENV_FILE"
-          echo "LOKI_ENDPOINT=${{ vars.LOKI_ENDPOINT }}" >> "$ENV_FILE"
-          echo "PROMETHEUS_ENDPOINT=${{ vars.PROMETHEUS_ENDPOINT }}" >> "$ENV_FILE"
+          echo "OTLP_METRICS_ENDPOINT=${{ vars.OTLP_METRICS_ENDPOINT }}" >> "$ENV_FILE"
+          echo "OTLP_LOGS_ENDPOINT=${{ vars.OTLP_LOGS_ENDPOINT }}" >> "$ENV_FILE"
           echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> "$ENV_FILE"
 
           # Environment-specific variables
           if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
             echo "NODE_ENV=staging" >> "$ENV_FILE"
             echo "WEB_APP_URL=${{ vars.WEB_APP_URL }}" >> "$ENV_FILE"
-            echo "TELEMETRY_AUTH_USERNAME=${{ secrets.TELEMETRY_AUTH_USERNAME }}" >> "$ENV_FILE"
-            echo "TELEMETRY_AUTH_PASSWORD=${{ secrets.TELEMETRY_AUTH_PASSWORD }}" >> "$ENV_FILE"
+            echo "OTLP_METRICS_AUTH_USERNAME=${{ secrets.OTLP_METRICS_AUTH_USERNAME }}" >> "$ENV_FILE"
+            echo "OTLP_METRICS_AUTH_PASSWORD=${{ secrets.OTLP_METRICS_AUTH_PASSWORD }}" >> "$ENV_FILE"
+            echo "OTLP_LOGS_AUTH_USERNAME=${{ secrets.OTLP_LOGS_AUTH_USERNAME }}" >> "$ENV_FILE"
+            echo "OTLP_LOGS_AUTH_PASSWORD=${{ secrets.OTLP_LOGS_AUTH_PASSWORD }}" >> "$ENV_FILE"
           elif [ "${{ env.BUILD_ENV }}" = "prod" ]; then
             echo "NODE_ENV=production" >> "$ENV_FILE"
-            echo "TELEMETRY_AUTH_USERNAME=${{ secrets.TELEMETRY_AUTH_USERNAME }}" >> "$ENV_FILE"
-            echo "TELEMETRY_AUTH_PASSWORD=${{ secrets.TELEMETRY_AUTH_PASSWORD }}" >> "$ENV_FILE"
+            echo "OTLP_METRICS_AUTH_USERNAME=${{ secrets.OTLP_METRICS_AUTH_USERNAME }}" >> "$ENV_FILE"
+            echo "OTLP_METRICS_AUTH_PASSWORD=${{ secrets.OTLP_METRICS_AUTH_PASSWORD }}" >> "$ENV_FILE"
+            echo "OTLP_LOGS_AUTH_USERNAME=${{ secrets.OTLP_LOGS_AUTH_USERNAME }}" >> "$ENV_FILE"
+            echo "OTLP_LOGS_AUTH_PASSWORD=${{ secrets.OTLP_LOGS_AUTH_PASSWORD }}" >> "$ENV_FILE"
           fi
 
           # Copy to .env for react-native-config

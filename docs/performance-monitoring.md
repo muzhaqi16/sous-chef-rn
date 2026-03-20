@@ -466,3 +466,7 @@ Updated documentation to reflect current codebase state:
 - Navigation routes for PerformanceDashboard
 
 **Status:** ✅ Complete
+
+## Telemetry Transport
+
+All metrics collected by the performance hooks (render times, screen transitions, memory snapshots) are sent to the configured OTLP backend via `HttpTransport`. For setup instructions, endpoint configuration, and switching between Grafana Cloud and self-hosted backends, see [Telemetry Setup](./telemetry-setup.md).
