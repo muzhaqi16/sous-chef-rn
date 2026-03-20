@@ -136,7 +136,7 @@ AUTH_USERNAME=$OTLP_METRICS_AUTH_USERNAME \
 
 Then query in Grafana Explore (Prometheus datasource):
 ```
-{__name__="test_otlp_ping_total", job="sous-chef-app"}
+{__name__="test_otlp_ping_total", service_name="sous-chef-app"}
 ```
 
 ### From the running app
@@ -147,7 +147,7 @@ After a native rebuild, watch Metro logs for:
 - `Failed to send metrics via OTLP: { status: 401 ... }` - auth issue
 
 In Grafana Explore, query:
-- Metrics: `{job="sous-chef-app", env="development"}`
+- Metrics: `{service_name="sous-chef-app", env="development"}`
 - Logs: `{service_name="sous-chef-app"}`
 
 ## Metric Reference
@@ -204,7 +204,7 @@ Histogram bucket boundaries: `[10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 1000
 | No metrics after changing env vars | `react-native-config` needs native rebuild | Run `npx react-native run-android/ios` |
 | HTTP 401 on metrics | Wrong instance ID or expired token | Check OTLP instance ID (not Prometheus ID) and regenerate token |
 | HTTP 400 "invalid temporality" | Backend expects CUMULATIVE | Ensure `aggregationTemporality: 2` in HttpTransport |
-| Dashboards show "No data" | Metrics not ingested or wrong `job` label | Query `{job="sous-chef-app"}` in Explore to verify |
+| Dashboards show "No data" | Metrics not ingested or wrong `service_name` label | Query `{service_name="sous-chef-app"}` in Explore to verify |
 | Logs not appearing | Logs endpoint not configured or token missing `logs:write` scope | Check `OTLP_LOGS_ENDPOINT` is set and token has correct scopes |
 
 ## Code Structure

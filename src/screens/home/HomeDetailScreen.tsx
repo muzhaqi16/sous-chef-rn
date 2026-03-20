@@ -44,6 +44,7 @@ export const HomeDetailScreen: React.FC<{
   const {
     home,
     loading,
+    error,
     leaving,
     refetch,
     rolePickerState,
@@ -108,6 +109,12 @@ export const HomeDetailScreen: React.FC<{
   };
 
   if (loading || !home) {
+    const getMessage = () => {
+      if (loading) return 'Loading';
+      if (error) return 'Failed to load home details';
+      return 'Home not found';
+    };
+
     return (
       <DetailTemplate
         title="Home Details"
@@ -120,8 +127,16 @@ export const HomeDetailScreen: React.FC<{
                 <SousChefLoader
                   size="small"
                   showBrand={false}
-                  message={loading ? 'Loading' : 'Home not found'}
+                  message={getMessage()}
                 />
+                {!loading && !!error && (
+                  <Button
+                    title="Retry"
+                    onPress={() => refetch()}
+                    variant="secondary"
+                    style={styles.retryButton}
+                  />
+                )}
               </View>
             ),
           },
@@ -261,6 +276,9 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: theme.spacing.xl * 2,
+  },
+  retryButton: {
+    marginTop: theme.spacing.md,
   },
   joinCodeRow: {
     flexDirection: 'row',

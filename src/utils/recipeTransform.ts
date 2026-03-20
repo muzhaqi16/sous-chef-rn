@@ -3,6 +3,8 @@ import type {
   RecipeSearchResult,
 } from '#/services/recipeApi/types';
 
+export type DietTag = 'vegan' | 'vegetarian' | 'glutenFree' | 'dairyFree';
+
 export interface TransformedRecipeItem {
   id: string;
   title: string;
@@ -13,6 +15,10 @@ export interface TransformedRecipeItem {
   };
   imageUrl?: string;
   spoonacularId: number;
+  readyInMinutes?: number;
+  servings?: number;
+  healthScore?: number;
+  dietTags?: DietTag[];
 }
 
 /**
@@ -68,6 +74,26 @@ export function transformRecipeForDisplay(
         variant: 'info',
       };
     }
+
+    // Collect diet tags
+    const dietTags: DietTag[] = [];
+    if (textRecipe.vegan) dietTags.push('vegan');
+    else if (textRecipe.vegetarian) dietTags.push('vegetarian');
+    if (textRecipe.glutenFree) dietTags.push('glutenFree');
+    if (textRecipe.dairyFree) dietTags.push('dairyFree');
+
+    return {
+      id: `spoonacular-${recipe.id}`,
+      title: recipe.title,
+      subtitle: subtitleParts.join(' • '),
+      badge,
+      imageUrl: recipe.image,
+      spoonacularId: recipe.id,
+      readyInMinutes: textRecipe.readyInMinutes,
+      servings: textRecipe.servings,
+      healthScore: textRecipe.healthScore,
+      dietTags: dietTags.length > 0 ? dietTags : undefined,
+    };
   }
 
   return {

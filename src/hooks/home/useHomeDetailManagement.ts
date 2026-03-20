@@ -67,13 +67,13 @@ export function useHomeDetailManagement(homeId: string) {
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
   // - cache-and-network: Shows cached data immediately, then fetches full HomeFragment
-  // - errorPolicy: 'ignore' returns cached data when network fails
+  // - errorPolicy: 'all' returns cached data AND errors (needed to distinguish "not found" from "failed to load")
 
   // Query
-  const { data, loading, refetch } = useGetHomeQuery({
+  const { data, loading, error, refetch } = useGetHomeQuery({
     variables: { homeId },
     fetchPolicy: 'cache-and-network',
-    errorPolicy: 'ignore',
+    errorPolicy: 'all',
   });
 
   // Mutations
@@ -339,6 +339,7 @@ export function useHomeDetailManagement(homeId: string) {
     // Data
     home,
     loading,
+    error,
     updating,
     leaving,
     refetch,

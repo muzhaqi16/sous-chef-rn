@@ -226,9 +226,6 @@ export function AddItemSheet({
               />
             )}
 
-            {/* Tutorial hint (e.g. "Tap + next to an item to add it") */}
-            {!!tutorialHint && !showSearchResults && tutorialHint}
-
             {/* Action Buttons - hidden when showing search results */}
             {!showSearchResults && (
               <View style={styles.actionButtons}>
@@ -245,6 +242,9 @@ export function AddItemSheet({
                 />
               </View>
             )}
+
+            {/* Tutorial hint (e.g. "Tap + next to an item to add it") */}
+            {!!tutorialHint && !showSearchResults && tutorialHint}
 
             {/* Suggestions Sections - shown when search is empty, deferred until after animation */}
             {!!showSuggestions && !!state.shouldRenderSuggestions && (

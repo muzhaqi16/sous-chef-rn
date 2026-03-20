@@ -34,7 +34,7 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
 
   if (SkeletonComponent) {
     return (
-      <View>
+      <View style={styles.skeletonContainer}>
         {Array.from({ length: skeletonCount }, (_, index) => (
           <SkeletonComponent key={index} animated />
         ))}
@@ -50,6 +50,11 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  skeletonContainer: {
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.xs,
+    gap: theme.spacing.sm,
+  },
   footerLoader: {
     justifyContent: 'center',
     alignItems: 'center',

@@ -12,11 +12,9 @@ import { BackButton } from '../atoms/BackButton';
 import { Icon } from '#/utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 
-const SCROLL_DISTANCE = 80;
-const AVATAR_LARGE = 80;
-const AVATAR_SMALL = 44;
-const PADDING_LARGE = 0;
-const PADDING_SMALL = 0;
+const AVATAR_SIZE = 80;
+const AVATAR_SCALE_MIN = 0.55; // 80 * 0.55 = 44
+const USER_INFO_HEIGHT = 72;
 
 export interface ProfileHeaderProps {
   avatarUrl?: string | null;
@@ -25,7 +23,8 @@ export interface ProfileHeaderProps {
   onBack: () => void;
   onMore: () => void;
   onAvatarPress: () => void;
-  scrollY?: SharedValue<number>;
+  /** Collapse progress: 0 = expanded, 1 = collapsed. Animated via withTiming. */
+  progress?: SharedValue<number>;
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -35,80 +34,61 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onBack,
   onMore,
   onAvatarPress,
-  scrollY,
+  progress,
 }) => {
   const { theme } = useUnistyles();
 
-  const headerAnimatedStyle = useAnimatedStyle(() => {
-    if (!scrollY) return {};
-    const paddingVertical = interpolate(
-      scrollY.value,
-      [0, SCROLL_DISTANCE],
-      [PADDING_LARGE, PADDING_SMALL],
+  // Avatar: scale from 1 → 0.55 (GPU composited, no layout recalc)
+  const avatarScaleStyle = useAnimatedStyle(() => {
+    if (!progress) return {};
+    const scale = interpolate(
+      progress.value,
+      [0, 1],
+      [1, AVATAR_SCALE_MIN],
       Extrapolation.CLAMP,
     );
-    return { paddingVertical };
+    return { transform: [{ scale }] };
   });
 
-  const avatarAnimatedStyle = useAnimatedStyle(() => {
-    if (!scrollY)
-      return {
-        width: AVATAR_LARGE,
-        height: AVATAR_LARGE,
-        borderRadius: AVATAR_LARGE / 2,
-      };
-    const size = interpolate(
-      scrollY.value,
-      [0, SCROLL_DISTANCE],
-      [AVATAR_LARGE, AVATAR_SMALL],
-      Extrapolation.CLAMP,
-    );
-    return { width: size, height: size, borderRadius: size / 2 };
-  });
-
-  const fadeAnimatedStyle = useAnimatedStyle(() => {
-    if (!scrollY) return {};
+  // Edit badge: fade + shrink away (in first half of progress)
+  const badgeStyle = useAnimatedStyle(() => {
+    if (!progress) return {};
     const opacity = interpolate(
-      scrollY.value,
-      [0, SCROLL_DISTANCE / 2],
+      progress.value,
+      [0, 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     );
-    return { opacity };
-  });
-
-  const userInfoAnimatedStyle = useAnimatedStyle(() => {
-    if (!scrollY) return {};
-    const opacity = interpolate(
-      scrollY.value,
-      [0, SCROLL_DISTANCE / 2],
+    const scale = interpolate(
+      progress.value,
+      [0, 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     );
-    const maxHeight = interpolate(
-      scrollY.value,
-      [0, SCROLL_DISTANCE],
-      [60, 0],
+    return { opacity, transform: [{ scale }] };
+  });
+
+  // User info: collapse height + fade
+  const userInfoStyle = useAnimatedStyle(() => {
+    if (!progress) return {};
+    const height = interpolate(
+      progress.value,
+      [0, 1],
+      [USER_INFO_HEIGHT, 0],
       Extrapolation.CLAMP,
     );
-    const marginTop = interpolate(
-      scrollY.value,
-      [0, SCROLL_DISTANCE],
-      [8, 0],
+    const opacity = interpolate(
+      progress.value,
+      [0, 0.5],
+      [1, 0],
       Extrapolation.CLAMP,
     );
-    const marginBottom = interpolate(
-      scrollY.value,
-      [0, SCROLL_DISTANCE],
-      [4, 0],
-      Extrapolation.CLAMP,
-    );
-    return { opacity, maxHeight, marginTop, marginBottom };
+    return { height, opacity };
   });
 
   return (
     <View>
-      <Animated.View style={[styles.header, headerAnimatedStyle]}>
+      <View style={styles.header}>
         <BackButton onPress={onBack} color={theme.colors.textPrimary} />
         <Pressable
           onPress={onAvatarPress}
@@ -117,33 +97,35 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             pressed && styles.pressed,
           ]}
         >
-          {avatarUrl ? (
-            <Animated.View style={[styles.avatarBase, avatarAnimatedStyle]}>
-              <CachedImage
-                uri={avatarUrl}
-                style={styles.avatarImage}
-                displaySize={80}
-                onFailure={() =>
-                  console.log('Avatar image failed to load:', avatarUrl)
-                }
-              />
-            </Animated.View>
-          ) : (
-            <Animated.View
-              style={[
-                styles.avatarBase,
-                styles.avatarPlaceholder,
-                avatarAnimatedStyle,
-              ]}
-            >
-              <Icon
-                name="person"
-                size={32}
-                color={theme.colors.textSecondary}
-              />
-            </Animated.View>
-          )}
-          <Animated.View style={[styles.profileAction, fadeAnimatedStyle]}>
+          <Animated.View
+            collapsable={false}
+            style={[styles.avatarScaleWrapper, avatarScaleStyle]}
+          >
+            {avatarUrl ? (
+              <View style={styles.avatarBase}>
+                <CachedImage
+                  uri={avatarUrl}
+                  style={styles.avatarImage}
+                  displaySize={AVATAR_SIZE}
+                  onFailure={() =>
+                    console.log('Avatar image failed to load:', avatarUrl)
+                  }
+                />
+              </View>
+            ) : (
+              <View style={[styles.avatarBase, styles.avatarPlaceholder]}>
+                <Icon
+                  name="person"
+                  size={32}
+                  color={theme.colors.textSecondary}
+                />
+              </View>
+            )}
+          </Animated.View>
+          <Animated.View
+            collapsable={false}
+            style={[styles.profileAction, badgeStyle]}
+          >
             <Icon color={theme.colors.iconOnPrimary} name="create" size={15} />
           </Animated.View>
         </Pressable>
@@ -153,9 +135,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           color={theme.colors.textPrimary}
           accessibilityLabel="More options"
         />
-      </Animated.View>
+      </View>
       {(!!name || !!subtitle) && (
-        <Animated.View style={[styles.userInfo, userInfoAnimatedStyle]}>
+        <Animated.View
+          collapsable={false}
+          style={[styles.userInfo, userInfoStyle]}
+        >
           {!!name && <Text style={styles.nameText}>{name}</Text>}
           {!!subtitle && <Text style={styles.subtitleText}>{subtitle}</Text>}
         </Animated.View>
@@ -170,12 +155,18 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.xl,
-    paddingVertical: 0,
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.sm,
   },
   avatarContainer: {},
+  avatarScaleWrapper: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+  },
   avatarBase: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
     backgroundColor: theme.colors.surface,
     borderWidth: 2,
     borderColor: theme.colors.primary,
@@ -208,6 +199,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
+    marginTop: 8,
   },
   subtitleText: {
     fontSize: theme.fonts.size.sm,

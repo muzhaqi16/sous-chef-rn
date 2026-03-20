@@ -44,6 +44,8 @@ export class TelemetryService {
       environment: this.config.environment,
       enabled_transports: this.transports.filter(t => t.isAvailable()).length,
     });
+
+    this.incrementCounter('app_starts_total');
   }
 
   updateConfig(newConfig: Partial<TelemetryConfig>): void {

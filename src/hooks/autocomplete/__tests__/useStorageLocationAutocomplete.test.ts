@@ -4,17 +4,28 @@ import { StorageLocation, StorageType } from '#generated';
 
 const makeLocation = (
   overrides: Partial<StorageLocation> = {},
-): StorageLocation => ({
-  id: 'loc-1',
-  name: 'Fridge',
-  type: StorageType.Refrigerator,
-  isDefault: false,
-  ...overrides,
-} as StorageLocation);
+): StorageLocation =>
+  ({
+    id: 'loc-1',
+    name: 'Fridge',
+    type: StorageType.Refrigerator,
+    isDefault: false,
+    ...overrides,
+  } as StorageLocation);
 
 const storageLocations: StorageLocation[] = [
-  makeLocation({ id: '1', name: 'Fridge', type: StorageType.Refrigerator, isDefault: true }),
-  makeLocation({ id: '2', name: 'Pantry Shelf', type: StorageType.PantryShelf, isDefault: false }),
+  makeLocation({
+    id: '1',
+    name: 'Fridge',
+    type: StorageType.Refrigerator,
+    isDefault: true,
+  }),
+  makeLocation({
+    id: '2',
+    name: 'Pantry Shelf',
+    type: StorageType.PantryShelf,
+    isDefault: false,
+  }),
   makeLocation({
     id: '3',
     name: 'Freezer',
@@ -22,12 +33,27 @@ const storageLocations: StorageLocation[] = [
     isDefault: false,
     parentLocation: makeLocation({ id: '1', name: 'Fridge' }),
   }),
-  makeLocation({ id: '4', name: 'Counter', type: StorageType.Counter, isDefault: false }),
-  makeLocation({ id: '5', name: 'Cabinet', type: StorageType.Cabinet, isDefault: false }),
+  makeLocation({
+    id: '4',
+    name: 'Counter',
+    type: StorageType.Counter,
+    isDefault: false,
+  }),
+  makeLocation({
+    id: '5',
+    name: 'Cabinet',
+    type: StorageType.Cabinet,
+    isDefault: false,
+  }),
 ];
 
 beforeEach(() => {
+  jest.useFakeTimers();
   jest.clearAllMocks();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 describe('useStorageLocationAutocomplete', () => {
@@ -44,7 +70,10 @@ describe('useStorageLocationAutocomplete', () => {
 
   it('filters locations by name match', () => {
     const { result } = renderHook(() =>
-      useStorageLocationAutocomplete({ storageLocations, searchTerm: 'fridge' }),
+      useStorageLocationAutocomplete({
+        storageLocations,
+        searchTerm: 'fridge',
+      }),
     );
 
     const names = result.current.displayItems.map(l => l.name);
@@ -53,7 +82,10 @@ describe('useStorageLocationAutocomplete', () => {
 
   it('filters locations by type match', () => {
     const { result } = renderHook(() =>
-      useStorageLocationAutocomplete({ storageLocations, searchTerm: 'refrigerator' }),
+      useStorageLocationAutocomplete({
+        storageLocations,
+        searchTerm: 'refrigerator',
+      }),
     );
 
     const names = result.current.displayItems.map(l => l.name);
@@ -63,7 +95,10 @@ describe('useStorageLocationAutocomplete', () => {
 
   it('filters locations by parent location name match', () => {
     const { result } = renderHook(() =>
-      useStorageLocationAutocomplete({ storageLocations, searchTerm: 'fridge' }),
+      useStorageLocationAutocomplete({
+        storageLocations,
+        searchTerm: 'fridge',
+      }),
     );
 
     // Freezer has parentLocation named 'Fridge'
@@ -90,13 +125,18 @@ describe('useStorageLocationAutocomplete', () => {
     // Rest should be alphabetically sorted
     const nonDefault = items.slice(1);
     for (let i = 0; i < nonDefault.length - 1; i++) {
-      expect(nonDefault[i].name.localeCompare(nonDefault[i + 1].name)).toBeLessThanOrEqual(0);
+      expect(
+        nonDefault[i].name.localeCompare(nonDefault[i + 1].name),
+      ).toBeLessThanOrEqual(0);
     }
   });
 
   it('showAddNew is true when searchTerm is >= 2 chars and no exact match exists', () => {
     const { result } = renderHook(() =>
-      useStorageLocationAutocomplete({ storageLocations, searchTerm: 'Garage' }),
+      useStorageLocationAutocomplete({
+        storageLocations,
+        searchTerm: 'Garage',
+      }),
     );
 
     expect(result.current.showAddNew).toBe(true);
@@ -104,7 +144,10 @@ describe('useStorageLocationAutocomplete', () => {
 
   it('showAddNew is false when searchTerm has an exact match (case-insensitive)', () => {
     const { result } = renderHook(() =>
-      useStorageLocationAutocomplete({ storageLocations, searchTerm: 'Fridge' }),
+      useStorageLocationAutocomplete({
+        storageLocations,
+        searchTerm: 'Fridge',
+      }),
     );
 
     expect(result.current.showAddNew).toBe(false);

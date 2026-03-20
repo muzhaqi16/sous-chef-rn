@@ -438,6 +438,10 @@ export const ShoppingListMainContent: React.FC<
           }
         };
 
+        const isSwipeStep =
+          tutorial.currentStep ===
+          ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS;
+
         return (
           <SpotlightCoachMark
             targetRect={targetRect}
@@ -447,6 +451,7 @@ export const ShoppingListMainContent: React.FC<
             totalSteps={TUTORIAL_TOTAL_STEPS}
             onDismiss={tutorial.skipAll}
             onTargetPress={handleTargetPress}
+            allowGesturePassthrough={isSwipeStep}
           />
         );
       })()}

@@ -79,7 +79,7 @@ describe('TelemetryService', () => {
 
   // ------------------------------------------------------------------ initialize
   describe('initialize', () => {
-    it('sets isInitialized and tracks app_telemetry_initialized event', () => {
+    it('sets isInitialized and tracks app_telemetry_initialized event', async () => {
       const service = new TelemetryService({
         enabled: true,
         enableLogs: true,
@@ -91,6 +91,16 @@ describe('TelemetryService', () => {
       const { logger } = jest.requireMock('#/utils/environment');
       // logger.info is called once during initialize
       expect(logger.info).toHaveBeenCalledTimes(1);
+
+      await service.flush();
+      expect(mockSendMetrics).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'app_starts_total',
+            type: 'counter',
+          }),
+        ]),
+      );
     });
 
     it('starts flush timers when logs are enabled', () => {

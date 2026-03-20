@@ -13,6 +13,7 @@ import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import {
   useRecipeCacheStore,
   ingredientCacheKey,
+  randomCacheKey,
 } from '#/store/useRecipeCacheStore';
 
 export type DiscoveryMode = 'pantry' | 'random' | 'none';
@@ -192,11 +193,9 @@ async function fetchPantryDiscovery(
   );
 }
 
-/** Module-level helper: fetch random recipes */
+/** Module-level helper: fetch random recipes (with cache) */
 async function fetchRandomDiscovery(
-  setDiscoveryState: (
-    updater: (prev: DiscoveryState) => DiscoveryState,
-  ) => void,
+  onResults: (results: RecipeInformation[]) => void,
   setMode: (v: DiscoveryMode) => void,
   setLoading: (v: boolean) => void,
   signal?: AbortSignal,
@@ -206,19 +205,29 @@ async function fetchRandomDiscovery(
     if (!v && signal?.aborted) return;
     setLoading(v);
   };
+
+  const cacheKey = randomCacheKey(dietaryTags);
+  const cacheStore = useRecipeCacheStore.getState();
+  const cached = cacheStore.getCached(cacheKey);
+
+  if (cached) {
+    const cachedResults = cached.results as RecipeInformation[];
+    guardedSetLoading(false);
+    onResults(cachedResults);
+    setMode('random');
+    return;
+  }
+
   await executeWithLoadingState(
     async () => {
       const results = await spoonacularService.getRandomRecipes(
-        { number: 10, tags: dietaryTags },
+        { number: DISCOVERY_FETCH_SIZE, tags: dietaryTags },
         signal,
       );
       if (signal?.aborted) return;
-      const items = results.map(transformRandomRecipe);
-      setDiscoveryState(() => ({
-        items,
-        visibleCount: items.length,
-        totalResults: items.length,
-      }));
+
+      cacheStore.setCached(cacheKey, results);
+      onResults(results);
       setMode('random');
     },
     guardedSetLoading,
@@ -278,6 +287,8 @@ export function useRecipeDiscovery(): UseRecipeDiscoveryResult {
 
   // All raw results from the API (pantry mode only)
   const allResultsRef = useRef<RecipeSearchResult[]>([]);
+  // All raw results from the API (random mode only)
+  const allRandomResultsRef = useRef<RecipeInformation[]>([]);
   // Enrichment info map — accumulated across batches
   const infoMapRef = useRef<Map<number, RecipeInformation>>(new Map());
 
@@ -352,10 +363,46 @@ export function useRecipeDiscovery(): UseRecipeDiscoveryResult {
     handlePantryResultsRef.current = handlePantryResults;
   });
 
+  // Handle raw random results: store them, show first page
+  const handleRandomResults = (results: RecipeInformation[]) => {
+    allRandomResultsRef.current = results;
+    const firstPage = results.slice(0, DISCOVERY_PAGE_SIZE);
+    setDiscoveryState({
+      items: firstPage.map(transformRandomRecipe),
+      visibleCount: DISCOVERY_PAGE_SIZE,
+      totalResults: results.length,
+    });
+  };
+
+  const handleRandomResultsRef = useRef(handleRandomResults);
+  useEffect(() => {
+    handleRandomResultsRef.current = handleRandomResults;
+  });
+
   // Load more: increase visible count and enrich the new batch
   const loadMoreDiscovery = () => {
-    const allResults = allResultsRef.current;
     const { visibleCount } = discoveryState;
+
+    if (mode === 'random') {
+      const allResults = allRandomResultsRef.current;
+      if (visibleCount >= allResults.length) return;
+
+      const newCount = Math.min(
+        visibleCount + DISCOVERY_PAGE_SIZE,
+        allResults.length,
+      );
+      const visible = allResults.slice(0, newCount);
+
+      setDiscoveryState(prev => ({
+        ...prev,
+        visibleCount: newCount,
+        items: visible.map(transformRandomRecipe),
+      }));
+      return;
+    }
+
+    // Pantry mode
+    const allResults = allResultsRef.current;
     if (visibleCount >= allResults.length) return;
 
     const newCount = Math.min(
@@ -395,7 +442,7 @@ export function useRecipeDiscovery(): UseRecipeDiscoveryResult {
   };
 
   const discoveryHasMore =
-    mode === 'pantry' &&
+    mode !== 'none' &&
     discoveryState.visibleCount < discoveryState.totalResults;
 
   // Fetch-key pattern: compute a stable key that changes when we should re-fetch.
@@ -432,7 +479,7 @@ export function useRecipeDiscovery(): UseRecipeDiscoveryResult {
       );
     } else {
       fetchRandomDiscovery(
-        setDiscoveryState,
+        handleRandomResultsRef.current,
         setMode,
         setLoading,
         controller.signal,
@@ -470,8 +517,15 @@ export function useRecipeDiscovery(): UseRecipeDiscoveryResult {
         setLoading,
       );
     } else {
+      // Clear random cache so we get fresh results
+      const cacheKey = randomCacheKey(dietaryTags);
+      const cacheStore = useRecipeCacheStore.getState();
+      const newCache = { ...cacheStore.cache };
+      delete newCache[cacheKey];
+      useRecipeCacheStore.setState({ cache: newCache });
+
       fetchRandomDiscovery(
-        setDiscoveryState,
+        handleRandomResultsRef.current,
         setMode,
         setLoading,
         undefined,

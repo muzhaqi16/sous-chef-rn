@@ -3,6 +3,8 @@ import { Pressable, Text } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
+  withTiming,
+  Easing,
 } from 'react-native-reanimated';
 import {
   SafeAreaView,
@@ -33,10 +35,21 @@ export const ProfileScreen = () => {
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { theme } = useUnistyles();
   const actionTrayRef = useRef<ActionTrayRef>(null);
-  const scrollY = useSharedValue(0);
+  const headerProgress = useSharedValue(0);
+  const headerTiming = {
+    duration: 300,
+    easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+  };
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: event => {
-      scrollY.set(event.contentOffset.y);
+      const y = event.contentOffset.y;
+      // Hysteresis: wide gap (10–40px) prevents oscillation at boundary
+      // < 0.5 / > 0.5 checks work during mid-animation (vs === 0/1 which miss)
+      if (y > 40 && headerProgress.value < 0.5) {
+        headerProgress.set(withTiming(1, headerTiming));
+      } else if (y <= 10 && headerProgress.value > 0.5) {
+        headerProgress.set(withTiming(0, headerTiming));
+      }
     },
   });
 
@@ -108,7 +121,7 @@ export const ProfileScreen = () => {
         onBack={() => goBack()}
         onMore={handleMorePress}
         onAvatarPress={handleAvatarPress}
-        scrollY={scrollY}
+        progress={headerProgress}
       />
 
       <Animated.ScrollView

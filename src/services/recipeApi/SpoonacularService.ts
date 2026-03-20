@@ -200,7 +200,7 @@ class SpoonacularService {
     const response = await this.fetch<GetRandomRecipesResponse>(
       '/recipes/random',
       {
-        number: Math.min(number, 10), // Limit to 10 to save API calls
+        number: Math.min(number, 100), // Spoonacular API max is 100
         'include-tags': tags,
         includeNutrition,
       },

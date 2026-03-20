@@ -351,13 +351,15 @@ describe('PantryContent', () => {
       />,
     );
     unmount();
-    // Now render with empty items in a specific location
+    // Now render with empty items in a specific location.
+    // totalCount may be 0 (filtered query), but locationCounts.all > 0 triggers
+    // the location-specific message via overallItemCount.
     render(
       <PantryContent
         {...defaultProps}
         items={[]}
         locationFilter={'fridge'}
-        totalCount={5}
+        totalCount={0}
       />,
     );
     expect(screen.getByText('No items in Fridge')).toBeTruthy();
