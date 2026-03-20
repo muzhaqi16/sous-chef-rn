@@ -8,15 +8,20 @@ export interface TelemetryConfig {
   appName: string;
   environment: string;
   platform: string;
+  instanceId?: string;
   flushIntervals: {
     metrics: number;
     logs: number;
   };
   endpoints: {
-    prometheus?: string;
-    loki?: string;
+    metrics?: string;
+    logs?: string;
   };
-  auth?: {
+  metricsAuth?: {
+    username?: string;
+    password?: string;
+  };
+  logsAuth?: {
     username?: string;
     password?: string;
   };
@@ -39,7 +44,6 @@ export interface MetricEntry {
   labels: Record<string, string>;
   timestamp: number;
   type: 'counter' | 'gauge' | 'histogram';
-  histogramFamily?: string;
 }
 
 export interface ErrorDetails {
@@ -98,7 +102,6 @@ export const DEFAULT_CONFIG: TelemetryConfig = {
     logs: 5000,
   },
   endpoints: {},
-  auth: undefined,
   transports: {
     http: false,
     console: true,

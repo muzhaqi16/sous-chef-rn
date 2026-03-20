@@ -200,5 +200,9 @@ export const selectSearchState = (state: RootState) => ({
 export const selectIsAdminUser = (state: RootState) =>
   state.user?.role === 'ADMIN' || state.user?.role === 'SUPER_ADMIN';
 
+// Dev tools access selector — decouples feature gating from data-access roles
+export const selectCanAccessDevTools = (state: RootState) =>
+  state.user?.canAccessDevTools === true;
+
 // Single property selector for network status
 export const selectIsOnline = (state: RootState) => state.isOnline;

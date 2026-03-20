@@ -225,6 +225,7 @@ export const useStore = create<RootState>()(
             toastMessage,
             toastType,
             pendingPantryScrollToTop,
+            tutorialResetGeneration,
 
             // Navigation transient state
             onBoardingStep, // Restart onboarding flow on app restart

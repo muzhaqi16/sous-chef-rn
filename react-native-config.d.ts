@@ -5,11 +5,13 @@ declare module 'react-native-config' {
     WEB_SOCKET_URL: string;
     NODE_ENV?: string;
     WEB_APP_URL?: string;
-    PROMETHEUS_ENDPOINT?: string;
     SPOONACULAR_API_KEY?: string;
-    LOKI_ENDPOINT?: string;
-    TELEMETRY_AUTH_USERNAME?: string;
-    TELEMETRY_AUTH_PASSWORD?: string;
+    OTLP_METRICS_ENDPOINT?: string;
+    OTLP_METRICS_AUTH_USERNAME?: string;
+    OTLP_METRICS_AUTH_PASSWORD?: string;
+    OTLP_LOGS_ENDPOINT?: string;
+    OTLP_LOGS_AUTH_USERNAME?: string;
+    OTLP_LOGS_AUTH_PASSWORD?: string;
   }
 
   export const Config: NativeConfig;

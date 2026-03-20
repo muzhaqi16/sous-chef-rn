@@ -33,12 +33,18 @@ import {
   selectNavigationUtils,
   selectSearchState,
   selectIsAdminUser,
+  selectCanAccessDevTools,
 } from '../useAppStore';
 
 // Create a minimal mock state matching the RootState shape
 function makeState(overrides: Record<string, unknown> = {}) {
   return {
-    user: { id: 'u1', email: 'test@example.com', emailVerified: true, onBoarded: true },
+    user: {
+      id: 'u1',
+      email: 'test@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
     accessToken: 'access-token-123',
     refreshToken: 'refresh-token-456',
     selectedHomeId: 'home-1',
@@ -146,27 +152,45 @@ describe('grouped selectors', () => {
 
 describe('additional primitive selectors', () => {
   it('selectSelectedMealPlanId returns selectedMealPlanId', () => {
-    expect(selectSelectedMealPlanId(makeState({ selectedMealPlanId: 'mp-1' }))).toBe('mp-1');
+    expect(
+      selectSelectedMealPlanId(makeState({ selectedMealPlanId: 'mp-1' })),
+    ).toBe('mp-1');
   });
 
   it('selectSetHasInitializedHomeData returns setter', () => {
     const setter = jest.fn();
-    expect(selectSetHasInitializedHomeData(makeState({ setHasInitializedHomeData: setter }))).toBe(setter);
+    expect(
+      selectSetHasInitializedHomeData(
+        makeState({ setHasInitializedHomeData: setter }),
+      ),
+    ).toBe(setter);
   });
 
   it('selectSetIsHomeSelectionReady returns setter', () => {
     const setter = jest.fn();
-    expect(selectSetIsHomeSelectionReady(makeState({ setIsHomeSelectionReady: setter }))).toBe(setter);
+    expect(
+      selectSetIsHomeSelectionReady(
+        makeState({ setIsHomeSelectionReady: setter }),
+      ),
+    ).toBe(setter);
   });
 
   it('selectIsPantryQueryComplete returns flag', () => {
-    expect(selectIsPantryQueryComplete(makeState({ isPantryQueryComplete: true }))).toBe(true);
-    expect(selectIsPantryQueryComplete(makeState({ isPantryQueryComplete: false }))).toBe(false);
+    expect(
+      selectIsPantryQueryComplete(makeState({ isPantryQueryComplete: true })),
+    ).toBe(true);
+    expect(
+      selectIsPantryQueryComplete(makeState({ isPantryQueryComplete: false })),
+    ).toBe(false);
   });
 
   it('selectSetIsPantryQueryComplete returns setter', () => {
     const setter = jest.fn();
-    expect(selectSetIsPantryQueryComplete(makeState({ setIsPantryQueryComplete: setter }))).toBe(setter);
+    expect(
+      selectSetIsPantryQueryComplete(
+        makeState({ setIsPantryQueryComplete: setter }),
+      ),
+    ).toBe(setter);
   });
 });
 
@@ -210,7 +234,9 @@ describe('action and grouped selectors', () => {
     expect(result.postLoginCredentials).toEqual({ email: 'a@b.com' });
     expect(result.setNavigationState).toBe(overrides.setNavigationState);
     expect(result.setShowBiometricSetup).toBe(overrides.setShowBiometricSetup);
-    expect(result.setPostLoginCredentials).toBe(overrides.setPostLoginCredentials);
+    expect(result.setPostLoginCredentials).toBe(
+      overrides.setPostLoginCredentials,
+    );
   });
 
   it('selectBottomSheetState returns scanner bottom sheet state', () => {
@@ -261,7 +287,9 @@ describe('action and grouped selectors', () => {
 
   it('selectSetHomeAndPantry returns the atomic setter', () => {
     const setter = jest.fn();
-    expect(selectSetHomeAndPantry(makeState({ setHomeAndPantry: setter }))).toBe(setter);
+    expect(
+      selectSetHomeAndPantry(makeState({ setHomeAndPantry: setter })),
+    ).toBe(setter);
   });
 
   it('selectShoppingListState returns shopping list state', () => {
@@ -271,7 +299,9 @@ describe('action and grouped selectors', () => {
     };
     const result = selectShoppingListState(makeState(overrides));
     expect(result.selectedShoppingListId).toBe('sl-1');
-    expect(result.setSelectedShoppingListId).toBe(overrides.setSelectedShoppingListId);
+    expect(result.setSelectedShoppingListId).toBe(
+      overrides.setSelectedShoppingListId,
+    );
   });
 
   it('selectMealPlanState returns meal plan state', () => {
@@ -322,7 +352,9 @@ describe('action and grouped selectors', () => {
       setOnboarded: jest.fn(),
     };
     const result = selectNavigationUtils(makeState(overrides));
-    expect(result.getUserNavigationState).toBe(overrides.getUserNavigationState);
+    expect(result.getUserNavigationState).toBe(
+      overrides.getUserNavigationState,
+    );
     expect(result.setOnBoardingStep).toBe(overrides.setOnBoardingStep);
   });
 
@@ -344,18 +376,48 @@ describe('action and grouped selectors', () => {
   });
 
   it('selectIsAdminUser returns true for ADMIN role', () => {
-    expect(selectIsAdminUser(makeState({ user: { role: 'ADMIN' } }))).toBe(true);
+    expect(selectIsAdminUser(makeState({ user: { role: 'ADMIN' } }))).toBe(
+      true,
+    );
   });
 
   it('selectIsAdminUser returns true for SUPER_ADMIN role', () => {
-    expect(selectIsAdminUser(makeState({ user: { role: 'SUPER_ADMIN' } }))).toBe(true);
+    expect(
+      selectIsAdminUser(makeState({ user: { role: 'SUPER_ADMIN' } })),
+    ).toBe(true);
   });
 
   it('selectIsAdminUser returns false for regular user', () => {
-    expect(selectIsAdminUser(makeState({ user: { role: 'MEMBER' } }))).toBe(false);
+    expect(selectIsAdminUser(makeState({ user: { role: 'MEMBER' } }))).toBe(
+      false,
+    );
   });
 
   it('selectIsAdminUser returns false when user is null', () => {
     expect(selectIsAdminUser(makeState({ user: null }))).toBeFalsy();
+  });
+
+  it('selectCanAccessDevTools returns true when canAccessDevTools is true', () => {
+    expect(
+      selectCanAccessDevTools(makeState({ user: { canAccessDevTools: true } })),
+    ).toBe(true);
+  });
+
+  it('selectCanAccessDevTools returns false when canAccessDevTools is false', () => {
+    expect(
+      selectCanAccessDevTools(
+        makeState({ user: { canAccessDevTools: false } }),
+      ),
+    ).toBe(false);
+  });
+
+  it('selectCanAccessDevTools returns false when canAccessDevTools is undefined', () => {
+    expect(selectCanAccessDevTools(makeState({ user: { id: 'u1' } }))).toBe(
+      false,
+    );
+  });
+
+  it('selectCanAccessDevTools returns false when user is null', () => {
+    expect(selectCanAccessDevTools(makeState({ user: null }))).toBeFalsy();
   });
 });

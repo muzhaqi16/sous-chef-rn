@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -79,7 +87,8 @@ export const ChangePasswordScreen: React.FC = () => {
       setIsSubmitting,
       (error: unknown) => {
         const errorMessage =
-          (error as any)?.message || 'Failed to change password. Please try again.';
+          (error as any)?.message ||
+          'Failed to change password. Please try again.';
         toast({
           message: errorMessage,
           type: 'error',
@@ -91,7 +100,7 @@ export const ChangePasswordScreen: React.FC = () => {
   const isFormValid = form.formState.isValid;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <Header title="Change Password" onBack={goBack} centerTitle />
 
       <KeyboardAvoidingView
@@ -103,7 +112,11 @@ export const ChangePasswordScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.iconContainer}>
-            <Icon name="lock-closed-outline" size={64} color={theme.colors.primary} />
+            <Icon
+              name="lock-closed-outline"
+              size={64}
+              color={theme.colors.primary}
+            />
           </View>
 
           <Text style={styles.subtitle}>
@@ -116,7 +129,9 @@ export const ChangePasswordScreen: React.FC = () => {
               <PasswordInput
                 value={watchedValues.currentPassword}
                 onChangeText={text =>
-                  form.setValue('currentPassword', text, { shouldValidate: true })
+                  form.setValue('currentPassword', text, {
+                    shouldValidate: true,
+                  })
                 }
                 placeholder="Enter your current password"
                 errorMessage={form.formState.errors.currentPassword?.message}
@@ -142,7 +157,9 @@ export const ChangePasswordScreen: React.FC = () => {
               <PasswordInput
                 value={watchedValues.confirmPassword}
                 onChangeText={text =>
-                  form.setValue('confirmPassword', text, { shouldValidate: true })
+                  form.setValue('confirmPassword', text, {
+                    shouldValidate: true,
+                  })
                 }
                 placeholder="Confirm your new password"
                 errorMessage={form.formState.errors.confirmPassword?.message}
@@ -151,7 +168,7 @@ export const ChangePasswordScreen: React.FC = () => {
             </View>
 
             <Pressable
-              style={({pressed}) => [
+              style={({ pressed }) => [
                 styles.submitButton,
                 (!isFormValid || isSubmitting) && styles.submitButtonDisabled,
                 pressed && styles.pressed,

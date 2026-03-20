@@ -70,8 +70,12 @@ jobs:
           API_KEY=${{ secrets.IOS_API_KEY }}
           WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}
           NODE_ENV=production
-          LOKI_ENDPOINT=${{ vars.LOKI_ENDPOINT }}
-          PROMETHEUS_ENDPOINT=${{ vars.PROMETHEUS_ENDPOINT }}
+          OTLP_METRICS_ENDPOINT=${{ vars.OTLP_METRICS_ENDPOINT }}
+          OTLP_LOGS_ENDPOINT=${{ vars.OTLP_LOGS_ENDPOINT }}
+          OTLP_METRICS_AUTH_USERNAME=${{ secrets.OTLP_METRICS_AUTH_USERNAME }}
+          OTLP_METRICS_AUTH_PASSWORD=${{ secrets.OTLP_METRICS_AUTH_PASSWORD }}
+          OTLP_LOGS_AUTH_USERNAME=${{ secrets.OTLP_LOGS_AUTH_USERNAME }}
+          OTLP_LOGS_AUTH_PASSWORD=${{ secrets.OTLP_LOGS_AUTH_PASSWORD }}
           SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}
           EOF
           echo "Generated .env file"

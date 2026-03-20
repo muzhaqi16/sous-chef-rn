@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import {
   TelemetryTransport,
   LogEntry,
@@ -7,10 +6,22 @@ import {
 } from '../types';
 import { logger } from '#/utils/environment';
 
+const HISTOGRAM_BOUNDS = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
+
+interface MetricMeta {
+  name: string;
+  labels: Record<string, string>;
+}
+
 export class HttpTransport implements TelemetryTransport {
   private readonly config: TelemetryConfig;
-  private metricsAccumulator: Map<string, number> = new Map();
-  private histogramFamilies: Set<string> = new Set();
+
+  // Accumulated state between flushes
+  private counterAccumulator: Map<string, number> = new Map();
+  private gaugeAccumulator: Map<string, number> = new Map();
+  private histogramObservations: Map<string, number[]> = new Map();
+  private metricMeta: Map<string, MetricMeta> = new Map();
+  private flushStartTime: string = `${Date.now()}000000`;
 
   constructor(config: TelemetryConfig) {
     this.config = config;
@@ -23,181 +34,392 @@ export class HttpTransport implements TelemetryTransport {
   isAvailable(): boolean {
     return (
       this.config.transports.http &&
-      (!!this.config.endpoints.prometheus || !!this.config.endpoints.loki)
+      !!(this.config.endpoints.metrics || this.config.endpoints.logs)
     );
   }
 
   async sendLogs(logs: LogEntry[]): Promise<void> {
-    if (!this.isAvailable() || !this.config.endpoints.loki) {
+    if (!this.isAvailable() || !this.config.endpoints.logs) {
       return;
     }
-
     try {
-      const streams = [
-        {
-          stream: {
-            job: this.config.appName,
-            app: this.config.appName,
-            environment: this.config.environment,
-            platform: this.config.platform,
+      const nowNano = `${Date.now()}000000`;
+      const payload = {
+        resourceLogs: [
+          {
+            resource: {
+              attributes: [
+                {
+                  key: 'service.name',
+                  value: { stringValue: this.config.appName },
+                },
+                {
+                  key: 'deployment.environment.name',
+                  value: { stringValue: this.config.environment },
+                },
+                {
+                  key: 'os.type',
+                  value: { stringValue: this.config.platform },
+                },
+              ],
+            },
+            scopeLogs: [
+              {
+                scope: { name: 'sous-chef-telemetry', version: '1.0.0' },
+                logRecords: logs.map(log => ({
+                  timeUnixNano: nowNano,
+                  body: {
+                    stringValue: JSON.stringify({
+                      message: log.message,
+                      ...log.extra,
+                    }),
+                  },
+                  severityText: log.level.toUpperCase(),
+                  attributes: [
+                    {
+                      key: 'level',
+                      value: { stringValue: log.level },
+                    },
+                    {
+                      key: 'environment',
+                      value: { stringValue: this.config.environment },
+                    },
+                    {
+                      key: 'platform',
+                      value: { stringValue: this.config.platform },
+                    },
+                  ],
+                })),
+              },
+            ],
           },
-          values: logs.map(log => [
-            `${Date.now()}000000`,
-            JSON.stringify({
-              level: log.level,
-              message: log.message,
-              timestamp: log.timestamp,
-              ...log.extra,
-            }),
-          ]),
-        },
-      ];
+        ],
+      };
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
 
-      if (this.config.auth?.username && this.config.auth?.password) {
+      if (this.config.logsAuth?.username && this.config.logsAuth?.password) {
         const credentials = btoa(
-          `${this.config.auth.username}:${this.config.auth.password}`,
+          `${this.config.logsAuth.username}:${this.config.logsAuth.password}`,
         );
         headers.Authorization = `Basic ${credentials}`;
       }
 
-      const response = await fetch(
-        `${this.ensureProtocol(this.config.endpoints.loki!)}/loki/api/v1/push`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ streams }),
-        },
-      );
+      const otlpUrl = `${this.ensureProtocol(
+        this.config.endpoints.logs!,
+      )}/v1/logs`;
 
-      if (!response.ok) {
-        logger.warn('Failed to send logs to Loki:', response.status);
-      } else {
-        logger.debug(`✅ Logs sent to Loki (${logs.length} entries)`);
-      }
-    } catch (error) {
-      logger.error('Failed to send logs to Loki:', error);
-    }
-  }
-
-  async sendMetrics(metrics: MetricEntry[]): Promise<void> {
-    if (!this.isAvailable() || !this.config.endpoints.prometheus) {
-      return;
-    }
-
-    try {
-      // Accumulate metrics by key (handle counter increments properly)
-      metrics.forEach(metric => {
-        const labelStr = Object.entries({
-          app: this.config.appName,
-          ...metric.labels,
-        })
-          .filter(([, v]) => v !== undefined && v !== null)
-          .sort() // Sort for consistent key
-          .map(([k, v]) => `${k}="${v}"`)
-          .join(',');
-
-        const key = labelStr ? `${metric.name}{${labelStr}}` : metric.name;
-
-        if (metric.type === 'counter') {
-          // For counters, accumulate the value
-          const current = this.metricsAccumulator.get(key) || 0;
-          this.metricsAccumulator.set(key, current + metric.value);
-        } else {
-          // For gauges, replace the value
-          this.metricsAccumulator.set(key, metric.value);
-        }
-
-        if (metric.histogramFamily) {
-          this.histogramFamilies.add(metric.histogramFamily);
-        }
-      });
-
-      // Build Prometheus format text WITHOUT TIMESTAMPS
-      // Group metrics: histogram sub-metrics (_sum, _count, _bucket) go under their family name
-      const metricGroups = new Map<string, { type: string; lines: string[] }>();
-
-      this.metricsAccumulator.forEach((value, key) => {
-        const metricName = key.split('{')[0];
-        const groupKey = this.getHistogramFamily(metricName) || metricName;
-        const type = this.histogramFamilies.has(groupKey)
-          ? 'histogram'
-          : this.inferMetricType(metricName);
-
-        if (!metricGroups.has(groupKey)) {
-          metricGroups.set(groupKey, { type, lines: [] });
-        }
-        metricGroups.get(groupKey)!.lines.push(`${key} ${value}`);
-      });
-
-      // Build the final body
-      let body = '';
-      metricGroups.forEach((data, groupName) => {
-        body += `# HELP ${groupName} ${groupName.replace(/_/g, ' ')}\n`;
-        body += `# TYPE ${groupName} ${data.type}\n`;
-        data.lines.forEach(line => {
-          body += `${line}\n`;
-        });
-      });
-
-      if (body.trim().length === 0) {
-        logger.debug('No metrics to send');
-        return;
-      }
-
-      // Send to Push Gateway
-      const headers: Record<string, string> = {
-        'Content-Type': 'text/plain; version=0.0.4',
-      };
-
-      if (this.config.auth?.username && this.config.auth?.password) {
-        const credentials = btoa(
-          `${this.config.auth.username}:${this.config.auth.password}`,
-        );
-        headers.Authorization = `Basic ${credentials}`;
-      }
-
-      const pushGatewayUrl = `${this.ensureProtocol(
-        this.config.endpoints.prometheus!,
-      )}/metrics/job/${this.config.appName}/instance/${Platform.OS}`;
-
-      logger.debug('📤 Sending metrics to Push Gateway:', {
-        url: pushGatewayUrl,
-        metricsCount: this.metricsAccumulator.size,
-        bodyPreview: body.substring(0, 500),
-      });
-
-      const response = await fetch(pushGatewayUrl, {
+      const response = await fetch(otlpUrl, {
         method: 'POST',
         headers,
-        body: body,
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const responseText = await response
           .text()
           .catch(() => 'Unable to read response');
-        logger.error('❌ Failed to send metrics to Push Gateway:', {
+        logger.warn('Failed to send logs via OTLP:', {
           status: response.status,
           statusText: response.statusText,
           response: responseText,
-          url: pushGatewayUrl,
+          url: otlpUrl,
         });
-        // Don't clear accumulator on failure
       } else {
-        logger.debug(
-          `✅ Metrics sent to Push Gateway (${this.metricsAccumulator.size} metrics)`,
-        );
-        // Clear accumulator after successful send
-        this.metricsAccumulator.clear();
-        this.histogramFamilies.clear();
+        logger.debug(`✅ Logs sent via OTLP (${logs.length} entries)`);
       }
     } catch (error) {
-      logger.error('❌ Failed to send metrics to Push Gateway:', error);
+      logger.error('Failed to send logs via OTLP:', error);
     }
+  }
+
+  async sendMetrics(metrics: MetricEntry[]): Promise<void> {
+    if (!this.isAvailable() || !this.config.endpoints.metrics) {
+      return;
+    }
+
+    try {
+      // Accumulate incoming metrics
+      for (const metric of metrics) {
+        const key = this.buildKey(metric.name, metric.labels);
+
+        if (!this.metricMeta.has(key)) {
+          this.metricMeta.set(key, {
+            name: metric.name,
+            labels: metric.labels,
+          });
+        }
+
+        if (metric.type === 'counter') {
+          const current = this.counterAccumulator.get(key) || 0;
+          this.counterAccumulator.set(key, current + metric.value);
+        } else if (metric.type === 'gauge') {
+          this.gaugeAccumulator.set(key, metric.value);
+        } else if (metric.type === 'histogram') {
+          const observations = this.histogramObservations.get(key) || [];
+          observations.push(metric.value);
+          this.histogramObservations.set(key, observations);
+        }
+      }
+
+      const totalMetrics =
+        this.counterAccumulator.size +
+        this.gaugeAccumulator.size +
+        this.histogramObservations.size;
+
+      if (totalMetrics === 0) {
+        logger.debug('No metrics to send');
+        return;
+      }
+
+      const payload = this.buildOtlpPayload();
+      const body = JSON.stringify(payload);
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (
+        this.config.metricsAuth?.username &&
+        this.config.metricsAuth?.password
+      ) {
+        const credentials = btoa(
+          `${this.config.metricsAuth.username}:${this.config.metricsAuth.password}`,
+        );
+        headers.Authorization = `Basic ${credentials}`;
+      }
+
+      const otlpUrl = `${this.ensureProtocol(
+        this.config.endpoints.metrics!,
+      )}/v1/metrics`;
+
+      logger.debug('📤 Sending metrics via OTLP:', {
+        url: otlpUrl,
+        metricsCount: totalMetrics,
+      });
+
+      const response = await fetch(otlpUrl, {
+        method: 'POST',
+        headers,
+        body,
+      });
+
+      if (!response.ok) {
+        const responseText = await response
+          .text()
+          .catch(() => 'Unable to read response');
+        logger.error('❌ Failed to send metrics via OTLP:', {
+          status: response.status,
+          statusText: response.statusText,
+          response: responseText,
+          url: otlpUrl,
+        });
+        // Don't clear accumulators on failure — retry on next flush
+      } else {
+        logger.debug(`✅ Metrics sent via OTLP (${totalMetrics} metrics)`);
+        this.clearAccumulators();
+      }
+    } catch (error) {
+      logger.error('❌ Failed to send metrics via OTLP:', error);
+    }
+  }
+
+  private buildKey(name: string, labels: Record<string, string>): string {
+    const labelStr = Object.entries(labels)
+      .filter(([, v]) => v !== undefined && v !== null)
+      .sort()
+      .map(([k, v]) => `${k}="${v}"`)
+      .join(',');
+    return labelStr ? `${name}{${labelStr}}` : name;
+  }
+
+  private clearAccumulators(): void {
+    this.counterAccumulator.clear();
+    this.gaugeAccumulator.clear();
+    this.histogramObservations.clear();
+    this.metricMeta.clear();
+    this.flushStartTime = `${Date.now()}000000`;
+  }
+
+  private buildOtlpPayload(): Record<string, unknown> {
+    const nowNano = `${Date.now()}000000`;
+    const otlpMetrics: Record<string, unknown>[] = [];
+
+    // Group by metric name for OTLP (each metric has multiple data points)
+    const countersByName = this.groupByName(this.counterAccumulator);
+    const gaugesByName = this.groupByName(this.gaugeAccumulator);
+    const histogramsByName = this.groupHistogramsByName();
+
+    // Counters → OTLP Sum
+    for (const [name, dataPoints] of countersByName) {
+      otlpMetrics.push({
+        name,
+        sum: {
+          dataPoints: dataPoints.map(dp => ({
+            asDouble: dp.value,
+            startTimeUnixNano: this.flushStartTime,
+            timeUnixNano: nowNano,
+            attributes: this.toOtlpAttributes(dp.labels),
+          })),
+          aggregationTemporality: 2, // CUMULATIVE
+          isMonotonic: true,
+        },
+      });
+    }
+
+    // Gauges → OTLP Gauge
+    for (const [name, dataPoints] of gaugesByName) {
+      otlpMetrics.push({
+        name,
+        gauge: {
+          dataPoints: dataPoints.map(dp => ({
+            asDouble: dp.value,
+            timeUnixNano: nowNano,
+            attributes: this.toOtlpAttributes(dp.labels),
+          })),
+        },
+      });
+    }
+
+    // Histograms → OTLP Histogram
+    for (const [name, dataPoints] of histogramsByName) {
+      otlpMetrics.push({
+        name,
+        histogram: {
+          dataPoints: dataPoints.map(dp => {
+            const bucketCounts = this.computeBucketCounts(dp.values);
+            return {
+              startTimeUnixNano: this.flushStartTime,
+              timeUnixNano: nowNano,
+              count: `${dp.values.length}`,
+              sum: dp.values.reduce((a, b) => a + b, 0),
+              bucketCounts: bucketCounts.map(String),
+              explicitBounds: HISTOGRAM_BOUNDS,
+              attributes: this.toOtlpAttributes(dp.labels),
+            };
+          }),
+          aggregationTemporality: 2, // CUMULATIVE
+        },
+      });
+    }
+
+    return {
+      resourceMetrics: [
+        {
+          resource: {
+            attributes: [
+              {
+                key: 'service.name',
+                value: { stringValue: this.config.appName },
+              },
+              {
+                key: 'deployment.environment.name',
+                value: { stringValue: this.config.environment },
+              },
+              {
+                key: 'os.type',
+                value: { stringValue: this.config.platform },
+              },
+              ...(this.config.instanceId
+                ? [
+                    {
+                      key: 'service.instance.id',
+                      value: { stringValue: this.config.instanceId },
+                    },
+                  ]
+                : []),
+            ],
+          },
+          scopeMetrics: [
+            {
+              scope: { name: 'sous-chef-telemetry', version: '1.0.0' },
+              metrics: otlpMetrics,
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  private groupByName(
+    accumulator: Map<string, number>,
+  ): Map<string, { value: number; labels: Record<string, string> }[]> {
+    const grouped = new Map<
+      string,
+      { value: number; labels: Record<string, string> }[]
+    >();
+
+    for (const [key, value] of accumulator) {
+      const meta = this.metricMeta.get(key);
+      if (!meta) {
+        continue;
+      }
+      const existing = grouped.get(meta.name) || [];
+      existing.push({ value, labels: meta.labels });
+      grouped.set(meta.name, existing);
+    }
+
+    return grouped;
+  }
+
+  private groupHistogramsByName(): Map<
+    string,
+    { values: number[]; labels: Record<string, string> }[]
+  > {
+    const grouped = new Map<
+      string,
+      { values: number[]; labels: Record<string, string> }[]
+    >();
+
+    for (const [key, values] of this.histogramObservations) {
+      const meta = this.metricMeta.get(key);
+      if (!meta) {
+        continue;
+      }
+      const existing = grouped.get(meta.name) || [];
+      existing.push({ values, labels: meta.labels });
+      grouped.set(meta.name, existing);
+    }
+
+    return grouped;
+  }
+
+  private computeBucketCounts(values: number[]): number[] {
+    // OTLP: N+1 buckets for N bounds
+    // bucket[0] = count of values <= bounds[0]
+    // bucket[i] = count of values in (bounds[i-1], bounds[i]]
+    // bucket[N] = count of values > bounds[N-1]
+    const counts = new Array(HISTOGRAM_BOUNDS.length + 1).fill(0);
+
+    for (const value of values) {
+      let placed = false;
+      for (let i = 0; i < HISTOGRAM_BOUNDS.length; i++) {
+        if (value <= HISTOGRAM_BOUNDS[i]) {
+          counts[i]++;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        counts[HISTOGRAM_BOUNDS.length]++;
+      }
+    }
+
+    return counts;
+  }
+
+  private toOtlpAttributes(
+    labels: Record<string, string>,
+  ): { key: string; value: { stringValue: string } }[] {
+    return Object.entries(labels)
+      .filter(([, v]) => v !== undefined && v !== null)
+      .sort()
+      .map(([key, value]) => ({
+        key,
+        value: { stringValue: value },
+      }));
   }
 
   private ensureProtocol(url: string): string {
@@ -205,27 +427,5 @@ export class HttpTransport implements TelemetryTransport {
       return url;
     }
     return `https://${url}`;
-  }
-
-  private getHistogramFamily(metricName: string): string | null {
-    for (const suffix of ['_sum', '_count', '_bucket']) {
-      if (metricName.endsWith(suffix)) {
-        const baseName = metricName.slice(0, -suffix.length);
-        if (this.histogramFamilies.has(baseName)) {
-          return baseName;
-        }
-      }
-    }
-    return null;
-  }
-
-  private inferMetricType(metricName: string): string {
-    if (metricName.endsWith('_total') || metricName.endsWith('_count')) {
-      return 'counter';
-    }
-    if (metricName.endsWith('_bucket') || metricName.endsWith('_sum')) {
-      return 'histogram';
-    }
-    return 'gauge';
   }
 }

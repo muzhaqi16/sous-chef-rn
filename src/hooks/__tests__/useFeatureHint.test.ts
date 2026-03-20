@@ -1,16 +1,37 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useFeatureHint } from '../useFeatureHint';
 
-// Mock MMKV storage
-const mockStore = new Map<string, boolean>();
-jest.mock('#/storage/mmkv', () => ({
-  storage: {
-    getBoolean: (key: string) => mockStore.get(key),
-    set: (key: string, value: boolean) => mockStore.set(key, value),
-    remove: (key: string) => mockStore.delete(key),
-    getAllKeys: () => [...mockStore.keys()],
-  },
-}));
+// Mock MMKV storage — the Map lives inside the factory so it is available
+// when module-level code (ApolloCachePersistence, zustand persist) runs,
+// since jest.mock factories are hoisted above variable declarations.
+jest.mock('#/storage/mmkv', () => {
+  const store = new Map<string, any>();
+  return {
+    __mockStore: store,
+    storage: {
+      getString: (key: string) => store.get(key),
+      getNumber: (key: string) => store.get(key),
+      getBoolean: (key: string) => store.get(key),
+      set: (key: string, value: any) => store.set(key, value),
+      remove: (key: string) => store.delete(key),
+      delete: (key: string) => store.delete(key),
+      contains: (key: string) => store.has(key),
+      clearAll: () => store.clear(),
+      getAllKeys: () => [...store.keys()],
+    },
+    zustandStorage: {
+      getItem: async (name: string) => store.get(name) ?? null,
+      setItem: async (name: string, value: string) => store.set(name, value),
+      removeItem: async (name: string) => store.delete(name),
+    },
+    getStorage: async () => ({}),
+    STORAGE_KEY: 'sous-chef-storage',
+  };
+});
+
+const { __mockStore: mockStore } = jest.requireMock<{
+  __mockStore: Map<string, any>;
+}>('#/storage/mmkv');
 
 // Mock tutorials setting — enabled by default
 let mockTutorialsEnabled = true;
@@ -38,9 +59,7 @@ afterEach(() => {
 
 describe('useFeatureHint', () => {
   it('starts hidden when showOnMount is false', () => {
-    const { result } = renderHook(() =>
-      useFeatureHint({ featureId: 'test' }),
-    );
+    const { result } = renderHook(() => useFeatureHint({ featureId: 'test' }));
 
     expect(result.current.isVisible).toBe(false);
     expect(result.current.hasBeenShown).toBe(false);
@@ -91,9 +110,7 @@ describe('useFeatureHint', () => {
   });
 
   it('actions.show() makes hint visible when tutorials enabled', () => {
-    const { result } = renderHook(() =>
-      useFeatureHint({ featureId: 'test' }),
-    );
+    const { result } = renderHook(() => useFeatureHint({ featureId: 'test' }));
 
     act(() => {
       result.current.actions.show();
@@ -105,9 +122,7 @@ describe('useFeatureHint', () => {
   it('actions.show() does nothing when tutorials disabled', () => {
     mockTutorialsEnabled = false;
 
-    const { result } = renderHook(() =>
-      useFeatureHint({ featureId: 'test' }),
-    );
+    const { result } = renderHook(() => useFeatureHint({ featureId: 'test' }));
 
     act(() => {
       result.current.actions.show();
@@ -149,9 +164,7 @@ describe('useFeatureHint', () => {
   it('actions.reset() clears persisted state', () => {
     mockStore.set('feature_hint_shown_user-1_test', true);
 
-    const { result } = renderHook(() =>
-      useFeatureHint({ featureId: 'test' }),
-    );
+    const { result } = renderHook(() => useFeatureHint({ featureId: 'test' }));
 
     expect(result.current.hasBeenShown).toBe(true);
 

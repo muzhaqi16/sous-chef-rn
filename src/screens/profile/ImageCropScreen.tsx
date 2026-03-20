@@ -318,6 +318,7 @@ export const ImageCropScreen: React.FC<
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['left', 'right']}
     >
       <Header
         title="Crop Photo"

@@ -317,3 +317,72 @@ export function addNewItemToShoppingListCache(
     console.warn('Failed to update cache for new shopping list item:', error);
   }
 }
+
+/**
+ * Remove a single item from ShoppingList cache when moving to pantry.
+ *
+ * Unlike the generic `createRemoveFromParentConnectionUpdater`, this only
+ * modifies the correct filtered variant (purchased or unpurchased) based on
+ * the item's purchase status, preventing incorrect totalCount decrements
+ * on the other tab.
+ *
+ * Also updates `completedItems` and `totalItems` counters on the ShoppingList.
+ */
+export function removeItemFromShoppingListForMoveToPantry(
+  cache: ApolloCache,
+  listId: string,
+  itemId: string,
+  wasPurchased: boolean,
+): void {
+  try {
+    const parentCacheId = cache.identify({
+      __typename: 'ShoppingList',
+      id: listId,
+    });
+
+    if (!parentCacheId) return;
+
+    const filterKey = `isPurchased":${wasPurchased}`;
+
+    cache.modify({
+      id: parentCacheId,
+      fields: {
+        itemsConnection(existing: any, { readField, storeFieldName }: any) {
+          if (!storeFieldName.includes(filterKey) || !existing?.edges)
+            return existing;
+
+          return {
+            ...existing,
+            edges: existing.edges.filter(
+              (edge: any) => readField('id', edge.node) !== itemId,
+            ),
+            totalCount: Math.max(0, (existing.totalCount || 0) - 1),
+          };
+        },
+        ...(wasPurchased && {
+          completedItems(existing: number = 0) {
+            return Math.max(0, existing - 1);
+          },
+        }),
+        totalItems(existing: number = 0) {
+          return Math.max(0, existing - 1);
+        },
+      },
+    });
+
+    // Evict the item entity from cache
+    const cacheId = cache.identify({
+      __typename: 'ShoppingListItem',
+      id: itemId,
+    });
+    if (cacheId) {
+      cache.evict({ id: cacheId });
+    }
+    cache.gc();
+  } catch (error) {
+    console.warn(
+      'Failed to remove item from ShoppingList for move to pantry:',
+      error,
+    );
+  }
+}

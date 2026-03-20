@@ -38,6 +38,9 @@ export interface UIState {
   // Cross-navigation scroll flags
   pendingPantryScrollToTop: boolean;
 
+  // Tutorial reset signal (session-only counter; bumped by resetAllFeatureHints)
+  tutorialResetGeneration: number;
+
   // Actions
   setLoading: (loading: boolean) => void;
   setError: (error: boolean) => void;
@@ -61,6 +64,7 @@ export interface UIState {
   setGlobalSearchQuery: (query: string) => void;
   setActiveFilters: (filters: Record<string, any>) => void;
   setPendingPantryScrollToTop: (pending: boolean) => void;
+  bumpTutorialResetGeneration: () => void;
   showToast: (
     message: string,
     type: 'success' | 'error' | 'info' | 'warning',
@@ -88,6 +92,7 @@ const initialUIState = {
   toastMessage: null,
   toastType: null,
   pendingPantryScrollToTop: false,
+  tutorialResetGeneration: 0,
 };
 
 export const createUISlice: StateCreator<
@@ -95,7 +100,7 @@ export const createUISlice: StateCreator<
   [['zustand/immer', never]],
   [],
   UIState
-> = (set) => ({
+> = set => ({
   ...initialUIState,
 
   setLoading: loading => {
@@ -184,6 +189,12 @@ export const createUISlice: StateCreator<
   setPendingPantryScrollToTop: pending => {
     set(state => {
       state.pendingPantryScrollToTop = pending;
+    });
+  },
+
+  bumpTutorialResetGeneration: () => {
+    set(state => {
+      state.tutorialResetGeneration += 1;
     });
   },
 

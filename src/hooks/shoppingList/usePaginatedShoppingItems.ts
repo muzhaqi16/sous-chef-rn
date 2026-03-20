@@ -18,7 +18,7 @@ interface UsePaginatedShoppingItemsOptions {
 
 interface ConnectionData {
   items: ShoppingListItemDisplayFragment[];
-  totalCount: number;
+  totalCount: number | undefined;
   hasMore: boolean;
   isLoadingMore: boolean;
   loadMore: () => Promise<void>;
@@ -258,7 +258,7 @@ export function usePaginatedShoppingItems({
   const unpurchasedTotalCount =
     unpurchasedData?.shoppingList?.itemsConnection?.totalCount ?? 0;
   const purchasedTotalCount =
-    purchasedData?.shoppingList?.itemsConnection?.totalCount ?? 0;
+    purchasedData?.shoppingList?.itemsConnection?.totalCount ?? undefined;
 
   // --- Refetch both queries ---
   const handleRefetch = async () => {
@@ -278,7 +278,9 @@ export function usePaginatedShoppingItems({
   // (e.g., all visible items toggled but server has more pages)
   useEffect(() => {
     const purchasedNeedsRefetch =
-      purchasedTotalCount > 0 && purchasedItems.length === 0 && !pLoading;
+      (purchasedTotalCount ?? 0) > 0 &&
+      purchasedItems.length === 0 &&
+      !pLoading;
     const unpurchasedNeedsRefetch =
       unpurchasedTotalCount > 0 && unpurchasedItems.length === 0 && !uLoading;
 

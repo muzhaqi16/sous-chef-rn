@@ -4,13 +4,14 @@ import { useMoveToPantry } from '../useMoveToPantry';
 // --- Mocks ---
 
 const mockMoveShoppingItemToPantry = jest.fn();
+let capturedMutationOptions: any;
 
 jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
-  useMoveShoppingItemToPantryMutation: () => [
-    mockMoveShoppingItemToPantry,
-    { loading: false },
-  ],
+  useMoveShoppingItemToPantryMutation: (options: any) => {
+    capturedMutationOptions = options;
+    return [mockMoveShoppingItemToPantry, { loading: false }];
+  },
 }));
 
 jest.mock('#/services/telemetry', () => ({
@@ -21,7 +22,10 @@ jest.mock('#/services/telemetry', () => ({
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
-  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
+}));
+
+jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
+  removeItemFromShoppingListForMoveToPantry: jest.fn(),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -203,5 +207,182 @@ describe('useMoveToPantry', () => {
         remove_from_list: true,
       }),
     );
+  });
+
+  // ---------------------------------------------------------------------------
+  // Cache update logic
+  // ---------------------------------------------------------------------------
+
+  describe('cache update logic', () => {
+    function createMockCache() {
+      return {
+        modify: jest.fn(),
+        evict: jest.fn(),
+        gc: jest.fn(),
+        identify: jest.fn(
+          (obj: { __typename: string; id: string }) =>
+            `${obj.__typename}:${obj.id}`,
+        ),
+      } as any;
+    }
+
+    const mockData = {
+      moveShoppingItemToPantry: {
+        pantryItem: { id: 'pantry-item-1', __typename: 'PantryItem' },
+      },
+    };
+
+    /**
+     * Helper: render the hook, trigger moveToPantry to set refs,
+     * then return the captured update function and a fresh mock cache.
+     */
+    async function setupAndTrigger(
+      itemOverrides: Record<string, unknown> = {},
+      inputOverrides: Record<string, unknown> = {},
+    ) {
+      mockMoveShoppingItemToPantry.mockResolvedValue({ data: mockData });
+
+      const { result } = renderHook(() =>
+        useMoveToPantry({ currentListId: 'list-1' }),
+      );
+
+      const item = createItem(itemOverrides);
+
+      await act(async () => {
+        await result.current.moveToPantry(item, {
+          pantryId: 'pantry-1',
+          actualQuantity: 1,
+          removeFromList: true,
+          ...inputOverrides,
+        });
+      });
+
+      // Clear mocks so cache update assertions start clean
+      jest.clearAllMocks();
+
+      return {
+        update: capturedMutationOptions.update,
+        cache: createMockCache(),
+      };
+    }
+
+    it('adds pantry item to cache and removes purchased item from shopping list', async () => {
+      const { update, cache } = await setupAndTrigger();
+      const {
+        createAddToParentConnectionUpdater,
+      } = require('#/apollo/utils/cacheUpdaters');
+      const {
+        removeItemFromShoppingListForMoveToPantry,
+      } = require('#/apollo/utils/shoppingListCacheUpdaters');
+
+      const mockAddUpdater = jest.fn();
+      createAddToParentConnectionUpdater.mockReturnValue(mockAddUpdater);
+
+      update(cache, { data: mockData });
+
+      expect(createAddToParentConnectionUpdater).toHaveBeenCalledWith(
+        'Pantry',
+        'itemsConnection',
+        'PantryItem',
+      );
+      expect(mockAddUpdater).toHaveBeenCalledWith(
+        cache,
+        'pantry-1',
+        mockData.moveShoppingItemToPantry.pantryItem,
+      );
+      expect(removeItemFromShoppingListForMoveToPantry).toHaveBeenCalledWith(
+        cache,
+        'list-1',
+        'item-1',
+        true, // wasPurchased = true (default item has isPurchased: true)
+      );
+    });
+
+    it('passes wasPurchased=false for unpurchased item', async () => {
+      const { update, cache } = await setupAndTrigger({
+        purchaseInfo: { isPurchased: false },
+      });
+      const {
+        createAddToParentConnectionUpdater,
+      } = require('#/apollo/utils/cacheUpdaters');
+      createAddToParentConnectionUpdater.mockReturnValue(jest.fn());
+      const {
+        removeItemFromShoppingListForMoveToPantry,
+      } = require('#/apollo/utils/shoppingListCacheUpdaters');
+
+      update(cache, { data: mockData });
+
+      expect(removeItemFromShoppingListForMoveToPantry).toHaveBeenCalledWith(
+        cache,
+        'list-1',
+        'item-1',
+        false,
+      );
+    });
+
+    it('marks item as unpurchased when removeFromList is false', async () => {
+      const { update, cache } = await setupAndTrigger(
+        {},
+        { removeFromList: false },
+      );
+      const {
+        createAddToParentConnectionUpdater,
+      } = require('#/apollo/utils/cacheUpdaters');
+      createAddToParentConnectionUpdater.mockReturnValue(jest.fn());
+      const {
+        removeItemFromShoppingListForMoveToPantry,
+      } = require('#/apollo/utils/shoppingListCacheUpdaters');
+
+      update(cache, { data: mockData });
+
+      expect(removeItemFromShoppingListForMoveToPantry).not.toHaveBeenCalled();
+      expect(cache.identify).toHaveBeenCalledWith({
+        __typename: 'ShoppingListItem',
+        id: 'item-1',
+      });
+      expect(cache.modify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'ShoppingListItem:item-1',
+          fields: expect.objectContaining({
+            purchaseInfo: expect.any(Function),
+            version: expect.any(Function),
+            updatedAt: expect.any(Function),
+          }),
+        }),
+      );
+    });
+
+    it('does nothing when data is null', async () => {
+      const { update, cache } = await setupAndTrigger();
+      const {
+        createAddToParentConnectionUpdater,
+      } = require('#/apollo/utils/cacheUpdaters');
+      const {
+        removeItemFromShoppingListForMoveToPantry,
+      } = require('#/apollo/utils/shoppingListCacheUpdaters');
+
+      update(cache, { data: null });
+
+      expect(createAddToParentConnectionUpdater).not.toHaveBeenCalled();
+      expect(removeItemFromShoppingListForMoveToPantry).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when pantryId ref is null', () => {
+      // Render without calling moveToPantry — refs stay null
+      renderHook(() => useMoveToPantry({ currentListId: 'list-1' }));
+
+      const {
+        createAddToParentConnectionUpdater,
+      } = require('#/apollo/utils/cacheUpdaters');
+      const {
+        removeItemFromShoppingListForMoveToPantry,
+      } = require('#/apollo/utils/shoppingListCacheUpdaters');
+
+      const cache = createMockCache();
+      capturedMutationOptions.update(cache, { data: mockData });
+
+      expect(createAddToParentConnectionUpdater).not.toHaveBeenCalled();
+      expect(removeItemFromShoppingListForMoveToPantry).not.toHaveBeenCalled();
+    });
   });
 });

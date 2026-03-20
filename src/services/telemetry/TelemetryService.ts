@@ -135,51 +135,16 @@ export class TelemetryService {
       return;
     }
 
-    const baseLabels = {
-      platform: Platform.OS,
-      env: this.config.environment,
-      ...labels,
-    };
-
     this.addMetric({
-      name: `${name}_sum`,
+      name,
       value,
-      labels: baseLabels,
+      labels: {
+        platform: Platform.OS,
+        env: this.config.environment,
+        ...labels,
+      },
       timestamp: Date.now(),
-      type: 'counter',
-      histogramFamily: name,
-    });
-
-    this.addMetric({
-      name: `${name}_count`,
-      value: 1,
-      labels: baseLabels,
-      timestamp: Date.now(),
-      type: 'counter',
-      histogramFamily: name,
-    });
-
-    const buckets = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
-    for (const bucket of buckets) {
-      if (value <= bucket) {
-        this.addMetric({
-          name: `${name}_bucket`,
-          value: 1,
-          labels: { ...baseLabels, le: bucket.toString() },
-          timestamp: Date.now(),
-          type: 'counter',
-          histogramFamily: name,
-        });
-      }
-    }
-
-    this.addMetric({
-      name: `${name}_bucket`,
-      value: 1,
-      labels: { ...baseLabels, le: '+Inf' },
-      timestamp: Date.now(),
-      type: 'counter',
-      histogramFamily: name,
+      type: 'histogram',
     });
   }
 

@@ -202,6 +202,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['left', 'right']}
     >
       <View style={styles.content}>
         <View style={styles.header}>

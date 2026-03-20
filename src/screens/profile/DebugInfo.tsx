@@ -8,8 +8,10 @@ import Config from 'react-native-config';
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { useAppStore, selectCanAccessDevTools } from '#/store/useAppStore';
 
 export const DebugInfo: React.FC = () => {
+  const canAccessDevTools = useAppStore(selectCanAccessDevTools);
   const config = Environment.getConfig();
   const apiConfig = Environment.getApiConfig();
 
@@ -35,9 +37,10 @@ export const DebugInfo: React.FC = () => {
       'Max Retries': apiConfig.retries.toString(),
     },
     Telemetry: {
-      'Prometheus Endpoint': Config.PROMETHEUS_ENDPOINT || 'Not set',
-      'Loki Endpoint': Config.LOKI_ENDPOINT || 'Not set',
-      'Auth Username': Config.TELEMETRY_AUTH_USERNAME || 'Not set',
+      'Metrics Endpoint': Config.OTLP_METRICS_ENDPOINT || 'Not set',
+      'Logs Endpoint': Config.OTLP_LOGS_ENDPOINT || 'Not set',
+      'Metrics Auth': Config.OTLP_METRICS_AUTH_USERNAME || 'Not set',
+      'Logs Auth': Config.OTLP_LOGS_AUTH_USERNAME || 'Not set',
     },
     'Device Info': {
       Platform: Platform.OS,
@@ -80,8 +83,8 @@ export const DebugInfo: React.FC = () => {
     alertService.alert('Copied', `${sectionName} copied to clipboard`);
   };
 
-  // Only show in development, local, or staging builds
-  if (!Environment.shouldEnableDebugFeatures()) {
+  // Only show in development, local, or staging builds — or for users with dev tools access
+  if (!Environment.shouldEnableDebugFeatures() && !canAccessDevTools) {
     return (
       <ProfileScreenWrapper title="Debug Info">
         <View style={styles.notAvailableContainer}>

@@ -330,7 +330,7 @@ describe('TelemetryService', () => {
 
   // ------------------------------------------------------------------ recordHistogram
   describe('recordHistogram', () => {
-    it('creates _sum, _count, and _bucket metrics', async () => {
+    it('creates a single histogram metric entry with the raw value', async () => {
       const service = new TelemetryService({
         enabled: true,
         enableMetrics: true,
@@ -339,50 +339,43 @@ describe('TelemetryService', () => {
       await service.flush();
 
       const metrics = mockSendMetrics.mock.calls[0][0];
-      const names = metrics.map((m: { name: string }) => m.name);
-
-      expect(names).toContain('request_duration_sum');
-      expect(names).toContain('request_duration_count');
-      expect(names).toContain('request_duration_bucket');
+      expect(metrics).toHaveLength(1);
+      expect(metrics[0]).toEqual(
+        expect.objectContaining({
+          name: 'request_duration',
+          value: 75,
+          type: 'histogram',
+        }),
+      );
     });
 
-    it('populates buckets correctly for value 75', async () => {
+    it('includes platform and environment labels', async () => {
       const service = new TelemetryService({
         enabled: true,
         enableMetrics: true,
+        environment: 'production',
       });
-      service.recordHistogram('latency', 75);
+      service.recordHistogram('latency', 100, { host: 'api.test' });
       await service.flush();
 
       const metrics = mockSendMetrics.mock.calls[0][0];
-      const buckets = metrics.filter(
-        (m: { name: string }) => m.name === 'latency_bucket',
+      expect(metrics[0].labels).toEqual(
+        expect.objectContaining({
+          platform: 'ios',
+          env: 'production',
+          host: 'api.test',
+        }),
       );
-
-      // Buckets: 10,25,50 are < 75 so skipped; 100,250,500,1000,2500,5000,10000 + Inf
-      const les = buckets.map((b: { labels: { le: string } }) => b.labels.le);
-      expect(les).not.toContain('10');
-      expect(les).not.toContain('25');
-      expect(les).not.toContain('50');
-      expect(les).toContain('100');
-      expect(les).toContain('250');
-      expect(les).toContain('+Inf');
     });
 
-    it('always includes +Inf bucket', async () => {
+    it('is a no-op when disabled', async () => {
       const service = new TelemetryService({
-        enabled: true,
+        enabled: false,
         enableMetrics: true,
       });
-      service.recordHistogram('huge_value', 999999);
+      service.recordHistogram('test', 50);
       await service.flush();
-
-      const metrics = mockSendMetrics.mock.calls[0][0];
-      const infBucket = metrics.find(
-        (m: { name: string; labels: { le: string } }) =>
-          m.name === 'huge_value_bucket' && m.labels.le === '+Inf',
-      );
-      expect(infBucket).toBeDefined();
+      expect(mockSendMetrics).not.toHaveBeenCalled();
     });
   });
 
@@ -521,12 +514,13 @@ describe('TelemetryService', () => {
       await service.flush();
 
       const metrics = mockSendMetrics.mock.calls[0][0];
-      const sumMetric = metrics.find(
-        (m: { name: string }) => m.name === 'app_timing_api_ms_sum',
+      const histogramMetric = metrics.find(
+        (m: { name: string }) => m.name === 'app_timing_api_ms',
       );
-      expect(sumMetric).toBeDefined();
-      expect(sumMetric.value).toBe(350);
-      expect(sumMetric.labels).toEqual(
+      expect(histogramMetric).toBeDefined();
+      expect(histogramMetric.value).toBe(350);
+      expect(histogramMetric.type).toBe('histogram');
+      expect(histogramMetric.labels).toEqual(
         expect.objectContaining({ variable: 'fetchRecipes', label: 'graphql' }),
       );
     });
@@ -540,10 +534,10 @@ describe('TelemetryService', () => {
       await service.flush();
 
       const metrics = mockSendMetrics.mock.calls[0][0];
-      const sumMetric = metrics.find(
-        (m: { name: string }) => m.name === 'app_timing_render_ms_sum',
+      const histogramMetric = metrics.find(
+        (m: { name: string }) => m.name === 'app_timing_render_ms',
       );
-      expect(sumMetric.labels.label).toBe('default');
+      expect(histogramMetric.labels.label).toBe('default');
     });
   });
 

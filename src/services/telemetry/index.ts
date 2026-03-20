@@ -3,11 +3,10 @@ import Config from 'react-native-config';
 import { TelemetryService } from './TelemetryService';
 import { TelemetryConfig } from './types';
 import { Environment } from '#/utils/environment';
+import { getDeviceId } from '#/utils/deviceId';
 
 const createTelemetryConfig = (): TelemetryConfig => {
   const env = Environment.getConfig();
-
-  const needsAuth = env.isProduction || env.isStaging;
 
   return {
     enabled: Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
@@ -22,27 +21,33 @@ const createTelemetryConfig = (): TelemetryConfig => {
       ? 'staging'
       : 'development',
     platform: Platform.OS,
+    instanceId: `${Platform.OS}_${getDeviceId()}`,
     flushIntervals: {
       metrics: env.isDevelopment ? 5000 : 10000,
       logs: env.isDevelopment ? 2000 : 5000,
     },
     endpoints: {
-      prometheus: Config.PROMETHEUS_ENDPOINT,
-      loki: Config.LOKI_ENDPOINT,
+      metrics: Config.OTLP_METRICS_ENDPOINT,
+      logs: Config.OTLP_LOGS_ENDPOINT,
     },
-    auth:
-      needsAuth &&
-      Config.TELEMETRY_AUTH_USERNAME &&
-      Config.TELEMETRY_AUTH_PASSWORD
+    metricsAuth:
+      Config.OTLP_METRICS_AUTH_USERNAME && Config.OTLP_METRICS_AUTH_PASSWORD
         ? {
-            username: Config.TELEMETRY_AUTH_USERNAME,
-            password: Config.TELEMETRY_AUTH_PASSWORD,
+            username: Config.OTLP_METRICS_AUTH_USERNAME,
+            password: Config.OTLP_METRICS_AUTH_PASSWORD,
+          }
+        : undefined,
+    logsAuth:
+      Config.OTLP_LOGS_AUTH_USERNAME && Config.OTLP_LOGS_AUTH_PASSWORD
+        ? {
+            username: Config.OTLP_LOGS_AUTH_USERNAME,
+            password: Config.OTLP_LOGS_AUTH_PASSWORD,
           }
         : undefined,
     transports: {
       http:
         (env.isDevelopment || env.isStaging || env.isProduction) &&
-        !!(Config.PROMETHEUS_ENDPOINT || Config.LOKI_ENDPOINT),
+        !!(Config.OTLP_METRICS_ENDPOINT || Config.OTLP_LOGS_ENDPOINT),
       console: false,
     },
   };

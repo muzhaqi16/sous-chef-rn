@@ -6,10 +6,8 @@ import {
   ShoppingListItemDisplayFragment,
 } from '#generated';
 import { Telemetry } from '#/services/telemetry';
-import {
-  createAddToParentConnectionUpdater,
-  createRemoveFromParentConnectionUpdater,
-} from '#/apollo/utils/cacheUpdaters';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { removeItemFromShoppingListForMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
 import {
   executeCacheUpdate,
   executeMutation,
@@ -69,13 +67,14 @@ export function useMoveToPantry({
 
           if (removeFromListRef.current) {
             // Remove from shopping list cache if removeFromList was true
-            const removeFromShoppingListCache =
-              createRemoveFromParentConnectionUpdater(
-                'ShoppingList',
-                'itemsConnection',
-                'ShoppingListItem',
-              );
-            removeFromShoppingListCache(cache, currentListId, selectedItem.id);
+            const wasPurchased =
+              selectedItem.purchaseInfo?.isPurchased ?? false;
+            removeItemFromShoppingListForMoveToPantry(
+              cache,
+              currentListId,
+              selectedItem.id,
+              wasPurchased,
+            );
           } else {
             // If keeping in list, mark as unpurchased in cache (server does this automatically)
             const cacheId = cache.identify({

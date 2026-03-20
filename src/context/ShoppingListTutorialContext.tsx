@@ -10,6 +10,7 @@ import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
 import { useAppStore } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
 // ── Storage key helpers (compatible with useFeatureHint / resetAllFeatureHints) ──
 
@@ -156,6 +157,15 @@ export function ShoppingListTutorialProvider({
   const [hasStarted, setHasStarted] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [rects, setRects] = useState<Record<string, TargetRect | null>>({});
+
+  // React to external resets (centralized signal hook)
+  const wasReset = useTutorialResetSignal();
+  if (wasReset) {
+    setIsCompleted(false);
+    setCurrentStep(ShoppingListTutorialStep.IDLE);
+    setHasStarted(false);
+    setIsTransitioning(false);
+  }
 
   const userIdRef = useRef(userId);
   useEffect(() => {
