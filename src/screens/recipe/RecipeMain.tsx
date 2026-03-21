@@ -424,6 +424,7 @@ const RecipeMainInner: React.FC = () => {
           onItemPress={handleItemPress}
           onRefresh={screen.handleRefresh}
           emptyState={screen.emptyStateConfig}
+          dataMode={screen.showSearchResults ? 'search' : 'discovery'}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
           ListHeaderComponent={recipeListHeader}
@@ -697,7 +698,7 @@ export const RecipeMain: React.FC = () => (
 
 const styles = StyleSheet.create(theme => ({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  searchBarContainer: { paddingHorizontal: theme.spacing.md },
+  searchBarContainer: { paddingHorizontal: theme.spacing['3'] },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -710,7 +711,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    marginHorizontal: theme.spacing.md,
+    marginHorizontal: theme.spacing['3'],
     marginTop: theme.spacing.sm,
     borderRadius: theme.radii.md,
   },
@@ -736,7 +737,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
-    marginHorizontal: theme.spacing.md,
+    marginHorizontal: theme.spacing['3'],
     marginTop: theme.spacing.sm,
   },
   searchResultsText: {

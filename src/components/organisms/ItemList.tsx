@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useRef, useState } from 'react';
+import React, { useDeferredValue, useEffect, useRef, useState } from 'react';
 import {
   View,
   RefreshControl,
@@ -19,8 +19,10 @@ import { IconName } from '#/utils/iconUtils';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { createPropsComparator } from '#utils/memoUtils';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
-import { CachedImage } from '#components/atoms/CachedImage';
+import { CachedImage, preloadImages } from '#components/atoms/CachedImage';
 import { commonStyles } from '#/styles/commonStyles';
+import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
+import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import {
   ItemListActionsProvider,
   useItemListActions,
@@ -114,6 +116,9 @@ const renderItem = (info: ListRenderItemInfo<Item>) => (
 // Module-scope getItemType — all items are the same type for optimal recycler pooling
 const getItemType = () => 'item';
 
+// Stable config — prevents scroll jumps during data updates (matches PantryContent & SortableList)
+const MVCP_DISABLED = { disabled: true };
+
 interface ItemListProps {
   items: Item[];
   onItemPress: (id: string) => void;
@@ -131,6 +136,8 @@ interface ItemListProps {
   testIDPrefix?: string;
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   scrollEventThrottle?: number;
+  /** When this key changes, scroll resets to top (prevents FlashList v2 blank-cell regression). */
+  dataMode?: string;
   emptyState?: {
     icon: IconName;
     title: string;
@@ -159,12 +166,43 @@ export const ItemList: React.FC<ItemListProps> = ({
   testIDPrefix,
   onScroll,
   scrollEventThrottle,
+  dataMode,
   emptyState,
 }) => {
   const [refreshing, setRefreshing] = useState(false);
   const flashListRef = useRef<FlashListRef<Item>>(null);
   const { bottom: safeBottom } = useSafeAreaInsets();
   const deferredItems = useDeferredValue(items);
+
+  // ── Performance instrumentation (matches PantryContent & SortableList) ──
+  const perfCallbacks = useFlashListPerformance(flashListRef, {
+    componentName: 'ItemList',
+  });
+  useDataReferenceTracker(
+    deferredItems,
+    'ItemList.deferredItems',
+    perfCallbacks.onDataReferenceChange,
+  );
+
+  // ── Image preloading — covers all items including paginated appends ──
+  useEffect(() => {
+    const urls: string[] = [];
+    for (const item of items) {
+      if (item.imageUrl) urls.push(item.imageUrl);
+    }
+    if (urls.length > 0) preloadImages(urls);
+  }, [items]);
+
+  // ── Scroll reset on data mode change (prevents FlashList v2 blank-cell regression) ──
+  const prevDataMode = useRef(dataMode);
+  useEffect(() => {
+    if (dataMode !== undefined && prevDataMode.current !== dataMode) {
+      requestAnimationFrame(() => {
+        flashListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      });
+    }
+    prevDataMode.current = dataMode;
+  }, [dataMode]);
 
   // Dynamic content style with proper bottom padding for tab bar
   const contentStyle = {
@@ -245,6 +283,9 @@ export const ItemList: React.FC<ItemListProps> = ({
         renderItem={renderItem}
         extraData={extraData}
         drawDistance={FLASHLIST_DEFAULTS.fullScreen.drawDistance}
+        maintainVisibleContentPosition={MVCP_DISABLED}
+        onLoad={perfCallbacks.onLoad}
+        onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
         onEndReached={onEndReached}
         onEndReachedThreshold={onEndReachedThreshold}
         ListHeaderComponent={
