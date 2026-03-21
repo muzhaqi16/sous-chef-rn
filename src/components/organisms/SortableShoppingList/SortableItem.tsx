@@ -356,7 +356,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginHorizontal: theme.spacing.md,
+    marginHorizontal: theme.spacing['3'],
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
   },

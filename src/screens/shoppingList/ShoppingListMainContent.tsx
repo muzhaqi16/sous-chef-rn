@@ -467,6 +467,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   searchBarContainer: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing['3'],
   },
 }));

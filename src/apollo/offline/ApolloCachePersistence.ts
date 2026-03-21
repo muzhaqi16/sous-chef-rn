@@ -1,4 +1,5 @@
 import { NormalizedCacheObject } from '@apollo/client';
+import { getVersion } from 'react-native-device-info';
 import { storage } from '#storage/mmkv';
 import { Telemetry } from '#/services/telemetry';
 
@@ -6,7 +7,7 @@ const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CRITICAL_CACHE_KEY = 'apollo-cache-v1-critical';
 const DEFERRED_CACHE_KEY = 'apollo-cache-v1-deferred';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
-const CURRENT_CACHE_VERSION = '1.1.5'; // Purge stale entities after fragment field removals
+const CURRENT_CACHE_VERSION = getVersion(); // Purge stale cache on every app version bump
 
 /**
  * Typenames restored synchronously at startup (~30 entities, ~5KB).

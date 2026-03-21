@@ -2,6 +2,28 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { ItemList } from '../ItemList';
 
+jest.mock('#hooks/performance/useFlashListPerformance', () => ({
+  useFlashListPerformance: () => ({
+    onLoad: jest.fn(),
+    onViewableItemsChanged: jest.fn(),
+    onDataReferenceChange: jest.fn(),
+    printReport: jest.fn(),
+    getBlankRisk: () => ({
+      level: 'none',
+      factors: [],
+      coverageRatio: 1,
+      scrollVelocity: 0,
+    }),
+  }),
+}));
+jest.mock('#hooks/performance/useDataReferenceTracker', () => ({
+  useDataReferenceTracker: jest.fn(),
+}));
+jest.mock('#components/atoms/CachedImage', () => ({
+  CachedImage: () => null,
+  preloadImages: jest.fn(),
+}));
+
 jest.mock('../ItemCard', () => {
   const { Text, View } = require('react-native');
   return {

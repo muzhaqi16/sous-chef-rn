@@ -1,3 +1,4 @@
+import { Dimensions } from 'react-native';
 import type { FlashListProps } from '@shopify/flash-list';
 
 type FlashListPerformanceProps = Pick<
@@ -7,7 +8,7 @@ type FlashListPerformanceProps = Pick<
 
 export const FLASHLIST_DEFAULTS: Record<string, FlashListPerformanceProps> = {
   fullScreen: {
-    drawDistance: 250,
+    drawDistance: Math.round(Dimensions.get('window').height * 2),
     maxItemsInRecyclePool: 15,
   },
   bottomSheet: {

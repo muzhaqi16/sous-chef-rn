@@ -56,6 +56,7 @@ export const ShoppingListItemSkeleton: React.FC<
 
 const styles = StyleSheet.create(theme => ({
   wrapper: {
+    marginHorizontal: theme.spacing['3'],
     borderRadius: theme.radii.md,
   },
   content: {

@@ -1035,7 +1035,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   searchContainer: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing['3'],
     paddingBottom: theme.spacing.sm,
   },
   sectionHeaderTrim: {

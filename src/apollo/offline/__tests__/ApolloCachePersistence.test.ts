@@ -7,7 +7,7 @@ const CACHE_KEY = 'apollo-cache-v1';
 const CRITICAL_KEY = 'apollo-cache-v1-critical';
 const DEFERRED_KEY = 'apollo-cache-v1-deferred';
 const VERSION_KEY = 'apollo-cache-version';
-const CURRENT_VERSION = '1.1.5';
+const CURRENT_VERSION = '1.0.0'; // Matches jest.setup.js mock of getVersion()
 
 describe('ApolloCachePersistence', () => {
   beforeEach(() => {

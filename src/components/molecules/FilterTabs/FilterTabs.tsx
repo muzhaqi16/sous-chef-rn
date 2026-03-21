@@ -189,7 +189,7 @@ const styles = StyleSheet.create(theme => ({
   },
   scrollContent: {
     gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing['3'],
   },
   tab: {
     flexDirection: 'row',

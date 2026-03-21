@@ -43,14 +43,24 @@ export const PantryItemSkeleton: React.FC<PantryItemSkeletonProps> = ({
 
         {/* Content (title + subtitle) - matches CardContent */}
         <View style={styles.content}>
-          <SkeletonLine width="70%" height={16} style={styles.title} animated={animated} />
+          <SkeletonLine
+            width="70%"
+            height={16}
+            style={styles.title}
+            animated={animated}
+          />
           <SkeletonLine width="50%" height={13} animated={animated} />
         </View>
 
         {/* Right slot (quantity + location) - matches CardRightSlot meta type */}
         <View style={styles.trailing}>
           <SkeletonLine width={45} height={16} animated={animated} />
-          <SkeletonLine width={40} height={11} style={styles.location} animated={animated} />
+          <SkeletonLine
+            width={40}
+            height={11}
+            style={styles.location}
+            animated={animated}
+          />
         </View>
       </View>
     </View>
@@ -59,7 +69,6 @@ export const PantryItemSkeleton: React.FC<PantryItemSkeletonProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   wrapper: {
-    marginBottom: theme.spacing.sm,
     marginHorizontal: theme.spacing['3'],
   },
   container: {
@@ -70,7 +79,15 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
     backgroundColor: theme.colors.surface,
-    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 3, spreadDistance: 0, color: `${theme.colors.backgroundSecondary}0A` }],
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 1,
+        blurRadius: 3,
+        spreadDistance: 0,
+        color: `${theme.colors.backgroundSecondary}0A`,
+      },
+    ],
   },
   image: {
     marginRight: theme.spacing['3'],
