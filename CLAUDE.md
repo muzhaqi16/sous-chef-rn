@@ -48,27 +48,24 @@ const gesture = Gesture.Tap().onEnd(() => {
 
 An ESLint `no-restricted-syntax` rule enforces this at lint time.
 
-### Pagination is Ephemeral — Never Persist Connection State
+### Cache Persistence — Raw Apollo State
 
-**Treat pagination as ephemeral.** Connection wrappers (`edges`, `pageInfo`, `endCursor`,
-`hasNextPage`) are stripped from the Apollo cache before persisting to disk
-(`stripConnectionFields` in `ApolloCachePersistence.ts`). On restore, pagination always
-starts fresh from the API.
+The Apollo cache is persisted to MMKV as-is via `cache.extract()` / `cache.restore()`
+in `ApolloCachePersistence.ts`. No transformation is applied — connection fields (`edges`,
+`pageInfo`) are preserved so queries can be satisfied from cache immediately on cold start.
 
-**What gets persisted:** Normalized entities (`PantryItem:123`, `ShoppingListItem:456`, etc.)
-survive across sessions — they render instantly via `cache.readFragment`.
+**What gets persisted:** The full normalized cache — entities (`PantryItem:123`,
+`ShoppingListItem:456`), connection wrappers (`itemsConnection`, `membersConnection`),
+and `ROOT_QUERY`. On restore, queries return cached data instantly.
 
-**What does NOT get persisted:** Connection fields on parent entities (`itemsConnection`,
-`membersConnection`, `shoppingListsConnection`, etc.). The first `useQuery` after restore
-hits the `!existing` merge path and fetches fresh page 1 data.
-
-**Why:** Persisting stale `pageInfo`/`endCursor` causes phantom "load more" states and
-requires layered workarounds (totalCount correction, pageInfoCorrected flags, etc.).
-Major production apps treat pagination the same way — always start fresh.
+**Stale data handling:** The default `cache-and-network` watchQuery policy fires a
+background network request on every mount. Stale `pageInfo` or edges from a previous
+session are automatically replaced within seconds. A brief flash of stale pagination
+state (e.g., "load more" visible when no more items exist) is acceptable — it
+self-corrects when the network response arrives.
 
 **When adding new paginated connections:**
 - Use `itemsConnectionFieldPolicy()` or `mergeConnectionByNodeId()` for merge logic
-- Consumers must handle missing connection data gracefully (optional chaining, empty defaults)
 - Use `extractNodes()` / `normalizeConnection()` helpers which return `[]` for missing edges
 - Use `cache-and-network` → `cache-first` fetch policy so the network fires immediately on restore
 

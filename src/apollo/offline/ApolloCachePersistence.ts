@@ -314,8 +314,7 @@ class ApolloCachePersistence {
             }
           }
 
-          const stripped = stripConnectionFields(cache);
-          const { critical, deferred } = this.partitionCache(stripped);
+          const { critical, deferred } = this.partitionCache(cache);
           const criticalString = JSON.stringify(critical);
           const deferredString = JSON.stringify(deferred);
           const tStringify = performance.now();
@@ -386,8 +385,7 @@ class ApolloCachePersistence {
     }
 
     try {
-      const stripped = stripConnectionFields(cache);
-      const { critical, deferred } = this.partitionCache(stripped);
+      const { critical, deferred } = this.partitionCache(cache);
       const criticalString = JSON.stringify(critical);
       const deferredString = JSON.stringify(deferred);
       const sizeKB = Math.round(
@@ -517,48 +515,6 @@ class ApolloCachePersistence {
       return false;
     }
   }
-}
-
-/**
- * Connection fields have this shape: { edges: [...], pageInfo: {...} }
- * Returns true if the value looks like a Relay connection wrapper.
- */
-function isConnectionField(value: unknown): boolean {
-  return (
-    value != null &&
-    typeof value === 'object' &&
-    !Array.isArray(value) &&
-    'edges' in value &&
-    'pageInfo' in value
-  );
-}
-
-/**
- * Strip connection-shaped fields from persisted cache data so pagination
- * always starts fresh from the API on restore.
- *
- * Normalized entities (PantryItem, ShoppingListItem, etc.) are preserved —
- * only connection wrappers (objects with `edges` + `pageInfo`) are removed
- * from their parent entities.
- */
-export function stripConnectionFields(
-  cacheData: Record<string, any>,
-): Record<string, any> {
-  const cleaned: Record<string, any> = {};
-  for (const [key, value] of Object.entries(cacheData)) {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      const entity = { ...value };
-      for (const [field, fieldValue] of Object.entries(entity)) {
-        if (isConnectionField(fieldValue)) {
-          delete entity[field];
-        }
-      }
-      cleaned[key] = entity;
-    } else {
-      cleaned[key] = value;
-    }
-  }
-  return cleaned;
 }
 
 /**
