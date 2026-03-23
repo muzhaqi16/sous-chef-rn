@@ -45,7 +45,7 @@ on:
 
 jobs:
   # ─────────────────────────────────────────────────────────────
-  # Self-hosted runner build (persistent Linux runner)
+  # Self-hosted runner build (Linux or macOS runner with 'android' label)
   # Toggle: set vars.ANDROID_SELF_HOSTED_ENABLED = 'true' to enable
   # ─────────────────────────────────────────────────────────────
   build-self-hosted:
@@ -57,7 +57,7 @@ jobs:
         inputs.runner_type == 'both' ||
         (inputs.runner_type == 'default' && vars.ANDROID_SELF_HOSTED_ENABLED == 'true')
       ))
-    runs-on: [self-hosted, Linux]
+    runs-on: [self-hosted, android]
     timeout-minutes: 30
 
     environment: ${{
@@ -68,9 +68,6 @@ jobs:
       }}
 
     env:
-      ANDROID_HOME: /opt/android-sdk
-      ANDROID_SDK_ROOT: /opt/android-sdk
-      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
       GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
       NODE_OPTIONS: --max-old-space-size=4096
       BUILD_ENV: ${{
@@ -90,19 +87,36 @@ jobs:
         with:
           clean: true
 
+      - name: Detect Android SDK and Java paths
+        run: |
+          if [ "$(uname)" = "Darwin" ]; then
+            echo "ANDROID_HOME=$HOME/Library/Android/sdk" >> "$GITHUB_ENV"
+            echo "ANDROID_SDK_ROOT=$HOME/Library/Android/sdk" >> "$GITHUB_ENV"
+            JAVA_DIR=$(/usr/libexec/java_home -v 17 2>/dev/null || echo "")
+            if [ -n "$JAVA_DIR" ]; then
+              echo "JAVA_HOME=$JAVA_DIR" >> "$GITHUB_ENV"
+            fi
+          else
+            echo "ANDROID_HOME=/opt/android-sdk" >> "$GITHUB_ENV"
+            echo "ANDROID_SDK_ROOT=/opt/android-sdk" >> "$GITHUB_ENV"
+            echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> "$GITHUB_ENV"
+          fi
+
       - name: Display build environment
         run: |
           echo "Building for environment: ${{ env.BUILD_ENV }}"
           echo "Play Store build: ${{ env.IS_PLAYSTORE }}"
           echo "Tag/Ref: ${{ github.ref }}"
+          echo "Runner OS: $(uname -s) ($(uname -m))"
           echo "Node version: $(node -v)"
           echo "Java version: $(java -version 2>&1 | head -n 1)"
           echo "Android SDK: $ANDROID_HOME"
+          echo "Java Home: $JAVA_HOME"
 
       - name: Setup Android local.properties
         run: |
-          echo "sdk.dir=/opt/android-sdk" > android/local.properties
-          echo "Created android/local.properties"
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+          echo "Created android/local.properties with sdk.dir=$ANDROID_HOME"
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
