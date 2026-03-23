@@ -37,7 +37,7 @@ let shouldAutoReconnect = true;
 const getReconnectDelay = (attempt: number): number => {
   const delay = Math.min(
     BASE_RECONNECT_DELAY_MS * Math.pow(2, attempt),
-    MAX_RECONNECT_DELAY_MS
+    MAX_RECONNECT_DELAY_MS,
   );
   // Add jitter (up to 25% variance) to prevent thundering herd
   const jitter = delay * 0.25 * Math.random();
@@ -62,7 +62,11 @@ const scheduleReconnect = () => {
   }
 
   const delay = getReconnectDelay(reconnectAttempts);
-  logger.info(`🔄 WebSocket scheduling reconnection in ${Math.round(delay)}ms (attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+  logger.info(
+    `🔄 WebSocket scheduling reconnection in ${Math.round(delay)}ms (attempt ${
+      reconnectAttempts + 1
+    }/${MAX_RECONNECT_ATTEMPTS})`,
+  );
 
   reconnectTimeoutId = setTimeout(() => {
     reconnectTimeoutId = null;
@@ -98,7 +102,7 @@ const createWsClient = () => {
     lazy: true, // only connect on first subscribe
     keepAlive: getKeepAliveInterval(),
     connectionParams: () => {
-      const token = useStore.getState().accessToken;
+      const { accessToken: token, refreshToken } = useStore.getState();
       const apiKey = Config.API_KEY;
       const deviceId = getDeviceIdSync();
 
@@ -114,6 +118,12 @@ const createWsClient = () => {
         params.authorization = `Bearer ${token}`;
       }
 
+      // Include refresh token so server can auto-refresh expired access tokens
+      // during WebSocket connection without requiring a separate HTTP roundtrip
+      if (refreshToken) {
+        params.refreshToken = refreshToken;
+      }
+
       // Include deviceId for subscription self-echo filtering
       // Server will include this in subscription payloads as originatorClientId
       if (deviceId) {
@@ -123,7 +133,10 @@ const createWsClient = () => {
       return params;
     },
     on: {
-      connected: () => {
+      connected: (
+        _socket: unknown,
+        payload: Record<string, unknown> | undefined,
+      ) => {
         isReconnecting = false;
         // Reset reconnect attempts on successful connection
         reconnectAttempts = 0;
@@ -131,6 +144,23 @@ const createWsClient = () => {
           clearTimeout(reconnectTimeoutId);
           reconnectTimeoutId = null;
         }
+
+        // Server auto-refreshed our tokens during connection —
+        // store the new pair via setTokens() (centralized token storage)
+        if (payload?.tokenRefreshed) {
+          const { accessToken, refreshToken } = payload as {
+            tokenRefreshed: boolean;
+            accessToken: string;
+            refreshToken: string;
+          };
+          if (accessToken && refreshToken) {
+            useStore.getState().setTokens({ accessToken, refreshToken });
+            logger.info(
+              '🔌 WebSocket: tokens refreshed by server during connection',
+            );
+          }
+        }
+
         if (__DEV__) {
           logger.info('🔌 WebSocket connected:', {
             url: WS_URL,
@@ -140,31 +170,37 @@ const createWsClient = () => {
       },
       closed: (event: any) => {
         isReconnecting = false;
-        // Error 4500 is "Invalid or expired JWT token" - expected during token expiration
-        // Suppress this specific error to reduce log noise during normal token refresh cycles
-        const isAuthError = event?.code === 4500;
+        const code = event?.code;
+        const reason = typeof event?.reason === 'string' ? event.reason : '';
 
-        // Detect HTTP 401 rejection (happens when token is expired on initial connect)
-        const is401Rejection = event?.code === 1006 &&
-          typeof event?.reason === 'string' &&
-          event.reason.includes('401');
+        // Auth error detection: 4500 (legacy), 4401 (new), or 1006+401
+        const isAuthCode = code === 4500 || code === 4401;
+        const is401Rejection = code === 1006 && reason.includes('401');
 
-        if (__DEV__ && !isAuthError) {
+        // Specific auth error reasons from server
+        const hasAuthReason = [
+          'AUTH_TOKEN_EXPIRED',
+          'AUTH_REFRESH_TOKEN_INVALID',
+          'AUTH_TOKEN_INVALID',
+        ].some(r => reason.includes(r));
+
+        if (__DEV__ && !isAuthCode) {
           logger.info('🔌 WebSocket closed:', {
-            code: event?.code,
+            code,
             reason: event?.reason,
             wasClean: event?.wasClean,
             timestamp: new Date().toISOString(),
           });
         }
 
-        // Auth errors (4500 or 401) - don't reconnect, token refresh will handle it
-        // Note: 401 rejection means token is invalid, let proactiveTokenRefresh or
-        // errorLink handle the refresh, then subscriptions will auto-restart
-        if (isAuthError || is401Rejection) {
-          if (is401Rejection) {
-            logger.info('🔌 WebSocket rejected with 401 - awaiting token refresh');
-          }
+        // Auth errors — don't reconnect from here. Recovery flows through:
+        // authLink detects expired token on next HTTP request →
+        // proactiveTokenRefresh() in refreshToken.ts →
+        // reconnectWebSocket() in wsLink.ts (one-directional dependency)
+        if (isAuthCode || is401Rejection || hasAuthReason) {
+          logger.info(
+            '🔌 WebSocket closed: auth error, awaiting re-authentication',
+          );
           return;
         }
 

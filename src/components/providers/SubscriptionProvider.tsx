@@ -1,30 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { jwtDecode } from 'jwt-decode';
 import { useAuthUser } from '#/hooks/auth/useAuthUser';
 import { useAppStore } from '#store/useAppStore';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { enableAutoReconnect, disableAutoReconnect } from '#/apollo/links/wsLink';
-import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
+import {
+  enableAutoReconnect,
+  disableAutoReconnect,
+} from '#/apollo/links/wsLink';
 import { AuthenticatedSubscriptions } from './AuthenticatedSubscriptions';
 import { AuthenticatedDataProvider } from './AuthenticatedDataProvider';
 import { ListAnimationProvider } from '#/context/ListAnimationContext';
-import { useStore } from '#store';
-import { logger } from '#/utils/environment';
-
-/**
- * Check if token is expired or expiring soon (within 30 seconds)
- */
-const isTokenExpiredOrExpiringSoon = (token: string | null): boolean => {
-  if (!token) return true;
-  try {
-    const decoded = jwtDecode<{ exp: number }>(token);
-    const expiresAt = decoded.exp * 1000;
-    // Consider expired if less than 30 seconds remaining
-    return expiresAt - Date.now() < 30 * 1000;
-  } catch {
-    return true;
-  }
-};
 
 interface SubscriptionProviderProps {
   children: React.ReactNode;
@@ -64,37 +48,27 @@ interface SubscriptionProviderProps {
  * </ApolloProvider>
  * ```
  */
-export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ children }) => {
+export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
+  children,
+}) => {
   const user = useAuthUser();
-  const isAuthenticated = useAppStore(state => !!(state.user && state.accessToken));
-  // Block subscriptions until token is validated/refreshed to prevent 401 race condition
+  const isAuthenticated = useAppStore(
+    state => !!(state.user && state.accessToken),
+  );
+  // Gate subscriptions behind auth state — server handles token refresh during WS connection
   const [isTokenReady, setIsTokenReady] = useState(false);
   // Defer WebSocket subscriptions to avoid competing with startup queries on the JS thread
   const [subscriptionsReady, setSubscriptionsReady] = useState(false);
 
   // Enable/disable auto-reconnect and cleanup subscriptions based on auth state
   useEffect(() => {
-    const initializeWebSocket = async () => {
+    const initializeWebSocket = () => {
       if (isAuthenticated) {
-        const accessToken = useStore.getState().accessToken;
-
-        // Validate token before enabling WebSocket
-        if (isTokenExpiredOrExpiringSoon(accessToken)) {
-          logger.info('[SubscriptionProvider] Token expired/expiring, refreshing before WebSocket init');
-          try {
-            await proactiveTokenRefresh();
-          } catch {
-            logger.warn('[SubscriptionProvider] Token refresh failed, WebSocket may fail initially');
-          }
-        }
-
-        // Enable WebSocket auto-reconnection when authenticated
+        // Server-side WS auth handles token refresh during connection —
+        // connectionParams sends both access + refresh tokens, and the server
+        // auto-refreshes expired access tokens, returning new tokens in ConnectionAck.
+        // No blocking HTTP refresh needed before enabling WebSocket.
         enableAutoReconnect();
-        // Don't call reconnectWebSocket() here - the lazy WebSocket client
-        // will connect automatically when subscriptions start.
-        // reconnectWebSocket() is only needed for token refresh scenarios.
-
-        // NOW subscriptions can start - token is validated/refreshed
         setIsTokenReady(true);
       } else {
         // Disable auto-reconnection and cleanup on logout
@@ -129,15 +103,18 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
   return (
     <ListAnimationProvider>
-      {/* Only initialize data when user is authenticated AND token is ready
-          This prevents WebSocket connection attempts with expired tokens on app restart,
-          eliminating "Socket closed" 401 errors by ensuring token is validated first */}
+      {/* Only initialize data when user is authenticated AND token is ready.
+          Server-side WS auth handles expired tokens via connectionParams refresh token. */}
       {/* Key by userId to force remount when user changes - this ensures hooks
           like useDefaultHome reset their refs and fetch fresh data for the new user */}
-      {!!isAuthenticated && !!user?.id && !!isTokenReady && <AuthenticatedDataProvider key={`data-${user.id}`} userId={user.id} />}
+      {!!isAuthenticated && !!user?.id && !!isTokenReady && (
+        <AuthenticatedDataProvider key={`data-${user.id}`} userId={user.id} />
+      )}
       {/* Subscriptions deferred by 3s — initial data comes from queries, real-time
           updates can safely start after the startup window completes */}
-      {!!isAuthenticated && !!user?.id && !!subscriptionsReady && <AuthenticatedSubscriptions key={`subs-${user.id}`} userId={user.id} />}
+      {!!isAuthenticated && !!user?.id && !!subscriptionsReady && (
+        <AuthenticatedSubscriptions key={`subs-${user.id}`} userId={user.id} />
+      )}
       {children}
     </ListAnimationProvider>
   );
