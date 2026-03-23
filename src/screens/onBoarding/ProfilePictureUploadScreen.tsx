@@ -7,6 +7,7 @@ import {
   Dimensions,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
@@ -142,7 +143,9 @@ export const ProfilePictureUploadScreen = () => {
   const handleTakePhoto = () => {
     // Pre-compute permission outside try-catch to avoid value block bailout
     const cameraPermission =
-      PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA;
+      Platform.OS === 'ios'
+        ? PERMISSIONS.IOS.CAMERA
+        : PERMISSIONS.ANDROID.CAMERA;
 
     executeMutation(
       async () => {

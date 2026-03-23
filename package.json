@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "3.2.13",
+  "version": "3.2.14",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -122,7 +122,7 @@
     "react-native-nitro-modules": "^0.35.0",
     "react-native-pager-view": "^7.0.2",
     "react-native-performance": "^6.0.0",
-    "react-native-permissions": "^5.4.4",
+    "react-native-permissions": "^5.5.1",
     "react-native-reanimated": "^4.2.2",
     "react-native-safe-area-context": "^5.7.0",
     "react-native-screens": "^4.24.0",

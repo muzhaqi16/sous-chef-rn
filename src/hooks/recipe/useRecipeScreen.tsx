@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 import { alertService } from '#/services/alertService';
 import { useDeferredSearch } from '#hooks/performance/useDeferredSearch';
@@ -17,7 +17,6 @@ import {
   textSearchCacheKey,
   ingredientCacheKey,
 } from '#/store/useRecipeCacheStore';
-import { preloadImages } from '#components/atoms/CachedImage';
 import { useAppStore } from '#store/useAppStore';
 import type { IconName } from '#/utils/iconUtils';
 
@@ -171,17 +170,23 @@ export function useRecipeScreen() {
   // ── User ──
   const userId = useAppStore(state => state.user?.id);
 
-  // ── Dietary profile (for filter defaults) ──
+  // ── Dietary profile (for filter defaults + discovery tags) ──
   const { profile: dietaryProfile } = useDietaryProfile();
 
+  // Compute dietary tags once for discovery (random recipe API)
+  const dietRestriction = dietaryProfile?.restrictions?.find(
+    (r: any) => r.diet,
+  );
+  const dietaryTags = dietRestriction?.diet
+    ? dietRestriction.diet.toLowerCase()
+    : undefined;
+
   // ── Discovery (includes pantry data) ──
-  const discovery = useRecipeDiscovery();
+  const discovery = useRecipeDiscovery(dietaryTags);
 
   // ── Search state ──
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<
-    (SearchRecipesResult | RecipeSearchResult)[]
-  >([]);
+  const [searchResults, setSearchResults] = useState<DisplayItem[]>([]);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [visibleSearchCount, setVisibleSearchCount] =
@@ -282,23 +287,11 @@ export function useRecipeScreen() {
   const showSearchResults = searchPerformed && searchResults.length > 0;
   const showDiscovery = !searchPerformed && discovery.items.length > 0;
 
-  // Transform search results (client-side paginated)
-  const visibleSearchResults = showSearchResults
+  // Search results are pre-transformed at data arrival (see setSearchResultsAndResetPage)
+  // Just slice for client-side pagination
+  const searchItems = showSearchResults
     ? searchResults.slice(0, visibleSearchCount)
     : [];
-
-  const searchItems: DisplayItem[] = visibleSearchResults.map(recipe => {
-    const transformed = transformRecipeForDisplay(recipe);
-    return {
-      id: transformed.id,
-      title: transformed.title,
-      subtitle: transformed.subtitle,
-      badge: transformed.badge
-        ? { text: transformed.badge.text, variant: 'primary' as 'primary' }
-        : undefined,
-      imageUrl: transformed.imageUrl,
-    };
-  });
 
   const searchHasMore =
     showSearchResults && visibleSearchCount < searchResults.length;
@@ -310,36 +303,14 @@ export function useRecipeScreen() {
     );
   };
 
-  // Transform discovery items
-  const discoveryDisplayItems: DisplayItem[] = showDiscovery
-    ? discovery.items.map(item => ({
-        id: item.id,
-        title: item.title,
-        subtitle: item.subtitle,
-        badge: item.badge,
-        imageUrl: item.imageUrl,
-      }))
-    : [];
-
-  const items = showSearchResults
+  // DiscoveryItem already satisfies DisplayItem — no mapping needed
+  const items: DisplayItem[] = showSearchResults
     ? searchItems
     : showDiscovery
-    ? discoveryDisplayItems
+    ? discovery.items
     : [];
 
-  // Preload recipe images for the visible page
-  const imageSourceItems = showSearchResults
-    ? visibleSearchResults
-    : discovery.items;
-  useEffect(() => {
-    const urls = imageSourceItems
-      .slice(0, SEARCH_PAGE_SIZE)
-      .map((item: any) => item.imageUrl ?? item.image)
-      .filter(Boolean) as string[];
-    if (urls.length > 0) {
-      preloadImages(urls);
-    }
-  }, [imageSourceItems]);
+  // Image preloading is handled by ItemList internally — no duplicate effect needed
 
   // ── Actions ──
   const toggleIngredient = (name: string) => {
@@ -428,11 +399,26 @@ export function useRecipeScreen() {
     }
   };
 
-  // Wrapper that resets visible count when search results change
+  // Transform + store results at data arrival time (avoids per-render transformation)
   const setSearchResultsAndResetPage = (
     results: (SearchRecipesResult | RecipeSearchResult)[],
   ) => {
-    setSearchResults(results);
+    const transformed = results.map(recipe => {
+      const t = transformRecipeForDisplay(recipe);
+      return {
+        id: t.id,
+        title: t.title,
+        subtitle: t.subtitle,
+        badge: t.badge
+          ? ({
+              text: t.badge.text,
+              variant: 'primary',
+            } satisfies DisplayItem['badge'])
+          : undefined,
+        imageUrl: t.imageUrl,
+      };
+    });
+    setSearchResults(transformed);
     setVisibleSearchCount(SEARCH_PAGE_SIZE);
   };
 

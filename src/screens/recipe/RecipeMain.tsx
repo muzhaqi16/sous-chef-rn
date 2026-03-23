@@ -3,7 +3,6 @@ import { View, Text, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
@@ -15,7 +14,6 @@ import {
   type SearchBarAction,
 } from '#components/molecules/SearchBar';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
-import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { Icon } from '#/utils/iconUtils';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
@@ -32,38 +30,7 @@ import {
   type IngredientSelectorSheetRef,
 } from './RecipeSearch/IngredientSelectorSheet';
 import { useRecipeScreen } from '#/hooks/recipe/useRecipeScreen';
-
-// ── Filter options — synced with DietaryRestrictionSelector + Spoonacular API values ──
-
-const DIET_OPTIONS = [
-  { label: 'Vegetarian', value: 'vegetarian' },
-  { label: 'Vegan', value: 'vegan' },
-  { label: 'Gluten Free', value: 'gluten free' },
-  { label: 'Ketogenic', value: 'ketogenic' },
-  { label: 'Paleo', value: 'paleo' },
-  { label: 'Pescetarian', value: 'pescetarian' },
-  { label: 'Lacto-Vegetarian', value: 'lacto-vegetarian' },
-  { label: 'Ovo-Vegetarian', value: 'ovo-vegetarian' },
-  { label: 'Primal', value: 'primal' },
-  { label: 'Low FODMAP', value: 'low fodmap' },
-  { label: 'Whole30', value: 'whole30' },
-];
-
-const INTOLERANCE_OPTIONS = [
-  { label: 'Dairy', value: 'dairy' },
-  { label: 'Egg', value: 'egg' },
-  { label: 'Gluten', value: 'gluten' },
-  { label: 'Grain', value: 'grain' },
-  { label: 'Peanut', value: 'peanut' },
-  { label: 'Seafood', value: 'seafood' },
-  { label: 'Sesame', value: 'sesame' },
-  { label: 'Shellfish', value: 'shellfish' },
-  { label: 'Soy', value: 'soy' },
-  { label: 'Sulfite', value: 'sulfite' },
-  { label: 'Tree Nut', value: 'tree nut' },
-  { label: 'Wheat', value: 'wheat' },
-  { label: 'Fish', value: 'fish' },
-];
+import { RecipeFilterSheet } from './RecipeFilterSheet';
 
 // ── Recipe tutorial steps ──
 const RECIPE_TUTORIAL_STEPS: TutorialStep[] = [
@@ -135,7 +102,11 @@ const RecipeMainInner: React.FC = () => {
     Record<string, LayoutRect | null>
   >({});
   const setButtonRect = (key: string, rect: LayoutRect) => {
-    setButtonRects(prev => ({ ...prev, [key]: rect }));
+    setButtonRects(prev => {
+      // Skip if already measured — button positions don't change after initial layout
+      if (prev[key]) return prev;
+      return { ...prev, [key]: rect };
+    });
   };
 
   const filterSheetRef = useRef<BottomSheetModal>(null);
@@ -175,7 +146,11 @@ const RecipeMainInner: React.FC = () => {
 
   // Track sheet open/close via BottomSheetModal's onChange (-1 = closed, 0+ = open)
   const handleSheetChange = (index: number) => {
+    const closing = isSheetOpen && index < 0;
     setIsSheetOpen(index >= 0);
+    if (closing && screen.searchPerformed && screen.searchQuery.trim()) {
+      screen.handleTextSearch();
+    }
   };
 
   const handleItemPress = (id: string | number) => {
@@ -413,7 +388,7 @@ const RecipeMainInner: React.FC = () => {
 
   return (
     <View style={styles.container} testID="recipes-screen">
-      {screen.discovery.loading && screen.items.length === 0 ? (
+      {screen.discovery.loading && !screen.showSearchResults ? (
         <>
           {recipeListHeader}
           <RecipeSkeleton />
@@ -452,202 +427,13 @@ const RecipeMainInner: React.FC = () => {
         onSheetChange={open => setIsSheetOpen(open)}
       />
 
-      {/* Filter Bottom Sheet */}
-      <BottomSheetAction
+      {/* Filter Bottom Sheet — lazy-mounted for performance */}
+      <RecipeFilterSheet
         sheetRef={filterSheetRef}
-        sheetTitle="Filters"
-        snapPoints={['75%', '90%']}
-        onChange={handleSheetChange}
-      >
-        {/* Diet Filter */}
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>Diet</Text>
-          <Text style={styles.filterSectionSubtitle}>
-            Select all that apply
-          </Text>
-          <View style={styles.chipRow}>
-            {DIET_OPTIONS.map(diet => {
-              const isSelected = screen.activeFilters.diet.includes(diet.value);
-              return (
-                <Pressable
-                  key={diet.value}
-                  style={({ pressed }) => [
-                    styles.filterChip,
-                    isSelected && styles.filterChipActive,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() =>
-                    screen.setActiveFilters(prev => ({
-                      ...prev,
-                      diet: isSelected
-                        ? prev.diet.filter(d => d !== diet.value)
-                        : [...prev.diet, diet.value],
-                    }))
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      isSelected && styles.filterChipTextActive,
-                    ]}
-                  >
-                    {diet.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Intolerances Filter */}
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>
-            Allergies & Intolerances
-          </Text>
-          <Text style={styles.filterSectionSubtitle}>
-            Select all that apply
-          </Text>
-          <View style={styles.checkboxGrid}>
-            {INTOLERANCE_OPTIONS.map(intolerance => {
-              const isSelected = screen.activeFilters.intolerances.includes(
-                intolerance.value,
-              );
-              return (
-                <Pressable
-                  key={intolerance.value}
-                  style={({ pressed }) => [
-                    styles.checkboxItem,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() =>
-                    screen.setActiveFilters(prev => ({
-                      ...prev,
-                      intolerances: isSelected
-                        ? prev.intolerances.filter(i => i !== intolerance.value)
-                        : [...prev.intolerances, intolerance.value],
-                    }))
-                  }
-                >
-                  <Ionicons
-                    name={isSelected ? 'checkbox' : 'square-outline'}
-                    size={24}
-                    color={
-                      isSelected
-                        ? theme.colors.primary
-                        : theme.colors.textSecondary
-                    }
-                  />
-                  <Text style={styles.checkboxText}>{intolerance.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Meal Type Filter */}
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>Meal Type</Text>
-          <Text style={styles.filterSectionSubtitle}>Select one</Text>
-          <View style={styles.chipRow}>
-            {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(type => (
-              <Pressable
-                key={type}
-                style={({ pressed }) => [
-                  styles.filterChip,
-                  screen.activeFilters.mealType === type.toLowerCase() &&
-                    styles.filterChipActive,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() =>
-                  screen.setActiveFilters(prev => ({
-                    ...prev,
-                    mealType:
-                      prev.mealType === type.toLowerCase()
-                        ? null
-                        : type.toLowerCase(),
-                  }))
-                }
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    screen.activeFilters.mealType === type.toLowerCase() &&
-                      styles.filterChipTextActive,
-                  ]}
-                >
-                  {type}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* Max Cook Time Filter */}
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>Max Cook Time</Text>
-          <Text style={styles.filterSectionSubtitle}>Select one</Text>
-          <View style={styles.chipRow}>
-            {[
-              { label: '15 min', value: 15 },
-              { label: '30 min', value: 30 },
-              { label: '45 min', value: 45 },
-              { label: '60 min', value: 60 },
-            ].map(time => (
-              <Pressable
-                key={time.value}
-                style={({ pressed }) => [
-                  styles.filterChip,
-                  screen.activeFilters.maxReadyTime === time.value &&
-                    styles.filterChipActive,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() =>
-                  screen.setActiveFilters(prev => ({
-                    ...prev,
-                    maxReadyTime:
-                      prev.maxReadyTime === time.value ? null : time.value,
-                  }))
-                }
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    screen.activeFilters.maxReadyTime === time.value &&
-                      styles.filterChipTextActive,
-                  ]}
-                >
-                  {time.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.filterActions}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.filterActionButton,
-              styles.clearButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={screen.clearFilters}
-          >
-            <Text style={styles.clearButtonText}>Clear All</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.filterActionButton,
-              styles.applyButton,
-              { backgroundColor: theme.colors.primary },
-              pressed && styles.pressed,
-            ]}
-            onPress={() => filterSheetRef.current?.close()}
-          >
-            <Text style={styles.applyButtonText}>Apply Filters</Text>
-          </Pressable>
-        </View>
-      </BottomSheetAction>
+        activeFilters={screen.activeFilters}
+        setActiveFilters={screen.setActiveFilters}
+        onSheetChange={handleSheetChange}
+      />
 
       {tutorial.currentStep ? (
         <SpotlightCoachMark
@@ -744,83 +530,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
-  },
-  filterSection: { marginBottom: theme.spacing.xl },
-  filterSectionTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  filterSectionSubtitle: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.md,
-  },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
-  filterChip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-  },
-  filterChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  filterChipText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
-  filterChipTextActive: { color: theme.colors.white },
-  checkboxGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
-  checkboxItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '48%',
-    padding: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.surface,
-  },
-  checkboxText: {
-    marginLeft: theme.spacing.sm,
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textPrimary,
-  },
-  filterActions: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.lg,
-  },
-  filterActionButton: {
-    flex: 1,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-  },
-  clearButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  clearButtonText: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  applyButton: {},
-  applyButtonText: {
-    color: theme.colors.white,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: { opacity: theme.opacity.pressed },
 }));

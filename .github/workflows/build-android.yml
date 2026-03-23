@@ -29,9 +29,31 @@ on:
         options:
           - apk
           - playstore
+      runner_type:
+        description: "Runner to use (default uses repo variables)"
+        required: false
+        default: "default"
+        type: choice
+        options:
+          - default
+          - self-hosted
+          - github-hosted
+          - both
 
 jobs:
-  build:
+  # ─────────────────────────────────────────────────────────────
+  # Self-hosted runner build (persistent Linux runner)
+  # Toggle: set vars.ANDROID_SELF_HOSTED_ENABLED = 'true' to enable
+  # ─────────────────────────────────────────────────────────────
+  build-self-hosted:
+    name: Build (Self-Hosted)
+    if: |
+      (github.event_name != 'workflow_dispatch' && vars.ANDROID_SELF_HOSTED_ENABLED == 'true') ||
+      (github.event_name == 'workflow_dispatch' && (
+        inputs.runner_type == 'self-hosted' ||
+        inputs.runner_type == 'both' ||
+        (inputs.runner_type == 'default' && vars.ANDROID_SELF_HOSTED_ENABLED == 'true')
+      ))
     runs-on: [self-hosted, Linux]
     timeout-minutes: 30
 
@@ -84,27 +106,6 @@ jobs:
 
       - name: Setup gradlew as executable
         run: chmod +x ./android/gradlew
-
-      - name: Cache node_modules
-        if: runner.environment != 'self-hosted'
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
-
-      - name: Cache Gradle
-        if: runner.environment != 'self-hosted'
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            android/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
 
       - name: Install dependencies
         run: npm ci
@@ -282,3 +283,268 @@ jobs:
 
           # Stop Gradle daemon
           cd android && ./gradlew --stop || true
+
+  # ─────────────────────────────────────────────────────────────
+  # GitHub-hosted runner build (ephemeral ubuntu-latest)
+  # Toggle: set vars.ANDROID_GITHUB_HOSTED_ENABLED = 'true' to enable
+  # ─────────────────────────────────────────────────────────────
+  build-github-hosted:
+    name: Build (GitHub-Hosted)
+    if: |
+      (github.event_name != 'workflow_dispatch' && vars.ANDROID_GITHUB_HOSTED_ENABLED == 'true') ||
+      (github.event_name == 'workflow_dispatch' && (
+        inputs.runner_type == 'github-hosted' ||
+        inputs.runner_type == 'both' ||
+        (inputs.runner_type == 'default' && vars.ANDROID_GITHUB_HOSTED_ENABLED == 'true')
+      ))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    environment: ${{
+      github.event_name == 'workflow_dispatch' && inputs.environment ||
+      startsWith(github.ref_name, 'dev-v') && 'dev' ||
+      startsWith(github.ref_name, 'stg-v') && 'stg' ||
+      'prod'
+      }}
+
+    env:
+      GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
+      NODE_OPTIONS: --max-old-space-size=4096
+      BUILD_ENV: ${{
+        github.event_name == 'workflow_dispatch' && inputs.environment ||
+        startsWith(github.ref_name, 'dev-v') && 'dev' ||
+        startsWith(github.ref_name, 'stg-v') && 'stg' ||
+        'prod'
+        }}
+      IS_PLAYSTORE: ${{
+        (github.event_name == 'workflow_dispatch' && inputs.build_type == 'playstore') ||
+        startsWith(github.ref_name, 'playstore-v')
+        }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Android local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+          echo "Created android/local.properties with ANDROID_HOME=$ANDROID_HOME"
+
+      - name: Display build environment
+        run: |
+          echo "Building for environment: ${{ env.BUILD_ENV }}"
+          echo "Play Store build: ${{ env.IS_PLAYSTORE }}"
+          echo "Tag/Ref: ${{ github.ref }}"
+          echo "Node version: $(node -v)"
+          echo "Java version: $(java -version 2>&1 | head -n 1)"
+          echo "Android SDK: $ANDROID_HOME"
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v3
+
+      - name: Setup gradlew as executable
+        run: chmod +x ./android/gradlew
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Play Store keystore
+        if: env.IS_PLAYSTORE == 'true'
+        run: |
+          echo -n "${{ secrets.PLAYSTORE_KEYSTORE_BASE64 }}" | base64 --decode > ./android/app/upload-key.keystore
+          echo "" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_STORE_FILE=upload-key.keystore" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_ALIAS=upload" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.PLAYSTORE_KEYSTORE_PASSWORD }}" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.PLAYSTORE_KEY_PASSWORD }}" >> android/gradle.properties
+
+      - name: Setup regular keystore
+        if: env.IS_PLAYSTORE != 'true'
+        run: |
+          echo -n "${{ secrets.BUILD_CERTIFICATE_BASE64 }}" | base64 --decode > ./android/app/release.keystore
+          echo "" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_ALIAS=github" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
+
+      - name: Clean Android build
+        run: |
+          cd android
+          ./gradlew clean
+          cd ..
+
+      - name: Generate .env file
+        run: |
+          ENV_FILE=".env.${{ env.BUILD_ENV }}"
+
+          # Common variables for all environments
+          echo "API_URL=${{ vars.API_URL }}" > "$ENV_FILE"
+          echo "API_KEY=${{ secrets.API_KEY }}" >> "$ENV_FILE"
+          echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> "$ENV_FILE"
+          echo "OTLP_METRICS_ENDPOINT=${{ vars.OTLP_METRICS_ENDPOINT }}" >> "$ENV_FILE"
+          echo "OTLP_LOGS_ENDPOINT=${{ vars.OTLP_LOGS_ENDPOINT }}" >> "$ENV_FILE"
+          echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> "$ENV_FILE"
+
+          # Environment-specific variables
+          if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
+            echo "NODE_ENV=staging" >> "$ENV_FILE"
+            echo "WEB_APP_URL=${{ vars.WEB_APP_URL }}" >> "$ENV_FILE"
+            echo "OTLP_METRICS_AUTH_USERNAME=${{ secrets.OTLP_METRICS_AUTH_USERNAME }}" >> "$ENV_FILE"
+            echo "OTLP_METRICS_AUTH_PASSWORD=${{ secrets.OTLP_METRICS_AUTH_PASSWORD }}" >> "$ENV_FILE"
+            echo "OTLP_LOGS_AUTH_USERNAME=${{ secrets.OTLP_LOGS_AUTH_USERNAME }}" >> "$ENV_FILE"
+            echo "OTLP_LOGS_AUTH_PASSWORD=${{ secrets.OTLP_LOGS_AUTH_PASSWORD }}" >> "$ENV_FILE"
+          elif [ "${{ env.BUILD_ENV }}" = "prod" ]; then
+            echo "NODE_ENV=production" >> "$ENV_FILE"
+            echo "OTLP_METRICS_AUTH_USERNAME=${{ secrets.OTLP_METRICS_AUTH_USERNAME }}" >> "$ENV_FILE"
+            echo "OTLP_METRICS_AUTH_PASSWORD=${{ secrets.OTLP_METRICS_AUTH_PASSWORD }}" >> "$ENV_FILE"
+            echo "OTLP_LOGS_AUTH_USERNAME=${{ secrets.OTLP_LOGS_AUTH_USERNAME }}" >> "$ENV_FILE"
+            echo "OTLP_LOGS_AUTH_PASSWORD=${{ secrets.OTLP_LOGS_AUTH_PASSWORD }}" >> "$ENV_FILE"
+          fi
+
+          # Copy to .env for react-native-config
+          cp "$ENV_FILE" .env
+          echo "Generated $ENV_FILE and copied to .env"
+
+      - name: Build Play Store AAB
+        if: env.IS_PLAYSTORE == 'true'
+        run: |
+          cd android
+          ./gradlew bundleRelease
+
+      - name: Build APK
+        if: env.IS_PLAYSTORE != 'true'
+        run: |
+          cd android
+          if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
+            ./gradlew assembleStaging
+          else
+            ./gradlew assembleRelease
+          fi
+
+      - name: List build outputs
+        run: |
+          if [ "${{ env.IS_PLAYSTORE }}" = "true" ]; then
+            ls -hal ./android/app/build/outputs/bundle/release/ || echo "No AAB outputs found"
+          elif [ "${{ env.BUILD_ENV }}" = "stg" ]; then
+            ls -hal ./android/app/build/outputs/apk/staging/ || echo "No staging APK outputs found"
+          else
+            ls -hal ./android/app/build/outputs/apk/release/ || echo "No release APK outputs found"
+          fi
+
+      - name: Verify 16KB page alignment
+        if: env.IS_PLAYSTORE != 'true'
+        run: |
+          if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
+            APK_DIR="./android/app/build/outputs/apk/staging"
+          else
+            APK_DIR="./android/app/build/outputs/apk/release"
+          fi
+
+          ALIGNMENT_OK=true
+          for APK in "$APK_DIR"/*.apk; do
+            [ -f "$APK" ] || continue
+            echo "Checking 16KB alignment: $(basename "$APK")"
+            if ! $ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools/ | tail -n1)/zipalign -c -P 16 -v 4 "$APK" > /dev/null 2>&1; then
+              echo "::warning::APK $(basename "$APK") is NOT 16KB page-aligned. This may cause issues on Android 15+ devices."
+              ALIGNMENT_OK=false
+            else
+              echo "$(basename "$APK") is properly 16KB aligned"
+            fi
+          done
+
+          if [ "$ALIGNMENT_OK" = false ]; then
+            echo "::warning::Some APKs failed 16KB alignment check. Review third-party native libraries."
+          fi
+
+      - name: Rename APK files
+        if: env.IS_PLAYSTORE != 'true'
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+
+          if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
+            APK_DIR="./android/app/build/outputs/apk/staging"
+            SUFFIX="staging"
+          else
+            APK_DIR="./android/app/build/outputs/apk/release"
+            SUFFIX="release"
+          fi
+
+          # Rename universal APK
+          if [ -f "${APK_DIR}/app-universal-${SUFFIX}.apk" ]; then
+            mv "${APK_DIR}/app-universal-${SUFFIX}.apk" \
+              "${APK_DIR}/sous-chef-${SUFFIX}-${TAG_NAME}-universal.apk"
+          fi
+
+          # Rename architecture-specific APKs
+          for ARCH in armeabi-v7a arm64-v8a x86 x86_64; do
+            if [ -f "${APK_DIR}/app-${ARCH}-${SUFFIX}.apk" ]; then
+              mv "${APK_DIR}/app-${ARCH}-${SUFFIX}.apk" \
+                "${APK_DIR}/sous-chef-${SUFFIX}-${TAG_NAME}-${ARCH}.apk"
+            fi
+          done
+
+      - name: Upload Play Store AAB
+        if: env.IS_PLAYSTORE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab-${{ github.ref_name }}
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Upload APKs
+        if: env.IS_PLAYSTORE != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks-${{ env.BUILD_ENV }}-${{ github.ref_name }}
+          path: android/app/build/outputs/apk/${{ env.BUILD_ENV == 'stg' && 'staging' || 'release' }}/sous-chef-*.apk
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────
+  # Build summary
+  # ─────────────────────────────────────────────────────────────
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [build-self-hosted, build-github-hosted]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "## Android Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Runner | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Self-Hosted | ${{ needs.build-self-hosted.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| GitHub-Hosted | ${{ needs.build-github-hosted.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.build-self-hosted.result }}" = "failure" ] || \
+             [ "${{ needs.build-github-hosted.result }}" = "failure" ]; then
+            echo "::error::One or more build jobs failed"
+            exit 1
+          fi
