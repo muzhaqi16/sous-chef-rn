@@ -1,14 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  Dimensions,
-  Platform } from 'react-native';
+import { View, Text, Dimensions, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   Camera,
   useCameraDevices,
-  useCodeScanner } from 'react-native-vision-camera';
+  useCodeScanner,
+} from 'react-native-vision-camera';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -19,15 +16,21 @@ import BarcodeMask from '#components/organisms/BarcodeMask';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
+import { SystemBars } from 'react-native-edge-to-edge';
 import type { BarcodeSource } from '#/types/navigation';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
-  source?: BarcodeSource;
-  pantryId?: string;
-  shoppingListId?: string;
-} | undefined>> = ({ route }) => {
+export const BarcodeScannerScreen: React.FC<
+  StaticScreenProps<
+    | {
+        source?: BarcodeSource;
+        pantryId?: string;
+        shoppingListId?: string;
+      }
+    | undefined
+  >
+> = ({ route }) => {
   const { navigate, goBack, navigation } = useAppNavigation();
   const { source, pantryId, shoppingListId } = route?.params || {};
   const devices = useCameraDevices();
@@ -35,7 +38,12 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
 
   const { theme } = useUnistyles();
 
-  const { isGranted: hasPermission, isBlocked, request: requestPermission, openSettings } = usePermission('camera');
+  const {
+    isGranted: hasPermission,
+    isBlocked,
+    request: requestPermission,
+    openSettings,
+  } = usePermission('camera');
 
   // barcode state/hooks
   const hasNavigatedRef = useRef(false);
@@ -57,23 +65,21 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
 
   // 2) When screen focuses *and* permission granted, turn scanner on;
   //    when unfocused, turn it off.
-  useFocusEffect(
-    () => {
-      if (!hasPermission) {
-        // we'll show the "grant permission" UI instead
-        return () => {};
-      }
-      hasNavigatedRef.current = false;
-      setHasScanned(false);
-      setIsActive(true);
-      setScanning(true);
+  useFocusEffect(() => {
+    if (!hasPermission) {
+      // we'll show the "grant permission" UI instead
+      return () => {};
+    }
+    hasNavigatedRef.current = false;
+    setHasScanned(false);
+    setIsActive(true);
+    setScanning(true);
 
-      return () => {
-        setIsActive(false);
-        setScanning(false);
-      };
-    },
-  );
+    return () => {
+      setIsActive(false);
+      setScanning(false);
+    };
+  });
 
   // 3) Set up the VisionCamera code‐scanner callback
   // PERFORMANCE: Limited to most common barcode types for grocery items
@@ -103,9 +109,11 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
           format: type,
           source,
           pantryId,
-          shoppingListId });
+          shoppingListId,
+        });
       }
-    } });
+    },
+  });
 
   const toggleFlash = () => setFlashEnabled(f => !f);
   const resetScan = () => {
@@ -166,6 +174,7 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
   // C) Permission granted & device ready → show scanner
   return (
     <View style={styles.container}>
+      <SystemBars hidden />
       <Camera
         style={styles.camera}
         device={device}
@@ -242,7 +251,8 @@ const styles = StyleSheet.create(theme => ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'black' },
+    backgroundColor: 'black',
+  },
   camera: { flex: 1 },
   centeredContainer: {
     position: 'absolute',
@@ -254,12 +264,14 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     backgroundColor: 'black',
     paddingHorizontal: theme.spacing.lg,
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   messageText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   header: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 50 : 20,
@@ -269,51 +281,61 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    zIndex: 1 },
+    zIndex: 1,
+  },
   headerButton: {
     width: 44,
     height: 44,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.overlays.medium,
     justifyContent: 'center',
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   headerTitle: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   instructionsContainer: {
     position: 'absolute',
     top: screenHeight * 0.25,
     left: theme.spacing.lg,
     right: theme.spacing.lg,
     alignItems: 'center',
-    zIndex: 1 },
+    zIndex: 1,
+  },
   instructionsText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   subInstructionsText: {
     color: theme.colors.overlays.light,
     fontSize: theme.fonts.size.sm,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   bottomControls: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 50 : 30,
     left: theme.spacing.lg,
     right: theme.spacing.lg,
     alignItems: 'center',
-    zIndex: 1 },
+    zIndex: 1,
+  },
   scanIndicator: { alignItems: 'center' },
   scanDot: {
     width: 12,
     height: 12,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.overlays.medium,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   scanDotActive: { backgroundColor: theme.colors.primary },
   scanStatusText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium } }));
+    fontWeight: theme.fonts.weight.medium,
+  },
+}));

@@ -1,5 +1,8 @@
 name: E2E Smoke Tests
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 # Run smoke tests on every PR for quick feedback
 on:
   pull_request:

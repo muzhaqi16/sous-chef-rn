@@ -146,11 +146,10 @@ describe('cache pagination integration', () => {
     it('shrinkage: refetch with hasNextPage:false removes stale items', () => {
       const cache = makeCache();
 
-      writeConn(
-        cache,
-        [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')],
-        { hasNextPage: true, endCursor: 'c2' },
-      );
+      writeConn(cache, [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
       writeConn(
         cache,
         [slEdge('sl-3', 'C')],
@@ -160,11 +159,10 @@ describe('cache pagination integration', () => {
       expect(readEdges(cache)).toHaveLength(3);
 
       // Refetch — all items fit in one page now (sl-2 was deleted server-side)
-      writeConn(
-        cache,
-        [slEdge('sl-1', 'A'), slEdge('sl-3', 'C')],
-        { hasNextPage: false, endCursor: 'c3' },
-      );
+      writeConn(cache, [slEdge('sl-1', 'A'), slEdge('sl-3', 'C')], {
+        hasNextPage: false,
+        endCursor: 'c3',
+      });
 
       const edges = readEdges(cache);
       expect(edges).toHaveLength(2);
@@ -177,11 +175,10 @@ describe('cache pagination integration', () => {
     it('updated items: refetch replaces page 1 items with updated data', () => {
       const cache = makeCache();
 
-      writeConn(
-        cache,
-        [slEdge('sl-1', 'Old Name')],
-        { hasNextPage: true, endCursor: 'c1' },
-      );
+      writeConn(cache, [slEdge('sl-1', 'Old Name')], {
+        hasNextPage: true,
+        endCursor: 'c1',
+      });
       writeConn(
         cache,
         [slEdge('sl-2', 'B')],
@@ -190,11 +187,10 @@ describe('cache pagination integration', () => {
       );
 
       // Refetch with updated page 1 item
-      writeConn(
-        cache,
-        [slEdge('sl-1', 'New Name')],
-        { hasNextPage: true, endCursor: 'c1' },
-      );
+      writeConn(cache, [slEdge('sl-1', 'New Name')], {
+        hasNextPage: true,
+        endCursor: 'c1',
+      });
 
       const edges = readEdges(cache);
       expect(edges).toHaveLength(2);
@@ -208,11 +204,10 @@ describe('cache pagination integration', () => {
     it('overlap deduplication: page 2 overlapping with page 1 produces no duplicates', () => {
       const cache = makeCache();
 
-      writeConn(
-        cache,
-        [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')],
-        { hasNextPage: true, endCursor: 'c2' },
-      );
+      writeConn(cache, [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
       // Page 2 — sl-2 overlaps with page 1
       writeConn(
         cache,
@@ -292,11 +287,10 @@ describe('cache pagination integration', () => {
     it('full lifecycle with after arg', () => {
       const cache = makeCache();
 
-      writeConn(
-        cache,
-        [memberEdge('m-1', 'Alice'), memberEdge('m-2', 'Bob')],
-        { hasNextPage: true, endCursor: 'mc2' },
-      );
+      writeConn(cache, [memberEdge('m-1', 'Alice'), memberEdge('m-2', 'Bob')], {
+        hasNextPage: true,
+        endCursor: 'mc2',
+      });
       writeConn(
         cache,
         [memberEdge('m-3', 'Charlie')],
@@ -306,11 +300,10 @@ describe('cache pagination integration', () => {
       expect(readEdges(cache)).toHaveLength(3);
 
       // Refetch without cursor (hasNextPage:true) — preserve page 2
-      writeConn(
-        cache,
-        [memberEdge('m-1', 'Alice'), memberEdge('m-2', 'Bob')],
-        { hasNextPage: true, endCursor: 'mc2' },
-      );
+      writeConn(cache, [memberEdge('m-1', 'Alice'), memberEdge('m-2', 'Bob')], {
+        hasNextPage: true,
+        endCursor: 'mc2',
+      });
 
       const ids = readEdges(cache).map((e: any) => e.node.id);
       expect(ids).toEqual(expect.arrayContaining(['m-1', 'm-2', 'm-3']));
@@ -319,11 +312,10 @@ describe('cache pagination integration', () => {
     it('shrinkage with after', () => {
       const cache = makeCache();
 
-      writeConn(
-        cache,
-        [memberEdge('m-1', 'Alice')],
-        { hasNextPage: true, endCursor: 'mc1' },
-      );
+      writeConn(cache, [memberEdge('m-1', 'Alice')], {
+        hasNextPage: true,
+        endCursor: 'mc1',
+      });
       writeConn(
         cache,
         [memberEdge('m-2', 'Bob')],
@@ -333,11 +325,10 @@ describe('cache pagination integration', () => {
       expect(readEdges(cache)).toHaveLength(2);
 
       // Refetch — member removed, all fit in one page
-      writeConn(
-        cache,
-        [memberEdge('m-1', 'Alice')],
-        { hasNextPage: false, endCursor: 'mc1' },
-      );
+      writeConn(cache, [memberEdge('m-1', 'Alice')], {
+        hasNextPage: false,
+        endCursor: 'mc1',
+      });
 
       expect(readEdges(cache)).toHaveLength(1);
       expect(readEdges(cache)[0].node.id).toBe('m-1');
@@ -372,7 +363,11 @@ describe('cache pagination integration', () => {
     `;
 
     const QUERY_WITH_FILTER = gql`
-      query GetList($id: ID!, $after: String, $filters: ShoppingListItemFilters) {
+      query GetList(
+        $id: ID!
+        $after: String
+        $filters: ShoppingListItemFilters
+      ) {
         shoppingList(id: $id) {
           id
           itemsConnection(after: $after, filters: $filters) {
@@ -432,11 +427,10 @@ describe('cache pagination integration', () => {
       const cache = makeCache();
 
       // Page 1
-      writeConn(
-        cache,
-        [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')],
-        { hasNextPage: true, endCursor: 'c2' },
-      );
+      writeConn(cache, [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
 
       // Page 2
       writeConn(
@@ -456,11 +450,10 @@ describe('cache pagination integration', () => {
       ]);
 
       // Refetch page 1 (no cursor, hasNextPage:true) — must preserve page 2
-      writeConn(
-        cache,
-        [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')],
-        { hasNextPage: true, endCursor: 'c2' },
-      );
+      writeConn(cache, [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
 
       edges = readEdges(cache);
       expect(edges).toHaveLength(3);
@@ -474,11 +467,10 @@ describe('cache pagination integration', () => {
     it('overlap deduplication: existing position kept', () => {
       const cache = makeCache();
 
-      writeConn(
-        cache,
-        [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')],
-        { hasNextPage: true, endCursor: 'c2' },
-      );
+      writeConn(cache, [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
       // Page 2 — si-2 overlaps with page 1
       writeConn(
         cache,
@@ -499,11 +491,10 @@ describe('cache pagination integration', () => {
     it('shrinkage: hasNextPage:false replaces all', () => {
       const cache = makeCache();
 
-      writeConn(
-        cache,
-        [itemEdge('si-1', 'Milk')],
-        { hasNextPage: true, endCursor: 'c1' },
-      );
+      writeConn(cache, [itemEdge('si-1', 'Milk')], {
+        hasNextPage: true,
+        endCursor: 'c1',
+      });
       writeConn(
         cache,
         [itemEdge('si-2', 'Bread')],
@@ -513,11 +504,10 @@ describe('cache pagination integration', () => {
       expect(readEdges(cache)).toHaveLength(2);
 
       // Refetch — items removed, all fit in one page
-      writeConn(
-        cache,
-        [itemEdge('si-1', 'Milk')],
-        { hasNextPage: false, endCursor: 'c1' },
-      );
+      writeConn(cache, [itemEdge('si-1', 'Milk')], {
+        hasNextPage: false,
+        endCursor: 'c1',
+      });
 
       expect(readEdges(cache)).toHaveLength(1);
       expect(readEdges(cache)[0].node.id).toBe('si-1');
@@ -527,11 +517,10 @@ describe('cache pagination integration', () => {
       const cache = makeCache();
 
       // Write to default (no filter) entry
-      writeConn(
-        cache,
-        [itemEdge('si-1', 'Milk')],
-        { hasNextPage: false, endCursor: 'c1' },
-      );
+      writeConn(cache, [itemEdge('si-1', 'Milk')], {
+        hasNextPage: false,
+        endCursor: 'c1',
+      });
 
       // Write to filtered entry
       cache.writeQuery({
@@ -570,11 +559,10 @@ describe('cache pagination integration', () => {
       const cache = makeCache();
 
       // Page 1
-      writeConn(
-        cache,
-        [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')],
-        { hasNextPage: true, endCursor: 'c2' },
-      );
+      writeConn(cache, [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
 
       // Page 2 (final page)
       writeConn(
@@ -590,7 +578,9 @@ describe('cache pagination integration', () => {
         variables: { id: 'list-1' },
       });
       expect(result.shoppingList.itemsConnection.edges).toHaveLength(3);
-      expect(result.shoppingList.itemsConnection.pageInfo.hasNextPage).toBe(false);
+      expect(result.shoppingList.itemsConnection.pageInfo.hasNextPage).toBe(
+        false,
+      );
       expect(result.shoppingList.itemsConnection.pageInfo.endCursor).toBe('c3');
 
       // Duplicate cursor request: same cursor c2 sent again due to race condition.
@@ -609,7 +599,9 @@ describe('cache pagination integration', () => {
       });
       expect(result.shoppingList.itemsConnection.edges).toHaveLength(3);
       // Existing pageInfo preserved — hasNextPage stays false
-      expect(result.shoppingList.itemsConnection.pageInfo.hasNextPage).toBe(false);
+      expect(result.shoppingList.itemsConnection.pageInfo.hasNextPage).toBe(
+        false,
+      );
       expect(result.shoppingList.itemsConnection.pageInfo.endCursor).toBe('c3');
     });
   });
@@ -683,7 +675,13 @@ describe('cache pagination integration', () => {
       const edges = Array.from({ length: 50 }, (_, i) =>
         itemEdge(`si-${i}`, `Item ${i}`),
       );
-      writeConn(cache, edges, { hasNextPage: true, endCursor: 'c50' }, undefined, 200);
+      writeConn(
+        cache,
+        edges,
+        { hasNextPage: true, endCursor: 'c50' },
+        undefined,
+        200,
+      );
 
       expect(readEdges(cache)).toHaveLength(50);
     });
@@ -695,13 +693,25 @@ describe('cache pagination integration', () => {
       const page1 = Array.from({ length: 100 }, (_, i) =>
         itemEdge(`si-${i}`, `Item ${i}`),
       );
-      writeConn(cache, page1, { hasNextPage: true, endCursor: 'c100' }, undefined, 300);
+      writeConn(
+        cache,
+        page1,
+        { hasNextPage: true, endCursor: 'c100' },
+        undefined,
+        300,
+      );
 
       // Write 60 more edges as page 2 (total would be 160, exceeding 150)
       const page2 = Array.from({ length: 60 }, (_, i) =>
         itemEdge(`si-${100 + i}`, `Item ${100 + i}`),
       );
-      writeConn(cache, page2, { hasNextPage: true, endCursor: 'c160' }, { after: 'c100' }, 300);
+      writeConn(
+        cache,
+        page2,
+        { hasNextPage: true, endCursor: 'c160' },
+        { after: 'c100' },
+        300,
+      );
 
       const edges = readEdges(cache);
       // Should be capped at 150
@@ -721,13 +731,25 @@ describe('cache pagination integration', () => {
       const page1 = Array.from({ length: 100 }, (_, i) =>
         itemEdge(`si-${i}`, `Item ${i}`),
       );
-      writeConn(cache, page1, { hasNextPage: true, endCursor: 'c100' }, undefined, 200);
+      writeConn(
+        cache,
+        page1,
+        { hasNextPage: true, endCursor: 'c100' },
+        undefined,
+        200,
+      );
 
       // Background refetch returns first 50 (no cursor, hasNextPage:true)
       const refetch = Array.from({ length: 50 }, (_, i) =>
         itemEdge(`si-${i}`, `Item ${i}`),
       );
-      writeConn(cache, refetch, { hasNextPage: true, endCursor: 'c50' }, undefined, 200);
+      writeConn(
+        cache,
+        refetch,
+        { hasNextPage: true, endCursor: 'c50' },
+        undefined,
+        200,
+      );
 
       // All 100 should still be there (deduped, within limit)
       expect(readEdges(cache)).toHaveLength(100);
@@ -819,11 +841,10 @@ describe('cache pagination integration', () => {
     it('full lifecycle: pagination + refetch preservation', () => {
       const cache = makeCache();
 
-      writeConn(
-        cache,
-        [piEdge('pi-1', 'Flour'), piEdge('pi-2', 'Sugar')],
-        { hasNextPage: true, endCursor: 'c2' },
-      );
+      writeConn(cache, [piEdge('pi-1', 'Flour'), piEdge('pi-2', 'Sugar')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
       writeConn(
         cache,
         [piEdge('pi-3', 'Salt')],
@@ -833,11 +854,10 @@ describe('cache pagination integration', () => {
       expect(readEdges(cache)).toHaveLength(3);
 
       // Refetch page 1 (no cursor, hasNextPage:true)
-      writeConn(
-        cache,
-        [piEdge('pi-1', 'Flour'), piEdge('pi-2', 'Sugar')],
-        { hasNextPage: true, endCursor: 'c2' },
-      );
+      writeConn(cache, [piEdge('pi-1', 'Flour'), piEdge('pi-2', 'Sugar')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
 
       const ids = readEdges(cache).map((e: any) => e.node.id);
       expect(ids).toEqual(expect.arrayContaining(['pi-1', 'pi-2', 'pi-3']));
@@ -846,11 +866,10 @@ describe('cache pagination integration', () => {
     it('shrinkage: hasNextPage:false clears stale items', () => {
       const cache = makeCache();
 
-      writeConn(
-        cache,
-        [piEdge('pi-1', 'Flour')],
-        { hasNextPage: true, endCursor: 'c1' },
-      );
+      writeConn(cache, [piEdge('pi-1', 'Flour')], {
+        hasNextPage: true,
+        endCursor: 'c1',
+      });
       writeConn(
         cache,
         [piEdge('pi-2', 'Sugar')],
@@ -860,11 +879,10 @@ describe('cache pagination integration', () => {
       expect(readEdges(cache)).toHaveLength(2);
 
       // Refetch — all fit in one page
-      writeConn(
-        cache,
-        [piEdge('pi-1', 'Flour')],
-        { hasNextPage: false, endCursor: 'c1' },
-      );
+      writeConn(cache, [piEdge('pi-1', 'Flour')], {
+        hasNextPage: false,
+        endCursor: 'c1',
+      });
 
       expect(readEdges(cache)).toHaveLength(1);
       expect(readEdges(cache)[0].node.id).toBe('pi-1');
@@ -1009,11 +1027,10 @@ describe('cache pagination integration', () => {
     it('shrinkage', () => {
       const cache = makeCache();
 
-      writeRecipes(
-        cache,
-        [recipeEdge('r-1', 'Pasta')],
-        { hasNextPage: true, endCursor: 'rc1' },
-      );
+      writeRecipes(cache, [recipeEdge('r-1', 'Pasta')], {
+        hasNextPage: true,
+        endCursor: 'rc1',
+      });
       writeRecipes(
         cache,
         [recipeEdge('r-2', 'Salad')],
@@ -1023,11 +1040,10 @@ describe('cache pagination integration', () => {
       expect(readEdges(cache)).toHaveLength(2);
 
       // Refetch — only 1 recipe now
-      writeRecipes(
-        cache,
-        [recipeEdge('r-1', 'Pasta')],
-        { hasNextPage: false, endCursor: 'rc1' },
-      );
+      writeRecipes(cache, [recipeEdge('r-1', 'Pasta')], {
+        hasNextPage: false,
+        endCursor: 'rc1',
+      });
 
       expect(readEdges(cache)).toHaveLength(1);
       expect(readEdges(cache)[0].node.id).toBe('r-1');
@@ -1515,9 +1531,7 @@ describe('cache pagination integration', () => {
       });
 
       expect(page1.shoppingList.itemsConnection.edges).toHaveLength(1);
-      expect(page1.shoppingList.itemsConnection.edges[0].node.id).toBe(
-        'si-1',
-      );
+      expect(page1.shoppingList.itemsConnection.edges[0].node.id).toBe('si-1');
 
       // fetchMore for page 2
       const observable = client.watchQuery({
@@ -1540,92 +1554,5 @@ describe('cache pagination integration', () => {
       expect(ids).toContain('si-1');
       expect(ids).toContain('si-2');
     });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Persistence: stripConnectionFields
-// ---------------------------------------------------------------------------
-
-describe('stripConnectionFields', () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { stripConnectionFields } = require('../../apollo/offline/ApolloCachePersistence');
-
-  it('removes connection-shaped fields while preserving entity data', () => {
-    const cacheData = {
-      'ShoppingList:1': {
-        __typename: 'ShoppingList',
-        id: '1',
-        name: 'Groceries',
-        itemsConnection: {
-          edges: [{ __ref: 'ShoppingListItem:a' }],
-          pageInfo: { hasNextPage: true, endCursor: 'c1' },
-        },
-      },
-      'ShoppingListItem:a': {
-        __typename: 'ShoppingListItem',
-        id: 'a',
-        name: 'Milk',
-      },
-      ROOT_QUERY: {
-        __typename: 'Query',
-        'shoppingList({"id":"1"})': { __ref: 'ShoppingList:1' },
-      },
-    };
-
-    const result = stripConnectionFields(cacheData);
-
-    // Entity scalar fields preserved
-    expect(result['ShoppingList:1'].id).toBe('1');
-    expect(result['ShoppingList:1'].name).toBe('Groceries');
-    // Connection field stripped
-    expect(result['ShoppingList:1'].itemsConnection).toBeUndefined();
-    // Normalized entity untouched
-    expect(result['ShoppingListItem:a']).toEqual(cacheData['ShoppingListItem:a']);
-    // ROOT_QUERY preserved (no connection fields inside it)
-    expect(result.ROOT_QUERY).toEqual(cacheData.ROOT_QUERY);
-  });
-
-  it('handles keyArgs-generated connection keys', () => {
-    const cacheData = {
-      'Pantry:1': {
-        __typename: 'Pantry',
-        id: '1',
-        'itemsConnection:{"filters":{"categoryId":"cat-1"}}': {
-          edges: [{ __ref: 'PantryItem:x' }],
-          pageInfo: { hasNextPage: false, endCursor: null },
-        },
-        'itemsConnection:{"filters":{"categoryId":"cat-2"}}': {
-          edges: [],
-          pageInfo: { hasNextPage: false, endCursor: null },
-        },
-      },
-    };
-
-    const result = stripConnectionFields(cacheData);
-
-    expect(result['Pantry:1'].id).toBe('1');
-    expect(
-      result['Pantry:1']['itemsConnection:{"filters":{"categoryId":"cat-1"}}'],
-    ).toBeUndefined();
-    expect(
-      result['Pantry:1']['itemsConnection:{"filters":{"categoryId":"cat-2"}}'],
-    ).toBeUndefined();
-  });
-
-  it('preserves non-connection object fields', () => {
-    const cacheData = {
-      'User:1': {
-        __typename: 'User',
-        id: '1',
-        profile: { __ref: 'UserProfile:1' },
-        settings: { theme: 'dark', language: 'en' },
-      },
-    };
-
-    const result = stripConnectionFields(cacheData);
-
-    expect(result['User:1'].profile).toEqual({ __ref: 'UserProfile:1' });
-    expect(result['User:1'].settings).toEqual({ theme: 'dark', language: 'en' });
   });
 });

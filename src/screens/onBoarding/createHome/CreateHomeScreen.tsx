@@ -585,16 +585,16 @@ const CreateHomeScreenComponent = () => {
           <View style={styles.resourceCard}>
             <Text style={styles.resourceLabel}>Home</Text>
             <Text style={styles.resourceName}>{existingHome.name}</Text>
-          </View>
 
-          <View style={styles.resourceCard}>
-            <Text style={styles.resourceLabel}>Pantry</Text>
-            <Text style={styles.resourceName}>{existingPantry.name}</Text>
-            {!!existingPantry.isDefault && (
-              <View style={styles.defaultBadge}>
-                <Text style={styles.defaultBadgeText}>Default</Text>
-              </View>
-            )}
+            <View style={styles.pantrySection}>
+              <Text style={styles.resourceLabel}>Pantry</Text>
+              <Text style={styles.resourceName}>{existingPantry.name}</Text>
+              {!!existingPantry.isDefault && (
+                <View style={styles.defaultBadge}>
+                  <Text style={styles.defaultBadgeText}>Default</Text>
+                </View>
+              )}
+            </View>
           </View>
 
           <Text style={styles.infoText}>
@@ -673,6 +673,12 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  pantrySection: {
+    marginTop: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
   },
   resourceName: {
     fontSize: theme.fonts.size.lg,

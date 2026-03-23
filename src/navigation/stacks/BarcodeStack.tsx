@@ -1,10 +1,12 @@
 import React from 'react';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SearchResultsScreen } from '#screens/barcode/SearchResultsScreen';
 
 // Lazy-load BarcodeScannerScreen to defer vision-camera JS loading
-const BarcodeScannerScreen = React.lazy(
-  () => import('#screens/barcode/BarcodeScannerScreen').then(m => ({ default: m.BarcodeScannerScreen })),
+const BarcodeScannerScreen = React.lazy(() =>
+  import('#screens/barcode/BarcodeScannerScreen').then(m => ({
+    default: m.BarcodeScannerScreen,
+  })),
 );
 
 export const BarcodeStack = createNativeStackNavigator({
@@ -17,9 +19,6 @@ export const BarcodeStack = createNativeStackNavigator({
     BarcodeScanner: {
       screen: BarcodeScannerScreen,
       linking: 'scan',
-      options: {
-        statusBarHidden: true,
-      },
     },
     SearchResults: {
       screen: SearchResultsScreen,

@@ -3,11 +3,16 @@ import { StyleSheet } from 'react-native-unistyles';
 // UNISTYLES FIX: Inline common style properties instead of spreading from commonStyles
 // Spreading from another Unistyles stylesheet can cause "2 unistyles styles" warnings
 
-// IMPORTANT: All border radii in SwipeableItem must match to prevent visual gaps during
-// swipe animations. The container, children container, and action containers all use
-// the same radius (theme.radii.lg). Mismatched radii cause sub-pixel gaps between layers.
+// BORDER RADIUS CONVENTION:
+// The card child (BaseItemCard, ListItem, etc.) is the single source of truth for visible
+// borderRadius + borderWidth. SwipeableItem layers must NOT add their own visible radius:
+// - swipeableContainer: keeps borderRadius for shadow shape only (NO backgroundColor)
+// - childrenContainer: overflow:hidden without borderRadius — rectangular clip, child handles rounding
+// - Action containers: use matching radius on their exposed (outer) edges only
+// Adding backgroundColor to swipeableContainer or borderRadius to childrenContainer causes
+// a "double border" artifact where the parent's radius clips/bleeds against the card's.
 export const styles = StyleSheet.create(theme => {
-  // Shared border radius for all swipeable containers - DO NOT use different values
+  // Shared border radius for swipeable + action containers
   const SWIPEABLE_RADIUS = theme.radii.lg;
 
   return {
@@ -15,18 +20,19 @@ export const styles = StyleSheet.create(theme => {
       overflow: 'visible', // Allow shadow to show and actions to extend
     },
 
-    // Container style for Swipeable component
-    // Dark bg fills the overshoot gap when content slides past the action container width.
+    // Container style for Swipeable component (shadow shape only, no visible background)
     swipeableContainer: {
       overflow: 'visible',
       borderRadius: SWIPEABLE_RADIUS,
-      backgroundColor: theme.colors.charade['950'],
+      // No backgroundColor here — it bleeds through as a thin dark ring behind
+      // the card's rounded border. The action containers have their own dark bg.
     },
 
     // Children container style for Swipeable component
+    // No borderRadius here — the card inside handles its own rounding.
+    // Adding borderRadius + overflow:hidden here double-clips the card's border corners.
     childrenContainer: {
       overflow: 'hidden',
-      borderRadius: SWIPEABLE_RADIUS,
     },
 
     actionsContainer: {
