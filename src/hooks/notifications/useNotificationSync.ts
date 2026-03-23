@@ -17,6 +17,7 @@ import {
   useMarkNotificationAsReadMutation,
   useMarkNotificationUnreadMutation,
   useDeleteNotificationMutation,
+  useMarkAllNotificationsAsReadMutation,
 } from '#generated';
 import { useStore } from '#store';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -27,6 +28,7 @@ export function useNotificationSync() {
   const [markReadMutation] = useMarkNotificationAsReadMutation();
   const [markUnreadMutation] = useMarkNotificationUnreadMutation();
   const [deleteMutation] = useDeleteNotificationMutation();
+  const [markAllReadMutation] = useMarkAllNotificationsAsReadMutation();
 
   const syncMarkAsRead = (id: string) => {
     // Skip if already read
@@ -86,32 +88,26 @@ export function useNotificationSync() {
   };
 
   const syncMarkAllAsRead = () => {
-    const unreadIds = useStore
-      .getState()
-      .notifications.filter(n => !n.isRead)
-      .map(n => n.id);
+    const hasUnread = useStore.getState().notifications.some(n => !n.isRead);
 
-    if (unreadIds.length === 0) return;
+    if (!hasUnread) return;
 
     // Optimistic local update
     useStore.getState().markAllAsRead();
 
-    // Sync each to server — each mutation has its own error handler
-    // so only the failed ones get rolled back
-    for (const id of unreadIds) {
-      executeMutation(
-        () => markReadMutation({ variables: { id } }),
-        (error: unknown) => {
-          errorService.reportError(error, {
-            operation: 'syncMarkAllAsRead',
-            notificationId: id,
-          });
-          if (!isNetworkError(error)) {
-            useStore.getState().markAsUnread(id);
-          }
-        },
-      );
-    }
+    // Single bulk mutation instead of N individual calls
+    executeMutation(
+      () => markAllReadMutation(),
+      (error: unknown) => {
+        errorService.reportError(error, {
+          operation: 'syncMarkAllAsRead',
+        });
+        // On server error, recalculate counts — cache-and-network will self-correct
+        if (!isNetworkError(error)) {
+          useStore.getState().updateUnreadCount();
+        }
+      },
+    );
   };
 
   return {

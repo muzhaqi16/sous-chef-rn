@@ -12171,6 +12171,8 @@ export type HomeFragment = { __typename: 'Home', id: string, name: string, descr
 
 export type NotificationFragment = { __typename: 'Notification', id: string, userId: string, type: NotificationType, payload: any, status: NotificationStatus, sentAt: string, readAt: string | null, createdAt: string };
 
+export type ExpirationNotificationFragment = { __typename: 'ExpirationNotification', id: string, notificationType: ExpirationNotificationType, daysUntilExpiry: number, expiresAt: string, status: NotificationDeliveryStatus, sentAt: string | null, readAt: string | null, actionTaken: ExpirationAction | null, actionAt: string | null, dismissedAt: string | null, createdAt: string, genericNotificationId: string | null, pantryItemId: string, pantryItem: { __typename: 'PantryItem', id: string, item: { __typename: 'Item', id: string, name: string, imageUrl: string | null } } };
+
 export type PurchaseFragment = { __typename: 'Purchase', id: string, purchaseDate: string, quantity: number, unitPrice: number, unitSymbol: string };
 
 export type MealPlanRecipeFragment = { __typename: 'Recipe', id: string, name: string, imageUrl: string | null, servings: number, totalTimeMinutes: number | null };
@@ -12676,6 +12678,53 @@ export type CreateTemplateFromMealPlanMutation = { __typename: 'Mutation', creat
       & MealTemplateDisplayFragment
     ) | null } };
 
+export type MarkAllNotificationsAsReadMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MarkAllNotificationsAsReadMutation = { __typename: 'Mutation', markAllNotificationsAsRead: { __typename: 'BulkNotificationPayload', success: boolean, message: string, code: string, count: number } };
+
+export type DeleteAllReadNotificationsMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DeleteAllReadNotificationsMutation = { __typename: 'Mutation', deleteAllReadNotifications: { __typename: 'BulkNotificationPayload', success: boolean, message: string, code: string, count: number } };
+
+export type DeleteMultipleNotificationsMutationVariables = Exact<{
+  ids: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
+
+
+export type DeleteMultipleNotificationsMutation = { __typename: 'Mutation', deleteMultipleNotifications: { __typename: 'BulkNotificationPayload', success: boolean, message: string, code: string, count: number } };
+
+export type MarkExpirationActionMutationVariables = Exact<{
+  input: MarkActionInput;
+}>;
+
+
+export type MarkExpirationActionMutation = { __typename: 'Mutation', markExpirationAction: { __typename: 'ExpirationNotificationPayload', success: boolean, message: string, code: string, expirationNotification: (
+      { __typename: 'ExpirationNotification' }
+      & ExpirationNotificationFragment
+    ) | null } };
+
+export type DismissExpirationNotificationMutationVariables = Exact<{
+  input: DismissNotificationInput;
+}>;
+
+
+export type DismissExpirationNotificationMutation = { __typename: 'Mutation', dismissExpirationNotification: { __typename: 'ExpirationNotificationPayload', success: boolean, message: string, code: string, expirationNotification: (
+      { __typename: 'ExpirationNotification' }
+      & ExpirationNotificationFragment
+    ) | null } };
+
+export type MarkExpirationNotificationAsReadMutationVariables = Exact<{
+  notificationId: Scalars['ID']['input'];
+}>;
+
+
+export type MarkExpirationNotificationAsReadMutation = { __typename: 'Mutation', markExpirationNotificationAsRead: { __typename: 'ExpirationNotificationPayload', success: boolean, message: string, code: string, expirationNotification: (
+      { __typename: 'ExpirationNotification' }
+      & ExpirationNotificationFragment
+    ) | null } };
+
 export type MarkNotificationAsReadMutationVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
@@ -12702,6 +12751,13 @@ export type DeleteNotificationMutationVariables = Exact<{
 
 
 export type DeleteNotificationMutation = { __typename: 'Mutation', deleteNotification: { __typename: 'NotificationPayload', success: boolean, message: string, code: string } };
+
+export type GetNotificationStatsQueryVariables = Exact<{
+  filters?: InputMaybe<NotificationFilters>;
+}>;
+
+
+export type GetNotificationStatsQuery = { __typename: 'Query', notificationStats: { __typename: 'NotificationStats', total: number, unread: number, read: number, dismissed: number, expired: number, byCategory: Array<{ __typename: 'NotificationCategoryCount', category: string, count: number, unreadCount: number }>, byPriority: Array<{ __typename: 'NotificationPriorityCount', priority: Priority, count: number, unreadCount: number }>, byType: Array<{ __typename: 'NotificationTypeCount', type: NotificationType, count: number, unreadCount: number }> } };
 
 export type NotificationChangedSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
@@ -13026,7 +13082,10 @@ export type ExpirationNotificationChangedSubscriptionVariables = Exact<{
 }>;
 
 
-export type ExpirationNotificationChangedSubscription = { __typename: 'Subscription', expirationNotificationChanged: { __typename: 'ExpirationNotificationChangeEvent', changeType: ExpirationNotificationChangeType, pantryId: string, timestamp: string, notification: { __typename: 'ExpirationNotification', id: string, pantryItemId: string, notificationType: ExpirationNotificationType, daysUntilExpiry: number, expiresAt: string, status: NotificationDeliveryStatus, sentAt: string | null, dismissedAt: string | null, pantryItem: { __typename: 'PantryItem', id: string, item: { __typename: 'Item', id: string, name: string, imageUrl: string | null } } } } };
+export type ExpirationNotificationChangedSubscription = { __typename: 'Subscription', expirationNotificationChanged: { __typename: 'ExpirationNotificationChangeEvent', changeType: ExpirationNotificationChangeType, pantryId: string, timestamp: string, notification: (
+      { __typename: 'ExpirationNotification' }
+      & ExpirationNotificationFragment
+    ) } };
 
 export type SearchRecipesQueryVariables = Exact<{
   query: Scalars['String']['input'];
@@ -13676,6 +13735,7 @@ export const HomeDisplayFragmentDoc = /*#__PURE__*/ {"kind":"Document","definiti
 export const HomeListFragmentDoc = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"HomeListFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Home"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"membersConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"5"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"invitesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"5"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"recipientName"}},{"kind":"Field","name":{"kind":"Name","value":"status"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pantriesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"10"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"myMembership"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"canManageHome"}}]}}]}}]} as unknown as DocumentNode;
 export const HomeFragmentDoc = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"HomeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Home"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}},{"kind":"Field","name":{"kind":"Name","value":"isPublic"}},{"kind":"Field","name":{"kind":"Name","value":"joinCode"}},{"kind":"Field","name":{"kind":"Name","value":"allowJoinCode"}},{"kind":"Field","name":{"kind":"Name","value":"maxMembers"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"invitesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"20"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"recipientName"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"membersConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"20"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"canManageHome"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pantriesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"20"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"myMembership"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"canManageHome"}}]}}]}}]} as unknown as DocumentNode;
 export const NotificationFragmentDoc = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"NotificationFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Notification"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"payload"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]} as unknown as DocumentNode;
+export const ExpirationNotificationFragmentDoc = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ExpirationNotificationFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ExpirationNotification"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"notificationType"}},{"kind":"Field","name":{"kind":"Name","value":"daysUntilExpiry"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"actionTaken"}},{"kind":"Field","name":{"kind":"Name","value":"actionAt"}},{"kind":"Field","name":{"kind":"Name","value":"dismissedAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"genericNotificationId"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItemId"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}}]}}]} as unknown as DocumentNode;
 export const MealPlanDisplayFragmentDoc = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MealPlan"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"planType"}},{"kind":"Field","name":{"kind":"Name","value":"startDate"}},{"kind":"Field","name":{"kind":"Name","value":"endDate"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"totalCalories"}},{"kind":"Field","name":{"kind":"Name","value":"totalProtein"}},{"kind":"Field","name":{"kind":"Name","value":"totalCarbs"}},{"kind":"Field","name":{"kind":"Name","value":"totalFat"}},{"kind":"Field","name":{"kind":"Name","value":"actualCost"}},{"kind":"Field","name":{"kind":"Name","value":"budgetAmount"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"myMembership"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"role"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]} as unknown as DocumentNode;
 export const MealPlanRecipeFragmentDoc = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}}]}}]} as unknown as DocumentNode;
 export const MealPlanItemFragmentDoc = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MealPlanItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"mealType"}},{"kind":"Field","name":{"kind":"Name","value":"isCompleted"}},{"kind":"Field","name":{"kind":"Name","value":"completedAt"}},{"kind":"Field","name":{"kind":"Name","value":"customMealName"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"calories"}},{"kind":"Field","name":{"kind":"Name","value":"protein"}},{"kind":"Field","name":{"kind":"Name","value":"carbs"}},{"kind":"Field","name":{"kind":"Name","value":"fat"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedCost"}},{"kind":"Field","name":{"kind":"Name","value":"actualCost"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionSource"}},{"kind":"Field","name":{"kind":"Name","value":"usedPantryItems"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MealPlanRecipeFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}}]}}]} as unknown as DocumentNode;
@@ -15825,6 +15885,160 @@ export function useCreateTemplateFromMealPlanMutation(baseOptions?: ApolloReactH
 export type CreateTemplateFromMealPlanMutationHookResult = ReturnType<typeof useCreateTemplateFromMealPlanMutation>;
 export type CreateTemplateFromMealPlanMutationResult = ApolloReactCommon.MutationResult<CreateTemplateFromMealPlanMutation>;
 export type CreateTemplateFromMealPlanMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateTemplateFromMealPlanMutation, CreateTemplateFromMealPlanMutationVariables>;
+export const MarkAllNotificationsAsReadDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"MarkAllNotificationsAsRead"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"markAllNotificationsAsRead"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"count"}}]}}]}}]} as unknown as DocumentNode;
+
+/**
+ * __useMarkAllNotificationsAsReadMutation__
+ *
+ * To run a mutation, you first call `useMarkAllNotificationsAsReadMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useMarkAllNotificationsAsReadMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [markAllNotificationsAsReadMutation, { data, loading, error }] = useMarkAllNotificationsAsReadMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useMarkAllNotificationsAsReadMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<MarkAllNotificationsAsReadMutation, MarkAllNotificationsAsReadMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<MarkAllNotificationsAsReadMutation, MarkAllNotificationsAsReadMutationVariables>(MarkAllNotificationsAsReadDocument, options);
+      }
+export type MarkAllNotificationsAsReadMutationHookResult = ReturnType<typeof useMarkAllNotificationsAsReadMutation>;
+export type MarkAllNotificationsAsReadMutationResult = ApolloReactCommon.MutationResult<MarkAllNotificationsAsReadMutation>;
+export type MarkAllNotificationsAsReadMutationOptions = ApolloReactCommon.BaseMutationOptions<MarkAllNotificationsAsReadMutation, MarkAllNotificationsAsReadMutationVariables>;
+export const DeleteAllReadNotificationsDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeleteAllReadNotifications"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deleteAllReadNotifications"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"count"}}]}}]}}]} as unknown as DocumentNode;
+
+/**
+ * __useDeleteAllReadNotificationsMutation__
+ *
+ * To run a mutation, you first call `useDeleteAllReadNotificationsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteAllReadNotificationsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteAllReadNotificationsMutation, { data, loading, error }] = useDeleteAllReadNotificationsMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDeleteAllReadNotificationsMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<DeleteAllReadNotificationsMutation, DeleteAllReadNotificationsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<DeleteAllReadNotificationsMutation, DeleteAllReadNotificationsMutationVariables>(DeleteAllReadNotificationsDocument, options);
+      }
+export type DeleteAllReadNotificationsMutationHookResult = ReturnType<typeof useDeleteAllReadNotificationsMutation>;
+export type DeleteAllReadNotificationsMutationResult = ApolloReactCommon.MutationResult<DeleteAllReadNotificationsMutation>;
+export type DeleteAllReadNotificationsMutationOptions = ApolloReactCommon.BaseMutationOptions<DeleteAllReadNotificationsMutation, DeleteAllReadNotificationsMutationVariables>;
+export const DeleteMultipleNotificationsDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeleteMultipleNotifications"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ids"}},"type":{"kind":"NonNullType","type":{"kind":"ListType","type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deleteMultipleNotifications"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"ids"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ids"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"count"}}]}}]}}]} as unknown as DocumentNode;
+
+/**
+ * __useDeleteMultipleNotificationsMutation__
+ *
+ * To run a mutation, you first call `useDeleteMultipleNotificationsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteMultipleNotificationsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteMultipleNotificationsMutation, { data, loading, error }] = useDeleteMultipleNotificationsMutation({
+ *   variables: {
+ *      ids: // value for 'ids'
+ *   },
+ * });
+ */
+export function useDeleteMultipleNotificationsMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<DeleteMultipleNotificationsMutation, DeleteMultipleNotificationsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<DeleteMultipleNotificationsMutation, DeleteMultipleNotificationsMutationVariables>(DeleteMultipleNotificationsDocument, options);
+      }
+export type DeleteMultipleNotificationsMutationHookResult = ReturnType<typeof useDeleteMultipleNotificationsMutation>;
+export type DeleteMultipleNotificationsMutationResult = ApolloReactCommon.MutationResult<DeleteMultipleNotificationsMutation>;
+export type DeleteMultipleNotificationsMutationOptions = ApolloReactCommon.BaseMutationOptions<DeleteMultipleNotificationsMutation, DeleteMultipleNotificationsMutationVariables>;
+export const MarkExpirationActionDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"MarkExpirationAction"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"MarkActionInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"markExpirationAction"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"expirationNotification"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ExpirationNotificationFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ExpirationNotificationFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ExpirationNotification"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"notificationType"}},{"kind":"Field","name":{"kind":"Name","value":"daysUntilExpiry"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"actionTaken"}},{"kind":"Field","name":{"kind":"Name","value":"actionAt"}},{"kind":"Field","name":{"kind":"Name","value":"dismissedAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"genericNotificationId"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItemId"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}}]}}]} as unknown as DocumentNode;
+
+/**
+ * __useMarkExpirationActionMutation__
+ *
+ * To run a mutation, you first call `useMarkExpirationActionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useMarkExpirationActionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [markExpirationActionMutation, { data, loading, error }] = useMarkExpirationActionMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useMarkExpirationActionMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<MarkExpirationActionMutation, MarkExpirationActionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<MarkExpirationActionMutation, MarkExpirationActionMutationVariables>(MarkExpirationActionDocument, options);
+      }
+export type MarkExpirationActionMutationHookResult = ReturnType<typeof useMarkExpirationActionMutation>;
+export type MarkExpirationActionMutationResult = ApolloReactCommon.MutationResult<MarkExpirationActionMutation>;
+export type MarkExpirationActionMutationOptions = ApolloReactCommon.BaseMutationOptions<MarkExpirationActionMutation, MarkExpirationActionMutationVariables>;
+export const DismissExpirationNotificationDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DismissExpirationNotification"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"DismissNotificationInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"dismissExpirationNotification"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"expirationNotification"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ExpirationNotificationFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ExpirationNotificationFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ExpirationNotification"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"notificationType"}},{"kind":"Field","name":{"kind":"Name","value":"daysUntilExpiry"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"actionTaken"}},{"kind":"Field","name":{"kind":"Name","value":"actionAt"}},{"kind":"Field","name":{"kind":"Name","value":"dismissedAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"genericNotificationId"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItemId"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}}]}}]} as unknown as DocumentNode;
+
+/**
+ * __useDismissExpirationNotificationMutation__
+ *
+ * To run a mutation, you first call `useDismissExpirationNotificationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDismissExpirationNotificationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [dismissExpirationNotificationMutation, { data, loading, error }] = useDismissExpirationNotificationMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useDismissExpirationNotificationMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<DismissExpirationNotificationMutation, DismissExpirationNotificationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<DismissExpirationNotificationMutation, DismissExpirationNotificationMutationVariables>(DismissExpirationNotificationDocument, options);
+      }
+export type DismissExpirationNotificationMutationHookResult = ReturnType<typeof useDismissExpirationNotificationMutation>;
+export type DismissExpirationNotificationMutationResult = ApolloReactCommon.MutationResult<DismissExpirationNotificationMutation>;
+export type DismissExpirationNotificationMutationOptions = ApolloReactCommon.BaseMutationOptions<DismissExpirationNotificationMutation, DismissExpirationNotificationMutationVariables>;
+export const MarkExpirationNotificationAsReadDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"MarkExpirationNotificationAsRead"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"notificationId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"markExpirationNotificationAsRead"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"notificationId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"notificationId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"expirationNotification"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ExpirationNotificationFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ExpirationNotificationFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ExpirationNotification"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"notificationType"}},{"kind":"Field","name":{"kind":"Name","value":"daysUntilExpiry"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"actionTaken"}},{"kind":"Field","name":{"kind":"Name","value":"actionAt"}},{"kind":"Field","name":{"kind":"Name","value":"dismissedAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"genericNotificationId"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItemId"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}}]}}]} as unknown as DocumentNode;
+
+/**
+ * __useMarkExpirationNotificationAsReadMutation__
+ *
+ * To run a mutation, you first call `useMarkExpirationNotificationAsReadMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useMarkExpirationNotificationAsReadMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [markExpirationNotificationAsReadMutation, { data, loading, error }] = useMarkExpirationNotificationAsReadMutation({
+ *   variables: {
+ *      notificationId: // value for 'notificationId'
+ *   },
+ * });
+ */
+export function useMarkExpirationNotificationAsReadMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<MarkExpirationNotificationAsReadMutation, MarkExpirationNotificationAsReadMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<MarkExpirationNotificationAsReadMutation, MarkExpirationNotificationAsReadMutationVariables>(MarkExpirationNotificationAsReadDocument, options);
+      }
+export type MarkExpirationNotificationAsReadMutationHookResult = ReturnType<typeof useMarkExpirationNotificationAsReadMutation>;
+export type MarkExpirationNotificationAsReadMutationResult = ApolloReactCommon.MutationResult<MarkExpirationNotificationAsReadMutation>;
+export type MarkExpirationNotificationAsReadMutationOptions = ApolloReactCommon.BaseMutationOptions<MarkExpirationNotificationAsReadMutation, MarkExpirationNotificationAsReadMutationVariables>;
 export const MarkNotificationAsReadDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"MarkNotificationAsRead"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"markNotificationAsRead"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"notification"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"NotificationFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"NotificationFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Notification"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"payload"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]} as unknown as DocumentNode;
 
 /**
@@ -15903,6 +16117,43 @@ export function useDeleteNotificationMutation(baseOptions?: ApolloReactHooks.Mut
 export type DeleteNotificationMutationHookResult = ReturnType<typeof useDeleteNotificationMutation>;
 export type DeleteNotificationMutationResult = ApolloReactCommon.MutationResult<DeleteNotificationMutation>;
 export type DeleteNotificationMutationOptions = ApolloReactCommon.BaseMutationOptions<DeleteNotificationMutation, DeleteNotificationMutationVariables>;
+export const GetNotificationStatsDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetNotificationStats"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"filters"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"NotificationFilters"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"notificationStats"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"Variable","name":{"kind":"Name","value":"filters"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"total"}},{"kind":"Field","name":{"kind":"Name","value":"unread"}},{"kind":"Field","name":{"kind":"Name","value":"read"}},{"kind":"Field","name":{"kind":"Name","value":"dismissed"}},{"kind":"Field","name":{"kind":"Name","value":"expired"}},{"kind":"Field","name":{"kind":"Name","value":"byCategory"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"count"}},{"kind":"Field","name":{"kind":"Name","value":"unreadCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"byPriority"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"count"}},{"kind":"Field","name":{"kind":"Name","value":"unreadCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"byType"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"count"}},{"kind":"Field","name":{"kind":"Name","value":"unreadCount"}}]}}]}}]}}]} as unknown as DocumentNode;
+
+/**
+ * __useGetNotificationStatsQuery__
+ *
+ * To run a query within a React component, call `useGetNotificationStatsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetNotificationStatsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetNotificationStatsQuery({
+ *   variables: {
+ *      filters: // value for 'filters'
+ *   },
+ * });
+ */
+export function useGetNotificationStatsQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<GetNotificationStatsQuery, GetNotificationStatsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<GetNotificationStatsQuery, GetNotificationStatsQueryVariables>(GetNotificationStatsDocument, options);
+      }
+export function useGetNotificationStatsLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GetNotificationStatsQuery, GetNotificationStatsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<GetNotificationStatsQuery, GetNotificationStatsQueryVariables>(GetNotificationStatsDocument, options);
+        }
+// @ts-ignore
+export function useGetNotificationStatsSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GetNotificationStatsQuery, GetNotificationStatsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GetNotificationStatsQuery, GetNotificationStatsQueryVariables>;
+export function useGetNotificationStatsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GetNotificationStatsQuery, GetNotificationStatsQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GetNotificationStatsQuery | undefined, GetNotificationStatsQueryVariables>;
+export function useGetNotificationStatsSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GetNotificationStatsQuery, GetNotificationStatsQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<GetNotificationStatsQuery, GetNotificationStatsQueryVariables>(GetNotificationStatsDocument, options);
+        }
+export type GetNotificationStatsQueryHookResult = ReturnType<typeof useGetNotificationStatsQuery>;
+export type GetNotificationStatsLazyQueryHookResult = ReturnType<typeof useGetNotificationStatsLazyQuery>;
+export type GetNotificationStatsSuspenseQueryHookResult = ReturnType<typeof useGetNotificationStatsSuspenseQuery>;
+export type GetNotificationStatsQueryResult = ApolloReactCommon.QueryResult<GetNotificationStatsQuery, GetNotificationStatsQueryVariables>;
 export const NotificationChangedDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"NotificationChanged"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"notificationChanged"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changeType"}},{"kind":"Field","name":{"kind":"Name","value":"notification"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"NotificationFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"NotificationFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Notification"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"payload"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]} as unknown as DocumentNode;
 
 /**
@@ -16918,7 +17169,7 @@ export function usePantryAlertsSubscription(baseOptions: ApolloReactHooks.Subscr
       }
 export type PantryAlertsSubscriptionHookResult = ReturnType<typeof usePantryAlertsSubscription>;
 export type PantryAlertsSubscriptionResult = ApolloReactCommon.SubscriptionResult<PantryAlertsSubscription>;
-export const ExpirationNotificationChangedDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"ExpirationNotificationChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"expirationNotificationChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"pantryId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changeType"}},{"kind":"Field","name":{"kind":"Name","value":"notification"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItemId"}},{"kind":"Field","name":{"kind":"Name","value":"notificationType"}},{"kind":"Field","name":{"kind":"Name","value":"daysUntilExpiry"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"dismissedAt"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
+export const ExpirationNotificationChangedDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"ExpirationNotificationChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"expirationNotificationChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"pantryId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changeType"}},{"kind":"Field","name":{"kind":"Name","value":"notification"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ExpirationNotificationFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ExpirationNotificationFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ExpirationNotification"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"notificationType"}},{"kind":"Field","name":{"kind":"Name","value":"daysUntilExpiry"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"actionTaken"}},{"kind":"Field","name":{"kind":"Name","value":"actionAt"}},{"kind":"Field","name":{"kind":"Name","value":"dismissedAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"genericNotificationId"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItemId"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useExpirationNotificationChangedSubscription__

@@ -776,6 +776,30 @@ fragment NotificationFragment on Notification {
   createdAt
 }
 
+fragment ExpirationNotificationFragment on ExpirationNotification {
+  id
+  notificationType
+  daysUntilExpiry
+  expiresAt
+  status
+  sentAt
+  readAt
+  actionTaken
+  actionAt
+  dismissedAt
+  createdAt
+  genericNotificationId
+  pantryItemId
+  pantryItem {
+    id
+    item {
+      id
+      name
+      imageUrl
+    }
+  }
+}
+
 fragment PurchaseFragment on Purchase {
   id
   purchaseDate

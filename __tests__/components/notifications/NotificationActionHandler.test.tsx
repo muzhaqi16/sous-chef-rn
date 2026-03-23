@@ -11,6 +11,16 @@ jest.mock('../../../src/apollo/links/refreshToken');
 jest.mock('../../../src/components/notifications/InvitationAcceptanceModal', () => ({
   InvitationAcceptanceModal: () => null,
 }));
+jest.mock('../../../src/components/notifications/ExpirationActionSheet', () => ({
+  ExpirationActionSheet: () => null,
+}));
+jest.mock('../../../src/hooks/notifications/useExpirationNotificationSync', () => ({
+  useExpirationNotificationSync: () => ({
+    syncMarkAction: jest.fn(),
+    syncDismiss: jest.fn(),
+    syncMarkRead: jest.fn(),
+  }),
+}));
 jest.mock('../../../src/hooks/navigation/useAppNavigation');
 jest.mock('../../../src/store/useAppStore', () => ({
   useAppStore: (selector: any) =>
