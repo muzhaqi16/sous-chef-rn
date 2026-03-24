@@ -169,8 +169,13 @@ export function usePantrySubscriptions(userId?: string) {
   //
   // Expiration Notification Subscription
   // Receives real-time expiration alerts for pantry items (CREATED, UPDATED).
-  // These are consumed by the notification system, not Apollo cache.
+  // Enriches the matching generic notification in Zustand with expiration-specific data
+  // (daysUntilExpiry, pantryItem info, expirationNotificationId) so the action sheet
+  // can display context and fire expiration-specific mutations.
   //
+  // Closure-captured store actions (same pattern as PantryChanges above)
+  const linkExpirationData = useAppStore(state => state.linkExpirationData);
+
   const expirationHandlers = subscriptionService.register({
     subscriptionName: 'ExpirationNotificationChanged',
     entityType: 'ExpirationNotification',
@@ -179,6 +184,21 @@ export function usePantrySubscriptions(userId?: string) {
     cacheUpdateStrategy: CacheStrategy.NONE,
     enableLogging: true,
     entityId: selectedPantryId,
+    customOnData: (payload: any) => {
+      if (!payload) return;
+      const { changeType, notification } = payload;
+      if (!notification?.genericNotificationId) return;
+
+      if (changeType === 'CREATED' || changeType === 'UPDATED') {
+        linkExpirationData(notification.genericNotificationId, {
+          expirationNotificationId: notification.id,
+          expirationAction: notification.actionTaken ?? undefined,
+          daysUntilExpiry: notification.daysUntilExpiry,
+          pantryItemName: notification.pantryItem?.item?.name,
+          pantryItemImageUrl: notification.pantryItem?.item?.imageUrl,
+        });
+      }
+    },
   });
 
   useExpirationNotificationChangedSubscription({

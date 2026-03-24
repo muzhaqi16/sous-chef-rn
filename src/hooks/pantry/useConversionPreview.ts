@@ -12,25 +12,17 @@ interface UseConversionPreviewOptions {
   /** The item's tracking unit */
   trackingUnitId: string | undefined;
   trackingUnitSymbol: string;
-  /** The item's current quantity in tracking units */
-  availableInTrackingUnit: number;
   /** Conversion ratio: selectedUnit = trackingUnit * ratio */
   conversionRatio: number | null;
-  /** Pre-computed available quantity in selected unit (from PantryActionModal shared state) */
-  externalAvailableInSelectedUnit?: number | null;
-  /** Whether the external available quantity is still loading */
-  externalAvailableLoading?: boolean;
 }
 
 interface ConversionPreviewResult {
   /** e.g. "2 tbsp ≈ 29.57 mL" */
   previewText: string | null;
-  /** Available quantity expressed in the selected unit */
-  availableInSelectedUnit: number | null;
   /** Whether the input preview conversion is loading */
   previewLoading: boolean;
-  /** Whether the available quantity conversion is loading */
-  availableLoading: boolean;
+  /** Raw input quantity converted to tracking/net-weight units (from API or local ratio) */
+  convertedValue: number | null;
 }
 
 const DEBOUNCE_MS = 500;
@@ -56,27 +48,11 @@ export function useConversionPreview({
   selectedUnitSymbol,
   trackingUnitId,
   trackingUnitSymbol,
-  availableInTrackingUnit,
   conversionRatio,
-  externalAvailableInSelectedUnit,
-  externalAvailableLoading,
 }: UseConversionPreviewOptions): ConversionPreviewResult {
   const [previewText, setPreviewText] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-
-  // Use external available quantity when provided (from PantryActionModal shared state)
-  const hasExternalAvailable = externalAvailableInSelectedUnit !== undefined;
-  const [internalAvailableInSelectedUnit, setInternalAvailableInSelectedUnit] =
-    useState<number | null>(null);
-  const [internalAvailableLoading, setInternalAvailableLoading] =
-    useState(false);
-
-  const availableInSelectedUnit = hasExternalAvailable
-    ? externalAvailableInSelectedUnit
-    : internalAvailableInSelectedUnit;
-  const availableLoading = hasExternalAvailable
-    ? externalAvailableLoading ?? false
-    : internalAvailableLoading;
+  const [convertedValue, setConvertedValue] = useState<number | null>(null);
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -88,45 +64,6 @@ export function useConversionPreview({
     selectedUnitId === trackingUnitId || !selectedUnitId || !trackingUnitId;
   const shouldShowPreview =
     !isSameUnit && inputQuantity != null && inputQuantity > 0;
-
-  // Convert available quantity when selected unit changes (render-time state update)
-  // Skipped when external available quantity is provided
-  const [prevUnitId, setPrevUnitId] = useState(selectedUnitId);
-  if (!hasExternalAvailable && selectedUnitId !== prevUnitId) {
-    setPrevUnitId(selectedUnitId);
-
-    if (isSameUnit) {
-      setInternalAvailableInSelectedUnit(null);
-      setInternalAvailableLoading(false);
-    } else if (conversionRatio != null) {
-      // Local conversion — instant, no network call
-      setInternalAvailableInSelectedUnit(
-        availableInTrackingUnit * conversionRatio,
-      );
-      setInternalAvailableLoading(false);
-    } else {
-      // Network fallback
-      setInternalAvailableLoading(true);
-      queueMicrotask(() => {
-        executeQuery(
-          () =>
-            convertQuantity({
-              variables: {
-                pantryItemId: pantryItemId,
-                quantity: availableInTrackingUnit,
-                fromUnitId: trackingUnitId!,
-                toUnitId: selectedUnitId!,
-              },
-            }),
-          'Error converting available quantity:',
-        ).then(result => {
-          const value = result?.data?.convertQuantity?.value ?? null;
-          setInternalAvailableInSelectedUnit(value);
-          setInternalAvailableLoading(false);
-        });
-      });
-    }
-  }
 
   // Track preview request key to detect when a new conversion is needed (render-time state update)
   const currentKey = makePreviewKey(
@@ -142,9 +79,11 @@ export function useConversionPreview({
       // Clearing — no conversion needed
       setPreviewText(null);
       setPreviewLoading(false);
+      setConvertedValue(null);
     } else if (conversionRatio != null) {
       // Local computation — instant, no debounce
       const trackingValue = inputQuantity! / conversionRatio;
+      setConvertedValue(trackingValue);
       const formattedValue = Number.isInteger(trackingValue)
         ? trackingValue.toString()
         : trackingValue.toFixed(2).replace(/\.?0+$/, '');
@@ -187,8 +126,10 @@ export function useConversionPreview({
           setPreviewText(
             `${inputQuantity} ${selectedUnitSymbol} \u2248 ${formattedValue} ${trackingUnitSymbol}`,
           );
+          setConvertedValue(converted.value);
         } else {
           setPreviewText(null);
+          setConvertedValue(null);
         }
         setPreviewLoading(false);
       });
@@ -213,8 +154,7 @@ export function useConversionPreview({
 
   return {
     previewText,
-    availableInSelectedUnit,
     previewLoading,
-    availableLoading,
+    convertedValue,
   };
 }

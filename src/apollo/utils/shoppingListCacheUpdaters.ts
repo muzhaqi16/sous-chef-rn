@@ -12,7 +12,11 @@
  */
 
 import type { ApolloCache } from '@apollo/client';
-import { createRemoveFromParentConnectionUpdater } from './cacheUpdaters';
+import {
+  createRemoveFromParentConnectionUpdater,
+  safeEvict,
+  safeEvictMany,
+} from './cacheUpdaters';
 
 /**
  * Remove item from ShoppingList.itemsConnection (all variants).
@@ -72,17 +76,10 @@ function clearItemsFromCache(
   });
 
   // Evict all deleted items from cache
-  itemIds.forEach(itemId => {
-    const cacheId = cache.identify({
-      __typename: 'ShoppingListItem',
-      id: itemId,
-    });
-    if (cacheId) {
-      cache.evict({ id: cacheId });
-    }
-  });
-
-  cache.gc();
+  safeEvictMany(
+    cache,
+    itemIds.map(id => ({ typename: 'ShoppingListItem', id })),
+  );
 }
 
 /** Clear ALL purchased items from cache. */
@@ -141,14 +138,14 @@ function updateItemsConnectionForPurchaseStatusChange(
               return {
                 ...existing,
                 edges: existing.edges.filter(
-                  (edge: any) => readField('id', edge.node) !== itemId,
+                  (edge: any) => readField('id', edge?.node) !== itemId,
                 ),
                 totalCount: Math.max(0, (existing.totalCount || 0) - 1),
               };
             }
             if (isPurchasedConnection) {
               const alreadyExists = existing.edges.some(
-                (edge: any) => readField('id', edge.node) === itemId,
+                (edge: any) => readField('id', edge?.node) === itemId,
               );
               if (alreadyExists) return existing;
               return {
@@ -173,14 +170,14 @@ function updateItemsConnectionForPurchaseStatusChange(
               return {
                 ...existing,
                 edges: existing.edges.filter(
-                  (edge: any) => readField('id', edge.node) !== itemId,
+                  (edge: any) => readField('id', edge?.node) !== itemId,
                 ),
                 totalCount: Math.max(0, (existing.totalCount || 0) - 1),
               };
             }
             if (isUnpurchasedConnection) {
               const alreadyExists = existing.edges.some(
-                (edge: any) => readField('id', edge.node) === itemId,
+                (edge: any) => readField('id', edge?.node) === itemId,
               );
               if (alreadyExists) return existing;
               return {
@@ -274,13 +271,13 @@ export function addNewItemToShoppingListCache(
           if (isPurchasedConnection) {
             // REMOVE from purchased variant (handles re-add of previously purchased item)
             const hadItem = existing.edges.some(
-              (edge: any) => readField('id', edge.node) === item.id,
+              (edge: any) => readField('id', edge?.node) === item.id,
             );
             if (!hadItem) return existing;
             return {
               ...existing,
               edges: existing.edges.filter(
-                (edge: any) => readField('id', edge.node) !== item.id,
+                (edge: any) => readField('id', edge?.node) !== item.id,
               ),
               totalCount: Math.max(0, (existing.totalCount || 0) - 1),
             };
@@ -288,7 +285,7 @@ export function addNewItemToShoppingListCache(
 
           // ADD to unfiltered and unpurchased variants
           const alreadyExists = existing.edges.some(
-            (edge: any) => readField('id', edge.node) === item.id,
+            (edge: any) => readField('id', edge?.node) === item.id,
           );
           if (alreadyExists) return existing;
 
@@ -354,7 +351,7 @@ export function removeItemFromShoppingListForMoveToPantry(
           return {
             ...existing,
             edges: existing.edges.filter(
-              (edge: any) => readField('id', edge.node) !== itemId,
+              (edge: any) => readField('id', edge?.node) !== itemId,
             ),
             totalCount: Math.max(0, (existing.totalCount || 0) - 1),
           };
@@ -371,14 +368,7 @@ export function removeItemFromShoppingListForMoveToPantry(
     });
 
     // Evict the item entity from cache
-    const cacheId = cache.identify({
-      __typename: 'ShoppingListItem',
-      id: itemId,
-    });
-    if (cacheId) {
-      cache.evict({ id: cacheId });
-    }
-    cache.gc();
+    safeEvict(cache, 'ShoppingListItem', itemId);
   } catch (error) {
     console.warn(
       'Failed to remove item from ShoppingList for move to pantry:',

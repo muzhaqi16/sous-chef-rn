@@ -19,6 +19,7 @@ import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useErrorService, errorService } from '#/services/errorService';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
@@ -170,10 +171,7 @@ export const PantrySettings: React.FC<
         });
 
         // Evict the deleted pantry from cache
-        cache.evict({
-          id: cache.identify({ __typename: 'Pantry', id: deletedPantryId }),
-        });
-        cache.gc(); // Garbage collect orphaned data
+        safeEvict(cache, 'Pantry', deletedPantryId);
       } catch (error) {
         console.warn('Cache update failed for deletePantry:', error);
         // Fallback handled by UI refetch

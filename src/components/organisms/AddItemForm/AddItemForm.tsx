@@ -46,6 +46,7 @@ export interface AddItemFormInitialData {
   type?: string;
   storageState?: string;
   shelfLifeDays?: number;
+  shelfLifeOpenedDays?: number;
   tags?: string[];
   categoryIds?: string[];
 }
@@ -170,6 +171,13 @@ const getFormSections = (
           name: 'shelfLifeDays',
           label: 'Shelf Life (Days)',
           placeholder: 'Enter shelf life in days',
+          component: FormNumberInput,
+          props: { componentType: 'number', keyboardType: 'numeric' },
+        },
+        {
+          name: 'shelfLifeOpenedDays',
+          label: 'Shelf Life Once Opened (Days)',
+          placeholder: 'Enter shelf life once opened',
           component: FormNumberInput,
           props: { componentType: 'number', keyboardType: 'numeric' },
         },
@@ -326,6 +334,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       storageState: StorageState.Ambient,
       type: ItemType.Foundation,
       shelfLifeDays: undefined,
+      shelfLifeOpenedDays: undefined,
       baseDimension: '',
       defaultConsumeIncrement: undefined,
       defaultConsumeUnitId: '',
@@ -361,6 +370,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         values.storageState = initialData.storageState;
       if (initialData.shelfLifeDays != null)
         values.shelfLifeDays = initialData.shelfLifeDays;
+      if (initialData.shelfLifeOpenedDays != null)
+        values.shelfLifeOpenedDays = initialData.shelfLifeOpenedDays;
       if (initialData.tags) values.tags = initialData.tags;
       if (initialData.categoryIds) values.categoryIds = initialData.categoryIds;
     }
@@ -469,6 +480,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       primaryUpc: data.upc || undefined,
       vendor: brandName || undefined,
       shelfLifeDays: data.shelfLifeDays || undefined,
+      shelfLifeOpenedDays: data.shelfLifeOpenedDays || undefined,
       imageUrl: data.imageUrl || undefined,
       netWeights: netWeights.length > 0 ? netWeights : undefined,
       units: units.length > 0 ? units : undefined,

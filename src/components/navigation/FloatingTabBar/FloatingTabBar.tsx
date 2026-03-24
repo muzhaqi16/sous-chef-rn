@@ -24,9 +24,21 @@ import { AddButton } from './AddButton';
 import { TabItem } from './TabItem';
 import { useShowNavigationLabels } from '#hooks/settings/useSettings';
 import { HapticService } from '#services/haptic/HapticService';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { SPRING, TIMING } from '#/constants/animations';
 
 export const TAB_BAR_HEIGHT = 65;
+
+/**
+ * Tab bar is only visible on these main screens.
+ * Single source of truth — no per-screen tabBarStyle needed in HomeTabs.
+ */
+const MAIN_SCREENS = new Set([
+  'PantryMain',
+  'ShoppingListMain',
+  'RecipeMain',
+  'MealPlanMain',
+]);
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   state,
@@ -79,26 +91,34 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const translateY = useSharedValue(0);
   const opacity = useSharedValue(1);
 
+  // Tracks whether navigation/overlay is actively hiding the tab bar.
+  // Used to prevent the scroll reaction from overriding the navigation hide.
+  const navHidden = useSharedValue(false);
+
   // Track active tab for scanner visibility
   useEffect(() => {
     const activeRoute = state.routes[state.index];
     setActiveTab(activeRoute.name);
   }, [state.index, state.routes, setActiveTab]);
 
-  // Check if the focused route has tabBarStyle: { display: 'none' }
+  // Hide tab bar on any screen that is not a main tab screen.
+  // getFocusedRouteNameFromRoute returns the nested stack's focused route name;
+  // null/undefined means no nested state yet → initial main screen is focused.
   const focusedRoute = state.routes[state.index];
-  const focusedOptions = descriptors[focusedRoute.key]?.options;
+  const nestedRouteName = getFocusedRouteNameFromRoute(
+    focusedRoute as Parameters<typeof getFocusedRouteNameFromRoute>[0],
+  );
   const shouldHideFromNavigation =
-    focusedOptions?.tabBarStyle &&
-    typeof focusedOptions.tabBarStyle === 'object' &&
-    'display' in focusedOptions.tabBarStyle &&
-    focusedOptions.tabBarStyle.display === 'none';
+    nestedRouteName != null && !MAIN_SCREENS.has(nestedRouteName);
 
   // Animate tab bar visibility (overlay/navigation-driven — React state)
-  // Takes priority over scroll-driven hide: resets scrollTabBarHidden so the
-  // scroll reaction won't revert the hide when overlay is open.
+  // Takes priority over scroll-driven hide.
   useLayoutEffect(() => {
     const shouldHide = isOverlayOpen || shouldHideFromNavigation;
+
+    // Update navHidden BEFORE resetting scrollTabBarHidden so the scroll
+    // reaction can check this guard and skip the show animation.
+    navHidden.set(!!shouldHide);
 
     // Fast timing for opacity (linear, no spring)
     opacity.set(withTiming(shouldHide ? 0 : 1, { duration: TIMING.FAST }));
@@ -106,8 +126,8 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     // Snappy spring with subtle bounce (higher damping = less bounce)
     translateY.set(withSpring(shouldHide ? 150 : 0, SPRING.HEAVY));
 
-    // Reset scroll state when overlay/nav takes priority — prevents the scroll
-    // reaction from showing the tab bar while an overlay is still open.
+    // Reset scroll state when overlay/nav takes priority — prevents stale
+    // scroll-hidden state from persisting when the user returns.
     if (shouldHide) {
       scrollTabBarHidden.set(false);
     }
@@ -117,14 +137,16 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     translateY,
     opacity,
     scrollTabBarHidden,
+    navHidden,
   ]);
 
   // Scroll-driven tab bar hide (SharedValue from screen scroll handlers).
-  // Overlay/nav priority is handled above by resetting scrollTabBarHidden.
+  // Skips when navigation/overlay is hiding the bar to prevent race conditions.
   useAnimatedReaction(
     () => scrollTabBarHidden.value,
     (hidden, prevHidden) => {
       if (hidden === prevHidden) return;
+      if (navHidden.value) return;
       translateY.set(withSpring(hidden ? 150 : 0, SPRING.HEAVY));
       opacity.set(withTiming(hidden ? 0 : 1, { duration: TIMING.FAST }));
     },

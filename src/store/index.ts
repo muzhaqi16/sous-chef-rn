@@ -247,6 +247,9 @@ export const useStore = create<RootState>()(
             authIsLoading,
             authIsLoadingCredentials,
 
+            // Notification transient state (session-only buffer for race condition handling)
+            pendingExpirationLinks,
+
             ...persistedState
           } = state;
           // ========== PERSISTENT STATE (everything else) ==========

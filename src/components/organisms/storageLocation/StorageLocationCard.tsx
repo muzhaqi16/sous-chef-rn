@@ -85,7 +85,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                       / {location.capacity} {location.capacityUnit || 'units'}
                     </Text>
                   ) : null}
-                  {!!location.parentLocation && (
+                  {!!location.parentLocation?.name && (
                     <Text style={styles.parentInfo}>
                       {' '}
                       • Inside {location.parentLocation.name}

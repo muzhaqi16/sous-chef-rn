@@ -26,7 +26,6 @@ import { LocationFilter } from '#utils/pantryFilters';
 import { SearchBar } from '../molecules/SearchBar';
 import { FilterTabs } from '../molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '../molecules/FilterTabs/types';
-import { SectionHeader } from '../molecules/SectionHeader';
 import { PantryItemCard, type ItemVariant } from './PantryItemCard';
 import { PantryHeader } from './PantryHeader';
 import { PantrySortModal } from './PantrySortModal';
@@ -142,6 +141,7 @@ interface PantryContentProps {
   onSettingsPress?: () => void;
   onAnalyticsPress?: () => void;
   onLowStockNavigate?: () => void;
+  onExpiringNavigate?: () => void;
 
   // List actions
   onRefresh?: () => void;
@@ -182,6 +182,10 @@ interface PantryContentProps {
 
   /** Scroll handler for tab bar direction tracking */
   scrollHandler?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /** Shows tab bar when drag ends without momentum */
+  onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /** Shows tab bar when momentum scrolling ends */
+  onMomentumScrollEnd?: () => void;
 }
 
 export interface PantryContentRef {
@@ -247,6 +251,23 @@ let _lastDisplayMapColors: {
 let _lastDisplayMap: Map<string, ItemDisplayData> = new Map();
 let _displayMapHits = 0;
 let _displayMapMisses = 0;
+
+// Per-item display cache — survives FULL MISS when individual items haven't changed.
+// Keyed by "id:updatedAt" so cache entries invalidate when item data changes.
+const _itemDisplayCache = new Map<string, ItemDisplayData>();
+const MAX_ITEM_CACHE = 200;
+let _itemCacheColors: {
+  expired: string;
+  warning: string;
+  normal: string;
+} | null = null;
+
+/** Returns a cache key when the item has a version stamp, or null to skip caching. */
+function getItemCacheKey(item: PantryItem): string | null {
+  // updatedAt is the canonical version — skip caching when absent
+  if (!item.updatedAt) return null;
+  return `${item.id}:${item.updatedAt}`;
+}
 
 /** Value-equality check for expiration colors (3 string comparisons). */
 function colorsMatch(
@@ -379,7 +400,7 @@ function computeDisplayMap(
     return _lastDisplayMap;
   }
 
-  // Full recompute
+  // Full recompute — use per-item cache to skip unchanged items
   if (__DEV__) {
     _displayMapMisses++;
     console.log(
@@ -392,10 +413,47 @@ function computeDisplayMap(
     );
   }
 
+  // Invalidate per-item cache when colors change (colors are baked into entries)
+  if (!colorsMatch(_itemCacheColors, expirationColors)) {
+    _itemDisplayCache.clear();
+    _itemCacheColors = expirationColors;
+  }
+
   const map = new Map<string, ItemDisplayData>();
   const now = new Date();
+  let cacheHits = 0;
   for (const item of items) {
-    computeItemEntry(item, now, expirationColors, getLocation, map);
+    const cacheKey = getItemCacheKey(item);
+    const cached = cacheKey ? _itemDisplayCache.get(cacheKey) : undefined;
+    if (cached) {
+      map.set(item.id, cached);
+      cacheHits++;
+    } else {
+      computeItemEntry(item, now, expirationColors, getLocation, map);
+      // Store in per-item cache for future FULL MISS reuse
+      if (cacheKey) {
+        const entry = map.get(item.id);
+        if (entry) {
+          _itemDisplayCache.set(cacheKey, entry);
+        }
+      }
+    }
+  }
+
+  // Evict oldest entries when cache exceeds limit
+  if (_itemDisplayCache.size > MAX_ITEM_CACHE) {
+    const excess = _itemDisplayCache.size - MAX_ITEM_CACHE;
+    const keys = _itemDisplayCache.keys();
+    for (let i = 0; i < excess; i++) {
+      const key = keys.next().value;
+      if (key) _itemDisplayCache.delete(key);
+    }
+  }
+
+  if (__DEV__ && cacheHits > 0) {
+    console.log(
+      `[computeDisplayMap] Per-item cache: ${cacheHits}/${items.length} hits`,
+    );
   }
 
   _lastDisplayMapItems = items;
@@ -609,6 +667,7 @@ export const PantryContent = React.forwardRef<
       onSettingsPress,
       onAnalyticsPress,
       onLowStockNavigate,
+      onExpiringNavigate,
       totalCount,
       onAddItem,
       hasMore = false,
@@ -622,6 +681,8 @@ export const PantryContent = React.forwardRef<
       onHomeBadgeLayout,
       onSettingsIconLayout,
       scrollHandler,
+      onScrollEndDrag,
+      onMomentumScrollEnd,
     },
     ref,
   ) => {
@@ -743,15 +804,22 @@ export const PantryContent = React.forwardRef<
       getLocationString,
     );
 
-    // Preload images for visible + upcoming items to prevent blank shimmer during fast scroll
+    // Preload images for visible + upcoming items to prevent blank shimmer during fast scroll.
+    // Read URLs from displayMap (already resolved) instead of re-calling resolveImageUrl.
+    // Deferred to idle time so the JS thread stays free for FlashList cell recycling.
     useEffect(() => {
       const urls: string[] = [];
       for (const item of sortedItems) {
-        const url = resolveImageUrl(item);
-        if (url) urls.push(url);
+        const display = displayMap.get(item.id);
+        if (display?.imageUrl) urls.push(display.imageUrl);
       }
-      if (urls.length > 0) preloadImages(urls);
-    }, [sortedItems]);
+      if (urls.length === 0) return;
+
+      const handle = requestIdleCallback(() => {
+        preloadImages(urls);
+      });
+      return () => cancelIdleCallback(handle);
+    }, [sortedItems, displayMap]);
 
     // Scroll to top when filter or sort changes to reset position after reorder
     const prevLocationFilter = useRef(locationFilter);
@@ -788,12 +856,6 @@ export const PantryContent = React.forwardRef<
           isAction: true,
         },
       ];
-    })();
-
-    const sectionTitle = (() => {
-      const activeTab = tabs.find(tab => tab.id === locationFilter);
-      const label = activeTab?.label ?? 'All';
-      return `${label.toUpperCase()} ITEMS`;
     })();
 
     // Stable extraData — string avoids new array reference every render
@@ -868,10 +930,13 @@ export const PantryContent = React.forwardRef<
                   stickyHeaderIndices={STICKY_HEADER_INDICES}
                   stickyHeaderConfig={STICKY_HEADER_CONFIG}
                   drawDistance={DRAW_DISTANCE}
+                  maxItemsInRecyclePool={15}
                   extraData={extraData}
                   contentContainerStyle={listContentStyle}
                   showsVerticalScrollIndicator={false}
                   onScroll={scrollHandler}
+                  onScrollEndDrag={onScrollEndDrag}
+                  onMomentumScrollEnd={onMomentumScrollEnd}
                   scrollEventThrottle={16}
                   refreshControl={
                     onRefresh ? (
@@ -949,20 +1014,13 @@ export const PantryContent = React.forwardRef<
                             stats={stats}
                             onAnalyticsPress={onAnalyticsPress}
                             onLowStockNavigate={onLowStockNavigate}
+                            onExpiringNavigate={onExpiringNavigate}
+                            sortLabel={`Sort ${
+                              sortDirection === 'asc' ? '↑' : '↓'
+                            }`}
+                            onSortPress={openSortModal}
                           />
                         )}
-                      </View>
-                      {/* Section header — trim excess bottom padding for uniform spacing */}
-                      <View style={styles.sectionHeaderTrim}>
-                        <SectionHeader
-                          title={sectionTitle}
-                          variant="default"
-                          actionLabel={`Sort ${
-                            sortDirection === 'asc' ? '↑' : '↓'
-                          }`}
-                          onActionPress={openSortModal}
-                          testID="pantry-sort-button"
-                        />
                       </View>
                     </>
                   }
@@ -1037,10 +1095,6 @@ const styles = StyleSheet.create(theme => ({
   searchContainer: {
     paddingHorizontal: theme.spacing['3'],
     paddingBottom: theme.spacing.sm,
-  },
-  sectionHeaderTrim: {
-    marginTop: -theme.spacing.sm,
-    marginBottom: -(theme.spacing.md - theme.spacing.sm),
   },
   listContainer: {
     flex: 1,

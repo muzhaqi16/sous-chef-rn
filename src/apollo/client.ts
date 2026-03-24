@@ -174,7 +174,12 @@ function setupCachePersistence(client: ApolloClient) {
 
   if (originalGc) {
     cache.gc = function (...args: any) {
-      const result = (originalGc as any)(...args);
+      // Always reset the result cache so stale query results referencing
+      // evicted entities are discarded immediately. Without this, components
+      // can read dangling __ref pointers and crash (production-only because
+      // dev mode's loadDevMessages() masks the error).
+      const options = { resetResultCache: true, ...args[0] };
+      const result = (originalGc as any)(options);
       schedulePersistence();
       return result;
     };

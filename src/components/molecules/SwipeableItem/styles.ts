@@ -38,12 +38,13 @@ export const styles = StyleSheet.create(theme => {
     actionsContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      height: '100%',
       backgroundColor: theme.colors.charade['950'],
       justifyContent: 'center',
       width: 160,
       marginLeft: -12, // Extend under card edge to cover rounded corners
       paddingLeft: 12, // Compensate for margin to maintain button positioning
+      marginVertical: -theme.spacing.xs, // Extend beyond swipeable bounds to cover card border/corners
+      paddingVertical: theme.spacing.xs, // Compensate to keep buttons centered
       borderTopLeftRadius: 0, // Square edge where it meets the card
       borderBottomLeftRadius: 0,
       borderTopRightRadius: SWIPEABLE_RADIUS, // Rounded outer edge
@@ -52,13 +53,14 @@ export const styles = StyleSheet.create(theme => {
     leftActionsContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      height: '100%',
       backgroundColor: theme.colors.charade['950'],
       justifyContent: 'center',
       width: 180,
       gap: theme.spacing.xs,
       marginRight: -12, // Extend under card edge to cover rounded corners
       paddingRight: 12, // Compensate for margin to maintain button positioning
+      marginVertical: -theme.spacing.xs, // Extend beyond swipeable bounds to cover card border/corners
+      paddingVertical: theme.spacing.xs, // Compensate to keep buttons centered
       borderTopRightRadius: 0, // Square edge where it meets the card
       borderBottomRightRadius: 0,
       borderTopLeftRadius: SWIPEABLE_RADIUS, // Rounded outer edge

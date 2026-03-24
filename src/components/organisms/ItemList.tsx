@@ -135,6 +135,8 @@ interface ItemListProps {
   ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
   testIDPrefix?: string;
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onMomentumScrollEnd?: () => void;
   scrollEventThrottle?: number;
   /** When this key changes, scroll resets to top (prevents FlashList v2 blank-cell regression). */
   dataMode?: string;
@@ -165,6 +167,8 @@ export const ItemList: React.FC<ItemListProps> = ({
   ListFooterComponent,
   testIDPrefix,
   onScroll,
+  onScrollEndDrag,
+  onMomentumScrollEnd,
   scrollEventThrottle,
   dataMode,
   emptyState,
@@ -245,6 +249,8 @@ export const ItemList: React.FC<ItemListProps> = ({
           paddingBottom: contentStyle.paddingBottom,
         }}
         onScroll={onScroll}
+        onScrollEndDrag={onScrollEndDrag}
+        onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={scrollEventThrottle}
         refreshControl={
           onRefresh ? (
@@ -274,6 +280,8 @@ export const ItemList: React.FC<ItemListProps> = ({
         contentContainerStyle={contentStyle}
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}
+        onScrollEndDrag={onScrollEndDrag}
+        onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={scrollEventThrottle}
         refreshControl={
           onRefresh ? (

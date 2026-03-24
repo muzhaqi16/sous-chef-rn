@@ -724,8 +724,10 @@ const RecipeDetailScreen: React.FC = () => {
 
           {/* Ingredients */}
           {!!displayData.ingredients && displayData.ingredients.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
+            <View style={styles.ingredientsSection}>
+              <View
+                style={[styles.sectionHeader, styles.ingredientsSectionHeader]}
+              >
                 <Text style={styles.sectionTitle}>Ingredients</Text>
                 <Pressable
                   onPress={handleAddAllIngredientsToList}
@@ -1335,6 +1337,13 @@ const styles = StyleSheet.create(theme => ({
   section: {
     marginBottom: theme.spacing.xl,
   },
+  ingredientsSection: {
+    marginBottom: theme.spacing.xl,
+    marginHorizontal: -theme.spacing.lg,
+  },
+  ingredientsSectionHeader: {
+    paddingHorizontal: theme.spacing.lg,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1359,7 +1368,7 @@ const styles = StyleSheet.create(theme => ({
   },
   ingredientsList: {
     paddingVertical: theme.spacing.sm,
-    paddingLeft: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
   },
   instructionStep: {
     flexDirection: 'row',

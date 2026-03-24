@@ -39,6 +39,7 @@ jest.mock('#/services/toastService', () => ({
 jest.mock('#/services/telemetry', () => ({
   Telemetry: {
     trackEvent: jest.fn(),
+    trackError: jest.fn(),
   },
 }));
 
@@ -81,10 +82,15 @@ describe('useMealTemplateActions', () => {
     });
 
     expect(response).toEqual({ success: true });
-    expect(toastService.success).toHaveBeenCalledWith('Meal plan created from template!');
-    expect(Telemetry.trackEvent).toHaveBeenCalledWith('meal_plan_created_from_template', {
-      template_id: 'template-1',
-    });
+    expect(toastService.success).toHaveBeenCalledWith(
+      'Meal plan created from template!',
+    );
+    expect(Telemetry.trackEvent).toHaveBeenCalledWith(
+      'meal_plan_created_from_template',
+      {
+        template_id: 'template-1',
+      },
+    );
   });
 
   it('createPlanFromTemplate returns null when mutation returns falsy', async () => {
@@ -117,10 +123,15 @@ describe('useMealTemplateActions', () => {
     });
 
     expect(response).toEqual({ success: true });
-    expect(toastService.success).toHaveBeenCalledWith('Meal plan saved as template!');
-    expect(Telemetry.trackEvent).toHaveBeenCalledWith('template_created_from_meal_plan', {
-      meal_plan_id: 'plan-1',
-    });
+    expect(toastService.success).toHaveBeenCalledWith(
+      'Meal plan saved as template!',
+    );
+    expect(Telemetry.trackEvent).toHaveBeenCalledWith(
+      'template_created_from_meal_plan',
+      {
+        meal_plan_id: 'plan-1',
+      },
+    );
   });
 
   it('deleteTemplate returns true and shows toast on success', async () => {
@@ -155,14 +166,19 @@ describe('useMealTemplateActions', () => {
 
     const { result } = renderHook(() => useMealTemplateActions());
 
-    const response = await result.current.duplicateTemplate('template-1', 'Copy of Template');
+    const response = await result.current.duplicateTemplate(
+      'template-1',
+      'Copy of Template',
+    );
 
     expect(response).toEqual({ success: true, id: 'dup-1' });
     expect(toastService.success).toHaveBeenCalledWith('Template duplicated!');
   });
 
   it('returns null when mutation throws (executeMutation returns false)', async () => {
-    mockCreateFromTemplateMutation.mockRejectedValue(new Error('Network error'));
+    mockCreateFromTemplateMutation.mockRejectedValue(
+      new Error('Network error'),
+    );
 
     const { result } = renderHook(() => useMealTemplateActions());
 
@@ -172,9 +188,6 @@ describe('useMealTemplateActions', () => {
     });
 
     expect(response).toBeNull();
-    expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('Create meal plan from template error:'),
-      expect.any(Error),
-    );
+    expect(Telemetry.trackError).toHaveBeenCalled();
   });
 });

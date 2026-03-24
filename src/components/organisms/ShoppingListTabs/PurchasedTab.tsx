@@ -34,6 +34,8 @@ const PurchasedTabComponent: React.FC = () => {
     canMarkPurchased,
     isTransitioning,
     onScroll,
+    onScrollEndDrag,
+    onMomentumScrollEnd,
     scrollEventThrottle,
     listHeaderComponent,
   } = useShoppingListData('purchased');
@@ -98,6 +100,8 @@ const PurchasedTabComponent: React.FC = () => {
           canMarkPurchased={canMarkPurchased}
           listEmptyComponent={emptyComponent}
           onScroll={onScroll}
+          onScrollEndDrag={onScrollEndDrag}
+          onMomentumScrollEnd={onMomentumScrollEnd}
           scrollEventThrottle={scrollEventThrottle}
           listHeaderComponent={listHeaderComponent}
         />

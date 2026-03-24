@@ -36,7 +36,6 @@ export const FractionQuickSelect: React.FC<FractionQuickSelectProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Quick select</Text>
       <View style={styles.chipRow}>
         {fractions.map(value => {
           const isSelected =
@@ -71,11 +70,7 @@ export const FractionQuickSelect: React.FC<FractionQuickSelectProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     marginTop: theme.spacing.xs,
-  },
-  label: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
   },
   chipRow: {
     flexDirection: 'row',
@@ -83,6 +78,8 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   chip: {
+    flex: 1,
+    alignItems: 'center',
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
     borderRadius: theme.radii.sm,

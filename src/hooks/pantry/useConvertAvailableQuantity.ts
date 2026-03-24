@@ -12,6 +12,10 @@ interface UseConvertAvailableQuantityOptions {
   availableInTrackingUnit: number;
   /** Conversion ratio: selectedUnit = trackingUnit * ratio */
   conversionRatio: number | null;
+  /** For dual-tracked items: remaining quantity in the net weight unit */
+  remainingNetWeight?: number | null;
+  /** For dual-tracked items: the net weight unit ID */
+  netWeightUnitId?: string;
 }
 
 interface UseConvertAvailableQuantityResult {
@@ -22,11 +26,11 @@ interface UseConvertAvailableQuantityResult {
 }
 
 /**
- * Converts the item's available quantity from tracking units into the selected unit.
+ * Converts the item's available quantity into the selected unit.
  *
- * Uses local `conversionRatio` when available, otherwise falls back to the
- * `convertQuantity` GraphQL query. Extracted from `useConversionPreview` so
- * `PantryActionModal` can share the result with both display and validation.
+ * For dual-tracked items, converts from `remainingNetWeight` (accurate).
+ * For simple items, uses local `conversionRatio` when available,
+ * otherwise falls back to the `convertQuantity` API.
  */
 export function useConvertAvailableQuantity({
   pantryItemId,
@@ -34,6 +38,8 @@ export function useConvertAvailableQuantity({
   trackingUnitId,
   availableInTrackingUnit,
   conversionRatio,
+  remainingNetWeight,
+  netWeightUnitId,
 }: UseConvertAvailableQuantityOptions): UseConvertAvailableQuantityResult {
   const [availableInSelectedUnit, setAvailableInSelectedUnit] = useState<
     number | null
@@ -44,10 +50,16 @@ export function useConvertAvailableQuantity({
     fetchPolicy: 'network-only',
   });
 
+  // For dual-tracked items, the authoritative remaining is in net weight units
+  const isDualTracked = remainingNetWeight != null && netWeightUnitId != null;
+  const fromUnitId = isDualTracked ? netWeightUnitId : trackingUnitId;
+  const fromQuantity = isDualTracked
+    ? remainingNetWeight!
+    : availableInTrackingUnit;
   const isSameUnit =
-    selectedUnitId === trackingUnitId || !selectedUnitId || !trackingUnitId;
+    selectedUnitId === fromUnitId || !selectedUnitId || !fromUnitId;
 
-  // Convert available quantity when selected unit changes (render-time state update)
+  // Re-convert when selected unit changes (render-time state update)
   const [prevUnitId, setPrevUnitId] = useState(selectedUnitId);
   if (selectedUnitId !== prevUnitId) {
     setPrevUnitId(selectedUnitId);
@@ -55,32 +67,38 @@ export function useConvertAvailableQuantity({
     if (isSameUnit) {
       setAvailableInSelectedUnit(null);
       setAvailableLoading(false);
-    } else if (conversionRatio != null) {
-      // Local conversion — instant, no network call
+    } else if (conversionRatio != null && !isDualTracked) {
+      // Local ratio (tracking→selected) — only for non-dual-tracked items
       setAvailableInSelectedUnit(availableInTrackingUnit * conversionRatio);
       setAvailableLoading(false);
     } else {
-      // Network fallback
+      // Let the API handle the conversion
       setAvailableLoading(true);
       queueMicrotask(() => {
         executeQuery(
           () =>
             convertQuantity({
               variables: {
-                pantryItemId: pantryItemId,
-                quantity: availableInTrackingUnit,
-                fromUnitId: trackingUnitId!,
+                pantryItemId,
+                quantity: fromQuantity,
+                fromUnitId: fromUnitId!,
                 toUnitId: selectedUnitId!,
               },
             }),
           'Error converting available quantity:',
         ).then(result => {
-          const value = result?.data?.convertQuantity?.value ?? null;
-          setAvailableInSelectedUnit(value);
+          setAvailableInSelectedUnit(
+            result?.data?.convertQuantity?.value ?? null,
+          );
           setAvailableLoading(false);
         });
       });
     }
+  }
+
+  // When selected unit matches the source, return the quantity directly
+  if (isSameUnit && isDualTracked) {
+    return { availableInSelectedUnit: fromQuantity, availableLoading: false };
   }
 
   return {

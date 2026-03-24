@@ -37,10 +37,13 @@ export interface FormDataInput {
   category: string;
   tags?: string[];
   netWeight?: string;
+  netWeightUnit?: string;
   netWeightUnitId?: string;
 }
 
-export interface CreatePantryItemParams<T extends FormDataInput = FormDataInput> {
+export interface CreatePantryItemParams<
+  T extends FormDataInput = FormDataInput,
+> {
   input: T;
   pantryId: string;
   quantityValue: number;
@@ -49,7 +52,9 @@ export interface CreatePantryItemParams<T extends FormDataInput = FormDataInput>
   selectedCategoryId: string | null;
 }
 
-export interface UpdatePantryItemParams<T extends FormDataInput = FormDataInput> {
+export interface UpdatePantryItemParams<
+  T extends FormDataInput = FormDataInput,
+> {
   itemId: string;
   input: T;
   currentItem: PantryItemFragment;

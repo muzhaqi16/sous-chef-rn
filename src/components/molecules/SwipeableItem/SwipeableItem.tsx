@@ -3,6 +3,7 @@ import {
   View,
   type AccessibilityActionEvent,
   type AccessibilityActionInfo,
+  type ViewStyle,
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { type SharedValue } from 'react-native-reanimated';
@@ -13,14 +14,27 @@ import { useSwipeableActions } from './hooks/useSwipeableActions';
 import { styles } from './styles';
 import { SwipeableItemProps } from './types';
 
-// Pre-computed placeholder styles — avoids creating new object on every render
-const PLACEHOLDER_STYLES: Record<number, { width: number }> = {
-  80: { width: 80 },
-  120: { width: 120 },
-  180: { width: 180 },
+// Matches marginLeft/marginRight: -12 in actionsContainer/leftActionsContainer styles.
+// Placeholders must include the same margin so the Swipeable measures the same layout
+// width as the actual action components — preventing the card from opening past the
+// action background during the placeholder→actual component transition.
+const CARD_EDGE_EXTENSION = 12;
+
+const LEFT_PLACEHOLDER_STYLES: Record<number, ViewStyle> = {
+  80: { width: 80, marginRight: -CARD_EDGE_EXTENSION },
+  120: { width: 120, marginRight: -CARD_EDGE_EXTENSION },
+  180: { width: 180, marginRight: -CARD_EDGE_EXTENSION },
 };
-const getPlaceholderStyle = (count: number) =>
-  PLACEHOLDER_STYLES[count <= 1 ? 80 : count === 2 ? 120 : 180];
+const getLeftPlaceholderStyle = (count: number) =>
+  LEFT_PLACEHOLDER_STYLES[count <= 1 ? 80 : count === 2 ? 120 : 180];
+
+const RIGHT_PLACEHOLDER_STYLES: Record<number, ViewStyle> = {
+  80: { width: 80, marginLeft: -CARD_EDGE_EXTENSION },
+  120: { width: 120, marginLeft: -CARD_EDGE_EXTENSION },
+  180: { width: 180, marginLeft: -CARD_EDGE_EXTENSION },
+};
+const getRightPlaceholderStyle = (count: number) =>
+  RIGHT_PLACEHOLDER_STYLES[count <= 1 ? 80 : count === 2 ? 120 : 180];
 
 const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   children,
@@ -81,7 +95,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
 
   const renderRightActions = (progress: SharedValue<number>) => {
     if (!hasSwipeStarted && rightButtonCount > 0) {
-      return <View style={getPlaceholderStyle(rightButtonCount)} />;
+      return <View style={getRightPlaceholderStyle(rightButtonCount)} />;
     }
     return (
       <RightActions
@@ -97,7 +111,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
 
   const renderLeftActions = (progress: SharedValue<number>) => {
     if (!hasSwipeStarted && leftButtonCount > 0) {
-      return <View style={getPlaceholderStyle(leftButtonCount)} />;
+      return <View style={getLeftPlaceholderStyle(leftButtonCount)} />;
     }
     return (
       <LeftActions

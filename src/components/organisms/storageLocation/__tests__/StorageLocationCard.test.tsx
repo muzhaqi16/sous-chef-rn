@@ -51,10 +51,13 @@ describe('StorageLocationCard', () => {
   });
 
   it('renders SVG icon for storage type', () => {
-    const { UNSAFE_queryByType } = render(<StorageLocationCard {...defaultProps} />);
-    // SvgXml from react-native-svg renders an RNSVGSvgView
-    const { SvgXml } = require('react-native-svg');
-    expect(UNSAFE_queryByType(SvgXml)).toBeTruthy();
+    const { UNSAFE_queryByType } = render(
+      <StorageLocationCard {...defaultProps} />,
+    );
+    const {
+      StorageLocationIcon,
+    } = require('#components/atoms/StorageLocationIcon');
+    expect(UNSAFE_queryByType(StorageLocationIcon)).toBeTruthy();
   });
 
   it('renders item count with correct pluralization', () => {

@@ -44,6 +44,14 @@ export interface PantryActionSharedState {
   availableInSelectedUnit: number | null;
   /** Whether the available quantity conversion is still loading */
   availableLoading: boolean;
+  /** For dual-tracked items: remaining quantity in net weight units */
+  remainingNetWeight: number | null;
+  /** For dual-tracked items: net weight unit symbol (e.g. "g") */
+  netWeightUnitSymbol: string | undefined;
+  /** For dual-tracked items: net weight unit ID */
+  netWeightUnitId: string | undefined;
+  /** Whether the item has dual-tracking (net weight + net weight unit) */
+  isDualTracked: boolean;
 }
 
 interface PantryActionModalProps {
@@ -117,8 +125,14 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   });
 
   // Dual-tracking info (kept for the item info display)
+  // Matches API lazy init: quantity × netWeight (see pantry-quantity-engine.md)
+  const effectiveNetWeight =
+    pantryItem?.remainingNetWeight ??
+    (pantryItem?.netWeight != null
+      ? pantryItem.quantity * pantryItem.netWeight
+      : null);
   const isDualTracked =
-    pantryItem?.remainingNetWeight != null && pantryItem?.netWeightUnit != null;
+    effectiveNetWeight != null && pantryItem?.netWeightUnit != null;
   const hasContentUnit =
     isDualTracked &&
     pantryItem?.packageBreakdown != null &&
@@ -138,8 +152,12 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   const trackingUnitSymbol = pantryItem?.unit?.symbol || '';
   const trackingUnitId = pantryItem?.unit?.id;
 
-  const activeUnitSymbol = selectedUnitInfo?.unitSymbol || trackingUnitSymbol;
-  const activeUnitId = selectedUnitInfo?.unitId || trackingUnitId;
+  // Fallback: net weight unit for dual-tracked items, then tracking unit
+  const fallbackUnitSymbol =
+    pantryItem?.netWeightUnit?.symbol || trackingUnitSymbol;
+  const fallbackUnitId = pantryItem?.netWeightUnit?.id || trackingUnitId;
+  const activeUnitSymbol = selectedUnitInfo?.unitSymbol || fallbackUnitSymbol;
+  const activeUnitId = selectedUnitInfo?.unitId || fallbackUnitId;
   const isConvertedUnit =
     selectedUnitInfo != null && !selectedUnitInfo.isTrackingUnit;
 
@@ -151,6 +169,8 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       trackingUnitId,
       availableInTrackingUnit: trackingQuantity,
       conversionRatio: selectedUnitInfo?.conversionRatio ?? null,
+      remainingNetWeight: effectiveNetWeight,
+      netWeightUnitId: pantryItem?.netWeightUnit?.id,
     });
 
   // Reset state when modal opens (render-time state update)
@@ -214,6 +234,10 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       selectedRankedUnit?.commonFractions ?? defaultCommonFractions,
     availableInSelectedUnit,
     availableLoading,
+    remainingNetWeight: effectiveNetWeight,
+    netWeightUnitSymbol: pantryItem?.netWeightUnit?.symbol,
+    netWeightUnitId: pantryItem?.netWeightUnit?.id,
+    isDualTracked,
   };
 
   return (
@@ -268,7 +292,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                           pantryItem.packageBreakdown!.contentUnit.symbol ||
                           pantryItem.packageBreakdown!.contentUnit.name
                         }`
-                      : `${pantryItem.remainingNetWeight} ${pantryItem.netWeightUnit?.symbol}`}{' '}
+                      : `${effectiveNetWeight} ${pantryItem.netWeightUnit?.symbol}`}{' '}
                     remaining)
                   </Text>
                 )}

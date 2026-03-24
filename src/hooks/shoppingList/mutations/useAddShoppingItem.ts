@@ -18,6 +18,7 @@ import { useErrorService } from '#/services/errorService';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { createOptimisticShoppingListItem } from './utils';
 import type { ShoppingListItemInput } from './types';
@@ -76,13 +77,7 @@ export function useAddShoppingItem({
       // update() runs twice: once for the optimistic response (item.id starts with "temp-"),
       // once for the server response (real ID). On the server response, evict the stale temp entity.
       if (lastTempIdRef.current && !item.id.startsWith('temp-')) {
-        cache.evict({
-          id: cache.identify({
-            __typename: 'ShoppingListItem',
-            id: lastTempIdRef.current,
-          }),
-        });
-        cache.gc();
+        safeEvict(cache, 'ShoppingListItem', lastTempIdRef.current);
         lastTempIdRef.current = null;
       }
 

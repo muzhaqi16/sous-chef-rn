@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
-import { alertService } from '#/services/alertService';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { CollapsibleChipPicker } from '#components/molecules/CollapsibleChipPicker';
-import { ConversionPreview } from '#components/atoms/ConversionPreview';
-import { FractionQuickSelect } from '#components/atoms/FractionQuickSelect';
+import { QuantityInputFeedback } from '#components/molecules/QuantityInputFeedback';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { formatQuantity } from '#/utils/formatQuantity';
-import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
+import { validateDeductionQuantity } from '#/utils/validateDeductionQuantity';
+import { useQuantityFeedback } from '#hooks/pantry/useQuantityFeedback';
 import { UsagePurpose, PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
 import {
@@ -63,40 +61,12 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   const handleConfirm = (shared: PantryActionSharedState) => {
     if (!pantryItem) return;
 
-    const quantityValue = parseFractionalInput(quantityInput);
-    if (quantityValue === null || isNaN(quantityValue) || quantityValue <= 0) {
-      alertService.alert('Error', 'Please enter a valid quantity');
-      return;
-    }
-
-    // Validate against available quantity in the active unit
-    if (shared.isConvertedUnit) {
-      if (shared.availableLoading) {
-        alertService.alert(
-          'Please Wait',
-          'Still calculating available quantity...',
-        );
-        return;
-      }
-      if (
-        shared.availableInSelectedUnit != null &&
-        quantityValue > shared.availableInSelectedUnit
-      ) {
-        alertService.alert(
-          'Error',
-          `Cannot consume more than available quantity (${formatQuantity(
-            shared.availableInSelectedUnit,
-          )} ${shared.activeUnitSymbol})`,
-        );
-        return;
-      }
-    } else if (quantityValue > shared.trackingQuantity) {
-      alertService.alert(
-        'Error',
-        `Cannot consume more than available quantity (${shared.trackingQuantity} ${shared.activeUnitSymbol})`,
-      );
-      return;
-    }
+    const quantityValue = validateDeductionQuantity(
+      quantityInput,
+      shared,
+      'consume',
+    );
+    if (quantityValue === null) return;
 
     onConfirm(
       quantityValue,
@@ -153,29 +123,8 @@ const ConsumeActionFields: React.FC<{
   showFifoHint,
 }) => {
   const consumeAmount = parseFractionalInput(quantityInput);
-
-  const conversion = useConversionPreview({
-    pantryItemId: shared.pantryItemId,
-    inputQuantity: consumeAmount,
-    selectedUnitId: shared.activeUnitId,
-    selectedUnitSymbol: shared.activeUnitSymbol,
-    trackingUnitId: shared.trackingUnitId,
-    trackingUnitSymbol: shared.trackingUnitSymbol,
-    availableInTrackingUnit: shared.trackingQuantity,
-    conversionRatio: shared.selectedUnitInfo?.conversionRatio ?? null,
-    externalAvailableInSelectedUnit: shared.availableInSelectedUnit,
-    externalAvailableLoading: shared.availableLoading,
-  });
-
-  // Use converted available quantity when using a non-tracking unit
-  const availableInUnit = shared.isConvertedUnit
-    ? shared.availableInSelectedUnit
-    : shared.trackingQuantity;
-
-  const remaining =
-    consumeAmount !== null && !isNaN(consumeAmount) && availableInUnit != null
-      ? availableInUnit - consumeAmount
-      : null;
+  const { conversion, remaining, availableInUnit, remainingUnitSymbol } =
+    useQuantityFeedback(consumeAmount, shared);
 
   return (
     <>
@@ -190,38 +139,21 @@ const ConsumeActionFields: React.FC<{
           keyboardType="numeric"
           useBottomSheetInput
         />
-        {shared.isConvertedUnit ? (
-          <ConversionPreview
-            previewText={conversion.previewText}
-            loading={conversion.previewLoading}
-            confidence={shared.selectedUnitInfo?.conversionConfidence ?? null}
-          />
-        ) : null}
-        {remaining !== null ? (
-          <Text
-            style={[
-              commonStyles.bottomSheetHelperText,
-              remaining < 0 && commonStyles.bottomSheetHelperTextError,
-            ]}
-          >
-            {remaining >= 0
-              ? `Remaining: ${formatQuantity(remaining)} ${
-                  shared.activeUnitSymbol
-                }`
-              : `Exceeds available (${formatQuantity(availableInUnit!)} ${
-                  shared.activeUnitSymbol
-                })`}
-          </Text>
-        ) : null}
-        {shared.commonFractions != null && shared.commonFractions.length > 0 ? (
-          <FractionQuickSelect
-            fractions={shared.commonFractions}
-            onSelect={value => setQuantityInput(value.toString())}
-            selectedValue={consumeAmount ?? undefined}
-            unitSymbol={shared.activeUnitSymbol}
-            displayAsFraction
-          />
-        ) : null}
+        <QuantityInputFeedback
+          remaining={remaining}
+          availableInUnit={availableInUnit}
+          activeUnitSymbol={remainingUnitSymbol}
+          consumeUnitSymbol={shared.activeUnitSymbol}
+          isConvertedUnit={shared.isConvertedUnit}
+          previewText={conversion.previewText}
+          previewLoading={conversion.previewLoading}
+          conversionConfidence={
+            shared.selectedUnitInfo?.conversionConfidence ?? null
+          }
+          commonFractions={shared.commonFractions}
+          onFractionSelect={value => setQuantityInput(value.toString())}
+          selectedFractionValue={consumeAmount ?? undefined}
+        />
         {showFifoHint ? (
           <Text style={commonStyles.bottomSheetHelperText}>
             Items are consumed oldest-first by expiration date

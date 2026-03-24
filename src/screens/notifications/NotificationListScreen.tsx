@@ -11,12 +11,14 @@ import { UrgentNotificationsBanner } from '#components/notifications/UrgentNotif
 import { useNotifications } from '#hooks/notifications/useNotifications';
 import {
   NotificationItem as NotificationType,
-  NotificationCategory } from '#store/slices/notificationSlice';
+  NotificationCategory,
+} from '#store/slices/notificationSlice';
 import { Header } from '#components/molecules/Header';
 import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
 import {
   groupNotificationsByDate,
-  createSectionListData } from '#utils/notificationGrouping';
+  createSectionListData,
+} from '#utils/notificationGrouping';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const NotificationListScreen: React.FC = () => {
@@ -31,7 +33,8 @@ export const NotificationListScreen: React.FC = () => {
     handleMarkAllAsRead,
     handleRemoveNotification,
     clearAll,
-    getNotificationsByCategory } = useNotifications();
+    getNotificationsByCategory,
+  } = useNotifications();
 
   // Initialize real-time notifications (already handled by consolidated useNotifications)
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -54,67 +57,73 @@ export const NotificationListScreen: React.FC = () => {
   })();
 
   const handleNotificationPress = async (
-      notification: NotificationType,
-      actionHandler?: (notification: NotificationType) => void,
-    ) => {
-      // Mark as read
-      if (!notification.isRead) {
-        await handleMarkAsRead(notification.id);
-      }
+    notification: NotificationType,
+    actionHandler?: (notification: NotificationType) => void,
+  ) => {
+    // Mark as read
+    if (!notification.isRead) {
+      await handleMarkAsRead(notification.id);
+    }
 
-      // Handle actionable notifications first
-      if (
-        notification.requiresAction &&
-        notification.actionType &&
-        actionHandler
-      ) {
-        actionHandler(notification);
-        return;
-      }
+    // Handle actionable notifications first
+    if (
+      notification.requiresAction &&
+      notification.actionType &&
+      actionHandler
+    ) {
+      actionHandler(notification);
+      return;
+    }
 
-      // Navigate based on type and action
-      if (notification.requiresAction && notification.actionType) {
-        switch (notification.actionType) {
-          case 'ACCEPT_INVITE':
-          case 'ACCEPT_HOME_INVITE':
-          case 'ACCEPT_SHOPPING_LIST_INVITE':
-            // These will be handled by the action handler
-            if (actionHandler) {
-              actionHandler(notification);
-            }
-            break;
-          case 'ADD_TO_SHOPPING_LIST':
-            navigateTo.shoppingListMain();
-            break;
-          case 'VIEW_EXPIRING_ITEMS':
-            // Navigate to main pantry - expired items now shown inline
+    // Navigate based on type and action
+    if (notification.requiresAction && notification.actionType) {
+      switch (notification.actionType) {
+        case 'ACCEPT_INVITE':
+        case 'ACCEPT_HOME_INVITE':
+        case 'ACCEPT_SHOPPING_LIST_INVITE':
+          // These will be handled by the action handler
+          if (actionHandler) {
+            actionHandler(notification);
+          }
+          break;
+        case 'ADD_TO_SHOPPING_LIST':
+          navigateTo.shoppingListMain();
+          break;
+        case 'VIEW_EXPIRING_ITEMS':
+          // Route through action handler for expiration action sheet
+          if (actionHandler) {
+            actionHandler(notification);
+          } else {
             navigate('Pantry');
-            break;
-          case 'REVIEW_SECURITY':
-            navigateTo.profile();
-            break;
-          default:
-            navigate('NotificationDetail', {
-              notification });
-        }
-      } else {
-        // Default navigation based on category
-        switch (notification.category) {
-          case NotificationCategory.SHOPPING_LIST:
-            navigateTo.shoppingListMain();
-            break;
-          case NotificationCategory.PANTRY:
-            navigateTo.pantryMain();
-            break;
-          case NotificationCategory.SECURITY:
-            navigateTo.profile();
-            break;
-          default:
-            navigate('NotificationDetail', {
-              notification });
-        }
+          }
+          break;
+        case 'REVIEW_SECURITY':
+          navigateTo.profile();
+          break;
+        default:
+          navigate('NotificationDetail', {
+            notification,
+          });
       }
-    };
+    } else {
+      // Default navigation based on category
+      switch (notification.category) {
+        case NotificationCategory.SHOPPING_LIST:
+          navigateTo.shoppingListMain();
+          break;
+        case NotificationCategory.PANTRY:
+          navigateTo.pantryMain();
+          break;
+        case NotificationCategory.SECURITY:
+          navigateTo.profile();
+          break;
+        default:
+          navigate('NotificationDetail', {
+            notification,
+          });
+      }
+    }
+  };
 
   // Prepare sections for SectionList using utility
   const sections = createSectionListData(filteredGroups);
@@ -131,29 +140,32 @@ export const NotificationListScreen: React.FC = () => {
       rightActions={[
         {
           icon: 'settings',
-          onPress: () => navigate('NotificationSettings') },
+          onPress: () => navigate('NotificationSettings'),
+        },
       ]}
     />
   );
 
-  const notificationActionRef = useRef<((notification: NotificationType) => void) | null>(null);
+  const notificationActionRef = useRef<
+    ((notification: NotificationType) => void) | null
+  >(null);
 
   const renderNotificationItem = ({ item }: { item: NotificationType }) => (
-      <NotificationItem
-        notification={item}
-        onPress={notification =>
-          handleNotificationPress(
-            notification,
-            notificationActionRef.current ?? undefined,
-          )
-        }
-        onDismiss={handleRemoveNotification}
-      />
-    );
+    <NotificationItem
+      notification={item}
+      onPress={notification =>
+        handleNotificationPress(
+          notification,
+          notificationActionRef.current ?? undefined,
+        )
+      }
+      onDismiss={handleRemoveNotification}
+    />
+  );
 
   const renderSectionHeader = ({ section }: { section: { title: string } }) => (
-      <NotificationGroupHeader title={section.title} />
-    );
+    <NotificationGroupHeader title={section.title} />
+  );
 
   return (
     <NotificationActionHandler>
@@ -204,6 +216,9 @@ export const NotificationListScreen: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background },
+    backgroundColor: theme.colors.background,
+  },
   emptyContainer: {
-    flex: 1 } }));
+    flex: 1,
+  },
+}));

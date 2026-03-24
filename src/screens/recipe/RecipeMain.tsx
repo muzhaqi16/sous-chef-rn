@@ -72,7 +72,12 @@ const RecipeMainInner: React.FC = () => {
 
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
   const { scrollTabBarHidden } = useTabBarSetters();
-  const { scrollHandler, isScrolledDown } = useCollapsibleScroll();
+  const {
+    scrollHandler,
+    scrollEndDragHandler,
+    momentumEndHandler,
+    isScrolledDown,
+  } = useCollapsibleScroll();
 
   useAnimatedReaction(
     () => isScrolledDown.value,
@@ -275,13 +280,10 @@ const RecipeMainInner: React.FC = () => {
         }}
       >
         <Pressable
-          onPress={
-            screen.selectedIngredients.size === 0 ? openFilterSheet : undefined
-          }
+          onPress={openFilterSheet}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Dietary restrictions"
-          disabled={screen.selectedIngredients.size > 0}
         >
           <Icon
             name="options-outline"
@@ -401,6 +403,8 @@ const RecipeMainInner: React.FC = () => {
           emptyState={screen.emptyStateConfig}
           dataMode={screen.showSearchResults ? 'search' : 'discovery'}
           onScroll={scrollHandler}
+          onScrollEndDrag={scrollEndDragHandler}
+          onMomentumScrollEnd={momentumEndHandler}
           scrollEventThrottle={16}
           ListHeaderComponent={recipeListHeader}
           onEndReached={
@@ -433,6 +437,10 @@ const RecipeMainInner: React.FC = () => {
         activeFilters={screen.activeFilters}
         setActiveFilters={screen.setActiveFilters}
         onSheetChange={handleSheetChange}
+        isIngredientSearch={
+          screen.selectedIngredients.size > 0 ||
+          (!screen.showSearchResults && screen.discovery.mode === 'pantry')
+        }
       />
 
       {tutorial.currentStep ? (
@@ -443,6 +451,7 @@ const RecipeMainInner: React.FC = () => {
           stepIndex={tutorial.currentStep.stepIndex}
           totalSteps={tutorial.currentStep.totalSteps}
           onDismiss={tutorial.skipAll}
+          onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
             const actions: Record<number, () => void> = {
               0: () => navigate('SavedRecipes'),

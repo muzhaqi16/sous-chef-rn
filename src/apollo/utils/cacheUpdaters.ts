@@ -11,6 +11,22 @@ import { serializeError } from '#/utils/errorSerialization';
  */
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Run garbage collection with `resetResultCache` so stale query results
+ * referencing evicted entities are discarded immediately.
+ *
+ * `ApolloCache.gc()` doesn't expose the `resetResultCache` option in its
+ * type signature, but `InMemoryCache` (the runtime type) supports it.
+ */
+// justified: ApolloCache abstract type omits the options param that InMemoryCache accepts at runtime
+export function gcResetResultCache(cache: ApolloCache): string[] {
+  return (cache as any).gc({ resetResultCache: true });
+}
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -99,8 +115,7 @@ export function createAddToQueryFieldUpdater<T extends { id: string }>(
             // Check for duplicates if enabled
             if (checkDuplicates) {
               const exists = existingItems.some(
-                (itemRef: Reference) =>
-                  readField('id', itemRef) === newItem.id,
+                (itemRef: Reference) => readField('id', itemRef) === newItem.id,
               );
 
               if (exists) return existingItems;
@@ -114,10 +129,7 @@ export function createAddToQueryFieldUpdater<T extends { id: string }>(
         },
       });
     } catch (error) {
-      console.warn(
-        `Cache update failed for adding to ${fieldName}:`,
-        error,
-      );
+      console.warn(`Cache update failed for adding to ${fieldName}:`, error);
       // Fail silently - caller can handle refetch if needed
     }
   };
@@ -162,7 +174,9 @@ export function createAddToKeyedQueryFieldUpdater<T extends { id: string }>(
             // Only update if storeFieldName contains the matching key value
             // Apollo serializes keyArgs into storeFieldName, e.g.:
             // "shoppingListItems:{\"shoppingListId\":\"abc123\"}"
-            if (!storeFieldName.includes(`${keyArgName}":"${currentKeyValue}"`)) {
+            if (
+              !storeFieldName.includes(`${keyArgName}":"${currentKeyValue}"`)
+            ) {
               return existingItems;
             }
 
@@ -173,8 +187,7 @@ export function createAddToKeyedQueryFieldUpdater<T extends { id: string }>(
             // Check for duplicates if enabled
             if (checkDuplicates) {
               const exists = existingItems.some(
-                (itemRef: Reference) =>
-                  readField('id', itemRef) === newItem.id,
+                (itemRef: Reference) => readField('id', itemRef) === newItem.id,
               );
 
               if (exists) return existingItems;
@@ -189,10 +202,7 @@ export function createAddToKeyedQueryFieldUpdater<T extends { id: string }>(
         },
       });
     } catch (error) {
-      console.warn(
-        `Cache update failed for adding to ${fieldName}:`,
-        error,
-      );
+      console.warn(`Cache update failed for adding to ${fieldName}:`, error);
     }
   };
 }
@@ -246,7 +256,7 @@ export function createRemoveFromQueryFieldUpdater(
           id: cache.identify({ __typename: typename, id: itemId }),
         });
         if (gc) {
-          cache.gc();
+          gcResetResultCache(cache);
         }
       }
     } catch (error) {
@@ -338,10 +348,7 @@ export function createAddToQueryConnectionUpdater<T extends { id: string }>(
         },
       });
     } catch (error) {
-      console.warn(
-        `Cache update failed for adding to ${fieldName}:`,
-        error,
-      );
+      console.warn(`Cache update failed for adding to ${fieldName}:`, error);
     }
   };
 }
@@ -406,7 +413,7 @@ export function createRemoveFromQueryConnectionUpdater(
           id: cache.identify({ __typename: typename, id: itemId }),
         });
         if (gc) {
-          cache.gc();
+          gcResetResultCache(cache);
         }
       }
     } catch (error) {
@@ -490,8 +497,7 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
             // Check for duplicates if enabled
             if (checkDuplicates) {
               const exists = existingEdges.some(
-                (edge: any) =>
-                  readField('id', edge?.node) === newItem.id,
+                (edge: any) => readField('id', edge?.node) === newItem.id,
               );
 
               if (exists) {
@@ -586,8 +592,7 @@ export function createAddToParentArrayUpdater<T extends { id: string }>(
             // Check for duplicates if enabled
             if (checkDuplicates) {
               const exists = existingItems.some(
-                (itemRef: Reference) =>
-                  readField('id', itemRef) === newItem.id,
+                (itemRef: Reference) => readField('id', itemRef) === newItem.id,
               );
 
               if (exists) return existingItems;
@@ -691,7 +696,7 @@ export function createRemoveFromParentConnectionUpdater(
           id: cache.identify({ __typename: itemTypename, id: itemId }),
         });
         if (gc) {
-          cache.gc();
+          gcResetResultCache(cache);
         }
       }
     } catch (error) {
@@ -761,7 +766,7 @@ export function createRemoveFromParentArrayUpdater(
           id: cache.identify({ __typename: itemTypename, id: itemId }),
         });
         if (gc) {
-          cache.gc();
+          gcResetResultCache(cache);
         }
       }
     } catch (error) {
@@ -792,13 +797,61 @@ export function createRemoveFromParentArrayUpdater(
  */
 export function createItemEvictor(typename: string) {
   return (cache: ApolloCache, itemId: string): void => {
-    try {
-      cache.evict({
-        id: cache.identify({ __typename: typename, id: itemId }),
-      });
-      cache.gc();
-    } catch (error) {
-      console.warn(`Cache eviction failed for ${typename}:${itemId}:`, serializeError(error));
-    }
+    safeEvict(cache, typename, itemId);
   };
+}
+
+/**
+ * Safely evict a single entity from cache and run garbage collection.
+ *
+ * Centralizes the identify → evict → gc(resetResultCache) pattern.
+ * Use this instead of calling cache.evict() + cache.gc() directly.
+ *
+ * @example
+ * safeEvict(cache, 'ShoppingListItem', itemId);
+ */
+export function safeEvict(
+  cache: ApolloCache,
+  typename: string,
+  itemId: string,
+): void {
+  try {
+    cache.evict({
+      id: cache.identify({ __typename: typename, id: itemId }),
+    });
+    gcResetResultCache(cache);
+  } catch (error) {
+    console.warn(
+      `Cache eviction failed for ${typename}:${itemId}:`,
+      serializeError(error),
+    );
+  }
+}
+
+/**
+ * Safely evict multiple entities from cache, running GC once at the end.
+ *
+ * More efficient than calling safeEvict() in a loop (single GC pass).
+ *
+ * @example
+ * safeEvictMany(cache, [
+ *   { typename: 'ShoppingListItem', id: 'item-1' },
+ *   { typename: 'ShoppingListItem', id: 'item-2' },
+ * ]);
+ */
+export function safeEvictMany(
+  cache: ApolloCache,
+  items: ReadonlyArray<{ typename: string; id: string }>,
+): void {
+  try {
+    for (const { typename, id } of items) {
+      const cacheId = cache.identify({ __typename: typename, id });
+      if (cacheId) {
+        cache.evict({ id: cacheId });
+      }
+    }
+    gcResetResultCache(cache);
+  } catch (error) {
+    console.warn('Batch cache eviction failed:', serializeError(error));
+  }
 }

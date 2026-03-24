@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { alertService } from '#/services/alertService';
+import { ExpirationAction } from '#generated';
 import {
   InvitationAcceptanceModal,
   InvitationData,
 } from './InvitationAcceptanceModal';
+import { ExpirationActionSheet } from './ExpirationActionSheet';
 import { NotificationItem } from '#store/slices/notificationSlice';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAppStore } from '#store/useAppStore';
+import { useExpirationNotificationSync } from '#hooks/notifications/useExpirationNotificationSync';
 
 interface NotificationActionHandlerProps {
   children: (props: {
     showInvitationModal: (notification: NotificationItem) => void;
     handleNotificationAction: (notification: NotificationItem) => void;
+    showExpirationActionSheet: (notification: NotificationItem) => void;
   }) => React.ReactElement;
 }
 
@@ -24,6 +28,12 @@ export const NotificationActionHandler: React.FC<
   const [currentNotificationId, setCurrentNotificationId] = useState<
     string | null
   >(null);
+
+  // Expiration action sheet — state-driven (no ref access during render)
+  const [selectedExpirationNotification, setSelectedExpirationNotification] =
+    useState<NotificationItem | null>(null);
+  const { syncMarkAction, syncMarkRead } = useExpirationNotificationSync();
+
   const { navigateTo, navigate } = useAppNavigation();
   const setHomeAndPantry = useAppStore(state => state.setHomeAndPantry);
   const removeNotification = useAppStore(state => state.removeNotification);
@@ -55,6 +65,32 @@ export const NotificationActionHandler: React.FC<
     }
   };
 
+  const showExpirationActionSheet = (notification: NotificationItem) => {
+    if (notification.expirationNotificationId) {
+      // State-driven: setting this triggers ExpirationActionSheet visible prop
+      setSelectedExpirationNotification(notification);
+    } else {
+      // Fallback: navigate to pantry if expiration data not yet linked
+      navigate('Pantry');
+    }
+  };
+
+  const handleExpirationAction = (
+    notification: NotificationItem,
+    action: ExpirationAction,
+  ) => {
+    if (notification.expirationNotificationId) {
+      syncMarkAction(
+        notification.id,
+        notification.expirationNotificationId,
+        action,
+      );
+      // Also mark the expiration notification as read on the server
+      syncMarkRead(notification.expirationNotificationId);
+    }
+    setSelectedExpirationNotification(null);
+  };
+
   const handleNotificationAction = (notification: NotificationItem) => {
     if (!notification.requiresAction || !notification.actionType) {
       return;
@@ -84,15 +120,9 @@ export const NotificationActionHandler: React.FC<
         break;
 
       case 'VIEW_EXPIRING_ITEMS':
-        // Navigate to main pantry - expired items now shown inline
-        try {
-          navigate('Pantry');
-        } catch {
-          alertService.alert(
-            'Navigation Error',
-            'Could not navigate to pantry.',
-          );
-        }
+        // Show expiration action sheet if enriched data is available,
+        // otherwise navigate to pantry as fallback
+        showExpirationActionSheet(notification);
         break;
 
       case 'VIEW_LIST':
@@ -199,6 +229,7 @@ export const NotificationActionHandler: React.FC<
       {children({
         showInvitationModal,
         handleNotificationAction,
+        showExpirationActionSheet,
       })}
 
       <InvitationAcceptanceModal
@@ -211,6 +242,13 @@ export const NotificationActionHandler: React.FC<
         }}
         onAccept={handleInvitationAccept}
         onReject={handleInvitationReject}
+      />
+
+      <ExpirationActionSheet
+        visible={selectedExpirationNotification != null}
+        notification={selectedExpirationNotification}
+        onActionSelected={handleExpirationAction}
+        onDismiss={() => setSelectedExpirationNotification(null)}
       />
     </>
   );

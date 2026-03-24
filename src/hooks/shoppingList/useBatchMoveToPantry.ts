@@ -5,6 +5,7 @@ import {
   executeCacheUpdate,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
+import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
 
 interface UseBatchMoveToPantryOptions {
   currentListId: string | undefined;
@@ -59,7 +60,7 @@ export function useBatchMoveToPantry({
                   ...existing,
                   edges: existing.edges.filter(
                     (edge: any) =>
-                      !movedIds.has(readField('id', edge.node) as string),
+                      !movedIds.has(readField('id', edge?.node) as string),
                   ),
                   totalCount: Math.max(
                     0,
@@ -77,16 +78,13 @@ export function useBatchMoveToPantry({
           });
 
           // Evict all moved items from cache
-          for (const item of result.movedItems) {
-            const cacheId = cache.identify({
-              __typename: 'ShoppingListItem',
+          safeEvictMany(
+            cache,
+            result.movedItems.map(item => ({
+              typename: 'ShoppingListItem',
               id: item.shoppingListItemId,
-            });
-            if (cacheId) {
-              cache.evict({ id: cacheId });
-            }
-          }
-          cache.gc();
+            })),
+          );
         }, 'Cache update failed for batch move to pantry:');
       },
       onError: error => {

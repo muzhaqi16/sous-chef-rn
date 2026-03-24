@@ -6,6 +6,7 @@ import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
 import { StorageLocationCard } from '#components/organisms/storageLocation/StorageLocationCard';
 import { StorageLocationSheet } from '#components/modals/StorageLocationSheet/StorageLocationSheet';
+import { useAppStore } from '#/store/useAppStore';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
@@ -25,6 +26,7 @@ export const StorageLocationsScreen: React.FC<{
   useScreenTransition('StorageLocationsScreen');
   const { homeId } = route.params;
   const { goBack } = useAppNavigation();
+  const selectedPantryId = useAppStore(state => state.selectedPantryId);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'flat' | 'tree'>('flat');
@@ -42,7 +44,7 @@ export const StorageLocationsScreen: React.FC<{
     createLocation,
     error,
     refetch,
-  } = useStorageLocationManagement(homeId);
+  } = useStorageLocationManagement(homeId, selectedPantryId ?? undefined);
 
   // Open sheet for editing — map nested parentLocation to flat parentLocationId
   const handleOpenEdit = (location: any) => {
@@ -60,20 +62,26 @@ export const StorageLocationsScreen: React.FC<{
   };
 
   // Recursive component to render tree structure
-  const renderTreeNode = (node: any, depth: number = 0): React.ReactElement => (
-    <View key={node.id} style={{ marginLeft: depth * 16 }}>
-      <StorageLocationCard
-        location={node}
-        isDefault={node.isDefault}
-        onEdit={() => handleOpenEdit(node)}
-        onDelete={() => handleDelete(node)}
-        onSetDefault={() => handleSetDefault(node.id)}
-      />
-      {node.childLocations?.map((child: any) =>
-        renderTreeNode(child, depth + 1),
-      )}
-    </View>
-  );
+  const renderTreeNode = (
+    node: any,
+    depth: number = 0,
+  ): React.ReactElement | null => {
+    if (!node?.id) return null;
+    return (
+      <View key={node.id} style={{ marginLeft: depth * 16 }}>
+        <StorageLocationCard
+          location={node}
+          isDefault={node.isDefault}
+          onEdit={() => handleOpenEdit(node)}
+          onDelete={() => handleDelete(node)}
+          onSetDefault={() => handleSetDefault(node.id)}
+        />
+        {node.childLocations?.map((child: any) =>
+          renderTreeNode(child, depth + 1),
+        )}
+      </View>
+    );
+  };
 
   const handleCreate = async (formData: any) => {
     const result = await createLocation(formData);
@@ -173,9 +181,11 @@ export const StorageLocationsScreen: React.FC<{
     );
   }
 
+  const isEmpty = locations.length === 0;
   const sections = [
     {
       transparent: true,
+      fill: isEmpty,
       content: (
         <>
           {/* Error Message */}

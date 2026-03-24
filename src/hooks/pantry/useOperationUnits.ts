@@ -212,8 +212,11 @@ export function useOperationUnits({
   const allUnits = rawUnits.map(ru => toRankedUnitInfo(ru, trackingUnitId));
   const groups = buildGroups(allUnits, trackingUnitType);
 
-  // Default unit = first in ranked list (rank 1)
-  const defaultRankedUnit = allUnits.length > 0 ? allUnits[0] : null;
+  // Default unit = first in ranked list (rank 1), prefer net weight unit for dual-tracked items
+  const defaultRankedUnit =
+    (netWeightUnitId != null
+      ? allUnits.find(u => u.unitId === netWeightUnitId)
+      : null) ?? (allUnits.length > 0 ? allUnits[0] : null);
   const defaultUnit = defaultRankedUnit
     ? toSelectedUnitInfo(defaultRankedUnit)
     : null;

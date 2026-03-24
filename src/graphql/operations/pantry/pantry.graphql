@@ -597,6 +597,9 @@ mutation OpenPantryItemBatch($input: OpenBatchInput!) {
     code
     pantryItem {
       ...PantryItemDisplay
+      batches {
+        ...PantryItemBatchFragment
+      }
     }
   }
 }
@@ -752,22 +755,7 @@ subscription ExpirationNotificationChanged($pantryId: ID!) {
   expirationNotificationChanged(pantryId: $pantryId) {
     changeType
     notification {
-      id
-      pantryItemId
-      notificationType
-      daysUntilExpiry
-      expiresAt
-      status
-      sentAt
-      dismissedAt
-      pantryItem {
-        id
-        item {
-          id
-          name
-          imageUrl
-        }
-      }
+      ...ExpirationNotificationFragment
     }
     pantryId
     timestamp

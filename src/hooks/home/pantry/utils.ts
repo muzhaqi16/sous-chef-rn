@@ -47,7 +47,7 @@ export function batchAddToPantryItemsCache(
         const existingEdges: ReadonlyArray<{ node: Reference }> =
           existingConnection?.edges ?? [];
         const existingIds = new Set(
-          existingEdges.map(edge => readField('id', edge.node)),
+          existingEdges.map(edge => readField('id', edge?.node)),
         );
 
         const newEdges = newItems

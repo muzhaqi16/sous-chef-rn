@@ -305,6 +305,7 @@ fragment ItemFragment on Item {
   storageState
   showInOnboarding
   shelfLifeDays
+  shelfLifeOpenedDays
   popularity
   status
   visibility
@@ -430,6 +431,8 @@ fragment PantryItemFragment on PantryItem {
   # Intentionally avoids ...ItemFragment to stay under 175-field complexity limit
   item {
     name
+    shelfLifeDays
+    shelfLifeOpenedDays
     nutritions
     defaultConsumeIncrement
     defaultConsumeUnitId
@@ -449,6 +452,14 @@ fragment PantryItemFragment on PantryItem {
         id
         name
       }
+    }
+    unitConversions {
+      id
+      fromUnit { id name symbol type }
+      toUnit { id name symbol type }
+      conversionRatio
+      confidence
+      source
     }
   }
   # Extended unit fields for detail view (Display has id, name, symbol)
@@ -512,6 +523,7 @@ fragment PantryItemBatchFragment on PantryItemBatch {
   quantity
   status
   expiresAt
+  expiresAtIsManual
   costPerUnit
   totalCost
   store { id name }
@@ -774,6 +786,30 @@ fragment NotificationFragment on Notification {
   sentAt
   readAt
   createdAt
+}
+
+fragment ExpirationNotificationFragment on ExpirationNotification {
+  id
+  notificationType
+  daysUntilExpiry
+  expiresAt
+  status
+  sentAt
+  readAt
+  actionTaken
+  actionAt
+  dismissedAt
+  createdAt
+  genericNotificationId
+  pantryItemId
+  pantryItem {
+    id
+    item {
+      id
+      name
+      imageUrl
+    }
+  }
 }
 
 fragment PurchaseFragment on Purchase {

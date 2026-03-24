@@ -1,16 +1,10 @@
-import React, {
-  forwardRef,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from 'react';
+import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { StyleSheet } from 'react-native-unistyles';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { FormTextArea } from '#components/molecules/FormTextArea';
 import { Header } from '#components/molecules/Header';
 import { generateId } from '#/utils/generateId';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import type { StepFormState } from '../useRecipeForm';
 
 export interface RecipeStepEditorRef {
@@ -26,7 +20,11 @@ export const RecipeStepEditor = forwardRef<
   RecipeStepEditorRef,
   RecipeStepEditorProps
 >(({ onSave }, ref) => {
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
+    onDismiss: () => {},
+    snapPoints: ['50%'],
+    keyboardBehavior: 'interactive',
+  });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [instruction, setInstruction] = useState('');
 
@@ -55,16 +53,7 @@ export const RecipeStepEditor = forwardRef<
   };
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['50%', '95%']}
-      enableDynamicSizing={false}
-      keyboardBehavior="interactive"
-      enablePanDownToClose
-      backdropComponent={DismissBackdrop}
-      handleIndicatorStyle={styles.handleIndicator}
-      backgroundStyle={styles.sheetBackground}
-    >
+    <BottomSheetModal ref={bottomSheetRef} {...modalProps} index={0}>
       <Header
         title={editingId ? 'Edit Step' : 'Add Step'}
         centerTitle
@@ -82,15 +71,16 @@ export const RecipeStepEditor = forwardRef<
         ]}
       />
 
-      <BottomSheetFormScrollView contentContainerStyle={styles.content}>
+      <BottomSheetView style={styles.content}>
         <FormTextArea
           label="Instruction"
           value={instruction}
           onChangeText={setInstruction}
           placeholder="Describe what to do in this step..."
           required
+          useBottomSheetInput
         />
-      </BottomSheetFormScrollView>
+      </BottomSheetView>
     </BottomSheetModal>
   );
 });
@@ -98,12 +88,6 @@ export const RecipeStepEditor = forwardRef<
 RecipeStepEditor.displayName = 'RecipeStepEditor';
 
 const styles = StyleSheet.create(theme => ({
-  handleIndicator: {
-    backgroundColor: theme.colors.textTertiary,
-  },
-  sheetBackground: {
-    backgroundColor: theme.colors.background,
-  },
   content: {
     paddingTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,

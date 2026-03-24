@@ -1,21 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
-import {
-  getFocusedRouteNameFromRoute,
-  type RouteProp,
-  type ParamListBase,
-} from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-
-// Helper to get focused route name with proper typing for tab navigator routes
-// Tab navigator provides `params: unknown` but getFocusedRouteNameFromRoute expects `params: object`
-const getTabRouteName = (route: {
-  params?: unknown;
-  state?: unknown;
-  name: string;
-  key: string;
-}) => getFocusedRouteNameFromRoute(route as RouteProp<ParamListBase>);
 import { PantryStack } from './PantryStack';
 import { ShoppingListStack } from './ShoppingListStack';
 import { RecipeStack } from './RecipeStack';
@@ -46,47 +32,19 @@ export const HomeTabs = createBottomTabNavigator({
   screens: {
     Pantry: {
       screen: PantryStack,
-      options: ({ route }) => {
-        const routeName = getTabRouteName(route) ?? 'PantryMain';
-        return {
-          title: 'Pantry',
-          tabBarStyle:
-            routeName !== 'PantryMain' ? { display: 'none' } : undefined,
-        };
-      },
+      options: { title: 'Pantry' },
     },
     ShoppingList: {
       screen: ShoppingListStack,
-      options: ({ route }) => {
-        const routeName = getTabRouteName(route) ?? 'ShoppingListMain';
-        return {
-          title: 'List',
-          tabBarStyle:
-            routeName !== 'ShoppingListMain' ? { display: 'none' } : undefined,
-        };
-      },
+      options: { title: 'List' },
     },
     Recipe: {
       screen: RecipeStack,
-      options: ({ route }) => {
-        const routeName = getTabRouteName(route) ?? 'RecipeMain';
-        return {
-          title: 'Recipes',
-          tabBarStyle:
-            routeName !== 'RecipeMain' ? { display: 'none' } : undefined,
-        };
-      },
+      options: { title: 'Recipes' },
     },
     MealPlan: {
       screen: MealPlanStack,
-      options: ({ route }) => {
-        const routeName = getTabRouteName(route) ?? 'MealPlanMain';
-        return {
-          title: 'Meal Plan',
-          tabBarStyle:
-            routeName !== 'MealPlanMain' ? { display: 'none' } : undefined,
-        };
-      },
+      options: { title: 'Meal Plan' },
     },
   },
 });

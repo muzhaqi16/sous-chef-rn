@@ -1,5 +1,8 @@
 import React from 'react';
-import { useUnitAutocomplete, type UnitItem } from '#hooks/autocomplete/useUnitAutocomplete';
+import {
+  useUnitAutocomplete,
+  type UnitItem,
+} from '#hooks/autocomplete/useUnitAutocomplete';
 import { AutocompleteField } from './AutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
 
@@ -12,7 +15,12 @@ interface UnitAutocompleteFieldProps {
   required?: boolean;
   error?: string;
   testID?: string;
-  onUnitSelected?: (unitId: string | null, unitName: string | null, unitType?: string | null, unitSymbol?: string | null) => void;
+  onUnitSelected?: (
+    unitId: string | null,
+    unitName: string | null,
+    unitType?: string | null,
+    unitSymbol?: string | null,
+  ) => void;
 }
 
 export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
@@ -24,31 +32,30 @@ export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
   required,
   error,
   testID,
-  onUnitSelected }) => {
+  onUnitSelected,
+}) => {
   const unit = useUnitAutocomplete();
 
   const handleTextChange = (text: string) => {
-      onChangeText(text);
-      unit.handleSearchTermChange(text);
-      // Clear unit selection when user types manually
-      if (!text) {
-        onUnitSelected?.(null, null, null);
-      }
-    };
+    onChangeText(text);
+    unit.handleSearchTermChange(text);
+    // Any manual typing invalidates the previous autocomplete selection
+    onUnitSelected?.(null, null, null);
+  };
 
   const handleSelect = (item: UnitItem) => {
-      onChangeText(item.symbol);
-      onUnitSelected?.(item.id, item.name, item.type, item.symbol);
-      unit.setSearchTerm('');
-    };
+    onChangeText(item.symbol);
+    onUnitSelected?.(item.id, item.name, item.type, item.symbol);
+    unit.setSearchTerm('');
+  };
 
   const renderItem = (item: UnitItem) => (
-      <AutocompleteRow
-        symbolText={item.symbol}
-        title={item.name}
-        trailingText={item.abbreviation ? `(${item.abbreviation})` : undefined}
-      />
-    );
+    <AutocompleteRow
+      symbolText={item.symbol}
+      title={item.name}
+      trailingText={item.abbreviation ? `(${item.abbreviation})` : undefined}
+    />
+  );
 
   const keyExtractor = (item: UnitItem) => item.id;
 

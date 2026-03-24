@@ -70,6 +70,7 @@ interface PantryItemFormData {
 
   // Net weight
   netWeight?: string;
+  netWeightUnit?: string;
   netWeightUnitId?: string;
 
   // Storage fields (both modes)
@@ -88,6 +89,7 @@ const addItemSchema = object({
   minQuantity: string(),
   restockQuantity: string(),
   netWeight: string(),
+  netWeightUnit: string(),
   netWeightUnitId: string(),
   storageState: string().oneOf(Object.values(StorageState)),
   location: string(),
@@ -104,6 +106,7 @@ const editItemSchema = object({
   minQuantity: string(),
   restockQuantity: string(),
   netWeight: string(),
+  netWeightUnit: string(),
   netWeightUnitId: string(),
   storageState: string().oneOf(Object.values(StorageState)),
   location: string(),
@@ -145,7 +148,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     { id: string; name: string }[]
   >([]);
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
-  const [netWeightUnitDisplay, setNetWeightUnitDisplay] = useState('');
+  const [netWeightUnitId, setNetWeightUnitId] = useState<string | null>(null);
 
   const selectedPantryId = useAppStore(selectSelectedPantryId);
   // Get selectedHomeId from Zustand (no GraphQL query triggered)
@@ -225,6 +228,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         restockQuantity: item.restockQuantity?.toString() || '',
         brand: item.brand?.name || '',
         netWeight: item.netWeight?.toString() || '',
+        netWeightUnit:
+          item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
         netWeightUnitId: item.netWeightUnit?.id || '',
         storageState: item.storageState || StorageState.Ambient,
         location:
@@ -247,6 +252,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       minQuantity: '',
       restockQuantity: '',
       netWeight: '',
+      netWeightUnit: '',
       netWeightUnitId: '',
       storageState: StorageState.Ambient,
       location: '',
@@ -273,7 +279,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   // "Adjusting state during render" pattern — avoids setState-in-useEffect lint error
   const [prevExistingItemData, setPrevExistingItemData] =
-    useState(existingItemData);
+    useState<typeof existingItemData>();
   if (
     mode === 'edit' &&
     existingItemData?.pantryItem &&
@@ -290,6 +296,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       restockQuantity: item.restockQuantity?.toString() || '',
       brand: item.brand?.name || '',
       netWeight: item.netWeight?.toString() || '',
+      netWeightUnit:
+        item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
       netWeightUnitId: item.netWeightUnit?.id || '',
       storageState: item.storageState || StorageState.Ambient,
       location:
@@ -310,11 +318,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         type: item.unit.type ?? null,
       });
     }
-    // Initialize net weight unit display from existing item
+    // Initialize net weight unit ID from existing item
     if (item.netWeightUnit?.id) {
-      setNetWeightUnitDisplay(
-        item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
-      );
+      setNetWeightUnitId(item.netWeightUnit.id);
     }
   }
 
@@ -396,14 +402,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     }));
   };
 
-  const handleNetWeightUnitSelected = (
-    unitId: string | null,
-    unitName: string | null,
-  ) => {
-    if (unitName) setNetWeightUnitDisplay(unitName);
-    if (unitId) {
-      setValue('netWeightUnitId', unitId, { shouldDirty: true });
-    }
+  const handleNetWeightUnitSelected = (unitId: string | null) => {
+    setNetWeightUnitId(unitId);
   };
 
   const handleSave = (data: PantryItemFormData) => {
@@ -427,6 +427,16 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         // Resolve unit ID from symbol if needed
         const unitId =
           trackingUnit.id ?? (await resolveUnitId(null, data.unit));
+
+        // Resolve net weight unit from symbol text if needed (skip if weight locked)
+        const netWeightUnitText = (data.netWeightUnit || '').trim();
+        if (!isWeightLocked && netWeightUnitText) {
+          const resolvedNetWeightUnitId =
+            netWeightUnitId ?? (await resolveUnitId(null, netWeightUnitText));
+          if (resolvedNetWeightUnitId) {
+            data.netWeightUnitId = resolvedNetWeightUnitId;
+          }
+        }
 
         if (mode === 'add') {
           await createPantryItem({
@@ -455,20 +465,29 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
             delete dirtyFieldsRecord.netWeightUnitId;
           }
 
-          const quantityOrUnitChanged =
-            dirtyFieldsRecord.quantityInput || dirtyFieldsRecord.unit;
+          // Detect unit change even if dirtyFields missed it (e.g. typed without autocomplete)
+          const currentUnitSymbol = currentItem.unit?.symbol || '';
+          const typedUnit = (data.unit || '').trim();
+          if (typedUnit && typedUnit !== currentUnitSymbol) {
+            dirtyFieldsRecord.unit = true;
+          }
+
+          const quantityChanged = !!dirtyFieldsRecord.quantityInput;
+          const unitChanged = !!dirtyFieldsRecord.unit;
+          const unitChangedWithoutId = unitChanged && !unitId;
 
           const hasNonQuantityChanges = Object.keys(dirtyFieldsRecord).some(
             k => k !== 'quantityInput' && k !== 'unit' && dirtyFieldsRecord[k],
           );
 
           // Handle quantity/unit changes with dedicated mutation
-          if (quantityOrUnitChanged) {
+          // Skip unit via this path when unitId is null — route through updatePantryItemFields instead
+          if (quantityChanged || (unitChanged && !unitChangedWithoutId)) {
             updateQuantity({
               itemId,
               quantityInput: data.quantityInput || quantityValue.toString(),
               quantityValue,
-              unitId,
+              unitId: unitChangedWithoutId ? null : unitId,
               unitSymbol: data.unit,
               trackingUnit,
               currentItem,
@@ -476,7 +495,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           }
 
           // Handle non-quantity field updates
-          if (hasNonQuantityChanges) {
+          // Also route unit changes here when unitId is null (UnitSpecInput supports unitSymbol)
+          if (hasNonQuantityChanges || unitChangedWithoutId) {
             updatePantryItemFields({
               itemId,
               input: data,
@@ -484,10 +504,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               dirtyFields: dirtyFieldsRecord,
               selectedLocationId,
               selectedBrandId,
-              trackingUnit: quantityOrUnitChanged ? trackingUnit : undefined,
+              trackingUnit:
+                quantityChanged || unitChanged ? trackingUnit : undefined,
               selectedStorageLocation,
+              unitSymbol: unitChangedWithoutId ? data.unit : undefined,
             });
-          } else if (!quantityOrUnitChanged) {
+          } else if (!quantityChanged && !unitChanged) {
             // Nothing changed — still dismiss the form
             onSuccess?.();
           }
@@ -651,13 +673,19 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                       />
                     )}
                   />
-                  <UnitAutocompleteField
-                    variant="modal"
-                    label="Unit"
-                    value={netWeightUnitDisplay}
-                    onChangeText={setNetWeightUnitDisplay}
-                    onUnitSelected={handleNetWeightUnitSelected}
-                    placeholder="oz, g, ml"
+                  <Controller
+                    control={control}
+                    name="netWeightUnit"
+                    render={({ field: { onChange, value } }) => (
+                      <UnitAutocompleteField
+                        variant="modal"
+                        label="Unit"
+                        value={value || ''}
+                        onChangeText={onChange}
+                        onUnitSelected={handleNetWeightUnitSelected}
+                        placeholder="oz, g, ml"
+                      />
+                    )}
                   />
                 </FieldRow>
               </View>

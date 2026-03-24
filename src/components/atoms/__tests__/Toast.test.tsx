@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { ToastProvider } from '../Toast';
@@ -11,15 +11,19 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-// Helper component that triggers a toast
+// Helper component that triggers a toast once on mount
 const ToastTrigger: React.FC<{
   message: string;
   type?: any;
   action?: { label: string; onPress: () => void };
 }> = ({ message, type, action }) => {
   const showToast = useToast();
+  const triggered = useRef(false);
   useEffect(() => {
-    showToast({ message, type, action });
+    if (!triggered.current) {
+      triggered.current = true;
+      showToast({ message, type, action });
+    }
   }, [message, type, action, showToast]);
   return <Text>Trigger</Text>;
 };

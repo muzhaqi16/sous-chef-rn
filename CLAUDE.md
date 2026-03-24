@@ -46,7 +46,23 @@ const gesture = Gesture.Tap().onEnd(() => {
 });
 ```
 
-An ESLint `no-restricted-syntax` rule enforces this at lint time.
+**Never pass function references as arguments to `scheduleOnRN`.** Functions cannot be
+serialized across the worklet boundary — they arrive as plain objects in release mode,
+causing `TypeError: Object is not a function`. Only pass primitives (strings, numbers,
+booleans). Capture function dependencies via RN-scope closure instead:
+
+```ts
+// CORRECT — capture onDismiss via closure, pass only primitives
+const handleDismiss = () => { onDismiss(id); };
+scheduleOnRN(handleDismiss);
+
+// WRONG — passing a function reference through the worklet boundary
+scheduleOnRN(dismissEntry, onDismiss, id);  // onDismiss is an object in release
+```
+
+Two ESLint `no-restricted-syntax` rules enforce this at lint time:
+1. No inline functions as the first argument
+2. No more than 2 arguments (prevents passing function refs as extra args)
 
 ### Cache Persistence — Raw Apollo State
 

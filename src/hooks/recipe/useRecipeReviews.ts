@@ -11,6 +11,7 @@ import {
 } from '#generated';
 import { useAuthUser } from '#hooks/auth/useAuthUser';
 import { toastService } from '#/services/toastService';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 
 interface UseRecipeReviewsOptions {
   recipeId: string;
@@ -92,10 +93,7 @@ export function useRecipeReviews({
       refetchQueries: refetchQueries,
       update: (cache, { data }, { variables }) => {
         if (!data?.deleteRecipeReview?.success || !variables?.id) return;
-        cache.evict({
-          id: cache.identify({ __typename: 'RecipeReview', id: variables.id }),
-        });
-        cache.gc();
+        safeEvict(cache, 'RecipeReview', variables.id);
       },
       onError: err => {
         toastService.error(err.message || 'Failed to delete review');

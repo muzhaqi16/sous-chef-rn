@@ -592,11 +592,13 @@ export const PantryItemDetail: React.FC<
           remainingNetWeightText={remainingNetWeightText}
           quantityBreakdownText={quantityBreakdownText}
           packageBreakdownText={packageBreakdownText}
+          shelfLifeDays={item.item?.shelfLifeDays}
+          shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
           onCorrectWeight={() => setCorrectWeightVisible(true)}
         />
 
-        {/* Batch Section - only show when item has active batches */}
-        {!!item.batches && item.activeBatchCount > 0 && (
+        {/* Batch Section - only show when item has been restocked (2+ batches) */}
+        {!!item.batches && item.batches.length > 1 && (
           <BatchSection
             batches={item.batches}
             pantryItemId={item.id}

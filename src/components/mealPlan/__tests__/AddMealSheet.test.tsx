@@ -20,11 +20,11 @@ jest.mock('#components/atoms/CachedImage', () => ({
 }));
 
 jest.mock('#components/molecules/BottomSheetSearchBar', () => {
+  const R = require('react');
   const { TextInput } = require('react-native');
-  const React = require('react');
   return {
-    BottomSheetSearchBar: React.forwardRef((props: any, ref: any) => {
-      React.useImperativeHandle(ref, () => ({
+    BottomSheetSearchBar: R.forwardRef((props: any, ref: any) => {
+      R.useImperativeHandle(ref, () => ({
         clear: jest.fn(),
         focus: jest.fn(),
         blur: jest.fn(),

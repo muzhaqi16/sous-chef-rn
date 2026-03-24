@@ -3,18 +3,22 @@ import { toastService } from '#/services/toastService';
 import {
   useGetStorageLocationsQuery,
   useGetStorageLocationTreeLazyQuery,
-  useCreateStorageLocationMutation,
   useUpdateStorageLocationMutation,
   useDeleteStorageLocationMutation,
   useSetDefaultStorageLocationMutation,
-  CreateStorageLocationInput,
-  UpdateStorageLocationInput } from '#generated';
+  UpdateStorageLocationInput,
+} from '#generated';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
-import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
+import { extractNodes } from '#/utils/connectionUtils';
 import {
-  createAddToQueryConnectionUpdater,
-  createRemoveFromQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { executeMutation, executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+  createRemoveFromQueryConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
+} from '#/apollo/utils/cacheUpdaters';
+import {
+  executeMutation,
+  executeCacheUpdate,
+} from '#/utils/compilerSafeWrappers';
+import { useCreateStorageLocation } from './useCreateStorageLocation';
 
 /**
  * Build a tree structure from a flat list of locations using parentLocation references
@@ -23,7 +27,9 @@ function buildTreeFromFlatList(locations: any[]): any[] {
   if (!locations || locations.length === 0) return [];
 
   // Create a map for quick lookup
-  const locationMap = new Map(locations.map(loc => [loc.id, { ...loc, childLocations: [] }]));
+  const locationMap = new Map(
+    locations.map(loc => [loc.id, { ...loc, childLocations: [] }]),
+  );
 
   // Array to hold root locations (locations without a parent)
   const roots: any[] = [];
@@ -65,7 +71,10 @@ function buildTreeFromFlatList(locations: any[]): any[] {
  * Hook for managing storage locations in a home
  * Follows the same pattern as useShoppingListManagement and usePantryManagement
  */
-export function useStorageLocationManagement(homeId: string | undefined) {
+export function useStorageLocationManagement(
+  homeId: string | undefined,
+  pantryId?: string,
+) {
   const shouldSkip = !homeId;
   // Track if tree query has been fetched
   const hasTreeFetchedRef = useRef(false);
@@ -91,7 +100,12 @@ export function useStorageLocationManagement(homeId: string | undefined) {
 
   // Fetch tree data after initial locations load (deferred, non-blocking)
   useEffect(() => {
-    if (!shouldSkip && homeId && data?.storageLocations?.edges && !hasTreeFetchedRef.current) {
+    if (
+      !shouldSkip &&
+      homeId &&
+      data?.storageLocations?.edges &&
+      !hasTreeFetchedRef.current
+    ) {
       hasTreeFetchedRef.current = true;
       // Defer tree fetch to avoid competing with screen-critical queries
       const idleId = requestIdleCallback(() => {
@@ -108,55 +122,62 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     }
   }, [homeId]);
 
-  // CRUD operations utilities
-  const { createAddOperation } = useCrudOperations();
-
-  // Mutations
-  const [createMutation, { loading: creating }] =
-    useCreateStorageLocationMutation({
-      errorPolicy: 'all',
-      update: (cache, { data }) => {
-        const newLocation = data?.createStorageLocation?.storageLocation;
-        if (!newLocation || !homeId) return;
-
-        executeCacheUpdate(
-          () => {
-            const addToStorageLocationsCache = createAddToQueryConnectionUpdater('storageLocations', 'StorageLocation');
-            addToStorageLocationsCache(cache, newLocation, { position: 'end' });
-          },
-          'Cache update failed for createStorageLocation:',
-          refetch,
-        );
-      } });
+  // Reuse the lightweight create hook — it handles both ROOT_QUERY and
+  // Pantry.storageLocationsConnection cache updates so PantryMain tabs sync instantly.
+  const { createLocation, creating } = useCreateStorageLocation(
+    homeId,
+    pantryId,
+  );
 
   const [updateMutation, { loading: updating }] =
     useUpdateStorageLocationMutation({
       // Update mutation automatically updates the cache for modified fields
       // No manual cache update needed - Apollo handles it automatically
       onError: error => {
-        toastService.error(error.message || 'Failed to update storage location');
-      } });
+        toastService.error(
+          error.message || 'Failed to update storage location',
+        );
+      },
+    });
 
   const [deleteMutation] = useDeleteStorageLocationMutation({
     errorPolicy: 'all',
     update: (cache, { data }, { variables }) => {
-      if (!data?.deleteStorageLocation?.success || !variables || !homeId) return;
+      if (!data?.deleteStorageLocation?.success || !variables || !homeId)
+        return;
 
       executeCacheUpdate(
         () => {
-          const removeFromStorageLocationsCache = createRemoveFromQueryConnectionUpdater(
-            'storageLocations',
-            'StorageLocation',
-          );
-          removeFromStorageLocationsCache(cache, variables.id, { evictItem: true });
+          // Remove from PantryMain's filter tabs before evicting the entity
+          if (pantryId) {
+            const removeFromPantryLocations =
+              createRemoveFromParentConnectionUpdater(
+                'Pantry',
+                'storageLocationsConnection',
+                'StorageLocation',
+              );
+            removeFromPantryLocations(cache, pantryId, variables.id);
+          }
+
+          const removeFromStorageLocationsCache =
+            createRemoveFromQueryConnectionUpdater(
+              'storageLocations',
+              'StorageLocation',
+            );
+          removeFromStorageLocationsCache(cache, variables.id, {
+            evictItem: true,
+          });
         },
         'Cache update failed for deleteStorageLocation:',
         refetch,
       );
     },
     onError: error => {
-      toastService.error(error.message || 'Cannot delete location with items or child locations');
-    } });
+      toastService.error(
+        error.message || 'Cannot delete location with items or child locations',
+      );
+    },
+  });
 
   const [setDefaultMutation] = useSetDefaultStorageLocationMutation({
     // SetDefault mutation returns the updated location with isDefault field
@@ -164,19 +185,13 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     // No manual cache update needed
     onError: error => {
       toastService.error(error.message || 'Failed to set default location');
-    } });
+    },
+  });
 
-  // Action handlers using CRUD utilities
-  const createLocation = createAddOperation({
-    mutation: createMutation,
-    parentId: () => homeId,
-    transformInput: (input: Omit<CreateStorageLocationInput, 'homeId'>) => ({
-      ...input,
-      homeId }),
-    onSuccess: (data: any) => data?.createStorageLocation?.storageLocation,
-    operationName: 'Create Storage Location' });
-
-  const updateLocation = async (id: string, input: UpdateStorageLocationInput) => {
+  const updateLocation = async (
+    id: string,
+    input: UpdateStorageLocationInput,
+  ) => {
     const result = await executeMutation(
       () => updateMutation({ variables: { id, input } }),
       'Update storage location error:',
@@ -195,7 +210,9 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     if (payload?.success) {
       toastService.success('Storage location deleted');
     } else {
-      toastService.error(payload?.message ?? 'Failed to delete storage location');
+      toastService.error(
+        payload?.message ?? 'Failed to delete storage location',
+      );
     }
     return payload?.success ?? false;
   };
@@ -210,11 +227,12 @@ export function useStorageLocationManagement(homeId: string | undefined) {
   };
 
   // Preserve data even when query fails to prevent cascade failures
-  const locations = usePreservedArrayData(data?.storageLocations?.edges?.map(e => e.node));
+  const locations = usePreservedArrayData(extractNodes(data?.storageLocations));
   const treeFromQuery = usePreservedArrayData(treeData?.storageLocationTree);
 
   // Build tree from flat list if tree query returns empty
-  const tree = treeFromQuery.length > 0 ? treeFromQuery : buildTreeFromFlatList(locations);
+  const tree =
+    treeFromQuery.length > 0 ? treeFromQuery : buildTreeFromFlatList(locations);
 
   return {
     // Data
@@ -231,5 +249,6 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     updateLocation,
     deleteLocation,
     setDefaultLocation,
-    refetch };
+    refetch,
+  };
 }

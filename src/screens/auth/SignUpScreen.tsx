@@ -7,7 +7,7 @@ import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
 import { EmailInput } from '#components/atoms/EmailInput';
 import { PasswordInput } from '#components/atoms/PasswordInput';
-import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
+import { NameInput } from '#components/atoms/NameInput';
 import { getSignUpValidationSchema } from '#/utils/validation/auth';
 import { type RegisterInput } from '#generated';
 import { authService } from '#/services/authService';
@@ -53,7 +53,7 @@ export const SignUpScreen = (): React.JSX.Element => {
             name: 'name',
             label: 'Name',
             placeholder: 'e.g John Doe',
-            component: BaseInput,
+            component: NameInput,
             props: { testID: 'signup-name-input' },
           },
           {

@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { alertService } from '#/services/alertService';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { CollapsibleChipPicker } from '#components/molecules/CollapsibleChipPicker';
-import { ConversionPreview } from '#components/atoms/ConversionPreview';
-import { FractionQuickSelect } from '#components/atoms/FractionQuickSelect';
+import { QuantityInputFeedback } from '#components/molecules/QuantityInputFeedback';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { formatQuantity } from '#/utils/formatQuantity';
-import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
+import { validateDeductionQuantity } from '#/utils/validateDeductionQuantity';
+import { useQuantityFeedback } from '#hooks/pantry/useQuantityFeedback';
 import { WasteReason, PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { PantryOperation } from '#hooks/pantry/useOperationUnits';
@@ -68,38 +66,12 @@ export const RecordWastePantryItemModal: React.FC<
   const handleConfirm = (shared: PantryActionSharedState) => {
     if (!pantryItem) return;
 
-    const wasteValue = parseFractionalInput(wasteAmountInput);
-    if (wasteValue === null || isNaN(wasteValue) || wasteValue <= 0) {
-      alertService.alert('Error', 'Please enter a valid waste amount');
-      return;
-    }
-    if (shared.isConvertedUnit) {
-      if (shared.availableLoading) {
-        alertService.alert(
-          'Please Wait',
-          'Still calculating available quantity...',
-        );
-        return;
-      }
-      if (
-        shared.availableInSelectedUnit != null &&
-        wasteValue > shared.availableInSelectedUnit
-      ) {
-        alertService.alert(
-          'Error',
-          `Cannot waste more than available quantity (${formatQuantity(
-            shared.availableInSelectedUnit,
-          )} ${shared.activeUnitSymbol})`,
-        );
-        return;
-      }
-    } else if (wasteValue > shared.trackingQuantity) {
-      alertService.alert(
-        'Error',
-        `Cannot waste more than available quantity (${shared.trackingQuantity} ${shared.activeUnitSymbol})`,
-      );
-      return;
-    }
+    const wasteValue = validateDeductionQuantity(
+      wasteAmountInput,
+      shared,
+      'waste',
+    );
+    if (wasteValue === null) return;
 
     onConfirm(
       wasteValue,
@@ -164,28 +136,8 @@ const WasteActionFields: React.FC<{
   shared,
 }) => {
   const wasteAmount = parseFractionalInput(wasteAmountInput);
-
-  const conversion = useConversionPreview({
-    pantryItemId: shared.pantryItemId,
-    inputQuantity: wasteAmount,
-    selectedUnitId: shared.activeUnitId,
-    selectedUnitSymbol: shared.activeUnitSymbol,
-    trackingUnitId: shared.trackingUnitId,
-    trackingUnitSymbol: shared.trackingUnitSymbol,
-    availableInTrackingUnit: shared.trackingQuantity,
-    conversionRatio: shared.selectedUnitInfo?.conversionRatio ?? null,
-    externalAvailableInSelectedUnit: shared.availableInSelectedUnit,
-    externalAvailableLoading: shared.availableLoading,
-  });
-
-  const availableInUnit = shared.isConvertedUnit
-    ? shared.availableInSelectedUnit
-    : shared.trackingQuantity;
-
-  const remaining =
-    wasteAmount !== null && !isNaN(wasteAmount) && availableInUnit != null
-      ? availableInUnit - wasteAmount
-      : null;
+  const { conversion, remaining, availableInUnit, remainingUnitSymbol } =
+    useQuantityFeedback(wasteAmount, shared);
 
   return (
     <>
@@ -200,38 +152,21 @@ const WasteActionFields: React.FC<{
           keyboardType="numeric"
           useBottomSheetInput
         />
-        {shared.isConvertedUnit ? (
-          <ConversionPreview
-            previewText={conversion.previewText}
-            loading={conversion.previewLoading}
-            confidence={shared.selectedUnitInfo?.conversionConfidence ?? null}
-          />
-        ) : null}
-        {remaining !== null ? (
-          <Text
-            style={[
-              commonStyles.bottomSheetHelperText,
-              remaining < 0 && commonStyles.bottomSheetHelperTextError,
-            ]}
-          >
-            {remaining >= 0
-              ? `Remaining: ${formatQuantity(remaining)} ${
-                  shared.activeUnitSymbol
-                }`
-              : `Exceeds available (${formatQuantity(availableInUnit!)} ${
-                  shared.activeUnitSymbol
-                })`}
-          </Text>
-        ) : null}
-        {shared.commonFractions != null && shared.commonFractions.length > 0 ? (
-          <FractionQuickSelect
-            fractions={shared.commonFractions}
-            onSelect={value => setWasteAmountInput(value.toString())}
-            selectedValue={wasteAmount ?? undefined}
-            unitSymbol={shared.activeUnitSymbol}
-            displayAsFraction
-          />
-        ) : null}
+        <QuantityInputFeedback
+          remaining={remaining}
+          availableInUnit={availableInUnit}
+          activeUnitSymbol={remainingUnitSymbol}
+          consumeUnitSymbol={shared.activeUnitSymbol}
+          isConvertedUnit={shared.isConvertedUnit}
+          previewText={conversion.previewText}
+          previewLoading={conversion.previewLoading}
+          conversionConfidence={
+            shared.selectedUnitInfo?.conversionConfidence ?? null
+          }
+          commonFractions={shared.commonFractions}
+          onFractionSelect={value => setWasteAmountInput(value.toString())}
+          selectedFractionValue={wasteAmount ?? undefined}
+        />
       </View>
 
       {/* Waste Reason Selection */}

@@ -48,6 +48,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   const isShowingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queueRef = useRef<ToastOptions[]>([]);
+  const currentToastTypeRef = useRef<ToastType | null>(null);
+  const currentToastHasActionRef = useRef(false);
 
   const showToastRef = useRef<ToastFn | null>(null);
 
@@ -66,6 +68,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   const clearContent = () => {
     setToastState(null);
     isShowingRef.current = false;
+    currentToastTypeRef.current = null;
+    currentToastHasActionRef.current = false;
   };
 
   const processQueue = () => {
@@ -85,6 +89,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   const presentToast = (opts: ToastOptions) => {
     const { message, type = 'default', action } = opts;
     isShowingRef.current = true;
+    currentToastTypeRef.current = type;
+    currentToastHasActionRef.current = !!action;
     setToastState({ message, type, action });
 
     const targetY = insets.top + 16;
@@ -119,6 +125,34 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
 
   const showToast: ToastFn = opts => {
     if (isShowingRef.current) {
+      const incomingType = opts.type ?? 'default';
+      const canReplace =
+        !currentToastHasActionRef.current &&
+        !opts.action &&
+        currentToastTypeRef.current === incomingType;
+
+      if (canReplace) {
+        // Replace in-place: swap message text, reset timer, no animation cycle
+        setToastState({
+          message: opts.message,
+          type: incomingType,
+          action: undefined,
+        });
+        // Flush redundant same-type toasts but keep different-type/action toasts
+        queueRef.current = queueRef.current.filter(
+          q => q.action != null || (q.type ?? 'default') !== incomingType,
+        );
+        clearTimer();
+        const timeout =
+          opts.duration === TOAST.AUTO_DISMISS_LONG
+            ? TOAST.AUTO_DISMISS_LONG
+            : TOAST.AUTO_DISMISS_SHORT;
+        timerRef.current = setTimeout(() => {
+          animateDismiss();
+        }, timeout);
+        return;
+      }
+
       queueRef.current.push(opts);
       return;
     }

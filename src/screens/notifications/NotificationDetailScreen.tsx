@@ -9,9 +9,11 @@ import { format } from 'date-fns/format';
 import type { StaticScreenProps } from '@react-navigation/native';
 import type { NotificationItem } from '#store/slices/notificationSlice';
 
-export const NotificationDetailScreen: React.FC<StaticScreenProps<{
-  notification: NotificationItem;
-}>> = ({ route }) => {
+export const NotificationDetailScreen: React.FC<
+  StaticScreenProps<{
+    notification: NotificationItem;
+  }>
+> = ({ route }) => {
   const notification = route.params?.notification;
 
   if (!notification) {
@@ -29,7 +31,7 @@ export const NotificationDetailScreen: React.FC<StaticScreenProps<{
 
   return (
     <NotificationActionHandler>
-      {({ handleNotificationAction }) => (
+      {({ handleNotificationAction, showExpirationActionSheet }) => (
         <ScrollView style={styles.container}>
           <View style={styles.header}>
             <View style={styles.iconContainer}>
@@ -59,12 +61,21 @@ export const NotificationDetailScreen: React.FC<StaticScreenProps<{
 
             {!!notification.requiresAction && !!notification.actionType && (
               <Pressable
-                style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
-                onPress={() => handleNotificationAction(notification)}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() =>
+                  notification.actionType === 'VIEW_EXPIRING_ITEMS'
+                    ? showExpirationActionSheet(notification)
+                    : handleNotificationAction(notification)
+                }
               >
                 <Text style={styles.actionButtonText}>
                   {notification.actionType === 'ACCEPT_HOME_INVITE'
                     ? 'Accept Home Invitation'
+                    : notification.actionType === 'VIEW_EXPIRING_ITEMS'
+                    ? 'Take Action'
                     : 'Accept Invitation'}
                 </Text>
               </Pressable>

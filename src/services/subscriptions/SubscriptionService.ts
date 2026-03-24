@@ -36,7 +36,11 @@ import {
   LogLevel,
 } from './types';
 import { MutationType } from '#generated';
-import { serializeError, isCircularStructureError, isTimerCircularStructureError } from '#/utils/errorSerialization';
+import {
+  serializeError,
+  isCircularStructureError,
+  isTimerCircularStructureError,
+} from '#/utils/errorSerialization';
 
 export class SubscriptionService {
   private static instance: SubscriptionService;
@@ -54,12 +58,15 @@ export class SubscriptionService {
   // Pending delete tracking (to handle subscription race conditions)
   // When we optimistically delete an item, Apollo's auto-normalization may re-add it
   // from the subscription payload. We track pending deletes to re-evict if needed.
-  private pendingDeletes = new Map<string, {
-    parentId: string;
-    entityType: string;
-    parentTypename: string;
-    connectionField: string;
-  }>();
+  private pendingDeletes = new Map<
+    string,
+    {
+      parentId: string;
+      entityType: string;
+      parentTypename: string;
+      connectionField: string;
+    }
+  >();
 
   // Pending parent entity deletes (shopping lists, pantries)
   // When deleting a parent entity, subscriptions may still be active and receiving
@@ -107,7 +114,12 @@ export class SubscriptionService {
     parentTypename: string = 'Pantry',
     connectionField: string = 'itemsConnection',
   ): void {
-    this.pendingDeletes.set(itemId, { parentId, entityType, parentTypename, connectionField });
+    this.pendingDeletes.set(itemId, {
+      parentId,
+      entityType,
+      parentTypename,
+      connectionField,
+    });
     // Auto-cleanup after 30s to prevent memory leaks in edge cases
     setTimeout(() => this.pendingDeletes.delete(itemId), 30000);
   }
@@ -175,7 +187,9 @@ export class SubscriptionService {
    * @param config - Subscription configuration
    * @returns Configured handlers (onData, onError, onComplete)
    */
-  register<TData = any>(config: SubscriptionConfig<TData>): SubscriptionHandlers {
+  register<TData = any>(
+    config: SubscriptionConfig<TData>,
+  ): SubscriptionHandlers {
     // Set defaults - use Partial for optional fields
     const finalConfig = {
       subscriptionName: config.subscriptionName,
@@ -183,7 +197,8 @@ export class SubscriptionService {
       mutation: config.mutation || MutationType.Updated,
       enableDeduplication: config.enableDeduplication ?? true,
       userId: config.userId,
-      cacheUpdateStrategy: config.cacheUpdateStrategy || CacheStrategy.AUTOMATIC,
+      cacheUpdateStrategy:
+        config.cacheUpdateStrategy || CacheStrategy.AUTOMATIC,
       cacheFieldName: config.cacheFieldName || '',
       customOnData: config.customOnData,
       customOnError: config.customOnError,
@@ -222,34 +237,59 @@ export class SubscriptionService {
       try {
         // Skip processing if parent entity is being deleted
         if (config.entityId && this.pendingParentDeletes.has(config.entityId)) {
-          this.log(config, LogLevel.DEBUG, 'Skipping update for entity being deleted', {
-            entityId: config.entityId,
-          });
+          this.log(
+            config,
+            LogLevel.DEBUG,
+            'Skipping update for entity being deleted',
+            {
+              entityId: config.entityId,
+            },
+          );
           return;
         }
 
         // Extract payload from subscription data
         const subscriptionData = data?.data;
         if (!subscriptionData) {
-          this.log(config, LogLevel.WARN, 'No subscription data received', data);
+          this.log(
+            config,
+            LogLevel.WARN,
+            'No subscription data received',
+            data,
+          );
           return;
         }
 
         // Get the actual payload (first property of subscription data)
-        const payload = Object.values(subscriptionData)[0] as SubscriptionPayload<TData>;
+        const payload = Object.values(
+          subscriptionData,
+        )[0] as SubscriptionPayload<TData>;
 
         if (!payload) {
-          this.log(config, LogLevel.WARN, 'Empty subscription payload', subscriptionData);
+          this.log(
+            config,
+            LogLevel.WARN,
+            'Empty subscription payload',
+            subscriptionData,
+          );
           return;
         }
 
         // Step 1: Deduplication check
-        if (config.enableDeduplication && !this.shouldProcessUpdate(payload, config)) {
+        if (
+          config.enableDeduplication &&
+          !this.shouldProcessUpdate(payload, config)
+        ) {
           this.stats.dedupedUpdates++;
-          this.log(config, LogLevel.DEBUG, 'Filtered duplicate/self-echo update', {
-            userId: payload.userId,
-            mutation: payload.mutation,
-          });
+          this.log(
+            config,
+            LogLevel.DEBUG,
+            'Filtered duplicate/self-echo update',
+            {
+              userId: payload.userId,
+              mutation: payload.mutation,
+            },
+          );
           return;
         }
 
@@ -287,9 +327,14 @@ export class SubscriptionService {
             this.updateCache(client.cache, config, payload);
           } else {
             // UPDATE with AUTOMATIC - let Apollo normalization handle it
-            this.log(config, LogLevel.DEBUG, 'Using Apollo normalization for UPDATE', {
-              mutation,
-            });
+            this.log(
+              config,
+              LogLevel.DEBUG,
+              'Using Apollo normalization for UPDATE',
+              {
+                mutation,
+              },
+            );
           }
         }
         // CacheStrategy.NONE - Skip all cache updates
@@ -299,7 +344,12 @@ export class SubscriptionService {
           config.customOnData(payload as TData, client);
         }
       } catch (error) {
-        this.log(config, LogLevel.ERROR, 'Error in onData handler', serializeError(error));
+        this.log(
+          config,
+          LogLevel.ERROR,
+          'Error in onData handler',
+          serializeError(error),
+        );
       }
     };
   }
@@ -314,7 +364,8 @@ export class SubscriptionService {
       // Check if this is a network-related error that will be auto-recovered
       const errorMessage = error?.message?.toLowerCase() || '';
       const isSocketClosed = errorMessage.includes('socket closed');
-      const isNetworkError = errorMessage.includes('network') ||
+      const isNetworkError =
+        errorMessage.includes('network') ||
         errorMessage.includes('connection') ||
         errorMessage.includes('websocket');
 
@@ -331,7 +382,12 @@ export class SubscriptionService {
       this.stats.totalErrors++;
       this.updateSubscriptionStats(config, 'error');
 
-      this.log(config, LogLevel.ERROR, 'Subscription error', serializeError(error));
+      this.log(
+        config,
+        LogLevel.ERROR,
+        'Subscription error',
+        serializeError(error),
+      );
 
       // Call custom error handler if provided
       if (config.customOnError && typeof config.customOnError === 'function') {
@@ -357,7 +413,10 @@ export class SubscriptionService {
       this.subscriptions.delete(key);
 
       // Call custom complete handler if provided
-      if (config.customOnComplete && typeof config.customOnComplete === 'function') {
+      if (
+        config.customOnComplete &&
+        typeof config.customOnComplete === 'function'
+      ) {
         config.customOnComplete();
       }
     };
@@ -474,7 +533,11 @@ export class SubscriptionService {
     payload: SubscriptionPayload<TData>,
   ): void {
     if (!config.cacheFieldName) {
-      this.log(config, LogLevel.WARN, 'No cacheFieldName provided for manual cache update');
+      this.log(
+        config,
+        LogLevel.WARN,
+        'No cacheFieldName provided for manual cache update',
+      );
       return;
     }
 
@@ -495,7 +558,10 @@ export class SubscriptionService {
           // Add item to array field
           cache.modify({
             fields: {
-              [config.cacheFieldName]: (existingItems = [], { toReference, readField }: any) => {
+              [config.cacheFieldName]: (
+                existingItems = [],
+                { toReference, readField }: any,
+              ) => {
                 const newItemRef = toReference(item);
 
                 // Check if item already exists (prevent duplicates)
@@ -504,7 +570,12 @@ export class SubscriptionService {
                 );
 
                 if (exists) {
-                  this.log(config, LogLevel.DEBUG, 'Item already in cache, skipping add', itemId);
+                  this.log(
+                    config,
+                    LogLevel.DEBUG,
+                    'Item already in cache, skipping add',
+                    itemId,
+                  );
                   return existingItems;
                 }
 
@@ -524,7 +595,12 @@ export class SubscriptionService {
         case MutationType.Completed:
           // Apollo automatic normalization handles this
           // The item data in the subscription will be merged into the cache automatically
-          this.log(config, LogLevel.DEBUG, 'Update handled by Apollo normalization', itemId);
+          this.log(
+            config,
+            LogLevel.DEBUG,
+            'Update handled by Apollo normalization',
+            itemId,
+          );
           break;
 
         case MutationType.Deleted:
@@ -541,7 +617,12 @@ export class SubscriptionService {
           // payload, so we need to re-evict it AND ensure it's removed from the Connection
           const pendingDelete = this.pendingDeletes.get(itemId);
           if (pendingDelete) {
-            this.log(config, LogLevel.DEBUG, 'Re-evicting pending delete (counteract auto-normalization)', itemId);
+            this.log(
+              config,
+              LogLevel.DEBUG,
+              'Re-evicting pending delete (counteract auto-normalization)',
+              itemId,
+            );
 
             // First, ensure the item is removed from the parent Connection
             // This prevents the race condition where auto-normalization writes the item
@@ -556,7 +637,10 @@ export class SubscriptionService {
                 cache.modify({
                   id: parentCacheId,
                   fields: {
-                    [pendingDelete.connectionField]: (existingConnection: any = {}, { readField }: any) => {
+                    [pendingDelete.connectionField]: (
+                      existingConnection: any = {},
+                      { readField }: any,
+                    ) => {
                       const existingEdges = existingConnection?.edges || [];
                       const edges = existingEdges.filter(
                         (edge: any) => readField('id', edge?.node) !== itemId,
@@ -570,20 +654,28 @@ export class SubscriptionService {
                       return {
                         ...existingConnection,
                         edges,
-                        totalCount: Math.max(0, (existingConnection?.totalCount || 0) - 1),
+                        totalCount: Math.max(
+                          0,
+                          (existingConnection?.totalCount || 0) - 1,
+                        ),
                       };
                     },
                   },
                 });
               }
             } catch (error) {
-              this.log(config, LogLevel.WARN, 'Failed to remove from parent Connection during pending delete', serializeError(error));
+              this.log(
+                config,
+                LogLevel.WARN,
+                'Failed to remove from parent Connection during pending delete',
+                serializeError(error),
+              );
             }
 
             // Then evict the item itself
             if (cacheId) {
               cache.evict({ id: cacheId });
-              cache.gc();
+              cache.gc({ resetResultCache: true });
             }
             this.pendingDeletes.delete(itemId);
             break;
@@ -592,7 +684,12 @@ export class SubscriptionService {
           // Check if item is already evicted (e.g., from a previous operation)
           const itemExists = cacheId && cache.data?.data?.[cacheId];
           if (!itemExists) {
-            this.log(config, LogLevel.DEBUG, 'Item already evicted, skipping delete', itemId);
+            this.log(
+              config,
+              LogLevel.DEBUG,
+              'Item already evicted, skipping delete',
+              itemId,
+            );
             break;
           }
 
@@ -600,16 +697,26 @@ export class SubscriptionService {
           // Remove item from array field
           cache.modify({
             fields: {
-              [config.cacheFieldName]: (existingItems = [], { readField }: any) => {
-                return existingItems.filter((itemRef: any) => readField('id', itemRef) !== itemId);
+              [config.cacheFieldName]: (
+                existingItems = [],
+                { readField }: any,
+              ) => {
+                return existingItems.filter(
+                  (itemRef: any) => readField('id', itemRef) !== itemId,
+                );
               },
             },
           });
 
           // Evict item from cache
           cache.evict({ id: cacheId });
-          cache.gc(); // Garbage collect orphaned references
-          this.log(config, LogLevel.DEBUG, 'Removed and evicted item from cache', itemId);
+          cache.gc({ resetResultCache: true }); // Garbage collect orphaned references
+          this.log(
+            config,
+            LogLevel.DEBUG,
+            'Removed and evicted item from cache',
+            itemId,
+          );
           break;
         }
 
@@ -625,7 +732,12 @@ export class SubscriptionService {
           error: serializeError(error),
         });
       }
-      this.log(config, LogLevel.ERROR, 'Cache update failed', serializeError(error));
+      this.log(
+        config,
+        LogLevel.ERROR,
+        'Cache update failed',
+        serializeError(error),
+      );
     }
   }
 
@@ -649,7 +761,12 @@ export class SubscriptionService {
     }
 
     // Skip logs below configured level
-    const logLevels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR];
+    const logLevels = [
+      LogLevel.DEBUG,
+      LogLevel.INFO,
+      LogLevel.WARN,
+      LogLevel.ERROR,
+    ];
     const configLogLevel = config.logLevel || LogLevel.INFO;
     if (logLevels.indexOf(level) < logLevels.indexOf(configLogLevel)) {
       return;
@@ -665,9 +782,10 @@ export class SubscriptionService {
           isCircularStructureError(data.message)));
 
     // Extract raw error message for visibility even when circular refs detected
-    const rawErrorMessage = typeof data === 'object' && data?.message
-      ? data.message
-      : typeof data === 'string'
+    const rawErrorMessage =
+      typeof data === 'object' && data?.message
+        ? data.message
+        : typeof data === 'string'
         ? data
         : 'Unknown error';
 
@@ -726,7 +844,9 @@ export class SubscriptionService {
    * Generate unique subscription key
    */
   private getSubscriptionKey<TData>(config: SubscriptionConfig<TData>): string {
-    return `${config.subscriptionName}-${config.entityId || 'default'}-${config.userId || 'anonymous'}`;
+    return `${config.subscriptionName}-${config.entityId || 'default'}-${
+      config.userId || 'anonymous'
+    }`;
   }
 
   /**
@@ -764,7 +884,9 @@ export class SubscriptionService {
    * Get list of active subscription names (for debugging)
    */
   getActiveSubscriptions(): string[] {
-    return Array.from(this.subscriptions.values()).map(sub => sub.subscriptionName);
+    return Array.from(this.subscriptions.values()).map(
+      sub => sub.subscriptionName,
+    );
   }
 }
 

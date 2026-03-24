@@ -45,6 +45,21 @@ export interface NotificationItem {
   actionData?: any;
   expiresAt?: string | null;
   source?: 'server' | 'local'; // Track notification source
+  // Expiration notification enrichment (linked from expirationNotificationChanged subscription)
+  expirationNotificationId?: string | null;
+  expirationAction?: string | null;
+  daysUntilExpiry?: number | null;
+  pantryItemName?: string | null;
+  pantryItemImageUrl?: string | null;
+}
+
+/** Data passed from the expirationNotificationChanged subscription to enrich a generic notification. */
+export interface ExpirationLinkData {
+  expirationNotificationId: string;
+  expirationAction?: string | null;
+  daysUntilExpiry?: number | null;
+  pantryItemName?: string | null;
+  pantryItemImageUrl?: string | null;
 }
 
 export interface NotificationState {
@@ -54,6 +69,8 @@ export interface NotificationState {
   lastFetchedAt: string | null;
   subscribedLists: string[]; // Shopping list IDs to subscribe to
   subscribedPantries: string[]; // Pantry IDs to subscribe to
+  // Buffers enrichment data when expirationNotificationChanged fires before notificationChanged
+  pendingExpirationLinks: Record<string, ExpirationLinkData>;
 
   // Actions
   addNotification: (notification: Omit<NotificationItem, 'isRead'>) => void;
@@ -81,6 +98,13 @@ export interface NotificationState {
   addSubscribedPantry: (pantryId: string) => void;
   removeSubscribedPantry: (pantryId: string) => void;
   cleanupOrphanedSubscriptions: () => void;
+  // Expiration actions
+  setExpirationAction: (notificationId: string, action: string) => void;
+  linkExpirationData: (
+    genericNotificationId: string,
+    expirationData: ExpirationLinkData,
+  ) => void;
+
   // Selectors
   getUnreadNotifications: () => NotificationItem[];
   getNotificationsByCategory: (
@@ -88,6 +112,9 @@ export interface NotificationState {
   ) => NotificationItem[];
   getUrgentNotifications: () => NotificationItem[];
   getActionableNotifications: () => NotificationItem[];
+  getExpirationNotification: (
+    genericNotificationId: string,
+  ) => NotificationItem | undefined;
 
   // Reset
   resetNotifications: () => void;
@@ -112,10 +139,13 @@ const initialNotificationState: Omit<
   | 'removeSubscribedList'
   | 'addSubscribedPantry'
   | 'removeSubscribedPantry'
+  | 'setExpirationAction'
+  | 'linkExpirationData'
   | 'getUnreadNotifications'
   | 'getNotificationsByCategory'
   | 'getUrgentNotifications'
   | 'getActionableNotifications'
+  | 'getExpirationNotification'
   | 'resetNotifications'
   | 'cleanupOrphanedSubscriptions'
 > = {
@@ -125,6 +155,7 @@ const initialNotificationState: Omit<
   lastFetchedAt: null,
   subscribedLists: [],
   subscribedPantries: [],
+  pendingExpirationLinks: {},
 };
 
 export const createNotificationSlice: StateCreator<
@@ -180,7 +211,7 @@ export const createNotificationSlice: StateCreator<
     }
 
     set(state => {
-      const newNotification = {
+      const newNotification: NotificationItem = {
         ...notification,
         isRead: false,
         source: notification.source || 'local', // Mark as local by default
@@ -189,6 +220,22 @@ export const createNotificationSlice: StateCreator<
           safeParseDate(notification.sentAt)?.toISOString() ||
           new Date().toISOString(),
       };
+
+      // Apply any buffered expiration enrichment data (race condition handling:
+      // expirationNotificationChanged may have fired before this generic notification)
+      const pendingLink = state.pendingExpirationLinks[newNotification.id];
+      if (pendingLink) {
+        newNotification.expirationNotificationId =
+          pendingLink.expirationNotificationId;
+        newNotification.daysUntilExpiry = pendingLink.daysUntilExpiry;
+        newNotification.pantryItemName = pendingLink.pantryItemName;
+        newNotification.pantryItemImageUrl = pendingLink.pantryItemImageUrl;
+        if (pendingLink.expirationAction) {
+          newNotification.expirationAction = pendingLink.expirationAction;
+        }
+        delete state.pendingExpirationLinks[newNotification.id];
+      }
+
       state.notifications.unshift(newNotification);
       state.unreadCount = state.notifications.filter(n => !n.isRead).length;
       state.urgentCount = state.notifications.filter(
@@ -530,6 +577,44 @@ export const createNotificationSlice: StateCreator<
     });
   },
 
+  setExpirationAction: (notificationId, action) => {
+    set(state => {
+      const notification = state.notifications.find(
+        n => n.id === notificationId,
+      );
+      if (notification) {
+        notification.expirationAction = action;
+      }
+    });
+  },
+
+  linkExpirationData: (genericNotificationId, expirationData) => {
+    set(state => {
+      const notification = state.notifications.find(
+        n => n.id === genericNotificationId,
+      );
+      if (notification) {
+        // Generic notification already exists — enrich it in place
+        notification.expirationNotificationId =
+          expirationData.expirationNotificationId;
+        notification.daysUntilExpiry =
+          expirationData.daysUntilExpiry ?? notification.daysUntilExpiry;
+        notification.pantryItemName =
+          expirationData.pantryItemName ?? notification.pantryItemName;
+        notification.pantryItemImageUrl =
+          expirationData.pantryItemImageUrl ?? notification.pantryItemImageUrl;
+        if (expirationData.expirationAction) {
+          notification.expirationAction = expirationData.expirationAction;
+        }
+      } else {
+        // Race condition: expiration subscription fired before general notification.
+        // Buffer the enrichment data — addNotification will apply it when the
+        // generic notification arrives.
+        state.pendingExpirationLinks[genericNotificationId] = expirationData;
+      }
+    });
+  },
+
   getUnreadNotifications: () => {
     return get().notifications.filter(n => !n.isRead);
   },
@@ -546,6 +631,12 @@ export const createNotificationSlice: StateCreator<
 
   getActionableNotifications: () => {
     return get().notifications.filter(n => n.requiresAction && !n.isRead);
+  },
+
+  getExpirationNotification: genericNotificationId => {
+    return get().notifications.find(
+      n => n.id === genericNotificationId && n.expirationNotificationId,
+    );
   },
 
   resetNotifications: () => {

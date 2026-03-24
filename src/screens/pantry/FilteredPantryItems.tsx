@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, RefreshControl } from 'react-native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { differenceInCalendarDays } from 'date-fns';
 
 import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
-import { Header } from '#components/molecules/Header';
+import { Header, type HeaderAction } from '#components/molecules/Header';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
@@ -23,15 +25,39 @@ import { commonStyles } from '#/styles/commonStyles';
 import { createPropsComparator } from '#utils/memoUtils';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import {
-  LowStockActionsProvider,
-  useLowStockActions,
-} from './LowStockActionsContext';
+  FilteredItemsActionsProvider,
+  useFilteredItemsActions,
+} from './FilteredItemsActionsContext';
 
-const keyExtractor = (item: { id: string }) => item.id;
+// ── Types ──
 
-type LayoutRect = { x: number; y: number; width: number; height: number };
+export type FilteredPantryItemsMode = 'lowStock' | 'expiring';
 
-// ── Tutorial steps ──
+type FilteredPantryItemsParams = {
+  mode?: FilteredPantryItemsMode;
+};
+
+interface FilteredItem {
+  id: string;
+  itemName: string;
+  quantity: number;
+  unit: { symbol: string } | null;
+  isLowStock: boolean;
+  expiresAt?: string | null;
+}
+
+// ── Mode config ──
+
+interface ModeConfig {
+  title: string;
+  emptyMessage: string;
+  emptyIcon: string;
+  filter: (item: FilteredItem) => boolean;
+  sort?: (a: FilteredItem, b: FilteredItem) => number;
+  subtitle: (item: FilteredItem) => string;
+  tutorialSteps: TutorialStep[];
+  showCartAction: boolean;
+}
 
 const LOW_STOCK_TUTORIAL_STEPS: TutorialStep[] = [
   {
@@ -48,38 +74,88 @@ const LOW_STOCK_TUTORIAL_STEPS: TutorialStep[] = [
   },
 ];
 
-interface LowStockItem {
-  id: string;
-  itemName: string;
-  quantity: number;
-  unit: { symbol: string } | null;
-  isLowStock: boolean;
+function formatExpirySubtitle(expiresAt: string | null | undefined): string {
+  if (!expiresAt) return '';
+  const days = differenceInCalendarDays(new Date(expiresAt), new Date());
+  if (days < 0) return 'Expired';
+  if (days === 0) return 'Expires today';
+  if (days === 1) return 'Expires tomorrow';
+  return `Expires in ${days} days`;
 }
 
-// --- Module-scope LowStockRenderItem ---
+const MODE_CONFIG: Record<FilteredPantryItemsMode, ModeConfig> = {
+  lowStock: {
+    title: 'Low Stock Items',
+    emptyMessage: 'All items are above minimum stock levels',
+    emptyIcon: 'cube-outline',
+    filter: item => item.isLowStock,
+    subtitle: item =>
+      `${item.quantity} ${item.unit?.symbol ?? ''} remaining`.trim(),
+    tutorialSteps: LOW_STOCK_TUTORIAL_STEPS,
+    showCartAction: true,
+  },
+  expiring: {
+    title: 'Expiring Items',
+    emptyMessage: 'No items are expiring soon',
+    emptyIcon: 'time-outline',
+    filter: item => {
+      if (!item.expiresAt) return false;
+      const days = differenceInCalendarDays(
+        new Date(item.expiresAt),
+        new Date(),
+      );
+      return days <= 7;
+    },
+    sort: (a, b) => {
+      const aDate = a.expiresAt ? new Date(a.expiresAt).getTime() : Infinity;
+      const bDate = b.expiresAt ? new Date(b.expiresAt).getTime() : Infinity;
+      return aDate - bDate;
+    },
+    subtitle: item => formatExpirySubtitle(item.expiresAt),
+    tutorialSteps: [],
+    showCartAction: false,
+  },
+};
 
-interface LowStockRenderItemProps {
-  item: LowStockItem;
+// ── Helpers ──
+
+const keyExtractor = (item: { id: string }) => item.id;
+const getItemType = () => 'item';
+
+type LayoutRect = { x: number; y: number; width: number; height: number };
+
+// ── Render item ──
+
+interface FilteredRenderItemProps {
+  item: FilteredItem;
   primaryColor: string;
+  subtitleFn: (item: FilteredItem) => string;
+  showCart: boolean;
   onCartMeasure?: (rect: LayoutRect) => void;
 }
 
-const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({
+const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
   item,
   primaryColor,
+  subtitleFn,
+  showCart,
   onCartMeasure,
 }) => {
-  const { navigateTo, handleAddToList } = useLowStockActions();
+  const { navigateTo, handleAddToList } = useFilteredItemsActions();
   const cartRef = useRef<View>(null);
 
-  const cartButton = (
-    <Pressable
-      onPress={() => handleAddToList(item.id)}
-      style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
-    >
-      <Icon name="cart-outline" size={20} color={primaryColor} />
-    </Pressable>
-  );
+  const cartButton =
+    showCart && handleAddToList ? (
+      <Pressable
+        onPress={() => handleAddToList(item.id)}
+        style={({ pressed }) => [
+          styles.actionButton,
+          pressed && styles.pressed,
+        ]}
+      >
+        <Icon name="cart-outline" size={20} color={primaryColor} />
+      </Pressable>
+    ) : null;
 
   return (
     <SwipeableItem onPress={() => navigateTo({ itemId: item.id })}>
@@ -87,10 +163,10 @@ const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({
         <View style={styles.itemInfo}>
           <Text style={styles.itemName}>{item.itemName}</Text>
           <Text style={[commonStyles.caption, styles.itemDetails]}>
-            {item.quantity} {item.unit?.symbol} remaining
+            {subtitleFn(item)}
           </Text>
         </View>
-        {onCartMeasure ? (
+        {cartButton && onCartMeasure ? (
           <View
             ref={cartRef}
             collapsable={false}
@@ -114,29 +190,34 @@ const LowStockRenderItemComponent: React.FC<LowStockRenderItemProps> = ({
   );
 };
 
-const arePropsEqual = createPropsComparator<LowStockRenderItemProps>({
-  referenceKeys: ['primaryColor', 'onCartMeasure'],
+const arePropsEqual = createPropsComparator<FilteredRenderItemProps>({
+  referenceKeys: ['primaryColor', 'onCartMeasure', 'subtitleFn', 'showCart'],
   nestedComparisons: {
-    item: ['id', 'itemName', 'quantity'],
+    item: ['id', 'itemName', 'quantity', 'expiresAt'],
     'item.unit': ['symbol'],
   },
 });
 
-const LowStockRenderItem = React.memo(
-  LowStockRenderItemComponent,
+const FilteredRenderItem = React.memo(
+  FilteredRenderItemComponent,
   arePropsEqual,
 );
 
-const getLowStockItemType = () => 'item';
+// ── Empty state ──
 
-// --- Module-scope LowStockEmpty ---
-
-interface LowStockEmptyProps {
+interface FilteredEmptyProps {
   loading: boolean;
   hasItems: boolean;
+  icon: string;
+  message: string;
 }
 
-const LowStockEmpty: React.FC<LowStockEmptyProps> = ({ loading, hasItems }) => {
+const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
+  loading,
+  hasItems,
+  icon,
+  message,
+}) => {
   const { theme } = useUnistyles();
 
   if (loading || !hasItems) {
@@ -151,17 +232,19 @@ const LowStockEmpty: React.FC<LowStockEmptyProps> = ({ loading, hasItems }) => {
 
   return (
     <View style={[commonStyles.center, styles.emptyState]}>
-      <Icon name="cube-outline" size={64} color={theme.colors.success} />
-      <Text style={[commonStyles.body, styles.emptyText]}>
-        All items are above minimum stock levels
-      </Text>
+      <Icon name={icon} size={64} color={theme.colors.success} />
+      <Text style={[commonStyles.body, styles.emptyText]}>{message}</Text>
     </View>
   );
 };
 
-// --- Main component ---
+// ── Main component ──
 
-export const LowStockItems: React.FC = () => {
+export const FilteredPantryItems: React.FC<
+  StaticScreenProps<FilteredPantryItemsParams | undefined>
+> = ({ route }) => {
+  const mode = route.params?.mode ?? 'lowStock';
+  const config = MODE_CONFIG[mode];
   const { theme } = useUnistyles();
 
   const { goBack, navigateTo } = useAppNavigation();
@@ -177,7 +260,6 @@ export const LowStockItems: React.FC = () => {
   useFocusEffect(onScreenFocus);
 
   // Use cache-only hook for pantry resolution (no network requests)
-  // This prevents query cascade when switching between pantry screens
   const { pantry, selectedHomeId } = useCurrentPantry();
 
   const { addLowStockToShoppingList, loading: addAllLoading } =
@@ -189,17 +271,20 @@ export const LowStockItems: React.FC = () => {
   } = usePantryManagement(pantry?.id);
   const [addToShoppingList] = useAddItemToShoppingListMutation();
 
-  // Progressively load all pages so the isLowStock filter sees every item
+  // Progressively load all pages so the filter sees every item
   useEffect(() => {
     if (hasMore && !isLoadingMore && !loading) {
       loadMore();
     }
   }, [hasMore, isLoadingMore, loading, loadMore]);
 
-  const lowStockItems = (() => {
+  const filteredItems = (() => {
     if (!allItems) return [];
-
-    return allItems.filter(item => item.isLowStock);
+    const filtered = allItems.filter(config.filter);
+    if (config.sort) {
+      return filtered.sort(config.sort);
+    }
+    return filtered;
   })();
 
   // ── Tutorial measurement state ──
@@ -207,12 +292,12 @@ export const LowStockItems: React.FC = () => {
   const [headerCartRect, setHeaderCartRect] = useState<LayoutRect | null>(null);
 
   const tutorial = useTutorialSequence({
-    steps: LOW_STOCK_TUTORIAL_STEPS,
+    steps: config.tutorialSteps,
     targetRects: {
       itemCart: itemCartRect,
       headerCart: headerCartRect,
     },
-    canStart: lowStockItems.length > 0 && !loading,
+    canStart: filteredItems.length > 0 && !loading,
     isPaused: !isScreenFocused,
   });
 
@@ -235,34 +320,38 @@ export const LowStockItems: React.FC = () => {
   const actions = {
     navigateTo: (params: { itemId: string }) =>
       navigateTo.pantryItemDetail(params),
-    handleAddToList,
+    ...(config.showCartAction && { handleAddToList }),
   };
+
+  const headerRightActions: HeaderAction[] | undefined = config.showCartAction
+    ? [
+        {
+          icon: 'cart-outline',
+          onPress: addLowStockToShoppingList,
+          loading: addAllLoading,
+          testID: 'add-all-low-stock',
+          onMeasure: setHeaderCartRect,
+        },
+      ]
+    : undefined;
 
   return (
     <View style={commonStyles.container}>
       <Header
-        title="Low Stock Items"
+        title={config.title}
         onBack={goBack}
         centerTitle
-        rightActions={[
-          {
-            icon: 'cart-outline',
-            onPress: addLowStockToShoppingList,
-            loading: addAllLoading,
-            testID: 'add-all-low-stock',
-            onMeasure: setHeaderCartRect,
-          },
-        ]}
+        rightActions={headerRightActions}
       />
 
-      <LowStockActionsProvider actions={actions}>
+      <FilteredItemsActionsProvider actions={actions}>
         <FlashList
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          data={lowStockItems}
+          data={filteredItems}
           keyExtractor={keyExtractor}
           {...FLASHLIST_DEFAULTS.fullScreen}
-          getItemType={getLowStockItemType}
+          getItemType={getItemType}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -272,23 +361,30 @@ export const LowStockItems: React.FC = () => {
             />
           }
           ListEmptyComponent={
-            <LowStockEmpty loading={loading} hasItems={!!allItems} />
+            <FilteredEmpty
+              loading={loading}
+              hasItems={!!allItems}
+              icon={config.emptyIcon}
+              message={config.emptyMessage}
+            />
           }
           renderItem={({
             item,
             index,
           }: {
-            item: LowStockItem;
+            item: FilteredItem;
             index: number;
           }) => (
-            <LowStockRenderItem
+            <FilteredRenderItem
               item={item}
               primaryColor={theme.colors.primary}
+              subtitleFn={config.subtitle}
+              showCart={config.showCartAction}
               onCartMeasure={index === 0 ? setItemCartRect : undefined}
             />
           )}
         />
-      </LowStockActionsProvider>
+      </FilteredItemsActionsProvider>
 
       {tutorial.currentStep ? (
         <SpotlightCoachMark

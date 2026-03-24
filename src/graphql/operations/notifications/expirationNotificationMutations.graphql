@@ -1,0 +1,36 @@
+# ============================================
+# EXPIRATION NOTIFICATION MUTATIONS
+# ============================================
+
+mutation MarkExpirationAction($input: MarkActionInput!) {
+  markExpirationAction(input: $input) {
+    success
+    message
+    code
+    expirationNotification {
+      ...ExpirationNotificationFragment
+    }
+  }
+}
+
+mutation DismissExpirationNotification($input: DismissNotificationInput!) {
+  dismissExpirationNotification(input: $input) {
+    success
+    message
+    code
+    expirationNotification {
+      ...ExpirationNotificationFragment
+    }
+  }
+}
+
+mutation MarkExpirationNotificationAsRead($notificationId: ID!) {
+  markExpirationNotificationAsRead(notificationId: $notificationId) {
+    success
+    message
+    code
+    expirationNotification {
+      ...ExpirationNotificationFragment
+    }
+  }
+}

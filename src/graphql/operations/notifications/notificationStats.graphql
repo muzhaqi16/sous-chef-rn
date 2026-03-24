@@ -1,0 +1,28 @@
+# ============================================
+# NOTIFICATION STATS QUERY
+# ============================================
+
+query GetNotificationStats($filters: NotificationFilters) {
+  notificationStats(filters: $filters) {
+    total
+    unread
+    read
+    dismissed
+    expired
+    byCategory {
+      category
+      count
+      unreadCount
+    }
+    byPriority {
+      priority
+      count
+      unreadCount
+    }
+    byType {
+      type
+      count
+      unreadCount
+    }
+  }
+}

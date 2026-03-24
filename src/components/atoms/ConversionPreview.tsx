@@ -39,7 +39,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: theme.spacing.xs,
     minHeight: 20,
   },
   text: {

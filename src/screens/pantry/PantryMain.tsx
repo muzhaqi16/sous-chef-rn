@@ -44,7 +44,6 @@ import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkel
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
-import { SectionHeader } from '#components/molecules/SectionHeader';
 
 // ── Pantry tutorial steps (data-driven, add entries to extend) ──
 const PANTRY_TUTORIAL_STEPS: TutorialStep[] = [
@@ -77,7 +76,12 @@ const PantryMainInner: React.FC = () => {
   const { setOverlayOpen, scrollTabBarHidden } = useTabBarSetters();
 
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
-  const { scrollHandler, isScrolledDown } = useCollapsibleScroll();
+  const {
+    scrollHandler,
+    scrollEndDragHandler,
+    momentumEndHandler,
+    isScrolledDown,
+  } = useCollapsibleScroll();
 
   // Sync scroll direction → tab bar visibility (UI thread only)
   useAnimatedReaction(
@@ -161,7 +165,10 @@ const PantryMainInner: React.FC = () => {
       navigate('PantryAnalytics', { pantryId: screen.pantry.id });
     }
   };
-  const handleLowStockNavigate = () => navigate('LowStockItems');
+  const handleLowStockNavigate = () =>
+    navigate('FilteredPantryItems', { mode: 'lowStock' });
+  const handleExpiringNavigate = () =>
+    navigate('FilteredPantryItems', { mode: 'expiring' });
   const handleSelectHome = () => navigate('HomeManagement', {});
   const stableNavigateTo = {
     pantryItem: (params: { itemId: string }) => navigateTo.pantryItem(params),
@@ -191,12 +198,15 @@ const PantryMainInner: React.FC = () => {
         onSettingsPress={handleOpenSelector}
         onAnalyticsPress={handleAnalyticsPress}
         onLowStockNavigate={handleLowStockNavigate}
+        onExpiringNavigate={handleExpiringNavigate}
         onSelectHome={handleSelectHome}
         onOverlayOpen={handleOverlayOpen}
         onOverlayClose={handleOverlayClose}
         canStartTutorial={canStartTutorial}
         isPantryFocused={isPantryFocused}
         scrollHandler={scrollHandler}
+        scrollEndDragHandler={scrollEndDragHandler}
+        momentumEndHandler={momentumEndHandler}
       />
     </PantryModalsProvider>
   );
@@ -218,13 +228,18 @@ interface PantryMainContentProps {
   onSettingsPress: () => void;
   onAnalyticsPress: () => void;
   onLowStockNavigate: () => void;
+  onExpiringNavigate: () => void;
   onSelectHome: () => void;
   onOverlayOpen: () => void;
   onOverlayClose: () => void;
   canStartTutorial: boolean;
   isPantryFocused: boolean;
-  // Scroll handler for tab bar direction tracking
+  // Scroll handlers for tab bar direction tracking
   scrollHandler: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  scrollEndDragHandler: (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => void;
+  momentumEndHandler: () => void;
 }
 
 function PantryMainContent({
@@ -239,12 +254,15 @@ function PantryMainContent({
   onSettingsPress,
   onAnalyticsPress,
   onLowStockNavigate,
+  onExpiringNavigate,
   onSelectHome,
   onOverlayOpen,
   onOverlayClose,
   canStartTutorial,
   isPantryFocused,
   scrollHandler,
+  scrollEndDragHandler,
+  momentumEndHandler,
 }: PantryMainContentProps) {
   const {
     handleConsumeItem,
@@ -344,6 +362,7 @@ function PantryMainContent({
         onSettingsPress={onSettingsPress}
         onAnalyticsPress={onAnalyticsPress}
         onLowStockNavigate={onLowStockNavigate}
+        onExpiringNavigate={onExpiringNavigate}
         totalCount={screen.totalCount}
         noHomeSelected={screen.noHomeSelected}
         noHomes={screen.noHomes}
@@ -358,6 +377,8 @@ function PantryMainContent({
         onHomeBadgeLayout={setHomeBadgeRect}
         onSettingsIconLayout={setSettingsIconRect}
         scrollHandler={scrollHandler}
+        onScrollEndDrag={scrollEndDragHandler}
+        onMomentumScrollEnd={momentumEndHandler}
       />
       <AnimatedItemSelector
         ref={selectorRef}
@@ -374,6 +395,7 @@ function PantryMainContent({
           stepIndex={tutorial.currentStep.stepIndex}
           totalSteps={tutorial.currentStep.totalSteps}
           onDismiss={tutorial.skipAll}
+          onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
             const action =
               tutorialTargetActions[tutorial.currentStep!.stepIndex];
@@ -417,13 +439,6 @@ export const PantryMain: React.FC = () => (
             tabs={SKELETON_PANTRY_TABS}
             activeTabId="all"
             onTabChange={noop}
-          />
-          <SectionHeader
-            title="ALL ITEMS"
-            variant="default"
-            actionLabel="Sort ↓"
-            onActionPress={noop}
-            testID="pantry-sort-button"
           />
           <PantryScreenSkeleton />
         </View>
