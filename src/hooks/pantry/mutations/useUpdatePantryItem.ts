@@ -43,6 +43,7 @@ interface UpdatePantryItemFieldsParams {
   selectedBrandId: string | null;
   trackingUnit?: UnitSelection;
   selectedStorageLocation?: { id: string; name: string; type: string } | null;
+  unitSymbol?: string;
 }
 
 /**
@@ -97,6 +98,7 @@ export function useUpdatePantryItem({
     selectedBrandId,
     trackingUnit,
     selectedStorageLocation,
+    unitSymbol,
   }: UpdatePantryItemFieldsParams): void => {
     // Build input for dirty fields only
     const updateInput = buildDirtyUpdateInput(
@@ -104,6 +106,7 @@ export function useUpdatePantryItem({
       dirtyFields,
       selectedLocationId,
       selectedBrandId,
+      unitSymbol,
     );
 
     // Only fire mutation if there are changes

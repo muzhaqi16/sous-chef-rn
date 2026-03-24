@@ -1,10 +1,10 @@
-import React, {useState} from 'react';
-import {Text, View, ActivityIndicator} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import React, { useState } from 'react';
+import { Text, View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
-import {Button} from '#components/base/Button';
-import {useAppStore} from '#store/useAppStore';
-import {useCompleteOnboardingMutation} from '#generated';
+import { Button } from '#components/base/Button';
+import { useAppStore } from '#store/useAppStore';
+import { useCompleteOnboardingMutation } from '#generated';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const OnboardingCompleteScreen = () => {
@@ -18,7 +18,7 @@ export const OnboardingCompleteScreen = () => {
     onCompleted: () => {
       // Update the user in the store
       if (user) {
-        updateUser({...user, onBoarded: true});
+        updateUser({ ...user, onBoarded: true });
       }
 
       setIsCompleting(false);
@@ -49,14 +49,14 @@ export const OnboardingCompleteScreen = () => {
     }
   };
 
-
   return (
     <OnBoardingWrapper
       title="All set!"
       subtitle="Your home is ready to use"
       step={7}
       totalSteps={7}
-      testID="onboarding-complete-screen">
+      testID="onboarding-complete-screen"
+    >
       <View style={styles.container}>
         <View style={styles.successIcon}>
           <Text style={styles.checkmark}>✓</Text>
@@ -86,22 +86,11 @@ export const OnboardingCompleteScreen = () => {
       </View>
 
       <Button
-        title={isCompleting ? 'Completing Setup...' : 'Get Started'}
+        title="Get Started"
         onPress={handleComplete}
         variant="primary"
-        disabled={isCompleting}
+        loading={isCompleting}
       />
-
-      {!!isCompleting && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator
-            size="small"
-            color={styles.loadingIndicator.color}
-          />
-          <Text style={styles.loadingText}>Finalizing your setup...</Text>
-        </View>
-      )}
-
     </OnBoardingWrapper>
   );
 };
@@ -157,19 +146,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.error,
     fontSize: theme.typography.fontSize.sm,
     textAlign: 'center',
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: theme.spacing['3'],
-  },
-  loadingIndicator: {
-    color: theme.colors.primary,
-  },
-  loadingText: {
-    marginLeft: theme.spacing.sm,
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
   },
 }));

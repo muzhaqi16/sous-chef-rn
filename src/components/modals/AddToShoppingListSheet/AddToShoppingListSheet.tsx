@@ -14,6 +14,7 @@ import {
   ItemSuggestion,
 } from '#generated';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import { createOptimisticShoppingListItem } from '#/hooks/shoppingList/mutations/utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
@@ -125,13 +126,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
         // Evict temp-ID entity when the real server response arrives
         if (lastTempIdRef.current && !newItem.id.startsWith('temp-')) {
-          cache.evict({
-            id: cache.identify({
-              __typename: 'ShoppingListItem',
-              id: lastTempIdRef.current,
-            }),
-          });
-          cache.gc();
+          safeEvict(cache, 'ShoppingListItem', lastTempIdRef.current);
           lastTempIdRef.current = null;
         }
 

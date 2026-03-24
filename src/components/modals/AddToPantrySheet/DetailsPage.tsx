@@ -74,7 +74,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
       bottomOffset={16}
     >
       {/* Quantity + Unit */}
-      <View style={{ zIndex: 1 }}>
+      <View style={{ zIndex: 10 }}>
         <FieldRow>
           <EditableCounter
             label="Quantity"

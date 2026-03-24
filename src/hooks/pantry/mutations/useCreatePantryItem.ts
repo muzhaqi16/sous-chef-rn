@@ -92,7 +92,11 @@ export function useCreatePantryItem({
 
     const baseInput = {
       pantryId: targetPantryId,
-      ...(unitId && { unit: { unitId } }),
+      ...(unitId
+        ? { unit: { unitId } }
+        : input.unit?.trim()
+        ? { unit: { unitSymbol: input.unit.trim() } }
+        : {}),
       quantity: quantityValue,
       storage: {
         storageState: input.storageState,

@@ -25,9 +25,12 @@ const mockUseMyShoppingListsChangesSubscription = jest.fn();
 const mockUseCollaborationChangesSubscription = jest.fn();
 jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
-  useShoppingListChangesSubscription: (...args: any[]) => mockUseShoppingListChangesSubscription(...args),
-  useMyShoppingListsChangesSubscription: (...args: any[]) => mockUseMyShoppingListsChangesSubscription(...args),
-  useCollaborationChangesSubscription: (...args: any[]) => mockUseCollaborationChangesSubscription(...args),
+  useShoppingListChangesSubscription: (...args: any[]) =>
+    mockUseShoppingListChangesSubscription(...args),
+  useMyShoppingListsChangesSubscription: (...args: any[]) =>
+    mockUseMyShoppingListsChangesSubscription(...args),
+  useCollaborationChangesSubscription: (...args: any[]) =>
+    mockUseCollaborationChangesSubscription(...args),
 }));
 
 jest.mock('#store/useAppStore', () => ({
@@ -49,6 +52,9 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
+  safeEvict: jest.fn(),
+  safeEvictMany: jest.fn(),
+  gcResetResultCache: jest.fn(),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -103,21 +109,31 @@ describe('useShoppingListSubscriptions', () => {
   });
 
   it('handles ITEMS_CHANGED Created mutation in customOnData', () => {
-    const { addNewItemToShoppingListCache } = require('#/apollo/utils/shoppingListCacheUpdaters');
+    const {
+      addNewItemToShoppingListCache,
+    } = require('#/apollo/utils/shoppingListCacheUpdaters');
 
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges')
+        customOnData = config.customOnData;
       return {};
     });
 
     renderHook(() => useShoppingListSubscriptions('user-1'));
 
-    const mockCache: any = { batch: jest.fn(({ update }: any) => update(mockCache)) };
+    const mockCache: any = {
+      batch: jest.fn(({ update }: any) => update(mockCache)),
+    };
     const mockClient = { cache: mockCache };
 
     customOnData(
-      { changeType: 'ITEMS_CHANGED', mutation: 'CREATED', item: { id: 'i1' }, userId: 'other-user' },
+      {
+        changeType: 'ITEMS_CHANGED',
+        mutation: 'CREATED',
+        item: { id: 'i1' },
+        userId: 'other-user',
+      },
       mockClient,
     );
 
@@ -125,11 +141,14 @@ describe('useShoppingListSubscriptions', () => {
   });
 
   it('skips self-echo for ITEMS_CHANGED', () => {
-    const { addNewItemToShoppingListCache } = require('#/apollo/utils/shoppingListCacheUpdaters');
+    const {
+      addNewItemToShoppingListCache,
+    } = require('#/apollo/utils/shoppingListCacheUpdaters');
 
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges')
+        customOnData = config.customOnData;
       return {};
     });
 
@@ -137,7 +156,12 @@ describe('useShoppingListSubscriptions', () => {
 
     const mockClient = { cache: { batch: jest.fn() } };
     customOnData(
-      { changeType: 'ITEMS_CHANGED', mutation: 'CREATED', item: { id: 'i1' }, userId: 'user-1' },
+      {
+        changeType: 'ITEMS_CHANGED',
+        mutation: 'CREATED',
+        item: { id: 'i1' },
+        userId: 'user-1',
+      },
       mockClient,
     );
 
@@ -149,21 +173,31 @@ describe('useShoppingListSubscriptions', () => {
   });
 
   it('handles ITEMS_CHANGED Deleted mutation without animation', () => {
-    const { removeFromShoppingListItemsConnection } = require('#/apollo/utils/shoppingListCacheUpdaters');
+    const {
+      removeFromShoppingListItemsConnection,
+    } = require('#/apollo/utils/shoppingListCacheUpdaters');
 
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges')
+        customOnData = config.customOnData;
       return {};
     });
 
     renderHook(() => useShoppingListSubscriptions('user-1'));
 
-    const mockCache: any = { batch: jest.fn(({ update }: any) => update(mockCache)) };
+    const mockCache: any = {
+      batch: jest.fn(({ update }: any) => update(mockCache)),
+    };
     const mockClient = { cache: mockCache };
 
     customOnData(
-      { changeType: 'ITEMS_CHANGED', mutation: 'DELETED', item: { id: 'i1' }, userId: 'other-user' },
+      {
+        changeType: 'ITEMS_CHANGED',
+        mutation: 'DELETED',
+        item: { id: 'i1' },
+        userId: 'other-user',
+      },
       mockClient,
     );
 
@@ -171,11 +205,14 @@ describe('useShoppingListSubscriptions', () => {
   });
 
   it('handles ITEMS_BATCH_CLEARED', () => {
-    const { clearAllPurchasedItemsFromCache } = require('#/apollo/utils/shoppingListCacheUpdaters');
+    const {
+      clearAllPurchasedItemsFromCache,
+    } = require('#/apollo/utils/shoppingListCacheUpdaters');
 
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges')
+        customOnData = config.customOnData;
       return {};
     });
 
@@ -183,7 +220,11 @@ describe('useShoppingListSubscriptions', () => {
 
     const mockClient = { cache: {} };
     customOnData(
-      { changeType: 'ITEMS_BATCH_CLEARED', clearedItemIds: ['i1', 'i2'], userId: 'other-user' },
+      {
+        changeType: 'ITEMS_BATCH_CLEARED',
+        clearedItemIds: ['i1', 'i2'],
+        userId: 'other-user',
+      },
       mockClient,
     );
 
@@ -197,7 +238,8 @@ describe('useShoppingListSubscriptions', () => {
   it('does nothing for null payload', () => {
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges')
+        customOnData = config.customOnData;
       return {};
     });
 
@@ -209,13 +251,12 @@ describe('useShoppingListSubscriptions', () => {
   it('handles LIST_UPDATED for parent deleting', () => {
     // First call is the top-level guard (selectedShoppingListId) — return false
     // Second call is inside LIST_UPDATED case (node.id) — return true
-    mockIsParentDeleting
-      .mockReturnValueOnce(false)
-      .mockReturnValueOnce(true);
+    mockIsParentDeleting.mockReturnValueOnce(false).mockReturnValueOnce(true);
 
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges')
+        customOnData = config.customOnData;
       return {};
     });
 
@@ -229,35 +270,52 @@ describe('useShoppingListSubscriptions', () => {
     const mockClient = { cache: mockCache };
 
     customOnData(
-      { changeType: ShoppingListChangeType.ListUpdated, shoppingList: { id: 'list-1' } },
+      {
+        changeType: ShoppingListChangeType.ListUpdated,
+        shoppingList: { id: 'list-1' },
+      },
       mockClient,
     );
 
-    expect(mockCache.evict).toHaveBeenCalled();
-    expect(mockCache.gc).toHaveBeenCalled();
+    const { safeEvict } = require('#/apollo/utils/cacheUpdaters');
+    expect(safeEvict).toHaveBeenCalledWith(mockCache, 'ShoppingList', 'list-1');
   });
 
   it('passes scheduleAnimation callback for Deleted items', () => {
-    const { removeFromShoppingListItemsConnection } = require('#/apollo/utils/shoppingListCacheUpdaters');
+    const {
+      removeFromShoppingListItemsConnection,
+    } = require('#/apollo/utils/shoppingListCacheUpdaters');
 
     let customOnData: any;
     mockRegister.mockImplementation((config: any) => {
-      if (config.subscriptionName === 'ShoppingListChanges') customOnData = config.customOnData;
+      if (config.subscriptionName === 'ShoppingListChanges')
+        customOnData = config.customOnData;
       return {};
     });
 
     const scheduleAnimation = jest.fn((id, dir, onComplete) => onComplete());
     renderHook(() => useShoppingListSubscriptions('user-1', scheduleAnimation));
 
-    const mockCache: any = { batch: jest.fn(({ update }: any) => update(mockCache)) };
+    const mockCache: any = {
+      batch: jest.fn(({ update }: any) => update(mockCache)),
+    };
     const mockClient = { cache: mockCache };
 
     customOnData(
-      { changeType: 'ITEMS_CHANGED', mutation: 'DELETED', item: { id: 'i1' }, userId: 'other-user' },
+      {
+        changeType: 'ITEMS_CHANGED',
+        mutation: 'DELETED',
+        item: { id: 'i1' },
+        userId: 'other-user',
+      },
       mockClient,
     );
 
-    expect(scheduleAnimation).toHaveBeenCalledWith('i1', -1, expect.any(Function));
+    expect(scheduleAnimation).toHaveBeenCalledWith(
+      'i1',
+      -1,
+      expect.any(Function),
+    );
     expect(removeFromShoppingListItemsConnection).toHaveBeenCalled();
   });
 });

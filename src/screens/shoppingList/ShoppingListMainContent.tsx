@@ -98,7 +98,12 @@ export const ShoppingListMainContent: React.FC<
   const { theme } = useUnistyles();
 
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
-  const { scrollHandler, isScrolledDown } = useCollapsibleScroll();
+  const {
+    scrollHandler,
+    scrollEndDragHandler,
+    momentumEndHandler,
+    isScrolledDown,
+  } = useCollapsibleScroll();
 
   useAnimatedReaction(
     () => isScrolledDown.value,
@@ -283,6 +288,8 @@ export const ShoppingListMainContent: React.FC<
     searchQuery,
     // Scroll direction tracking — threaded to FlashList via data context
     onScroll: scrollHandler,
+    onScrollEndDrag: scrollEndDragHandler,
+    onMomentumScrollEnd: momentumEndHandler,
     scrollEventThrottle: 16,
   };
 
@@ -450,6 +457,7 @@ export const ShoppingListMainContent: React.FC<
             stepIndex={stepConfig.stepIndex}
             totalSteps={TUTORIAL_TOTAL_STEPS}
             onDismiss={tutorial.skipAll}
+            onNext={tutorial.skipCurrentStep}
             onTargetPress={handleTargetPress}
             allowGesturePassthrough={isSwipeStep}
           />

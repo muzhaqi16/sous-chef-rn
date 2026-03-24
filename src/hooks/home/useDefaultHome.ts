@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useApolloClient } from '@apollo/client/react';
+import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
 import { useGetHomesLazyQuery, useSetDefaultHomeMutation } from '#generated';
 import {
   useAppStore,
@@ -30,7 +31,9 @@ export const useDefaultHome = () => {
     selectedPantryId,
     setSelectedPantryId,
   } = useAppStore(useShallow(selectPantryState));
-  const canAttemptQueries = useAppStore(state => !!(state.accessToken || state.refreshToken) && !state.isLoggingOut);
+  const canAttemptQueries = useAppStore(
+    state => !!(state.accessToken || state.refreshToken) && !state.isLoggingOut,
+  );
 
   // Track if we've already initialized defaults to prevent cascading re-renders
   const hasInitializedRef = useRef(false);
@@ -158,23 +161,13 @@ export const useDefaultHome = () => {
 
       // Evict stale Home and Pantry entities from Apollo cache
       // This prevents cache-only queries from returning deleted entities
-      const homeIdentifier = client.cache.identify({
-        __typename: 'Home',
-        id: selectedHomeId,
-      });
-      if (homeIdentifier) {
-        client.cache.evict({ id: homeIdentifier });
-      }
+      const itemsToEvict: Array<{ typename: string; id: string }> = [
+        { typename: 'Home', id: selectedHomeId },
+      ];
       if (selectedPantryId) {
-        const pantryIdentifier = client.cache.identify({
-          __typename: 'Pantry',
-          id: selectedPantryId,
-        });
-        if (pantryIdentifier) {
-          client.cache.evict({ id: pantryIdentifier });
-        }
+        itemsToEvict.push({ typename: 'Pantry', id: selectedPantryId });
       }
-      client.cache.gc();
+      safeEvictMany(client.cache, itemsToEvict);
 
       setSelectedHomeId(null);
       setSelectedPantryId(null);

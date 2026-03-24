@@ -26,7 +26,6 @@ import { LocationFilter } from '#utils/pantryFilters';
 import { SearchBar } from '../molecules/SearchBar';
 import { FilterTabs } from '../molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '../molecules/FilterTabs/types';
-import { SectionHeader } from '../molecules/SectionHeader';
 import { PantryItemCard, type ItemVariant } from './PantryItemCard';
 import { PantryHeader } from './PantryHeader';
 import { PantrySortModal } from './PantrySortModal';
@@ -142,6 +141,7 @@ interface PantryContentProps {
   onSettingsPress?: () => void;
   onAnalyticsPress?: () => void;
   onLowStockNavigate?: () => void;
+  onExpiringNavigate?: () => void;
 
   // List actions
   onRefresh?: () => void;
@@ -182,6 +182,10 @@ interface PantryContentProps {
 
   /** Scroll handler for tab bar direction tracking */
   scrollHandler?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /** Shows tab bar when drag ends without momentum */
+  onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /** Shows tab bar when momentum scrolling ends */
+  onMomentumScrollEnd?: () => void;
 }
 
 export interface PantryContentRef {
@@ -609,6 +613,7 @@ export const PantryContent = React.forwardRef<
       onSettingsPress,
       onAnalyticsPress,
       onLowStockNavigate,
+      onExpiringNavigate,
       totalCount,
       onAddItem,
       hasMore = false,
@@ -622,6 +627,8 @@ export const PantryContent = React.forwardRef<
       onHomeBadgeLayout,
       onSettingsIconLayout,
       scrollHandler,
+      onScrollEndDrag,
+      onMomentumScrollEnd,
     },
     ref,
   ) => {
@@ -790,12 +797,6 @@ export const PantryContent = React.forwardRef<
       ];
     })();
 
-    const sectionTitle = (() => {
-      const activeTab = tabs.find(tab => tab.id === locationFilter);
-      const label = activeTab?.label ?? 'All';
-      return `${label.toUpperCase()} ITEMS`;
-    })();
-
     // Stable extraData — string avoids new array reference every render
     const extraData = `${sortOption}-${sortDirection}-${locationFilter}`;
 
@@ -872,6 +873,8 @@ export const PantryContent = React.forwardRef<
                   contentContainerStyle={listContentStyle}
                   showsVerticalScrollIndicator={false}
                   onScroll={scrollHandler}
+                  onScrollEndDrag={onScrollEndDrag}
+                  onMomentumScrollEnd={onMomentumScrollEnd}
                   scrollEventThrottle={16}
                   refreshControl={
                     onRefresh ? (
@@ -949,20 +952,13 @@ export const PantryContent = React.forwardRef<
                             stats={stats}
                             onAnalyticsPress={onAnalyticsPress}
                             onLowStockNavigate={onLowStockNavigate}
+                            onExpiringNavigate={onExpiringNavigate}
+                            sortLabel={`Sort ${
+                              sortDirection === 'asc' ? '↑' : '↓'
+                            }`}
+                            onSortPress={openSortModal}
                           />
                         )}
-                      </View>
-                      {/* Section header — trim excess bottom padding for uniform spacing */}
-                      <View style={styles.sectionHeaderTrim}>
-                        <SectionHeader
-                          title={sectionTitle}
-                          variant="default"
-                          actionLabel={`Sort ${
-                            sortDirection === 'asc' ? '↑' : '↓'
-                          }`}
-                          onActionPress={openSortModal}
-                          testID="pantry-sort-button"
-                        />
                       </View>
                     </>
                   }
@@ -1037,10 +1033,6 @@ const styles = StyleSheet.create(theme => ({
   searchContainer: {
     paddingHorizontal: theme.spacing['3'],
     paddingBottom: theme.spacing.sm,
-  },
-  sectionHeaderTrim: {
-    marginTop: -theme.spacing.sm,
-    marginBottom: -(theme.spacing.md - theme.spacing.sm),
   },
   listContainer: {
     flex: 1,

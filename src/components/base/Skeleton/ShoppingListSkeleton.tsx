@@ -26,7 +26,7 @@ export const ShoppingListSkeleton: React.FC = () => (
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    paddingVertical: theme.spacing['3'],
+    paddingTop: theme.spacing.sm,
     gap: theme.spacing.sm,
   },
   itemList: {

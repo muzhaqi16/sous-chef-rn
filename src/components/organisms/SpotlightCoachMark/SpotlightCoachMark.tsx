@@ -15,6 +15,12 @@ import Animated, {
   withSpring,
   withDelay,
 } from 'react-native-reanimated';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from 'react-native-gesture-handler';
+import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SPRING, TIMING } from '#constants/animations';
 
@@ -39,6 +45,8 @@ export interface SpotlightCoachMarkProps {
   /** When true, renders as an overlay View instead of a Modal so gestures
    *  pass through the hole area to the underlying content (e.g. swipeable items). */
   allowGesturePassthrough?: boolean;
+  /** Called when the user swipes left to advance to the next step */
+  onNext?: () => void;
 }
 
 const HOLE_PADDING = 8;
@@ -47,6 +55,7 @@ const TOOLTIP_WIDTH = 275;
 const ARROW_SIZE = 10;
 // Border large enough to cover the entire screen around the hole
 const DIM_BORDER = 2000;
+const SWIPE_THRESHOLD = 50;
 
 /**
  * Spotlight overlay that highlights a target element with a dimmed background.
@@ -62,6 +71,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   stepIndex,
   totalSteps,
   allowGesturePassthrough,
+  onNext,
 }) => {
   const { theme } = useUnistyles();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
@@ -121,10 +131,24 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   // Determine if tooltip goes above or below
   const showAbove = adjustedRect.y > screenHeight / 2;
 
-  // Pulse animation — opacity-only breathing (no scale to stay within hole bounds)
+  // ── Shared values ──
   const pulseOpacity = useSharedValue(1);
   const tooltipTranslateY = useSharedValue(showAbove ? 10 : -10);
   const tooltipOpacity = useSharedValue(0);
+
+  // Detect step changes — cross-fade tooltip.
+  // Uses "adjusting state during render" pattern (no effect needed).
+  const [prevStepIndex, setPrevStepIndex] = useState(stepIndex);
+  if (prevStepIndex !== stepIndex) {
+    setPrevStepIndex(stepIndex);
+    // Cross-fade tooltip (fade out → position snaps while invisible → fade in)
+    tooltipOpacity.set(
+      withSequence(
+        withTiming(0, { duration: TIMING.INSTANT }),
+        withTiming(1, { duration: TIMING.FAST }),
+      ),
+    );
+  }
 
   useLayoutEffect(() => {
     // Pulse ring — gentle opacity breathing
@@ -149,6 +173,8 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
     tooltipTranslateY.set(withDelay(100, withSpring(0, SPRING.GENTLE)));
   }, [pulseOpacity, tooltipTranslateY, tooltipOpacity, showAbove]);
 
+  // ── Animated styles ──
+
   const pulseAnimatedStyle = useAnimatedStyle(() => ({
     opacity: pulseOpacity.value,
   }));
@@ -161,6 +187,22 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const handleTargetTap = () => {
     onTargetPress?.();
   };
+
+  // Swipe-to-advance gesture (left swipe → next step)
+  // Pre-defined RN-scope callback for scheduleOnRN (CLAUDE.md convention)
+  const handleSwipeAdvance = () => {
+    onNext?.();
+  };
+
+  const swipeGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .onEnd(event => {
+      'worklet';
+      if (event.translationX < -SWIPE_THRESHOLD) {
+        scheduleOnRN(handleSwipeAdvance);
+      }
+    })
+    .enabled(!!onNext && !allowGesturePassthrough);
 
   // Clamp tooltip horizontally within screen
   const tooltipHalf = TOOLTIP_WIDTH / 2;
@@ -181,148 +223,155 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   );
 
   const overlay = (
-    <View
-      ref={allowGesturePassthrough ? overlayRef : undefined}
-      collapsable={!allowGesturePassthrough}
-      style={[
-        styles.fullScreen,
-        allowGesturePassthrough && styles.passthroughContainer,
-      ]}
-      pointerEvents={allowGesturePassthrough ? 'box-none' : undefined}
-    >
-      {/* Dismiss overlay — covers entire screen, handles taps outside the hole */}
-      {!allowGesturePassthrough && (
-        <Pressable style={styles.dismissArea} onPress={onDismiss} />
-      )}
-
-      {/* Dim overlay with rounded hole — uses a massive border to dim the screen */}
+    <GestureDetector gesture={swipeGesture}>
       <View
+        ref={allowGesturePassthrough ? overlayRef : undefined}
+        collapsable={!allowGesturePassthrough}
         style={[
-          styles.dimWithHole,
-          {
-            top: holeTop - DIM_BORDER,
-            left: holeLeft - DIM_BORDER,
-            width: holeWidth + DIM_BORDER * 2,
-            height: holeHeight + DIM_BORDER * 2,
-            borderWidth: DIM_BORDER,
-            borderRadius: DIM_BORDER + borderRadius,
-          },
+          styles.fullScreen,
+          allowGesturePassthrough && styles.passthroughContainer,
         ]}
-        pointerEvents="none"
-      />
+        pointerEvents={allowGesturePassthrough ? 'box-none' : undefined}
+      >
+        {/* Dismiss overlay — covers entire screen, handles taps outside the hole */}
+        {!allowGesturePassthrough && (
+          <Pressable style={styles.dismissArea} onPress={onDismiss} />
+        )}
 
-      {/* Transparent hole tap target — omitted in passthrough mode so
-          gestures reach the underlying content (e.g. swipeable items) */}
-      {!allowGesturePassthrough && (
-        <Pressable
+        {/* Dim overlay with rounded hole — uses a massive border to dim the screen */}
+        <View
           style={[
-            styles.holeTap,
+            styles.dimWithHole,
+            {
+              top: holeTop - DIM_BORDER,
+              left: holeLeft - DIM_BORDER,
+              width: holeWidth + DIM_BORDER * 2,
+              height: holeHeight + DIM_BORDER * 2,
+              borderWidth: DIM_BORDER,
+              borderRadius: DIM_BORDER + borderRadius,
+            },
+          ]}
+          pointerEvents="none"
+        />
+
+        {/* Transparent hole tap target — omitted in passthrough mode so
+          gestures reach the underlying content (e.g. swipeable items) */}
+        {!allowGesturePassthrough && (
+          <Pressable
+            style={[
+              styles.holeTap,
+              {
+                top: holeTop,
+                left: holeLeft,
+                width: holeWidth,
+                height: holeHeight,
+                borderRadius,
+              },
+            ]}
+            onPress={handleTargetTap}
+            testID="spotlight-target"
+          />
+        )}
+
+        {/* Pulsing ring */}
+        <Animated.View
+          style={[
+            styles.pulseRing,
             {
               top: holeTop,
               left: holeLeft,
               width: holeWidth,
               height: holeHeight,
               borderRadius,
+              borderColor: theme.colors.primary,
             },
+            pulseAnimatedStyle,
           ]}
-          onPress={handleTargetTap}
-          testID="spotlight-target"
+          pointerEvents="none"
         />
-      )}
 
-      {/* Pulsing ring */}
-      <Animated.View
-        style={[
-          styles.pulseRing,
-          {
-            top: holeTop,
-            left: holeLeft,
-            width: holeWidth,
-            height: holeHeight,
-            borderRadius,
-            borderColor: theme.colors.primary,
-          },
-          pulseAnimatedStyle,
-        ]}
-        pointerEvents="none"
-      />
-
-      {/* Tooltip card */}
-      <Animated.View
-        style={[
-          styles.tooltip,
-          {
-            left: tooltipLeft,
-            width: TOOLTIP_WIDTH,
-            ...(showAbove
-              ? {
-                  bottom: screenHeight - holeTop + TOOLTIP_MARGIN + ARROW_SIZE,
-                }
-              : { top: holeBottom + TOOLTIP_MARGIN + ARROW_SIZE }),
-          },
-          tooltipAnimatedStyle,
-        ]}
-        pointerEvents={allowGesturePassthrough ? 'none' : undefined}
-      >
-        {/* Arrow */}
-        <View
+        {/* Tooltip card */}
+        <Animated.View
           style={[
-            styles.arrow,
+            styles.tooltip,
             {
-              left: arrowLeft,
-              backgroundColor: theme.colors.surface,
+              left: tooltipLeft,
+              width: TOOLTIP_WIDTH,
               ...(showAbove
-                ? { bottom: -ARROW_SIZE / 2 }
-                : { top: -ARROW_SIZE / 2 }),
+                ? {
+                    bottom:
+                      screenHeight - holeTop + TOOLTIP_MARGIN + ARROW_SIZE,
+                  }
+                : { top: holeBottom + TOOLTIP_MARGIN + ARROW_SIZE }),
             },
+            tooltipAnimatedStyle,
           ]}
-        />
+        >
+          {/* Arrow */}
+          <View
+            style={[
+              styles.arrow,
+              {
+                left: arrowLeft,
+                backgroundColor: theme.colors.surface,
+                ...(showAbove
+                  ? { bottom: -ARROW_SIZE / 2 }
+                  : { top: -ARROW_SIZE / 2 }),
+              },
+            ]}
+          />
 
-        <Text style={styles.tooltipTitle}>{title}</Text>
-        {subtitle ? (
-          <Text style={styles.tooltipSubtitle}>{subtitle}</Text>
-        ) : null}
-        {totalSteps != null && stepIndex != null && totalSteps > 1 ? (
-          <View style={styles.stepIndicator}>
-            {Array.from({ length: totalSteps }, (_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.stepDot,
-                  {
-                    backgroundColor:
-                      i === stepIndex
-                        ? theme.colors.primary
-                        : theme.colors.border,
-                  },
-                ]}
-              />
-            ))}
-          </View>
-        ) : null}
-      </Animated.View>
+          <Text style={styles.tooltipTitle}>{title}</Text>
+          {subtitle ? (
+            <Text style={styles.tooltipSubtitle}>{subtitle}</Text>
+          ) : null}
+          {totalSteps != null && stepIndex != null && totalSteps > 1 ? (
+            <View style={styles.stepIndicator}>
+              {Array.from({ length: totalSteps }, (_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.stepDot,
+                    {
+                      backgroundColor:
+                        i === stepIndex
+                          ? theme.colors.primary
+                          : theme.colors.border,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          ) : null}
+          {onNext ? (
+            <Pressable onPress={onNext} style={styles.nextButton} hitSlop={8}>
+              <Text style={styles.nextButtonText}>Next ›</Text>
+            </Pressable>
+          ) : null}
+        </Animated.View>
 
-      {/* Skip button — position adapts to avoid overlapping the target hole */}
-      <Pressable
-        onPress={onDismiss}
-        style={[
-          styles.skipButton,
-          // If hole overlaps the default skip position (top-right),
-          // move skip to the left side
-          holeTop < theme.spacing.xl * 3 &&
-          holeLeft + holeWidth > screenWidth / 2
-            ? { right: undefined, left: theme.spacing.lg }
-            : undefined,
-        ]}
-        hitSlop={12}
-        accessibilityRole="button"
-        accessibilityLabel="Skip tutorial"
-      >
-        <Text style={styles.skipText}>
-          {totalSteps != null && totalSteps > 1 ? 'Skip all' : 'Skip'}
-        </Text>
-      </Pressable>
-    </View>
+        {/* Skip button — position adapts to avoid overlapping the target hole */}
+        <Pressable
+          onPress={onDismiss}
+          style={[
+            styles.skipButton,
+            // If hole overlaps the default skip position (top-right),
+            // move skip to the left side
+            holeTop < theme.spacing.xl * 3 &&
+            holeLeft + holeWidth > screenWidth / 2
+              ? { right: undefined, left: theme.spacing.lg }
+              : undefined,
+          ]}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Skip tutorial"
+        >
+          <Text style={styles.skipText}>
+            {totalSteps != null && totalSteps > 1 ? 'Skip all' : 'Skip'}
+          </Text>
+        </Pressable>
+      </View>
+    </GestureDetector>
   );
 
   if (allowGesturePassthrough) {
@@ -351,7 +400,9 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
       navigationBarTranslucent
       onRequestClose={onDismiss}
     >
-      {overlay}
+      <GestureHandlerRootView style={styles.fullScreen}>
+        {overlay}
+      </GestureHandlerRootView>
     </Modal>
   );
 };
@@ -413,6 +464,17 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     gap: theme.spacing.xs,
     marginTop: theme.spacing.md,
+  },
+  nextButton: {
+    alignSelf: 'flex-end',
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  nextButtonText: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.primary,
   },
   stepDot: {
     width: 8,

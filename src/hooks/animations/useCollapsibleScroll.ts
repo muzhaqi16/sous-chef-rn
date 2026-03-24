@@ -16,6 +16,12 @@ const DIRECTION_THRESHOLD = 10;
 export interface UseCollapsibleScrollReturn {
   /** Attach to FlashList onScroll (regular JS callback, compatible with FlashList v2). */
   scrollHandler: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /** Attach to FlashList onScrollEndDrag — shows tab bar when drag ends without momentum. */
+  scrollEndDragHandler: (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => void;
+  /** Attach to FlashList onMomentumScrollEnd — shows tab bar when momentum ends. */
+  momentumEndHandler: () => void;
   /** true when scrolling down past the threshold — drive tab bar hide. */
   isScrolledDown: SharedValue<boolean>;
   /** Current scroll offset. */
@@ -48,5 +54,25 @@ export function useCollapsibleScroll(): UseCollapsibleScrollReturn {
     }
   };
 
-  return { scrollHandler, isScrolledDown, scrollY };
+  const scrollEndDragHandler = (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => {
+    // If velocity is near zero, no momentum will follow — show tab bar now
+    const velocity = event.nativeEvent.velocity?.y ?? 0;
+    if (Math.abs(velocity) < 0.5) {
+      isScrolledDown.set(false);
+    }
+  };
+
+  const momentumEndHandler = () => {
+    isScrolledDown.set(false);
+  };
+
+  return {
+    scrollHandler,
+    scrollEndDragHandler,
+    momentumEndHandler,
+    isScrolledDown,
+    scrollY,
+  };
 }

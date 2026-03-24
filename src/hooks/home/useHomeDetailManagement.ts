@@ -15,7 +15,10 @@ import {
 } from '#generated';
 import { MESSAGES } from '#/constants/messages';
 import { normalizeHome } from '#/utils/connectionUtils';
-import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import {
+  createRemoveFromParentConnectionUpdater,
+  safeEvict,
+} from '#/apollo/utils/cacheUpdaters';
 import {
   executeCacheUpdate,
   executeMutation,
@@ -193,10 +196,7 @@ export function useHomeDetailManagement(homeId: string) {
         if (!data?.leaveHome?.success) return;
 
         executeCacheUpdate(() => {
-          cache.evict({
-            id: cache.identify({ __typename: 'Home', id: homeId }),
-          });
-          cache.gc();
+          safeEvict(cache, 'Home', homeId);
         }, 'Cache update failed for leaveHome:');
       },
       onCompleted: data => {

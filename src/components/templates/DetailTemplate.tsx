@@ -11,6 +11,8 @@ interface DetailSection {
   title?: string;
   content: React.ReactNode;
   transparent?: boolean;
+  /** When true, section expands to fill available vertical space (useful for empty states) */
+  fill?: boolean;
 }
 
 interface DetailTemplateProps {
@@ -52,7 +54,11 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
       />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingVertical: theme.spacing.sm, paddingBottom: insets.bottom || theme.spacing.sm }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingVertical: theme.spacing.sm,
+          paddingBottom: insets.bottom || theme.spacing.sm,
+        }}
         refreshControl={
           onRefresh ? (
             <RefreshControl
@@ -68,9 +74,12 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
             style={[
               !section.transparent && commonStyles.shadow,
               section.transparent ? styles.transparentSection : styles.section,
+              section.fill && { flex: 1 },
             ]}
           >
-            {!!section.title && <Text style={styles.sectionTitle}>{section.title}</Text>}
+            {!!section.title && (
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+            )}
             {section.content}
           </View>
         ))}

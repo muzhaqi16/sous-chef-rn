@@ -49,6 +49,9 @@ export interface UseTutorialSequenceReturn {
   currentStep: TutorialStepConfig | null;
   /** Dismiss current step and advance to next */
   advance: () => void;
+  /** Advance without the transition gap — keeps the overlay mounted so the
+   *  spotlight can seamlessly move to the next target (used by swipe-to-advance). */
+  advanceInPlace: () => void;
   /** Dismiss all remaining steps */
   skipAll: () => void;
 }
@@ -127,6 +130,14 @@ export const useTutorialSequence = ({
     }, 400);
   };
 
+  const advanceInPlace = () => {
+    if (activeStepIndex === -1) return;
+    const step = stepsRef.current[activeStepIndex];
+    const key = buildStorageKey(userIdRef.current, step.featureId);
+    storage.set(key, true);
+    setGeneration(g => g + 1);
+  };
+
   const skipAll = () => {
     for (const step of stepsRef.current) {
       const key = buildStorageKey(userIdRef.current, step.featureId);
@@ -154,5 +165,5 @@ export const useTutorialSequence = ({
         }
       : null;
 
-  return { isActive, currentStep, advance, skipAll };
+  return { isActive, currentStep, advance, advanceInPlace, skipAll };
 };

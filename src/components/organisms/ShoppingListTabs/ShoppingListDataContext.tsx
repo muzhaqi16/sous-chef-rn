@@ -24,6 +24,8 @@ export interface ShoppingListTabData {
   isTransitioning: boolean;
   // Scroll direction tracking — threaded from screen to FlashList
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onMomentumScrollEnd?: () => void;
   scrollEventThrottle?: number;
   // Scrollable header content — rendered above the list as ListHeaderComponent
   listHeaderComponent?: React.ReactElement | null;

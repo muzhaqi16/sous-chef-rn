@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -10,24 +11,18 @@ interface AuthWrapperProps {
 }
 
 export const AuthWrapper = ({ children, testID }: AuthWrapperProps) => {
-  const keyboardVerticalOffset = Platform.select({ ios: 64, android: 0 });
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={keyboardVerticalOffset}
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scrollContainer}
+        bottomOffset={16}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.inner} testID={testID}>
-            {children}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        <View style={styles.inner} testID={testID}>
+          {children}
+        </View>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };
@@ -36,9 +31,6 @@ const styles = StyleSheet.create(theme => ({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  keyboardAvoid: {
-    flex: 1,
   },
   scrollContainer: {
     flexGrow: 1,

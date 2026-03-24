@@ -131,24 +131,47 @@ const RestockActionFields: React.FC<{
 }) => {
   const addAmount = parseFractionalInput(quantityInput);
 
+  // For dual-tracked items, show conversion to net weight unit (e.g. cups → grams)
   const conversion = useConversionPreview({
     pantryItemId: shared.pantryItemId,
     inputQuantity: addAmount,
     selectedUnitId: shared.activeUnitId,
     selectedUnitSymbol: shared.activeUnitSymbol,
-    trackingUnitId: shared.trackingUnitId,
-    trackingUnitSymbol: shared.trackingUnitSymbol,
-    availableInTrackingUnit: shared.trackingQuantity,
-    conversionRatio: shared.selectedUnitInfo?.conversionRatio ?? null,
+    trackingUnitId:
+      shared.isDualTracked && shared.isConvertedUnit
+        ? shared.netWeightUnitId!
+        : shared.trackingUnitId,
+    trackingUnitSymbol:
+      shared.isDualTracked && shared.isConvertedUnit
+        ? shared.netWeightUnitSymbol!
+        : shared.trackingUnitSymbol,
+    conversionRatio: shared.isDualTracked
+      ? null
+      : shared.selectedUnitInfo?.conversionRatio ?? null,
   });
 
-  const currentInUnit = shared.isConvertedUnit
-    ? conversion.availableInSelectedUnit
-    : shared.trackingQuantity;
+  // For dual-tracked items, show new total in net weight
+  const currentInUnit =
+    shared.isDualTracked && shared.isConvertedUnit
+      ? shared.remainingNetWeight
+      : shared.isConvertedUnit
+      ? shared.availableInSelectedUnit
+      : shared.trackingQuantity;
+
+  const newQuantitySymbol =
+    shared.isDualTracked && shared.isConvertedUnit
+      ? shared.netWeightUnitSymbol!
+      : shared.activeUnitSymbol;
 
   const newQuantity =
-    addAmount !== null && !isNaN(addAmount) && currentInUnit != null
-      ? currentInUnit + addAmount
+    addAmount !== null &&
+    !isNaN(addAmount) &&
+    currentInUnit != null &&
+    (shared.isDualTracked ? conversion.convertedValue != null : true)
+      ? currentInUnit +
+        (shared.isDualTracked && conversion.convertedValue != null
+          ? conversion.convertedValue
+          : addAmount)
       : null;
 
   return (
@@ -164,18 +187,23 @@ const RestockActionFields: React.FC<{
           useBottomSheetInput
           required
         />
-        {shared.isConvertedUnit ? (
-          <ConversionPreview
-            previewText={conversion.previewText}
-            loading={conversion.previewLoading}
-            confidence={shared.selectedUnitInfo?.conversionConfidence ?? null}
-          />
-        ) : null}
-        {newQuantity !== null ? (
-          <Text style={styles.newQuantityText}>
-            New quantity: {formatQuantity(newQuantity)}{' '}
-            {shared.activeUnitSymbol}
-          </Text>
+        {newQuantity !== null || shared.isConvertedUnit ? (
+          <View style={commonStyles.bottomSheetInfoRow}>
+            {newQuantity !== null ? (
+              <Text style={[styles.newQuantityText, { marginTop: 0 }]}>
+                New quantity: {formatQuantity(newQuantity)} {newQuantitySymbol}
+              </Text>
+            ) : null}
+            {shared.isConvertedUnit ? (
+              <ConversionPreview
+                previewText={conversion.previewText}
+                loading={conversion.previewLoading}
+                confidence={
+                  shared.selectedUnitInfo?.conversionConfidence ?? null
+                }
+              />
+            ) : null}
+          </View>
         ) : null}
         {shared.commonFractions != null && shared.commonFractions.length > 0 ? (
           <FractionQuickSelect

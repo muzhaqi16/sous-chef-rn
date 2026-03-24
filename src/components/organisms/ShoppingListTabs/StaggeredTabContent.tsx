@@ -39,6 +39,8 @@ interface StaggeredTabContentProps {
   listEmptyComponent?: ReactElement | ComponentType<any> | null;
   // Scroll direction tracking
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onScrollEndDrag?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onMomentumScrollEnd?: () => void;
   scrollEventThrottle?: number;
   // Scrollable header content
   listHeaderComponent?: React.ReactElement | null;
@@ -66,6 +68,8 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   onMoveToPantry,
   listEmptyComponent,
   onScroll,
+  onScrollEndDrag,
+  onMomentumScrollEnd,
   scrollEventThrottle,
   listHeaderComponent,
 }) => {
@@ -102,6 +106,8 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
         canMarkPurchased={canMarkPurchased}
         canReorderItems={canReorderItems}
         onScroll={onScroll}
+        onScrollEndDrag={onScrollEndDrag}
+        onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={scrollEventThrottle}
         ListHeaderComponent={listHeaderComponent}
       />

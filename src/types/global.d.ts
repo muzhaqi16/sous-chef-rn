@@ -2,6 +2,13 @@
  * Global type declarations for React Native APIs not in standard TypeScript types
  */
 
+declare module '*.svg' {
+  import React from 'react';
+  import { SvgProps } from 'react-native-svg';
+  const content: React.FC<SvgProps>;
+  export default content;
+}
+
 /**
  * Options for requestIdleCallback
  * @see https://reactnative.dev/docs/global-requestIdleCallback

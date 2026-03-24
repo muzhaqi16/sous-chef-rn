@@ -59,6 +59,7 @@ export function buildDirtyUpdateInput(
   dirtyFields: Record<string, boolean>,
   locationId: string | null,
   brandId: string | null,
+  unitSymbol?: string | null,
 ): UpdatePantryItemInput {
   const input: UpdatePantryItemInput = {};
 
@@ -112,11 +113,16 @@ export function buildDirtyUpdateInput(
       ? parseFloat(data.netWeight)
       : null;
   }
-  if (dirtyFields.netWeightUnitId) {
+  if (dirtyFields.netWeightUnit || dirtyFields.netWeightUnitId) {
     netWeightInput.netWeightUnitId = data.netWeightUnitId || null;
   }
   if (Object.keys(netWeightInput).length > 0) {
     input.netWeight = netWeightInput;
+  }
+
+  // Handle unit changes via UnitSpecInput (when unitId is unavailable)
+  if (dirtyFields.unit && unitSymbol?.trim()) {
+    input.unit = { unitSymbol: unitSymbol.trim() };
   }
 
   // Group brand fields into brand: BrandReferenceInput

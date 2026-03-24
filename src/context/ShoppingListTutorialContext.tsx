@@ -112,6 +112,8 @@ interface ShoppingListTutorialContextValue {
   registerRect: (key: TutorialRectKey, rect: TargetRect | null) => void;
   rects: Record<string, TargetRect | null>;
 
+  // Skip current spotlight step and advance to the next one
+  skipCurrentStep: () => void;
   // Dismiss entire tutorial
   skipAll: () => void;
 }
@@ -275,6 +277,27 @@ export function ShoppingListTutorialProvider({
 
   // ── Skip ──
 
+  const skipCurrentStep = () => {
+    const nextSpotlight: Partial<
+      Record<ShoppingListTutorialStep, ShoppingListTutorialStep>
+    > = {
+      [ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON]:
+        ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS,
+      [ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS]:
+        ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX,
+      [ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX]:
+        ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB,
+      [ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB]:
+        ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY,
+    };
+    const next = nextSpotlight[currentStep];
+    if (next) {
+      advanceTo(next);
+    } else {
+      markComplete();
+    }
+  };
+
   const skipAll = () => {
     markComplete();
     for (const oldId of OLD_TUTORIAL_IDS) {
@@ -301,6 +324,7 @@ export function ShoppingListTutorialProvider({
     notifyMoveToPantryTapped,
     registerRect,
     rects,
+    skipCurrentStep,
     skipAll,
   };
 

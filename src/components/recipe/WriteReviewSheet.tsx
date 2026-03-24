@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+  BottomSheetTextInput,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { StarRatingInput } from './StarRatingInput';
 import type { RecipeReviewFragment } from '#generated';
@@ -22,11 +23,15 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
   existingReview,
   onSubmit,
   onClose,
-  submitting }) => {
-  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
-    onDismiss: onClose,
-    snapPoints: ['55%'],
-    keyboardAware: true });
+  submitting,
+}) => {
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      visible,
+      onDismiss: onClose,
+      snapPoints: ['55%'],
+      keyboardBehavior: 'interactive',
+    });
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -43,15 +48,6 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
     }
   }
 
-  // Present/dismiss bottom sheet
-  useEffect(() => {
-    if (visible) {
-      ref.current?.present();
-    } else {
-      ref.current?.dismiss();
-    }
-  }, [visible, ref]);
-
   const handleSubmit = async () => {
     if (submitting || rating === 0) return;
     await onSubmit(rating, comment.trim() || undefined);
@@ -62,9 +58,7 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps} index={0}>
-      <BottomSheetFormScrollView
-        contentContainerStyle={[styles.content, contentContainerStyle]}
-      >
+      <BottomSheetView style={[styles.content, contentContainerStyle]}>
         <Text style={styles.title}>
           {isEditing ? 'Edit Review' : 'Write a Review'}
         </Text>
@@ -113,30 +107,35 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
             </Text>
           )}
         </Pressable>
-      </BottomSheetFormScrollView>
+      </BottomSheetView>
     </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    padding: theme.spacing.lg },
+    padding: theme.spacing.lg,
+  },
   title: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   ratingSection: {
     marginBottom: theme.spacing.lg,
     alignItems: 'center',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   label: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   commentSection: {
     marginBottom: theme.spacing.lg,
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   textInput: {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -145,19 +144,25 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
     minHeight: 100,
-    textAlignVertical: 'top' },
+    textAlignVertical: 'top',
+  },
   submitButton: {
     backgroundColor: theme.colors.primary,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
     alignItems: 'center',
     minHeight: 48,
-    justifyContent: 'center' },
+    justifyContent: 'center',
+  },
   submitButtonDisabled: {
-    opacity: 0.5 },
+    opacity: 0.5,
+  },
   submitText: {
     color: theme.colors.onPrimary,
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

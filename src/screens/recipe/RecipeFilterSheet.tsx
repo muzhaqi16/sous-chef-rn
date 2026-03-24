@@ -62,6 +62,7 @@ interface RecipeFilterSheetProps {
   activeFilters: RecipeFilters;
   setActiveFilters: React.Dispatch<React.SetStateAction<RecipeFilters>>;
   onSheetChange: (index: number) => void;
+  isIngredientSearch?: boolean;
 }
 
 // ── Component ──
@@ -71,6 +72,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
   activeFilters,
   setActiveFilters,
   onSheetChange,
+  isIngredientSearch = false,
 }) => {
   const { theme } = useUnistyles();
 
@@ -100,190 +102,218 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
       snapPoints={['75%', '90%']}
       onChange={handleChange}
       headerRight={
-        <View style={styles.filterHeaderActions}>
-          <Pressable
-            onPress={() => setDraftFilters(DEFAULT_FILTERS)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Clear all filters"
-          >
-            <Text style={styles.filterHeaderClearText}>Clear</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => sheetRef.current?.close()}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Apply filters"
-          >
-            <Icon
-              name="checkmark-circle"
-              size={24}
-              color={theme.colors.primary}
-            />
-          </Pressable>
-        </View>
+        isIngredientSearch ? undefined : (
+          <View style={styles.filterHeaderActions}>
+            <Pressable
+              onPress={() => setDraftFilters(DEFAULT_FILTERS)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Clear all filters"
+            >
+              <Text style={styles.filterHeaderClearText}>Clear</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => sheetRef.current?.close()}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Apply filters"
+            >
+              <Icon
+                name="checkmark-circle"
+                size={24}
+                color={theme.colors.primary}
+              />
+            </Pressable>
+          </View>
+        )
       }
     >
       {mounted ? (
         <>
-          {/* Diet Filter */}
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Diet</Text>
-            <Text style={styles.filterSectionSubtitle}>
-              Select all that apply
-            </Text>
-            <View style={styles.chipRow}>
-              {DIET_OPTIONS.map(diet => {
-                const isSelected = draftFilters.diet.includes(diet.value);
-                return (
+          {isIngredientSearch ? (
+            <View style={styles.infoBanner}>
+              <View style={styles.infoBannerIconCircle}>
+                <Ionicons
+                  name="information-circle"
+                  size={16}
+                  color={theme.colors.white}
+                />
+              </View>
+              <View style={styles.infoBannerTextContainer}>
+                <Text style={styles.infoBannerTitle}>
+                  Filters only apply to text search
+                </Text>
+                <Text style={styles.infoBannerSubtitle}>
+                  Use text search to apply filters
+                </Text>
+              </View>
+            </View>
+          ) : null}
+          <View
+            pointerEvents={isIngredientSearch ? 'none' : 'auto'}
+            style={isIngredientSearch ? styles.disabledContent : undefined}
+          >
+            {/* Diet Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Diet</Text>
+              <Text style={styles.filterSectionSubtitle}>
+                Select all that apply
+              </Text>
+              <View style={styles.chipRow}>
+                {DIET_OPTIONS.map(diet => {
+                  const isSelected = draftFilters.diet.includes(diet.value);
+                  return (
+                    <Pressable
+                      key={diet.value}
+                      style={({ pressed }) => [
+                        styles.filterChip,
+                        isSelected && styles.filterChipActive,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() =>
+                        setDraftFilters(prev => ({
+                          ...prev,
+                          diet: isSelected
+                            ? prev.diet.filter(d => d !== diet.value)
+                            : [...prev.diet, diet.value],
+                        }))
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          isSelected && styles.filterChipTextActive,
+                        ]}
+                      >
+                        {diet.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Intolerances Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>
+                Allergies & Intolerances
+              </Text>
+              <Text style={styles.filterSectionSubtitle}>
+                Select all that apply
+              </Text>
+              <View style={styles.checkboxGrid}>
+                {INTOLERANCE_OPTIONS.map(intolerance => {
+                  const isSelected = draftFilters.intolerances.includes(
+                    intolerance.value,
+                  );
+                  return (
+                    <Pressable
+                      key={intolerance.value}
+                      style={({ pressed }) => [
+                        styles.checkboxItem,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() =>
+                        setDraftFilters(prev => ({
+                          ...prev,
+                          intolerances: isSelected
+                            ? prev.intolerances.filter(
+                                i => i !== intolerance.value,
+                              )
+                            : [...prev.intolerances, intolerance.value],
+                        }))
+                      }
+                    >
+                      <Ionicons
+                        name={isSelected ? 'checkbox' : 'square-outline'}
+                        size={24}
+                        color={
+                          isSelected
+                            ? theme.colors.primary
+                            : theme.colors.textSecondary
+                        }
+                      />
+                      <Text style={styles.checkboxText}>
+                        {intolerance.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Meal Type Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Meal Type</Text>
+              <Text style={styles.filterSectionSubtitle}>Select one</Text>
+              <View style={styles.chipRow}>
+                {MEAL_TYPES.map(type => (
                   <Pressable
-                    key={diet.value}
+                    key={type}
                     style={({ pressed }) => [
                       styles.filterChip,
-                      isSelected && styles.filterChipActive,
+                      draftFilters.mealType === type.toLowerCase() &&
+                        styles.filterChipActive,
                       pressed && styles.pressed,
                     ]}
                     onPress={() =>
                       setDraftFilters(prev => ({
                         ...prev,
-                        diet: isSelected
-                          ? prev.diet.filter(d => d !== diet.value)
-                          : [...prev.diet, diet.value],
+                        mealType:
+                          prev.mealType === type.toLowerCase()
+                            ? null
+                            : type.toLowerCase(),
                       }))
                     }
                   >
                     <Text
                       style={[
                         styles.filterChipText,
-                        isSelected && styles.filterChipTextActive,
+                        draftFilters.mealType === type.toLowerCase() &&
+                          styles.filterChipTextActive,
                       ]}
                     >
-                      {diet.label}
+                      {type}
                     </Text>
                   </Pressable>
-                );
-              })}
+                ))}
+              </View>
             </View>
-          </View>
 
-          {/* Intolerances Filter */}
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>
-              Allergies & Intolerances
-            </Text>
-            <Text style={styles.filterSectionSubtitle}>
-              Select all that apply
-            </Text>
-            <View style={styles.checkboxGrid}>
-              {INTOLERANCE_OPTIONS.map(intolerance => {
-                const isSelected = draftFilters.intolerances.includes(
-                  intolerance.value,
-                );
-                return (
+            {/* Max Cook Time Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Max Cook Time</Text>
+              <Text style={styles.filterSectionSubtitle}>Select one</Text>
+              <View style={styles.chipRow}>
+                {COOK_TIMES.map(time => (
                   <Pressable
-                    key={intolerance.value}
+                    key={time.value}
                     style={({ pressed }) => [
-                      styles.checkboxItem,
+                      styles.filterChip,
+                      draftFilters.maxReadyTime === time.value &&
+                        styles.filterChipActive,
                       pressed && styles.pressed,
                     ]}
                     onPress={() =>
                       setDraftFilters(prev => ({
                         ...prev,
-                        intolerances: isSelected
-                          ? prev.intolerances.filter(
-                              i => i !== intolerance.value,
-                            )
-                          : [...prev.intolerances, intolerance.value],
+                        maxReadyTime:
+                          prev.maxReadyTime === time.value ? null : time.value,
                       }))
                     }
                   >
-                    <Ionicons
-                      name={isSelected ? 'checkbox' : 'square-outline'}
-                      size={24}
-                      color={
-                        isSelected
-                          ? theme.colors.primary
-                          : theme.colors.textSecondary
-                      }
-                    />
-                    <Text style={styles.checkboxText}>{intolerance.label}</Text>
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        draftFilters.maxReadyTime === time.value &&
+                          styles.filterChipTextActive,
+                      ]}
+                    >
+                      {time.label}
+                    </Text>
                   </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Meal Type Filter */}
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Meal Type</Text>
-            <Text style={styles.filterSectionSubtitle}>Select one</Text>
-            <View style={styles.chipRow}>
-              {MEAL_TYPES.map(type => (
-                <Pressable
-                  key={type}
-                  style={({ pressed }) => [
-                    styles.filterChip,
-                    draftFilters.mealType === type.toLowerCase() &&
-                      styles.filterChipActive,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() =>
-                    setDraftFilters(prev => ({
-                      ...prev,
-                      mealType:
-                        prev.mealType === type.toLowerCase()
-                          ? null
-                          : type.toLowerCase(),
-                    }))
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      draftFilters.mealType === type.toLowerCase() &&
-                        styles.filterChipTextActive,
-                    ]}
-                  >
-                    {type}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {/* Max Cook Time Filter */}
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Max Cook Time</Text>
-            <Text style={styles.filterSectionSubtitle}>Select one</Text>
-            <View style={styles.chipRow}>
-              {COOK_TIMES.map(time => (
-                <Pressable
-                  key={time.value}
-                  style={({ pressed }) => [
-                    styles.filterChip,
-                    draftFilters.maxReadyTime === time.value &&
-                      styles.filterChipActive,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={() =>
-                    setDraftFilters(prev => ({
-                      ...prev,
-                      maxReadyTime:
-                        prev.maxReadyTime === time.value ? null : time.value,
-                    }))
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      draftFilters.maxReadyTime === time.value &&
-                        styles.filterChipTextActive,
-                    ]}
-                  >
-                    {time.label}
-                  </Text>
-                </Pressable>
-              ))}
+                ))}
+              </View>
             </View>
           </View>
         </>
@@ -356,6 +386,40 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary + '1A',
+    borderRadius: theme.radii.md,
+    paddingVertical: theme.spacing.sm + 2,
+    paddingHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  infoBannerIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoBannerTextContainer: {
+    flex: 1,
+  },
+  infoBannerTitle: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+  },
+  infoBannerSubtitle: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  disabledContent: {
+    opacity: 0.4,
   },
   pressed: { opacity: theme.opacity.pressed },
 }));

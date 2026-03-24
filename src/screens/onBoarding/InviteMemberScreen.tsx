@@ -210,16 +210,12 @@ export const InviteMemberScreen = () => {
             onChangeText={setCurrentEmail}
             onSubmitEditing={addInvite}
           />
-          <Pressable
-            style={({ pressed }) => [
-              styles.addButton,
-              pressed && styles.pressed,
-            ]}
+          <Button
+            title="Add"
             onPress={addInvite}
             disabled={!currentEmail.trim()}
-          >
-            <Text style={styles.addButtonText}>Add</Text>
-          </Pressable>
+            size="medium"
+          />
         </View>
 
         <View style={styles.invitesList}>
@@ -286,22 +282,12 @@ const styles = StyleSheet.create(theme => ({
   },
   inputContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: theme.spacing.lg,
     gap: theme.spacing.sm,
   },
   emailInputContainer: {
     flex: 1,
-  },
-  addButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.lg,
-    justifyContent: 'center',
-    borderRadius: theme.radii.sm,
-  },
-  addButtonText: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
   invitesList: {
     flex: 1,

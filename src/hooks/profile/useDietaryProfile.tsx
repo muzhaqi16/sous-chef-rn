@@ -14,6 +14,7 @@ import {
 } from '#generated';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { useErrorService } from '#/services/errorService';
 
 export interface DietaryRestriction {
@@ -187,16 +188,8 @@ export const useDietaryProfile = () => {
         },
       });
 
-      // Step 2: Evict the entity from cache
-      cache.evict({
-        id: cache.identify({
-          __typename: 'DietaryRestriction',
-          id: restrictionId,
-        }),
-      });
-
-      // Step 3: CRITICAL - Garbage collect orphaned data
-      cache.gc();
+      // Step 2: Evict the entity and garbage collect
+      safeEvict(cache, 'DietaryRestriction', restrictionId);
     },
     onError: error => {
       const { message } = handleApolloError(error, {

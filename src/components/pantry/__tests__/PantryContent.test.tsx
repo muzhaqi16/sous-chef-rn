@@ -221,11 +221,12 @@ jest.mock('../../molecules/SectionHeader', () => ({
 }));
 
 jest.mock('../PantryAlertBar', () => ({
-  PantryAlertBar: ({ stats }: any) => {
+  PantryAlertBar: ({ stats, sortLabel }: any) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="pantry-alert-bar">
         <Text>Alert: {stats.expiringCount} expiring</Text>
+        {sortLabel ? <Text>{sortLabel}</Text> : null}
       </View>
     );
   },
@@ -303,11 +304,6 @@ describe('PantryContent', () => {
     expect(screen.getByText('Fridge')).toBeTruthy();
     expect(screen.getByText('Freezer')).toBeTruthy();
     expect(screen.getByText('Pantry')).toBeTruthy();
-  });
-
-  it('renders the section header with sort button', () => {
-    render(<PantryContent {...defaultProps} />);
-    expect(screen.getByText('ALL ITEMS')).toBeTruthy();
   });
 
   it('shows empty state when no items and no search query', () => {
@@ -407,8 +403,11 @@ describe('PantryContent', () => {
   // --- Additional branch coverage tests ---
 
   it('renders sort direction indicator as descending arrow', () => {
-    render(<PantryContent {...defaultProps} />);
-    // Default sortDirection is 'desc'
+    const items = [createMockPantryItem({ id: '1' })];
+    const stats = { totalItems: 1, expiringCount: 0, lowStockCount: 0 };
+    render(
+      <PantryContent {...defaultProps} items={items} stats={stats as any} />,
+    );
     expect(screen.getByText(/Sort/)).toBeTruthy();
   });
 
@@ -424,7 +423,15 @@ describe('PantryContent', () => {
       sortItems: jest.fn((items: any[]) => items),
     });
 
-    render(<PantryContent {...defaultProps} />);
+    const sortItems = [createMockPantryItem({ id: '1' })];
+    const stats = { totalItems: 1, expiringCount: 0, lowStockCount: 0 };
+    render(
+      <PantryContent
+        {...defaultProps}
+        items={sortItems}
+        stats={stats as any}
+      />,
+    );
     expect(screen.getByText(/Sort/)).toBeTruthy();
 
     // Restore
@@ -516,17 +523,6 @@ describe('PantryContent', () => {
     expect(screen.getByTestId('pantry-list')).toBeTruthy();
 
     useDeferredRender.mockReturnValue(true);
-  });
-
-  it('renders section header with specific location label', () => {
-    render(<PantryContent {...defaultProps} locationFilter={'fridge'} />);
-    expect(screen.getByText('FRIDGE ITEMS')).toBeTruthy();
-  });
-
-  it('renders section header with default All label for unknown filter', () => {
-    render(<PantryContent {...defaultProps} locationFilter={'unknown-loc'} />);
-    // Falls back to 'All' when activeTab is not found
-    expect(screen.getByText('ALL ITEMS')).toBeTruthy();
   });
 
   it('renders custom tabs when provided', () => {
