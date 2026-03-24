@@ -23,11 +23,6 @@ interface AlertCardProps {
   onDismiss: (id: number) => void;
 }
 
-/** Module-level dismiss callback for runOnJS (must not be inline per CLAUDE.md worklet convention) */
-function dismissEntry(onDismiss: (id: number) => void, id: number) {
-  onDismiss(id);
-}
-
 const AlertCard: React.FC<AlertCardProps> = ({
   entry,
   stackIndex,
@@ -36,6 +31,11 @@ const AlertCard: React.FC<AlertCardProps> = ({
   const scale = useSharedValue(ALERT.ENTER_SCALE_FROM);
   const opacity = useSharedValue(0);
   const dismissing = useRef(false);
+
+  // Closure avoids passing onDismiss (a function) through the worklet boundary where it would serialize to an object
+  const handleDismissEntry = () => {
+    onDismiss(entry.id);
+  };
 
   // Enter animation
   useEffect(() => {
@@ -54,7 +54,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
     scale.set(
       withTiming(ALERT.EXIT_SCALE_TO, { duration: TIMING.FAST }, finished => {
         if (finished) {
-          scheduleOnRN(dismissEntry, onDismiss, entry.id);
+          scheduleOnRN(handleDismissEntry);
         }
       }),
     );
@@ -132,6 +132,22 @@ const AlertCard: React.FC<AlertCardProps> = ({
   );
 };
 
+/** Dismiss the top alert by invoking its cancel button (or single button) callback. */
+function dismissTopAlert(
+  alerts: AlertEntry[],
+  onDismiss: (id: number) => void,
+) {
+  if (alerts.length === 0) return;
+  const topAlert = alerts[alerts.length - 1];
+  const cancelButton = topAlert.buttons.find(b => b.style === 'cancel');
+  if (cancelButton) {
+    cancelButton.onPress?.();
+  } else if (topAlert.buttons.length === 1) {
+    topAlert.buttons[0].onPress?.();
+  }
+  onDismiss(topAlert.id);
+}
+
 // ─── AlertStack ───────────────────────────────────────────────────────────────
 
 interface AlertStackProps {
@@ -158,17 +174,7 @@ const AlertStack: React.FC<AlertStackProps> = ({ alerts, onDismiss }) => {
   const visibleAlerts = alerts.slice(-ALERT.MAX_VISIBLE).reverse();
 
   const handleBackdropPress = () => {
-    // Dismiss top alert if it has a single button or a cancel button
-    if (alerts.length === 0) return;
-    const topAlert = alerts[alerts.length - 1];
-    const cancelButton = topAlert.buttons.find(b => b.style === 'cancel');
-    if (cancelButton) {
-      cancelButton.onPress?.();
-      onDismiss(topAlert.id);
-    } else if (topAlert.buttons.length === 1) {
-      topAlert.buttons[0].onPress?.();
-      onDismiss(topAlert.id);
-    }
+    dismissTopAlert(alerts, onDismiss);
   };
 
   return (
@@ -213,15 +219,7 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({ children }) => {
 
   // Handle Android hardware back button — dismiss top alert
   const handleRequestClose = () => {
-    if (alerts.length === 0) return;
-    const topAlert = alerts[alerts.length - 1];
-    const cancelButton = topAlert.buttons.find(b => b.style === 'cancel');
-    if (cancelButton) {
-      cancelButton.onPress?.();
-    } else if (topAlert.buttons.length === 1) {
-      topAlert.buttons[0].onPress?.();
-    }
-    handleDismiss(topAlert.id);
+    dismissTopAlert(alerts, handleDismiss);
   };
 
   return (

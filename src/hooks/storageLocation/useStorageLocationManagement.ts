@@ -9,6 +9,7 @@ import {
   UpdateStorageLocationInput,
 } from '#generated';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
+import { extractNodes } from '#/utils/connectionUtils';
 import {
   createRemoveFromQueryConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -226,9 +227,7 @@ export function useStorageLocationManagement(
   };
 
   // Preserve data even when query fails to prevent cascade failures
-  const locations = usePreservedArrayData(
-    data?.storageLocations?.edges?.map(e => e.node),
-  );
+  const locations = usePreservedArrayData(extractNodes(data?.storageLocations));
   const treeFromQuery = usePreservedArrayData(treeData?.storageLocationTree);
 
   // Build tree from flat list if tree query returns empty

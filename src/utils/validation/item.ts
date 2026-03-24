@@ -41,6 +41,16 @@ export const shelfLifeDaysRule = number()
   .max(3650, 'Shelf life cannot exceed 10 years')
   .optional();
 
+// Shelf life once opened validation (in days)
+export const shelfLifeOpenedDaysRule = number()
+  .transform((value, originalValue) =>
+    String(originalValue).trim() === '' ? undefined : value,
+  )
+  .integer('Must be a whole number')
+  .min(1, 'Opened shelf life must be at least 1 day')
+  .max(3650, 'Opened shelf life cannot exceed 10 years')
+  .optional();
+
 // Display item size validation
 export const displayItemSizeRule = string()
   .max(50, 'Display size cannot exceed 50 characters')
@@ -160,6 +170,7 @@ export const createItemSchema = object({
   type: string().nullable().optional(),
   storageState: string().nullable().optional(),
   shelfLifeDays: shelfLifeDaysRule,
+  shelfLifeOpenedDays: shelfLifeOpenedDaysRule,
   baseDimension: string().nullable().optional(),
   defaultConsumeIncrement: number()
     .transform((value, originalValue) =>

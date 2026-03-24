@@ -127,6 +127,11 @@ module.exports = {
           'Do not pass inline functions to scheduleOnRN — define the callback in RN runtime scope first. Inline functions inside worklets cause native crashes on Android.',
       },
       {
+        selector: 'CallExpression[callee.name="scheduleOnRN"][arguments.2]',
+        message:
+          'scheduleOnRN should have at most 2 arguments (function + one primitive). Functions cannot be serialized across the worklet boundary — capture them via RN-scope closure instead.',
+      },
+      {
         selector:
           ':matches(Property[key.name="shadowColor"], Property[key.name="shadowOffset"], Property[key.name="shadowOpacity"], Property[key.name="shadowRadius"])',
         message:

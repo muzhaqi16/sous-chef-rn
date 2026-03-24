@@ -20,6 +20,7 @@ export interface ScannedItem {
   type?: string;
   storageState?: string;
   shelfLifeDays?: number;
+  shelfLifeOpenedDays?: number;
   tags?: string[];
   categories?: Array<{ id: string; name: string; isPrimary?: boolean }>;
 }

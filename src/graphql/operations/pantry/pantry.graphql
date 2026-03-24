@@ -597,6 +597,9 @@ mutation OpenPantryItemBatch($input: OpenBatchInput!) {
     code
     pantryItem {
       ...PantryItemDisplay
+      batches {
+        ...PantryItemBatchFragment
+      }
     }
   }
 }

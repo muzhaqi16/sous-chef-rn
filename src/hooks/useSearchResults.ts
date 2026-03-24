@@ -50,6 +50,7 @@ const convertToScannedItem = (
     type?: string | null;
     storageState?: string | null;
     shelfLifeDays?: number | null;
+    shelfLifeOpenedDays?: number | null;
     tags?: string[] | null;
     displayUnit?: {
       id: string;
@@ -137,6 +138,7 @@ const convertToScannedItem = (
     type: item.type || undefined,
     storageState: item.storageState || undefined,
     shelfLifeDays: item.shelfLifeDays ?? undefined,
+    shelfLifeOpenedDays: item.shelfLifeOpenedDays ?? undefined,
     tags: item.tags ?? undefined,
     categories: item.categories?.map(c => ({
       id: c.category.id,
@@ -237,6 +239,8 @@ function buildCorrectedScannedItem(
     type: (formData.type as string) || original.type,
     storageState: (formData.storageState as string) || original.storageState,
     shelfLifeDays: (formData.shelfLifeDays as number) ?? original.shelfLifeDays,
+    shelfLifeOpenedDays:
+      (formData.shelfLifeOpenedDays as number) ?? original.shelfLifeOpenedDays,
     tags: (formData.tags as string[]) || original.tags,
   };
 }
@@ -479,11 +483,15 @@ export const useSearchResults = (barcode: string, format?: string) => {
             }
           : undefined,
       productDetails:
-        formData.primaryUpc || formData.vendor || formData.shelfLifeDays
+        formData.primaryUpc ||
+        formData.vendor ||
+        formData.shelfLifeDays ||
+        formData.shelfLifeOpenedDays
           ? {
               primaryUpc: formData.primaryUpc || undefined,
               vendor: formData.vendor || undefined,
               shelfLifeDays: formData.shelfLifeDays || undefined,
+              shelfLifeOpenedDays: formData.shelfLifeOpenedDays || undefined,
             }
           : undefined,
       packageInfo:

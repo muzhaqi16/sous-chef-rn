@@ -30,11 +30,10 @@ describe('executeMutation', () => {
     expect(result).toBe(false);
   });
 
-  it('logs to console only in __DEV__ when given a string', async () => {
+  it('reports error via errorService when given a string', async () => {
     const err = new Error('oops');
     await executeMutation(() => Promise.reject(err), 'ctx');
-    // In test env __DEV__ is true, so console.error should be called
-    expect(console.error).toHaveBeenCalledWith('ctx', err);
+    expect(mockReportError).toHaveBeenCalledWith(err, { operation: 'ctx' });
   });
 
   it('calls onError callback when given a function', async () => {

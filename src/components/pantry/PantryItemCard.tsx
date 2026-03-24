@@ -65,26 +65,26 @@ const ExpirationText = React.memo<{
  * Always renders <Animated.View> so the React tree structure never changes,
  * preventing image flicker caused by View → Animated.View swaps.
  */
+const SLIDE_INITIAL = { translateX: 0, opacity: 1 };
+
 const SlideAnimatedWrapper: React.FC<{
   itemId: string;
   onDelete: (id: string) => void;
   children: (handleDelete: () => void) => React.ReactNode;
 }> = ({ itemId, onDelete, children }) => {
-  const translateX = useSharedValue(0);
-  const slideOpacity = useSharedValue(1);
+  // Consolidated into 2 shared values (from 3) to reduce Reanimated bridge overhead per cell
+  const slide = useSharedValue(SLIDE_INITIAL);
   const isAnimating = useSharedValue(false);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.get() }],
-    opacity: slideOpacity.get(),
+    transform: [{ translateX: slide.get().translateX }],
+    opacity: slide.get().opacity,
   }));
 
   // Synchronous reset on FlashList cell recycling — fires during render (before paint)
   useRecyclingState(undefined, [itemId], () => {
-    cancelAnimation(translateX);
-    cancelAnimation(slideOpacity);
-    translateX.set(0);
-    slideOpacity.set(1);
+    cancelAnimation(slide);
+    slide.set(SLIDE_INITIAL);
     isAnimating.set(false);
   });
 
@@ -102,17 +102,21 @@ const SlideAnimatedWrapper: React.FC<{
       easing: Easing.bezier(0.25, 0.1, 0.25, 1),
     };
 
-    slideOpacity.set(
-      withTiming(SLIDE_PRESETS.exitWithFade.opacityTarget, config),
-    );
-    translateX.set(
-      withTiming(SCREEN_WIDTH, config, finished => {
-        'worklet';
-        isAnimating.set(false);
-        if (finished) {
-          scheduleOnRN(doDelete);
-        }
-      }),
+    slide.set(
+      withTiming(
+        {
+          translateX: SCREEN_WIDTH,
+          opacity: SLIDE_PRESETS.exitWithFade.opacityTarget,
+        },
+        config,
+        finished => {
+          'worklet';
+          isAnimating.set(false);
+          if (finished) {
+            scheduleOnRN(doDelete);
+          }
+        },
+      ),
     );
   };
 

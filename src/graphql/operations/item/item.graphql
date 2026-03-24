@@ -16,6 +16,7 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
         type
         storageState
         shelfLifeDays
+        shelfLifeOpenedDays
         tags
         displayUnit {
           id
@@ -78,6 +79,7 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: String) {
         type
         storageState
         shelfLifeDays
+        shelfLifeOpenedDays
         tags
         displayUnit {
           id
@@ -255,6 +257,7 @@ mutation CreateItem($input: CreateItemInput!) {
       type
       storageState
       shelfLifeDays
+      shelfLifeOpenedDays
       imageUrl
       tags
       brands {

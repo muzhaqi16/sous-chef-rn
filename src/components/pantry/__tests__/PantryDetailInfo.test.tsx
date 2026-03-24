@@ -10,7 +10,10 @@ jest.mock('#hooks/pantry/usePantryItemTransformation', () => ({
   }),
   formatAcquisitionMethod: jest.fn((m: string | null | undefined) => {
     if (!m) return null;
-    return m.split('_').map((w: string) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+    return m
+      .split('_')
+      .map((w: string) => w.charAt(0) + w.slice(1).toLowerCase())
+      .join(' ');
   }),
   formatCurrency: jest.fn((a: number | null | undefined) => {
     if (a == null || a <= 0) return null;
@@ -60,6 +63,8 @@ describe('PantryDetailInfo', () => {
     remainingNetWeightText: null as string | null,
     quantityBreakdownText: null as string | null,
     packageBreakdownText: null as string | null,
+    shelfLifeDays: null as number | null | undefined,
+    shelfLifeOpenedDays: null as number | null | undefined,
   };
 
   it('always renders Quantity row', () => {
@@ -245,5 +250,28 @@ describe('PantryDetailInfo', () => {
       />,
     );
     expect(screen.getByText('Net Weight')).toBeTruthy();
+  });
+
+  it('renders Shelf Life row with both unopened and opened days', () => {
+    render(
+      <PantryDetailInfo
+        {...defaultProps}
+        shelfLifeDays={365}
+        shelfLifeOpenedDays={180}
+      />,
+    );
+    expect(screen.getByText('Shelf Life')).toBeTruthy();
+    expect(screen.getByText('365d (180d once opened)')).toBeTruthy();
+  });
+
+  it('renders Shelf Life row with only unopened days', () => {
+    render(<PantryDetailInfo {...defaultProps} shelfLifeDays={365} />);
+    expect(screen.getByText('Shelf Life')).toBeTruthy();
+    expect(screen.getByText('365 days')).toBeTruthy();
+  });
+
+  it('does not render Shelf Life row when both are null', () => {
+    render(<PantryDetailInfo {...defaultProps} />);
+    expect(screen.queryByText('Shelf Life')).toBeNull();
   });
 });

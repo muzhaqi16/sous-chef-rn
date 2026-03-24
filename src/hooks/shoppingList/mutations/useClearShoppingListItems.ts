@@ -62,7 +62,6 @@ async function executeClearItems(
       // Items were evicted from cache — refetch to restore authoritative state
       await refetch();
       isClearingRef.current = false;
-      throw error; // Re-throw to propagate to caller
     },
   );
 

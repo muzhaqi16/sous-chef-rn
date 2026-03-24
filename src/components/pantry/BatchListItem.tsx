@@ -71,14 +71,23 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
         </Text>
 
         {expiryInfo ? (
-          <Text
-            style={[
-              styles.expiryText,
-              expiryInfo.isExpired && styles.expiryTextExpired,
-            ]}
-          >
-            {expiryInfo.text}
-          </Text>
+          <View style={styles.expiryRow}>
+            <Text
+              style={[
+                styles.expiryText,
+                expiryInfo.isExpired && styles.expiryTextExpired,
+              ]}
+            >
+              {expiryInfo.text}
+            </Text>
+            {!!batch.expiresAtIsManual && (
+              <Icon
+                name="lock-closed-outline"
+                size={12}
+                color={theme.colors.textTertiary}
+              />
+            )}
+          </View>
         ) : null}
 
         {batch.store?.name ? (
@@ -131,11 +140,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               ]}
               hitSlop={8}
             >
-              <Icon
-                name="trash-outline"
-                size={18}
-                color={theme.colors.error}
-              />
+              <Icon name="trash-outline" size={18} color={theme.colors.error} />
             </Pressable>
           )}
         </View>
@@ -151,6 +156,8 @@ export const BatchListItem = React.memo(
     prev.batch.status === next.batch.status &&
     prev.batch.quantity === next.batch.quantity &&
     prev.batch.isOpened === next.batch.isOpened &&
+    prev.batch.expiresAt === next.batch.expiresAt &&
+    prev.batch.expiresAtIsManual === next.batch.expiresAtIsManual &&
     prev.unitSymbol === next.unitSymbol,
 );
 
@@ -215,10 +222,15 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     marginTop: 2,
   },
+  expiryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginTop: 2,
+  },
   expiryText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.warning,
-    marginTop: 2,
   },
   expiryTextExpired: {
     color: theme.colors.error,

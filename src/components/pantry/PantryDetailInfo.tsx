@@ -21,6 +21,8 @@ interface PantryDetailInfoProps {
   remainingNetWeightText: string | null;
   quantityBreakdownText: string | null;
   packageBreakdownText: string | null;
+  shelfLifeDays: number | null | undefined;
+  shelfLifeOpenedDays: number | null | undefined;
   onCorrectWeight?: () => void;
 }
 
@@ -31,6 +33,8 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   remainingNetWeightText,
   quantityBreakdownText,
   packageBreakdownText,
+  shelfLifeDays,
+  shelfLifeOpenedDays,
   onCorrectWeight,
 }) => {
   const { theme } = useUnistyles();
@@ -110,6 +114,25 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           label="Package"
           value={packageBreakdownText}
           icon="layers-outline"
+          showColon={false}
+          labelStyle={styles.labelText}
+          valueStyle={styles.valueText}
+          containerStyle={styles.rowContainer}
+        />
+      )}
+
+      {/* Shelf Life Row */}
+      {(shelfLifeDays != null || shelfLifeOpenedDays != null) && (
+        <InfoRow
+          label="Shelf Life"
+          value={
+            shelfLifeOpenedDays != null && shelfLifeDays != null
+              ? `${shelfLifeDays}d (${shelfLifeOpenedDays}d once opened)`
+              : shelfLifeDays != null
+              ? `${shelfLifeDays} days`
+              : `${shelfLifeOpenedDays}d once opened`
+          }
+          icon="timer-outline"
           showColon={false}
           labelStyle={styles.labelText}
           valueStyle={styles.valueText}

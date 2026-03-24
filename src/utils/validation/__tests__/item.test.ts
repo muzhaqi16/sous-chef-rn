@@ -4,6 +4,7 @@ import {
   upcRule,
   skuRule,
   shelfLifeDaysRule,
+  shelfLifeOpenedDaysRule,
   tagsRule,
   createItemSchema,
 } from '../item';
@@ -130,6 +131,33 @@ describe('item validation', () => {
     });
   });
 
+  describe('shelfLifeOpenedDaysRule', () => {
+    it('accepts valid days', async () => {
+      expect(await validateRule(shelfLifeOpenedDaysRule, 30)).toBeNull();
+      expect(await validateRule(shelfLifeOpenedDaysRule, 1)).toBeNull();
+      expect(await validateRule(shelfLifeOpenedDaysRule, 3650)).toBeNull();
+    });
+
+    it('rejects 0 days', async () => {
+      const msg = await validateRule(shelfLifeOpenedDaysRule, 0);
+      expect(msg).toBeTruthy();
+    });
+
+    it('rejects over 3650 days', async () => {
+      const msg = await validateRule(shelfLifeOpenedDaysRule, 3651);
+      expect(msg).toContain('10 years');
+    });
+
+    it('rejects non-integer', async () => {
+      const msg = await validateRule(shelfLifeOpenedDaysRule, 1.5);
+      expect(msg).toBeTruthy();
+    });
+
+    it('allows undefined (optional)', async () => {
+      expect(await validateRule(shelfLifeOpenedDaysRule, undefined)).toBeNull();
+    });
+  });
+
   describe('tagsRule', () => {
     it('accepts valid tags', async () => {
       expect(await validateRule(tagsRule, ['organic', 'fresh'])).toBeNull();
@@ -158,6 +186,7 @@ describe('item validation', () => {
         description: 'Fresh organic milk',
         upc: '123456789012',
         shelfLifeDays: 14,
+        shelfLifeOpenedDays: 7,
         tags: ['organic', 'dairy'],
         categoryIds: ['cat-1'],
       };

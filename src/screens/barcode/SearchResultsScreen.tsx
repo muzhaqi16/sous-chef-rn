@@ -35,6 +35,7 @@ function buildInitialDataFromItem(item: ScannedItem): AddItemFormInitialData {
     type: item.type,
     storageState: item.storageState,
     shelfLifeDays: item.shelfLifeDays,
+    shelfLifeOpenedDays: item.shelfLifeOpenedDays,
     tags: item.tags,
     categoryIds: item.categories?.map(c => c.id),
   };

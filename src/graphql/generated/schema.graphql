@@ -2912,6 +2912,7 @@ type Item {
   servingSizeUnit: String
   servingsPerPackage: Int
   shelfLifeDays: Int
+  shelfLifeOpenedDays: Int
   showInOnboarding: Boolean!
   status: ItemStatus!
   storageState: StorageState!
@@ -5416,6 +5417,7 @@ type PantryItemBatch {
   createdAt: DateTime!
   depletedAt: DateTime
   expiresAt: DateTime
+  expiresAtIsManual: Boolean!
   id: ID!
   isOpened: Boolean!
   notes: String
@@ -5829,6 +5831,7 @@ input ProductDetailsInput {
   alternateUpcs: [String!]
   primaryUpc: String
   shelfLifeDays: Int
+  shelfLifeOpenedDays: Int
   vendor: String
 }
 
@@ -6055,9 +6058,23 @@ type Query {
   adminHomes(after: String, before: String, filters: HomeFilters, first: Int, last: Int, orderBy: HomeOrderBy): HomeConnection!
   """
   List item unit conversions with optional filters (admin)
-  Supports filtering by item, source, verification status, and units
+  Supports filtering by item, source, verification status, and units.
+  By default only returns cross-type conversions (e.g., VOLUME→WEIGHT).
+  Same-type conversions are calculated from standard unit factors.
   """
-  adminItemUnitConversions(fromUnitId: ID, isVerified: Boolean, itemId: ID, limit: Int, offset: Int, source: ConversionSource, toUnitId: ID): AdminItemUnitConversionsResult!
+  adminItemUnitConversions(
+    """
+    When true (default), only returns cross-type conversions. Set to false to include same-type conversions.
+    """
+    crossTypeOnly: Boolean
+    fromUnitId: ID
+    isVerified: Boolean
+    itemId: ID
+    limit: Int
+    offset: Int
+    source: ConversionSource
+    toUnitId: ID
+  ): AdminItemUnitConversionsResult!
   """
   Admin: List all login histories with comprehensive filtering.
   Supports filtering by userId, ipAddress, date range, device, success/failure, and search.

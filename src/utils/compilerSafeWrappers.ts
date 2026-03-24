@@ -21,15 +21,15 @@ import { errorService } from '#/services/errorService';
  *  Pass a string for default logging, or a function for custom error handling (rollbacks, Alerts, etc.). */
 export async function executeMutation<T>(
   mutationFn: () => Promise<T>,
-  errorMsgOrOnError: string | ((error: unknown) => void),
+  errorMsgOrOnError: string | ((error: unknown) => void | Promise<void>),
 ): Promise<T | false> {
   try {
     return await mutationFn();
   } catch (error) {
     if (typeof errorMsgOrOnError === 'function') {
-      errorMsgOrOnError(error);
-    } else if (__DEV__) {
-      console.error(errorMsgOrOnError, error);
+      await errorMsgOrOnError(error);
+    } else {
+      errorService.reportError(error, { operation: errorMsgOrOnError });
     }
     return false;
   }

@@ -62,20 +62,26 @@ export const StorageLocationsScreen: React.FC<{
   };
 
   // Recursive component to render tree structure
-  const renderTreeNode = (node: any, depth: number = 0): React.ReactElement => (
-    <View key={node.id} style={{ marginLeft: depth * 16 }}>
-      <StorageLocationCard
-        location={node}
-        isDefault={node.isDefault}
-        onEdit={() => handleOpenEdit(node)}
-        onDelete={() => handleDelete(node)}
-        onSetDefault={() => handleSetDefault(node.id)}
-      />
-      {node.childLocations?.map((child: any) =>
-        renderTreeNode(child, depth + 1),
-      )}
-    </View>
-  );
+  const renderTreeNode = (
+    node: any,
+    depth: number = 0,
+  ): React.ReactElement | null => {
+    if (!node?.id) return null;
+    return (
+      <View key={node.id} style={{ marginLeft: depth * 16 }}>
+        <StorageLocationCard
+          location={node}
+          isDefault={node.isDefault}
+          onEdit={() => handleOpenEdit(node)}
+          onDelete={() => handleDelete(node)}
+          onSetDefault={() => handleSetDefault(node.id)}
+        />
+        {node.childLocations?.map((child: any) =>
+          renderTreeNode(child, depth + 1),
+        )}
+      </View>
+    );
+  };
 
   const handleCreate = async (formData: any) => {
     const result = await createLocation(formData);

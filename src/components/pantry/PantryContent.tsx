@@ -252,6 +252,23 @@ let _lastDisplayMap: Map<string, ItemDisplayData> = new Map();
 let _displayMapHits = 0;
 let _displayMapMisses = 0;
 
+// Per-item display cache — survives FULL MISS when individual items haven't changed.
+// Keyed by "id:updatedAt" so cache entries invalidate when item data changes.
+const _itemDisplayCache = new Map<string, ItemDisplayData>();
+const MAX_ITEM_CACHE = 200;
+let _itemCacheColors: {
+  expired: string;
+  warning: string;
+  normal: string;
+} | null = null;
+
+/** Returns a cache key when the item has a version stamp, or null to skip caching. */
+function getItemCacheKey(item: PantryItem): string | null {
+  // updatedAt is the canonical version — skip caching when absent
+  if (!item.updatedAt) return null;
+  return `${item.id}:${item.updatedAt}`;
+}
+
 /** Value-equality check for expiration colors (3 string comparisons). */
 function colorsMatch(
   a: { expired: string; warning: string; normal: string } | null,
@@ -383,7 +400,7 @@ function computeDisplayMap(
     return _lastDisplayMap;
   }
 
-  // Full recompute
+  // Full recompute — use per-item cache to skip unchanged items
   if (__DEV__) {
     _displayMapMisses++;
     console.log(
@@ -396,10 +413,47 @@ function computeDisplayMap(
     );
   }
 
+  // Invalidate per-item cache when colors change (colors are baked into entries)
+  if (!colorsMatch(_itemCacheColors, expirationColors)) {
+    _itemDisplayCache.clear();
+    _itemCacheColors = expirationColors;
+  }
+
   const map = new Map<string, ItemDisplayData>();
   const now = new Date();
+  let cacheHits = 0;
   for (const item of items) {
-    computeItemEntry(item, now, expirationColors, getLocation, map);
+    const cacheKey = getItemCacheKey(item);
+    const cached = cacheKey ? _itemDisplayCache.get(cacheKey) : undefined;
+    if (cached) {
+      map.set(item.id, cached);
+      cacheHits++;
+    } else {
+      computeItemEntry(item, now, expirationColors, getLocation, map);
+      // Store in per-item cache for future FULL MISS reuse
+      if (cacheKey) {
+        const entry = map.get(item.id);
+        if (entry) {
+          _itemDisplayCache.set(cacheKey, entry);
+        }
+      }
+    }
+  }
+
+  // Evict oldest entries when cache exceeds limit
+  if (_itemDisplayCache.size > MAX_ITEM_CACHE) {
+    const excess = _itemDisplayCache.size - MAX_ITEM_CACHE;
+    const keys = _itemDisplayCache.keys();
+    for (let i = 0; i < excess; i++) {
+      const key = keys.next().value;
+      if (key) _itemDisplayCache.delete(key);
+    }
+  }
+
+  if (__DEV__ && cacheHits > 0) {
+    console.log(
+      `[computeDisplayMap] Per-item cache: ${cacheHits}/${items.length} hits`,
+    );
   }
 
   _lastDisplayMapItems = items;
@@ -750,15 +804,22 @@ export const PantryContent = React.forwardRef<
       getLocationString,
     );
 
-    // Preload images for visible + upcoming items to prevent blank shimmer during fast scroll
+    // Preload images for visible + upcoming items to prevent blank shimmer during fast scroll.
+    // Read URLs from displayMap (already resolved) instead of re-calling resolveImageUrl.
+    // Deferred to idle time so the JS thread stays free for FlashList cell recycling.
     useEffect(() => {
       const urls: string[] = [];
       for (const item of sortedItems) {
-        const url = resolveImageUrl(item);
-        if (url) urls.push(url);
+        const display = displayMap.get(item.id);
+        if (display?.imageUrl) urls.push(display.imageUrl);
       }
-      if (urls.length > 0) preloadImages(urls);
-    }, [sortedItems]);
+      if (urls.length === 0) return;
+
+      const handle = requestIdleCallback(() => {
+        preloadImages(urls);
+      });
+      return () => cancelIdleCallback(handle);
+    }, [sortedItems, displayMap]);
 
     // Scroll to top when filter or sort changes to reset position after reorder
     const prevLocationFilter = useRef(locationFilter);
@@ -869,6 +930,7 @@ export const PantryContent = React.forwardRef<
                   stickyHeaderIndices={STICKY_HEADER_INDICES}
                   stickyHeaderConfig={STICKY_HEADER_CONFIG}
                   drawDistance={DRAW_DISTANCE}
+                  maxItemsInRecyclePool={15}
                   extraData={extraData}
                   contentContainerStyle={listContentStyle}
                   showsVerticalScrollIndicator={false}
