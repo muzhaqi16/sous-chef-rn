@@ -42,14 +42,14 @@ export function useCollapsibleScroll(): UseCollapsibleScrollReturn {
 
   const scrollHandler = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = Math.max(0, event.nativeEvent.contentOffset.y);
-    const delta = y - prevScrollY.value;
+    const delta = y - prevScrollY.get();
 
     scrollY.set(y);
 
     if (Math.abs(delta) > DIRECTION_THRESHOLD) {
       isScrolledDown.set(delta > 0 && y > COLLAPSE_DISTANCE);
       prevScrollY.set(y);
-    } else if (y <= COLLAPSE_DISTANCE && isScrolledDown.value) {
+    } else if (y <= COLLAPSE_DISTANCE && isScrolledDown.get()) {
       isScrolledDown.set(false);
     }
   };
