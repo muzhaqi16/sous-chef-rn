@@ -92,7 +92,12 @@ describe('resetManager', () => {
       });
 
       it('resets auth state when auth option is true', async () => {
-        await resetManager.resetStore({ auth: true, ui: false, preferences: false, clearApolloCache: false });
+        await resetManager.resetStore({
+          auth: true,
+          ui: false,
+          preferences: false,
+          clearApolloCache: false,
+        });
         const firstCall = mockSet.mock.calls[0][0];
         expect(firstCall.user).toBeNull();
         expect(firstCall.accessToken).toBeNull();
@@ -106,7 +111,12 @@ describe('resetManager', () => {
       });
 
       it('resets UI state when ui option is true', async () => {
-        await resetManager.resetStore({ auth: false, ui: true, preferences: false, clearApolloCache: false });
+        await resetManager.resetStore({
+          auth: false,
+          ui: true,
+          preferences: false,
+          clearApolloCache: false,
+        });
         const firstCall = mockSet.mock.calls[0][0];
         expect(firstCall.isLoading).toBe(false);
         expect(firstCall.isError).toBe(false);
@@ -116,18 +126,26 @@ describe('resetManager', () => {
       });
 
       it('resets preferences when preferences option is true', async () => {
-        await resetManager.resetStore({ auth: false, ui: false, preferences: true, clearApolloCache: false });
+        await resetManager.resetStore({
+          auth: false,
+          ui: false,
+          preferences: true,
+          clearApolloCache: false,
+        });
         const firstCall = mockSet.mock.calls[0][0];
         expect(firstCall.onBoardingStep).toBeNull();
         expect(firstCall.notifications).toEqual([]);
-        expect(firstCall.subscribedLists).toEqual([]);
-        expect(firstCall.subscribedPantries).toEqual([]);
         expect(firstCall.scannedBarcode).toBeNull();
       });
 
       it('attempts to clear Apollo cache when clearApolloCache is true', async () => {
         // The internal dynamic import may fail in test env, but the code handles errors gracefully
-        await resetManager.resetStore({ auth: false, ui: false, preferences: false, clearApolloCache: true });
+        await resetManager.resetStore({
+          auth: false,
+          ui: false,
+          preferences: false,
+          clearApolloCache: true,
+        });
         // Verify set was still called (reset continues despite cache clear error)
         expect(mockSet).toHaveBeenCalled();
         expect(console.error).toHaveBeenCalledWith(
@@ -137,12 +155,22 @@ describe('resetManager', () => {
       });
 
       it('skips Apollo cache clearing when clearApolloCache is false', async () => {
-        await resetManager.resetStore({ auth: false, ui: false, preferences: false, clearApolloCache: false });
+        await resetManager.resetStore({
+          auth: false,
+          ui: false,
+          preferences: false,
+          clearApolloCache: false,
+        });
         expect(mockSet).toHaveBeenCalled();
       });
 
       it('clears auth from storage when auth is true', async () => {
-        await resetManager.resetStore({ auth: true, ui: false, preferences: false, clearApolloCache: false });
+        await resetManager.resetStore({
+          auth: true,
+          ui: false,
+          preferences: false,
+          clearApolloCache: false,
+        });
         expect(clearTempRegistrationPassword).toHaveBeenCalled();
         expect(storage.remove).toHaveBeenCalledWith('accessToken');
         expect(storage.remove).toHaveBeenCalledWith('refreshToken');
@@ -150,7 +178,12 @@ describe('resetManager', () => {
 
       it('handles missing zustand data gracefully', async () => {
         // Should not throw even with no stored data
-        await resetManager.resetStore({ auth: true, ui: false, preferences: false, clearApolloCache: false });
+        await resetManager.resetStore({
+          auth: true,
+          ui: false,
+          preferences: false,
+          clearApolloCache: false,
+        });
         expect(clearTempRegistrationPassword).toHaveBeenCalled();
       });
 
@@ -163,7 +196,12 @@ describe('resetManager', () => {
 
       it('handles Apollo cache clear error gracefully', async () => {
         // The dynamic import inside resetStore may fail, but error is caught
-        await resetManager.resetStore({ auth: false, ui: false, preferences: false, clearApolloCache: true });
+        await resetManager.resetStore({
+          auth: false,
+          ui: false,
+          preferences: false,
+          clearApolloCache: true,
+        });
         // Should not throw, and set should still be called
         expect(mockSet).toHaveBeenCalled();
         expect(console.error).toHaveBeenCalledWith(
@@ -173,7 +211,12 @@ describe('resetManager', () => {
       });
 
       it('does not reset auth state when auth option is false', async () => {
-        await resetManager.resetStore({ auth: false, ui: false, preferences: false, clearApolloCache: false });
+        await resetManager.resetStore({
+          auth: false,
+          ui: false,
+          preferences: false,
+          clearApolloCache: false,
+        });
         const firstCall = mockSet.mock.calls[0][0];
         // Auth fields should NOT be present when auth=false
         expect(firstCall.user).toBeUndefined();
@@ -216,7 +259,8 @@ describe('resetManager', () => {
         await resetManager.tokenRefreshFailed('auth_rejected');
         // Should reset auth state
         const authCall = mockSet.mock.calls.find(
-          (call: any[]) => call[0]?.user === null && call[0]?.accessToken === null,
+          (call: any[]) =>
+            call[0]?.user === null && call[0]?.accessToken === null,
         );
         expect(authCall).toBeDefined();
         expect(console.error).toHaveBeenCalledWith(
@@ -229,7 +273,8 @@ describe('resetManager', () => {
         await resetManager.tokenRefreshFailed('network');
         // Should NOT reset auth state
         const authCall = mockSet.mock.calls.find(
-          (call: any[]) => call[0]?.user === null && call[0]?.accessToken === null,
+          (call: any[]) =>
+            call[0]?.user === null && call[0]?.accessToken === null,
         );
         expect(authCall).toBeUndefined();
         // Should set needsTokenRefresh flag
@@ -243,7 +288,8 @@ describe('resetManager', () => {
         await resetManager.tokenRefreshFailed('unknown');
         // Should NOT reset auth state
         const authCall = mockSet.mock.calls.find(
-          (call: any[]) => call[0]?.user === null && call[0]?.accessToken === null,
+          (call: any[]) =>
+            call[0]?.user === null && call[0]?.accessToken === null,
         );
         expect(authCall).toBeUndefined();
         // Should set needsTokenRefresh flag

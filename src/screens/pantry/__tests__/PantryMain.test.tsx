@@ -13,6 +13,7 @@ jest.mock('#/apollo/links/refreshToken');
 
 // --- Navigation ---
 jest.mock('#hooks/navigation/useAppNavigation');
+jest.mock('#hooks/pantry/usePantryPermissions');
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
 }));

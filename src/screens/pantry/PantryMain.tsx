@@ -44,6 +44,7 @@ import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkel
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
+import { usePantryPermissions } from '#hooks/pantry/usePantryPermissions';
 
 // ── Pantry tutorial steps (data-driven, add entries to extend) ──
 const PANTRY_TUTORIAL_STEPS: TutorialStep[] = [
@@ -274,6 +275,8 @@ function PantryMainContent({
     setAddLocationSheetVisible,
   } = usePantryModals();
 
+  const permissions = usePantryPermissions();
+
   // Track element positions for tutorial spotlight coach-marks
   const [homeBadgeRect, setHomeBadgeRect] = useState<{
     x: number;
@@ -313,7 +316,7 @@ function PantryMainContent({
 
   // Register add button action via tab bar
   useTabBarAddButton(
-    screen.noHomeSelected || screen.noHomes
+    screen.noHomeSelected || screen.noHomes || !permissions.canAddItems
       ? undefined
       : () => {
           Telemetry.trackEvent('add_pantry_item_clicked');
@@ -321,9 +324,11 @@ function PantryMainContent({
         },
   );
 
-  const handleAddItem = () => {
-    setAddSheetVisible(true);
-  };
+  const handleAddItem = permissions.canAddItems
+    ? () => {
+        setAddSheetVisible(true);
+      }
+    : undefined;
 
   const handleAddLocationPress = () => {
     setAddLocationSheetVisible(true);
@@ -351,11 +356,11 @@ function PantryMainContent({
         onSortChange={screen.handleSortChange}
         useServerSort={screen.useServerSort}
         onItemPress={onItemPress}
-        onItemEdit={handleEditItem}
-        onItemDelete={handleDeleteItem}
-        onItemConsume={handleConsumeItem}
-        onItemWaste={handleWasteItem}
-        onItemRestock={handleRestockItem}
+        onItemEdit={permissions.canEditItems ? handleEditItem : undefined}
+        onItemDelete={permissions.canEditItems ? handleDeleteItem : undefined}
+        onItemConsume={permissions.canEditItems ? handleConsumeItem : undefined}
+        onItemWaste={permissions.canEditItems ? handleWasteItem : undefined}
+        onItemRestock={permissions.canEditItems ? handleRestockItem : undefined}
         onAvatarPress={onAvatarPress}
         onNotificationPress={onNotificationPress}
         onHomePress={onHomePress}

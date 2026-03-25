@@ -158,16 +158,20 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                 onGenerateShoppingList();
               }}
             />
-            <View style={styles.divider} />
-            <ActionItem
-              icon="copy-outline"
-              label="Duplicate Plan"
-              description="Copy this plan to a new date range"
-              onPress={() => {
-                onClose();
-                onDuplicate();
-              }}
-            />
+            {permissions.canDuplicate ? (
+              <>
+                <View style={styles.divider} />
+                <ActionItem
+                  icon="copy-outline"
+                  label="Duplicate Plan"
+                  description="Copy this plan to a new date range"
+                  onPress={() => {
+                    onClose();
+                    onDuplicate();
+                  }}
+                />
+              </>
+            ) : null}
             <View style={styles.divider} />
             <ActionItem
               icon="nutrition-outline"

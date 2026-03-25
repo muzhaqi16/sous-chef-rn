@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { NotificationItem } from '../NotificationItem';
-import { NotificationCategory, NotificationPriority } from '#store/slices/notificationSlice';
-import { NotificationType } from '#generated';
+import { NotificationCategory, NotificationType } from '#generated';
+import { NotificationPriority } from '#store/slices/notificationSlice';
 
 jest.mock('#utils/iconUtils', () => {
   const R = require('react');
@@ -28,7 +28,7 @@ jest.mock('date-fns/formatDistanceToNow', () => ({
 const makeNotification = (overrides?: any) => ({
   id: 'notif-1',
   type: NotificationType.HomeInvitation,
-  category: NotificationCategory.COLLABORATION,
+  category: NotificationCategory.Shopping,
   priority: NotificationPriority.MEDIUM,
   title: 'New Invitation',
   message: 'You have been invited to join a home.',
@@ -56,7 +56,9 @@ describe('NotificationItem', () => {
 
   it('renders notification message', () => {
     render(<NotificationItem {...defaultProps} />);
-    expect(screen.getByText('You have been invited to join a home.')).toBeTruthy();
+    expect(
+      screen.getByText('You have been invited to join a home.'),
+    ).toBeTruthy();
   });
 
   it('renders formatted timestamp', () => {

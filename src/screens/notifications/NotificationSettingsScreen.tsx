@@ -13,7 +13,10 @@ import { useNavigation } from '@react-navigation/native';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
-import { useNotificationSettings } from '#hooks/notifications/useNotificationSettings';
+import {
+  useNotificationSettings,
+  type NotificationSettings,
+} from '#hooks/notifications/useNotificationSettings';
 import { useNotificationPermissions } from '#hooks/notifications/useNotificationPermissions';
 import { ExpirationFrequency } from '#generated';
 import { ModalPicker } from '#components/molecules/ModalPicker';
@@ -22,6 +25,114 @@ import {
   executeWithLoadingState,
   executeRefreshWithFinally,
 } from '#/utils/compilerSafeWrappers';
+
+interface SettingDef {
+  key: keyof NotificationSettings;
+  title: string;
+  description: string;
+  getValue?: (
+    settings: NotificationSettings,
+    hasPermission: boolean | null,
+  ) => boolean;
+}
+
+const CHANNEL_SETTINGS: SettingDef[] = [
+  {
+    key: 'pushEnabled',
+    title: 'Push Notifications',
+    description: 'Receive push notifications on your device',
+    getValue: (settings, hasPermission) =>
+      !!settings.pushEnabled && hasPermission === true,
+  },
+  {
+    key: 'emailEnabled',
+    title: 'Email Notifications',
+    description: 'Receive notifications via email',
+  },
+  {
+    key: 'smsEnabled',
+    title: 'SMS Notifications',
+    description: 'Receive text message notifications',
+  },
+];
+
+const PANTRY_SETTINGS: SettingDef[] = [
+  {
+    key: 'lowStockAlerts',
+    title: 'Low Stock Alerts',
+    description: 'Get notified when pantry items are running low',
+  },
+  {
+    key: 'pantryChanges',
+    title: 'Pantry Updates',
+    description: 'Get notified when items are added or updated',
+  },
+];
+
+const SHOPPING_SETTINGS: SettingDef[] = [
+  {
+    key: 'shoppingListUpdates',
+    title: 'List Updates',
+    description: 'Get notified when shared lists are updated',
+  },
+  {
+    key: 'sharedListUpdates',
+    title: 'Shared List Updates',
+    description: 'Get notified about changes in shared lists',
+  },
+];
+
+const SOCIAL_SETTINGS: SettingDef[] = [
+  {
+    key: 'collaborationInvites',
+    title: 'Collaboration Invites',
+    description: 'Get notified when invited to collaborate on lists',
+  },
+  {
+    key: 'homeInvites',
+    title: 'Home Invitations',
+    description: 'Get notified about invitations to join homes',
+  },
+];
+
+const RECIPE_SETTINGS: SettingDef[] = [
+  {
+    key: 'recipeRecommendations',
+    title: 'Recipe Recommendations',
+    description: 'Get recipe suggestions based on your pantry items',
+  },
+  {
+    key: 'mealPlanReminders',
+    title: 'Meal Plan Reminders',
+    description: 'Get reminders about upcoming meals',
+  },
+  {
+    key: 'cookingReminders',
+    title: 'Cooking Reminders',
+    description: "Get reminders when it's time to start cooking",
+  },
+];
+
+const DIGEST_SETTINGS: SettingDef[] = [
+  {
+    key: 'weeklyDigest',
+    title: 'Weekly Digest',
+    description: 'Receive a weekly summary of your pantry activity',
+  },
+  {
+    key: 'monthlyReport',
+    title: 'Monthly Report',
+    description: 'Receive a monthly report with insights and statistics',
+  },
+];
+
+const QUIET_HOURS_SETTINGS: SettingDef[] = [
+  {
+    key: 'quietHoursEnabled',
+    title: 'Enable Quiet Hours',
+    description: 'Mute notifications during specified hours',
+  },
+];
 
 const FREQUENCY_OPTIONS = [
   { label: 'Real-time (as items expire)', value: ExpirationFrequency.RealTime },
@@ -39,6 +150,27 @@ const THRESHOLD_OPTIONS = [
   { label: '5 days before', value: '5' },
   { label: '7 days before', value: '7' },
 ];
+
+const renderSettings = (
+  defs: SettingDef[],
+  settings: NotificationSettings,
+  hasPermission: boolean | null,
+  updating: string | null,
+  handleSettingChange: (
+    key: keyof NotificationSettings,
+    value: boolean | string | number | ExpirationFrequency,
+  ) => void,
+) =>
+  defs.map(({ key, title, description, getValue }) => (
+    <SettingSwitch
+      key={key}
+      title={title}
+      description={description}
+      value={getValue ? getValue(settings, hasPermission) : !!settings[key]}
+      onValueChange={v => handleSettingChange(key, v)}
+      loading={updating === key}
+    />
+  ));
 
 export const NotificationSettingsScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -85,7 +217,7 @@ export const NotificationSettingsScreen: React.FC = () => {
   }, [checkPermissions]);
 
   const handleSettingChange = (
-    key: string,
+    key: keyof NotificationSettings,
     value: boolean | string | number | ExpirationFrequency,
   ) => {
     // Special handling for push notification toggle
@@ -115,7 +247,7 @@ export const NotificationSettingsScreen: React.FC = () => {
             return;
           }
 
-          const success = await updateNotificationSetting(key as any, value);
+          const success = await updateNotificationSetting(key, value);
           if (!success) {
             alertService.alert(
               'Error',
@@ -138,7 +270,7 @@ export const NotificationSettingsScreen: React.FC = () => {
     // Default handling for all other settings
     executeRefreshWithFinally(
       async () => {
-        const success = await updateNotificationSetting(key as any, value);
+        const success = await updateNotificationSetting(key, value);
         if (!success) {
           alertService.alert(
             'Error',
@@ -234,27 +366,13 @@ export const NotificationSettingsScreen: React.FC = () => {
       )}
 
       <SettingSection title="General Notifications">
-        <SettingSwitch
-          title="Push Notifications"
-          description="Receive push notifications on your device"
-          value={!!settings.pushEnabled && hasPermission === true}
-          onValueChange={value => handleSettingChange('pushEnabled', value)}
-          loading={updating === 'pushEnabled'}
-        />
-        <SettingSwitch
-          title="Email Notifications"
-          description="Receive notifications via email"
-          value={settings.emailEnabled}
-          onValueChange={value => handleSettingChange('emailEnabled', value)}
-          loading={updating === 'emailEnabled'}
-        />
-        <SettingSwitch
-          title="SMS Notifications"
-          description="Receive text message notifications"
-          value={settings.smsEnabled}
-          onValueChange={value => handleSettingChange('smsEnabled', value)}
-          loading={updating === 'smsEnabled'}
-        />
+        {renderSettings(
+          CHANNEL_SETTINGS,
+          settings,
+          hasPermission,
+          updating,
+          handleSettingChange,
+        )}
       </SettingSection>
 
       <SettingSection title="Pantry Notifications">
@@ -318,119 +436,63 @@ export const NotificationSettingsScreen: React.FC = () => {
           </>
         )}
 
-        <SettingSwitch
-          title="Low Stock Alerts"
-          description="Get notified when pantry items are running low"
-          value={settings.lowStockAlerts}
-          onValueChange={value => handleSettingChange('lowStockAlerts', value)}
-          loading={updating === 'lowStockAlerts'}
-        />
-        <SettingSwitch
-          title="Pantry Updates"
-          description="Get notified when items are added or updated"
-          value={settings.pantryChanges}
-          onValueChange={value => handleSettingChange('pantryChanges', value)}
-          loading={updating === 'pantryChanges'}
-        />
+        {renderSettings(
+          PANTRY_SETTINGS,
+          settings,
+          hasPermission,
+          updating,
+          handleSettingChange,
+        )}
       </SettingSection>
 
       <SettingSection title="Shopping List Notifications">
-        <SettingSwitch
-          title="List Updates"
-          description="Get notified when shared lists are updated"
-          value={settings.shoppingListUpdates}
-          onValueChange={value =>
-            handleSettingChange('shoppingListUpdates', value)
-          }
-          loading={updating === 'shoppingListUpdates'}
-        />
-        <SettingSwitch
-          title="Shared List Updates"
-          description="Get notified about changes in shared lists"
-          value={settings.sharedListUpdates}
-          onValueChange={value =>
-            handleSettingChange('sharedListUpdates', value)
-          }
-          loading={updating === 'sharedListUpdates'}
-        />
+        {renderSettings(
+          SHOPPING_SETTINGS,
+          settings,
+          hasPermission,
+          updating,
+          handleSettingChange,
+        )}
       </SettingSection>
 
       <SettingSection title="Collaboration & Home">
-        <SettingSwitch
-          title="Collaboration Invites"
-          description="Get notified when invited to collaborate on lists"
-          value={settings.collaborationInvites}
-          onValueChange={value =>
-            handleSettingChange('collaborationInvites', value)
-          }
-          loading={updating === 'collaborationInvites'}
-        />
-        <SettingSwitch
-          title="Home Invitations"
-          description="Get notified about invitations to join homes"
-          value={settings.homeInvites}
-          onValueChange={value => handleSettingChange('homeInvites', value)}
-          loading={updating === 'homeInvites'}
-        />
+        {renderSettings(
+          SOCIAL_SETTINGS,
+          settings,
+          hasPermission,
+          updating,
+          handleSettingChange,
+        )}
       </SettingSection>
 
       <SettingSection title="Recipes & Meal Planning">
-        <SettingSwitch
-          title="Recipe Recommendations"
-          description="Get recipe suggestions based on your pantry items"
-          value={settings.recipeRecommendations}
-          onValueChange={value =>
-            handleSettingChange('recipeRecommendations', value)
-          }
-          loading={updating === 'recipeRecommendations'}
-        />
-        <SettingSwitch
-          title="Meal Plan Reminders"
-          description="Get reminders about upcoming meals"
-          value={settings.mealPlanReminders}
-          onValueChange={value =>
-            handleSettingChange('mealPlanReminders', value)
-          }
-          loading={updating === 'mealPlanReminders'}
-        />
-        <SettingSwitch
-          title="Cooking Reminders"
-          description="Get reminders when it's time to start cooking"
-          value={settings.cookingReminders}
-          onValueChange={value =>
-            handleSettingChange('cookingReminders', value)
-          }
-          loading={updating === 'cookingReminders'}
-        />
+        {renderSettings(
+          RECIPE_SETTINGS,
+          settings,
+          hasPermission,
+          updating,
+          handleSettingChange,
+        )}
       </SettingSection>
 
       <SettingSection title="Digests & Reports">
-        <SettingSwitch
-          title="Weekly Digest"
-          description="Receive a weekly summary of your pantry activity"
-          value={settings.weeklyDigest}
-          onValueChange={value => handleSettingChange('weeklyDigest', value)}
-          loading={updating === 'weeklyDigest'}
-        />
-        <SettingSwitch
-          title="Monthly Report"
-          description="Receive a monthly report with insights and statistics"
-          value={settings.monthlyReport}
-          onValueChange={value => handleSettingChange('monthlyReport', value)}
-          loading={updating === 'monthlyReport'}
-        />
+        {renderSettings(
+          DIGEST_SETTINGS,
+          settings,
+          hasPermission,
+          updating,
+          handleSettingChange,
+        )}
       </SettingSection>
 
       <SettingSection title="Quiet Hours">
-        <SettingSwitch
-          title="Enable Quiet Hours"
-          description="Mute notifications during specified hours"
-          value={settings.quietHoursEnabled}
-          onValueChange={value =>
-            handleSettingChange('quietHoursEnabled', value)
-          }
-          loading={updating === 'quietHoursEnabled'}
-        />
+        {renderSettings(
+          QUIET_HOURS_SETTINGS,
+          settings,
+          hasPermission,
+          updating,
+          handleSettingChange,
+        )}
         {!!settings.quietHoursEnabled && (
           <View style={styles.quietHoursInfo}>
             <Text style={styles.quietHoursText}>
@@ -480,11 +542,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.info,
     textAlign: 'center',
-  },
-  permissionBanner: {
-    marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
   },
   settingLabel: {
     fontSize: theme.fonts.size.sm,

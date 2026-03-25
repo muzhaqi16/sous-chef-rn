@@ -26,6 +26,7 @@ import {
   executeWithLoadingState,
   executeAsyncWithCleanup,
 } from '#/utils/compilerSafeWrappers';
+import { usePantryPermissions } from '#hooks/pantry/usePantryPermissions';
 
 /** Module-level helper to sync pantry form state from loaded data */
 function syncPantryFormState(
@@ -68,6 +69,7 @@ export const PantrySettings: React.FC<
   const selectedHomeId = useAppStore(selectSelectedHomeId);
   const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const { handleApolloError } = useErrorService();
+  const permissions = usePantryPermissions();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -389,15 +391,19 @@ export const PantrySettings: React.FC<
         title={!pantryId ? 'Create New Pantry' : 'Pantry Settings'}
         onBack={goBack}
         rightElement={
-          <Pressable
-            onPress={handleSave}
-            disabled={saving}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Text style={styles.saveButton}>
-              {saving ? 'Saving...' : !pantryId ? 'Create' : 'Save'}
-            </Text>
-          </Pressable>
+          (
+            !pantryId ? permissions.canManagePantry : permissions.canEditItems
+          ) ? (
+            <Pressable
+              onPress={handleSave}
+              disabled={saving}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Text style={styles.saveButton}>
+                {saving ? 'Saving...' : !pantryId ? 'Create' : 'Save'}
+              </Text>
+            </Pressable>
+          ) : undefined
         }
       />
 
@@ -447,8 +453,8 @@ export const PantrySettings: React.FC<
           </View>
         )}
 
-        {/* Only show danger zone if editing existing pantry */}
-        {!!pantryId && (
+        {/* Only show danger zone if editing existing pantry and user can manage */}
+        {!!pantryId && permissions.canManagePantry ? (
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>Danger Zone</Text>
 
@@ -468,7 +474,7 @@ export const PantrySettings: React.FC<
               it. This action cannot be undone.
             </Text>
           </View>
-        )}
+        ) : null}
       </ScrollView>
     </View>
   );

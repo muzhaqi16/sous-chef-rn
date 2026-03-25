@@ -22,6 +22,7 @@ import { Telemetry } from '#services/telemetry';
 import { HapticService } from '#services/haptic/HapticService';
 import { storage } from '#/storage/mmkv';
 import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
+import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#hooks/useNetworkStatus';
 import { useTheme } from '#hooks/useTheme';
@@ -199,6 +200,11 @@ const App = () => {
       // Initialize native performance metrics (startup marks, bundle load, HTTP timing)
       if (!detoxDisabled) {
         NativePerformanceService.initialize();
+        // Auto-start memory monitoring in production so Overview dashboard
+        // memory gauge populates without requiring manual opt-in
+        if (!__DEV__) {
+          MemoryMonitor.start();
+        }
       }
 
       // Report JS startup duration (time from index.js entry to store hydration)
@@ -217,9 +223,6 @@ const App = () => {
         global.__APP_START_TIMESTAMP = undefined; // Prevent re-reporting on HMR
       }
 
-      // Track app start as counter metric for dashboard
-      Telemetry.increment('app_starts_total');
-
       // Track app launch event (captures theme at launch time)
       Telemetry.trackEvent('app_launched', {
         theme: UnistylesRuntime.themeName,
@@ -232,9 +235,10 @@ const App = () => {
     }
 
     return () => {
-      // Cleanup native performance observers
+      // Cleanup native performance observers and memory monitor
       if (!detoxDisabled) {
         NativePerformanceService.cleanup();
+        MemoryMonitor.stop();
       }
       // Cleanup AppState token refresh listener
       cleanupAppStateTokenRefresh();

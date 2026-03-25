@@ -61,6 +61,7 @@ import {
   executeRefreshWithFinally,
 } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { usePantryPermissions } from '#hooks/pantry/usePantryPermissions';
 
 /** Module-level helper to sync suggested recipes from cache */
 function syncSuggestedRecipesFromCache(
@@ -186,6 +187,8 @@ export const PantryItemDetail: React.FC<
 
   // Correct weight mutation
   const { correctWeight } = useCorrectPantryItemWeight();
+
+  const permissions = usePantryPermissions();
 
   const item = data?.pantryItem;
 
@@ -449,42 +452,51 @@ export const PantryItemDetail: React.FC<
         new Date(b.expiresAt) < new Date(),
     );
 
-  const discardActions: HeaderAction[] = hasExpiredBatches
-    ? [
-        {
-          icon: 'close-circle-outline',
-          onPress: handleDiscardExpired,
-          variant: 'error',
-          testID: 'pantry-item-discard-button',
-        },
-      ]
-    : [];
+  const discardActions: HeaderAction[] =
+    hasExpiredBatches && permissions.canEditItems
+      ? [
+          {
+            icon: 'close-circle-outline',
+            onPress: handleDiscardExpired,
+            variant: 'error',
+            testID: 'pantry-item-discard-button',
+          },
+        ]
+      : [];
 
   const headerActions: HeaderAction[] = [
-    {
-      icon: addToListStatus === 'success' ? 'cart' : 'cart-outline',
-      onPress: handleAddToShoppingList,
-      variant: addToListStatus === 'success' ? 'success' : 'primary',
-      loading: addToListStatus === 'loading',
-      testID: 'pantry-item-add-to-list-button',
-    },
+    ...(permissions.canAddItems
+      ? [
+          {
+            icon: addToListStatus === 'success' ? 'cart' : 'cart-outline',
+            onPress: handleAddToShoppingList,
+            variant: addToListStatus === 'success' ? 'success' : 'primary',
+            loading: addToListStatus === 'loading',
+            testID: 'pantry-item-add-to-list-button',
+          } satisfies HeaderAction,
+        ]
+      : []),
     ...discardActions,
-    {
-      icon: 'swap-vertical-outline',
-      onPress: () => setAdjustModalVisible(true),
-      testID: 'pantry-item-adjust-button',
-    },
-    {
-      icon: 'create-outline',
-      onPress: handleEdit,
-      testID: 'pantry-item-edit-button',
-    },
-    {
-      icon: 'trash-outline',
-      onPress: handleDelete,
-      variant: 'error',
-      testID: 'pantry-item-delete-button',
-    },
+    ...(permissions.canEditItems
+      ? ([
+          {
+            icon: 'swap-vertical-outline',
+            onPress: () => setAdjustModalVisible(true),
+            testID: 'pantry-item-adjust-button',
+          },
+          {
+            icon: 'create-outline',
+            onPress: handleEdit,
+            testID: 'pantry-item-edit-button',
+          },
+          {
+            icon: 'trash-outline',
+            onPress: handleDelete,
+            variant: 'error',
+            testID: 'pantry-item-delete-button',
+          },
+        ] satisfies HeaderAction[])
+      : []),
   ];
 
   return (

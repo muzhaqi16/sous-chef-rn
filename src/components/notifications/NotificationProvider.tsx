@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNotifications } from '#hooks/notifications/useNotifications';
 import { useAuthUser } from '#hooks/auth/useAuthUser';
 import { useAppStore } from '#store/useAppStore';
@@ -14,37 +14,15 @@ interface NotificationProviderProps {
  * PERFORMANCE: This pattern eliminates cascade re-renders. When NotificationListener
  * re-renders due to notification/auth state changes, it doesn't affect siblings
  * since it returns null (no React elements to reconcile).
- *
- * STARTUP PRIORITY: useNotifications defers both the GetNotificationPreferences query
- * and the WebSocket subscription until 3s after authentication, so they don't compete
- * with critical startup queries (GetHomes, GetPantry). Settings defaults cover the gap.
  */
 const NotificationListener: React.FC = () => {
   const user = useAuthUser();
-  const isAuthenticated = useAppStore(state => !!(state.user && state.accessToken));
+  const isAuthenticated = useAppStore(
+    state => !!(state.user && state.accessToken),
+  );
 
-  // Defer subscription + preferences query by 3s to avoid competing with startup queries
-  const [ready, setReady] = useState(false);
+  useNotifications({ skip: !isAuthenticated || !user });
 
-  // Render-time reset: clear ready state when user logs out
-  const [prevIsAuthenticated, setPrevIsAuthenticated] = useState(isAuthenticated);
-  if (isAuthenticated !== prevIsAuthenticated) {
-    setPrevIsAuthenticated(isAuthenticated);
-    if (!isAuthenticated) {
-      setReady(false);
-    }
-  }
-
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      const timer = setTimeout(() => setReady(true), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, user]);
-
-  useNotifications({ skip: !ready });
-
-  // Returns null - no rendering, just side effects
   return null;
 };
 

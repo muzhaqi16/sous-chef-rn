@@ -28,6 +28,7 @@ import {
   FilteredItemsActionsProvider,
   useFilteredItemsActions,
 } from './FilteredItemsActionsContext';
+import { usePantryPermissions } from '#hooks/pantry/usePantryPermissions';
 
 // ── Types ──
 
@@ -265,6 +266,8 @@ export const FilteredPantryItems: React.FC<
   const { addLowStockToShoppingList, loading: addAllLoading } =
     useAddLowStockToShoppingList({ homeId: selectedHomeId ?? undefined });
 
+  const permissions = usePantryPermissions();
+
   const {
     state: { items: allItems, loading, hasMore, isLoadingMore },
     actions: { refetch, loadMore },
@@ -317,13 +320,15 @@ export const FilteredPantryItems: React.FC<
     }
   };
 
+  const showCart = config.showCartAction && permissions.canAddItems;
+
   const actions = {
     navigateTo: (params: { itemId: string }) =>
       navigateTo.pantryItemDetail(params),
-    ...(config.showCartAction && { handleAddToList }),
+    ...(showCart && { handleAddToList }),
   };
 
-  const headerRightActions: HeaderAction[] | undefined = config.showCartAction
+  const headerRightActions: HeaderAction[] | undefined = showCart
     ? [
         {
           icon: 'cart-outline',
@@ -379,7 +384,7 @@ export const FilteredPantryItems: React.FC<
               item={item}
               primaryColor={theme.colors.primary}
               subtitleFn={config.subtitle}
-              showCart={config.showCartAction}
+              showCart={showCart}
               onCartMeasure={index === 0 ? setItemCartRect : undefined}
             />
           )}

@@ -13,9 +13,23 @@ import {
   MyShoppingListInvitesDocument,
   MyShoppingListInvitesQuery,
   GetHomesDocument,
+  GetMyPendingInvitesDocument,
 } from '#generated';
 import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
+
+const INVITATION_EXPIRED_MSG =
+  'This invitation is no longer valid. It may have expired or already been used.';
+
+const getInvitationErrorMessage = (
+  error: unknown,
+  fallback: string,
+): string => {
+  const msg = (error as Error)?.message?.toLowerCase() || '';
+  return msg.includes('expired') || msg.includes('invalid')
+    ? INVITATION_EXPIRED_MSG
+    : (error as Error)?.message || fallback;
+};
 
 export interface InvitationData {
   type: 'HOME_INVITE' | 'SHOPPING_LIST_INVITE';
@@ -45,10 +59,14 @@ export const InvitationAcceptanceModal: React.FC<
   const [rejecting, setRejecting] = useState(false);
 
   const [acceptHomeInvite] = useAcceptHomeInviteMutation({
-    refetchQueries: [{ query: GetHomesDocument }],
+    refetchQueries: [
+      { query: GetHomesDocument },
+      { query: GetMyPendingInvitesDocument },
+    ],
     awaitRefetchQueries: true,
   });
   const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation({
+    refetchQueries: [{ query: MyShoppingListInvitesDocument }],
     update: (cache, { data }) => {
       if (!data?.acceptShoppingListInvite?.collaborator) return;
 
@@ -69,10 +87,27 @@ export const InvitationAcceptanceModal: React.FC<
     },
   });
   const [declineHomeInvite] = useDeclineHomeInviteMutation({
-    // Note: Declining an invite doesn't add or remove homes, just changes invite status.
-    // No cache update needed.
+    refetchQueries: [{ query: GetMyPendingInvitesDocument }],
   });
-  const [declineShoppingListInvite] = useDeclineShoppingListInviteMutation();
+  const [declineShoppingListInvite] = useDeclineShoppingListInviteMutation({
+    refetchQueries: [{ query: MyShoppingListInvitesDocument }],
+  });
+
+  const resolveToken = async (): Promise<string | undefined> => {
+    let token = invitation?.token;
+    if (!token && invitation?.type === 'SHOPPING_LIST_INVITE') {
+      const result = await client.query<MyShoppingListInvitesQuery>({
+        query: MyShoppingListInvitesDocument,
+        fetchPolicy: 'network-only',
+      });
+      const invites = result.data?.me?.pendingCollaborationInvites;
+      const invite = invites?.find(
+        inv => inv.id === invitation.payload?.inviteId,
+      );
+      token = invite?.token ?? undefined;
+    }
+    return token;
+  };
 
   const handleAccept = () => {
     if (!invitation) return;
@@ -80,20 +115,7 @@ export const InvitationAcceptanceModal: React.FC<
     setAccepting(true);
     executeAsyncWithCleanup(
       async () => {
-        let token = invitation.token;
-
-        // Fallback: Fetch token if missing (real-time notifications may not include it)
-        if (!token && invitation.type === 'SHOPPING_LIST_INVITE') {
-          const result = await client.query<MyShoppingListInvitesQuery>({
-            query: MyShoppingListInvitesDocument,
-            fetchPolicy: 'network-only',
-          });
-          const invites = result.data?.me?.pendingCollaborationInvites;
-          const invite = invites?.find(
-            inv => inv.id === invitation.payload?.inviteId,
-          );
-          token = invite?.token ?? undefined;
-        }
+        const token = await resolveToken();
 
         if (!token) {
           onClose();
@@ -106,22 +128,17 @@ export const InvitationAcceptanceModal: React.FC<
 
         if (invitation.type === 'HOME_INVITE') {
           const result = await acceptHomeInvite({
-            variables: {
-              token: token!,
-            },
+            variables: { token: token! },
           });
 
-          // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
           if (result.error) {
-            const errorMessage = result.error.message;
             onClose();
-            const message =
-              errorMessage?.includes('expired') ||
-              errorMessage?.includes('Invalid')
-                ? 'This invitation is no longer valid. It may have expired or already been used.'
-                : errorMessage ||
-                  'Failed to accept invitation. Please try again.';
-            toastService.error(message);
+            toastService.error(
+              getInvitationErrorMessage(
+                result.error,
+                'Failed to accept invitation. Please try again.',
+              ),
+            );
             return;
           }
 
@@ -143,22 +160,17 @@ export const InvitationAcceptanceModal: React.FC<
           }
         } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
           const result = await acceptShoppingListInvite({
-            variables: {
-              token: token!,
-            },
+            variables: { token: token! },
           });
 
-          // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
           if (result.error) {
-            const errorMessage = result.error.message;
             onClose();
-            const message =
-              errorMessage?.includes('expired') ||
-              errorMessage?.includes('Invalid')
-                ? 'This invitation is no longer valid. It may have expired or already been used.'
-                : errorMessage ||
-                  'Failed to accept invitation. Please try again.';
-            toastService.error(message);
+            toastService.error(
+              getInvitationErrorMessage(
+                result.error,
+                'Failed to accept invitation. Please try again.',
+              ),
+            );
             return;
           }
 
@@ -170,15 +182,13 @@ export const InvitationAcceptanceModal: React.FC<
       },
       () => setAccepting(false),
       (error: unknown) => {
-        // Close modal immediately to prevent stale UI
         onClose();
-        // Show non-blocking toast with contextual message
-        const err = error as any;
-        const message =
-          err.message?.includes('expired') || err.message?.includes('Invalid')
-            ? 'This invitation is no longer valid. It may have expired or already been used.'
-            : err.message || 'Failed to accept invitation. Please try again.';
-        toastService.error(message);
+        toastService.error(
+          getInvitationErrorMessage(
+            error,
+            'Failed to accept invitation. Please try again.',
+          ),
+        );
       },
     );
   };
@@ -199,22 +209,7 @@ export const InvitationAcceptanceModal: React.FC<
             setRejecting(true);
             executeAsyncWithCleanup(
               async () => {
-                let token = invitation.token;
-
-                // Fallback: Fetch token if missing (real-time notifications may not include it)
-                if (!token && invitation.type === 'SHOPPING_LIST_INVITE') {
-                  const result = await client.query<MyShoppingListInvitesQuery>(
-                    {
-                      query: MyShoppingListInvitesDocument,
-                      fetchPolicy: 'network-only',
-                    },
-                  );
-                  const invites = result.data?.me?.pendingCollaborationInvites;
-                  const invite = invites?.find(
-                    inv => inv.id === invitation.payload?.inviteId,
-                  );
-                  token = invite?.token ?? undefined;
-                }
+                const token = await resolveToken();
 
                 if (!token) {
                   onClose();
@@ -230,80 +225,56 @@ export const InvitationAcceptanceModal: React.FC<
                     variables: { token: token! },
                   });
 
-                  // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
                   if (result.error) {
-                    const errorMessage = result.error.message;
                     onClose();
-                    const message =
-                      errorMessage?.includes('expired') ||
-                      errorMessage?.includes('Invalid')
-                        ? 'This invitation is no longer valid. It may have expired or already been used.'
-                        : errorMessage ||
-                          'Failed to decline invitation. Please try again.';
-                    toastService.error(message);
+                    toastService.error(
+                      getInvitationErrorMessage(
+                        result.error,
+                        'Failed to decline invitation. Please try again.',
+                      ),
+                    );
                     return;
                   }
-
-                  alertService.alert(
-                    'Invitation Declined',
-                    `You have declined the invitation to ${invitation.entityName}`,
-                    [
-                      {
-                        text: 'OK',
-                        onPress: () => {
-                          onReject?.(invitation);
-                          onClose();
-                        },
-                      },
-                    ],
-                  );
                 } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
                   const result = await declineShoppingListInvite({
                     variables: { token: token! },
                   });
 
-                  // Check for GraphQL errors (errorPolicy: 'all' returns errors in result, not thrown)
                   if (result.error) {
-                    const errorMessage = result.error.message;
                     onClose();
-                    const message =
-                      errorMessage?.includes('expired') ||
-                      errorMessage?.includes('Invalid')
-                        ? 'This invitation is no longer valid. It may have expired or already been used.'
-                        : errorMessage ||
-                          'Failed to decline invitation. Please try again.';
-                    toastService.error(message);
+                    toastService.error(
+                      getInvitationErrorMessage(
+                        result.error,
+                        'Failed to decline invitation. Please try again.',
+                      ),
+                    );
                     return;
                   }
-
-                  alertService.alert(
-                    'Invitation Declined',
-                    `You have declined the invitation to ${invitation.entityName}`,
-                    [
-                      {
-                        text: 'OK',
-                        onPress: () => {
-                          onReject?.(invitation);
-                          onClose();
-                        },
-                      },
-                    ],
-                  );
                 }
+
+                alertService.alert(
+                  'Invitation Declined',
+                  `You have declined the invitation to ${invitation.entityName}`,
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        onReject?.(invitation);
+                        onClose();
+                      },
+                    },
+                  ],
+                );
               },
               () => setRejecting(false),
               (error: unknown) => {
-                // Close modal immediately to prevent stale UI
                 onClose();
-                // Show non-blocking toast with contextual message
-                const err = error as any;
-                const message =
-                  err.message?.includes('expired') ||
-                  err.message?.includes('Invalid')
-                    ? 'This invitation is no longer valid. It may have expired or already been used.'
-                    : err.message ||
-                      'Failed to decline invitation. Please try again.';
-                toastService.error(message);
+                toastService.error(
+                  getInvitationErrorMessage(
+                    error,
+                    'Failed to decline invitation. Please try again.',
+                  ),
+                );
               },
             );
           },

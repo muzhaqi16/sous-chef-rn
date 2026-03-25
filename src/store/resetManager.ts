@@ -96,8 +96,6 @@ export const createResetManager = (
         notifications: [],
         unreadCount: 0,
         urgentCount: 0,
-        subscribedLists: [],
-        subscribedPantries: [],
         // Reset scanner state
         scannedBarcode: null,
         isScanning: false,
@@ -156,7 +154,9 @@ export const createResetManager = (
     await resetManager.resetStore('ONBOARDING_RESET');
   },
 
-  tokenRefreshFailed: async (reason: 'auth_rejected' | 'network' | 'unknown') => {
+  tokenRefreshFailed: async (
+    reason: 'auth_rejected' | 'network' | 'unknown',
+  ) => {
     if (reason === 'auth_rejected') {
       // Server confirmed invalid refresh token — genuine logout
       const resetManager = createResetManager(set, get);

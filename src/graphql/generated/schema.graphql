@@ -653,7 +653,7 @@ type BulkLoginHistoryPayload implements MutationPayload {
 input BulkNotificationInput {
   actionUrl: String
   batchId: String
-  category: String
+  category: NotificationCategory
   expiresAt: DateTime
   message: String
   metadata: JSON
@@ -1271,7 +1271,7 @@ input CreateMembershipInput {
 input CreateNotificationInput {
   actionUrl: String
   batchId: String
-  category: String
+  category: NotificationCategory
   expiresAt: DateTime
   message: String
   metadata: JSON
@@ -4878,19 +4878,49 @@ Notification type for user alerts and messages
 Cache: None - notifications must be real-time
 """
 type Notification implements Timestamped {
+  """Deep link or CTA destination for this notification."""
+  actionUrl: String
+  """
+  Grouping category for this notification.
+  Matches the categories returned by NotificationStats.byCategory.
+  """
+  category: NotificationCategory
   createdAt: DateTime!
+  """When this notification expires. Null if it does not expire."""
+  expiresAt: DateTime
   id: ID!
+  message: String
   payload: JSON!
+  priority: Priority!
   readAt: DateTime
   sentAt: DateTime!
+  """
+  ID of the entity that triggered this notification (e.g. a HomeInvite ID).
+  Use this to correlate a notification back to its source entity.
+  Convention: sourceType="HOME_INVITE" means sourceId is a HomeInvite.id.
+  """
+  sourceId: String
+  """
+  Type label for the source entity. Known values: HOME_INVITE, MEMBERSHIP_INVITE, COLLABORATION_INVITE.
+  """
+  sourceType: String
   status: NotificationStatus!
+  title: String
   type: NotificationType!
   user: User!
   userId: ID!
 }
 
+enum NotificationCategory {
+  HOME
+  PANTRY
+  RECIPE
+  SHOPPING
+  SYSTEM
+}
+
 type NotificationCategoryCount {
-  category: String!
+  category: NotificationCategory!
   count: Int!
   unreadCount: Int!
 }
@@ -4943,7 +4973,7 @@ type NotificationEventPayload {
 
 input NotificationFilters {
   batchId: String
-  category: String
+  category: NotificationCategory
   dateRange: DateRangeInput
   priority: Priority
   sourceType: String
@@ -5042,16 +5072,6 @@ enum NotificationStatus {
   PENDING
   READ
   SENT
-}
-
-"""
-Notification subscription payload
-Cache: None - subscription events must be real-time
-"""
-type NotificationSubscriptionPayload {
-  mutation: MutationType!
-  node: Notification!
-  updatedFields: [String!]
 }
 
 """Identifies the category of a notification sent to a user"""
@@ -8508,7 +8528,7 @@ input UpdateModerationInput {
 
 input UpdateNotificationInput {
   actionUrl: String
-  category: String
+  category: NotificationCategory
   expiresAt: DateTime
   message: String
   metadata: JSON

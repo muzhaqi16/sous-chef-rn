@@ -3,10 +3,8 @@ import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { alertService } from '#/services/alertService';
-import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { formatRole } from '#utils/formatters/roleFormatters';
-import { createPropsComparator } from '#utils/memoUtils';
 import type { HomeInviteFragment } from '#generated';
 import {
   InviteActionsProvider,
@@ -150,17 +148,9 @@ function syncExistingResources(
   setCheckingExisting(false);
 }
 
-// --- Module-scope FlashList helpers ---
+// --- Invite card component ---
 
-const inviteKeyExtractor = (invite: { id: string }) => invite.id;
-
-interface InviteRenderItemProps {
-  item: HomeInviteFragment;
-}
-
-const InviteRenderItemComponent: React.FC<InviteRenderItemProps> = ({
-  item: invite,
-}) => {
+const InviteCard: React.FC<{ invite: HomeInviteFragment }> = ({ invite }) => {
   const { theme } = useUnistyles();
   const { handleAcceptInvite, handleDeclineInvite, accepting } =
     useInviteActions();
@@ -192,7 +182,7 @@ const InviteRenderItemComponent: React.FC<InviteRenderItemProps> = ({
             styles.inviteDeclineButton,
             pressed && styles.pressed,
           ]}
-          onPress={() => handleDeclineInvite(invite.id, inviteHomeName)}
+          onPress={() => handleDeclineInvite(invite.token, inviteHomeName)}
           disabled={accepting}
         >
           <Text style={styles.inviteDeclineButtonText}>Decline</Text>
@@ -203,7 +193,7 @@ const InviteRenderItemComponent: React.FC<InviteRenderItemProps> = ({
             styles.inviteAcceptButton,
             pressed && styles.pressed,
           ]}
-          onPress={() => handleAcceptInvite(invite.id)}
+          onPress={() => handleAcceptInvite(invite.token)}
           disabled={accepting}
         >
           {accepting ? (
@@ -216,23 +206,6 @@ const InviteRenderItemComponent: React.FC<InviteRenderItemProps> = ({
     </View>
   );
 };
-
-const areInvitePropsEqual = createPropsComparator<InviteRenderItemProps>({
-  nestedComparisons: {
-    item: ['id'],
-    'item.home': ['name'],
-    'item.inviter': ['email'],
-  },
-});
-
-const InviteRenderItem = React.memo(
-  InviteRenderItemComponent,
-  areInvitePropsEqual,
-);
-
-const renderInviteItem = ({ item }: { item: HomeInviteFragment }) => (
-  <InviteRenderItem item={item} />
-);
 
 const CreateHomeScreenComponent = () => {
   useScreenTransition('CreateHomeScreen');
@@ -541,12 +514,9 @@ const CreateHomeScreenComponent = () => {
             handleDeclineInvite={handleDeclineInvite}
             accepting={accepting}
           >
-            <FlashList
-              data={pendingInvites}
-              keyExtractor={inviteKeyExtractor}
-              renderItem={renderInviteItem}
-              extraData={accepting}
-            />
+            {pendingInvites.map(invite => (
+              <InviteCard key={invite.id} invite={invite} />
+            ))}
           </InviteActionsProvider>
         </View>
 

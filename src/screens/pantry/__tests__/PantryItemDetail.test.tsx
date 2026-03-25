@@ -15,6 +15,7 @@ jest.mock('#/services/alertService', () => ({
 
 // --- Navigation ---
 jest.mock('#hooks/navigation/useAppNavigation');
+jest.mock('#hooks/pantry/usePantryPermissions');
 const mockNav = (
   jest.requireMock('#hooks/navigation/useAppNavigation') as {
     useAppNavigation: jest.Mock;

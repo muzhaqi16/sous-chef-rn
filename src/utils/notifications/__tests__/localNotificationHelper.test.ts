@@ -4,25 +4,20 @@ import { Platform } from 'react-native';
 
 // Mock notifee
 const mockDisplayNotification = jest.fn().mockResolvedValue(undefined);
-const mockCancelNotification = jest.fn().mockResolvedValue(undefined);
-const mockCancelAllNotifications = jest.fn().mockResolvedValue(undefined);
-const mockGetBadgeCount = jest.fn().mockResolvedValue(5);
-const mockSetBadgeCount = jest.fn().mockResolvedValue(undefined);
 const mockCreateChannel = jest.fn().mockResolvedValue('default');
-const mockOnForegroundEvent = jest.fn<jest.Mock, [(event: any) => void]>(() => jest.fn()); // returns unsubscribe fn
-const mockOnBackgroundEvent = jest.fn<void, [(event: any) => Promise<void>]>(() => {});
+const mockOnForegroundEvent = jest.fn(() => jest.fn());
+const mockOnBackgroundEvent = jest.fn();
 
 jest.mock('@notifee/react-native', () => ({
   __esModule: true,
   default: {
     displayNotification: mockDisplayNotification,
-    cancelNotification: mockCancelNotification,
-    cancelAllNotifications: mockCancelAllNotifications,
-    getBadgeCount: mockGetBadgeCount,
-    setBadgeCount: mockSetBadgeCount,
     createChannel: mockCreateChannel,
     onForegroundEvent: mockOnForegroundEvent,
     onBackgroundEvent: mockOnBackgroundEvent,
+  },
+  EventType: {
+    DISMISSED: 2,
   },
   AndroidImportance: {
     HIGH: 4,
@@ -34,11 +29,11 @@ jest.mock('@notifee/react-native', () => ({
 }));
 
 describe('localNotificationHelper', () => {
-  let showLocalNotification: (params: { id: string; title: string; body: string; priority?: 'high' | 'default' | 'low' }) => Promise<void>;
-  let cancelNotification: (id: string) => Promise<void>;
-  let cancelAllNotifications: () => Promise<void>;
-  let getBadgeCount: () => Promise<number>;
-  let setBadgeCount: (count: number) => Promise<void>;
+  let showLocalNotification: (params: {
+    id: string;
+    title: string;
+    body: string;
+  }) => Promise<void>;
   let setupNotificationHandlers: () => () => void;
 
   beforeEach(() => {
@@ -47,10 +42,6 @@ describe('localNotificationHelper', () => {
     jest.resetModules();
     const mod = require('../localNotificationHelper');
     showLocalNotification = mod.showLocalNotification;
-    cancelNotification = mod.cancelNotification;
-    cancelAllNotifications = mod.cancelAllNotifications;
-    getBadgeCount = mod.getBadgeCount;
-    setBadgeCount = mod.setBadgeCount;
     setupNotificationHandlers = mod.setupNotificationHandlers;
   });
 
@@ -73,7 +64,10 @@ describe('localNotificationHelper', () => {
 
     it('creates Android channel on Android platform', async () => {
       const originalPlatform = Platform.OS;
-      Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        writable: true,
+      });
 
       await showLocalNotification({
         id: 'android-1',
@@ -88,7 +82,10 @@ describe('localNotificationHelper', () => {
         }),
       );
 
-      Object.defineProperty(Platform, 'OS', { value: originalPlatform, writable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: originalPlatform,
+        writable: true,
+      });
     });
 
     it('skips channel creation on iOS', async () => {
@@ -103,12 +100,18 @@ describe('localNotificationHelper', () => {
 
       expect(mockCreateChannel).not.toHaveBeenCalled();
 
-      Object.defineProperty(Platform, 'OS', { value: originalPlatform, writable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: originalPlatform,
+        writable: true,
+      });
     });
 
     it('uses BIGTEXT style for long body on Android', async () => {
       const originalPlatform = Platform.OS;
-      Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        writable: true,
+      });
 
       const longBody = 'A'.repeat(60); // > 50 chars
       await showLocalNotification({
@@ -128,12 +131,18 @@ describe('localNotificationHelper', () => {
         }),
       );
 
-      Object.defineProperty(Platform, 'OS', { value: originalPlatform, writable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: originalPlatform,
+        writable: true,
+      });
     });
 
     it('uses no style for short body on Android', async () => {
       const originalPlatform = Platform.OS;
-      Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        writable: true,
+      });
 
       await showLocalNotification({
         id: 'short-1',
@@ -149,12 +158,18 @@ describe('localNotificationHelper', () => {
         }),
       );
 
-      Object.defineProperty(Platform, 'OS', { value: originalPlatform, writable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: originalPlatform,
+        writable: true,
+      });
     });
 
     it('handles displayNotification error with Android fallback', async () => {
       const originalPlatform = Platform.OS;
-      Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        writable: true,
+      });
 
       mockDisplayNotification
         .mockRejectedValueOnce(new Error('Display failed'))
@@ -175,12 +190,18 @@ describe('localNotificationHelper', () => {
         }),
       );
 
-      Object.defineProperty(Platform, 'OS', { value: originalPlatform, writable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: originalPlatform,
+        writable: true,
+      });
     });
 
     it('handles both original and fallback failure on Android', async () => {
       const originalPlatform = Platform.OS;
-      Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        writable: true,
+      });
 
       mockDisplayNotification
         .mockRejectedValueOnce(new Error('Display failed'))
@@ -193,14 +214,19 @@ describe('localNotificationHelper', () => {
         body: 'Body',
       });
 
-      Object.defineProperty(Platform, 'OS', { value: originalPlatform, writable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: originalPlatform,
+        writable: true,
+      });
     });
 
     it('handles displayNotification error without fallback on iOS', async () => {
       const originalPlatform = Platform.OS;
       Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
 
-      mockDisplayNotification.mockRejectedValueOnce(new Error('Display failed'));
+      mockDisplayNotification.mockRejectedValueOnce(
+        new Error('Display failed'),
+      );
 
       // Should not throw, and should not attempt fallback on iOS
       await showLocalNotification({
@@ -211,129 +237,20 @@ describe('localNotificationHelper', () => {
 
       expect(mockDisplayNotification).toHaveBeenCalledTimes(1);
 
-      Object.defineProperty(Platform, 'OS', { value: originalPlatform, writable: true });
-    });
-
-    it('accepts priority parameter', async () => {
-      await showLocalNotification({
-        id: 'pri-1',
-        title: 'Priority Test',
-        body: 'Body',
-        priority: 'high',
+      Object.defineProperty(Platform, 'OS', {
+        value: originalPlatform,
+        writable: true,
       });
-
-      expect(mockDisplayNotification).toHaveBeenCalled();
-    });
-  });
-
-  describe('cancelNotification', () => {
-    it('cancels a notification by id', async () => {
-      await cancelNotification('cancel-1');
-      expect(mockCancelNotification).toHaveBeenCalledWith('cancel-1');
-    });
-
-    it('handles cancel error gracefully', async () => {
-      mockCancelNotification.mockRejectedValueOnce(new Error('Cancel failed'));
-      await cancelNotification('fail-1');
-      // Should not throw
-    });
-  });
-
-  describe('cancelAllNotifications', () => {
-    it('cancels all notifications', async () => {
-      await cancelAllNotifications();
-      expect(mockCancelAllNotifications).toHaveBeenCalled();
-    });
-
-    it('handles cancel all error gracefully', async () => {
-      mockCancelAllNotifications.mockRejectedValueOnce(new Error('Cancel all failed'));
-      await cancelAllNotifications();
-      // Should not throw
-    });
-  });
-
-  describe('getBadgeCount', () => {
-    it('returns badge count on iOS', async () => {
-      const originalPlatform = Platform.OS;
-      Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
-
-      const count = await getBadgeCount();
-      expect(count).toBe(5);
-      expect(mockGetBadgeCount).toHaveBeenCalled();
-
-      Object.defineProperty(Platform, 'OS', { value: originalPlatform, writable: true });
-    });
-
-    it('returns 0 on Android', async () => {
-      const originalPlatform = Platform.OS;
-      Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
-
-      const count = await getBadgeCount();
-      expect(count).toBe(0);
-      expect(mockGetBadgeCount).not.toHaveBeenCalled();
-
-      Object.defineProperty(Platform, 'OS', { value: originalPlatform, writable: true });
-    });
-  });
-
-  describe('setBadgeCount', () => {
-    it('sets badge count on iOS', async () => {
-      const originalPlatform = Platform.OS;
-      Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
-
-      await setBadgeCount(10);
-      expect(mockSetBadgeCount).toHaveBeenCalledWith(10);
-
-      Object.defineProperty(Platform, 'OS', { value: originalPlatform, writable: true });
-    });
-
-    it('does nothing on Android', async () => {
-      const originalPlatform = Platform.OS;
-      Object.defineProperty(Platform, 'OS', { value: 'android', writable: true });
-
-      await setBadgeCount(10);
-      expect(mockSetBadgeCount).not.toHaveBeenCalled();
-
-      Object.defineProperty(Platform, 'OS', { value: originalPlatform, writable: true });
     });
   });
 
   describe('setupNotificationHandlers', () => {
-    it('sets up foreground and background handlers', () => {
+    it('registers foreground and background handlers', () => {
       const unsubscribe = setupNotificationHandlers();
 
       expect(mockOnForegroundEvent).toHaveBeenCalled();
       expect(mockOnBackgroundEvent).toHaveBeenCalled();
       expect(typeof unsubscribe).toBe('function');
-    });
-
-    it('foreground handler processes PRESSED events', () => {
-      setupNotificationHandlers();
-
-      // Get the callback passed to onForegroundEvent
-      const callback = mockOnForegroundEvent.mock.calls[0]?.[0] as
-        | ((event: any) => void)
-        | undefined;
-      expect(typeof callback).toBe('function');
-
-      // Simulate PRESSED event (type=1)
-      callback?.({ type: 1, detail: { notification: { data: { screen: 'home' } } } });
-      // Simulate DELIVERED event (type=0)
-      callback?.({ type: 0, detail: { notification: { title: 'Test' } } });
-      // Simulate DISMISSED event (type=2)
-      callback?.({ type: 2, detail: { notification: { title: 'Test' } } });
-    });
-
-    it('background handler processes PRESSED events', () => {
-      setupNotificationHandlers();
-
-      const callback = mockOnBackgroundEvent.mock.calls[0]?.[0] as
-        | ((event: any) => Promise<void>)
-        | undefined;
-      expect(typeof callback).toBe('function');
-
-      // Simulate background PRESSED event
-      callback?.({ type: 1, detail: { notification: { data: { screen: 'pantry' } } } });
     });
   });
 });

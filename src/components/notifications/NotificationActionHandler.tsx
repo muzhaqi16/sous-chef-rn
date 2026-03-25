@@ -102,53 +102,10 @@ export const NotificationActionHandler: React.FC<
         showInvitationModal(notification);
         break;
 
-      case 'ADD_TO_SHOPPING_LIST':
-        // Navigate to shopping list and pre-fill the item
-        try {
-          // navigateTo.shoppingListMain({
-          //   prefilledItem: {
-          //     name: notification.payload.itemName,
-          //     itemId: notification.payload.itemId,
-          //   },
-          // });
-        } catch {
-          alertService.alert(
-            'Navigation Error',
-            'Could not navigate to shopping list.',
-          );
-        }
-        break;
-
       case 'VIEW_EXPIRING_ITEMS':
         // Show expiration action sheet if enriched data is available,
         // otherwise navigate to pantry as fallback
         showExpirationActionSheet(notification);
-        break;
-
-      case 'VIEW_LIST':
-        // Navigate to specific shopping list
-        try {
-          // navigateTo.shoppingListMain({
-          //   listId: notification.payload.listId,
-          // });
-        } catch {
-          alertService.alert(
-            'Navigation Error',
-            'Could not navigate to shopping list.',
-          );
-        }
-        break;
-
-      case 'REVIEW_SECURITY':
-        // Navigate to security settings
-        try {
-          navigateTo.profile();
-        } catch {
-          alertService.alert(
-            'Navigation Error',
-            'Could not navigate to settings.',
-          );
-        }
         break;
 
       default:
@@ -161,11 +118,7 @@ export const NotificationActionHandler: React.FC<
             {
               text: 'Go to Notifications',
               onPress: () => {
-                try {
-                  navigateTo.notifications();
-                } catch {
-                  console.log('Could not navigate to notifications');
-                }
+                navigateTo.notifications();
               },
             },
           ],
@@ -217,7 +170,9 @@ export const NotificationActionHandler: React.FC<
   };
 
   const handleInvitationReject = () => {
-    // Handle rejection
+    if (currentNotificationId) {
+      removeNotification(currentNotificationId);
+    }
     alertService.alert(
       'Invitation Rejected',
       'The invitation has been declined.',

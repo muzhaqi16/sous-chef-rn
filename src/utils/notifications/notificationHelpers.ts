@@ -1,7 +1,26 @@
-import {NotificationType} from '#generated';
-import {Icon} from '#utils/iconUtils';
+import { NotificationType } from '#generated';
+import { Icon } from '#utils/iconUtils';
 
 type IconProps = React.ComponentProps<typeof Icon>;
+
+export const getNotificationAction = (
+  type: NotificationType,
+): { requiresAction: boolean; actionType?: string } => {
+  switch (type) {
+    case NotificationType.HomeInvitation:
+    case NotificationType.MembershipInvite:
+      return { requiresAction: true, actionType: 'ACCEPT_HOME_INVITE' };
+    case NotificationType.CollaborationInvite:
+      return {
+        requiresAction: true,
+        actionType: 'ACCEPT_SHOPPING_LIST_INVITE',
+      };
+    case NotificationType.ExpiryReminder:
+      return { requiresAction: true, actionType: 'VIEW_EXPIRING_ITEMS' };
+    default:
+      return { requiresAction: false };
+  }
+};
 
 export const getNotificationIcon = (
   type: NotificationType,
@@ -29,4 +48,3 @@ export const getNotificationIcon = (
       return 'notifications';
   }
 };
-

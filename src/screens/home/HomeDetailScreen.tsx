@@ -88,6 +88,7 @@ export const HomeDetailScreen: React.FC<{
   const currentUserMembership = home?.myMembership;
 
   const isOwner = currentUserMembership?.role === 'OWNER';
+  const canManage = currentUserMembership?.canManageHome ?? false;
 
   const handleLeaveHome = async () => {
     if (!home) return;
@@ -155,6 +156,7 @@ export const HomeDetailScreen: React.FC<{
             value={home.name}
             onSave={saveName}
             placeholder="Enter home name"
+            readOnly={!canManage}
             validation={value => {
               if (!value.trim()) {
                 return 'Home name cannot be empty';
@@ -162,16 +164,18 @@ export const HomeDetailScreen: React.FC<{
               return null;
             }}
           />
-          <SettingSwitch
-            title="Allow Join Code"
-            description="Let others join this home using a code"
-            value={home.allowJoinCode ?? false}
-            onValueChange={handleToggleJoinCode}
-            disabled={joinCodeLoading}
-            loading={joinCodeLoading}
-            containerStyle={styles.joinCodeSwitch}
-          />
-          {!!home.allowJoinCode && !!home.joinCode && (
+          {canManage ? (
+            <SettingSwitch
+              title="Allow Join Code"
+              description="Let others join this home using a code"
+              value={home.allowJoinCode ?? false}
+              onValueChange={handleToggleJoinCode}
+              disabled={joinCodeLoading}
+              loading={joinCodeLoading}
+              containerStyle={styles.joinCodeSwitch}
+            />
+          ) : null}
+          {canManage && !!home.allowJoinCode && !!home.joinCode ? (
             <View style={styles.joinCodeRow}>
               <View style={styles.joinCodeContent}>
                 <Text style={styles.joinCodeLabel}>Join Code</Text>
@@ -193,7 +197,7 @@ export const HomeDetailScreen: React.FC<{
                 />
               </Pressable>
             </View>
-          )}
+          ) : null}
         </>
       ),
     },

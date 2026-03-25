@@ -3,18 +3,19 @@ import {
   createSectionListData,
   NotificationGroups,
 } from '../notificationGrouping';
+import { NotificationCategory, NotificationType } from '#generated';
 import {
   NotificationPriority,
-  NotificationCategory,
   NotificationItem,
 } from '#store/slices/notificationSlice';
-import { NotificationType } from '#generated';
 
-function makeNotification(overrides: Partial<NotificationItem> = {}): NotificationItem {
+function makeNotification(
+  overrides: Partial<NotificationItem> = {},
+): NotificationItem {
   return {
     id: 'n-1',
     type: NotificationType.NewItemAdded,
-    category: NotificationCategory.SYSTEM,
+    category: NotificationCategory.System,
     priority: NotificationPriority.MEDIUM,
     title: 'Test',
     message: 'Test notification',

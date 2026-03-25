@@ -152,7 +152,7 @@ const RootStack = createNativeStackNavigator({
         ProfilePhotoUpload: {
           screen: ProfilePhotoUploadScreen,
           options: {
-            presentation: 'modal',
+            presentation: 'card',
             animation: 'slide_from_bottom',
           },
           linking: 'upload-photo',
@@ -258,7 +258,10 @@ export function Navigation() {
   const { recordBiometricPromptResponse } = useBiometricPrompting();
   const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
 
-  const handlePostLoginBiometricComplete = (enabled: boolean, declined?: boolean) => {
+  const handlePostLoginBiometricComplete = (
+    enabled: boolean,
+    declined?: boolean,
+  ) => {
     setShowBiometricSetup(false);
 
     recordBiometricPromptResponse(enabled, declined);
@@ -348,11 +351,13 @@ export function Navigation() {
 
   return (
     <NavigationErrorBoundary>
-      <Suspense fallback={
-        <View style={suspenseFallbackStyle}>
-          <SousChefLoader size="small" showBrand={false} message="Loading" />
-        </View>
-      }>
+      <Suspense
+        fallback={
+          <View style={suspenseFallbackStyle}>
+            <SousChefLoader size="small" showBrand={false} message="Loading" />
+          </View>
+        }
+      >
         <StaticNavigation
           ref={navigationRef}
           theme={navigationTheme}

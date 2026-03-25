@@ -44,7 +44,8 @@ import {
   SortOrder,
   MealType,
   type MealPlanItemFragment,
-  type MealTemplateDisplayFragment } from '#generated';
+  type MealTemplateDisplayFragment,
+} from '#generated';
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 
@@ -102,19 +103,23 @@ const MealPlanMainInner: React.FC = () => {
   // Template state
   const [saveTemplateVisible, setSaveTemplateVisible] = useState(false);
   const [templateBrowserVisible, setTemplateBrowserVisible] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<MealTemplateDisplayFragment | null>(null);
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<MealTemplateDisplayFragment | null>(null);
   const [templatePreviewVisible, setTemplatePreviewVisible] = useState(false);
 
   // Shopping list generation state
-  const [shoppingListSheetVisible, setShoppingListSheetVisible] = useState(false);
+  const [shoppingListSheetVisible, setShoppingListSheetVisible] =
+    useState(false);
 
   // Mark cooked modal state
   const [markCookedVisible, setMarkCookedVisible] = useState(false);
-  const [pendingCookItem, setPendingCookItem] = useState<MealPlanItemFragment | null>(null);
+  const [pendingCookItem, setPendingCookItem] =
+    useState<MealPlanItemFragment | null>(null);
 
   // Edit custom meal state
   const [editCustomMealVisible, setEditCustomMealVisible] = useState(false);
-  const [editingCustomItem, setEditingCustomItem] = useState<MealPlanItemFragment | null>(null);
+  const [editingCustomItem, setEditingCustomItem] =
+    useState<MealPlanItemFragment | null>(null);
 
   // Settings and duplicate state
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -124,14 +129,21 @@ const MealPlanMainInner: React.FC = () => {
     createPlanFromTemplate,
     createTemplateFromPlan,
     creatingFromTemplate,
-    creatingTemplate } = useMealTemplateActions();
+    creatingTemplate,
+  } = useMealTemplateActions();
 
   // Fetch meal plans and resolve active plan
   const { currentPlan, mealPlans, loading: plansLoading } = useMealPlans();
-  const activePlanId = selectedMealPlanId ?? currentPlan?.id ?? mealPlans[0]?.id ?? null;
+  const activePlanId =
+    selectedMealPlanId ?? currentPlan?.id ?? mealPlans[0]?.id ?? null;
 
   // Fetch the active plan with items
-  const { mealPlan: activeMealPlan, items, nutritionSummary, refetch } = useMealPlan(activePlanId);
+  const {
+    mealPlan: activeMealPlan,
+    items,
+    nutritionSummary,
+    refetch,
+  } = useMealPlan(activePlanId);
 
   // Lifecycle: optimistic restoration, cache persistence, perf tracking
   useTabScreenLifecycle({
@@ -152,13 +164,18 @@ const MealPlanMainInner: React.FC = () => {
   const permissions = useMealPlanPermissions(activeMealPlan);
 
   // Compute plan date boundaries
-  const planStartDate = (activeMealPlan?.startDate ? parseISO(activeMealPlan.startDate) : undefined);
-  const planEndDate = (activeMealPlan?.endDate ? parseISO(activeMealPlan.endDate) : undefined);
+  const planStartDate = activeMealPlan?.startDate
+    ? parseISO(activeMealPlan.startDate)
+    : undefined;
+  const planEndDate = activeMealPlan?.endDate
+    ? parseISO(activeMealPlan.endDate)
+    : undefined;
 
   // Calendar state
   const calendar = useMealPlanCalendar({
     minDate: planStartDate,
-    maxDate: planEndDate });
+    maxDate: planEndDate,
+  });
 
   // Daily meals for selected date
   const { dailyMeals, totalCalories, isEmpty } = useDailyMeals(
@@ -178,11 +195,19 @@ const MealPlanMainInner: React.FC = () => {
   const { duplicatePlan, loading: duplicatingPlan } = useDuplicateMealPlan();
 
   // Delete meal plan
-  const [deletePlanMutation, { loading: deletingPlan }] = useDeleteMealPlanMutation({
-    refetchQueries: [{ query: GetMealPlansDocument, variables: { first: 20, orderBy: { startDate: SortOrder.Desc } } }],
-    onError: error => {
-      toastService.error(error.message || 'Failed to delete meal plan');
-    } });
+  const [deletePlanMutation, { loading: deletingPlan }] =
+    useDeleteMealPlanMutation({
+      refetchQueries: [
+        {
+          query: GetMealPlansDocument,
+          variables: { first: 20, orderBy: { startDate: SortOrder.Desc } },
+        },
+      ],
+      awaitRefetchQueries: true,
+      onError: error => {
+        toastService.error(error.message || 'Failed to delete meal plan');
+      },
+    });
 
   // Compute days with meals for calendar indicators
   const daysWithMeals = (() => {
@@ -202,86 +227,100 @@ const MealPlanMainInner: React.FC = () => {
     }
   };
 
-  // Register add button - opens add meal sheet
-  useTabBarAddButton(() => {
-    setAddMealType(undefined);
-    setAddMealVisible(true);
-  });
+  // Register add button - opens add meal sheet (only if user can edit)
+  useTabBarAddButton(
+    permissions.canEdit
+      ? () => {
+          setAddMealType(undefined);
+          setAddMealVisible(true);
+        }
+      : undefined,
+  );
 
-  const handleToggleCompleted = (id: string, isCompleted: boolean, hasRecipe: boolean) => {
-      const item = items.find(i => i.id === id);
-      if (!item) return;
+  const handleToggleCompleted = (
+    id: string,
+    isCompleted: boolean,
+    hasRecipe: boolean,
+  ) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
 
-      // Show MarkCookedModal when marking a recipe meal as complete
-      if (!isCompleted && hasRecipe) {
-        setPendingCookItem(item);
-        setMarkCookedVisible(true);
-        return;
-      }
+    // Show MarkCookedModal when marking a recipe meal as complete
+    if (!isCompleted && hasRecipe) {
+      setPendingCookItem(item);
+      setMarkCookedVisible(true);
+      return;
+    }
 
-      // For unchecking or custom meals, toggle directly
-      toggleCompleted(item);
-    };
+    // For unchecking or custom meals, toggle directly
+    toggleCompleted(item);
+  };
 
   const handleMarkCooked = (input: {
-      servings: number;
-      deductFromPantry: boolean;
-      useGranularDeduction: boolean;
-      notes?: string;
-    }) => {
-      if (!pendingCookItem) return;
-      toggleCompleted(pendingCookItem, {
-        deductFromPantry: input.deductFromPantry,
-        servings: input.servings,
-        notes: input.notes });
-      setPendingCookItem(null);
-    };
+    servings: number;
+    deductFromPantry: boolean;
+    useGranularDeduction: boolean;
+    notes?: string;
+  }) => {
+    if (!pendingCookItem) return;
+    toggleCompleted(pendingCookItem, {
+      deductFromPantry: input.deductFromPantry,
+      servings: input.servings,
+      notes: input.notes,
+    });
+    setPendingCookItem(null);
+  };
 
   const handleDeleteItem = (id: string) => {
-      deleteItem(id);
-    };
+    deleteItem(id);
+  };
 
   const handleAddRecipe = async (recipeId: string, mealType: MealType) => {
-      if (!activePlanId) return;
-      const result = await createItem({
-        mealPlanId: activePlanId,
-        recipeId,
-        mealType,
-        date: calendar.selectedDate.toISOString() });
-      if (result) {
-        setAddMealVisible(false);
-      }
-    };
+    if (!activePlanId) return;
+    const result = await createItem({
+      mealPlanId: activePlanId,
+      recipeId,
+      mealType,
+      date: calendar.selectedDate.toISOString(),
+    });
+    if (result) {
+      setAddMealVisible(false);
+    }
+  };
 
   const handleAddCustomMeal = async (name: string, mealType: MealType) => {
-      if (!activePlanId) return;
-      const result = await createItem({
-        mealPlanId: activePlanId,
-        customMealName: name,
-        mealType,
-        date: calendar.selectedDate.toISOString() });
-      if (result) {
-        setAddMealVisible(false);
-      }
-    };
+    if (!activePlanId) return;
+    const result = await createItem({
+      mealPlanId: activePlanId,
+      customMealName: name,
+      mealType,
+      date: calendar.selectedDate.toISOString(),
+    });
+    if (result) {
+      setAddMealVisible(false);
+    }
+  };
 
   const handleOpenAddMeal = (mealType?: MealType) => {
-      setAddMealType(mealType);
-      setAddMealVisible(true);
-    };
+    setAddMealType(mealType);
+    setAddMealVisible(true);
+  };
 
   const handleItemPress = (item: MealPlanItemFragment) => {
-      if (item.recipe?.id) {
-        navigate('RecipeDetail', { recipeId: item.recipe.id });
-      } else if (item.customMealName) {
-        setEditingCustomItem(item);
-        setEditCustomMealVisible(true);
-      }
-    };
+    if (item.recipe?.id) {
+      navigate('RecipeDetail', { recipeId: item.recipe.id });
+    } else if (item.customMealName && permissions.canEdit) {
+      setEditingCustomItem(item);
+      setEditCustomMealVisible(true);
+    }
+  };
 
-  const handleSaveCustomMeal = (id: string, input: { customMealName?: string; notes?: string }) => {
-      updateItem(id, input);
-    };
+  const handleSaveCustomMeal = (
+    id: string,
+    input: { customMealName?: string; notes?: string },
+  ) => {
+    updateItem(id, input);
+  };
 
   const handleCreatePlan = () => {
     navigate('CreateMealPlan');
@@ -292,17 +331,17 @@ const MealPlanMainInner: React.FC = () => {
   };
 
   const handleSaveTemplate = async (input: {
-      mealPlanId: string;
-      name: string;
-      description?: string;
-      category?: any;
-      tags?: string[];
-    }) => {
-      const result = await createTemplateFromPlan(input);
-      if (result?.success) {
-        setSaveTemplateVisible(false);
-      }
-    };
+    mealPlanId: string;
+    name: string;
+    description?: string;
+    category?: any;
+    tags?: string[];
+  }) => {
+    const result = await createTemplateFromPlan(input);
+    if (result?.success) {
+      setSaveTemplateVisible(false);
+    }
+  };
 
   const handleOpenTemplateBrowser = () => {
     setTemplateBrowserVisible(true);
@@ -316,71 +355,75 @@ const MealPlanMainInner: React.FC = () => {
     setSelectedMealPlanId: (id: string) => setSelectedMealPlanId(id),
     selectorRef,
     navigate,
-    onCreateFromTemplate: handleOpenTemplateBrowser });
+    onCreateFromTemplate: handleOpenTemplateBrowser,
+  });
 
   const handleSelectTemplate = (template: MealTemplateDisplayFragment) => {
-      setSelectedTemplate(template);
-      setTemplateBrowserVisible(false);
-      setTemplatePreviewVisible(true);
-    };
+    setSelectedTemplate(template);
+    setTemplateBrowserVisible(false);
+    setTemplatePreviewVisible(true);
+  };
 
   const handleCreateFromTemplate = async (config: {
-      templateId: string;
-      startDate: string;
-      name?: string;
-      servings?: number;
-    }) => {
-      const result = await createPlanFromTemplate(config);
-      if (result?.success) {
-        setTemplatePreviewVisible(false);
-        setSelectedTemplate(null);
-      }
-    };
+    templateId: string;
+    startDate: string;
+    name?: string;
+    servings?: number;
+  }) => {
+    const result = await createPlanFromTemplate(config);
+    if (result?.success) {
+      setTemplatePreviewVisible(false);
+      setSelectedTemplate(null);
+    }
+  };
 
   const handleDuplicatePlan = async (input: {
-      mealPlanId: string;
-      newName: string;
-      newStartDate: string;
-      newEndDate: string;
-    }) => {
-      const result = await duplicatePlan(input);
-      if (result?.success) {
-        setDuplicateVisible(false);
-      }
-    };
+    mealPlanId: string;
+    newName: string;
+    newStartDate: string;
+    newEndDate: string;
+  }) => {
+    const result = await duplicatePlan(input);
+    if (result?.success) {
+      setDuplicateVisible(false);
+    }
+  };
 
   const handleDeletePlan = async (id: string) => {
-      let result;
-      try {
-        result = await deletePlanMutation({ variables: { id } });
-      } catch {
-        // Error handled by onError callback
-        return;
+    let result;
+    try {
+      result = await deletePlanMutation({ variables: { id } });
+    } catch {
+      // Error handled by onError callback
+      return;
+    }
+    if (result.data?.deleteMealPlan?.success) {
+      toastService.success('Meal plan deleted');
+      // If we deleted the active plan, clear the selection so the UI falls back
+      // to the next available plan (or the empty state if none remain).
+      // awaitRefetchQueries ensures mealPlans is already updated at this point.
+      if (id === activePlanId) {
+        setSelectedMealPlanId(null);
       }
-      if (result.data?.deleteMealPlan?.success) {
-        toastService.success('Meal plan deleted');
-      }
-    };
+    }
+  };
 
   const handleGenerateShoppingList = async (options: {
-      checkPantry?: boolean;
-      name?: string;
-      shoppingListId?: string;
-    }) => {
-      const result = await generateShoppingList(options);
-      if (result?.success) {
-        setShoppingListSheetVisible(false);
-      }
-    };
+    checkPantry?: boolean;
+    name?: string;
+    shoppingListId?: string;
+  }) => {
+    const result = await generateShoppingList(options);
+    if (result?.success) {
+      setShoppingListSheetVisible(false);
+    }
+  };
 
   // Show empty state if no plans exist and not loading
   if (!plansLoading && mealPlans.length === 0) {
     return (
       <View style={styles.container} testID="meal-plan-screen">
-        <TabScreenHeader
-          label="Plan your meals"
-          title="Meal Plan"
-        />
+        <TabScreenHeader label="Plan your meals" title="Meal Plan" />
         <MealPlanEmptyState
           onCreatePlan={handleCreatePlan}
           onCreateFromTemplate={handleOpenTemplateBrowser}
@@ -507,10 +550,12 @@ const MealPlanMainInner: React.FC = () => {
         dailyMeals={dailyMeals}
         totalCalories={totalCalories}
         isEmpty={isEmpty}
-        onToggleCompleted={handleToggleCompleted}
+        onToggleCompleted={
+          permissions.canEdit ? handleToggleCompleted : undefined
+        }
         onItemPress={handleItemPress}
-        onDeleteItem={handleDeleteItem}
-        onAddMeal={handleOpenAddMeal}
+        onDeleteItem={permissions.canEdit ? handleDeleteItem : undefined}
+        onAddMeal={permissions.canEdit ? handleOpenAddMeal : undefined}
         refreshing={refreshing}
         onRefresh={handleRefresh}
         listHeader={
@@ -598,7 +643,9 @@ const MealPlanMainInner: React.FC = () => {
       <MarkCookedModal
         visible={markCookedVisible}
         recipeName={pendingCookItem?.recipe?.name ?? ''}
-        defaultServings={pendingCookItem?.servings ?? pendingCookItem?.recipe?.servings ?? 1}
+        defaultServings={
+          pendingCookItem?.servings ?? pendingCookItem?.recipe?.servings ?? 1
+        }
         onClose={() => {
           setMarkCookedVisible(false);
           setPendingCookItem(null);
@@ -631,19 +678,26 @@ const MealPlanMainInner: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background },
+    backgroundColor: theme.colors.background,
+  },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start' },
+    alignItems: 'flex-start',
+  },
   headerContent: {
-    flex: 1 },
+    flex: 1,
+  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: theme.spacing.md,
     paddingRight: theme.spacing.md,
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   headerActionButton: {
-    padding: theme.spacing.xs },
+    padding: theme.spacing.xs,
+  },
   nutritionContainer: {
-    marginBottom: theme.spacing.sm } }));
+    marginBottom: theme.spacing.sm,
+  },
+}));

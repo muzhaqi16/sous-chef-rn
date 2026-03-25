@@ -5,11 +5,13 @@ import {
   ActivityIndicator,
   RefreshControl,
   Pressable,
-  ScrollView } from 'react-native';
+  ScrollView,
+} from 'react-native';
 import Animated, {
   LinearTransition,
   FadeInDown,
-  FadeOutUp } from 'react-native-reanimated';
+  FadeOutUp,
+} from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '#components/molecules/Header';
@@ -23,10 +25,14 @@ import { Button } from '#/components/base/Button';
 import { toastService } from '#/services/toastService';
 import { HomeStats } from '#/components/organisms/home/HomeStats';
 import { CreateHomeForm } from '#/components/organisms/home/CreateHomeForm';
-import { HomeCard, type PartialHome } from '#/components/organisms/home/HomeCard';
+import {
+  HomeCard,
+  type PartialHome,
+} from '#/components/organisms/home/HomeCard';
 import {
   getInvitableRoles,
-  canInviteToHome } from '#/utils/permissions/homePermissions';
+  canInviteToHome,
+} from '#/utils/permissions/homePermissions';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
@@ -65,7 +71,8 @@ export const HomeManagement: React.FC = () => {
     joinHomeByCode,
     previewHomeByCode,
     stats,
-    refetch: refetchHomes } = useHomeManagement();
+    refetch: refetchHomes,
+  } = useHomeManagement();
 
   // Note: Removed useFocusEffect refetch to prevent flickering
   // Apollo's cache-and-network + cache-first strategy handles data freshness
@@ -73,40 +80,44 @@ export const HomeManagement: React.FC = () => {
 
   const { show, InviteModalComponent } = useInviteUserModal();
   const inviteUserPrompt = (homeId: string) => {
-      // Find the home and user's membership
-      const home = homes?.find(h => h.id === homeId);
-      if (!home) {
-        toastService.error('Home not found');
-        return;
-      }
+    // Find the home and user's membership
+    const home = homes?.find(h => h.id === homeId);
+    if (!home) {
+      toastService.error('Home not found');
+      return;
+    }
 
-      const membership = home.myMembership;
-      if (!membership) {
-        toastService.error('You are not a member of this home');
-        return;
-      }
+    const membership = home.myMembership;
+    if (!membership) {
+      toastService.error('You are not a member of this home');
+      return;
+    }
 
-      // Check if user has permission to invite
-      if (!canInviteToHome(membership.role)) {
-        toastService.error(
-          'You do not have permission to invite members to this home',
-        );
-        return;
-      }
+    // Check if user has permission to invite
+    if (!canInviteToHome(membership.role, membership.canInviteOthers)) {
+      toastService.error(
+        'You do not have permission to invite members to this home',
+      );
+      return;
+    }
 
-      // Get the roles this user can invite
-      const allowedRoles = getInvitableRoles(membership.role);
+    // Get the roles this user can invite
+    const allowedRoles = getInvitableRoles(
+      membership.role,
+      membership.canInviteOthers,
+    );
 
-      show({
-        title: 'Invite Member to Home',
-        allowedRoles,
-        onSubmit: async (email, role) => {
-          // Just call the function and let any errors bubble up to the modal
-          // The modal will handle displaying the error and keeping itself open
-          await inviteUserToHome(homeId, email, role);
-          // If we reach here, the invitation was successful and the modal will close
-        } });
-    };
+    show({
+      title: 'Invite Member to Home',
+      allowedRoles,
+      onSubmit: async (email, role) => {
+        // Just call the function and let any errors bubble up to the modal
+        // The modal will handle displaying the error and keeping itself open
+        await inviteUserToHome(homeId, email, role);
+        // If we reach here, the invitation was successful and the modal will close
+      },
+    });
+  };
 
   const handleCreateHome = async () => {
     if (!homeName.trim()) return;
@@ -144,31 +155,37 @@ export const HomeManagement: React.FC = () => {
   };
 
   const handleSetDefault = async (homeId: string) => {
-      // Clear any existing highlight timeout
-      if (highlightTimeoutRef.current) {
-        clearTimeout(highlightTimeoutRef.current);
-      }
+    // Clear any existing highlight timeout
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
 
-      await setDefaultHome(homeId);
+    await setDefaultHome(homeId);
 
-      // Highlight the newly-set default home
-      setHighlightedHomeId(homeId);
+    // Highlight the newly-set default home
+    setHighlightedHomeId(homeId);
 
-      // Auto-dismiss highlight after 2 seconds
-      highlightTimeoutRef.current = setTimeout(() => {
-        setHighlightedHomeId(null);
-      }, 2000);
-    };
+    // Auto-dismiss highlight after 2 seconds
+    highlightTimeoutRef.current = setTimeout(() => {
+      setHighlightedHomeId(null);
+    }, 2000);
+  };
 
   const handleViewHomeDetail = (homeId: string) => {
-      navigate('HomeDetail', { homeId });
-    };
+    navigate('HomeDetail', { homeId });
+  };
 
   const handleRefresh = () => {
     executeWithLoadingState(
-      async () => { await refetchHomes(); },
+      async () => {
+        await refetchHomes();
+      },
       setRefreshing,
-      (error) => { errorService.reportError(error, { operation: 'HomeManagement.refreshData' }); },
+      error => {
+        errorService.reportError(error, {
+          operation: 'HomeManagement.refreshData',
+        });
+      },
     );
   };
 
@@ -204,7 +221,8 @@ export const HomeManagement: React.FC = () => {
             {
               icon: 'add',
               onPress: () => setShowCreateForm(true),
-              variant: 'primary' },
+              variant: 'primary',
+            },
           ]}
         />
 
@@ -226,7 +244,7 @@ export const HomeManagement: React.FC = () => {
             {/* Mode Switcher */}
             <View style={styles.modeSwitcher}>
               <Pressable
-                style={({pressed}) => [
+                style={({ pressed }) => [
                   styles.modeButton,
                   mode === 'create' && styles.modeButtonActive,
                   pressed && styles.pressed,
@@ -243,7 +261,7 @@ export const HomeManagement: React.FC = () => {
                 </Text>
               </Pressable>
               <Pressable
-                style={({pressed}) => [
+                style={({ pressed }) => [
                   styles.modeButton,
                   mode === 'join' && styles.modeButtonActive,
                   pressed && styles.pressed,
@@ -344,7 +362,10 @@ export const HomeManagement: React.FC = () => {
           >
             {sortedHomes.map((home, index) => {
               const userCanInvite = home.myMembership
-                ? canInviteToHome(home.myMembership.role)
+                ? canInviteToHome(
+                    home.myMembership.role,
+                    home.myMembership.canInviteOthers,
+                  )
                 : false;
               const userCanDelete = home.myMembership?.canManageHome ?? false;
 
@@ -382,55 +403,72 @@ export const HomeManagement: React.FC = () => {
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   formContainer: {
     marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   modeSwitcher: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
     padding: theme.spacing.xs,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   modeButton: {
     flex: 1,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.sm,
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   modeButtonActive: {
-    backgroundColor: theme.colors.primary },
+    backgroundColor: theme.colors.primary,
+  },
   modeButtonText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   modeButtonTextActive: {
-    color: theme.colors.white },
+    color: theme.colors.white,
+  },
   joinForm: {
-    backgroundColor: theme.colors.surface },
+    backgroundColor: theme.colors.surface,
+  },
   formActions: {
     flexDirection: 'row',
     marginTop: theme.spacing.md,
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   actionButton: {
-    flex: 1 },
+    flex: 1,
+  },
   previewLoader: {
-    marginVertical: theme.spacing.sm },
+    marginVertical: theme.spacing.sm,
+  },
   previewCard: {
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   previewTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   previewSubtitle: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   previewDescription: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
-    marginTop: theme.spacing.xs },
+    marginTop: theme.spacing.xs,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

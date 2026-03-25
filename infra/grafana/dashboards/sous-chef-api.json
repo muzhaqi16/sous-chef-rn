@@ -429,7 +429,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "count(count by(__name__)({service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})) > 0 or vector(0)",
+          "expr": "count(count by(__name__)({service_name=\"sous-chef-app\"})) > 0 or vector(0)",
           "refId": "A",
           "legendFormat": "Metrics Active"
         }

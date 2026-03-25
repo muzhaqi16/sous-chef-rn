@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useDataPreloading } from '#/hooks/useDataPreloading';
-import { useAllPendingInvites } from '#/hooks/invitations/useAllPendingInvites';
+import { useNotificationsOnLaunch } from '#/hooks/notifications/useNotificationsOnLaunch';
 import { useAuthUser } from '#/hooks/auth/useAuthUser';
 import { useGetUserProfileQuery } from '#/graphql/generated';
 import { useAppStore } from '#store/useAppStore';
@@ -38,9 +38,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // The hook handles authentication checking internally
   useDataPreloading();
 
-  // Fetch and display ALL pending invitations (home + shopping list) on startup
-  // This ensures users can accept invitations even if they missed the notification
-  useAllPendingInvites(user?.id);
+  // Load all unread notifications on startup via notificationsConnection
+  // Re-queries on foreground to catch missed events (reconnect proxy)
+  useNotificationsOnLaunch(user?.id);
 
   // Fetch profile on every app load to keep Zustand store in sync
   // (e.g., profilePicture is only set at login/register and goes stale).
