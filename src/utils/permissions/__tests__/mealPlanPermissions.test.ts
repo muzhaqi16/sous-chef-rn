@@ -21,7 +21,15 @@ const NONE = {
   canSaveAsTemplate: false,
 };
 
-const GUEST = {
+const EDITOR = {
+  canEdit: true,
+  canDelete: false,
+  canDuplicate: true,
+  canGenerateShoppingList: true,
+  canSaveAsTemplate: true,
+};
+
+const VIEWER = {
   canEdit: false,
   canDelete: false,
   canDuplicate: false,
@@ -86,17 +94,17 @@ describe('mealPlanPermissions', () => {
       expect(getMealPlanPermissions(plan, 'u2')).toEqual(NONE);
     });
 
-    it('returns guest permissions for GUEST role', () => {
+    it('returns viewer permissions for GUEST role', () => {
       const plan = {
         homeId: 'h1',
         home: { myMembership: { role: MembershipRole.Guest } },
       };
-      expect(getMealPlanPermissions(plan, 'u2')).toEqual(GUEST);
+      expect(getMealPlanPermissions(plan, 'u2')).toEqual(VIEWER);
     });
 
-    it.each([MembershipRole.Owner, MembershipRole.Admin, MembershipRole.Member])(
+    it.each([MembershipRole.Owner, MembershipRole.Admin])(
       'returns full permissions for %s role',
-      (role) => {
+      role => {
         const plan = {
           homeId: 'h1',
           home: { myMembership: { role } },
@@ -104,6 +112,14 @@ describe('mealPlanPermissions', () => {
         expect(getMealPlanPermissions(plan, 'u2')).toEqual(FULL);
       },
     );
+
+    it('returns editor permissions (no delete) for MEMBER role', () => {
+      const plan = {
+        homeId: 'h1',
+        home: { myMembership: { role: MembershipRole.Member } },
+      };
+      expect(getMealPlanPermissions(plan, 'u2')).toEqual(EDITOR);
+    });
 
     it('returns full permissions for personal plans even without userId', () => {
       expect(getMealPlanPermissions({})).toEqual(FULL);

@@ -906,7 +906,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "count(count by(__name__)({service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})) > 0 or vector(0)",
+          "expr": "count(count by(__name__)({service_name=\"sous-chef-app\"})) > 0 or vector(0)",
           "refId": "A",
           "legendFormat": "Metrics Active"
         }
@@ -1558,7 +1558,8 @@
               { "color": "yellow", "value": 1 },
               { "color": "red", "value": 5 }
             ]
-          }
+          },
+          "noValue": "0"
         }
       },
       "gridPos": {
@@ -1584,7 +1585,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(increase(app_unhandled_exceptions_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
+          "expr": "sum(increase(app_unhandled_exceptions_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h])) or vector(0)",
           "refId": "A",
           "legendFormat": "Unhandled Exceptions"
         }
@@ -1607,7 +1608,8 @@
               { "color": "yellow", "value": 1 },
               { "color": "red", "value": 5 }
             ]
-          }
+          },
+          "noValue": "0"
         }
       },
       "gridPos": {
@@ -1633,7 +1635,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(increase(app_level_errors_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
+          "expr": "sum(increase(app_level_errors_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h])) or vector(0)",
           "refId": "A",
           "legendFormat": "Error Boundary"
         }

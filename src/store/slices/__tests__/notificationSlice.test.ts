@@ -1,10 +1,6 @@
 import { createTestStore } from '#/test-utils/createTestStore';
-import {
-  NotificationCategory,
-  NotificationPriority,
-  NotificationItem,
-} from '../notificationSlice';
-import { NotificationType } from '#/graphql/generated';
+import { NotificationCategory, NotificationType } from '#/graphql/generated';
+import { NotificationPriority, NotificationItem } from '../notificationSlice';
 
 // Mock authSlice dependencies
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -23,7 +19,7 @@ function createNotification(
   return {
     id: `notif-${Date.now()}-${Math.random()}`,
     type: NotificationType.NewItemAdded,
-    category: NotificationCategory.SYSTEM,
+    category: NotificationCategory.System,
     priority: NotificationPriority.MEDIUM,
     title: 'Test',
     message: 'Test message',
@@ -51,11 +47,9 @@ describe('notificationSlice', () => {
 
     it('does not add if user email is not verified', () => {
       const store = createTestStore();
-      store.getState().setAuth(
-        { ...testUser, emailVerified: false } as any,
-        'a',
-        'r',
-      );
+      store
+        .getState()
+        .setAuth({ ...testUser, emailVerified: false } as any, 'a', 'r');
       store.getState().addNotification(createNotification());
       expect(store.getState().notifications).toHaveLength(0);
     });
@@ -70,18 +64,22 @@ describe('notificationSlice', () => {
 
     it('rejects pantry notifications without selectedPantryId', () => {
       const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({ category: NotificationCategory.PANTRY }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({ category: NotificationCategory.Pantry }),
+        );
       expect(store.getState().notifications).toHaveLength(0);
     });
 
     it('allows pantry notifications with selectedPantryId', () => {
       const store = createAuthenticatedStore();
       store.getState().setSelectedPantryId('pantry-1');
-      store.getState().addNotification(
-        createNotification({ category: NotificationCategory.PANTRY }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({ category: NotificationCategory.Pantry }),
+        );
       expect(store.getState().notifications).toHaveLength(1);
     });
 
@@ -90,7 +88,7 @@ describe('notificationSlice', () => {
       store.getState().addNotification(
         createNotification({
           type: NotificationType.HomeInvitation,
-          category: NotificationCategory.MEMBERSHIP,
+          category: NotificationCategory.Home,
         }),
       );
       expect(store.getState().notifications).toHaveLength(1);
@@ -98,9 +96,11 @@ describe('notificationSlice', () => {
 
     it('tracks urgent count', () => {
       const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({ priority: NotificationPriority.URGENT }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({ priority: NotificationPriority.URGENT }),
+        );
       expect(store.getState().urgentCount).toBe(1);
     });
   });
@@ -117,9 +117,14 @@ describe('notificationSlice', () => {
 
     it('decrements urgent count for urgent notifications', () => {
       const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({ id: 'u1', priority: NotificationPriority.URGENT }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({
+            id: 'u1',
+            priority: NotificationPriority.URGENT,
+          }),
+        );
       store.getState().markAsRead('u1');
       expect(store.getState().urgentCount).toBe(0);
     });
@@ -169,64 +174,6 @@ describe('notificationSlice', () => {
     });
   });
 
-  describe('clearExpired', () => {
-    it('removes expired notifications', () => {
-      const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({
-          id: 'exp-1',
-          expiresAt: new Date(Date.now() - 1000).toISOString(),
-        }),
-      );
-      store.getState().addNotification(
-        createNotification({ id: 'active-1' }),
-      );
-      store.getState().clearExpired();
-      expect(store.getState().notifications).toHaveLength(1);
-      expect(store.getState().notifications[0].id).toBe('active-1');
-    });
-  });
-
-  describe('subscription management', () => {
-    it('adds subscribed list', () => {
-      const store = createAuthenticatedStore();
-      store.getState().setSelectedShoppingListId('list-1');
-      store.getState().addSubscribedList('list-1');
-      expect(store.getState().subscribedLists).toContain('list-1');
-    });
-
-    it('does not add duplicate list subscription', () => {
-      const store = createAuthenticatedStore();
-      store.getState().setSelectedShoppingListId('list-1');
-      store.getState().addSubscribedList('list-1');
-      store.getState().addSubscribedList('list-1');
-      expect(store.getState().subscribedLists).toHaveLength(1);
-    });
-
-    it('removes subscribed list', () => {
-      const store = createAuthenticatedStore();
-      store.getState().setSelectedShoppingListId('list-1');
-      store.getState().addSubscribedList('list-1');
-      store.getState().removeSubscribedList('list-1');
-      expect(store.getState().subscribedLists).toHaveLength(0);
-    });
-
-    it('adds subscribed pantry', () => {
-      const store = createAuthenticatedStore();
-      store.getState().setSelectedPantryId('pantry-1');
-      store.getState().addSubscribedPantry('pantry-1');
-      expect(store.getState().subscribedPantries).toContain('pantry-1');
-    });
-
-    it('removes subscribed pantry', () => {
-      const store = createAuthenticatedStore();
-      store.getState().setSelectedPantryId('pantry-1');
-      store.getState().addSubscribedPantry('pantry-1');
-      store.getState().removeSubscribedPantry('pantry-1');
-      expect(store.getState().subscribedPantries).toHaveLength(0);
-    });
-  });
-
   describe('selectors', () => {
     it('getUnreadNotifications returns only unread', () => {
       const store = createAuthenticatedStore();
@@ -239,37 +186,48 @@ describe('notificationSlice', () => {
     it('getNotificationsByCategory filters correctly', () => {
       const store = createAuthenticatedStore();
       store.getState().setSelectedPantryId('p1');
-      store.getState().addNotification(
-        createNotification({ id: 'cat1', category: NotificationCategory.PANTRY }),
-      );
-      store.getState().addNotification(
-        createNotification({ id: 'cat2', category: NotificationCategory.SYSTEM }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({
+            id: 'cat1',
+            category: NotificationCategory.Pantry,
+          }),
+        );
+      store
+        .getState()
+        .addNotification(
+          createNotification({
+            id: 'cat2',
+            category: NotificationCategory.System,
+          }),
+        );
       expect(
-        store.getState().getNotificationsByCategory(NotificationCategory.PANTRY),
+        store
+          .getState()
+          .getNotificationsByCategory(NotificationCategory.Pantry),
       ).toHaveLength(1);
     });
 
     it('getUrgentNotifications returns only unread urgent', () => {
       const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({ id: 'urg1', priority: NotificationPriority.URGENT }),
-      );
-      store.getState().addNotification(
-        createNotification({ id: 'urg2', priority: NotificationPriority.LOW }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({
+            id: 'urg1',
+            priority: NotificationPriority.URGENT,
+          }),
+        );
+      store
+        .getState()
+        .addNotification(
+          createNotification({
+            id: 'urg2',
+            priority: NotificationPriority.LOW,
+          }),
+        );
       expect(store.getState().getUrgentNotifications()).toHaveLength(1);
-    });
-
-    it('getActionableNotifications returns actionable unread', () => {
-      const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({ id: 'act1', requiresAction: true }),
-      );
-      store.getState().addNotification(
-        createNotification({ id: 'act2', requiresAction: false }),
-      );
-      expect(store.getState().getActionableNotifications()).toHaveLength(1);
     });
   });
 
@@ -290,18 +248,22 @@ describe('notificationSlice', () => {
   describe('addNotification - additional branches', () => {
     it('rejects shopping list notifications without selectedShoppingListId', () => {
       const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({ category: NotificationCategory.SHOPPING_LIST }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({ category: NotificationCategory.Shopping }),
+        );
       expect(store.getState().notifications).toHaveLength(0);
     });
 
     it('allows shopping list notifications with selectedShoppingListId', () => {
       const store = createAuthenticatedStore();
       store.getState().setSelectedShoppingListId('list-1');
-      store.getState().addNotification(
-        createNotification({ category: NotificationCategory.SHOPPING_LIST }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({ category: NotificationCategory.Shopping }),
+        );
       expect(store.getState().notifications).toHaveLength(1);
     });
 
@@ -310,7 +272,7 @@ describe('notificationSlice', () => {
       store.getState().addNotification(
         createNotification({
           type: NotificationType.HomeJoined,
-          category: NotificationCategory.MEMBERSHIP,
+          category: NotificationCategory.Home,
         }),
       );
       expect(store.getState().notifications).toHaveLength(0);
@@ -322,7 +284,7 @@ describe('notificationSlice', () => {
       store.getState().addNotification(
         createNotification({
           type: NotificationType.HomeJoined,
-          category: NotificationCategory.MEMBERSHIP,
+          category: NotificationCategory.Home,
         }),
       );
       expect(store.getState().notifications).toHaveLength(1);
@@ -333,7 +295,7 @@ describe('notificationSlice', () => {
       store.getState().addNotification(
         createNotification({
           type: NotificationType.MembershipInvite,
-          category: NotificationCategory.MEMBERSHIP,
+          category: NotificationCategory.Home,
         }),
       );
       expect(store.getState().notifications).toHaveLength(1);
@@ -344,7 +306,7 @@ describe('notificationSlice', () => {
       store.getState().addNotification(
         createNotification({
           type: NotificationType.CollaborationInvite,
-          category: NotificationCategory.MEMBERSHIP,
+          category: NotificationCategory.Home,
         }),
       );
       expect(store.getState().notifications).toHaveLength(1);
@@ -352,38 +314,42 @@ describe('notificationSlice', () => {
 
     it('handles invalid sentAt by using current date', () => {
       const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({ id: 'invalid-date-1', sentAt: 'not-a-date' }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({ id: 'invalid-date-1', sentAt: 'not-a-date' }),
+        );
       const notif = store.getState().notifications[0];
       expect(notif).toBeDefined();
       // sentAt should be a valid ISO string
       expect(new Date(notif.sentAt).getTime()).not.toBeNaN();
-    });
-
-    it('defaults source to local', () => {
-      const store = createAuthenticatedStore();
-      store.getState().addNotification(createNotification({ id: 'source-test' }));
-      expect(store.getState().notifications[0].source).toBe('local');
     });
   });
 
   describe('addMultipleNotifications - additional branches', () => {
     it('does not add if user email is not verified', () => {
       const store = createTestStore();
-      store.getState().setAuth(
-        { ...testUser, emailVerified: false } as any, 'a', 'r',
-      );
+      store
+        .getState()
+        .setAuth({ ...testUser, emailVerified: false } as any, 'a', 'r');
       store.getState().addMultipleNotifications([createNotification()]);
       expect(store.getState().notifications).toHaveLength(0);
     });
 
     it('filters out pantry notifications when no pantry selected', () => {
       const store = createAuthenticatedStore();
-      store.getState().addMultipleNotifications([
-        createNotification({ id: 'p1', category: NotificationCategory.PANTRY }),
-        createNotification({ id: 's1', category: NotificationCategory.SYSTEM }),
-      ]);
+      store
+        .getState()
+        .addMultipleNotifications([
+          createNotification({
+            id: 'p1',
+            category: NotificationCategory.Pantry,
+          }),
+          createNotification({
+            id: 's1',
+            category: NotificationCategory.System,
+          }),
+        ]);
       expect(store.getState().notifications).toHaveLength(1);
       expect(store.getState().notifications[0].id).toBe('s1');
     });
@@ -394,19 +360,27 @@ describe('notificationSlice', () => {
         createNotification({
           id: 'm1',
           type: NotificationType.HomeJoined,
-          category: NotificationCategory.MEMBERSHIP,
+          category: NotificationCategory.Home,
         }),
-        createNotification({ id: 's1', category: NotificationCategory.SYSTEM }),
+        createNotification({ id: 's1', category: NotificationCategory.System }),
       ]);
       expect(store.getState().notifications).toHaveLength(1);
     });
 
     it('filters out shopping list notifications when no list selected', () => {
       const store = createAuthenticatedStore();
-      store.getState().addMultipleNotifications([
-        createNotification({ id: 'sl1', category: NotificationCategory.SHOPPING_LIST }),
-        createNotification({ id: 's1', category: NotificationCategory.SYSTEM }),
-      ]);
+      store
+        .getState()
+        .addMultipleNotifications([
+          createNotification({
+            id: 'sl1',
+            category: NotificationCategory.Shopping,
+          }),
+          createNotification({
+            id: 's1',
+            category: NotificationCategory.System,
+          }),
+        ]);
       expect(store.getState().notifications).toHaveLength(1);
     });
 
@@ -416,7 +390,7 @@ describe('notificationSlice', () => {
         createNotification({
           id: 'inv1',
           type: NotificationType.HomeInvitation,
-          category: NotificationCategory.MEMBERSHIP,
+          category: NotificationCategory.Home,
         }),
       ]);
       expect(store.getState().notifications).toHaveLength(1);
@@ -424,142 +398,46 @@ describe('notificationSlice', () => {
 
     it('skips when all notifications are filtered', () => {
       const store = createAuthenticatedStore();
-      store.getState().addMultipleNotifications([
-        createNotification({ id: 'p1', category: NotificationCategory.PANTRY }),
-      ]);
+      store
+        .getState()
+        .addMultipleNotifications([
+          createNotification({
+            id: 'p1',
+            category: NotificationCategory.Pantry,
+          }),
+        ]);
       expect(store.getState().notifications).toHaveLength(0);
     });
 
     it('prevents duplicates in batch add', () => {
       const store = createAuthenticatedStore();
       store.getState().addNotification(createNotification({ id: 'existing' }));
-      store.getState().addMultipleNotifications([
-        createNotification({ id: 'existing' }),
-        createNotification({ id: 'new-one' }),
-      ]);
+      store
+        .getState()
+        .addMultipleNotifications([
+          createNotification({ id: 'existing' }),
+          createNotification({ id: 'new-one' }),
+        ]);
       expect(store.getState().notifications).toHaveLength(2);
     });
 
     it('tracks urgent count correctly in batch', () => {
       const store = createAuthenticatedStore();
-      store.getState().addMultipleNotifications([
-        createNotification({ id: 'u1', priority: NotificationPriority.URGENT }),
-        createNotification({ id: 'u2', priority: NotificationPriority.URGENT }),
-        createNotification({ id: 'n1', priority: NotificationPriority.LOW }),
-      ]);
+      store
+        .getState()
+        .addMultipleNotifications([
+          createNotification({
+            id: 'u1',
+            priority: NotificationPriority.URGENT,
+          }),
+          createNotification({
+            id: 'u2',
+            priority: NotificationPriority.URGENT,
+          }),
+          createNotification({ id: 'n1', priority: NotificationPriority.LOW }),
+        ]);
       expect(store.getState().urgentCount).toBe(2);
       expect(store.getState().unreadCount).toBe(3);
-    });
-  });
-
-  describe('syncNotificationsFromServer', () => {
-    it('does not sync if user email is not verified', () => {
-      const store = createTestStore();
-      store.getState().setAuth(
-        { ...testUser, emailVerified: false } as any, 'a', 'r',
-      );
-      store.getState().syncNotificationsFromServer([]);
-      // No change since email not verified
-      expect(store.getState().notifications).toHaveLength(0);
-    });
-
-    it('replaces notifications with server data', () => {
-      const store = createAuthenticatedStore();
-      store.getState().addNotification(createNotification({ id: 'local-1' }));
-
-      const serverNotifs: NotificationItem[] = [{
-        id: 'server-1',
-        type: NotificationType.NewItemAdded,
-        category: NotificationCategory.SYSTEM,
-        priority: NotificationPriority.MEDIUM,
-        title: 'Server',
-        message: 'From server',
-        payload: {},
-        sentAt: new Date().toISOString(),
-        isRead: false,
-      }];
-
-      store.getState().syncNotificationsFromServer(serverNotifs);
-      // Server notifications should replace + any newer local ones
-      expect(store.getState().notifications.length).toBeGreaterThanOrEqual(1);
-      expect(store.getState().lastFetchedAt).toBeTruthy();
-    });
-
-    it('preserves local realtime notifications newer than last fetch', () => {
-      const store = createAuthenticatedStore();
-      store.getState().setLastFetchedAt(new Date(Date.now() - 10000).toISOString());
-      store.getState().addNotification(
-        createNotification({ id: 'local-new', sentAt: new Date().toISOString() }),
-      );
-
-      const serverNotifs: NotificationItem[] = [{
-        id: 'server-1',
-        type: NotificationType.NewItemAdded,
-        category: NotificationCategory.SYSTEM,
-        priority: NotificationPriority.MEDIUM,
-        title: 'Server',
-        message: 'From server',
-        payload: {},
-        sentAt: new Date(Date.now() - 5000).toISOString(),
-        isRead: false,
-      }];
-
-      store.getState().syncNotificationsFromServer(serverNotifs);
-      const ids = store.getState().notifications.map(n => n.id);
-      expect(ids).toContain('server-1');
-      expect(ids).toContain('local-new');
-    });
-
-    it('sorts merged notifications by sentAt descending', () => {
-      const store = createAuthenticatedStore();
-
-      const older: NotificationItem = {
-        id: 'old-1',
-        type: NotificationType.NewItemAdded,
-        category: NotificationCategory.SYSTEM,
-        priority: NotificationPriority.LOW,
-        title: 'Old',
-        message: 'Old',
-        payload: {},
-        sentAt: new Date(Date.now() - 60000).toISOString(),
-        isRead: true,
-      };
-
-      const newer: NotificationItem = {
-        id: 'new-1',
-        type: NotificationType.NewItemAdded,
-        category: NotificationCategory.SYSTEM,
-        priority: NotificationPriority.HIGH,
-        title: 'New',
-        message: 'New',
-        payload: {},
-        sentAt: new Date().toISOString(),
-        isRead: false,
-      };
-
-      store.getState().syncNotificationsFromServer([older, newer]);
-      const notifs = store.getState().notifications;
-      expect(notifs[0].id).toBe('new-1');
-      expect(notifs[1].id).toBe('old-1');
-    });
-
-    it('calculates counts correctly', () => {
-      const store = createAuthenticatedStore();
-      const notifs: NotificationItem[] = [
-        {
-          id: 'unread-1', type: NotificationType.NewItemAdded,
-          category: NotificationCategory.SYSTEM, priority: NotificationPriority.URGENT,
-          title: 'T', message: 'M', payload: {}, sentAt: new Date().toISOString(), isRead: false,
-        },
-        {
-          id: 'read-1', type: NotificationType.NewItemAdded,
-          category: NotificationCategory.SYSTEM, priority: NotificationPriority.LOW,
-          title: 'T', message: 'M', payload: {}, sentAt: new Date().toISOString(), isRead: true,
-        },
-      ];
-      store.getState().syncNotificationsFromServer(notifs);
-      expect(store.getState().unreadCount).toBe(1);
-      expect(store.getState().urgentCount).toBe(1);
     });
   });
 
@@ -584,9 +462,14 @@ describe('notificationSlice', () => {
   describe('removeNotification - additional branches', () => {
     it('removes an unread urgent notification and updates counts', () => {
       const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({ id: 'urg-rm', priority: NotificationPriority.URGENT }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({
+            id: 'urg-rm',
+            priority: NotificationPriority.URGENT,
+          }),
+        );
       expect(store.getState().urgentCount).toBe(1);
       store.getState().removeNotification('urg-rm');
       expect(store.getState().urgentCount).toBe(0);
@@ -609,52 +492,25 @@ describe('notificationSlice', () => {
     });
   });
 
-  describe('clearExpired - additional branches', () => {
-    it('keeps notifications without expiresAt', () => {
-      const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({ id: 'no-expiry' }),
-      );
-      store.getState().clearExpired();
-      expect(store.getState().notifications).toHaveLength(1);
-    });
-
-    it('keeps future-expiring notifications', () => {
-      const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({
-          id: 'future-expiry',
-          expiresAt: new Date(Date.now() + 86400000).toISOString(),
-        }),
-      );
-      store.getState().clearExpired();
-      expect(store.getState().notifications).toHaveLength(1);
-    });
-
-    it('recalculates urgent count after clearing expired', () => {
-      const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({
-          id: 'exp-urg',
-          priority: NotificationPriority.URGENT,
-          expiresAt: new Date(Date.now() - 1000).toISOString(),
-        }),
-      );
-      expect(store.getState().urgentCount).toBe(1);
-      store.getState().clearExpired();
-      expect(store.getState().urgentCount).toBe(0);
-    });
-  });
-
   describe('updateUnreadCount', () => {
     it('recalculates unread and urgent counts', () => {
       const store = createAuthenticatedStore();
-      store.getState().addNotification(
-        createNotification({ id: 'count-1', priority: NotificationPriority.URGENT }),
-      );
-      store.getState().addNotification(
-        createNotification({ id: 'count-2', priority: NotificationPriority.LOW }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({
+            id: 'count-1',
+            priority: NotificationPriority.URGENT,
+          }),
+        );
+      store
+        .getState()
+        .addNotification(
+          createNotification({
+            id: 'count-2',
+            priority: NotificationPriority.LOW,
+          }),
+        );
       store.getState().updateUnreadCount();
       expect(store.getState().unreadCount).toBe(2);
       expect(store.getState().urgentCount).toBe(1);
@@ -670,53 +526,18 @@ describe('notificationSlice', () => {
     });
   });
 
-  describe('subscription management - additional branches', () => {
-    it('does not add subscribed list without selectedShoppingListId', () => {
-      const store = createAuthenticatedStore();
-      store.getState().addSubscribedList('list-1');
-      expect(store.getState().subscribedLists).toHaveLength(0);
-    });
-
-    it('does not add subscribed pantry without selectedPantryId', () => {
-      const store = createAuthenticatedStore();
-      store.getState().addSubscribedPantry('pantry-1');
-      expect(store.getState().subscribedPantries).toHaveLength(0);
-    });
-
-    it('does not add duplicate pantry subscription', () => {
-      const store = createAuthenticatedStore();
-      store.getState().setSelectedPantryId('pantry-1');
-      store.getState().addSubscribedPantry('pantry-1');
-      store.getState().addSubscribedPantry('pantry-1');
-      expect(store.getState().subscribedPantries).toHaveLength(1);
-    });
-  });
-
   describe('cleanupOrphanedSubscriptions', () => {
-    it('clears pantry subscriptions when no pantry selected', () => {
-      const store = createAuthenticatedStore();
-      store.getState().setSelectedPantryId('p1');
-      store.getState().addSubscribedPantry('p1');
-      store.getState().setSelectedPantryId(null as any);
-      store.getState().cleanupOrphanedSubscriptions();
-      expect(store.getState().subscribedPantries).toHaveLength(0);
-    });
-
-    it('clears list subscriptions when no list selected', () => {
-      const store = createAuthenticatedStore();
-      store.getState().setSelectedShoppingListId('l1');
-      store.getState().addSubscribedList('l1');
-      store.getState().setSelectedShoppingListId(null as any);
-      store.getState().cleanupOrphanedSubscriptions();
-      expect(store.getState().subscribedLists).toHaveLength(0);
-    });
-
     it('removes pantry notifications when no pantry selected', () => {
       const store = createAuthenticatedStore();
       store.getState().setSelectedPantryId('p1');
-      store.getState().addNotification(
-        createNotification({ id: 'pn1', category: NotificationCategory.PANTRY }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({
+            id: 'pn1',
+            category: NotificationCategory.Pantry,
+          }),
+        );
       store.getState().setSelectedPantryId(null as any);
       store.getState().cleanupOrphanedSubscriptions();
       expect(store.getState().notifications).toHaveLength(0);
@@ -725,9 +546,14 @@ describe('notificationSlice', () => {
     it('removes shopping list notifications when no list selected', () => {
       const store = createAuthenticatedStore();
       store.getState().setSelectedShoppingListId('l1');
-      store.getState().addNotification(
-        createNotification({ id: 'sln1', category: NotificationCategory.SHOPPING_LIST }),
-      );
+      store
+        .getState()
+        .addNotification(
+          createNotification({
+            id: 'sln1',
+            category: NotificationCategory.Shopping,
+          }),
+        );
       store.getState().setSelectedShoppingListId(null as any);
       store.getState().cleanupOrphanedSubscriptions();
       expect(store.getState().notifications).toHaveLength(0);
@@ -740,7 +566,7 @@ describe('notificationSlice', () => {
         createNotification({
           id: 'mn1',
           type: NotificationType.HomeJoined,
-          category: NotificationCategory.MEMBERSHIP,
+          category: NotificationCategory.Home,
         }),
       );
       store.getState().setSelectedHomeId(null as any);
@@ -754,7 +580,7 @@ describe('notificationSlice', () => {
         createNotification({
           id: 'inv-keep',
           type: NotificationType.HomeInvitation,
-          category: NotificationCategory.MEMBERSHIP,
+          category: NotificationCategory.Home,
         }),
       );
       store.getState().cleanupOrphanedSubscriptions();
@@ -767,7 +593,7 @@ describe('notificationSlice', () => {
       store.getState().addNotification(
         createNotification({
           id: 'urg-cleanup',
-          category: NotificationCategory.PANTRY,
+          category: NotificationCategory.Pantry,
           priority: NotificationPriority.URGENT,
         }),
       );

@@ -62,6 +62,7 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   },
 }));
 jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#hooks/pantry/usePantryPermissions');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },

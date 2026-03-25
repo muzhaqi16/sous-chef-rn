@@ -11,3 +11,28 @@ subscription NotificationChanged {
     timestamp
   }
 }
+
+# ============================================
+# QUERIES
+# ============================================
+
+query GetUnreadNotifications {
+  me {
+    id
+    notificationsConnection(
+      filter: { unreadOnly: true }
+      first: 50
+      orderBy: SENT_AT_DESC
+    ) {
+      edges {
+        node {
+          ...NotificationFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

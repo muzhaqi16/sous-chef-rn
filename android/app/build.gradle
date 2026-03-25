@@ -50,8 +50,8 @@ android {
         applicationId "dev.souschef.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 92
-        versionName "3.2.18"
+        versionCode 93
+        versionName "3.2.19"
         testBuildType System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 

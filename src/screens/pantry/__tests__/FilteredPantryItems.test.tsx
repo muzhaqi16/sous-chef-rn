@@ -29,6 +29,8 @@ jest.mock(
   }),
 );
 
+jest.mock('#hooks/pantry/usePantryPermissions');
+
 jest.mock('#hooks/pantry/useCurrentPantry', () => ({
   useCurrentPantry: () => ({
     pantry: { id: 'p1' },

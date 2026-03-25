@@ -3,17 +3,14 @@ import { AppState } from 'react-native';
 import {
   useNotificationChangedSubscription,
   NotificationType,
+  NotificationCategory,
+  Priority,
 } from '#generated';
 import { useAppStore } from '#store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
-import {
-  getNotificationTitle,
-  getNotificationMessage,
-  getNotificationCategory,
-  getNotificationPriority,
-} from '#utils/notifications/notificationParser';
-import { NotificationCategory } from '#store/slices/notificationSlice';
+import { getNotificationAction } from '#utils/notifications/notificationHelpers';
+import { NotificationPriority } from '#store/slices/notificationSlice';
 import {
   handleSubscriptionError,
   clearAllRetryStates,
@@ -29,6 +26,8 @@ const selectNotificationState = (state: any) => ({
 
 const selectNotificationActions = (state: any) => ({
   addNotification: state.addNotification,
+  markAsRead: state.markAsRead,
+  removeNotification: state.removeNotification,
   clearAll: state.clearAll,
   getNotificationsByCategory: state.getNotificationsByCategory,
 });
@@ -41,16 +40,19 @@ interface NotificationConfig {
 
 export const useNotifications = (config: NotificationConfig = {}) => {
   // PERFORMANCE: Use ref instead of state for AppState to avoid re-renders
-  // AppState is only needed in side effect (push notification check), not for rendering
   const appStateRef = useRef(AppState.currentState);
 
   // PERFORMANCE: Use grouped selectors with useShallow to reduce subscriptions (7 → 2)
   const { notifications, user } = useAppStore(
     useShallow(selectNotificationState),
   );
-  const { addNotification, clearAll, getNotificationsByCategory } = useAppStore(
-    useShallow(selectNotificationActions),
-  );
+  const {
+    addNotification,
+    markAsRead,
+    removeNotification,
+    clearAll,
+    getNotificationsByCategory,
+  } = useAppStore(useShallow(selectNotificationActions));
 
   // Fetch user notification preferences (deferred when hook is skipped)
   const { settings: userPreferences, isQuietTime } = useNotificationSettings({
@@ -70,7 +72,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
 
   // Check if notification type is enabled in user preferences
   const isNotificationTypeEnabled = (type: NotificationType): boolean => {
-    if (!userPreferences) return true; // Show by default if preferences not loaded
+    if (!userPreferences) return true;
 
     switch (type) {
       case NotificationType.ItemUpdated:
@@ -100,7 +102,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       case NotificationType.RecipeSaved:
         return userPreferences.recipeRecommendations;
       default:
-        return true; // Show unknown notification types by default
+        return true;
     }
   };
 
@@ -113,49 +115,17 @@ export const useNotifications = (config: NotificationConfig = {}) => {
 
     // Filter out notifications triggered by the current user
     if (sourceUserId && user?.id && sourceUserId === user.id) {
-      console.log('🚫 Filtering notification - triggered by current user:', {
-        type: notification.type,
-        sourceUserId,
-        currentUserId: user.id,
-      });
       return;
     }
 
     // Check if notification type is enabled in user preferences
     if (!isNotificationTypeEnabled(notification.type)) {
-      console.log('🚫 Filtering notification - disabled in user preferences:', {
-        type: notification.type,
-      });
       return;
     }
 
-    // Check if it's quiet time (only affects push notifications)
-    if (isQuietTime()) {
-      console.log('🔕 Quiet time active - suppressing push notification:', {
-        type: notification.type,
-      });
-      // Continue to show in-app notification but skip push
-    }
-
-    // Determine if notification requires action based on type
-    const requiresAction =
-      notification.type === NotificationType.MembershipInvite ||
-      notification.type === NotificationType.HomeInvitation ||
-      notification.type === NotificationType.CollaborationInvite ||
-      notification.type === NotificationType.ExpiryReminder;
-
-    // Set action type based on notification type
-    let actionType: string | undefined;
-    if (
-      notification.type === NotificationType.MembershipInvite ||
-      notification.type === NotificationType.HomeInvitation
-    ) {
-      actionType = 'ACCEPT_HOME_INVITE';
-    } else if (notification.type === NotificationType.CollaborationInvite) {
-      actionType = 'ACCEPT_SHOPPING_LIST_INVITE';
-    } else if (notification.type === NotificationType.ExpiryReminder) {
-      actionType = 'VIEW_EXPIRING_ITEMS';
-    }
+    const { requiresAction, actionType } = getNotificationAction(
+      notification.type,
+    );
 
     const processedNotification = {
       id: notification.id || Date.now().toString(),
@@ -163,9 +133,10 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       title: notification.title || 'Notification',
       message: notification.message || '',
       category,
-      priority: getNotificationPriority(notification.type),
+      priority: notification.priority ?? NotificationPriority.MEDIUM,
       payload: notification.payload || {},
       sentAt: notification.sentAt || new Date().toISOString(),
+      expiresAt: notification.expiresAt,
       isRead: false,
       requiresAction,
       actionType,
@@ -210,45 +181,46 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   useNotificationChangedSubscription({
     skip: config.skip || !user?.id,
     onData: ({ data }) => {
-      console.log(
-        '🔔 [NotificationChanged] Raw subscription data received:',
-        data,
-      );
       if (data.data?.notificationChanged?.notification) {
         const rawNotification = data.data.notificationChanged.notification;
+        const changeType = data.data.notificationChanged.changeType;
 
-        console.log('🔔 [NotificationChanged] Processing notification:', {
-          type: rawNotification.type,
-          id: rawNotification.id,
-          payload: rawNotification.payload,
-          changeType: data.data.notificationChanged.changeType,
-        });
+        if (changeType === 'RECEIVED') {
+          // Map server Priority enum → store NotificationPriority
+          const sp = rawNotification.priority;
+          const mappedPriority =
+            sp === Priority.High
+              ? NotificationPriority.HIGH
+              : sp === Priority.Urgent
+              ? NotificationPriority.URGENT
+              : sp === Priority.Low
+              ? NotificationPriority.LOW
+              : NotificationPriority.MEDIUM;
 
-        // Create properly structured notification using helper functions
-        processNotification(
-          {
-            type: rawNotification.type,
-            title: getNotificationTitle(
-              rawNotification.type,
-              rawNotification.payload,
-            ),
-            message: getNotificationMessage(
-              rawNotification.type,
-              rawNotification.payload,
-            ),
-            payload: rawNotification.payload,
-            sentAt: rawNotification.sentAt,
-          },
-          getNotificationCategory(rawNotification.type),
-        );
-      } else {
-        console.warn(
-          '⚠️ [NotificationChanged] Data received but no notification payload',
-        );
+          processNotification(
+            {
+              id: rawNotification.id,
+              type: rawNotification.type,
+              title: rawNotification.title ?? 'Notification',
+              message: rawNotification.message ?? '',
+              priority: mappedPriority,
+              payload: rawNotification.payload,
+              sentAt: rawNotification.sentAt,
+              expiresAt: rawNotification.expiresAt,
+            },
+            rawNotification.category ?? NotificationCategory.System,
+          );
+        } else if (changeType === 'UPDATED') {
+          const status = rawNotification.status;
+          if (status === 'READ' || status === 'CLICKED') {
+            markAsRead(rawNotification.id);
+          } else if (status === 'DISMISSED' || status === 'EXPIRED') {
+            removeNotification(rawNotification.id);
+          }
+        }
       }
     },
     onError: (error: Error) => {
-      // Let handleError decide whether to log based on error type
       handleError('NotificationChanged', error);
     },
   });
@@ -268,36 +240,13 @@ export const useNotifications = (config: NotificationConfig = {}) => {
     }
   }, [user?.id]);
 
-  // Log subscription status for debugging
-  useEffect(() => {
-    if (!config.skip && user?.id) {
-      console.log(
-        '✅ [NotificationChanged] Subscription ACTIVE for user:',
-        user.id,
-      );
-    } else if (!user?.id) {
-      console.log(
-        '⏸️ [NotificationChanged] Subscription SKIPPED - no authenticated user',
-      );
-    } else {
-      console.log(
-        '⏸️ [NotificationChanged] Subscription DEFERRED - startup delay',
-      );
-    }
-  }, [user?.id, config.skip]);
-
-  // PERFORMANCE: Optimize callback references - remove unnecessary wrappers
   return {
     config: finalConfig,
     notifications,
     handleMarkAsRead: syncMarkAsRead,
     handleMarkAllAsRead: syncMarkAllAsRead,
     handleRemoveNotification: syncDelete,
-    clearAll, // Local-only bulk clear (no server equivalent)
-    getNotificationsByCategory, // Direct reference instead of wrapper
-    updateConfig: (newConfig: Partial<NotificationConfig>) => {
-      // This would typically update stored preferences
-      console.log('Updating notification config:', newConfig);
-    },
+    clearAll,
+    getNotificationsByCategory,
   };
 };

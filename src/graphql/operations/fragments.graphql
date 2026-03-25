@@ -598,6 +598,11 @@ fragment MemberShipFragment on Membership {
   status
   displayName
   canManageHome
+  canViewPantry
+  canEditPantry
+  canAddItems
+  canRemoveItems
+  canInviteOthers
 }
 
 fragment BasicPantryFragment on Pantry {
@@ -654,9 +659,11 @@ fragment HomeDisplay on Home {
     status
     displayName
     canManageHome
+    canViewPantry
+    canEditPantry
     canAddItems
     canRemoveItems
-    canEditPantry
+    canInviteOthers
   }
 }
 
@@ -705,6 +712,11 @@ fragment HomeListFragment on Home {
     id
     role
     canManageHome
+    canViewPantry
+    canEditPantry
+    canAddItems
+    canRemoveItems
+    canInviteOthers
   }
 }
 
@@ -774,6 +786,11 @@ fragment HomeFragment on Home {
     status
     displayName
     canManageHome
+    canViewPantry
+    canEditPantry
+    canAddItems
+    canRemoveItems
+    canInviteOthers
   }
 }
 
@@ -781,8 +798,16 @@ fragment NotificationFragment on Notification {
   id
   userId
   type
-  payload
   status
+  priority
+  title
+  message
+  payload
+  category
+  sourceId
+  sourceType
+  actionUrl
+  expiresAt
   sentAt
   readAt
   createdAt
@@ -977,6 +1002,13 @@ fragment MealTemplateDisplay on MealTemplate {
   home {
     id
     name
+    myMembership {
+      id
+      role
+    }
+  }
+  user {
+    id
   }
   createdAt
   updatedAt

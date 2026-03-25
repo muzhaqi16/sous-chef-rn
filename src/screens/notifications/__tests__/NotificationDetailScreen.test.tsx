@@ -22,9 +22,7 @@ jest.mock('date-fns/format', () => ({
 
 describe('NotificationDetailScreen', () => {
   it('shows error when notification is missing', () => {
-    render(
-      <NotificationDetailScreen route={{ params: {} } as any} />,
-    );
+    render(<NotificationDetailScreen route={{ params: {} } as any} />);
     expect(screen.getByText('Notification not found')).toBeTruthy();
   });
 
@@ -32,6 +30,7 @@ describe('NotificationDetailScreen', () => {
     const notification = {
       id: '1',
       type: NotificationType.ExpiryReminder,
+      title: 'Items Expiring Soon',
       sentAt: '2026-01-01T00:00:00Z',
       message: 'Test message',
       payload: JSON.stringify({ message: 'Milk is expiring soon' }),
@@ -40,7 +39,7 @@ describe('NotificationDetailScreen', () => {
     render(
       <NotificationDetailScreen route={{ params: { notification } } as any} />,
     );
-    expect(screen.getByText('⚠️ Items Expiring Soon')).toBeTruthy();
+    expect(screen.getByText('Items Expiring Soon')).toBeTruthy();
     expect(screen.getByText('Milk is expiring soon')).toBeTruthy();
   });
 
@@ -48,6 +47,7 @@ describe('NotificationDetailScreen', () => {
     const notification = {
       id: '2',
       type: NotificationType.LowStock,
+      title: 'Low Stock Alert',
       sentAt: '2026-01-01T00:00:00Z',
       message: 'Stock alert',
       payload: { message: 'Low stock detected' },
@@ -56,7 +56,7 @@ describe('NotificationDetailScreen', () => {
     render(
       <NotificationDetailScreen route={{ params: { notification } } as any} />,
     );
-    expect(screen.getByText('📦 Low Stock Alert')).toBeTruthy();
+    expect(screen.getByText('Low Stock Alert')).toBeTruthy();
     expect(screen.getByText('Low stock detected')).toBeTruthy();
   });
 });

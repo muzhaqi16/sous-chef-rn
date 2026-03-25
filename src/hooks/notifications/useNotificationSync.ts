@@ -81,7 +81,7 @@ export function useNotificationSync() {
           notificationId: id,
         });
         if (!isNetworkError(error) && snapshot) {
-          useStore.getState().restoreNotification(snapshot);
+          useStore.getState().addNotification(snapshot);
         }
       },
     );

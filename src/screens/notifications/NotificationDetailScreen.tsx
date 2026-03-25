@@ -3,7 +3,6 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
-import { getNotificationTitle } from '#utils/notifications/notificationParser';
 
 import { format } from 'date-fns/format';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -38,7 +37,7 @@ export const NotificationDetailScreen: React.FC<
               <Icon name="notifications" size={32} color={styles.icon.color} />
             </View>
             <Text style={styles.title}>
-              {getNotificationTitle(notification.type)}
+              {notification.title || 'Notification'}
             </Text>
             <Text style={styles.timestamp}>
               {format(new Date(notification.sentAt), 'PPpp')}

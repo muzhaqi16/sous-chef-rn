@@ -10,21 +10,3 @@ mutation MarkAllNotificationsAsRead {
     count
   }
 }
-
-mutation DeleteAllReadNotifications {
-  deleteAllReadNotifications {
-    success
-    message
-    code
-    count
-  }
-}
-
-mutation DeleteMultipleNotifications($ids: [ID!]!) {
-  deleteMultipleNotifications(ids: $ids) {
-    success
-    message
-    code
-    count
-  }
-}

@@ -2,7 +2,7 @@ import React from 'react';
 import { useShoppingListSubscriptions } from '#/hooks/subscriptions/useShoppingListSubscriptions';
 import { usePantrySubscriptions } from '#/hooks/subscriptions/usePantrySubscriptions';
 import { useHomeSubscriptions } from '#/hooks/subscriptions/useHomeSubscriptions';
-import { useNotificationSubscriptions } from '#/hooks/subscriptions/useNotificationSubscriptions';
+
 import { useUserSubscriptions } from '#/hooks/subscriptions/useUserSubscriptions';
 import { useListAnimationOptional } from '#/context/ListAnimationContext';
 
@@ -24,9 +24,9 @@ interface AuthenticatedSubscriptionsProps {
  *
  * @param userId - The authenticated user's ID (required)
  */
-export const AuthenticatedSubscriptions: React.FC<AuthenticatedSubscriptionsProps> = ({
-  userId,
-}) => {
+export const AuthenticatedSubscriptions: React.FC<
+  AuthenticatedSubscriptionsProps
+> = ({ userId }) => {
   // Get animation scheduler from context (if available)
   // This allows subscription updates to trigger exit animations before cache updates
   // and entry animations when items appear in destination lists
@@ -42,7 +42,7 @@ export const AuthenticatedSubscriptions: React.FC<AuthenticatedSubscriptionsProp
   );
   usePantrySubscriptions(userId);
   useHomeSubscriptions(userId);
-  useNotificationSubscriptions(userId);
+
   useUserSubscriptions(userId);
 
   // This component doesn't render anything - it just runs subscription hooks

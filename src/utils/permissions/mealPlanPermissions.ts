@@ -1,4 +1,10 @@
-import { MembershipRole } from '#generated';
+import {
+  getPermissionLevel,
+  canEdit,
+  canDelete,
+  canView,
+  type HomeLinkedResource,
+} from './homeLinkedPermissions';
 
 /**
  * Permission flags for meal plan operations
@@ -12,46 +18,11 @@ export interface MealPlanPermissions {
 }
 
 /**
- * Home membership shape (from MealPlanDisplay.home.myMembership)
- */
-interface HomeMembership {
-  role: MembershipRole;
-}
-
-/**
  * Meal plan data shape needed for permission calculation
  */
-interface MealPlanData {
-  homeId?: string | null;
-  home?: {
-    myMembership?: HomeMembership | null;
-  } | null;
+interface MealPlanData extends HomeLinkedResource {
   createdBy?: { id: string } | null;
 }
-
-const NO_PERMISSIONS: MealPlanPermissions = {
-  canEdit: false,
-  canDelete: false,
-  canDuplicate: false,
-  canGenerateShoppingList: false,
-  canSaveAsTemplate: false,
-};
-
-const FULL_PERMISSIONS: MealPlanPermissions = {
-  canEdit: true,
-  canDelete: true,
-  canDuplicate: true,
-  canGenerateShoppingList: true,
-  canSaveAsTemplate: true,
-};
-
-const GUEST_PERMISSIONS: MealPlanPermissions = {
-  canEdit: false,
-  canDelete: false,
-  canDuplicate: false,
-  canGenerateShoppingList: true,
-  canSaveAsTemplate: false,
-};
 
 /**
  * Check if the current user is the creator of the meal plan
@@ -60,7 +31,9 @@ export function isMealPlanCreator(
   mealPlan: MealPlanData,
   userId?: string,
 ): boolean {
-  return !!mealPlan.createdBy?.id && !!userId && mealPlan.createdBy.id === userId;
+  return (
+    !!mealPlan.createdBy?.id && !!userId && mealPlan.createdBy.id === userId
+  );
 }
 
 /**
@@ -73,35 +46,24 @@ export function isPersonalPlan(mealPlan: MealPlanData): boolean {
 /**
  * Get permissions for a meal plan based on home membership and ownership.
  *
- * Rules:
- * - Personal plans (no homeId): creator gets full permissions
- * - Home plans: OWNER/ADMIN/MEMBER get full permissions, GUEST gets view + generate shopping list
- * - Creator of a home plan always gets full permissions
+ * Uses the centralized HomeLinkedResource permission model:
+ * - Personal plans (no homeId): full permissions
+ * - Home plans: creator → full; OWNER/ADMIN → full; MEMBER → edit (no delete); GUEST → view only
  */
 export function getMealPlanPermissions(
   mealPlan: MealPlanData,
   userId?: string,
 ): MealPlanPermissions {
-  // Personal plans: creator gets full permissions
-  if (isPersonalPlan(mealPlan)) {
-    return FULL_PERMISSIONS;
-  }
+  const level = getPermissionLevel(
+    mealPlan,
+    isMealPlanCreator(mealPlan, userId),
+  );
 
-  // Home plans: check if user is the creator
-  if (isMealPlanCreator(mealPlan, userId)) {
-    return FULL_PERMISSIONS;
-  }
-
-  // Home plans: check membership role
-  const membership = mealPlan.home?.myMembership;
-  if (!membership) {
-    return NO_PERMISSIONS;
-  }
-
-  if (membership.role === MembershipRole.Guest) {
-    return GUEST_PERMISSIONS;
-  }
-
-  // OWNER/ADMIN/MEMBER get full permissions
-  return FULL_PERMISSIONS;
+  return {
+    canEdit: canEdit(level),
+    canDelete: canDelete(level),
+    canDuplicate: canEdit(level),
+    canGenerateShoppingList: canView(level),
+    canSaveAsTemplate: canEdit(level),
+  };
 }

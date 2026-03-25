@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable, RefreshControl } from 'react-native';
-import Animated, { type useAnimatedScrollHandler } from 'react-native-reanimated';
+import Animated, {
+  type useAnimatedScrollHandler,
+} from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { format } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
@@ -14,7 +16,11 @@ interface DayMealListProps {
   dailyMeals: MealTypeGroup[];
   totalCalories: number;
   isEmpty: boolean;
-  onToggleCompleted: (id: string, isCompleted: boolean, hasRecipe: boolean) => void;
+  onToggleCompleted?: (
+    id: string,
+    isCompleted: boolean,
+    hasRecipe: boolean,
+  ) => void;
   onItemPress?: (item: MealPlanItemFragment) => void;
   onDeleteItem?: (id: string) => void;
   onAddMeal?: (mealType?: MealType) => void;
@@ -85,7 +91,9 @@ export const DayMealList: React.FC<DayMealListProps> = ({
               onToggleCompleted={onToggleCompleted}
               onItemPress={onItemPress}
               onDeleteItem={onDeleteItem}
-              onAddMeal={onAddMeal ? () => onAddMeal(group.mealType) : undefined}
+              onAddMeal={
+                onAddMeal ? () => onAddMeal(group.mealType) : undefined
+              }
             />
           ))}
 
@@ -93,9 +101,16 @@ export const DayMealList: React.FC<DayMealListProps> = ({
           {!!onAddMeal && (
             <Pressable
               onPress={() => onAddMeal()}
-              style={({ pressed }) => [styles.addMealButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.addMealButton,
+                pressed && styles.pressed,
+              ]}
             >
-              <Icon name="add-circle-outline" size={20} color={styles.addMealIcon.color} />
+              <Icon
+                name="add-circle-outline"
+                size={20}
+                color={styles.addMealIcon.color}
+              />
               <Text style={styles.addMealText}>Add a meal</Text>
             </Pressable>
           )}

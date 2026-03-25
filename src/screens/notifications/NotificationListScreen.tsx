@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, SectionList, RefreshControl } from 'react-native';
+import { View, SectionList } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { NotificationItem } from '#components/notifications/NotificationItem';
@@ -9,10 +9,8 @@ import { NotificationGroupHeader } from '#components/notifications/NotificationG
 import { NotificationFilters } from '#components/notifications/NotificationFilters';
 import { UrgentNotificationsBanner } from '#components/notifications/UrgentNotificationsBanner';
 import { useNotifications } from '#hooks/notifications/useNotifications';
-import {
-  NotificationItem as NotificationType,
-  NotificationCategory,
-} from '#store/slices/notificationSlice';
+import { NotificationItem as NotificationType } from '#store/slices/notificationSlice';
+import { NotificationCategory } from '#generated';
 import { Header } from '#components/molecules/Header';
 import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
 import {
@@ -35,15 +33,6 @@ export const NotificationListScreen: React.FC = () => {
     clearAll,
     getNotificationsByCategory,
   } = useNotifications();
-
-  // Initialize real-time notifications (already handled by consolidated useNotifications)
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    // Notifications are Zustand-based with no network refetch needed
-    requestAnimationFrame(() => setIsRefreshing(false));
-  };
 
   // Filter notifications based on selected category
   const filteredNotifications = (() => {
@@ -78,27 +67,18 @@ export const NotificationListScreen: React.FC = () => {
     // Navigate based on type and action
     if (notification.requiresAction && notification.actionType) {
       switch (notification.actionType) {
-        case 'ACCEPT_INVITE':
         case 'ACCEPT_HOME_INVITE':
         case 'ACCEPT_SHOPPING_LIST_INVITE':
-          // These will be handled by the action handler
           if (actionHandler) {
             actionHandler(notification);
           }
           break;
-        case 'ADD_TO_SHOPPING_LIST':
-          navigateTo.shoppingListMain();
-          break;
         case 'VIEW_EXPIRING_ITEMS':
-          // Route through action handler for expiration action sheet
           if (actionHandler) {
             actionHandler(notification);
           } else {
             navigate('Pantry');
           }
-          break;
-        case 'REVIEW_SECURITY':
-          navigateTo.profile();
           break;
         default:
           navigate('NotificationDetail', {
@@ -108,14 +88,11 @@ export const NotificationListScreen: React.FC = () => {
     } else {
       // Default navigation based on category
       switch (notification.category) {
-        case NotificationCategory.SHOPPING_LIST:
+        case NotificationCategory.Shopping:
           navigateTo.shoppingListMain();
           break;
-        case NotificationCategory.PANTRY:
+        case NotificationCategory.Pantry:
           navigateTo.pantryMain();
-          break;
-        case NotificationCategory.SECURITY:
-          navigateTo.profile();
           break;
         default:
           navigate('NotificationDetail', {
@@ -198,12 +175,6 @@ export const NotificationListScreen: React.FC = () => {
               ListEmptyComponent={<EmptyNotifications />}
               contentContainerStyle={
                 !hasNotifications ? styles.emptyContainer : undefined
-              }
-              refreshControl={
-                <RefreshControl
-                  refreshing={isRefreshing}
-                  onRefresh={handleRefresh}
-                />
               }
             />
           </View>

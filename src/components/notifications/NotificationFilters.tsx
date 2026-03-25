@@ -1,12 +1,8 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {NotificationCategory} from '#store/slices/notificationSlice';
+import { View, Text, Pressable, ScrollView } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { NotificationCategory } from '#generated';
+import { NOTIFICATION_CATEGORIES } from '#store/slices/notificationSlice';
 
 interface NotificationFiltersProps {
   selectedCategory: NotificationCategory | null;
@@ -22,37 +18,42 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterScroll}>
+        contentContainerStyle={styles.filterScroll}
+      >
         <Pressable
-          style={({pressed}) => [
+          style={({ pressed }) => [
             styles.filterPill,
             !selectedCategory && styles.filterPillActive,
             pressed && styles.pressed,
           ]}
-          onPress={() => onCategoryChange(null)}>
+          onPress={() => onCategoryChange(null)}
+        >
           <Text
             style={[
               styles.filterText,
               !selectedCategory && styles.filterTextActive,
-            ]}>
+            ]}
+          >
             All
           </Text>
         </Pressable>
 
-        {Object.values(NotificationCategory).map(category => (
+        {NOTIFICATION_CATEGORIES.map(category => (
           <Pressable
             key={category}
-            style={({pressed}) => [
+            style={({ pressed }) => [
               styles.filterPill,
               selectedCategory === category && styles.filterPillActive,
               pressed && styles.pressed,
             ]}
-            onPress={() => onCategoryChange(category)}>
+            onPress={() => onCategoryChange(category)}
+          >
             <Text
               style={[
                 styles.filterText,
                 selectedCategory === category && styles.filterTextActive,
-              ]}>
+              ]}
+            >
               {category.replace('_', ' ')}
             </Text>
           </Pressable>

@@ -273,6 +273,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
               inviter: {
@@ -404,6 +405,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
               inviter: {
@@ -431,6 +433,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
               inviter: {
@@ -456,6 +459,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
               inviter: { email: 'john@test.com', profile: null },
@@ -478,6 +482,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
               inviter: null,
@@ -500,6 +505,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: null,
               inviter: { email: 'john@test.com', profile: null },
@@ -522,6 +528,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
               inviter: { email: 'john@test.com', profile: null },
@@ -547,6 +554,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
               inviter: { email: 'john@test.com', profile: null },
@@ -597,6 +605,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
               inviter: { email: 'john@test.com', profile: null },
@@ -637,6 +646,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
               inviter: { email: 'john@test.com', profile: null },
@@ -662,6 +672,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
               inviter: { email: 'john@test.com', profile: null },
@@ -888,6 +899,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'ADMIN',
               home: { name: 'Johns Home' },
               inviter: { email: 'john@test.com', profile: null },
@@ -910,6 +922,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Johns Home' },
               inviter: { email: 'john@test.com', profile: null },
@@ -988,6 +1001,7 @@ describe('CreateHomeScreen', () => {
           pendingHomeInvites: [
             {
               id: 'invite-1',
+              token: 'invite-1',
               role: 'MEMBER',
               home: { name: 'Home A' },
               inviter: {
@@ -997,6 +1011,7 @@ describe('CreateHomeScreen', () => {
             },
             {
               id: 'invite-2',
+              token: 'invite-2',
               role: 'ADMIN',
               home: { name: 'Home B' },
               inviter: { email: 'b@test.com', profile: { displayName: 'Bob' } },

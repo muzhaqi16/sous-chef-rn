@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { NotificationFilters } from '../NotificationFilters';
-import { NotificationCategory } from '#store/slices/notificationSlice';
+import { NotificationCategory } from '#generated';
 
 describe('NotificationFilters', () => {
   const defaultProps = {
@@ -47,7 +47,7 @@ describe('NotificationFilters', () => {
     render(
       <NotificationFilters
         {...defaultProps}
-        selectedCategory={NotificationCategory.PANTRY}
+        selectedCategory={NotificationCategory.Pantry}
       />,
     );
     // Should still render all filters

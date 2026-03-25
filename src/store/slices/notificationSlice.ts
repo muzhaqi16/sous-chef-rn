@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { RootState } from '../index';
-import { NotificationType } from '#/graphql/generated';
+import { NotificationType, NotificationCategory } from '#/graphql/generated';
 import { safeParseDate } from '#utils/dateUtils';
 
 // Helper to check if a notification is an invitation (should always show)
@@ -18,16 +18,8 @@ export enum NotificationPriority {
   URGENT = 'URGENT',
 }
 
-export enum NotificationCategory {
-  SHOPPING_LIST = 'SHOPPING_LIST',
-  PANTRY = 'PANTRY',
-  COLLABORATION = 'COLLABORATION',
-  MEMBERSHIP = 'MEMBERSHIP',
-  RECIPE = 'RECIPE',
-  SECURITY = 'SECURITY',
-  ACCOUNT = 'ACCOUNT',
-  SYSTEM = 'SYSTEM',
-}
+/** Category values derived from the server enum — used by filter UI */
+export const NOTIFICATION_CATEGORIES = Object.values(NotificationCategory);
 
 export interface NotificationItem {
   id: string;
@@ -44,7 +36,6 @@ export interface NotificationItem {
   actionType?: string;
   actionData?: any;
   expiresAt?: string | null;
-  source?: 'server' | 'local'; // Track notification source
   // Expiration notification enrichment (linked from expirationNotificationChanged subscription)
   expirationNotificationId?: string | null;
   expirationAction?: string | null;
@@ -67,8 +58,6 @@ export interface NotificationState {
   unreadCount: number;
   urgentCount: number;
   lastFetchedAt: string | null;
-  subscribedLists: string[]; // Shopping list IDs to subscribe to
-  subscribedPantries: string[]; // Pantry IDs to subscribe to
   // Buffers enrichment data when expirationNotificationChanged fires before notificationChanged
   pendingExpirationLinks: Record<string, ExpirationLinkData>;
 
@@ -76,9 +65,6 @@ export interface NotificationState {
   addNotification: (notification: Omit<NotificationItem, 'isRead'>) => void;
   addMultipleNotifications: (
     notifications: Omit<NotificationItem, 'isRead'>[],
-  ) => void;
-  syncNotificationsFromServer: (
-    serverNotifications: NotificationItem[],
   ) => void;
   markAsRead: (notificationId: string) => void;
   markAsUnread: (notificationId: string) => void;
@@ -88,15 +74,9 @@ export interface NotificationState {
   ) => void;
   markAllAsRead: () => void;
   removeNotification: (notificationId: string) => void;
-  restoreNotification: (notification: NotificationItem) => void;
   clearAll: () => void;
-  clearExpired: () => void;
   updateUnreadCount: () => void;
   setLastFetchedAt: (timestamp: string) => void;
-  addSubscribedList: (listId: string) => void;
-  removeSubscribedList: (listId: string) => void;
-  addSubscribedPantry: (pantryId: string) => void;
-  removeSubscribedPantry: (pantryId: string) => void;
   cleanupOrphanedSubscriptions: () => void;
   // Expiration actions
   setExpirationAction: (notificationId: string, action: string) => void;
@@ -111,7 +91,6 @@ export interface NotificationState {
     category: NotificationCategory,
   ) => NotificationItem[];
   getUrgentNotifications: () => NotificationItem[];
-  getActionableNotifications: () => NotificationItem[];
   getExpirationNotification: (
     genericNotificationId: string,
   ) => NotificationItem | undefined;
@@ -124,27 +103,19 @@ const initialNotificationState: Omit<
   NotificationState,
   | 'addNotification'
   | 'addMultipleNotifications'
-  | 'syncNotificationsFromServer'
   | 'markAsRead'
   | 'markAsUnread'
   | 'markAsReadWithSync'
   | 'markAllAsRead'
   | 'removeNotification'
-  | 'restoreNotification'
   | 'clearAll'
-  | 'clearExpired'
   | 'updateUnreadCount'
   | 'setLastFetchedAt'
-  | 'addSubscribedList'
-  | 'removeSubscribedList'
-  | 'addSubscribedPantry'
-  | 'removeSubscribedPantry'
   | 'setExpirationAction'
   | 'linkExpirationData'
   | 'getUnreadNotifications'
   | 'getNotificationsByCategory'
   | 'getUrgentNotifications'
-  | 'getActionableNotifications'
   | 'getExpirationNotification'
   | 'resetNotifications'
   | 'cleanupOrphanedSubscriptions'
@@ -153,8 +124,6 @@ const initialNotificationState: Omit<
   unreadCount: 0,
   urgentCount: 0,
   lastFetchedAt: null,
-  subscribedLists: [],
-  subscribedPantries: [],
   pendingExpirationLinks: {},
 };
 
@@ -179,7 +148,7 @@ export const createNotificationSlice: StateCreator<
 
     // Safety check: Don't add pantry notifications without pantry
     if (
-      notification.category === NotificationCategory.PANTRY &&
+      notification.category === NotificationCategory.Pantry &&
       !state.selectedPantryId
     ) {
       return;
@@ -187,7 +156,7 @@ export const createNotificationSlice: StateCreator<
 
     // Safety check: Don't add home notifications without home (except invitations)
     if (
-      notification.category === NotificationCategory.MEMBERSHIP &&
+      notification.category === NotificationCategory.Home &&
       !state.selectedHomeId &&
       !isInvitation
     ) {
@@ -196,7 +165,7 @@ export const createNotificationSlice: StateCreator<
 
     // Safety check: Don't add shopping list notifications without list
     if (
-      notification.category === NotificationCategory.SHOPPING_LIST &&
+      notification.category === NotificationCategory.Shopping &&
       !state.selectedShoppingListId
     ) {
       return;
@@ -214,7 +183,6 @@ export const createNotificationSlice: StateCreator<
       const newNotification: NotificationItem = {
         ...notification,
         isRead: false,
-        source: notification.source || 'local', // Mark as local by default
         // Ensure sentAt is always a valid ISO string
         sentAt:
           safeParseDate(notification.sentAt)?.toISOString() ||
@@ -260,19 +228,19 @@ export const createNotificationSlice: StateCreator<
       }
 
       if (
-        notification.category === NotificationCategory.PANTRY &&
+        notification.category === NotificationCategory.Pantry &&
         !state.selectedPantryId
       ) {
         return false;
       }
       if (
-        notification.category === NotificationCategory.MEMBERSHIP &&
+        notification.category === NotificationCategory.Home &&
         !state.selectedHomeId
       ) {
         return false;
       }
       if (
-        notification.category === NotificationCategory.SHOPPING_LIST &&
+        notification.category === NotificationCategory.Shopping &&
         !state.selectedShoppingListId
       ) {
         return false;
@@ -293,7 +261,6 @@ export const createNotificationSlice: StateCreator<
         .map(n => ({
           ...n,
           isRead: false,
-          source: n.source || 'local', // Mark as local by default
           // Ensure sentAt is always a valid ISO string
           sentAt:
             safeParseDate(n.sentAt)?.toISOString() || new Date().toISOString(),
@@ -310,89 +277,10 @@ export const createNotificationSlice: StateCreator<
     });
   },
 
-  // Sync notifications from server - replaces existing with server truth while preserving newer local ones
-  syncNotificationsFromServer: serverNotifications => {
-    const state = get();
-
-    if (!state.user?.emailVerified) {
-      return;
-    }
-
-    set(state => {
-      // Keep track of local notifications that are newer than last fetch (real-time additions)
-      const lastFetch = state.lastFetchedAt
-        ? new Date(state.lastFetchedAt)
-        : new Date(0);
-      const localRealtimeNotifications = state.notifications.filter(n => {
-        const notifDate = new Date(n.sentAt);
-        return (
-          notifDate > lastFetch &&
-          !serverNotifications.find(sn => sn.id === n.id)
-        );
-      });
-
-      // Merge server notifications with preserved local ones
-      const allNotifications = [
-        ...serverNotifications,
-        ...localRealtimeNotifications,
-      ];
-
-      // Sort by sentAt (newest first)
-      allNotifications.sort(
-        (a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime(),
-      );
-
-      // Update state
-      state.notifications = allNotifications;
-      state.unreadCount = allNotifications.filter(n => !n.isRead).length;
-      state.urgentCount = allNotifications.filter(
-        n => !n.isRead && n.priority === NotificationPriority.URGENT,
-      ).length;
-      state.lastFetchedAt = new Date().toISOString();
-    });
-  },
-
-  // Enhanced subscription management with validation
-  addSubscribedList: listId => {
-    const state = get();
-    if (!state.selectedShoppingListId) {
-      return;
-    }
-
-    set(state => {
-      if (!state.subscribedLists.includes(listId)) {
-        state.subscribedLists.push(listId);
-      }
-    });
-  },
-
-  addSubscribedPantry: pantryId => {
-    const state = get();
-    if (!state.selectedPantryId) {
-      return;
-    }
-
-    set(state => {
-      if (!state.subscribedPantries.includes(pantryId)) {
-        state.subscribedPantries.push(pantryId);
-      }
-    });
-  },
-
-  // Clean up subscriptions when entities are removed
   cleanupOrphanedSubscriptions: () => {
     const state = get();
 
     set(draft => {
-      // Remove subscriptions for entities that no longer exist
-      if (!state.selectedPantryId) {
-        draft.subscribedPantries = [];
-      }
-
-      if (!state.selectedShoppingListId) {
-        draft.subscribedLists = [];
-      }
-
       // Remove notifications for entities that no longer exist (but always keep invitations)
       draft.notifications = draft.notifications.filter(notification => {
         // Always keep invitations - user needs them to join homes/lists
@@ -401,19 +289,19 @@ export const createNotificationSlice: StateCreator<
         }
 
         if (
-          notification.category === NotificationCategory.PANTRY &&
+          notification.category === NotificationCategory.Pantry &&
           !state.selectedPantryId
         ) {
           return false;
         }
         if (
-          notification.category === NotificationCategory.SHOPPING_LIST &&
+          notification.category === NotificationCategory.Shopping &&
           !state.selectedShoppingListId
         ) {
           return false;
         }
         if (
-          notification.category === NotificationCategory.MEMBERSHIP &&
+          notification.category === NotificationCategory.Home &&
           !state.selectedHomeId
         ) {
           return false;
@@ -505,48 +393,11 @@ export const createNotificationSlice: StateCreator<
     });
   },
 
-  restoreNotification: notification => {
-    set(state => {
-      // Re-insert at sorted position by sentAt (newest first)
-      const insertIndex = state.notifications.findIndex(
-        n =>
-          new Date(n.sentAt).getTime() <=
-          new Date(notification.sentAt).getTime(),
-      );
-      if (insertIndex === -1) {
-        state.notifications.push(notification);
-      } else {
-        state.notifications.splice(insertIndex, 0, notification);
-      }
-
-      if (!notification.isRead) {
-        state.unreadCount += 1;
-        if (notification.priority === NotificationPriority.URGENT) {
-          state.urgentCount += 1;
-        }
-      }
-    });
-  },
-
   clearAll: () => {
     set(state => {
       state.notifications = [];
       state.unreadCount = 0;
       state.urgentCount = 0;
-    });
-  },
-
-  clearExpired: () => {
-    set(state => {
-      const now = new Date().toISOString();
-      state.notifications = state.notifications.filter(n => {
-        if (!n.expiresAt) return true;
-        return n.expiresAt > now;
-      });
-      state.unreadCount = state.notifications.filter(n => !n.isRead).length;
-      state.urgentCount = state.notifications.filter(
-        n => !n.isRead && n.priority === NotificationPriority.URGENT,
-      ).length;
     });
   },
 
@@ -561,20 +412,6 @@ export const createNotificationSlice: StateCreator<
 
   setLastFetchedAt: timestamp => {
     set({ lastFetchedAt: timestamp });
-  },
-
-  removeSubscribedList: listId => {
-    set(state => {
-      state.subscribedLists = state.subscribedLists.filter(id => id !== listId);
-    });
-  },
-
-  removeSubscribedPantry: pantryId => {
-    set(state => {
-      state.subscribedPantries = state.subscribedPantries.filter(
-        id => id !== pantryId,
-      );
-    });
   },
 
   setExpirationAction: (notificationId, action) => {
@@ -627,10 +464,6 @@ export const createNotificationSlice: StateCreator<
     return get().notifications.filter(
       n => n.priority === NotificationPriority.URGENT && !n.isRead,
     );
-  },
-
-  getActionableNotifications: () => {
-    return get().notifications.filter(n => n.requiresAction && !n.isRead);
   },
 
   getExpirationNotification: genericNotificationId => {

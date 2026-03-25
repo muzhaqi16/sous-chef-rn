@@ -7,7 +7,11 @@ import type { MealPlanItemFragment } from '#generated';
 
 interface MealPlanItemCardProps {
   item: MealPlanItemFragment;
-  onToggleCompleted: (id: string, isCompleted: boolean, hasRecipe: boolean) => void;
+  onToggleCompleted?: (
+    id: string,
+    isCompleted: boolean,
+    hasRecipe: boolean,
+  ) => void;
   onPress?: (item: MealPlanItemFragment) => void;
   onDelete?: (id: string) => void;
 }
@@ -22,7 +26,10 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   const imageUrl = item.recipe?.imageUrl;
   const totalTime = item.recipe?.totalTimeMinutes;
   const usedPantryItems = item.usedPantryItems;
-  const hasPantryDeductions = item.isCompleted && Array.isArray(usedPantryItems) && usedPantryItems.length > 0;
+  const hasPantryDeductions =
+    item.isCompleted &&
+    Array.isArray(usedPantryItems) &&
+    usedPantryItems.length > 0;
 
   return (
     <Pressable
@@ -30,20 +37,42 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
       onPress={() => onPress?.(item)}
     >
       {/* Checkbox */}
-      <Pressable
-        onPress={() => onToggleCompleted(item.id, item.isCompleted, !!item.recipe)}
-        style={styles.checkbox}
-        hitSlop={8}
-      >
-        <Icon
-          name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
-          size={24}
-          color={item.isCompleted ? styles.checkboxChecked.color : styles.checkboxUnchecked.color}
-        />
-      </Pressable>
+      {onToggleCompleted ? (
+        <Pressable
+          onPress={() =>
+            onToggleCompleted(item.id, item.isCompleted, !!item.recipe)
+          }
+          style={styles.checkbox}
+          hitSlop={8}
+        >
+          <Icon
+            name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
+            size={24}
+            color={
+              item.isCompleted
+                ? styles.checkboxChecked.color
+                : styles.checkboxUnchecked.color
+            }
+          />
+        </Pressable>
+      ) : (
+        <View style={styles.checkbox}>
+          <Icon
+            name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
+            size={24}
+            color={
+              item.isCompleted
+                ? styles.checkboxChecked.color
+                : styles.checkboxUnchecked.color
+            }
+          />
+        </View>
+      )}
 
       {/* Image */}
-      {!!imageUrl && <CachedImage uri={imageUrl} style={styles.image} displaySize={44} />}
+      {!!imageUrl && (
+        <CachedImage uri={imageUrl} style={styles.image} displaySize={44} />
+      )}
 
       {/* Content */}
       <View style={styles.content}>
@@ -53,20 +82,32 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
         >
           {recipeName}
         </Text>
-        {!!(totalTime != null || item.servings != null || (item.calories != null && item.calories > 0)) && (
+        {!!(
+          totalTime != null ||
+          item.servings != null ||
+          (item.calories != null && item.calories > 0)
+        ) && (
           <View style={styles.meta}>
             <Text style={styles.metaText}>
               {[
                 totalTime != null && `${totalTime} min`,
                 item.servings != null && `${item.servings} servings`,
-                item.calories != null && item.calories > 0 && `${Math.round(item.calories)} cal`,
-              ].filter(Boolean).join(' \u00B7 ')}
+                item.calories != null &&
+                  item.calories > 0 &&
+                  `${Math.round(item.calories)} cal`,
+              ]
+                .filter(Boolean)
+                .join(' \u00B7 ')}
             </Text>
           </View>
         )}
         {!!hasPantryDeductions && (
           <View style={styles.pantryBadge}>
-            <Icon name="leaf-outline" size={12} color={styles.pantryBadgeText.color} />
+            <Icon
+              name="leaf-outline"
+              size={12}
+              color={styles.pantryBadgeText.color}
+            />
             <Text style={styles.pantryBadgeText}>Pantry updated</Text>
           </View>
         )}
@@ -74,8 +115,16 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
 
       {/* Delete */}
       {!!onDelete && (
-        <Pressable onPress={() => onDelete(item.id)} style={styles.deleteButton} hitSlop={8}>
-          <Icon name="close-circle-outline" size={20} color={styles.deleteIcon.color} />
+        <Pressable
+          onPress={() => onDelete(item.id)}
+          style={styles.deleteButton}
+          hitSlop={8}
+        >
+          <Icon
+            name="close-circle-outline"
+            size={20}
+            color={styles.deleteIcon.color}
+          />
         </Pressable>
       )}
     </Pressable>

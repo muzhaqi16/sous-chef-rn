@@ -194,12 +194,13 @@
             ]
           },
           "unit": "percent",
-          "decimals": 2
+          "decimals": 2,
+          "noValue": "0"
         }
       },
       "targets": [
         {
-          "expr": "(sum(rate(graphql_errors_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) / sum(rate(graphql_requests_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m]))) * 100",
+          "expr": "(sum(rate(graphql_errors_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) / clamp_min(sum(rate(graphql_requests_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])), 1e-10)) * 100 or vector(0)",
           "refId": "A",
           "legendFormat": "Error Rate"
         }
@@ -243,12 +244,13 @@
               { "color": "yellow", "value": 1 },
               { "color": "red", "value": 5 }
             ]
-          }
+          },
+          "noValue": "0"
         }
       },
       "targets": [
         {
-          "expr": "sum(increase(app_errors_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",is_fatal=\"true\"}[1h]))",
+          "expr": "sum(increase(app_errors_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",is_fatal=\"true\"}[1h])) or vector(0)",
           "refId": "A",
           "legendFormat": "Fatal Crashes"
         }
@@ -386,7 +388,8 @@
               { "color": "yellow", "value": 1 },
               { "color": "red", "value": 5 }
             ]
-          }
+          },
+          "noValue": "0"
         }
       },
       "gridPos": {
@@ -412,7 +415,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(increase(unhandled_promise_rejections_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
+          "expr": "sum(increase(unhandled_promise_rejections_total{service_name=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h])) or vector(0)",
           "refId": "A",
           "legendFormat": "Unhandled Rejections"
         }

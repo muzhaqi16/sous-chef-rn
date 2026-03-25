@@ -11,6 +11,7 @@ interface EditableFieldProps {
   onSave: (value: string) => Promise<void>;
   placeholder?: string;
   validation?: (value: string) => string | null;
+  readOnly?: boolean;
 }
 
 /**
@@ -23,6 +24,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
   onSave,
   placeholder,
   validation,
+  readOnly,
 }) => {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -59,7 +61,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
         setEditing(false);
       },
       setSaving,
-      (err) => {
+      err => {
         setError(err instanceof Error ? err.message : 'Failed to save');
       },
     );
@@ -78,14 +80,22 @@ export const EditableField: React.FC<EditableFieldProps> = ({
         />
         <View style={styles.editActions}>
           <Pressable
-            style={({pressed}) => [styles.editButton, styles.cancelButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.editButton,
+              styles.cancelButton,
+              pressed && styles.pressed,
+            ]}
             onPress={handleCancel}
             disabled={saving}
           >
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </Pressable>
           <Pressable
-            style={({pressed}) => [styles.editButton, styles.saveButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.editButton,
+              styles.saveButton,
+              pressed && styles.pressed,
+            ]}
             onPress={handleSave}
             disabled={saving}
           >
@@ -106,9 +116,17 @@ export const EditableField: React.FC<EditableFieldProps> = ({
         <Text style={styles.nameLabel}>{label}</Text>
         <Text style={styles.nameValue}>{value}</Text>
       </View>
-      <Pressable style={({pressed}) => [styles.editIconButton, pressed && styles.pressed]} onPress={handleStartEdit}>
-        <Icon name="create-outline" size={20} />
-      </Pressable>
+      {!readOnly && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.editIconButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={handleStartEdit}
+        >
+          <Icon name="create-outline" size={20} />
+        </Pressable>
+      )}
     </View>
   );
 };

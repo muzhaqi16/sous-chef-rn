@@ -55,20 +55,7 @@ jest.mock('#utils/notifications/localNotificationHelper', () => ({
   showLocalNotification: jest.fn(),
 }));
 
-jest.mock('#utils/notifications/notificationParser', () => ({
-  getNotificationTitle: jest.fn().mockReturnValue('Test Title'),
-  getNotificationMessage: jest.fn().mockReturnValue('Test Message'),
-  getNotificationCategory: jest.fn().mockReturnValue('PANTRY'),
-  getNotificationPriority: jest.fn().mockReturnValue('MEDIUM'),
-}));
-
 jest.mock('#store/slices/notificationSlice', () => ({
-  NotificationCategory: {
-    PANTRY: 'PANTRY',
-    SHOPPING_LIST: 'SHOPPING_LIST',
-    SECURITY: 'SECURITY',
-    SYSTEM: 'SYSTEM',
-  },
   NotificationPriority: {
     LOW: 'LOW',
     MEDIUM: 'MEDIUM',
@@ -168,10 +155,12 @@ describe('useNotifications', () => {
         data: {
           data: {
             notificationChanged: {
-              changeType: 'CREATED',
+              changeType: 'RECEIVED',
               notification: {
                 id: 'notif-1',
                 type: NotificationType.LowStock,
+                title: 'Low Stock Alert',
+                message: 'Milk is running low',
                 payload: { itemName: 'Milk' },
                 sentAt: '2024-01-01T00:00:00Z',
               },
@@ -184,20 +173,9 @@ describe('useNotifications', () => {
     expect(mockAddNotification).toHaveBeenCalledWith(
       expect.objectContaining({
         type: NotificationType.LowStock,
-        title: 'Test Title',
-        message: 'Test Message',
+        title: 'Low Stock Alert',
+        message: 'Milk is running low',
       }),
-    );
-  });
-
-  it('updateConfig logs config changes', () => {
-    const { result } = renderHook(() => useNotifications());
-
-    result.current.updateConfig({ showInAppNotifications: false });
-
-    expect(console.log).toHaveBeenCalledWith(
-      'Updating notification config:',
-      expect.any(Object),
     );
   });
 
@@ -210,6 +188,8 @@ describe('useNotifications', () => {
   it('getNotificationsByCategory is passed through from store', () => {
     const { result } = renderHook(() => useNotifications());
 
-    expect(result.current.getNotificationsByCategory).toBe(mockGetNotificationsByCategory);
+    expect(result.current.getNotificationsByCategory).toBe(
+      mockGetNotificationsByCategory,
+    );
   });
 });

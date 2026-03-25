@@ -1,7 +1,7 @@
 import React from 'react';
-import {View, Text, Pressable} from 'react-native';
-import {Icon} from '#utils/iconUtils';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { View, Text, Pressable } from 'react-native';
+import { Icon } from '#utils/iconUtils';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 interface HomeActionsProps {
   homeId: string;
@@ -22,13 +22,21 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
   onInvite,
   onDelete,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
+
+  const hasVisibleActions = !isDefault || canInvite || canDelete;
+  if (!hasVisibleActions) return null;
+
   return (
     <View style={styles.homeActions}>
       {!isDefault && (
         <Pressable
-          style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
-          onPress={() => onSetDefault(homeId)}>
+          style={({ pressed }) => [
+            styles.actionButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={() => onSetDefault(homeId)}
+        >
           <Icon
             name="star-outline"
             size={20}
@@ -40,19 +48,31 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
 
       {!!canInvite && (
         <Pressable
-          style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
-          onPress={() => onInvite(homeId)}>
-          <Icon name="person-add" size={20} color={theme.colors.textSecondary} />
+          style={({ pressed }) => [
+            styles.actionButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={() => onInvite(homeId)}
+        >
+          <Icon
+            name="person-add"
+            size={20}
+            color={theme.colors.textSecondary}
+          />
           <Text style={styles.actionText}>Invite</Text>
         </Pressable>
       )}
 
       {!!canDelete && (
         <Pressable
-          style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
-          onPress={() => onDelete(homeId)}>
+          style={({ pressed }) => [
+            styles.actionButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={() => onDelete(homeId)}
+        >
           <Icon name="trash-outline" size={20} color={theme.colors.error} />
-          <Text style={[styles.actionText, {color: theme.colors.error}]}>
+          <Text style={[styles.actionText, { color: theme.colors.error }]}>
             Delete
           </Text>
         </Pressable>

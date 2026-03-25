@@ -2,23 +2,33 @@ import { MembershipRole } from '#generated';
 
 /**
  * Get the roles that a user can invite to a home based on their own role
+ * and the granular `canInviteOthers` permission field.
  *
  * Permission rules:
- * - GUEST: Cannot invite anyone
- * - MEMBER: Can only invite MEMBER
+ * - If `canInviteOthers` is explicitly false, the user cannot invite anyone
+ * - GUEST: Cannot invite anyone (regardless of canInviteOthers)
+ * - MEMBER: Can invite if canInviteOthers !== false (only MEMBER role)
  * - ADMIN: Can invite MEMBER or ADMIN
  * - OWNER: Can invite GUEST, MEMBER, or ADMIN (but not another OWNER)
  *
  * Note: OWNER role is reserved for home creators and cannot be assigned via invitation
  */
-export function getInvitableRoles(userRole: MembershipRole): MembershipRole[] {
+export function getInvitableRoles(
+  userRole: MembershipRole,
+  canInviteOthers?: boolean,
+): MembershipRole[] {
+  // If permission is explicitly denied, no invitations allowed
+  if (canInviteOthers === false) {
+    return [];
+  }
+
   switch (userRole) {
     case MembershipRole.Guest:
       // Guests cannot invite anyone
       return [];
 
     case MembershipRole.Member:
-      // Members can only invite other members
+      // Members can invite if canInviteOthers is not explicitly false
       return [MembershipRole.Member];
 
     case MembershipRole.Admin:
@@ -27,7 +37,11 @@ export function getInvitableRoles(userRole: MembershipRole): MembershipRole[] {
 
     case MembershipRole.Owner:
       // Owners can invite anyone except another owner
-      return [MembershipRole.Guest, MembershipRole.Member, MembershipRole.Admin];
+      return [
+        MembershipRole.Guest,
+        MembershipRole.Member,
+        MembershipRole.Admin,
+      ];
 
     default:
       return [];
@@ -36,9 +50,13 @@ export function getInvitableRoles(userRole: MembershipRole): MembershipRole[] {
 
 /**
  * Check if a user can invite others to a home based on their role
+ * and the granular `canInviteOthers` permission field.
  */
-export function canInviteToHome(userRole: MembershipRole): boolean {
-  return getInvitableRoles(userRole).length > 0;
+export function canInviteToHome(
+  userRole: MembershipRole,
+  canInviteOthers?: boolean,
+): boolean {
+  return getInvitableRoles(userRole, canInviteOthers).length > 0;
 }
 
 /**
@@ -46,7 +64,9 @@ export function canInviteToHome(userRole: MembershipRole): boolean {
  * Returns null if the user is not a member
  */
 export function findUserMembership(
-  members: Array<{ id: string; userId?: string; role: string; status: string }> | undefined,
+  members:
+    | Array<{ id: string; userId?: string; role: string; status: string }>
+    | undefined,
   currentUserId: string | undefined,
 ): { id: string; role: MembershipRole; status: string } | null {
   if (!members || !currentUserId) {

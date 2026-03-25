@@ -36,7 +36,13 @@ jest.mock('#components/notifications/EmptyNotifications', () => ({
 jest.mock('#components/notifications/NotificationHeader', () => ({
   NotificationHeader: ({ hasNotifications }: any) => {
     const { View, Text } = require('react-native');
-    return <View><Text>Header {hasNotifications ? 'with' : 'without'} notifications</Text></View>;
+    return (
+      <View>
+        <Text>
+          Header {hasNotifications ? 'with' : 'without'} notifications
+        </Text>
+      </View>
+    );
   },
 }));
 
@@ -50,7 +56,11 @@ jest.mock('#components/notifications/NotificationGroupHeader', () => ({
 jest.mock('#components/notifications/NotificationFilters', () => ({
   NotificationFilters: () => {
     const { View, Text } = require('react-native');
-    return <View><Text>Filters</Text></View>;
+    return (
+      <View>
+        <Text>Filters</Text>
+      </View>
+    );
   },
 }));
 
@@ -66,20 +76,19 @@ jest.mock('#components/molecules/Header', () => ({
 }));
 
 jest.mock('#components/notifications/NotificationActionHandler', () => ({
-  NotificationActionHandler: ({ children }: any) => children({ handleNotificationAction: jest.fn() }),
+  NotificationActionHandler: ({ children }: any) =>
+    children({ handleNotificationAction: jest.fn() }),
 }));
 
 jest.mock('#utils/notificationGrouping', () => ({
-  groupNotificationsByDate: jest.fn().mockReturnValue({ urgent: [], today: [], earlier: [] }),
+  groupNotificationsByDate: jest
+    .fn()
+    .mockReturnValue({ urgent: [], today: [], earlier: [] }),
   createSectionListData: jest.fn().mockReturnValue([]),
 }));
 
 jest.mock('#store/slices/notificationSlice', () => ({
-  NotificationCategory: {
-    PANTRY: 'PANTRY',
-    SHOPPING_LIST: 'SHOPPING_LIST',
-    SECURITY: 'SECURITY',
-  },
+  NOTIFICATION_CATEGORIES: ['HOME', 'PANTRY', 'RECIPE', 'SHOPPING', 'SYSTEM'],
 }));
 
 beforeEach(() => {
@@ -108,19 +117,51 @@ describe('NotificationListScreen', () => {
   });
 
   it('renders with notifications data', () => {
-    const { groupNotificationsByDate, createSectionListData } = require('#utils/notificationGrouping');
+    const {
+      groupNotificationsByDate,
+      createSectionListData,
+    } = require('#utils/notificationGrouping');
     groupNotificationsByDate.mockReturnValue({
       urgent: [],
-      today: [{ id: 'n1', title: 'Test', message: 'msg', category: 'PANTRY', isRead: false }],
+      today: [
+        {
+          id: 'n1',
+          title: 'Test',
+          message: 'msg',
+          category: 'PANTRY',
+          isRead: false,
+        },
+      ],
       earlier: [],
     });
     createSectionListData.mockReturnValue([
-      { title: 'Today', data: [{ id: 'n1', title: 'Test', message: 'msg', category: 'PANTRY', isRead: false }] },
+      {
+        title: 'Today',
+        data: [
+          {
+            id: 'n1',
+            title: 'Test',
+            message: 'msg',
+            category: 'PANTRY',
+            isRead: false,
+          },
+        ],
+      },
     ]);
 
-    const { useNotifications } = require('#hooks/notifications/useNotifications');
+    const {
+      useNotifications,
+    } = require('#hooks/notifications/useNotifications');
     jest.mocked(useNotifications).mockReturnValue({
-      notifications: [{ id: 'n1', title: 'Test', message: 'msg', category: 'PANTRY', isRead: false }],
+      notifications: [
+        {
+          id: 'n1',
+          title: 'Test',
+          message: 'msg',
+          category: 'PANTRY',
+          isRead: false,
+        },
+      ],
       handleMarkAsRead: jest.fn(),
       handleMarkAllAsRead: jest.fn(),
       handleRemoveNotification: jest.fn(),
