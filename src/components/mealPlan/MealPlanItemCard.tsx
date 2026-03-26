@@ -142,6 +142,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     marginBottom: theme.spacing.xs,
+    ...theme.shadows.md,
   },
   pressed: {
     opacity: theme.opacity.pressed,

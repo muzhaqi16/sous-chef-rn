@@ -46,6 +46,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
     focused: isFocused,
     error: hasError,
     visible: hasError,
+    rightIcon: rightIcon != null,
   });
 
   const handleFocus = (e: any) => {
@@ -62,9 +63,15 @@ export const BaseInput: React.FC<BaseInputProps> = ({
     <View style={[styles.container, containerStyle]}>
       {label != null && <Text style={styles.label}>{label}</Text>}
       <View style={styles.inputContainer}>
-        {leftIcon != null && <View style={styles.iconWrapper}>{leftIcon}</View>}
+        {leftIcon != null && (
+          <View style={styles.leftIconWrapper}>{leftIcon}</View>
+        )}
         <TextInput
-          style={[styles.input, rightIcon != null && styles.inputWithRightIcon, style]}
+          style={[
+            styles.input,
+            rightIcon != null && styles.inputWithRightIcon,
+            style,
+          ]}
           placeholderTextColor={theme.colors.inputPlaceholder}
           onFocus={handleFocus}
           onBlur={handleBlur}
@@ -73,7 +80,10 @@ export const BaseInput: React.FC<BaseInputProps> = ({
         />
         {!!showClear && (
           <Pressable
-            style={({pressed}) => [styles.iconWrapper, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.leftIconWrapper,
+              pressed && styles.pressed,
+            ]}
             onPress={onClear}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
@@ -83,16 +93,14 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           </Pressable>
         )}
         {rightIcon != null && (
-          <View
-            style={[styles.iconWrapper, styles.rightIconOverlay]}
-          >
-            {rightIcon}
-          </View>
+          <View style={styles.rightIconWrapper}>{rightIcon}</View>
         )}
       </View>
       {!!hasError && (
         <Text
-          testID={textInputProps.testID ? `${textInputProps.testID}-error` : undefined}
+          testID={
+            textInputProps.testID ? `${textInputProps.testID}-error` : undefined
+          }
           style={styles.errorText}
         >
           {errorMessage}

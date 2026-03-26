@@ -20,7 +20,7 @@ export const getStorage = async (): Promise<MMKV> => {
     secureStorageInstance = createMMKV({
       id: STORAGE_KEY,
       encryptionKey,
-      compareBeforeSet: true,
+      // compareBeforeSet is incompatible with encryption (native MMKV asserts !m_crypter)
     });
     return secureStorageInstance;
   } catch (error) {
@@ -29,7 +29,7 @@ export const getStorage = async (): Promise<MMKV> => {
     console.warn('WARNING: Using unencrypted storage as fallback');
     secureStorageInstance = createMMKV({
       id: STORAGE_KEY,
-      compareBeforeSet: true,
+      // compareBeforeSet is incompatible with encryption (native MMKV asserts !m_crypter)
     });
     return secureStorageInstance;
   }
@@ -76,5 +76,3 @@ export const zustandStorage: StateStorage = {
     }
   },
 };
-
-// Cache utilities removed - now using Apollo Client only for server data

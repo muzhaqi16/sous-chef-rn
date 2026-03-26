@@ -81,7 +81,7 @@ const SelectableIngredientItemComponent: React.FC<
     <Pressable
       style={({ pressed }) => [
         styles.ingredientItem,
-        pressed && styles.pressed,
+        pressed && { opacity: 0.7 },
       ]}
       onPress={() => toggleIngredient(item.id)}
     >
@@ -271,7 +271,7 @@ const RecipeDetailScreen: React.FC = () => {
     <Pressable
       style={({ pressed }) => [
         styles.listPickerItem,
-        pressed && styles.pressed,
+        pressed && { opacity: 0.7 },
       ]}
       onPress={() => handleListSelected(item.id)}
     >
@@ -384,7 +384,7 @@ const RecipeDetailScreen: React.FC = () => {
                   onPress={() => setShowAddToMealPlanSheet(true)}
                   style={({ pressed }) => [
                     styles.actionButton,
-                    pressed && styles.pressed,
+                    pressed && { opacity: 0.7 },
                   ]}
                   accessibilityLabel="Add to meal plan"
                 >
@@ -401,7 +401,7 @@ const RecipeDetailScreen: React.FC = () => {
                   onPress={handleEditRecipe}
                   style={({ pressed }) => [
                     styles.actionButton,
-                    pressed && styles.pressed,
+                    pressed && { opacity: 0.7 },
                   ]}
                 >
                   <Ionicons
@@ -417,7 +417,7 @@ const RecipeDetailScreen: React.FC = () => {
                   onPress={handleFolderPress}
                   style={({ pressed }) => [
                     styles.actionButton,
-                    pressed && styles.pressed,
+                    pressed && { opacity: 0.7 },
                   ]}
                   disabled={saving || updatingFolderTags}
                 >
@@ -434,7 +434,7 @@ const RecipeDetailScreen: React.FC = () => {
                   onPress={handleHeartPress}
                   style={({ pressed }) => [
                     styles.actionButton,
-                    pressed && styles.pressed,
+                    pressed && { opacity: 0.7 },
                   ]}
                   disabled={saving || updatingFolderTags}
                 >
@@ -466,7 +466,7 @@ const RecipeDetailScreen: React.FC = () => {
                   onPress={() => setShowAddToMealPlanSheet(true)}
                   style={({ pressed }) => [
                     styles.actionButton,
-                    pressed && styles.pressed,
+                    pressed && { opacity: 0.7 },
                   ]}
                   accessibilityLabel="Add to meal plan"
                 >
@@ -482,7 +482,7 @@ const RecipeDetailScreen: React.FC = () => {
                   onPress={handleEditRecipe}
                   style={({ pressed }) => [
                     styles.actionButton,
-                    pressed && styles.pressed,
+                    pressed && { opacity: 0.7 },
                   ]}
                 >
                   <Ionicons
@@ -497,7 +497,7 @@ const RecipeDetailScreen: React.FC = () => {
                   onPress={handleFolderPress}
                   style={({ pressed }) => [
                     styles.actionButton,
-                    pressed && styles.pressed,
+                    pressed && { opacity: 0.7 },
                   ]}
                   disabled={saving || updatingFolderTags}
                 >
@@ -513,7 +513,7 @@ const RecipeDetailScreen: React.FC = () => {
                   onPress={handleHeartPress}
                   style={({ pressed }) => [
                     styles.actionButton,
-                    pressed && styles.pressed,
+                    pressed && { opacity: 0.7 },
                   ]}
                   disabled={saving || updatingFolderTags}
                 >
@@ -561,7 +561,7 @@ const RecipeDetailScreen: React.FC = () => {
               <Pressable
                 style={({ pressed }) => [
                   styles.cookedMetadata,
-                  pressed && styles.pressed,
+                  pressed && { opacity: 0.7 },
                 ]}
                 onPress={() => setCookedModalVisible(true)}
                 disabled={markingAsCooked}
@@ -589,7 +589,7 @@ const RecipeDetailScreen: React.FC = () => {
                     <Text
                       style={[
                         styles.metadataText,
-                        cookedCount > 0 && styles.cookedMetadataTextActive,
+                        cookedCount > 0 && { color: theme.colors.success },
                       ]}
                     >
                       {cookedCount > 0
@@ -652,7 +652,7 @@ const RecipeDetailScreen: React.FC = () => {
                   <Text
                     style={[
                       styles.detailValueText,
-                      savedFolder && styles.detailValueTextActive,
+                      savedFolder && { color: theme.colors.primary },
                     ]}
                   >
                     {savedFolder || 'None'}
@@ -725,14 +725,12 @@ const RecipeDetailScreen: React.FC = () => {
           {/* Ingredients */}
           {!!displayData.ingredients && displayData.ingredients.length > 0 && (
             <View style={styles.ingredientsSection}>
-              <View
-                style={[styles.sectionHeader, styles.ingredientsSectionHeader]}
-              >
+              <View style={styles.ingredientsSectionHeader}>
                 <Text style={styles.sectionTitle}>Ingredients</Text>
                 <Pressable
                   onPress={handleAddAllIngredientsToList}
                   disabled={addingToList}
-                  style={({ pressed }) => pressed && styles.pressed}
+                  style={({ pressed }) => pressed && { opacity: 0.7 }}
                 >
                   <Text style={styles.addAllButton}>
                     {addingToList ? 'Adding...' : 'Add All'}
@@ -745,7 +743,7 @@ const RecipeDetailScreen: React.FC = () => {
                 contentContainerStyle={styles.ingredientsList}
               >
                 {displayData.ingredients.map((ingredient, index) => (
-                  <React.Fragment key={ingredient.id}>
+                  <React.Fragment key={`${ingredient.id}-${index}`}>
                     {index > 0 && <IngredientSeparator />}
                     <IngredientCard
                       ingredient={ingredient}
@@ -844,7 +842,7 @@ const RecipeDetailScreen: React.FC = () => {
             <Pressable
               style={({ pressed }) => [
                 styles.attribution,
-                displayData.sourceUrl && pressed && styles.pressed,
+                displayData.sourceUrl && pressed && { opacity: 0.7 },
               ]}
               onPress={() =>
                 displayData.sourceUrl && Linking.openURL(displayData.sourceUrl)
@@ -883,7 +881,7 @@ const RecipeDetailScreen: React.FC = () => {
             style={({ pressed }) => [
               styles.optionButton,
               { borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-              pressed && styles.pressed,
+              pressed && { opacity: 0.7 },
             ]}
             onPress={handleAddAllIngredients}
           >
@@ -898,7 +896,7 @@ const RecipeDetailScreen: React.FC = () => {
           <Pressable
             style={({ pressed }) => [
               styles.optionButton,
-              pressed && styles.pressed,
+              pressed && { opacity: 0.7 },
             ]}
             onPress={openIngredientSelector}
           >
@@ -952,7 +950,7 @@ const RecipeDetailScreen: React.FC = () => {
           style={({ pressed }) => [
             styles.addSelectedButton,
             { backgroundColor: theme.colors.primary },
-            pressed && styles.pressed,
+            pressed && { opacity: 0.7 },
           ]}
           onPress={handleAddSelectedIngredients}
           disabled={selectedIngredients.size === 0 || addingToList}
@@ -1011,7 +1009,7 @@ const RecipeDetailScreen: React.FC = () => {
                   <Pressable
                     style={({ pressed }) => [
                       styles.clearNameButton,
-                      pressed && styles.pressed,
+                      pressed && { opacity: 0.7 },
                     ]}
                     onPress={() => setNewListName('')}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -1028,7 +1026,7 @@ const RecipeDetailScreen: React.FC = () => {
                 style={({ pressed }) => [
                   styles.createListButton,
                   { backgroundColor: theme.colors.primary },
-                  pressed && styles.pressed,
+                  pressed && { opacity: 0.7 },
                   !newListName.trim() && { opacity: 0.5 },
                 ]}
                 onPress={() => handleCreateListAndAddIngredients(newListName)}
@@ -1248,9 +1246,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
   },
-  cookedMetadataTextActive: {
-    color: theme.colors.success,
-  },
   folderTagsSection: {
     marginBottom: theme.spacing.lg,
     gap: theme.spacing.xs,
@@ -1273,9 +1268,6 @@ const styles = StyleSheet.create(theme => ({
   detailValueText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-  },
-  detailValueTextActive: {
-    color: theme.colors.primary,
   },
   ratingStars: {
     flexDirection: 'row',
@@ -1342,13 +1334,11 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: -theme.spacing.lg,
   },
   ingredientsSectionHeader: {
-    paddingHorizontal: theme.spacing.lg,
-  },
-  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
   },
   sectionTitle: {
     fontSize: theme.fonts.size.lg,
@@ -1546,8 +1536,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.onPrimary,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

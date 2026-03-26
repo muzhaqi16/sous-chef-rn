@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -26,7 +21,9 @@ import type { ToastFn } from '#/components/atoms/Toast';
 async function performPasswordReset(
   token: string,
   newPassword: string,
-  resetPassword: (opts: { variables: { token: string; newPassword: string } }) => Promise<any>,
+  resetPassword: (opts: {
+    variables: { token: string; newPassword: string };
+  }) => Promise<any>,
   toast: ToastFn,
   navigateToLogin: () => void,
 ): Promise<void> {
@@ -42,7 +39,8 @@ async function performPasswordReset(
     logger.info('Password reset successful');
 
     toast({
-      message: 'Password reset successfully! Please sign in with your new password.',
+      message:
+        'Password reset successfully! Please sign in with your new password.',
       type: 'success',
     });
 
@@ -50,7 +48,9 @@ async function performPasswordReset(
       navigateToLogin();
     }, 1500);
   } else {
-    throw new Error(result.data?.resetPassword?.message || 'Password reset failed');
+    throw new Error(
+      result.data?.resetPassword?.message || 'Password reset failed',
+    );
   }
 }
 
@@ -69,7 +69,7 @@ const resetPasswordSchema = object().shape({
     .min(8, 'Password must be at least 8 characters')
     .matches(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number',
     ),
   confirmPassword: string()
     .required('Please confirm your password')
@@ -116,25 +116,31 @@ export const ResetPasswordScreen: React.FC = () => {
     }
 
     executeWithLoadingState(
-      () => performPasswordReset(
-        token,
-        data.newPassword,
-        resetPassword,
-        toast,
-        navigateToLogin,
-      ),
+      () =>
+        performPasswordReset(
+          token,
+          data.newPassword,
+          resetPassword,
+          toast,
+          navigateToLogin,
+        ),
       setIsSubmitting,
       (error: unknown) => {
         logger.error('Password reset failed', { error });
 
-        const errorMessage = (error as any)?.message || 'Failed to reset password. The link may be expired or invalid.';
+        const errorMessage =
+          (error as any)?.message ||
+          'Failed to reset password. The link may be expired or invalid.';
 
         toast({
           message: errorMessage,
           type: 'error',
         });
 
-        if (errorMessage.toLowerCase().includes('expired') || errorMessage.toLowerCase().includes('invalid')) {
+        if (
+          errorMessage.toLowerCase().includes('expired') ||
+          errorMessage.toLowerCase().includes('invalid')
+        ) {
           setIsTokenRejected(true);
         }
       },
@@ -156,17 +162,25 @@ export const ResetPasswordScreen: React.FC = () => {
 
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Icon name="close-circle-outline" size={64} color={theme.colors.error} />
+            <Icon
+              name="close-circle-outline"
+              size={64}
+              color={theme.colors.error}
+            />
           </View>
           <Text style={styles.title}>Invalid Reset Link</Text>
           <Text style={styles.subtitle}>
-            This password reset link is invalid or has expired.
-            Please request a new password reset from the login screen.
+            This password reset link is invalid or has expired. Please request a
+            new password reset from the login screen.
           </Text>
 
           <Pressable
-            style={({pressed}) => [styles.button, styles.primaryButton, pressed && styles.pressed]}
-            onPress={handleReturnToLogin}>
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && { opacity: 0.7 },
+            ]}
+            onPress={handleReturnToLogin}
+          >
             <Text style={styles.primaryButtonText}>Return to Login</Text>
           </Pressable>
         </View>
@@ -180,12 +194,17 @@ export const ResetPasswordScreen: React.FC = () => {
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Icon name="lock-closed-outline" size={64} color={theme.colors.primary} />
+          <Icon
+            name="lock-closed-outline"
+            size={64}
+            color={theme.colors.primary}
+          />
         </View>
 
         <Text style={styles.title}>Reset Your Password</Text>
         <Text style={styles.subtitle}>
-          Enter your new password below. Make sure it's secure and easy for you to remember.
+          Enter your new password below. Make sure it's secure and easy for you
+          to remember.
         </Text>
 
         <View style={styles.form}>
@@ -193,7 +212,7 @@ export const ResetPasswordScreen: React.FC = () => {
             <Text style={styles.label}>New Password</Text>
             <PasswordInput
               value={watchedValues.newPassword}
-              onChangeText={(text) => form.setValue('newPassword', text)}
+              onChangeText={text => form.setValue('newPassword', text)}
               placeholder="Enter your new password"
               errorMessage={form.formState.errors.newPassword?.message}
             />
@@ -203,16 +222,20 @@ export const ResetPasswordScreen: React.FC = () => {
             <Text style={styles.label}>Confirm Password</Text>
             <PasswordInput
               value={watchedValues.confirmPassword}
-              onChangeText={(text) => form.setValue('confirmPassword', text)}
+              onChangeText={text => form.setValue('confirmPassword', text)}
               placeholder="Confirm your new password"
               errorMessage={form.formState.errors.confirmPassword?.message}
             />
           </View>
 
           <Pressable
-            style={({pressed}) => [styles.button, styles.primaryButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && { opacity: 0.7 },
+            ]}
             onPress={form.handleSubmit(onSubmit)}
-            disabled={isSubmitting || !form.formState.isValid}>
+            disabled={isSubmitting || !form.formState.isValid}
+          >
             {isSubmitting ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
@@ -266,22 +289,17 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
-  button: {
+  primaryButton: {
     paddingVertical: theme.spacing.sm + 2,
     paddingHorizontal: theme.spacing.xl,
     borderRadius: theme.radii.sm,
     alignItems: 'center',
     marginTop: theme.spacing['3'],
-  },
-  primaryButton: {
     backgroundColor: theme.colors.primary,
   },
   primaryButtonText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

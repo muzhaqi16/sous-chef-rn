@@ -3,7 +3,8 @@ import { Pressable, Text, ActivityIndicator } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring } from 'react-native-reanimated';
+  withSpring,
+} from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { SPRING } from '#constants/animations';
 import { Icon } from '#utils/iconUtils';
@@ -47,11 +48,13 @@ export const Button: React.FC<ButtonProps> = ({
   txtStyle,
   testID,
   accessibilityLabel,
-  accessibilityHint }) => {
+  accessibilityHint,
+}) => {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }] }));
+    transform: [{ scale: scale.value }],
+  }));
 
   const handlePressIn = () => {
     scale.set(withSpring(0.97, SPRING.PRESS));
@@ -67,23 +70,24 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   // Use title/children as fallback for accessibility label
-  const buttonLabel = accessibilityLabel || title || (typeof children === 'string' ? children : undefined);
+  const buttonLabel =
+    accessibilityLabel ||
+    title ||
+    (typeof children === 'string' ? children : undefined);
 
   const useWhiteRipple = variant === 'primary' || variant === 'danger';
+
+  styles.useVariants({
+    variant,
+    size,
+    fullWidth,
+    disabled: disabled || loading,
+  });
 
   return (
     <AnimatedPressable
       testID={testID}
-      style={[
-        styles.button,
-        styles[variant],
-        styles[size],
-        fullWidth && styles.fullWidth,
-        disabled && styles.disabled,
-        animatedStyle,
-        style,
-        btnStyle,
-      ]}
+      style={[styles.button, animatedStyle, style, btnStyle]}
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
@@ -112,9 +116,7 @@ export const Button: React.FC<ButtonProps> = ({
               }
             />
           )}
-          <Text style={[styles.text, styles[`${variant}Text`], txtStyle]}>
-            {title || children}
-          </Text>
+          <Text style={[styles.text, txtStyle]}>{title || children}</Text>
         </>
       )}
     </AnimatedPressable>
@@ -128,50 +130,64 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.lg,
     gap: theme.spacing.xs,
-    overflow: 'hidden' },
-  primary: {
-    backgroundColor: theme.colors.primary },
-  secondary: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border },
-  danger: {
-    backgroundColor: theme.colors.error },
-  ghost: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'transparent' },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: theme.colors.primary },
-  small: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    minHeight: theme.sizes.button.sm },
-  medium: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    minHeight: theme.sizes.button.md },
-  large: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    minHeight: theme.sizes.button.lg },
-  fullWidth: {
-    flex: 1 },
-  disabled: {
-    opacity: theme.opacity.disabled },
+    overflow: 'hidden',
+    variants: {
+      variant: {
+        primary: { backgroundColor: theme.colors.primary },
+        secondary: {
+          backgroundColor: theme.colors.surface,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+        },
+        danger: { backgroundColor: theme.colors.error },
+        ghost: {
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: 'transparent',
+        },
+        outline: {
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: theme.colors.primary,
+        },
+      },
+      size: {
+        small: {
+          paddingHorizontal: theme.spacing.sm,
+          paddingVertical: theme.spacing.xs,
+          minHeight: theme.sizes.button.sm,
+        },
+        medium: {
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: theme.spacing.sm,
+          minHeight: theme.sizes.button.md,
+        },
+        large: {
+          paddingHorizontal: theme.spacing.lg,
+          paddingVertical: theme.spacing.md,
+          minHeight: theme.sizes.button.lg,
+        },
+      },
+      fullWidth: {
+        true: { flex: 1 },
+      },
+      disabled: {
+        true: { opacity: theme.opacity.disabled },
+      },
+    },
+  },
   text: {
     fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
-    fontSize: theme.fonts.size.md },
-  primaryText: {
-    color: theme.colors.white },
-  secondaryText: {
-    color: theme.colors.textPrimary },
-  dangerText: {
-    color: theme.colors.white },
-  ghostText: {
-    color: theme.colors.primary },
-  outlineText: {
-    color: theme.colors.primary } }));
+    fontSize: theme.fonts.size.md,
+    variants: {
+      variant: {
+        primary: { color: theme.colors.white },
+        secondary: { color: theme.colors.textPrimary },
+        danger: { color: theme.colors.white },
+        ghost: { color: theme.colors.primary },
+        outline: { color: theme.colors.primary },
+      },
+    },
+  },
+}));

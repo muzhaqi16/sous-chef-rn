@@ -2330,7 +2330,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-skia (2.4.18):
+  - react-native-skia (2.5.4):
     - boost
     - DoubleConversion
     - fast_float
@@ -2948,7 +2948,7 @@ PODS:
     - React-perflogger (= 0.83.3)
     - React-utils (= 0.83.3)
     - SocketRocket
-  - ReactNavigation (8.0.0-alpha.14):
+  - ReactNavigation (8.0.0-alpha.16):
     - boost
     - DoubleConversion
     - fast_float
@@ -3917,7 +3917,7 @@ SPEC CHECKSUMS:
   react-native-pager-view: 5c3098839820aa73d75873e7b1a7eb9f119602b7
   react-native-performance: b48d1aba7501a54af5e1a7efb0dab1ab25dc734f
   react-native-safe-area-context: befb5404eb8a16fdc07fa2bebab3568ecabcbb8a
-  react-native-skia: 03e8994164f792bc9fa464ed475e7f8edce36d0e
+  react-native-skia: 172d000eca5432c98563fdd0ce1f23ef0fbb3602
   react-native-turbo-image: be4fdfeeced611d8d089d5ef879601d8bb293007
   react-native-vector-icons-ionicons: ad07e944a092a5cf71b8b569d8f5ce2bf674c415
   React-NativeModulesApple: 8e85260ad67e478259096a4b0440c70df006f88b
@@ -3953,7 +3953,7 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: 33358f2c73c51f5779623df2a8bed249115700ca
   ReactCodegen: 1aa12085ad18dd9fe235a297b89614cde4a3dee1
   ReactCommon: f1e15641376a45cf88e31c310d0399cf6b212e43
-  ReactNavigation: c75d95b8735735c850d9224555c6f211fcafcf16
+  ReactNavigation: 1b9895026254a0ef4669d7f6c574736e4b5731c0
   RNCClipboard: 4b58c780f63676367640f23c8e114e9bd0cf86ac
   RNCMaskedView: 5ef8c95cbab95334a32763b72896a7b7d07e6299
   RNCPicker: bf95ec4b2483e2ab256047130bc536b437cd916c

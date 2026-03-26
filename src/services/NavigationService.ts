@@ -3,8 +3,10 @@ import {
   CommonActions,
   StackActions,
 } from '@react-navigation/native';
+import type { ParamListBase } from '@react-navigation/native';
 
-export const navigationRef = createNavigationContainerRef();
+// Typed as ParamListBase because createStaticNavigation's ref prop expects it.
+export const navigationRef = createNavigationContainerRef<ParamListBase>();
 
 class NavigationServiceClass {
   navigate(name: string, params?: object) {

@@ -48,6 +48,8 @@ type LoadState = 'idle' | 'loading' | 'success' | 'error';
 const loadedUris = new Set<string>();
 const MAX_LOADED_URIS = 500;
 
+const HIDDEN: { display: 'none' } = { display: 'none' };
+
 export const CachedImage = ({
   uri,
   style,
@@ -135,7 +137,7 @@ export const CachedImage = ({
         style={[
           styles.overlay,
           radiusOverride,
-          loadState !== 'loading' && styles.hidden,
+          loadState !== 'loading' && HIDDEN,
         ]}
       >
         {loadState === 'loading' && (
@@ -150,10 +152,9 @@ export const CachedImage = ({
       {/* Error overlay — fully declarative */}
       <View
         style={[
-          styles.overlay,
           styles.errorOverlay,
           radiusOverride,
-          loadState !== 'error' && styles.hidden,
+          loadState !== 'error' && HIDDEN,
         ]}
       >
         <Icon
@@ -178,13 +179,15 @@ const styles = StyleSheet.create(theme => ({
     right: 0,
     bottom: 0,
   },
-  hidden: {
-    display: 'none',
-  },
   skeleton: {
     flex: 1,
   },
   errorOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: theme.colors.surfaceVariant,
     justifyContent: 'center',
     alignItems: 'center',

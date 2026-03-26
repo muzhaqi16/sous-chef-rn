@@ -57,7 +57,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             onPress={onPress}
             style={({ pressed }) => [
               styles.cardHeader,
-              pressed && onPress && styles.pressed,
+              pressed && onPress && { opacity: theme.opacity.pressed },
             ]}
             disabled={!onPress}
           >
@@ -107,7 +107,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                 style={({ pressed }) => [
                   commonStyles.row,
                   styles.actionButton,
-                  pressed && styles.pressed,
+                  pressed && { opacity: theme.opacity.pressed },
                 ]}
                 onPress={onSetDefault}
               >
@@ -119,7 +119,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               style={({ pressed }) => [
                 commonStyles.row,
                 styles.actionButton,
-                pressed && styles.pressed,
+                pressed && { opacity: theme.opacity.pressed },
               ]}
               onPress={onEdit}
             >
@@ -129,9 +129,8 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             <Pressable
               style={({ pressed }) => [
                 commonStyles.row,
-                styles.actionButton,
-                styles.deleteButton,
-                pressed && styles.pressed,
+                styles.deleteActionButton,
+                pressed && { opacity: theme.opacity.pressed },
               ]}
               onPress={onDelete}
             >
@@ -212,15 +211,18 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     fontWeight: theme.fonts.weight.medium,
   },
-  deleteButton: {
+  deleteActionButton: {
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xs,
+    borderRadius: theme.radii.sm,
     backgroundColor: 'transparent',
+    justifyContent: 'center',
+    gap: 4,
   },
   deleteText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.error,
     fontWeight: theme.fonts.weight.medium,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

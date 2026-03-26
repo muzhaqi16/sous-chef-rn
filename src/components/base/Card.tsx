@@ -106,6 +106,11 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   const { theme } = useUnistyles();
 
+  styles.useVariants({
+    layout,
+    disabled,
+  });
+
   const renderImage = () => {
     if (leftElement) return null;
 
@@ -129,7 +134,6 @@ export const Card: React.FC<CardProps> = ({
       return (
         <View
           style={[
-            styles.imageVertical,
             styles.imagePlaceholder,
             { backgroundColor: theme.colors.backgroundSecondary },
           ]}
@@ -143,12 +147,7 @@ export const Card: React.FC<CardProps> = ({
   };
 
   const renderContent = () => (
-    <View
-      style={[
-        styles.content,
-        layout === 'horizontal' && styles.contentHorizontal,
-      ]}
-    >
+    <View style={styles.content}>
       {!!badge && (
         <Badge variant={badge.variant} style={styles.badge}>
           {badge.text}
@@ -224,8 +223,6 @@ export const Card: React.FC<CardProps> = ({
           borderWidth: 1,
           borderColor: theme.colors.border,
         },
-        layout === 'vertical' && styles.cardVertical,
-        disabled && styles.cardDisabled,
         style,
       ]}
       testID={testID}
@@ -234,28 +231,36 @@ export const Card: React.FC<CardProps> = ({
         <>
           {leftElement || renderImage()}
           {renderContent()}
-          {!!rightElement && <View style={styles.rightSection}>{rightElement}</View>}
+          {!!rightElement && (
+            <View style={styles.rightSection}>{rightElement}</View>
+          )}
         </>
       ) : (
         <>
           {renderImage()}
           {renderContent()}
-          {!!rightElement && <View style={styles.rightSection}>{rightElement}</View>}
+          {!!rightElement && (
+            <View style={styles.rightSection}>{rightElement}</View>
+          )}
         </>
       )}
-      {!!bottomElement && <View style={styles.bottomSection}>{bottomElement}</View>}
+      {!!bottomElement && (
+        <View style={styles.bottomSection}>{bottomElement}</View>
+      )}
     </View>
   );
 
   if (onPress && !disabled) {
     // Build accessible label from card content if not explicitly provided
-    const cardLabel = accessibilityLabel || [title, subtitle, description].filter(Boolean).join(', ');
+    const cardLabel =
+      accessibilityLabel ||
+      [title, subtitle, description].filter(Boolean).join(', ');
 
     return (
       <Pressable
         onPress={onPress}
         disabled={disabled}
-        style={({pressed}) => pressed && styles.pressed}
+        style={({ pressed }) => pressed && styles.pressed}
         accessibilityRole="button"
         accessibilityLabel={cardLabel}
         accessibilityHint={accessibilityHint || 'Tap to view details'}
@@ -274,14 +279,16 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     borderRadius: theme.radii.lg,
     overflow: 'hidden',
-  },
-
-  cardVertical: {
-    flexDirection: 'column',
-  },
-
-  cardDisabled: {
-    opacity: theme.opacity.disabled,
+    variants: {
+      layout: {
+        horizontal: {},
+        vertical: { flexDirection: 'column' },
+      },
+      disabled: {
+        true: { opacity: theme.opacity.disabled },
+        false: {},
+      },
+    },
   },
 
   // Image styles
@@ -301,6 +308,10 @@ const styles = StyleSheet.create(theme => ({
   },
 
   imagePlaceholder: {
+    width: '100%',
+    height: 200,
+    borderTopLeftRadius: theme.radii.lg,
+    borderTopRightRadius: theme.radii.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -314,10 +325,12 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     padding: theme.spacing.md,
     gap: theme.spacing.xs,
-  },
-
-  contentHorizontal: {
-    justifyContent: 'center',
+    variants: {
+      layout: {
+        horizontal: { justifyContent: 'center' },
+        vertical: {},
+      },
+    },
   },
 
   badge: {

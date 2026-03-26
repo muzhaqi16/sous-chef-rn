@@ -1,15 +1,15 @@
 import React from 'react';
-import {View, Pressable, Text, Modal} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#utils/iconUtils';
+import { View, Pressable, Text, Modal } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
 
 export const RememberMeModal: React.FC<{
   visible: boolean;
   onAccept: () => void;
   onDecline: () => void;
   email: string;
-}> = ({visible, onAccept, onDecline, email}) => {
-  const {theme} = useUnistyles();
+}> = ({ visible, onAccept, onDecline, email }) => {
+  const { theme } = useUnistyles();
 
   return (
     <Modal
@@ -18,10 +18,15 @@ export const RememberMeModal: React.FC<{
       animationType="fade"
       onRequestClose={onDecline}
       statusBarTranslucent
-      navigationBarTranslucent>
+      navigationBarTranslucent
+    >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Icon name="lock-closed-outline" size={48} color={theme.colors.primary} />
+          <Icon
+            name="lock-closed-outline"
+            size={48}
+            color={theme.colors.primary}
+          />
 
           <Text style={styles.modalTitle}>Remember login info?</Text>
           <Text style={styles.modalSubtitle}>
@@ -31,14 +36,22 @@ export const RememberMeModal: React.FC<{
 
           <View style={styles.modalButtons}>
             <Pressable
-              style={({pressed}) => [styles.modalButton, styles.modalButtonSecondary, pressed && styles.pressed]}
-              onPress={onDecline}>
+              style={({ pressed }) => [
+                styles.modalButtonSecondary,
+                pressed && { opacity: theme.opacity.pressed },
+              ]}
+              onPress={onDecline}
+            >
               <Text style={styles.modalButtonSecondaryText}>Not Now</Text>
             </Pressable>
 
             <Pressable
-              style={({pressed}) => [styles.modalButton, styles.modalButtonPrimary, pressed && styles.pressed]}
-              onPress={onAccept}>
+              style={({ pressed }) => [
+                styles.modalButtonPrimary,
+                pressed && { opacity: theme.opacity.pressed },
+              ]}
+              onPress={onAccept}
+            >
               <Text style={styles.modalButtonPrimaryText}>Remember</Text>
             </Pressable>
           </View>
@@ -83,16 +96,18 @@ const styles = StyleSheet.create(theme => ({
     width: '100%',
     gap: theme.spacing['3'],
   },
-  modalButton: {
+  modalButtonPrimary: {
     flex: 1,
     paddingVertical: theme.spacing['3'],
     borderRadius: theme.radii.sm,
     alignItems: 'center',
-  },
-  modalButtonPrimary: {
     backgroundColor: theme.colors.primary,
   },
   modalButtonSecondary: {
+    flex: 1,
+    paddingVertical: theme.spacing['3'],
+    borderRadius: theme.radii.sm,
+    alignItems: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -106,8 +121,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

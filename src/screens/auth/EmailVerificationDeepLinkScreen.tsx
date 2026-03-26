@@ -189,9 +189,8 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
             <View style={styles.actions}>
               <Pressable
                 style={({ pressed }) => [
-                  styles.button,
                   styles.retryButton,
-                  pressed && styles.pressed,
+                  pressed && { opacity: theme.opacity.pressed },
                 ]}
                 onPress={performVerification}
               >
@@ -237,21 +236,16 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xl,
     width: '100%',
   },
-  button: {
+  retryButton: {
     paddingVertical: theme.spacing.sm + 2,
     paddingHorizontal: theme.spacing.xl,
     borderRadius: theme.radii.sm,
     alignItems: 'center',
-  },
-  retryButton: {
     backgroundColor: theme.colors.primary,
   },
   retryButtonText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

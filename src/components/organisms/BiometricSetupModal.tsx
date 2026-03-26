@@ -274,30 +274,26 @@ export const BiometricSetupModal = ({
               <View style={styles.buttons}>
                 <Pressable
                   style={({ pressed }) => [
-                    styles.button,
                     styles.primaryButton,
-                    pressed && styles.pressed,
+                    pressed && { opacity: theme.opacity.pressed },
                   ]}
                   onPress={handleEnableBiometric}
                   disabled={isEnabling}
                 >
-                  <Text style={[styles.buttonText, styles.primaryButtonText]}>
+                  <Text style={styles.primaryButtonText}>
                     {isEnabling ? 'Setting up...' : 'Enable Now'}
                   </Text>
                 </Pressable>
 
                 <Pressable
                   style={({ pressed }) => [
-                    styles.button,
                     styles.secondaryButton,
-                    pressed && styles.pressed,
+                    pressed && { opacity: theme.opacity.pressed },
                   ]}
                   onPress={handleSkip}
                   disabled={isEnabling}
                 >
-                  <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-                    Set up later
-                  </Text>
+                  <Text style={styles.secondaryButtonText}>Set up later</Text>
                 </Pressable>
               </View>
             </View>
@@ -385,28 +381,30 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
     marginBottom: theme.spacing.lg,
   },
-  button: {
+  primaryButton: {
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.spacing.md,
     alignItems: 'center',
-  },
-  primaryButton: {
     backgroundColor: theme.colors.primary,
   },
   secondaryButton: {
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.spacing.md,
+    alignItems: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  buttonText: {
+  primaryButtonText: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  primaryButtonText: {
     color: theme.colors.background,
   },
   secondaryButtonText: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
   },
   footer: {
@@ -429,8 +427,5 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

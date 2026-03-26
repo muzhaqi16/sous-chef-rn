@@ -449,6 +449,25 @@ export const ShoppingListMainContent: React.FC<
           tutorial.currentStep ===
           ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS;
 
+        // Don't show swipe spotlight until there is at least one item to swipe
+        if (isSwipeStep && rawUnpurchasedItems.length === 0) return null;
+
+        const handleNext = () => {
+          if (
+            tutorial.currentStep ===
+            ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON
+          ) {
+            // "Next" on add-button step opens the sheet (same as target press)
+            Telemetry.trackEvent('add_item_from_tab_bar', {
+              list_id: currentListId,
+            });
+            addItemSheet.open();
+            tutorial.notifyAddButtonPressed();
+          } else {
+            tutorial.skipCurrentStep();
+          }
+        };
+
         return (
           <SpotlightCoachMark
             targetRect={targetRect}
@@ -457,7 +476,7 @@ export const ShoppingListMainContent: React.FC<
             stepIndex={stepConfig.stepIndex}
             totalSteps={TUTORIAL_TOTAL_STEPS}
             onDismiss={tutorial.skipAll}
-            onNext={tutorial.skipCurrentStep}
+            onNext={handleNext}
             onTargetPress={handleTargetPress}
             allowGesturePassthrough={isSwipeStep}
           />

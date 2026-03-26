@@ -5,11 +5,11 @@
  */
 
 import React from 'react';
-import {View, Text} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {CachedImage} from '#components/atoms/CachedImage';
-import {Icon} from '#utils/iconUtils';
-import {getInitials} from '#utils/ownershipHelpers';
+import { View, Text } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { CachedImage } from '#components/atoms/CachedImage';
+import { Icon } from '#utils/iconUtils';
+import { getInitials } from '#utils/ownershipHelpers';
 
 interface AvatarProps {
   /** Avatar image URL */
@@ -37,7 +37,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   backgroundColor,
   textColor,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
 
   const containerStyle = {
     width: size,
@@ -70,17 +70,18 @@ export const Avatar: React.FC<AvatarProps> = ({
     return (
       <View
         style={[
-          styles.container,
           styles.initialsContainer,
           containerStyle,
-          backgroundColor && {backgroundColor},
-        ]}>
+          backgroundColor && { backgroundColor },
+        ]}
+      >
         <Text
           style={[
             styles.initials,
-            {fontSize},
-            textColor && {color: textColor},
-          ]}>
+            { fontSize },
+            textColor && { color: textColor },
+          ]}
+        >
           {initials}
         </Text>
       </View>
@@ -91,11 +92,11 @@ export const Avatar: React.FC<AvatarProps> = ({
   return (
     <View
       style={[
-        styles.container,
         styles.iconContainer,
         containerStyle,
-        backgroundColor && {backgroundColor},
-      ]}>
+        backgroundColor && { backgroundColor },
+      ]}
+    >
       <Icon
         name={fallbackIcon}
         size={size * 0.6}
@@ -114,6 +115,9 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary + '20',
   },
   initialsContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
     backgroundColor: theme.colors.primary + '20',
   },
   initials: {
@@ -121,6 +125,9 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
   },
   iconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
     backgroundColor: theme.colors.background,
   },
 }));

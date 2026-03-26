@@ -28,7 +28,8 @@ export const PostLoginBiometricPrompt = ({
   // Load biometric info when modal becomes visible
   useEffect(() => {
     if (visible) {
-      authService.getBiometricInfo()
+      authService
+        .getBiometricInfo()
         .then(info => {
           setBiometricInfo(info);
         })
@@ -49,11 +50,14 @@ export const PostLoginBiometricPrompt = ({
           return;
         }
 
-        const success = await authService.storeCredentials(userEmail, userPassword);
+        const success = await authService.storeCredentials(
+          userEmail,
+          userPassword,
+        );
         onComplete(success);
       },
       setIsEnabling,
-      (error) => {
+      error => {
         console.error('Error enabling biometric authentication:', error);
         onComplete(false);
       },
@@ -94,10 +98,17 @@ export const PostLoginBiometricPrompt = ({
       navigationBarTranslucent
     >
       <View style={styles.overlay} testID="post-login-biometric-prompt">
-        <View style={styles.container} testID="post-login-biometric-prompt-container">
+        <View
+          style={styles.container}
+          testID="post-login-biometric-prompt-container"
+        >
           <View style={styles.iconContainer}>
             <View style={styles.iconBackground}>
-              <Icon name={getBiometricIcon()} size={40} color={theme.colors.primary} />
+              <Icon
+                name={getBiometricIcon()}
+                size={40}
+                color={theme.colors.primary}
+              />
             </View>
           </View>
 
@@ -106,27 +117,31 @@ export const PostLoginBiometricPrompt = ({
 
           <View style={styles.buttons}>
             <Pressable
-              style={({pressed}) => [styles.button, styles.primaryButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                pressed && { opacity: theme.opacity.pressed },
+              ]}
               onPress={handleEnableNow}
               disabled={isEnabling}
               testID="biometric-prompt-enable"
               accessibilityLabel="Enable Now"
             >
-              <Text style={[styles.buttonText, styles.primaryButtonText]}>
+              <Text style={styles.primaryButtonText}>
                 {isEnabling ? 'Setting up...' : 'Enable Now'}
               </Text>
             </Pressable>
 
             <Pressable
-              style={({pressed}) => [styles.button, styles.secondaryButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                pressed && { opacity: theme.opacity.pressed },
+              ]}
               onPress={handleDecline}
               disabled={isEnabling}
               testID="biometric-prompt-decline"
               accessibilityLabel="Not now"
             >
-              <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-                Not now
-              </Text>
+              <Text style={styles.secondaryButtonText}>Not now</Text>
             </Pressable>
           </View>
         </View>
@@ -150,7 +165,15 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     maxWidth: 340,
     width: '100%',
-    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 12, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.1)' }],
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 12,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.1)',
+      },
+    ],
   },
   iconContainer: {
     marginBottom: theme.spacing.lg,
@@ -198,31 +221,30 @@ const styles = StyleSheet.create(theme => ({
     alignSelf: 'stretch',
     gap: theme.spacing.sm,
   },
-  button: {
+  primaryButton: {
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.spacing.sm,
     alignItems: 'center',
-  },
-  primaryButton: {
     backgroundColor: theme.colors.primary,
   },
   secondaryButton: {
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.spacing.sm,
+    alignItems: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  buttonText: {
+  primaryButtonText: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  primaryButtonText: {
     color: theme.colors.background,
   },
   secondaryButtonText: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

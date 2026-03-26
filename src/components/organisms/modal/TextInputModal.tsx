@@ -119,8 +119,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
 
           <TextInput
             style={[
-              styles.input,
-              multiline && styles.multilineInput,
+              multiline ? styles.multilineInput : styles.input,
               error ? { borderColor: resolvedErrorColor } : {},
             ]}
             placeholder={placeholder}
@@ -145,7 +144,10 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
 
           <View style={styles.buttonContainer}>
             <Pressable
-              style={({pressed}) => [styles.button, styles.cancelButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.cancelButton,
+                pressed && { opacity: theme.opacity.pressed },
+              ]}
               onPress={handleClose}
               disabled={isSubmitting}
             >
@@ -153,12 +155,11 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
             </Pressable>
 
             <Pressable
-              style={({pressed}) => [
-                styles.button,
+              style={({ pressed }) => [
                 styles.submitButton,
                 { backgroundColor: resolvedPrimaryColor },
                 isSubmitting && styles.disabledButton,
-                pressed && styles.pressed,
+                pressed && { opacity: theme.opacity.pressed },
               ]}
               onPress={handleSubmit}
               disabled={isSubmitting || loading}
@@ -191,7 +192,15 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
     padding: theme.spacing['5'],
-    boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: theme.spacing.xs, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.25)' }],
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 2,
+        blurRadius: theme.spacing.xs,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.25)',
+      },
+    ],
     minWidth: 300,
     maxWidth: '90%',
   },
@@ -216,6 +225,14 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   multilineInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing['3'],
+    fontSize: theme.typography.fontSize.base,
+    marginBottom: theme.spacing.sm,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.background,
     minHeight: theme.spacing['2xl'] + theme.spacing.xl,
     maxHeight: theme.spacing['3xl'] * 2,
   },
@@ -228,19 +245,23 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     marginTop: theme.spacing['3'],
   },
-  button: {
+  cancelButton: {
     flex: 1,
     padding: theme.spacing['3'],
     borderRadius: theme.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: theme.sizes.button.md,
-  },
-  cancelButton: {
     backgroundColor: theme.colors.background,
     marginRight: theme.spacing.sm,
   },
   submitButton: {
+    flex: 1,
+    padding: theme.spacing['3'],
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: theme.sizes.button.md,
     marginLeft: theme.spacing.sm,
   },
   disabledButton: {
@@ -255,8 +276,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

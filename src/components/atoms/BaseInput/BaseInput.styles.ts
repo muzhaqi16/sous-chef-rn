@@ -70,7 +70,7 @@ export default StyleSheet.create(theme => ({
     },
   },
 
-  iconWrapper: {
+  leftIconWrapper: {
     marginLeft: {
       xs: theme.spacing.sm,
       md: theme.spacing.md,
@@ -83,15 +83,23 @@ export default StyleSheet.create(theme => ({
     alignItems: 'center',
   },
 
-  rightIconOverlay: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    marginLeft: 0,
-    paddingHorizontal: {
-      xs: theme.spacing.sm,
-      md: theme.spacing.md,
+  rightIconWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    variants: {
+      rightIcon: {
+        true: {
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          bottom: 0,
+          marginLeft: 0,
+          paddingHorizontal: {
+            xs: theme.spacing.sm,
+            md: theme.spacing.md,
+          },
+        },
+      },
     },
   },
 

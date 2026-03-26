@@ -455,7 +455,6 @@ export const PantryMain: React.FC = () => (
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    paddingTop: theme.spacing.sm,
     backgroundColor: theme.colors.background,
   },
   searchContainer: {
