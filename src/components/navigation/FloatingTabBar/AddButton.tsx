@@ -3,7 +3,8 @@ import { Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring } from 'react-native-reanimated';
+  withSpring,
+} from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
@@ -16,12 +17,14 @@ export const AddButton: React.FC<AddButtonProps> = ({
   onPress,
   icon = 'add',
   iconLibrary,
-  disabled = false }) => {
+  disabled = false,
+}) => {
   const { theme } = useUnistyles();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }] }));
+    transform: [{ scale: scale.value }],
+  }));
 
   const handlePressIn = () => {
     scale.set(withSpring(0.9, SPRING.PRESS));
@@ -36,13 +39,15 @@ export const AddButton: React.FC<AddButtonProps> = ({
     onPress();
   };
 
+  styles.useVariants({ disabled });
+
   return (
     <AnimatedPressable
       testID="tab-bar-add-button"
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={[styles.addButton, disabled && styles.addButtonDisabled, animatedStyle]}
+      style={[styles.addButton, animatedStyle]}
       accessibilityRole="button"
       accessibilityLabel="Action button"
       accessibilityHint="Opens the action for the current tab"
@@ -68,7 +73,22 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     // Shadow for elevated effect
-    boxShadow: [{ offsetX: 0, offsetY: theme.spacing.xs, blurRadius: theme.radii.md, spreadDistance: 0, color: `${theme.colors.primary}4D` }] },
-  addButtonDisabled: {
-    opacity: 0.4,
-    boxShadow: [] } }));
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: theme.spacing.xs,
+        blurRadius: theme.radii.md,
+        spreadDistance: 0,
+        color: `${theme.colors.primary}4D`,
+      },
+    ],
+    variants: {
+      disabled: {
+        true: {
+          opacity: 0.4,
+          boxShadow: [],
+        },
+      },
+    },
+  },
+}));

@@ -1082,7 +1082,6 @@ const styles = StyleSheet.create(theme => ({
   header: {
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.xs,
   },
   stickySection: {
     backgroundColor: theme.colors.background,
@@ -1094,7 +1093,6 @@ const styles = StyleSheet.create(theme => ({
   },
   searchContainer: {
     paddingHorizontal: theme.spacing['3'],
-    paddingBottom: theme.spacing.sm,
   },
   listContainer: {
     flex: 1,

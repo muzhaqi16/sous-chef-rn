@@ -1,6 +1,6 @@
 import React from 'react';
-import {View, Text, ViewStyle} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { View, Text, ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -15,13 +15,20 @@ export const Badge: React.FC<BadgeProps> = ({
   size = 'small',
   style,
 }) => {
+  styles.useVariants({
+    variant: variant === 'default' ? undefined : variant,
+    size,
+  });
+
   return (
     <View
       accessibilityRole="text"
       accessibilityLabel={typeof children === 'string' ? children : undefined}
-      style={[styles.badge, styles[variant], styles[size], style]}
+      style={[styles.badge, style]}
     >
-      <Text maxFontSizeMultiplier={1.5} style={[styles.text, styles[`${variant}Text`]]}>{children}</Text>
+      <Text maxFontSizeMultiplier={1.5} style={styles.text}>
+        {children}
+      </Text>
     </View>
   );
 };
@@ -31,47 +38,37 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
-  },
-  default: {
-    backgroundColor: theme.colors.surface,
-  },
-  primary: {
-    backgroundColor: theme.colors.primaryLight,
-  },
-  success: {
-    backgroundColor: theme.colors.successLight,
-  },
-  warning: {
-    backgroundColor: theme.colors.warningLight,
-  },
-  danger: {
-    backgroundColor: theme.colors.errorLight,
-  },
-  small: {
-    paddingHorizontal: theme.spacing.xs + 2,
-    paddingVertical: 2,
-  },
-  medium: {
-    paddingHorizontal: theme.spacing['2.5'],
-    paddingVertical: theme.spacing.xs + 2,
+    variants: {
+      variant: {
+        default: { backgroundColor: theme.colors.surface },
+        primary: { backgroundColor: theme.colors.primaryLight },
+        success: { backgroundColor: theme.colors.successLight },
+        warning: { backgroundColor: theme.colors.warningLight },
+        danger: { backgroundColor: theme.colors.errorLight },
+      },
+      size: {
+        small: {
+          paddingHorizontal: theme.spacing.xs + 2,
+          paddingVertical: 2,
+        },
+        medium: {
+          paddingHorizontal: theme.spacing['2.5'],
+          paddingVertical: theme.spacing.xs + 2,
+        },
+      },
+    },
   },
   text: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  defaultText: {
-    color: theme.colors.textPrimary,
-  },
-  primaryText: {
-    color: theme.colors.primary,
-  },
-  successText: {
-    color: theme.colors.success,
-  },
-  warningText: {
-    color: theme.colors.warning,
-  },
-  dangerText: {
-    color: theme.colors.danger,
+    variants: {
+      variant: {
+        default: { color: theme.colors.textPrimary },
+        primary: { color: theme.colors.primary },
+        success: { color: theme.colors.success },
+        warning: { color: theme.colors.warning },
+        danger: { color: theme.colors.danger },
+      },
+    },
   },
 }));

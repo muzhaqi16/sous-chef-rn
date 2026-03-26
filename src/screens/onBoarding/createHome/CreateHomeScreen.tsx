@@ -178,9 +178,8 @@ const InviteCard: React.FC<{ invite: HomeInviteFragment }> = ({ invite }) => {
       <View style={styles.inviteActions}>
         <Pressable
           style={({ pressed }) => [
-            styles.button,
             styles.inviteDeclineButton,
-            pressed && styles.pressed,
+            pressed && { opacity: theme.opacity.pressed },
           ]}
           onPress={() => handleDeclineInvite(invite.token, inviteHomeName)}
           disabled={accepting}
@@ -189,9 +188,8 @@ const InviteCard: React.FC<{ invite: HomeInviteFragment }> = ({ invite }) => {
         </Pressable>
         <Pressable
           style={({ pressed }) => [
-            styles.button,
             styles.inviteAcceptButton,
-            pressed && styles.pressed,
+            pressed && { opacity: theme.opacity.pressed },
           ]}
           onPress={() => handleAcceptInvite(invite.token)}
           disabled={accepting}
@@ -736,14 +734,12 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     gap: theme.spacing.sm,
   },
-  button: {
+  inviteDeclineButton: {
     flex: 1,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  inviteDeclineButton: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -754,6 +750,11 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   inviteAcceptButton: {
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: theme.colors.primary,
   },
   inviteAcceptButtonText: {
@@ -776,8 +777,5 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     fontWeight: theme.fonts.weight.medium,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

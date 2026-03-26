@@ -4,7 +4,6 @@ import Animated from 'react-native-reanimated';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
 import { ListItem } from '../molecules/ListItem';
 import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles/commonStyles';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { SLIDE_PRESETS } from '#/constants/animations';
 
@@ -42,7 +41,8 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
   badge,
   rightElement,
   leftElement,
-  testID }) => {
+  testID,
+}) => {
   const { width: screenWidth } = useWindowDimensions();
 
   // Slide animation for delete/consume/waste actions
@@ -51,7 +51,8 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
     slideDistance: screenWidth,
     duration: SLIDE_PRESETS.exitWithFade.duration,
     withOpacity: SLIDE_PRESETS.exitWithFade.withOpacity,
-    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget });
+    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
+  });
 
   // Wrap delete action with slide animation
   const handleDelete = () => {
@@ -106,7 +107,10 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
     );
 
   return (
-    <Animated.View style={[commonStyles.shadow, styles.container, animatedSlideStyle]} testID={testID}>
+    <Animated.View
+      style={[styles.container, animatedSlideStyle]}
+      testID={testID}
+    >
       {innerContent}
     </Animated.View>
   );
@@ -117,9 +121,19 @@ export const ItemCard = React.memo(ItemCardComponent);
 const styles = StyleSheet.create(theme => ({
   container: {
     opacity: 1, // Prevent transparency inheritance
-    // Horizontal margin for shadow visibility
-    marginHorizontal: theme.spacing.md,
-    // Half vertical margin so stacked items merge to full spacing (md/2 + md/2 = md)
-    marginVertical: theme.spacing.sm,
+    marginHorizontal: theme.spacing['3'],
+    marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
-    boxSizing: 'border-box' } }));
+    boxSizing: 'border-box',
+    // Shadow inlined from commonStyles to avoid multiple unistyles on Animated.View
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 15,
+        spreadDistance: 1,
+        color: 'rgba(0, 0, 0, 0.1)',
+      },
+    ],
+  },
+}));

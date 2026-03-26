@@ -22,7 +22,7 @@ import {
 } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { SPRING, TIMING } from '#constants/animations';
+import { SPRING, TIMING, standardEasing } from '#constants/animations';
 
 export interface TargetRect {
   x: number;
@@ -53,14 +53,12 @@ const HOLE_PADDING = 8;
 const TOOLTIP_MARGIN = 12;
 const TOOLTIP_WIDTH = 275;
 const ARROW_SIZE = 10;
-// Border large enough to cover the entire screen around the hole
-const DIM_BORDER = 2000;
 const SWIPE_THRESHOLD = 50;
 
 /**
  * Spotlight overlay that highlights a target element with a dimmed background.
- * Uses a single View with a massive borderWidth to create the dim overlay,
- * so the hole inherits borderRadius for perfectly rounded corners.
+ * Uses four dim strips (top, bottom, left, right) around the hole to create
+ * the overlay, so position can be smoothly animated with Reanimated.
  */
 export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   targetRect,
@@ -136,18 +134,51 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const tooltipTranslateY = useSharedValue(showAbove ? 10 : -10);
   const tooltipOpacity = useSharedValue(0);
 
-  // Detect step changes — cross-fade tooltip.
+  // Animated hole geometry for smooth step transitions
+  const animHoleTop = useSharedValue(holeTop);
+  const animHoleLeft = useSharedValue(holeLeft);
+  const animHoleWidth = useSharedValue(holeWidth);
+  const animHoleHeight = useSharedValue(holeHeight);
+
+  // Smooth easing config for hole transition
+  const holeTimingConfig = { duration: TIMING.SLOW, easing: standardEasing };
+
+  // Detect step changes — animate hole + cross-fade tooltip.
   // Uses "adjusting state during render" pattern (no effect needed).
   const [prevStepIndex, setPrevStepIndex] = useState(stepIndex);
-  if (prevStepIndex !== stepIndex) {
+  const [prevAdjustedRect, setPrevAdjustedRect] = useState(adjustedRect);
+
+  const stepChanged = prevStepIndex !== stepIndex;
+  const rectChanged =
+    prevAdjustedRect.x !== adjustedRect.x ||
+    prevAdjustedRect.y !== adjustedRect.y ||
+    prevAdjustedRect.width !== adjustedRect.width ||
+    prevAdjustedRect.height !== adjustedRect.height;
+
+  if (stepChanged) {
     setPrevStepIndex(stepIndex);
-    // Cross-fade tooltip (fade out → position snaps while invisible → fade in)
+    setPrevAdjustedRect(adjustedRect);
+
+    // Animate hole to new position with eased timing
+    animHoleTop.set(withTiming(holeTop, holeTimingConfig));
+    animHoleLeft.set(withTiming(holeLeft, holeTimingConfig));
+    animHoleWidth.set(withTiming(holeWidth, holeTimingConfig));
+    animHoleHeight.set(withTiming(holeHeight, holeTimingConfig));
+
+    // Cross-fade tooltip (fade out → wait for hole to settle → fade in)
     tooltipOpacity.set(
       withSequence(
         withTiming(0, { duration: TIMING.INSTANT }),
-        withTiming(1, { duration: TIMING.FAST }),
+        withDelay(TIMING.STANDARD, withTiming(1, { duration: TIMING.FAST })),
       ),
     );
+  } else if (rectChanged) {
+    setPrevAdjustedRect(adjustedRect);
+    // Rect changed without step change (layout shift) — snap instantly
+    animHoleTop.set(holeTop);
+    animHoleLeft.set(holeLeft);
+    animHoleWidth.set(holeWidth);
+    animHoleHeight.set(holeHeight);
   }
 
   useLayoutEffect(() => {
@@ -182,6 +213,42 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const tooltipAnimatedStyle = useAnimatedStyle(() => ({
     opacity: tooltipOpacity.value,
     transform: [{ translateY: tooltipTranslateY.value }],
+  }));
+
+  // 4-strip dim overlay: top, bottom, left, right around the hole
+  const topStripStyle = useAnimatedStyle(() => ({
+    top: 0,
+    left: 0,
+    right: 0,
+    height: Math.max(0, animHoleTop.value),
+  }));
+
+  const bottomStripStyle = useAnimatedStyle(() => ({
+    top: animHoleTop.value + animHoleHeight.value,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  }));
+
+  const leftStripStyle = useAnimatedStyle(() => ({
+    top: animHoleTop.value,
+    left: 0,
+    width: Math.max(0, animHoleLeft.value),
+    height: animHoleHeight.value,
+  }));
+
+  const rightStripStyle = useAnimatedStyle(() => ({
+    top: animHoleTop.value,
+    left: animHoleLeft.value + animHoleWidth.value,
+    right: 0,
+    height: animHoleHeight.value,
+  }));
+
+  const pulsePositionStyle = useAnimatedStyle(() => ({
+    top: animHoleTop.value,
+    left: animHoleLeft.value,
+    width: animHoleWidth.value,
+    height: animHoleHeight.value,
   }));
 
   const handleTargetTap = () => {
@@ -238,22 +305,23 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           <Pressable style={styles.dismissArea} onPress={onDismiss} />
         )}
 
-        {/* Dim overlay with rounded hole — uses a massive border to dim the screen */}
-        <View
-          style={[
-            styles.dimWithHole,
-            {
-              top: holeTop - DIM_BORDER,
-              left: holeLeft - DIM_BORDER,
-              width: holeWidth + DIM_BORDER * 2,
-              height: holeHeight + DIM_BORDER * 2,
-              borderWidth: DIM_BORDER,
-              borderRadius: DIM_BORDER + borderRadius,
-            },
-          ]}
+        {/* Dim overlay — 4 strips around the hole */}
+        <Animated.View
+          style={[styles.dimStrip, topStripStyle]}
           pointerEvents="none"
         />
-
+        <Animated.View
+          style={[styles.dimStrip, bottomStripStyle]}
+          pointerEvents="none"
+        />
+        <Animated.View
+          style={[styles.dimStrip, leftStripStyle]}
+          pointerEvents="none"
+        />
+        <Animated.View
+          style={[styles.dimStrip, rightStripStyle]}
+          pointerEvents="none"
+        />
         {/* Transparent hole tap target — omitted in passthrough mode so
           gestures reach the underlying content (e.g. swipeable items) */}
         {!allowGesturePassthrough && (
@@ -277,14 +345,8 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
         <Animated.View
           style={[
             styles.pulseRing,
-            {
-              top: holeTop,
-              left: holeLeft,
-              width: holeWidth,
-              height: holeHeight,
-              borderRadius,
-              borderColor: theme.colors.primary,
-            },
+            { borderRadius, borderColor: theme.colors.primary },
+            pulsePositionStyle,
             pulseAnimatedStyle,
           ]}
           pointerEvents="none"
@@ -343,11 +405,35 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
               ))}
             </View>
           ) : null}
-          {onNext ? (
-            <Pressable onPress={onNext} style={styles.nextButton} hitSlop={8}>
-              <Text style={styles.nextButtonText}>Next ›</Text>
-            </Pressable>
-          ) : null}
+          {(() => {
+            const isLastStep =
+              totalSteps != null &&
+              stepIndex != null &&
+              stepIndex >= totalSteps - 1;
+            if (isLastStep) {
+              return (
+                <Pressable
+                  onPress={onDismiss}
+                  style={styles.nextButton}
+                  hitSlop={8}
+                >
+                  <Text style={styles.nextButtonText}>Done</Text>
+                </Pressable>
+              );
+            }
+            if (onNext) {
+              return (
+                <Pressable
+                  onPress={onNext}
+                  style={styles.nextButton}
+                  hitSlop={8}
+                >
+                  <Text style={styles.nextButtonText}>Next ›</Text>
+                </Pressable>
+              );
+            }
+            return null;
+          })()}
         </Animated.View>
 
         {/* Skip button — position adapts to avoid overlapping the target hole */}
@@ -382,7 +468,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
         <View
           ref={overlayRef}
           collapsable={false}
-          style={[styles.fullScreen, styles.passthroughContainer]}
+          style={styles.passthroughMeasure}
           pointerEvents="box-none"
           onLayout={handleOverlayLayout}
         />
@@ -414,12 +500,16 @@ const styles = StyleSheet.create(theme => ({
   passthroughContainer: {
     zIndex: 9999,
   },
+  passthroughMeasure: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
+  },
   dismissArea: {
     ...StyleSheet.absoluteFillObject,
   },
-  dimWithHole: {
+  dimStrip: {
     position: 'absolute',
-    borderColor: theme.colors.overlays.heavy,
+    backgroundColor: theme.colors.overlays.heavy,
   },
   holeTap: {
     position: 'absolute',
@@ -492,6 +582,6 @@ const styles = StyleSheet.create(theme => ({
   skipText: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textTertiary,
+    color: theme.colors.white,
   },
 }));

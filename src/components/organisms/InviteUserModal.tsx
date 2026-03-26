@@ -179,19 +179,18 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
             />
 
             {/* Role Selection */}
-            <Text style={[styles.label, styles.roleLabel]}>Select Role</Text>
+            <Text style={styles.roleSectionLabel}>Select Role</Text>
             {availableRoleOptions.map(role => (
               <Pressable
                 key={role.value}
-                style={({pressed}) => [
+                style={({ pressed }) => [
                   styles.roleOption,
-                  selectedRole === role.value && styles.roleOptionSelected,
                   { borderColor: theme.colors.border },
                   selectedRole === role.value && {
                     borderColor: theme.colors.primary,
                     backgroundColor: `${theme.colors.primary}10`,
                   },
-                  pressed && styles.pressed,
+                  pressed && { opacity: theme.opacity.pressed },
                 ]}
                 onPress={() => setSelectedRole(role.value)}
                 disabled={isSubmitting}
@@ -248,7 +247,10 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
             {/* Action Buttons */}
             <View style={styles.buttonContainer}>
               <Pressable
-                style={({pressed}) => [styles.button, styles.cancelButton, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.cancelButton,
+                  pressed && { opacity: theme.opacity.pressed },
+                ]}
                 onPress={handleClose}
                 disabled={isSubmitting}
               >
@@ -256,12 +258,11 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
               </Pressable>
 
               <Pressable
-                style={({pressed}) => [
-                  styles.button,
+                style={({ pressed }) => [
                   styles.submitButton,
                   { backgroundColor: theme.colors.primary },
                   (isSubmitting || isOffline) && styles.disabledButton,
-                  pressed && styles.pressed,
+                  pressed && { opacity: theme.opacity.pressed },
                 ]}
                 onPress={handleSubmit}
                 disabled={isSubmitting || isOffline}
@@ -309,7 +310,11 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
-  roleLabel: {
+  roleSectionLabel: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm,
     marginTop: theme.spacing.md,
   },
   input: {
@@ -328,9 +333,6 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing['3'],
     marginBottom: theme.spacing['3'],
     backgroundColor: theme.colors.inputBackground,
-  },
-  roleOptionSelected: {
-    borderWidth: 2,
   },
   roleOptionContent: {
     position: 'relative',
@@ -388,19 +390,23 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     marginTop: theme.spacing.md,
   },
-  button: {
+  cancelButton: {
     flex: 1,
     padding: theme.spacing['3'] + 2,
     borderRadius: theme.radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: theme.sizes.input.md,
-  },
-  cancelButton: {
     backgroundColor: theme.colors.surfaceVariant,
     marginRight: theme.spacing.sm,
   },
   submitButton: {
+    flex: 1,
+    padding: theme.spacing['3'] + 2,
+    borderRadius: theme.radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: theme.sizes.input.md,
     marginLeft: theme.spacing.sm,
   },
   disabledButton: {
@@ -415,8 +421,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

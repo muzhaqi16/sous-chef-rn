@@ -1,6 +1,6 @@
-import {createMMKV, type MMKV} from 'react-native-mmkv';
-import {StateStorage} from 'zustand/middleware';
-import {DeviceKeyManager} from '#/utils/security/deviceKey';
+import { createMMKV, type MMKV } from 'react-native-mmkv';
+import { StateStorage } from 'zustand/middleware';
+import { DeviceKeyManager } from '#/utils/security/deviceKey';
 
 export const STORAGE_KEY = 'sous-chef-storage';
 
@@ -20,6 +20,7 @@ export const getStorage = async (): Promise<MMKV> => {
     secureStorageInstance = createMMKV({
       id: STORAGE_KEY,
       encryptionKey,
+      // compareBeforeSet is incompatible with encryption (native MMKV asserts !m_crypter)
     });
     return secureStorageInstance;
   } catch (error) {
@@ -28,6 +29,7 @@ export const getStorage = async (): Promise<MMKV> => {
     console.warn('WARNING: Using unencrypted storage as fallback');
     secureStorageInstance = createMMKV({
       id: STORAGE_KEY,
+      // compareBeforeSet is incompatible with encryption (native MMKV asserts !m_crypter)
     });
     return secureStorageInstance;
   }
@@ -36,6 +38,7 @@ export const getStorage = async (): Promise<MMKV> => {
 // Legacy synchronous storage for immediate use (will be migrated)
 export const storage = createMMKV({
   id: STORAGE_KEY + '_temp',
+  compareBeforeSet: true,
   // Note: This temporary instance will be migrated to secure storage
 });
 
@@ -73,5 +76,3 @@ export const zustandStorage: StateStorage = {
     }
   },
 };
-
-// Cache utilities removed - now using Apollo Client only for server data

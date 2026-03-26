@@ -40,15 +40,15 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - MMKVCore (2.3.0)
-  - NitroMmkv (4.2.0):
+  - MMKVCore (2.4.0)
+  - NitroMmkv (4.3.0):
     - boost
     - DoubleConversion
     - fast_float
     - fmt
     - glog
     - hermes-engine
-    - MMKVCore (= 2.3.0)
+    - MMKVCore (= 2.4.0)
     - NitroModules
     - RCT-Folly
     - RCT-Folly/Fabric
@@ -72,7 +72,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - NitroModules (0.35.0):
+  - NitroModules (0.35.2):
     - boost
     - DoubleConversion
     - fast_float
@@ -2330,7 +2330,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-skia (2.4.18):
+  - react-native-skia (2.5.4):
     - boost
     - DoubleConversion
     - fast_float
@@ -2948,7 +2948,7 @@ PODS:
     - React-perflogger (= 0.83.3)
     - React-utils (= 0.83.3)
     - SocketRocket
-  - ReactNavigation (8.0.0-alpha.14):
+  - ReactNavigation (8.0.0-alpha.16):
     - boost
     - DoubleConversion
     - fast_float
@@ -3179,7 +3179,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - RNReanimated (4.2.2):
+  - RNReanimated (4.3.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -3206,11 +3206,12 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNReanimated/reanimated (= 4.2.2)
+    - RNReanimated/apple (= 4.3.0)
+    - RNReanimated/common (= 4.3.0)
     - RNWorklets
     - SocketRocket
     - Yoga
-  - RNReanimated/reanimated (4.2.2):
+  - RNReanimated/apple (4.3.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -3237,11 +3238,10 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNReanimated/reanimated/apple (= 4.2.2)
     - RNWorklets
     - SocketRocket
     - Yoga
-  - RNReanimated/reanimated/apple (4.2.2):
+  - RNReanimated/common (4.3.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -3387,7 +3387,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - RNWorklets (0.7.4):
+  - RNWorklets (0.8.1):
     - boost
     - DoubleConversion
     - fast_float
@@ -3414,10 +3414,11 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNWorklets/worklets (= 0.7.4)
+    - RNWorklets/apple (= 0.8.1)
+    - RNWorklets/common (= 0.8.1)
     - SocketRocket
     - Yoga
-  - RNWorklets/worklets (0.7.4):
+  - RNWorklets/apple (0.8.1):
     - boost
     - DoubleConversion
     - fast_float
@@ -3444,10 +3445,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNWorklets/worklets/apple (= 0.7.4)
     - SocketRocket
     - Yoga
-  - RNWorklets/worklets/apple (0.7.4):
+  - RNWorklets/common (0.8.1):
     - boost
     - DoubleConversion
     - fast_float
@@ -3868,9 +3868,9 @@ SPEC CHECKSUMS:
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
   hermes-engine: e49eae61483683dd38e94295ca3c3a905b8ac49c
   LiquidGlass: a2ea1e5036efd0964d666b4b63b5bcb3509e1651
-  MMKVCore: d078dce7d6586a888b2c2ef5343b6242678e3ee8
-  NitroMmkv: f0a5804b437ecda18aaf0c75649964343438f083
-  NitroModules: 1dc73273d6e3aee937eec41ef3ed9470804b9884
+  MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
+  NitroMmkv: 320feb7789986e3ba45582d5c630ebcfeca807ae
+  NitroModules: 17f56ebb3581e74931c870a789834582ce75470c
   RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669
   RCTDeprecation: 5b820e4173338406a389434c2b79b84ec3b17e26
   RCTRequired: 10f9df44a97f776fa100b21de237605e77558003
@@ -3917,7 +3917,7 @@ SPEC CHECKSUMS:
   react-native-pager-view: 5c3098839820aa73d75873e7b1a7eb9f119602b7
   react-native-performance: b48d1aba7501a54af5e1a7efb0dab1ab25dc734f
   react-native-safe-area-context: befb5404eb8a16fdc07fa2bebab3568ecabcbb8a
-  react-native-skia: 03e8994164f792bc9fa464ed475e7f8edce36d0e
+  react-native-skia: 172d000eca5432c98563fdd0ce1f23ef0fbb3602
   react-native-turbo-image: be4fdfeeced611d8d089d5ef879601d8bb293007
   react-native-vector-icons-ionicons: ad07e944a092a5cf71b8b569d8f5ce2bf674c415
   React-NativeModulesApple: 8e85260ad67e478259096a4b0440c70df006f88b
@@ -3953,7 +3953,7 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: 33358f2c73c51f5779623df2a8bed249115700ca
   ReactCodegen: 1aa12085ad18dd9fe235a297b89614cde4a3dee1
   ReactCommon: f1e15641376a45cf88e31c310d0399cf6b212e43
-  ReactNavigation: c75d95b8735735c850d9224555c6f211fcafcf16
+  ReactNavigation: 1b9895026254a0ef4669d7f6c574736e4b5731c0
   RNCClipboard: 4b58c780f63676367640f23c8e114e9bd0cf86ac
   RNCMaskedView: 5ef8c95cbab95334a32763b72896a7b7d07e6299
   RNCPicker: bf95ec4b2483e2ab256047130bc536b437cd916c
@@ -3963,10 +3963,10 @@ SPEC CHECKSUMS:
   RNKeychain: a2c134ab796272c3d605e035ab727591000b30f3
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
   RNPermissions: 223232cac8475680f8babc26f5712eb8f7db047a
-  RNReanimated: 18324d3313d6477e1d12836c20c3ee30afb5de30
+  RNReanimated: 4e6187f2ba1e30e6ddc7c8fc9f19b2dd2b6b2532
   RNScreens: 7f643ee0fd1407dc5085c7795460bd93da113b8f
   RNSVG: 3405336c4507ee0bafb02b08058d57216daa2c50
-  RNWorklets: a3184955a41f2be46898a937e2821469c8c8da42
+  RNWorklets: 6daa3975bebe6047822c7485666d501a716674ca
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Unistyles: aaf02a737998640500425993feee64d6579d096c
   VisionCamera: 7187b3dac1ff3071234ead959ce311875748e14f

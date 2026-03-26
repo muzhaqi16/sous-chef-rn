@@ -155,6 +155,12 @@ module.exports = {
         message:
           'useUnistyles() called without using its return value has no effect. Destructure what you need: `const { theme } = useUnistyles()`.',
       },
+      {
+        selector:
+          'ArrayExpression > MemberExpression[object.name="styles"] ~ MemberExpression[object.name="styles"]',
+        message:
+          "Avoid combining multiple `styles.*` on the same element — Unistyles v3 proxies break when spread by reanimated's StyleSheet.flatten(). Use `styles.useVariants()` instead.",
+      },
     ],
   },
 };

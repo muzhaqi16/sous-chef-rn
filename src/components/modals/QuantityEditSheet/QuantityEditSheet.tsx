@@ -271,7 +271,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                   backgroundColor: theme.colors.surface,
                   borderColor: theme.colors.border,
                 },
-                pressed && styles.pressed,
+                pressed && { opacity: theme.opacity.pressed },
               ]}
               onPress={handleDecrement}
               disabled={(parseFractionInput(quantityInput) ?? 0) <= 0}
@@ -291,9 +291,14 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             <Pressable
               style={({ pressed }) => [
                 styles.quantityDisplay,
-                isEditing && styles.quantityDisplayEditing,
-                isEditing && { borderColor: theme.colors.primary },
-                pressed && styles.pressed,
+                isEditing && {
+                  borderWidth: 2,
+                  borderRadius: theme.radii.md,
+                  paddingVertical: theme.spacing.xs,
+                  marginHorizontal: theme.spacing.md,
+                  borderColor: theme.colors.primary,
+                },
+                pressed && { opacity: theme.opacity.pressed },
               ]}
               onPress={handleQuantityPress}
             >
@@ -326,10 +331,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             {/* Increment Button */}
             <Pressable
               style={({ pressed }) => [
-                styles.counterButton,
                 styles.incrementButton,
                 { backgroundColor: theme.colors.primary },
-                pressed && styles.pressed,
+                pressed && { opacity: theme.opacity.pressed },
               ]}
               onPress={handleIncrement}
             >
@@ -429,7 +433,11 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
   },
   incrementButton: {
-    borderWidth: 0,
+    width: 56,
+    height: 56,
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   quantityDisplay: {
     minWidth: 80,
@@ -441,20 +449,11 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize['5xl'],
     fontWeight: theme.fonts.weight.semibold,
   },
-  quantityDisplayEditing: {
-    borderWidth: 2,
-    borderRadius: theme.radii.md,
-    paddingVertical: theme.spacing.xs,
-    marginHorizontal: theme.spacing.md,
-  },
   quantityInput: {
     fontSize: theme.typography.fontSize['5xl'],
     fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
     minWidth: 80,
     padding: 0,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

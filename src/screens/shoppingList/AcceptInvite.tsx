@@ -178,9 +178,8 @@ export const AcceptInvite: React.FC = () => {
         </Text>
         <Pressable
           style={({ pressed }) => [
-            styles.button,
             styles.declineButton,
-            pressed && styles.pressed,
+            pressed && { opacity: 0.7 },
           ]}
           onPress={() => navigation.goBack()}
         >
@@ -257,9 +256,8 @@ export const AcceptInvite: React.FC = () => {
         <View style={styles.actions}>
           <Pressable
             style={({ pressed }) => [
-              styles.button,
               styles.declineButton,
-              pressed && styles.pressed,
+              pressed && { opacity: 0.7 },
             ]}
             onPress={handleDecline}
             disabled={processing}
@@ -269,9 +267,8 @@ export const AcceptInvite: React.FC = () => {
 
           <Pressable
             style={({ pressed }) => [
-              styles.button,
               styles.acceptButton,
-              pressed && styles.pressed,
+              pressed && { opacity: 0.7 },
             ]}
             onPress={handleAccept}
             disabled={processing}
@@ -368,13 +365,11 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xl,
     gap: theme.spacing['3'],
   },
-  button: {
+  declineButton: {
     flex: 1,
     paddingVertical: theme.spacing.sm + 2,
     borderRadius: theme.radii.sm,
     alignItems: 'center',
-  },
-  declineButton: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -385,14 +380,15 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
   acceptButton: {
+    flex: 1,
+    paddingVertical: theme.spacing.sm + 2,
+    borderRadius: theme.radii.sm,
+    alignItems: 'center',
     backgroundColor: theme.colors.primary,
   },
   acceptButtonText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

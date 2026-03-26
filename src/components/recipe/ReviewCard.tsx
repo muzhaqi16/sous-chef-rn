@@ -32,35 +32,66 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       {/* Header: avatar, name, date */}
       <View style={styles.header}>
         {avatar ? (
-          <CachedImage
-            uri={avatar}
-            style={styles.avatar}
-          />
+          <CachedImage uri={avatar} style={styles.avatar} />
         ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Ionicons name="person" size={16} color={theme.colors.textSecondary} />
+          <View style={styles.avatarPlaceholder}>
+            <Ionicons
+              name="person"
+              size={16}
+              color={theme.colors.textSecondary}
+            />
           </View>
         )}
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
-            <Text style={styles.displayName} numberOfLines={1}>{displayName}</Text>
-            {!!review.verified && <Ionicons name="checkmark-circle" size={14} color={theme.colors.success} />}
+            <Text style={styles.displayName} numberOfLines={1}>
+              {displayName}
+            </Text>
+            {!!review.verified && (
+              <Ionicons
+                name="checkmark-circle"
+                size={14}
+                color={theme.colors.success}
+              />
+            )}
           </View>
           <Text style={styles.date}>
-            {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true })}
+            {formatDistanceToNow(new Date(review.createdAt), {
+              addSuffix: true,
+            })}
           </Text>
         </View>
         {/* Own review actions */}
         {!!isOwn && (
           <View style={styles.ownActions}>
             {!!onEdit && (
-              <Pressable onPress={onEdit} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
-                <Ionicons name="create-outline" size={18} color={theme.colors.primary} />
+              <Pressable
+                onPress={onEdit}
+                hitSlop={8}
+                style={({ pressed }) =>
+                  pressed && { opacity: theme.opacity.pressed }
+                }
+              >
+                <Ionicons
+                  name="create-outline"
+                  size={18}
+                  color={theme.colors.primary}
+                />
               </Pressable>
             )}
             {!!onDelete && (
-              <Pressable onPress={onDelete} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
-                <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
+              <Pressable
+                onPress={onDelete}
+                hitSlop={8}
+                style={({ pressed }) =>
+                  pressed && { opacity: theme.opacity.pressed }
+                }
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={18}
+                  color={theme.colors.error}
+                />
               </Pressable>
             )}
           </View>
@@ -86,21 +117,21 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       <Pressable
         onPress={onToggleHelpful}
         style={({ pressed }) => [
-          styles.helpfulButton,
-          hasVotedHelpful && styles.helpfulButtonActive,
-          pressed && styles.pressed,
+          hasVotedHelpful ? styles.helpfulButtonActive : styles.helpfulButton,
+          pressed && { opacity: theme.opacity.pressed },
         ]}
       >
         <Ionicons
           name={hasVotedHelpful ? 'thumbs-up' : 'thumbs-up-outline'}
           size={14}
-          color={hasVotedHelpful ? theme.colors.primary : theme.colors.textSecondary}
+          color={
+            hasVotedHelpful ? theme.colors.primary : theme.colors.textSecondary
+          }
         />
         <Text
-          style={[
-            styles.helpfulText,
-            hasVotedHelpful && styles.helpfulTextActive,
-          ]}
+          style={
+            hasVotedHelpful ? styles.helpfulTextActive : styles.helpfulText
+          }
         >
           Helpful{review.helpful > 0 ? ` (${review.helpful})` : ''}
         </Text>
@@ -126,6 +157,9 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: 18,
   },
   avatarPlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
@@ -175,6 +209,14 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
   },
   helpfulButtonActive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    alignSelf: 'flex-start',
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+    borderRadius: theme.radii.full,
+    borderWidth: 1,
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primary + '10',
   },
@@ -183,9 +225,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   helpfulTextActive: {
+    fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

@@ -309,7 +309,7 @@ export const InvitationAcceptanceModal: React.FC<
             <Pressable
               style={({ pressed }) => [
                 styles.closeButton,
-                pressed && styles.pressed,
+                pressed && { opacity: theme.opacity.pressed },
               ]}
               onPress={onClose}
             >
@@ -348,9 +348,8 @@ export const InvitationAcceptanceModal: React.FC<
           <View style={styles.actions}>
             <Pressable
               style={({ pressed }) => [
-                styles.button,
                 styles.rejectButton,
-                pressed && styles.pressed,
+                pressed && { opacity: theme.opacity.pressed },
               ]}
               onPress={handleReject}
               disabled={accepting || rejecting}
@@ -360,18 +359,15 @@ export const InvitationAcceptanceModal: React.FC<
               ) : (
                 <>
                   <Icon name="close" size={20} color={theme.colors.error} />
-                  <Text style={[styles.buttonText, styles.rejectText]}>
-                    Reject
-                  </Text>
+                  <Text style={styles.rejectText}>Reject</Text>
                 </>
               )}
             </Pressable>
 
             <Pressable
               style={({ pressed }) => [
-                styles.button,
                 styles.acceptButton,
-                pressed && styles.pressed,
+                pressed && { opacity: theme.opacity.pressed },
               ]}
               onPress={handleAccept}
               disabled={accepting || rejecting}
@@ -381,9 +377,7 @@ export const InvitationAcceptanceModal: React.FC<
               ) : (
                 <>
                   <Icon name="checkmark" size={20} color={theme.colors.white} />
-                  <Text style={[styles.buttonText, styles.acceptText]}>
-                    Accept
-                  </Text>
+                  <Text style={styles.acceptText}>Accept</Text>
                 </>
               )}
             </Pressable>
@@ -479,7 +473,7 @@ const styles = StyleSheet.create(theme => ({
     paddingTop: 0,
     gap: theme.spacing.sm,
   },
-  button: {
+  rejectButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -488,26 +482,29 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.radii.md,
     gap: theme.spacing.xs,
-  },
-  rejectButton: {
     backgroundColor: theme.colors.error + '10',
     borderWidth: 1,
     borderColor: theme.colors.error,
   },
   acceptButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.radii.md,
+    gap: theme.spacing.xs,
     backgroundColor: theme.colors.primary,
   },
-  buttonText: {
+  rejectText: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  rejectText: {
     color: theme.colors.error,
   },
   acceptText: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.white,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

@@ -301,7 +301,7 @@ export const ListSettings: React.FC<
             <Pressable
               onPress={handleSave}
               disabled={saving}
-              style={({ pressed }) => pressed && styles.pressed}
+              style={({ pressed }) => pressed && { opacity: 0.7 }}
             >
               <Text style={styles.saveButton}>
                 {saving ? 'Saving...' : !listId ? 'Create' : 'Save'}
@@ -345,7 +345,7 @@ export const ListSettings: React.FC<
 
               {isHomeLinked ? (
                 <>
-                  <View style={[styles.deleteButton, styles.disabledButton]}>
+                  <View style={styles.disabledLeaveButton}>
                     <Icon
                       name="log-out-outline"
                       size={20}
@@ -363,7 +363,7 @@ export const ListSettings: React.FC<
                   <Pressable
                     style={({ pressed }) => [
                       styles.deleteButton,
-                      pressed && styles.pressed,
+                      pressed && { opacity: 0.7 },
                     ]}
                     onPress={handleLeaveList}
                     disabled={leaving}
@@ -406,7 +406,7 @@ export const ListSettings: React.FC<
                 <Pressable
                   style={({ pressed }) => [
                     styles.pickerButton,
-                    pressed && styles.pressed,
+                    pressed && { opacity: 0.7 },
                   ]}
                   onPress={handleOpenHomePicker}
                 >
@@ -447,7 +447,7 @@ export const ListSettings: React.FC<
             <Pressable
               style={({ pressed }) => [
                 styles.actionRow,
-                pressed && styles.pressed,
+                pressed && { opacity: 0.7 },
               ]}
               onPress={() => navigate('ShareList', { listId: listId! })}
             >
@@ -476,7 +476,7 @@ export const ListSettings: React.FC<
             <Pressable
               style={({ pressed }) => [
                 styles.deleteButton,
-                pressed && styles.pressed,
+                pressed && { opacity: 0.7 },
               ]}
               onPress={handleDelete}
             >
@@ -573,7 +573,13 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.sm,
   },
-  disabledButton: {
+  disabledLeaveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing['3'],
+    borderWidth: 1,
+    borderRadius: theme.radii.sm,
     borderColor: theme.colors.border,
     opacity: 0.6,
   },
@@ -582,8 +588,5 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginLeft: theme.spacing.sm,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

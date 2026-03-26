@@ -227,36 +227,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
 
   const type = toastState?.type ?? 'default';
   const iconName = TOAST_ICONS[type];
-  const bgStyle =
-    type === 'success'
-      ? styles.bg_success
-      : type === 'error'
-      ? styles.bg_error
-      : type === 'warning'
-      ? styles.bg_warning
-      : type === 'info'
-      ? styles.bg_info
-      : styles.bg_default;
-  const borderStyle =
-    type === 'success'
-      ? styles.border_success
-      : type === 'error'
-      ? styles.border_error
-      : type === 'warning'
-      ? styles.border_warning
-      : type === 'info'
-      ? styles.border_info
-      : undefined;
-  const textStyle =
-    type === 'success'
-      ? styles.text_success
-      : type === 'error'
-      ? styles.text_error
-      : type === 'warning'
-      ? styles.text_warning
-      : type === 'info'
-      ? styles.text_info
-      : styles.text_default;
+  styles.useVariants({ type: type === 'default' ? undefined : type });
   const toastIconColor =
     type !== 'default' && type in theme.colors.alertBanner
       ? theme.colors.alertBanner[type as keyof typeof theme.colors.alertBanner]
@@ -270,7 +241,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
         <Animated.View
           testID={`toast-${type}`}
           pointerEvents={toastState ? 'auto' : 'box-none'}
-          style={[styles.toastContainer, bgStyle, borderStyle, animatedStyle]}
+          style={[styles.toastContainer, animatedStyle]}
         >
           {iconName ? (
             <Ionicons
@@ -281,7 +252,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
             />
           ) : null}
           <Text
-            style={[styles.toastText, textStyle]}
+            style={styles.toastText}
             testID="toast-message"
             numberOfLines={2}
           >
@@ -289,9 +260,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
           </Text>
           {toastState?.action ? (
             <Pressable onPress={handleActionPress} style={styles.actionButton}>
-              <Text style={[styles.actionText, textStyle]}>
-                {toastState.action.label}
-              </Text>
+              <Text style={styles.actionText}>{toastState.action.label}</Text>
             </Pressable>
           ) : null}
         </Animated.View>
@@ -313,33 +282,32 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.lg,
     zIndex: theme.zIndex.toast,
     ...theme.shadows.md,
+    backgroundColor: theme.colors.textPrimary,
+    variants: {
+      type: {
+        success: {
+          backgroundColor: theme.colors.alertBanner.success.bg,
+          borderWidth: 1,
+          borderColor: theme.colors.alertBanner.success.border,
+        },
+        error: {
+          backgroundColor: theme.colors.alertBanner.error.bg,
+          borderWidth: 1,
+          borderColor: theme.colors.alertBanner.error.border,
+        },
+        warning: {
+          backgroundColor: theme.colors.alertBanner.warning.bg,
+          borderWidth: 1,
+          borderColor: theme.colors.alertBanner.warning.border,
+        },
+        info: {
+          backgroundColor: theme.colors.alertBanner.info.bg,
+          borderWidth: 1,
+          borderColor: theme.colors.alertBanner.info.border,
+        },
+      },
+    },
   },
-  bg_default: { backgroundColor: theme.colors.textPrimary },
-  bg_success: { backgroundColor: theme.colors.alertBanner.success.bg },
-  bg_error: { backgroundColor: theme.colors.alertBanner.error.bg },
-  bg_warning: { backgroundColor: theme.colors.alertBanner.warning.bg },
-  bg_info: { backgroundColor: theme.colors.alertBanner.info.bg },
-  border_success: {
-    borderWidth: 1,
-    borderColor: theme.colors.alertBanner.success.border,
-  },
-  border_error: {
-    borderWidth: 1,
-    borderColor: theme.colors.alertBanner.error.border,
-  },
-  border_warning: {
-    borderWidth: 1,
-    borderColor: theme.colors.alertBanner.warning.border,
-  },
-  border_info: {
-    borderWidth: 1,
-    borderColor: theme.colors.alertBanner.info.border,
-  },
-  text_default: { color: theme.colors.textInverse },
-  text_success: { color: theme.colors.alertBanner.success.text },
-  text_error: { color: theme.colors.alertBanner.error.text },
-  text_warning: { color: theme.colors.alertBanner.warning.text },
-  text_info: { color: theme.colors.alertBanner.info.text },
   icon: {
     marginRight: theme.spacing.xs,
   },
@@ -347,6 +315,15 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textInverse,
+    variants: {
+      type: {
+        success: { color: theme.colors.alertBanner.success.text },
+        error: { color: theme.colors.alertBanner.error.text },
+        warning: { color: theme.colors.alertBanner.warning.text },
+        info: { color: theme.colors.alertBanner.info.text },
+      },
+    },
   },
   actionButton: {
     marginLeft: theme.spacing.sm,
@@ -357,5 +334,14 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.bold,
     textDecorationLine: 'underline',
+    color: theme.colors.textInverse,
+    variants: {
+      type: {
+        success: { color: theme.colors.alertBanner.success.text },
+        error: { color: theme.colors.alertBanner.error.text },
+        warning: { color: theme.colors.alertBanner.warning.text },
+        info: { color: theme.colors.alertBanner.info.text },
+      },
+    },
   },
 }));

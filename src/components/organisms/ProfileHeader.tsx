@@ -94,7 +94,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           onPress={onAvatarPress}
           style={({ pressed }) => [
             styles.avatarContainer,
-            pressed && styles.pressed,
+            pressed && { opacity: theme.opacity.pressed },
           ]}
         >
           <Animated.View
@@ -113,7 +113,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 />
               </View>
             ) : (
-              <View style={[styles.avatarBase, styles.avatarPlaceholder]}>
+              <View style={styles.avatarPlaceholder}>
                 <Icon
                   name="person"
                   size={32}
@@ -177,6 +177,13 @@ const styles = StyleSheet.create(theme => ({
     height: '100%',
   },
   avatarPlaceholder: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -205,8 +212,5 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: 2,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

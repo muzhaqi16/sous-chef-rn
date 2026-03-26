@@ -1,7 +1,7 @@
 /** @type {import('react-native-worklets/plugin').PluginOptions} */
 // https://docs.swmansion.com/react-native-worklets/docs/
 const workletsPluginOptions = {
-  // Your custom options.
+  strictGlobal: true,
 };
 
 module.exports = api => {

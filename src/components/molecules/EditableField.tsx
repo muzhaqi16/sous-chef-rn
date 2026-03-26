@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from './FormInput';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
@@ -26,6 +26,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
   validation,
   readOnly,
 }) => {
+  const { theme } = useUnistyles();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const [saving, setSaving] = useState(false);
@@ -81,9 +82,8 @@ export const EditableField: React.FC<EditableFieldProps> = ({
         <View style={styles.editActions}>
           <Pressable
             style={({ pressed }) => [
-              styles.editButton,
               styles.cancelButton,
-              pressed && styles.pressed,
+              pressed && { opacity: theme.opacity.pressed },
             ]}
             onPress={handleCancel}
             disabled={saving}
@@ -92,9 +92,8 @@ export const EditableField: React.FC<EditableFieldProps> = ({
           </Pressable>
           <Pressable
             style={({ pressed }) => [
-              styles.editButton,
               styles.saveButton,
-              pressed && styles.pressed,
+              pressed && { opacity: theme.opacity.pressed },
             ]}
             onPress={handleSave}
             disabled={saving}
@@ -120,7 +119,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
         <Pressable
           style={({ pressed }) => [
             styles.editIconButton,
-            pressed && styles.pressed,
+            pressed && { opacity: theme.opacity.pressed },
           ]}
           onPress={handleStartEdit}
         >
@@ -159,15 +158,13 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
     marginTop: theme.spacing.sm,
   },
-  editButton: {
+  cancelButton: {
     flex: 1,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 44,
-  },
-  cancelButton: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -177,13 +174,16 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
   saveButton: {
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
     backgroundColor: theme.colors.primary,
   },
   saveButtonText: {
     color: theme.colors.neutral[0],
     fontWeight: theme.fonts.weight.semibold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

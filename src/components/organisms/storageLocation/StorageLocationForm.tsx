@@ -221,9 +221,10 @@ export const StorageLocationForm = forwardRef<
                 <Pressable
                   key={type.value}
                   style={({ pressed }) => [
-                    styles.typeButton,
-                    formData.type === type.value && styles.typeButtonSelected,
-                    pressed && styles.pressed,
+                    formData.type === type.value
+                      ? styles.typeButtonSelected
+                      : styles.typeButton,
+                    pressed && { opacity: theme.opacity.pressed },
                   ]}
                   onPress={() =>
                     setFormData({
@@ -234,10 +235,11 @@ export const StorageLocationForm = forwardRef<
                 >
                   <StorageLocationIcon type={type.value} size={28} />
                   <Text
-                    style={[
-                      styles.typeLabel,
-                      formData.type === type.value && styles.typeLabelSelected,
-                    ]}
+                    style={
+                      formData.type === type.value
+                        ? styles.typeLabelSelected
+                        : styles.typeLabel
+                    }
                   >
                     {type.label}
                   </Text>
@@ -260,19 +262,21 @@ export const StorageLocationForm = forwardRef<
               >
                 <Pressable
                   style={({ pressed }) => [
-                    styles.parentButton,
-                    !formData.parentLocationId && styles.parentButtonSelected,
-                    pressed && styles.pressed,
+                    !formData.parentLocationId
+                      ? styles.parentButtonSelected
+                      : styles.parentButton,
+                    pressed && { opacity: theme.opacity.pressed },
                   ]}
                   onPress={() =>
                     setFormData({ ...formData, parentLocationId: undefined })
                   }
                 >
                   <Text
-                    style={[
-                      styles.parentLabel,
-                      !formData.parentLocationId && styles.parentLabelSelected,
-                    ]}
+                    style={
+                      !formData.parentLocationId
+                        ? styles.parentLabelSelected
+                        : styles.parentLabel
+                    }
                   >
                     None
                   </Text>
@@ -281,10 +285,10 @@ export const StorageLocationForm = forwardRef<
                   <Pressable
                     key={location.id}
                     style={({ pressed }) => [
-                      styles.parentButton,
-                      formData.parentLocationId === location.id &&
-                        styles.parentButtonSelected,
-                      pressed && styles.pressed,
+                      formData.parentLocationId === location.id
+                        ? styles.parentButtonSelected
+                        : styles.parentButton,
+                      pressed && { opacity: theme.opacity.pressed },
                     ]}
                     onPress={() =>
                       setFormData({
@@ -294,11 +298,11 @@ export const StorageLocationForm = forwardRef<
                     }
                   >
                     <Text
-                      style={[
-                        styles.parentLabel,
-                        formData.parentLocationId === location.id &&
-                          styles.parentLabelSelected,
-                      ]}
+                      style={
+                        formData.parentLocationId === location.id
+                          ? styles.parentLabelSelected
+                          : styles.parentLabel
+                      }
                     >
                       {location.name}
                     </Text>
@@ -337,21 +341,21 @@ export const StorageLocationForm = forwardRef<
                 <Pressable
                   key={option.value}
                   style={({ pressed }) => [
-                    styles.parentButton,
-                    formData.temperature === option.value &&
-                      styles.parentButtonSelected,
-                    pressed && styles.pressed,
+                    formData.temperature === option.value
+                      ? styles.parentButtonSelected
+                      : styles.parentButton,
+                    pressed && { opacity: theme.opacity.pressed },
                   ]}
                   onPress={() =>
                     setFormData({ ...formData, temperature: option.value })
                   }
                 >
                   <Text
-                    style={[
-                      styles.parentLabel,
-                      formData.temperature === option.value &&
-                        styles.parentLabelSelected,
-                    ]}
+                    style={
+                      formData.temperature === option.value
+                        ? styles.parentLabelSelected
+                        : styles.parentLabel
+                    }
                   >
                     {option.label}
                   </Text>
@@ -373,10 +377,10 @@ export const StorageLocationForm = forwardRef<
             >
               <Pressable
                 style={({ pressed }) => [
-                  styles.colorSwatch,
-                  styles.colorSwatchNone,
-                  !formData.color && styles.colorSwatchSelected,
-                  pressed && styles.pressed,
+                  !formData.color
+                    ? styles.colorSwatchNoneSelected
+                    : styles.colorSwatchNone,
+                  pressed && { opacity: theme.opacity.pressed },
                 ]}
                 onPress={() => setFormData({ ...formData, color: null })}
               >
@@ -386,11 +390,11 @@ export const StorageLocationForm = forwardRef<
                 <Pressable
                   key={preset.value}
                   style={({ pressed }) => [
-                    styles.colorSwatch,
+                    formData.color === preset.value
+                      ? styles.colorSwatchSelected
+                      : styles.colorSwatch,
                     { backgroundColor: preset.value },
-                    formData.color === preset.value &&
-                      styles.colorSwatchSelected,
-                    pressed && styles.pressed,
+                    pressed && { opacity: theme.opacity.pressed },
                   ]}
                   onPress={() =>
                     setFormData({ ...formData, color: preset.value })
@@ -406,7 +410,7 @@ export const StorageLocationForm = forwardRef<
         <Pressable
           style={({ pressed }) => [
             styles.advancedHeader,
-            pressed && styles.pressed,
+            pressed && { opacity: theme.opacity.pressed },
           ]}
           onPress={() => setAdvancedExpanded(!advancedExpanded)}
         >
@@ -475,7 +479,7 @@ export const StorageLocationForm = forwardRef<
               style={({ pressed }) => [
                 commonStyles.button,
                 commonStyles.buttonSecondary,
-                pressed && styles.pressed,
+                pressed && { opacity: theme.opacity.pressed },
               ]}
               onPress={onCancel}
               disabled={isSubmitting}
@@ -486,7 +490,7 @@ export const StorageLocationForm = forwardRef<
               style={({ pressed }) => [
                 commonStyles.button,
                 commonStyles.buttonPrimary,
-                pressed && styles.pressed,
+                pressed && { opacity: theme.opacity.pressed },
               ]}
               onPress={handleSubmit}
               disabled={isSubmitting || !formData.name.trim()}
@@ -548,10 +552,23 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 80,
   },
   typeButtonSelected: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    marginRight: theme.spacing.sm,
+    alignItems: 'center',
+    minWidth: 90,
     backgroundColor: theme.colors.primaryLight,
     borderColor: theme.colors.primary,
   },
   parentButtonSelected: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    marginRight: theme.spacing.sm,
+    minWidth: 80,
     backgroundColor: theme.colors.primaryLight,
     borderColor: theme.colors.primary,
   },
@@ -564,6 +581,7 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
   },
   typeLabelSelected: {
+    fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.semibold,
   },
@@ -573,6 +591,7 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
   },
   parentLabelSelected: {
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.semibold,
   },
@@ -590,11 +609,34 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   colorSwatchNone: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: theme.spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
   },
+  colorSwatchNoneSelected: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: theme.spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: theme.colors.textPrimary,
+    backgroundColor: theme.colors.surface,
+  },
   colorSwatchSelected: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: theme.spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 3,
     borderColor: theme.colors.textPrimary,
   },
@@ -632,8 +674,5 @@ const styles = StyleSheet.create(theme => ({
     ...commonStyles.row,
     gap: theme.spacing.sm,
     marginTop: theme.spacing.md,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

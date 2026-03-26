@@ -230,12 +230,6 @@ const RootStack = createNativeStackNavigator({
 
 export type RootStackParamList = StaticParamList<typeof RootStack>;
 
-// Module augmentation per v8 docs. RootParamList (overload 1) doesn't resolve
-// due to a TS limitation with `infer` on intersection types — the conditional
-// `RootNavigator extends TypedNavigatorInternal<infer P, …>` yields `{}`.
-// Overload 3 `useNavigation('ScreenName')` also fails since navigate() still
-// depends on the same unresolved ParamList. Use dispatch(CommonActions.navigate())
-// as a workaround until this is fixed in a stable v8 release.
 type RootStackType = typeof RootStack;
 declare module '@react-navigation/core' {
   interface RootNavigator extends RootStackType {}

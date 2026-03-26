@@ -269,32 +269,28 @@ export const BiometricSetupScreen = () => {
           <View style={styles.buttons}>
             <Pressable
               style={({ pressed }) => [
-                styles.button,
                 styles.primaryButton,
-                pressed && styles.pressed,
+                pressed && { opacity: 0.7 },
               ]}
               onPress={handleEnableBiometric}
               disabled={isEnabling}
               testID="biometric-setup-enable"
             >
-              <Text style={[styles.buttonText, styles.primaryButtonText]}>
+              <Text style={styles.primaryButtonText}>
                 {isEnabling ? 'Setting up...' : 'Enable Now'}
               </Text>
             </Pressable>
 
             <Pressable
               style={({ pressed }) => [
-                styles.button,
                 styles.secondaryButton,
-                pressed && styles.pressed,
+                pressed && { opacity: 0.7 },
               ]}
               onPress={handleSkip}
               disabled={isEnabling}
               testID="biometric-setup-skip"
             >
-              <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-                Set up later
-              </Text>
+              <Text style={styles.secondaryButtonText}>Set up later</Text>
             </Pressable>
           </View>
 
@@ -365,36 +361,35 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
     marginBottom: theme.spacing.lg,
   },
-  button: {
+  primaryButton: {
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.spacing.md,
     alignItems: 'center',
-  },
-  primaryButton: {
     backgroundColor: theme.colors.primary,
   },
   secondaryButton: {
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.spacing.md,
+    alignItems: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  buttonText: {
+  primaryButtonText: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  primaryButtonText: {
     color: theme.colors.background,
   },
   secondaryButtonText: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
   },
   footer: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

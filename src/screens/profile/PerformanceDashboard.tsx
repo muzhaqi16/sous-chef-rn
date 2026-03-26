@@ -26,6 +26,7 @@ import performance from 'react-native-performance';
  * table sorts and IIFE recomputations.
  */
 const FPSSection: React.FC = () => {
+  const { theme } = useUnistyles();
   const { fps, isLowFPS, stats: fpsStats } = useFPSMonitor();
 
   return (
@@ -36,7 +37,10 @@ const FPSSection: React.FC = () => {
         <View style={styles.startupRow}>
           <Text style={styles.startupLabel}>Current FPS</Text>
           <Text
-            style={[styles.startupValue, isLowFPS && styles.memoryCritical]}
+            style={[
+              styles.startupValue,
+              isLowFPS && { color: theme.colors.error },
+            ]}
           >
             {fps}
           </Text>
@@ -52,7 +56,7 @@ const FPSSection: React.FC = () => {
           <Text
             style={[
               styles.startupValue,
-              fpsStats.lowFPSCount > 0 && styles.memoryWarning,
+              fpsStats.lowFPSCount > 0 && { color: theme.colors.warning },
             ]}
           >
             {fpsStats.lowFPSCount}
@@ -320,28 +324,23 @@ export const PerformanceDashboard: React.FC = () => {
             </Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, styles.nameColumn]}>
-                  Host
-                </Text>
-                <Text style={[styles.tableHeaderText, styles.avgColumn]}>
-                  Duration
-                </Text>
+                <Text style={styles.tableHeaderName}>Host</Text>
+                <Text style={styles.tableHeaderAvg}>Duration</Text>
               </View>
               {recentHttpRequests.map((req, index) => (
                 <View
                   key={`${req.url}-${index}`}
                   style={[
                     styles.tableRow,
-                    index % 2 === 0 && styles.tableRowEven,
+                    index % 2 === 0 && {
+                      backgroundColor: theme.colors.backgroundSecondary,
+                    },
                   ]}
                 >
-                  <Text
-                    style={[styles.tableCell, styles.nameColumn]}
-                    numberOfLines={1}
-                  >
+                  <Text style={styles.tableCellName} numberOfLines={1}>
                     {req.host}
                   </Text>
-                  <Text style={[styles.tableCell, styles.avgColumn]}>
+                  <Text style={styles.tableCellAvg}>
                     {formatTime(req.duration)}
                   </Text>
                 </View>
@@ -359,46 +358,35 @@ export const PerformanceDashboard: React.FC = () => {
             </Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, styles.nameColumn]}>
-                  Component
-                </Text>
-                <Text style={[styles.tableHeaderText, styles.avgColumn]}>
-                  Avg
-                </Text>
-                <Text style={[styles.tableHeaderText, styles.maxColumn]}>
-                  Max
-                </Text>
-                <Text style={[styles.tableHeaderText, styles.totalColumn]}>
-                  Total
-                </Text>
-                <Text style={[styles.tableHeaderText, styles.countColumn]}>
-                  Count
-                </Text>
+                <Text style={styles.tableHeaderName}>Component</Text>
+                <Text style={styles.tableHeaderAvg}>Avg</Text>
+                <Text style={styles.tableHeaderMax}>Max</Text>
+                <Text style={styles.tableHeaderTotal}>Total</Text>
+                <Text style={styles.tableHeaderCount}>Count</Text>
               </View>
               {slowestComponents.map((metric, index) => (
                 <View
                   key={metric.componentName}
                   style={[
                     styles.tableRow,
-                    index % 2 === 0 && styles.tableRowEven,
+                    index % 2 === 0 && {
+                      backgroundColor: theme.colors.backgroundSecondary,
+                    },
                   ]}
                 >
-                  <Text
-                    style={[styles.tableCell, styles.nameColumn]}
-                    numberOfLines={1}
-                  >
+                  <Text style={styles.tableCellName} numberOfLines={1}>
                     {metric.componentName}
                   </Text>
-                  <Text style={[styles.tableCell, styles.avgColumn]}>
+                  <Text style={styles.tableCellAvg}>
                     {formatTime(metric.avgRenderTime)}
                   </Text>
-                  <Text style={[styles.tableCell, styles.maxColumn]}>
+                  <Text style={styles.tableCellMax}>
                     {formatTime(metric.maxRenderTime)}
                   </Text>
-                  <Text style={[styles.tableCell, styles.totalColumn]}>
+                  <Text style={styles.tableCellTotal}>
                     {formatTime(metric.totalRenderTime)}
                   </Text>
-                  <Text style={[styles.tableCell, styles.countColumn]}>
+                  <Text style={styles.tableCellCount}>
                     {metric.renderCount}
                   </Text>
                 </View>
@@ -416,40 +404,31 @@ export const PerformanceDashboard: React.FC = () => {
             </Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, styles.nameColumn]}>
-                  Screen
-                </Text>
-                <Text style={[styles.tableHeaderText, styles.avgColumn]}>
-                  Avg Mount
-                </Text>
-                <Text style={[styles.tableHeaderText, styles.maxColumn]}>
-                  Avg Interactive
-                </Text>
-                <Text style={[styles.tableHeaderText, styles.countColumn]}>
-                  Count
-                </Text>
+                <Text style={styles.tableHeaderName}>Screen</Text>
+                <Text style={styles.tableHeaderAvg}>Avg Mount</Text>
+                <Text style={styles.tableHeaderMax}>Avg Interactive</Text>
+                <Text style={styles.tableHeaderCount}>Count</Text>
               </View>
               {slowestScreens.map((metric, index) => (
                 <View
                   key={metric.screenName}
                   style={[
                     styles.tableRow,
-                    index % 2 === 0 && styles.tableRowEven,
+                    index % 2 === 0 && {
+                      backgroundColor: theme.colors.backgroundSecondary,
+                    },
                   ]}
                 >
-                  <Text
-                    style={[styles.tableCell, styles.nameColumn]}
-                    numberOfLines={1}
-                  >
+                  <Text style={styles.tableCellName} numberOfLines={1}>
                     {metric.screenName}
                   </Text>
-                  <Text style={[styles.tableCell, styles.avgColumn]}>
+                  <Text style={styles.tableCellAvg}>
                     {formatTime(metric.avgMountTime)}
                   </Text>
-                  <Text style={[styles.tableCell, styles.maxColumn]}>
+                  <Text style={styles.tableCellMax}>
                     {formatTime(metric.avgInteractiveTime)}
                   </Text>
-                  <Text style={[styles.tableCell, styles.countColumn]}>
+                  <Text style={styles.tableCellCount}>
                     {metric.transitionCount}
                   </Text>
                 </View>
@@ -471,10 +450,12 @@ export const PerformanceDashboard: React.FC = () => {
                     <Text
                       style={[
                         styles.startupValue,
-                        latestMemorySnapshot.usagePercent > 80 &&
-                          styles.memoryWarning,
-                        latestMemorySnapshot.usagePercent > 95 &&
-                          styles.memoryCritical,
+                        latestMemorySnapshot.usagePercent > 80 && {
+                          color: theme.colors.warning,
+                        },
+                        latestMemorySnapshot.usagePercent > 95 && {
+                          color: theme.colors.error,
+                        },
                       ]}
                     >
                       {formatMemory(latestMemorySnapshot.usedBytes)}
@@ -487,10 +468,12 @@ export const PerformanceDashboard: React.FC = () => {
                     <Text
                       style={[
                         styles.startupValue,
-                        latestMemorySnapshot.usagePercent > 80 &&
-                          styles.memoryWarning,
-                        latestMemorySnapshot.usagePercent > 95 &&
-                          styles.memoryCritical,
+                        latestMemorySnapshot.usagePercent > 80 && {
+                          color: theme.colors.warning,
+                        },
+                        latestMemorySnapshot.usagePercent > 95 && {
+                          color: theme.colors.error,
+                        },
                       ]}
                     >
                       {latestMemorySnapshot.usagePercent.toFixed(1)}%
@@ -503,11 +486,7 @@ export const PerformanceDashboard: React.FC = () => {
             {/* Recent History */}
             {recentMemorySnapshots.length > 0 && (
               <>
-                <Text
-                  style={[styles.sectionSubtitle, styles.memoryHistoryLabel]}
-                >
-                  Recent History
-                </Text>
+                <Text style={styles.memoryHistorySubtitle}>Recent History</Text>
                 <View style={styles.memoryList}>
                   {recentMemorySnapshots.map(snapshot => (
                     <View key={snapshot.timestamp} style={styles.memoryItem}>
@@ -518,8 +497,12 @@ export const PerformanceDashboard: React.FC = () => {
                         <Text
                           style={[
                             styles.memoryUsage,
-                            snapshot.usagePercent > 80 && styles.memoryWarning,
-                            snapshot.usagePercent > 95 && styles.memoryCritical,
+                            snapshot.usagePercent > 80 && {
+                              color: theme.colors.warning,
+                            },
+                            snapshot.usagePercent > 95 && {
+                              color: theme.colors.error,
+                            },
                           ]}
                         >
                           {snapshot.usagePercent.toFixed(1)}%
@@ -567,7 +550,7 @@ export const PerformanceDashboard: React.FC = () => {
           <Pressable
             style={({ pressed }) => [
               styles.clearButton,
-              pressed && styles.pressed,
+              pressed && { opacity: theme.opacity.pressed },
             ]}
             onPress={handleClearData}
           >
@@ -632,11 +615,44 @@ const styles = StyleSheet.create(theme => ({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  tableHeaderText: {
+  tableHeaderName: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     textTransform: 'uppercase',
+    flex: 2,
+  },
+  tableHeaderAvg: {
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    flex: 1,
+    textAlign: 'right',
+  },
+  tableHeaderMax: {
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    flex: 1,
+    textAlign: 'right',
+  },
+  tableHeaderTotal: {
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    flex: 1,
+    textAlign: 'right',
+  },
+  tableHeaderCount: {
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    flex: 0.7,
+    textAlign: 'right',
   },
   tableRow: {
     flexDirection: 'row',
@@ -645,33 +661,39 @@ const styles = StyleSheet.create(theme => ({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  tableRowEven: {
-    backgroundColor: theme.colors.backgroundSecondary,
-  },
-  tableCell: {
+  tableCellName: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textPrimary,
-  },
-  nameColumn: {
     flex: 2,
   },
-  avgColumn: {
+  tableCellAvg: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textPrimary,
     flex: 1,
     textAlign: 'right',
   },
-  maxColumn: {
+  tableCellMax: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textPrimary,
     flex: 1,
     textAlign: 'right',
   },
-  totalColumn: {
+  tableCellTotal: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textPrimary,
     flex: 1,
     textAlign: 'right',
   },
-  countColumn: {
+  tableCellCount: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textPrimary,
     flex: 0.7,
     textAlign: 'right',
   },
-  memoryHistoryLabel: {
+  memoryHistorySubtitle: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing['3'],
     marginTop: theme.spacing.md,
   },
   memoryList: {
@@ -699,12 +721,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     fontWeight: 'bold',
     color: theme.colors.success,
-  },
-  memoryWarning: {
-    color: theme.colors.warning,
-  },
-  memoryCritical: {
-    color: theme.colors.error,
   },
   memoryDetails: {
     fontSize: theme.typography.fontSize.xs,
@@ -741,9 +757,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.white,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
   startupCard: {
     backgroundColor: theme.colors.backgroundSecondary,
