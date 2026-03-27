@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { Text } from 'react-native';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, act } from '@testing-library/react-native';
 import { ActionTray } from '../ActionTray';
 
 jest.mock('#components/providers/OverlayBackdropProvider', () => ({
@@ -15,7 +15,9 @@ jest.mock('../ActionTrayContent', () => ({
   ActionTrayContent: ({ children, title }: any) => {
     const RN = require('react-native');
     const R = require('react');
-    return R.createElement(RN.View, { testID: 'action-tray-content' },
+    return R.createElement(
+      RN.View,
+      { testID: 'action-tray-content' },
       title ? R.createElement(RN.Text, null, title) : null,
       children,
     );
@@ -23,21 +25,38 @@ jest.mock('../ActionTrayContent', () => ({
 }));
 
 describe('ActionTray', () => {
-  it('renders with children', () => {
-    render(
+  it('renders nothing when not opened', () => {
+    const { toJSON } = render(
       <ActionTray>
         <Text>Tray content</Text>
       </ActionTray>,
     );
+    expect(toJSON()).toBeNull();
+  });
+
+  it('renders children after open', () => {
+    const ref = React.createRef<any>();
+    render(
+      <ActionTray ref={ref}>
+        <Text>Tray content</Text>
+      </ActionTray>,
+    );
+    act(() => {
+      ref.current.open();
+    });
     expect(screen.getByText('Tray content')).toBeTruthy();
   });
 
-  it('renders with title', () => {
+  it('renders with title after open', () => {
+    const ref = React.createRef<any>();
     render(
-      <ActionTray title="Actions">
+      <ActionTray ref={ref} title="Actions">
         <Text>Content</Text>
       </ActionTray>,
     );
+    act(() => {
+      ref.current.open();
+    });
     expect(screen.getByText('Actions')).toBeTruthy();
   });
 
@@ -65,12 +84,26 @@ describe('ActionTray', () => {
     expect(ref.current.isActive()).toBe(false);
   });
 
-  it('renders the ActionTrayContent wrapper', () => {
+  it('isActive returns true after open', () => {
+    const ref = React.createRef<any>();
     render(
-      <ActionTray>
+      <ActionTray ref={ref}>
         <Text>Content</Text>
       </ActionTray>,
     );
-    expect(screen.getByTestId('action-tray-content')).toBeTruthy();
+    act(() => {
+      ref.current.open();
+    });
+    expect(ref.current.isActive()).toBe(true);
+  });
+
+  it('close() does not throw when called while not open', () => {
+    const ref = React.createRef<any>();
+    render(
+      <ActionTray ref={ref}>
+        <Text>Content</Text>
+      </ActionTray>,
+    );
+    expect(() => ref.current.close()).not.toThrow();
   });
 });

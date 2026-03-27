@@ -1,4 +1,10 @@
-import React, { forwardRef, useImperativeHandle, useEffect, useRef } from 'react';
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useWindowDimensions } from 'react-native';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
@@ -19,93 +25,71 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       title,
       headerRight,
       showCloseButton = true,
-      enableBackdrop = true },
+      enableBackdrop = true,
+    },
     ref,
   ) => {
     const bottomSheetRef = useRef<BottomSheetModal>(null);
-    const isOpenRef = useRef(false);
+    const [mounted, setMounted] = useState(false);
     const { height } = useWindowDimensions();
     const { showBackdrop, hideBackdrop } = useOverlayBackdrop();
 
-    // Handle sheet state changes for open/close tracking
-    const handleSheetChanges = (index: number) => {
-        if (index >= 0) {
-          isOpenRef.current = true;
-          onOpen?.();
-        } else {
-          // Safety net: ensure backdrop is hidden when sheet fully closes
-          if (isOpenRef.current && enableBackdrop) {
-            hideBackdrop();
-          }
-          isOpenRef.current = false;
-          onClose?.();
-        }
-      };
-
-    // Cleanup on unmount
+    // Present the sheet once mounted, hide backdrop on unmount
     useEffect(() => {
+      if (mounted) {
+        bottomSheetRef.current?.present();
+      }
       return () => {
-        if (isOpenRef.current) {
+        if (mounted && enableBackdrop) {
           hideBackdrop();
         }
       };
-    }, [hideBackdrop]);
+    }, [mounted, enableBackdrop, hideBackdrop]);
 
-    // Expose same API as before
+    const handleSheetChanges = (index: number) => {
+      if (index < 0) {
+        // Sheet fully closed — unmount and notify
+        setMounted(false);
+        onClose?.();
+      }
+    };
+
+    const handleDismiss = () => {
+      if (enableBackdrop) {
+        hideBackdrop();
+      }
+      bottomSheetRef.current?.dismiss();
+    };
+
     useImperativeHandle(
       ref,
       () => ({
         open: () => {
-          if (isOpenRef.current) return;
+          if (mounted) return;
           if (enableBackdrop) {
-            showBackdrop({ opacity: 0.5, onPress: () => {
-              if (isOpenRef.current && enableBackdrop) {
-                hideBackdrop();
-                isOpenRef.current = false;
-              }
-              bottomSheetRef.current?.dismiss();
-            }});
+            showBackdrop({ opacity: 0.5, onPress: handleDismiss });
           }
-          bottomSheetRef.current?.present();
+          onOpen?.();
+          setMounted(true);
         },
-        close: () => {
-          if (isOpenRef.current && enableBackdrop) {
-            hideBackdrop();
-            isOpenRef.current = false;
-          }
-          bottomSheetRef.current?.dismiss();
-        },
+        close: handleDismiss,
         toggle: () => {
-          if (isOpenRef.current) {
-            if (enableBackdrop) {
-              hideBackdrop();
-              isOpenRef.current = false;
-            }
-            bottomSheetRef.current?.dismiss();
+          if (mounted) {
+            handleDismiss();
           } else {
             if (enableBackdrop) {
-              showBackdrop({ opacity: 0.5, onPress: () => {
-                if (isOpenRef.current && enableBackdrop) {
-                  hideBackdrop();
-                  isOpenRef.current = false;
-                }
-                bottomSheetRef.current?.dismiss();
-              }});
+              showBackdrop({ opacity: 0.5, onPress: handleDismiss });
             }
-            bottomSheetRef.current?.present();
+            onOpen?.();
+            setMounted(true);
           }
         },
-        isActive: () => isOpenRef.current }),
-      [enableBackdrop, showBackdrop, hideBackdrop],
+        isActive: () => mounted,
+      }),
+      [mounted, enableBackdrop, showBackdrop, onOpen, handleDismiss],
     );
 
-    const handleClose = () => {
-      if (isOpenRef.current && enableBackdrop) {
-        hideBackdrop();
-        isOpenRef.current = false;
-      }
-      bottomSheetRef.current?.dismiss();
-    };
+    if (!mounted) return null;
 
     return (
       <BottomSheetModal
@@ -126,7 +110,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
             title={title}
             headerRight={headerRight}
             showCloseButton={showCloseButton}
-            onClose={handleClose}
+            onClose={handleDismiss}
           >
             {children}
           </ActionTrayContent>
@@ -144,14 +128,26 @@ const styles = UnistylesStyleSheet.create(theme => ({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
-    boxShadow: [{ offsetX: 0, offsetY: -2, blurRadius: 8, spreadDistance: 0, color: `${theme.colors.textPrimary}1A` }] },
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: -2,
+        blurRadius: 8,
+        spreadDistance: 0,
+        color: `${theme.colors.textPrimary}1A`,
+      },
+    ],
+  },
   background: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 16 },
+    borderRadius: 16,
+  },
   handle: {
     display: 'none', // Hide default handle, ActionTrayContent has its own UI
   },
   content: {
     paddingTop: 0,
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg } }));
+    paddingBottom: theme.spacing.lg,
+  },
+}));

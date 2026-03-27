@@ -35,7 +35,7 @@ jest.mock('#/context/TabBarActionsContext', () => ({
 }));
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
-  useTabScreenLifecycle: jest.fn(),
+  useTabScreenLifecycle: jest.fn(() => ({ themeKey: 'light' })),
 }));
 jest.mock('#hooks/performance/useRenderTime', () => ({
   useRenderTime: jest.fn(),
@@ -49,7 +49,6 @@ jest.mock('#/hooks/recipe/useRecipeScreen', () => ({
     hasPantryItems: false,
     items: [],
     searchQuery: '',
-    setSearchQuery: jest.fn(),
     searchResults: [],
     searchPerformed: false,
     searchLoading: false,
@@ -173,7 +172,6 @@ function mockScreenWith(overrides: Record<string, any>) {
     hasPantryItems: false,
     items: [],
     searchQuery: '',
-    setSearchQuery: jest.fn(),
     searchResults: [],
     searchPerformed: false,
     searchLoading: false,

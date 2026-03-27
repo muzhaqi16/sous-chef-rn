@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { SortOption, SortDirection } from '../PantryContent';
+import type { SortOption, SortDirection } from '../pantryDisplay/types';
 
 // Item type for sorting (minimal interface)
 interface SortableItem {

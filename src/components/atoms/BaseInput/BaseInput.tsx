@@ -34,6 +34,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   onFocus,
   onBlur,
   value,
+  multiline,
   ...textInputProps
 }) => {
   const { theme } = useUnistyles();
@@ -62,13 +63,19 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   return (
     <View style={[styles.container, containerStyle]}>
       {label != null && <Text style={styles.label}>{label}</Text>}
-      <View style={styles.inputContainer}>
+      <View
+        style={[
+          styles.inputContainer,
+          multiline && styles.inputContainerMultiline,
+        ]}
+      >
         {leftIcon != null && (
           <View style={styles.leftIconWrapper}>{leftIcon}</View>
         )}
         <TextInput
           style={[
             styles.input,
+            multiline && styles.inputMultiline,
             rightIcon != null && styles.inputWithRightIcon,
             style,
           ]}
@@ -76,6 +83,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           onFocus={handleFocus}
           onBlur={handleBlur}
           value={value}
+          multiline={multiline}
           {...textInputProps}
         />
         {!!showClear && (

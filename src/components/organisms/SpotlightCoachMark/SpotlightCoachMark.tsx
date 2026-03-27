@@ -54,6 +54,7 @@ const TOOLTIP_MARGIN = 12;
 const TOOLTIP_WIDTH = 275;
 const ARROW_SIZE = 10;
 const SWIPE_THRESHOLD = 50;
+const HOLE_TIMING_CONFIG = { duration: TIMING.SLOW, easing: standardEasing };
 
 /**
  * Spotlight overlay that highlights a target element with a dimmed background.
@@ -119,14 +120,12 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
 
   const borderRadius = theme.radii.md;
 
-  // Padded hole dimensions
   const holeTop = adjustedRect.y - HOLE_PADDING;
   const holeLeft = adjustedRect.x - HOLE_PADDING;
   const holeWidth = adjustedRect.width + HOLE_PADDING * 2;
   const holeHeight = adjustedRect.height + HOLE_PADDING * 2;
   const holeBottom = holeTop + holeHeight;
 
-  // Determine if tooltip goes above or below
   const showAbove = adjustedRect.y > screenHeight / 2;
 
   // ── Shared values ──
@@ -139,9 +138,6 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const animHoleLeft = useSharedValue(holeLeft);
   const animHoleWidth = useSharedValue(holeWidth);
   const animHoleHeight = useSharedValue(holeHeight);
-
-  // Smooth easing config for hole transition
-  const holeTimingConfig = { duration: TIMING.SLOW, easing: standardEasing };
 
   // Detect step changes — animate hole + cross-fade tooltip.
   // Uses "adjusting state during render" pattern (no effect needed).
@@ -160,10 +156,10 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
     setPrevAdjustedRect(adjustedRect);
 
     // Animate hole to new position with eased timing
-    animHoleTop.set(withTiming(holeTop, holeTimingConfig));
-    animHoleLeft.set(withTiming(holeLeft, holeTimingConfig));
-    animHoleWidth.set(withTiming(holeWidth, holeTimingConfig));
-    animHoleHeight.set(withTiming(holeHeight, holeTimingConfig));
+    animHoleTop.set(withTiming(holeTop, HOLE_TIMING_CONFIG));
+    animHoleLeft.set(withTiming(holeLeft, HOLE_TIMING_CONFIG));
+    animHoleWidth.set(withTiming(holeWidth, HOLE_TIMING_CONFIG));
+    animHoleHeight.set(withTiming(holeHeight, HOLE_TIMING_CONFIG));
 
     // Cross-fade tooltip (fade out → wait for hole to settle → fade in)
     tooltipOpacity.set(
@@ -251,10 +247,6 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
     height: animHoleHeight.value,
   }));
 
-  const handleTargetTap = () => {
-    onTargetPress?.();
-  };
-
   // Swipe-to-advance gesture (left swipe → next step)
   // Pre-defined RN-scope callback for scheduleOnRN (CLAUDE.md convention)
   const handleSwipeAdvance = () => {
@@ -336,7 +328,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
                 borderRadius,
               },
             ]}
-            onPress={handleTargetTap}
+            onPress={onTargetPress}
             testID="spotlight-target"
           />
         )}
@@ -405,35 +397,21 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
               ))}
             </View>
           ) : null}
-          {(() => {
-            const isLastStep =
-              totalSteps != null &&
-              stepIndex != null &&
-              stepIndex >= totalSteps - 1;
-            if (isLastStep) {
-              return (
-                <Pressable
-                  onPress={onDismiss}
-                  style={styles.nextButton}
-                  hitSlop={8}
-                >
-                  <Text style={styles.nextButtonText}>Done</Text>
-                </Pressable>
-              );
-            }
-            if (onNext) {
-              return (
-                <Pressable
-                  onPress={onNext}
-                  style={styles.nextButton}
-                  hitSlop={8}
-                >
-                  <Text style={styles.nextButtonText}>Next ›</Text>
-                </Pressable>
-              );
-            }
-            return null;
-          })()}
+          {totalSteps != null &&
+          stepIndex != null &&
+          stepIndex >= totalSteps - 1 ? (
+            <Pressable
+              onPress={onDismiss}
+              style={styles.nextButton}
+              hitSlop={8}
+            >
+              <Text style={styles.nextButtonText}>Done</Text>
+            </Pressable>
+          ) : onNext ? (
+            <Pressable onPress={onNext} style={styles.nextButton} hitSlop={8}>
+              <Text style={styles.nextButtonText}>Next ›</Text>
+            </Pressable>
+          ) : null}
         </Animated.View>
 
         {/* Skip button — position adapts to avoid overlapping the target hole */}

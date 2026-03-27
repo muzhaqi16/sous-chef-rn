@@ -287,7 +287,7 @@ const App = () => {
                         2. GlobalBackdrop - covers everything including status bar
                         3. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
                       <ThemedStatusBar />
-                      <SafeAreaView mode = "padding" style={styles.container} edges={[ 'top','bottom']}>
+                      <SafeAreaView mode="padding" style={styles.container} edges={['top']}>
                         <OfflineBanner />
                         <ToastProvider>
                           <AlertProvider>
