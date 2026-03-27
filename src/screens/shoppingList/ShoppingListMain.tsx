@@ -27,7 +27,7 @@ const ShoppingListMainInner: React.FC = () => {
   const screenData = useShoppingListScreen();
 
   // --- Lifecycle: optimistic restoration, cache persistence, perf tracking ---
-  useTabScreenLifecycle({
+  const { themeKey } = useTabScreenLifecycle({
     screenName: 'ShoppingListMain',
     optimisticTypes: ['ShoppingList', 'ShoppingListItem'],
     telemetryProperties: () => ({
@@ -41,7 +41,10 @@ const ShoppingListMainInner: React.FC = () => {
   });
 
   return (
-    <ShoppingListTutorialProvider canStart={screenData.state.lists.length > 0}>
+    <ShoppingListTutorialProvider
+      key={themeKey}
+      canStart={screenData.state.lists.length > 0}
+    >
       <ShoppingListModalsProvider
         currentListId={screenData.state.currentListId}
         items={[

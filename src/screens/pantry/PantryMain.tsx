@@ -31,10 +31,8 @@ import {
   usePantryModals,
 } from '#/context/PantryModalsContext';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
-import {
-  PantryContent,
-  type PantryContentRef,
-} from '#components/pantry/PantryContent';
+import { PantryContent } from '#components/pantry/PantryContent';
+import type { PantryContentRef } from '#components/pantry/pantryDisplay/types';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import type { LocationFilter } from '#/utils/pantryFilters';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
@@ -96,7 +94,7 @@ const PantryMainInner: React.FC = () => {
   const screen = usePantryScreen();
 
   // ── Lifecycle: optimistic restoration, cache persistence, perf tracking ──
-  useTabScreenLifecycle({
+  const { themeKey } = useTabScreenLifecycle({
     screenName: 'PantryMain',
     optimisticTypes: ['Pantry', 'PantryItem'],
     telemetryProperties: () => ({
@@ -177,6 +175,7 @@ const PantryMainInner: React.FC = () => {
 
   return (
     <PantryModalsProvider
+      key={themeKey}
       pantryId={screen.pantry?.id}
       pantryItems={screen.pantryItems}
       removeItem={screen.handleRemoveItem}

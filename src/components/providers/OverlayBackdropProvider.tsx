@@ -4,7 +4,8 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  type SharedValue } from 'react-native-reanimated';
+  type SharedValue,
+} from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import { SHEET } from '#constants/animations';
@@ -27,13 +28,18 @@ interface OverlayBackdropInternalContextType {
   onPressCallbackRef: React.RefObject<(() => void) | null>;
 }
 
-const OverlayBackdropContext = createContext<OverlayBackdropContextType | null>(null);
-const OverlayBackdropInternalContext = createContext<OverlayBackdropInternalContextType | null>(null);
+const OverlayBackdropContext = createContext<OverlayBackdropContextType | null>(
+  null,
+);
+const OverlayBackdropInternalContext =
+  createContext<OverlayBackdropInternalContextType | null>(null);
 
 export const useOverlayBackdrop = (): OverlayBackdropContextType => {
   const context = useContext(OverlayBackdropContext);
   if (!context) {
-    throw new Error('useOverlayBackdrop must be used within OverlayBackdropProvider');
+    throw new Error(
+      'useOverlayBackdrop must be used within OverlayBackdropProvider',
+    );
   }
   return context;
 };
@@ -48,8 +54,9 @@ interface OverlayBackdropProviderProps {
  * so consumers using only showBackdrop/hideBackdrop don't re-render
  * when backdrop visibility changes.
  */
-export const OverlayBackdropProvider: React.FC<OverlayBackdropProviderProps> = ({
-  children }) => {
+export const OverlayBackdropProvider: React.FC<
+  OverlayBackdropProviderProps
+> = ({ children }) => {
   // Use shared values only for animation-related values
   const opacity = useSharedValue(0);
 
@@ -63,18 +70,23 @@ export const OverlayBackdropProvider: React.FC<OverlayBackdropProviderProps> = (
     const targetOpacity = options?.opacity ?? 0.5;
     onPressCallbackRef.current = options?.onPress ?? null;
     setIsVisible(true);
-    opacity.set(withTiming(targetOpacity, { duration: SHEET.BACKDROP_FADE_IN }));
+    opacity.set(
+      withTiming(targetOpacity, { duration: SHEET.BACKDROP_FADE_IN }),
+    );
   };
 
   const hideBackdrop = () => {
-    activeCountRef.current = Math.max(0, activeCountRef.current - 1);
+    if (activeCountRef.current <= 0) return;
+    activeCountRef.current -= 1;
     if (activeCountRef.current === 0) {
       onPressCallbackRef.current = null;
-      opacity.set(withTiming(0, { duration: SHEET.BACKDROP_FADE_OUT }, (finished) => {
-        if (finished) {
-          scheduleOnRN(setIsVisible, false);
-        }
-      }));
+      opacity.set(
+        withTiming(0, { duration: SHEET.BACKDROP_FADE_OUT }, finished => {
+          if (finished) {
+            scheduleOnRN(setIsVisible, false);
+          }
+        }),
+      );
     }
   };
 
@@ -116,7 +128,8 @@ export const GlobalBackdrop: React.FC = () => {
   };
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity?.value ?? 0 }));
+    opacity: opacity?.value ?? 0,
+  }));
 
   // If used outside provider, render nothing
   if (!internal) {
@@ -144,4 +157,6 @@ const styles = StyleSheet.create({
     // No zIndex - relies on render order. Must be rendered after content but before modal portals.
   },
   pressable: {
-    flex: 1 } });
+    flex: 1,
+  },
+});

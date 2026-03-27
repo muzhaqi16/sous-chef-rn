@@ -33,7 +33,7 @@ jest.mock('#/context/ShoppingListModalsContext', () => ({
 }));
 
 jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
-  useTabScreenLifecycle: jest.fn(),
+  useTabScreenLifecycle: jest.fn(() => ({ themeKey: 'light' })),
 }));
 
 jest.mock('../ShoppingListMainContent', () => ({
@@ -48,15 +48,28 @@ jest.mock('../ShoppingListMainContent', () => ({
 }));
 
 jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
-  ShoppingListErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  ShoppingListErrorBoundary: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 jest.mock('#components/performance/DeferredScreen', () => ({
-  DeferredScreen: ({ component: Component }: { component: React.FC; fallback: any }) => <Component />,
+  DeferredScreen: ({
+    component: Component,
+  }: {
+    component: React.FC;
+    fallback: any;
+  }) => <Component />,
 }));
-jest.mock('#components/molecules/TabScreenHeader', () => ({ TabScreenHeader: () => null }));
+jest.mock('#components/molecules/TabScreenHeader', () => ({
+  TabScreenHeader: () => null,
+}));
 jest.mock('#components/molecules/SearchBar', () => ({ SearchBar: () => null }));
-jest.mock('#components/organisms/ShoppingListTabs/FilterTabBar', () => ({ FilterTabBar: () => null }));
-jest.mock('#components/base/Skeleton/ShoppingListSkeleton', () => ({ ShoppingListSkeleton: () => null }));
+jest.mock('#components/organisms/ShoppingListTabs/FilterTabBar', () => ({
+  FilterTabBar: () => null,
+}));
+jest.mock('#components/base/Skeleton/ShoppingListSkeleton', () => ({
+  ShoppingListSkeleton: () => null,
+}));
 
 describe('ShoppingListMain', () => {
   beforeEach(() => jest.clearAllMocks());

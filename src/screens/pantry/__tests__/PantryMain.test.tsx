@@ -140,7 +140,7 @@ jest.mock('#hooks/pantry/usePantryScreen', () => ({
 
 // --- Lifecycle hook ---
 jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
-  useTabScreenLifecycle: jest.fn(),
+  useTabScreenLifecycle: jest.fn(() => ({ themeKey: 'light' })),
 }));
 
 // --- Pantry modals context ---

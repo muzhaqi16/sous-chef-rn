@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import type { SortOption, SortDirection } from './PantryContent';
+import type { SortOption, SortDirection } from './pantryDisplay/types';
 
 interface PantrySortModalProps {
   /** Whether the modal is visible */
@@ -60,68 +60,69 @@ const SORT_OPTIONS: Array<{
  * - Visual indicator for current selection
  * - Direction indicator (ascending/descending)
  */
-export const PantrySortModal: React.FC<PantrySortModalProps> = ({ visible, sortOption, sortDirection, onSelect, onClose }) => {
-    const { theme } = useUnistyles();
+export const PantrySortModal: React.FC<PantrySortModalProps> = ({
+  visible,
+  sortOption,
+  sortDirection,
+  onSelect,
+  onClose,
+}) => {
+  const { theme } = useUnistyles();
 
-    return (
-      <Modal
-        visible={visible}
-        transparent
-        animationType="fade"
-        onRequestClose={onClose}
-        statusBarTranslucent
-        navigationBarTranslucent
-      >
-        <TouchableWithoutFeedback onPress={onClose}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.sortModal}>
-                <Text style={styles.sortModalTitle}>Sort by</Text>
-                {SORT_OPTIONS.map(option => (
-                  <Pressable
-                    key={option.key}
-                    style={({pressed}) => [
-                      styles.sortOption,
-                      sortOption === option.key && styles.sortOptionActive,
-                      pressed && styles.pressed,
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback>
+            <View style={styles.sortModal}>
+              <Text style={styles.sortModalTitle}>Sort by</Text>
+              {SORT_OPTIONS.map(option => (
+                <Pressable
+                  key={option.key}
+                  style={({ pressed }) => [
+                    styles.sortOption,
+                    sortOption === option.key && styles.sortOptionActive,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() => onSelect(option.key)}
+                >
+                  <Icon
+                    name={option.icon}
+                    size={18}
+                    library={option.library}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.sortOptionLabel,
+                      sortOption === option.key && styles.sortOptionLabelActive,
                     ]}
-                    onPress={() => onSelect(option.key)}
                   >
+                    {option.label}
+                  </Text>
+                  {sortOption === option.key && (
                     <Icon
-                      name={option.icon}
+                      name={sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'}
                       size={18}
-                      library={option.library}
                       color={theme.colors.primary}
                     />
-                    <Text
-                      style={[
-                        styles.sortOptionLabel,
-                        sortOption === option.key &&
-                          styles.sortOptionLabelActive,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                    {sortOption === option.key && (
-                      <Icon
-                        name={
-                          sortDirection === 'asc'
-                            ? 'arrow-up'
-                            : 'arrow-down'
-                        }
-                        size={18}
-                        color={theme.colors.primary}
-                      />
-                    )}
-                  </Pressable>
-                ))}
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-    );
-  };
+                  )}
+                </Pressable>
+              ))}
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+};
 
 PantrySortModal.displayName = 'PantrySortModal';
 
@@ -138,7 +139,15 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing['5'],
     width: '80%',
     maxWidth: theme.sizes.modal.sm,
-    boxShadow: [{ offsetX: 0, offsetY: theme.spacing.xs, blurRadius: theme.spacing['3'], spreadDistance: 0, color: 'rgba(0, 0, 0, 0.15)' }],
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: theme.spacing.xs,
+        blurRadius: theme.spacing['3'],
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.15)',
+      },
+    ],
   },
   sortModalTitle: {
     fontSize: theme.typography.fontSize.lg,

@@ -40,6 +40,8 @@ interface PantryItemCardProps {
   remainingNetWeightText?: string | null;
   quantityBreakdownText?: string | null;
   activeBatchCount?: number;
+  /** Theme-dependent surface color — ensures re-render on theme change via memo shallow comparison. */
+  surfaceColor?: string;
 }
 
 /**
@@ -259,26 +261,10 @@ const styles = StyleSheet.create(theme => ({
   },
 }));
 
-// PERFORMANCE: Custom comparator only checks data primitives — action callbacks come
-// from context and don't appear in props, so every prop is a stable primitive/string.
-export const PantryItemCard = React.memo(
-  PantryItemCardComponent,
-  (prev, next) =>
-    prev.id === next.id &&
-    prev.name === next.name &&
-    prev.expirationText === next.expirationText &&
-    prev.expirationVariant === next.expirationVariant &&
-    prev.expirationColor === next.expirationColor &&
-    prev.quantity === next.quantity &&
-    prev.location === next.location &&
-    prev.variant === next.variant &&
-    prev.imageUrl === next.imageUrl &&
-    prev.isOutOfStock === next.isOutOfStock &&
-    prev.packageBreakdownText === next.packageBreakdownText &&
-    prev.remainingNetWeightText === next.remainingNetWeightText &&
-    prev.quantityBreakdownText === next.quantityBreakdownText &&
-    prev.activeBatchCount === next.activeBatchCount,
-);
+// PERFORMANCE: React.memo required — FlashList renderItem (module-scope parent,
+// not compiled by React Compiler). Default shallow comparison is sufficient
+// because all props are primitives (pre-flattened by PantryContent's computeDisplayMap).
+export const PantryItemCard = React.memo(PantryItemCardComponent);
 
 // PantryItemVariant alias for backwards compatibility
 export type PantryItemVariant = ItemVariant;

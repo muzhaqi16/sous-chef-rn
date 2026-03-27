@@ -137,29 +137,60 @@ jest.mock('#/services/toastService', () => ({
 }));
 
 jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
-  useTabScreenLifecycle: jest.fn(),
+  useTabScreenLifecycle: jest.fn(() => ({ themeKey: 'light' })),
 }));
 
 const mockDeferredScreen = jest.fn(({ fallback }: any) => fallback);
 jest.mock('#components/mealPlan/WeekStrip', () => ({ WeekStrip: () => null }));
-jest.mock('#components/mealPlan/MonthCalendar', () => ({ MonthCalendar: () => null }));
-jest.mock('#components/mealPlan/DayMealList', () => ({ DayMealList: () => null }));
-jest.mock('#components/mealPlan/CalendarToggleBar', () => ({ CalendarToggleBar: () => null }));
-jest.mock('#components/mealPlan/MealPlanEmptyState', () => ({ MealPlanEmptyState: () => 'MealPlanEmptyState' }));
-jest.mock('#components/mealPlan/AddMealSheet', () => ({ AddMealSheet: () => null }));
-jest.mock('#components/mealPlan/SaveAsTemplateSheet', () => ({ SaveAsTemplateSheet: () => null }));
-jest.mock('#components/mealPlan/TemplateBrowserSheet', () => ({ TemplateBrowserSheet: () => null }));
-jest.mock('#components/mealPlan/TemplatePreviewSheet', () => ({ TemplatePreviewSheet: () => null }));
-jest.mock('#components/mealPlan/GenerateShoppingListSheet', () => ({ GenerateShoppingListSheet: () => null }));
-jest.mock('#components/mealPlan/MealPlanSettingsSheet', () => ({ MealPlanSettingsSheet: () => null }));
-jest.mock('#components/mealPlan/DuplicatePlanSheet', () => ({ DuplicatePlanSheet: () => null }));
-jest.mock('#components/mealPlan/EditCustomMealSheet', () => ({ EditCustomMealSheet: () => null }));
-jest.mock('#components/mealPlan/NutritionSummaryCard', () => ({ NutritionSummaryCard: () => null }));
-jest.mock('#components/modals/MarkCookedModal', () => ({ MarkCookedModal: () => null }));
-jest.mock('#components/organisms/AnimatedItemSelector/AnimatedItemSelector', () => {
-  const { forwardRef } = require('react');
-  return { AnimatedItemSelector: forwardRef(() => null) };
-});
+jest.mock('#components/mealPlan/MonthCalendar', () => ({
+  MonthCalendar: () => null,
+}));
+jest.mock('#components/mealPlan/DayMealList', () => ({
+  DayMealList: () => null,
+}));
+jest.mock('#components/mealPlan/CalendarToggleBar', () => ({
+  CalendarToggleBar: () => null,
+}));
+jest.mock('#components/mealPlan/MealPlanEmptyState', () => ({
+  MealPlanEmptyState: () => 'MealPlanEmptyState',
+}));
+jest.mock('#components/mealPlan/AddMealSheet', () => ({
+  AddMealSheet: () => null,
+}));
+jest.mock('#components/mealPlan/SaveAsTemplateSheet', () => ({
+  SaveAsTemplateSheet: () => null,
+}));
+jest.mock('#components/mealPlan/TemplateBrowserSheet', () => ({
+  TemplateBrowserSheet: () => null,
+}));
+jest.mock('#components/mealPlan/TemplatePreviewSheet', () => ({
+  TemplatePreviewSheet: () => null,
+}));
+jest.mock('#components/mealPlan/GenerateShoppingListSheet', () => ({
+  GenerateShoppingListSheet: () => null,
+}));
+jest.mock('#components/mealPlan/MealPlanSettingsSheet', () => ({
+  MealPlanSettingsSheet: () => null,
+}));
+jest.mock('#components/mealPlan/DuplicatePlanSheet', () => ({
+  DuplicatePlanSheet: () => null,
+}));
+jest.mock('#components/mealPlan/EditCustomMealSheet', () => ({
+  EditCustomMealSheet: () => null,
+}));
+jest.mock('#components/mealPlan/NutritionSummaryCard', () => ({
+  NutritionSummaryCard: () => null,
+}));
+jest.mock('#components/modals/MarkCookedModal', () => ({
+  MarkCookedModal: () => null,
+}));
+jest.mock(
+  '#components/organisms/AnimatedItemSelector/AnimatedItemSelector',
+  () => {
+    const { forwardRef } = require('react');
+    return { AnimatedItemSelector: forwardRef(() => null) };
+  },
+);
 
 jest.mock('#components/performance/DeferredScreen', () => ({
   DeferredScreen: (props: any) => mockDeferredScreen(props),
@@ -309,7 +340,9 @@ describe('MealPlanMain', () => {
       loading: false,
     });
 
-    const { useMealPlanCalendar } = jest.requireMock('#hooks/mealPlan/useMealPlanCalendar');
+    const { useMealPlanCalendar } = jest.requireMock(
+      '#hooks/mealPlan/useMealPlanCalendar',
+    );
     useMealPlanCalendar.mockReturnValue({
       selectedDate: new Date('2026-03-01'),
       weekDays: [],
@@ -364,7 +397,9 @@ describe('MealPlanMain', () => {
       loading: false,
     });
 
-    const { useMealPlanPermissions } = jest.requireMock('#hooks/mealPlan/useMealPlanPermissions');
+    const { useMealPlanPermissions } = jest.requireMock(
+      '#hooks/mealPlan/useMealPlanPermissions',
+    );
     useMealPlanPermissions.mockReturnValue({
       canEdit: false,
       canDelete: false,

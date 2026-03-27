@@ -83,6 +83,16 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
   const [draftFilters, setDraftFilters] =
     useState<RecipeFilters>(activeFilters);
 
+  const hasDraftChanges =
+    draftFilters.diet.length !== activeFilters.diet.length ||
+    draftFilters.intolerances.length !== activeFilters.intolerances.length ||
+    draftFilters.mealType !== activeFilters.mealType ||
+    draftFilters.maxReadyTime !== activeFilters.maxReadyTime ||
+    draftFilters.diet.some(d => !activeFilters.diet.includes(d)) ||
+    draftFilters.intolerances.some(
+      i => !activeFilters.intolerances.includes(i),
+    );
+
   const handleChange = (index: number) => {
     if (index >= 0) {
       // Sheet opening — sync draft from parent's committed filters
@@ -102,30 +112,32 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
       snapPoints={['75%', '90%']}
       onChange={handleChange}
       headerRight={
-        isIngredientSearch ? undefined : (
-          <View style={styles.filterHeaderActions}>
-            <Pressable
-              onPress={() => setDraftFilters(DEFAULT_FILTERS)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Clear all filters"
-            >
-              <Text style={styles.filterHeaderClearText}>Clear</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => sheetRef.current?.close()}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Apply filters"
-            >
-              <Icon
-                name="checkmark-circle"
-                size={24}
-                color={theme.colors.primary}
-              />
-            </Pressable>
-          </View>
-        )
+        <View style={styles.filterHeaderActions}>
+          <Pressable
+            onPress={() => setDraftFilters(DEFAULT_FILTERS)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Clear all filters"
+          >
+            <Text style={styles.filterHeaderClearText}>Clear</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => sheetRef.current?.close()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Apply filters"
+          >
+            <Icon
+              name={
+                hasDraftChanges
+                  ? 'checkmark-circle'
+                  : 'checkmark-circle-outline'
+              }
+              size={24}
+              color={theme.colors.primary}
+            />
+          </Pressable>
+        </View>
       }
     >
       {mounted ? (
@@ -139,20 +151,12 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                   color={theme.colors.white}
                 />
               </View>
-              <View style={styles.infoBannerTextContainer}>
-                <Text style={styles.infoBannerTitle}>
-                  Filters only apply to text search
-                </Text>
-                <Text style={styles.infoBannerSubtitle}>
-                  Use text search to apply filters
-                </Text>
-              </View>
+              <Text style={styles.infoBannerTitle}>
+                Filters only apply to text search
+              </Text>
             </View>
           ) : null}
-          <View
-            pointerEvents={isIngredientSearch ? 'none' : 'auto'}
-            style={isIngredientSearch ? styles.disabledContent : undefined}
-          >
+          <View>
             {/* Diet Filter */}
             <View style={styles.filterSection}>
               <Text style={styles.filterSectionTitle}>Diet</Text>
@@ -405,21 +409,11 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  infoBannerTextContainer: {
-    flex: 1,
-  },
   infoBannerTitle: {
+    flex: 1,
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-  },
-  infoBannerSubtitle: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  disabledContent: {
-    opacity: 0.4,
   },
   pressed: { opacity: theme.opacity.pressed },
 }));

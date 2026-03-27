@@ -52,6 +52,7 @@ export const DayMealList: React.FC<DayMealListProps> = ({
       contentContainerStyle={[styles.content, isEmpty && styles.contentEmpty]}
       onScroll={onScroll}
       scrollEventThrottle={16}
+      showsVerticalScrollIndicator={false}
       refreshControl={
         onRefresh ? (
           <RefreshControl

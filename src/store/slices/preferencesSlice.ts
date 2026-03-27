@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand';
+import { UnistylesRuntime } from 'react-native-unistyles';
 import { RootState } from '../index';
 
 // Pantry sort preferences
@@ -84,7 +85,24 @@ export const createPreferencesSlice: StateCreator<
   ...initialPreferencesState,
   userPreferences: {},
 
-  setTheme: theme => set({ theme }),
+  setTheme: theme => {
+    // Apply native theme BEFORE Zustand notifies subscribers, so all components
+    // render with correct StyleSheet colors on the first pass.
+    try {
+      if (theme === ThemePreference.SYSTEM) {
+        UnistylesRuntime.setAdaptiveThemes(true);
+      } else {
+        UnistylesRuntime.setAdaptiveThemes(false);
+        UnistylesRuntime.setTheme(
+          theme === ThemePreference.DARK ? 'dark' : 'light',
+        );
+      }
+    } catch (e) {
+      // Swallow — useTheme's useEffect will retry on next render
+      if (__DEV__) console.warn('[setTheme] runtime error:', e);
+    }
+    set({ theme });
+  },
   setLanguage: language => set({ language }),
   setEmailNotifications: enabled => set({ emailNotifications: enabled }),
   setNotificationsEnabled: enabled => set({ pushNotifications: enabled }),
@@ -96,16 +114,18 @@ export const createPreferencesSlice: StateCreator<
 
   setUserPreference: (userId, prefs) => {
     set(state => {
-      const existing = state.userPreferences[userId] ?? { ...defaultUserPreferences };
+      const existing = state.userPreferences[userId] ?? {
+        ...defaultUserPreferences,
+      };
       state.userPreferences[userId] = { ...existing, ...prefs };
     });
   },
 
-  getUserPreferences: (userId) => {
+  getUserPreferences: userId => {
     return get().userPreferences[userId] ?? defaultUserPreferences;
   },
 
-  resetUserPreferences: (userId) => {
+  resetUserPreferences: userId => {
     set(state => {
       state.userPreferences[userId] = { ...defaultUserPreferences };
     });

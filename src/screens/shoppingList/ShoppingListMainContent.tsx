@@ -457,9 +457,9 @@ export const ShoppingListMainContent: React.FC<
             tutorial.currentStep ===
             ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON
           ) {
-            // "Next" on add-button step opens the sheet (same as target press)
             Telemetry.trackEvent('add_item_from_tab_bar', {
               list_id: currentListId,
+              source: 'tutorial',
             });
             addItemSheet.open();
             tutorial.notifyAddButtonPressed();

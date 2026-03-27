@@ -329,34 +329,12 @@ export function useRecipeScreen() {
     setSelectedIngredients(new Set());
   };
 
-  const handleTextSearch = async () => {
-    if (!searchQuery.trim()) {
-      if (discovery.hasPantryItems) {
-        const ingredientNames = discovery.pantryItems
-          .map((item: any) => item.itemName)
-          .filter(Boolean)
-          .slice(0, 20)
-          .join(',');
-
-        if (ingredientNames) {
-          await executeRecipeIngredientSearch(
-            ingredientNames,
-            setSearchLoading,
-            setSearchPerformed,
-            setSearchResultsAndResetPage,
-          );
-          return;
-        }
-      }
-      alertService.alert(
-        'Search Required',
-        'Please enter a search term or select pantry ingredients',
-      );
-      return;
-    }
+  const handleTextSearch = async (query: string) => {
+    if (!query.trim()) return;
+    setSearchQuery(query);
 
     await executeRecipeTextSearch(
-      searchQuery,
+      query,
       activeFilters,
       setSearchLoading,
       setSearchPerformed,
@@ -468,7 +446,6 @@ export function useRecipeScreen() {
 
     // Search state
     searchQuery,
-    setSearchQuery,
     searchResults,
     searchPerformed,
     searchLoading,

@@ -63,6 +63,15 @@ export default StyleSheet.create(theme => ({
     paddingVertical: 0,
   },
 
+  inputMultiline: {
+    textAlignVertical: 'top',
+    paddingVertical: theme.spacing.sm,
+  },
+
+  inputContainerMultiline: {
+    alignItems: 'flex-start',
+  },
+
   inputWithRightIcon: {
     paddingRight: {
       xs: 44,

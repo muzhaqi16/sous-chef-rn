@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { UnistylesRuntime } from 'react-native-unistyles';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import { useScreenTransition } from '#/hooks/performance/useScreenTransition';
@@ -55,7 +57,7 @@ export function useTabScreenLifecycle({
   screenName,
   optimisticTypes,
   telemetryProperties,
-}: UseTabScreenLifecycleOptions): void {
+}: UseTabScreenLifecycleOptions): { themeKey: string } {
   // 1. Restore persisted optimistic field values from offline storage
   useOptimisticDataRestorationMultiple(optimisticTypes);
 
@@ -67,4 +69,24 @@ export function useTabScreenLifecycle({
 
   // 4. Track screen view once on mount
   useScreenTelemetry(screenName, telemetryProperties);
+
+  // 5. Track theme changes while screen is unfocused.
+  //    Workaround for unistyles v3 issue where the C++ ShadowTree can't
+  //    deliver style updates to unfocused/suspended screens.
+  //    Returns themeKey — callers should set key={themeKey} on their content
+  //    wrapper to force a full remount when theme changed while unfocused.
+  //    See: https://github.com/jpudysz/react-native-unistyles/issues/1137
+  //         https://github.com/jpudysz/react-native-unistyles/issues/1139
+  const [themeKey, setThemeKey] = useState(
+    () => UnistylesRuntime.themeName ?? 'light',
+  );
+  useFocusEffect(() => {
+    const current = UnistylesRuntime.themeName ?? 'light';
+    if (current !== themeKey) {
+      setThemeKey(current);
+    }
+    return () => {};
+  });
+
+  return { themeKey };
 }

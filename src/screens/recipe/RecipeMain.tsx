@@ -1,4 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, {
+  useState,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+} from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
@@ -60,6 +65,54 @@ const RECIPE_TUTORIAL_STEPS: TutorialStep[] = [
   },
 ];
 
+// ── Isolated search input — keystrokes only re-render this component ──
+
+interface RecipeSearchInputRef {
+  clear: () => void;
+}
+
+interface RecipeSearchInputProps {
+  onSearch: (query: string) => void;
+  extraActions: SearchBarAction[];
+}
+
+const RecipeSearchInput = forwardRef<
+  RecipeSearchInputRef,
+  RecipeSearchInputProps
+>(({ onSearch, extraActions }, ref) => {
+  const [inputQuery, setInputQuery] = useState('');
+  const { theme } = useUnistyles();
+
+  useImperativeHandle(ref, () => ({
+    clear: () => setInputQuery(''),
+  }));
+
+  const rightActions: SearchBarAction[] = [
+    ...extraActions,
+    {
+      icon: 'search',
+      onPress: () => onSearch(inputQuery),
+      color: theme.colors.primary,
+      backgroundColor: theme.colors.surface,
+      testID: 'recipe-main-search-submit',
+    },
+  ];
+
+  return (
+    <View style={styles.searchBarContainer}>
+      <SearchBar
+        value={inputQuery}
+        onChangeText={setInputQuery}
+        onSubmitEditing={() => onSearch(inputQuery)}
+        returnKeyType="search"
+        placeholder="Search recipes..."
+        rightActions={rightActions}
+        testID="recipe-main-search-input"
+      />
+    </View>
+  );
+});
+
 // ── Inner component (thin — delegates to useRecipeScreen facade) ──
 
 const RecipeMainInner: React.FC = () => {
@@ -69,6 +122,8 @@ const RecipeMainInner: React.FC = () => {
 
   // Single facade hook for all data + state
   const screen = useRecipeScreen();
+
+  const searchInputRef = useRef<RecipeSearchInputRef>(null);
 
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
   const { scrollTabBarHidden } = useTabBarSetters();
@@ -130,7 +185,7 @@ const RecipeMainInner: React.FC = () => {
     isPaused: !isRecipeFocused || isSheetOpen,
   });
 
-  useTabScreenLifecycle({
+  const { themeKey } = useTabScreenLifecycle({
     screenName: 'RecipeMain',
     optimisticTypes: ['Recipe', 'SavedRecipe'],
     telemetryProperties: () => ({
@@ -149,13 +204,10 @@ const RecipeMainInner: React.FC = () => {
     filterSheetRef.current?.present();
   };
 
-  // Track sheet open/close via BottomSheetModal's onChange (-1 = closed, 0+ = open)
+  // Track sheet open/close — filters are saved on close but search is NOT
+  // auto-triggered; the user presses the search button to apply new filters.
   const handleSheetChange = (index: number) => {
-    const closing = isSheetOpen && index < 0;
     setIsSheetOpen(index >= 0);
-    if (closing && screen.searchPerformed && screen.searchQuery.trim()) {
-      screen.handleTextSearch();
-    }
   };
 
   const handleItemPress = (id: string | number) => {
@@ -166,37 +218,26 @@ const RecipeMainInner: React.FC = () => {
     navigate('RecipeDetail', { externalSource: 'SPOONACULAR', externalId });
   };
 
-  const searchBarRightActions: SearchBarAction[] = [
-    ...(screen.hasPantryItems
-      ? [
-          {
-            icon: 'restaurant',
-            onPress: openIngredientSelector,
-            color:
-              screen.selectedIngredients.size > 0
-                ? theme.colors.white
-                : theme.colors.primary,
-            backgroundColor:
-              screen.selectedIngredients.size > 0
-                ? theme.colors.primary
-                : theme.colors.surface,
-            badge:
-              screen.selectedIngredients.size > 0
-                ? screen.selectedIngredients.size
-                : undefined,
-            onButtonLayout: (rect: LayoutRect) =>
-              setButtonRect('pantryButton', rect),
-          },
-        ]
-      : []),
-    {
-      icon: 'search',
-      onPress: screen.handleTextSearch,
-      color: theme.colors.primary,
-      backgroundColor: theme.colors.surface,
-      testID: 'recipe-main-search-submit',
-    },
-  ];
+  const hasIngredientSelection = screen.selectedIngredients.size > 0;
+  const searchBarExtraActions: SearchBarAction[] = screen.hasPantryItems
+    ? [
+        {
+          icon: 'restaurant',
+          onPress: openIngredientSelector,
+          color: hasIngredientSelection
+            ? theme.colors.white
+            : theme.colors.primary,
+          backgroundColor: hasIngredientSelection
+            ? theme.colors.primary
+            : theme.colors.surface,
+          badge: hasIngredientSelection
+            ? screen.selectedIngredients.size
+            : undefined,
+          onButtonLayout: (rect: LayoutRect) =>
+            setButtonRect('pantryButton', rect),
+        },
+      ]
+    : [];
 
   const headerRight = (
     <View style={styles.headerActions}>
@@ -289,9 +330,7 @@ const RecipeMainInner: React.FC = () => {
             name="options-outline"
             size={24}
             color={
-              screen.selectedIngredients.size > 0
-                ? theme.colors.textTertiary
-                : screen.activeFilterCount > 0
+              screen.activeFilterCount > 0
                 ? theme.colors.primary
                 : theme.colors.textSecondary
             }
@@ -349,7 +388,10 @@ const RecipeMainInner: React.FC = () => {
           {screen.searchResults.length !== 1 ? 's' : ''}
         </Text>
         <Pressable
-          onPress={screen.clearSearch}
+          onPress={() => {
+            screen.clearSearch();
+            searchInputRef.current?.clear();
+          }}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Clear search results"
@@ -373,24 +415,19 @@ const RecipeMainInner: React.FC = () => {
         title="Recipes"
         headerRight={headerRight}
       />
-      <View style={styles.searchBarContainer}>
-        <SearchBar
-          value={screen.searchQuery}
-          onChangeText={screen.setSearchQuery}
-          onSubmitEditing={screen.handleTextSearch}
-          returnKeyType="search"
-          placeholder="Search recipes..."
-          rightActions={searchBarRightActions}
-          testID="recipe-main-search-input"
-        />
-      </View>
+      <RecipeSearchInput
+        ref={searchInputRef}
+        onSearch={screen.handleTextSearch}
+        extraActions={searchBarExtraActions}
+      />
       {ListHeader}
     </>
   );
 
   return (
-    <View style={styles.container} testID="recipes-screen">
-      {screen.discovery.loading && !screen.showSearchResults ? (
+    <View key={themeKey} style={styles.container} testID="recipes-screen">
+      {(screen.discovery.loading || screen.searchLoading) &&
+      !screen.showSearchResults ? (
         <>
           {recipeListHeader}
           <RecipeSkeleton />
