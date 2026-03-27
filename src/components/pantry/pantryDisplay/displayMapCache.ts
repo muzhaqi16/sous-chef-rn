@@ -58,8 +58,7 @@ function colorsMatch(a: ExpirationColors | null, b: ExpirationColors): boolean {
     a != null &&
     a.expired === b.expired &&
     a.warning === b.warning &&
-    a.normal === b.normal &&
-    a.surface === b.surface
+    a.normal === b.normal
   );
 }
 
@@ -114,7 +113,6 @@ function computeItemEntry(
       : null,
     quantityBreakdownText: formatQuantityBreakdown(item.quantityBreakdown),
     activeBatchCount: item.activeBatchCount,
-    surfaceColor: expirationColors.surface,
   });
 }
 

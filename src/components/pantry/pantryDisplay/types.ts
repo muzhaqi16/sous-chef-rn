@@ -13,7 +13,6 @@ export interface ExpirationColors {
   expired: string;
   warning: string;
   normal: string;
-  surface: string;
 }
 
 /** Pre-computed display data for a single pantry item. */
@@ -32,9 +31,6 @@ export interface ItemDisplayData {
   remainingNetWeightText: string | null | undefined;
   quantityBreakdownText: string | null | undefined;
   activeBatchCount: number | undefined;
-  /** Theme-dependent surface color — ensures PantryItemCard memo comparator
-   *  detects theme changes even for items without expiration data. */
-  surfaceColor: string;
 }
 
 export interface PantryContentRef {

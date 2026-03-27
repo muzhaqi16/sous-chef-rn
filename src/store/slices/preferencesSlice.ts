@@ -98,7 +98,7 @@ export const createPreferencesSlice: StateCreator<
         );
       }
     } catch (e) {
-      // Swallow — useTheme's useEffect will retry on next render
+      // Defensive — useTheme's useEffect will re-sync if this fails
       if (__DEV__) console.warn('[setTheme] runtime error:', e);
     }
     set({ theme });

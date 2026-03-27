@@ -211,7 +211,6 @@ export const PantryContent = React.forwardRef<
       expired: theme.colors.expiration.expiredText,
       warning: theme.colors.expiration.warningText,
       normal: theme.colors.textSecondary,
-      surface: theme.colors.surface,
     };
 
     const displayMap = computeDisplayMap(

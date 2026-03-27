@@ -40,8 +40,6 @@ interface PantryItemCardProps {
   remainingNetWeightText?: string | null;
   quantityBreakdownText?: string | null;
   activeBatchCount?: number;
-  /** Theme-dependent surface color — ensures re-render on theme change via memo shallow comparison. */
-  surfaceColor?: string;
 }
 
 /**
