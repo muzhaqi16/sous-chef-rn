@@ -125,6 +125,12 @@ jobs:
       - name: Setup gradlew as executable
         run: chmod +x ./android/gradlew
 
+      - name: Clean stale caches
+        run: |
+          # Clear Metro bundler cache to prevent stale module resolution
+          rm -rf "$TMPDIR/metro-"* "$TMPDIR/haste-map-"* /tmp/metro-* /tmp/haste-map-*
+          echo "Cleared Metro caches"
+
       - name: Install dependencies
         run: npm ci
 
