@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, TextStyle } from 'react-native';
+import { View, Text, TextStyle } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Badge } from '../base/Badge';

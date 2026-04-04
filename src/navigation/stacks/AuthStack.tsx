@@ -1,4 +1,8 @@
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import type { StaticParamList } from '@react-navigation/native';
+import {
+  createNativeStackNavigator,
+  createNativeStackScreen,
+} from '@react-navigation/native-stack';
 import { LandingAuthScreen } from '#screens/auth/LandingAuthScreen';
 import { LoginScreen } from '#screens/auth/LoginScreen';
 import { SignUpScreen } from '#screens/auth/SignUpScreen';
@@ -14,25 +18,27 @@ export const AuthStack = createNativeStackNavigator({
     contentStyle: { backgroundColor: theme.colors.background },
   }),
   screens: {
-    LandingAuth: {
+    LandingAuth: createNativeStackScreen({
       screen: LandingAuthScreen,
       linking: 'welcome',
-    },
-    Login: {
+    }),
+    Login: createNativeStackScreen({
       screen: LoginScreen,
       linking: 'login',
-    },
-    SignUp: {
+    }),
+    SignUp: createNativeStackScreen({
       screen: SignUpScreen,
       linking: 'signup',
-    },
-    ForgotPassword: {
+    }),
+    ForgotPassword: createNativeStackScreen({
       screen: ForgotPasswordScreen,
       linking: 'forgot-password',
-    },
-    CodeVerification: {
+    }),
+    CodeVerification: createNativeStackScreen({
       screen: CodeVerificationScreen,
       linking: 'auth/verify/:email?',
-    },
+    }),
   },
 });
+
+export type AuthStackParams = StaticParamList<typeof AuthStack>;

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export type SectionHeaderVariant = 'warning' | 'default' | 'info' | 'success';
@@ -63,7 +64,8 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
       <View style={styles.leftContent}>
         {icon ? <Text style={styles.icon}>{icon}</Text> : null}
         <Text style={[styles.title, { color: getTitleColor() }]}>
-          {title}{count !== undefined ? ` (${count})` : ''}
+          {title}
+          {count !== undefined ? ` (${count})` : ''}
         </Text>
       </View>
 

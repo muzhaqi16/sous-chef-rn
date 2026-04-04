@@ -1,8 +1,12 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { formatInviteStatus, getInviteStatusColor } from '#/utils/formatters/inviteFormatters';
+import {
+  formatInviteStatus,
+  getInviteStatusColor,
+} from '#/utils/formatters/inviteFormatters';
 import { InviteStatus } from '#/graphql/generated';
 
 interface Invite {
@@ -50,7 +54,13 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
           </Text>
         </View>
         {!!canRevoke && invite.status === InviteStatus.Pending && (
-          <Pressable style={({pressed}) => [styles.revokeButton, pressed && styles.pressed]} onPress={onRevoke}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.revokeButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={onRevoke}
+          >
             <Icon name="close" size={20} />
           </Pressable>
         )}

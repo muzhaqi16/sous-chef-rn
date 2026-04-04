@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, Pressable } from 'react-native';
+import { Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { createPropsComparator } from '#utils/memoUtils';

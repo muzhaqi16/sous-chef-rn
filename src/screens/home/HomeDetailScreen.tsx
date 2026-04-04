@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -26,9 +27,9 @@ type RouteParams = {
   homeId: string;
 };
 
-export const HomeDetailScreen: React.FC<{
-  route: { params: RouteParams };
-}> = ({ route }) => {
+export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
+  route,
+}) => {
   useScreenTransition('HomeDetailScreen');
   const { goBack, navigate } = useAppNavigation();
   const { homeId } = route.params;

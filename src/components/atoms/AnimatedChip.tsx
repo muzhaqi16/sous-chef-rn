@@ -64,27 +64,27 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
       paddingLeft: imageUrl
-        ? animatedTheme.value.spacing.sm
-        : animatedTheme.value.spacing['3'],
+        ? animatedTheme.get().spacing.sm
+        : animatedTheme.get().spacing['3'],
       paddingRight: interpolate(
-        selectedProgress.value,
+        selectedProgress.get(),
         [0, 1],
-        [animatedTheme.value.spacing['3'], animatedTheme.value.spacing.sm],
+        [animatedTheme.get().spacing['3'], animatedTheme.get().spacing.sm],
       ),
       borderColor: interpolateColor(
-        selectedProgress.value,
+        selectedProgress.get(),
         [0, 1],
-        [animatedTheme.value.colors.border, animatedTheme.value.colors.primary],
+        [animatedTheme.get().colors.border, animatedTheme.get().colors.primary],
       ),
       backgroundColor: interpolateColor(
-        selectedProgress.value,
+        selectedProgress.get(),
         [0, 1],
         [
-          animatedTheme.value.colors.chipBackground,
-          animatedTheme.value.colors.primaryLight,
+          animatedTheme.get().colors.chipBackground,
+          animatedTheme.get().colors.primaryLight,
         ],
       ),
-      opacity: disabled ? animatedTheme.value.opacity.disabled : 1,
+      opacity: disabled ? animatedTheme.get().opacity.disabled : 1,
     };
   }, [selectedProgress, disabled, imageUrl]);
 
@@ -92,11 +92,11 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   const animatedTextStyle = useAnimatedStyle(() => {
     return {
       color: interpolateColor(
-        selectedProgress.value,
+        selectedProgress.get(),
         [0, 1],
         [
-          animatedTheme.value.colors.chipText,
-          animatedTheme.value.colors.primary,
+          animatedTheme.get().colors.chipText,
+          animatedTheme.get().colors.primary,
         ],
       ),
     };
@@ -106,7 +106,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   const checkmarkAnimatedProps = useAnimatedProps(() => {
     return {
       strokeDashoffset: interpolate(
-        selectedProgress.value,
+        selectedProgress.get(),
         [0, 1],
         [CHECKMARK_LENGTH, 0],
       ),

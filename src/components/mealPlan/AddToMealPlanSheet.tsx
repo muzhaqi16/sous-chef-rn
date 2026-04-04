@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { format, parseISO, startOfDay } from 'date-fns';
@@ -30,11 +31,13 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
   visible,
   onClose,
   recipeId,
-  initialMealType }) => {
+  initialMealType,
+}) => {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
-    snapPoints: ['65%'] });
+    snapPoints: ['65%'],
+  });
 
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedMealType, setSelectedMealType] = useState<MealType>(
@@ -43,7 +46,8 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
 
   // Reset state when sheet opens (render-time conditional state update)
   const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevInitialMealType, setPrevInitialMealType] = useState(initialMealType);
+  const [prevInitialMealType, setPrevInitialMealType] =
+    useState(initialMealType);
   if (visible !== prevVisible || initialMealType !== prevInitialMealType) {
     setPrevVisible(visible);
     setPrevInitialMealType(initialMealType);
@@ -58,8 +62,12 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
 
   const activePlan = mealPlans.find(p => p.id === activePlanId) ?? null;
 
-  const minDate = (activePlan ? startOfDay(parseISO(activePlan.startDate)) : undefined);
-  const maxDate = (activePlan ? startOfDay(parseISO(activePlan.endDate)) : undefined);
+  const minDate = activePlan
+    ? startOfDay(parseISO(activePlan.startDate))
+    : undefined;
+  const maxDate = activePlan
+    ? startOfDay(parseISO(activePlan.endDate))
+    : undefined;
 
   const calendar = useMealPlanCalendar({ minDate, maxDate });
 
@@ -67,7 +75,8 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
     const success = await addRecipeToMealPlan({
       recipeId,
       mealType: selectedMealType,
-      date: calendar.selectedDate });
+      date: calendar.selectedDate,
+    });
     if (success) {
       ref.current?.dismiss();
     }
@@ -75,7 +84,9 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetScrollView contentContainerStyle={[styles.content, contentContainerStyle]}>
+      <BottomSheetScrollView
+        contentContainerStyle={[styles.content, contentContainerStyle]}
+      >
         <BottomSheetHeader
           title="Add to Meal Plan"
           onCancel={onClose}
@@ -127,7 +138,8 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
                       ]}
                       numberOfLines={1}
                     >
-                      {format(parseISO(plan.startDate), 'MMM d')} – {format(parseISO(plan.endDate), 'MMM d')}
+                      {format(parseISO(plan.startDate), 'MMM d')} –{' '}
+                      {format(parseISO(plan.endDate), 'MMM d')}
                     </Text>
                   </Pressable>
                 );
@@ -186,67 +198,85 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.lg },
+    paddingHorizontal: theme.spacing.lg,
+  },
   warningText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.warning,
     textAlign: 'center',
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   sectionLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   selectedDateLabel: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.lg,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   planChipScroll: {
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   planChipRow: {
     gap: theme.spacing.sm,
-    paddingRight: theme.spacing.md },
+    paddingRight: theme.spacing.md,
+  },
   planChip: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border },
+    borderColor: theme.colors.border,
+  },
   planChipSelected: {
     backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary },
+    borderColor: theme.colors.primary,
+  },
   planChipText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   planChipTextSelected: {
-    color: theme.colors.white },
+    color: theme.colors.white,
+  },
   planChipDate: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
-    marginTop: 2 },
+    marginTop: 2,
+  },
   planChipDateSelected: {
     color: theme.colors.white,
-    opacity: 0.8 },
+    opacity: 0.8,
+  },
   mealTypeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.xs,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   mealTypeChip: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border },
+    borderColor: theme.colors.border,
+  },
   mealTypeChipSelected: {
     backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary },
+    borderColor: theme.colors.primary,
+  },
   mealTypeText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   mealTypeTextSelected: {
     color: theme.colors.white,
-    fontWeight: theme.fonts.weight.medium } }));
+    fontWeight: theme.fonts.weight.medium,
+  },
+}));

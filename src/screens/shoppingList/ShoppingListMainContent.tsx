@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -106,7 +107,7 @@ export const ShoppingListMainContent: React.FC<
   } = useCollapsibleScroll();
 
   useAnimatedReaction(
-    () => isScrolledDown.value,
+    () => isScrolledDown.get(),
     hidden => {
       scrollTabBarHidden.set(hidden);
     },

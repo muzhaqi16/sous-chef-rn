@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, Text } from 'react-native';
+import { Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
@@ -27,7 +28,7 @@ const ActionButton: React.FC<{
       layout={LinearTransition}
     >
       <Pressable
-        style={({pressed}) => [
+        style={({ pressed }) => [
           styles.actionButton,
           variant === 'primary' ? styles.primaryButton : styles.secondaryButton,
           action.disabled && styles.disabledButton,
@@ -41,7 +42,9 @@ const ActionButton: React.FC<{
           size={20}
           color={
             action.color ||
-            (variant === 'primary' ? theme.colors.onPrimary : theme.colors.secondary)
+            (variant === 'primary'
+              ? theme.colors.onPrimary
+              : theme.colors.secondary)
           }
           library={action.iconLibrary}
         />

@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Counter } from './Counter';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { Pressable } from 'react-native-gesture-handler';
 
 interface ItemData {
   id: string;
@@ -32,7 +33,10 @@ const ItemCard: React.FC<ItemCardProps> = ({
 }) => {
   useRenderTime('ItemCard');
   return (
-    <Pressable onPress={onPress} style={({pressed}) => [styles.card, pressed && styles.pressed]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+    >
       <CachedImage
         accessibilityLabel={item?.name}
         resizeMode="contain"
@@ -53,7 +57,9 @@ const ItemCard: React.FC<ItemCardProps> = ({
         />
         {/* unitName from server already includes item-specific display name
             with proper singular/plural form based on quantity */}
-        {!!item?.unitName && <Text style={styles.cardDescription}>{item?.unitName}</Text>}
+        {!!item?.unitName && (
+          <Text style={styles.cardDescription}>{item?.unitName}</Text>
+        )}
       </View>
     </Pressable>
   );

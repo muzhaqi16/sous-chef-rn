@@ -1,7 +1,11 @@
 import React from 'react';
 import { View } from 'react-native';
+import type { StaticParamList } from '@react-navigation/native';
 import { useUnistyles } from 'react-native-unistyles';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import {
+  createBottomTabNavigator,
+  createBottomTabScreen,
+} from '@react-navigation/bottom-tabs';
 import { PantryStack } from './PantryStack';
 import { ShoppingListStack } from './ShoppingListStack';
 import { RecipeStack } from './RecipeStack';
@@ -30,21 +34,23 @@ export const HomeTabs = createBottomTabNavigator({
     animation: 'none',
   },
   screens: {
-    Pantry: {
+    Pantry: createBottomTabScreen({
       screen: PantryStack,
       options: { title: 'Pantry' },
-    },
-    ShoppingList: {
+    }),
+    ShoppingList: createBottomTabScreen({
       screen: ShoppingListStack,
       options: { title: 'List' },
-    },
-    Recipe: {
+    }),
+    Recipe: createBottomTabScreen({
       screen: RecipeStack,
       options: { title: 'Recipes' },
-    },
-    MealPlan: {
+    }),
+    MealPlan: createBottomTabScreen({
       screen: MealPlanStack,
       options: { title: 'Meal Plan' },
-    },
+    }),
   },
 });
+
+export type HomeTabsParams = StaticParamList<typeof HomeTabs>;

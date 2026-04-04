@@ -1,7 +1,8 @@
-import React, {useState, useEffect} from 'react';
-import {View, Text, Animated, Pressable} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {TIMING} from '#constants/animations';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Animated } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { TIMING } from '#constants/animations';
+import { Pressable } from 'react-native-gesture-handler';
 
 interface NotificationBannerProps {
   title?: string;
@@ -45,7 +46,8 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
 
   return (
     <Animated.View
-      style={[styles.bannerContainer, {transform: [{translateY: slide}]}]}>
+      style={[styles.bannerContainer, { transform: [{ translateY: slide }] }]}
+    >
       <View style={styles.bannerInner}>
         {title ? <Text style={styles.bannerTitle}>{title}</Text> : null}
         <Text style={styles.bannerMessage}>{message}</Text>
@@ -60,7 +62,8 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
               onClose?.();
             });
           }}
-          style={({pressed}) => pressed && styles.pressed}>
+          style={({ pressed }) => pressed && styles.pressed}
+        >
           <Text style={styles.bannerClose}>×</Text>
         </Pressable>
       </View>

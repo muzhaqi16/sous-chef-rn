@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { Pressable, Text } from 'react-native';
+import { Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -45,9 +46,9 @@ export const ProfileScreen = () => {
       const y = event.contentOffset.y;
       // Hysteresis: wide gap (10–40px) prevents oscillation at boundary
       // < 0.5 / > 0.5 checks work during mid-animation (vs === 0/1 which miss)
-      if (y > 40 && headerProgress.value < 0.5) {
+      if (y > 40 && headerProgress.get() < 0.5) {
         headerProgress.set(withTiming(1, headerTiming));
-      } else if (y <= 10 && headerProgress.value > 0.5) {
+      } else if (y <= 10 && headerProgress.get() > 0.5) {
         headerProgress.set(withTiming(0, headerTiming));
       }
     },

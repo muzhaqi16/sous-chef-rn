@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -113,7 +114,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
           </Text>
 
           <Pressable
-            onPress={form.handleSubmit(handleSave)}
+            onPress={() => form.handleSubmit(handleSave)()}
             style={({ pressed }) => [
               styles.headerButton,
               pressed && styles.pressed,

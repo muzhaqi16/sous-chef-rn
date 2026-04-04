@@ -2,9 +2,9 @@ import React, { useDeferredValue, useEffect, useRef, useState } from 'react';
 import {
   View,
   RefreshControl,
-  ScrollView,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
+  ScrollView,
 } from 'react-native';
 import {
   FlashList,

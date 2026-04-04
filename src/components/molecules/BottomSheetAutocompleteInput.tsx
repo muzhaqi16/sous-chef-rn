@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, Text, TextInput } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
   BottomSheetTextInput,

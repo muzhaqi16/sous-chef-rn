@@ -570,7 +570,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           fullWidth
           loading={loading}
           disabled={!isValid}
-          onPress={handleSubmit(handleFormSubmit)}
+          onPress={() => handleSubmit(handleFormSubmit)()}
         >
           {modeConfig.buttonLabel}
         </AnimatedButton>

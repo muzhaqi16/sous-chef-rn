@@ -435,10 +435,11 @@ jest.mock('@react-navigation/native', () => {
 jest.mock('react-native-gesture-handler', () => {
   const View = require('react-native').View;
   return {
+    Pressable: require('react-native').Pressable,
     Swipeable: View,
     DrawerLayout: View,
     State: {},
-    ScrollView: View,
+    ScrollView: require('react-native').ScrollView,
     Slider: View,
     Switch: View,
     TextInput: View,
@@ -481,6 +482,13 @@ jest.mock('react-native-gesture-handler', () => {
         onEnd: jest.fn().mockReturnThis(),
         enabled: jest.fn().mockReturnThis(),
         maxDuration: jest.fn().mockReturnThis(),
+      })),
+      Pinch: jest.fn(() => ({
+        onStart: jest.fn().mockReturnThis(),
+        onUpdate: jest.fn().mockReturnThis(),
+        onEnd: jest.fn().mockReturnThis(),
+        onChange: jest.fn().mockReturnThis(),
+        enabled: jest.fn().mockReturnThis(),
       })),
       Simultaneous: jest.fn((...gestures) => gestures),
       Exclusive: jest.fn((...gestures) => gestures),

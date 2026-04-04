@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, Image, Text, Pressable, Linking } from 'react-native';
+import { View, Image, Text, Linking } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
+import { CommonActions } from '@react-navigation/native';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
 import { Button } from '#components/base/Button';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
@@ -34,7 +36,7 @@ export function LandingAuthScreen() {
           <Button
             testID="landing-login-button"
             title="Log In"
-            onPress={() => navigation.navigate('Login')}
+            onPress={() => navigation.dispatch(CommonActions.navigate('Login'))}
             variant="secondary"
             fullWidth
             txtStyle={styles.txt}
@@ -42,14 +44,16 @@ export function LandingAuthScreen() {
           <Button
             testID="landing-signup-button"
             title="Sign Up"
-            onPress={() => navigation.navigate('SignUp')}
+            onPress={() =>
+              navigation.dispatch(CommonActions.navigate('SignUp'))
+            }
             fullWidth
             txtStyle={styles.txt}
           />
         </View>
 
         <Pressable
-          style={({pressed}) => pressed && styles.pressed}
+          style={({ pressed }) => pressed && styles.pressed}
           onPress={() => {
             Linking.openURL(getWebAppUrl('/privacy-policy')).catch(err =>
               console.error('Failed to open URL:', err),

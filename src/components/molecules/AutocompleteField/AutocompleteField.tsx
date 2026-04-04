@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, Pressable } from 'react-native';
+import { Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { InlineAutocomplete } from '../InlineAutocomplete';
 import { BottomSheetAutocompleteInput } from '../BottomSheetAutocompleteInput';
@@ -97,12 +98,7 @@ const footerStyles = StyleSheet.create(theme => ({
 export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
   const addNewFooter = (() => {
     if (!props.showAddNew || !props.onAddNew || !props.addNewLabel) return null;
-    return (
-      <AddNewFooter
-        label={props.addNewLabel}
-        onPress={props.onAddNew}
-      />
-    );
+    return <AddNewFooter label={props.addNewLabel} onPress={props.onAddNew} />;
   })();
 
   if (props.variant === 'inline') {
@@ -130,7 +126,8 @@ export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
   }
 
   // Modal variant - adapt renderItem to match BottomSheetAutocompleteInput's expected signature
-  const modalRenderItem = (item: TItem) => props.renderItem(item, 0) as React.ReactElement;
+  const modalRenderItem = (item: TItem) =>
+    props.renderItem(item, 0) as React.ReactElement;
 
   return (
     <BottomSheetAutocompleteInput<TItem>

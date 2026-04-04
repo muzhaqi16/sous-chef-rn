@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
@@ -18,13 +19,13 @@ export const EmptyDayState: React.FC<EmptyDayStateProps> = ({
 }) => {
   const { bottom: safeBottom } = useSafeAreaInsets();
   return (
-    <View style={[styles.container, { paddingBottom: getTabBarBottomPadding(safeBottom) }]}>
-      <Icon
-
-        name="restaurant-outline"
-        size={48}
-        color={styles.icon.color}
-      />
+    <View
+      style={[
+        styles.container,
+        { paddingBottom: getTabBarBottomPadding(safeBottom) },
+      ]}
+    >
+      <Icon name="restaurant-outline" size={48} color={styles.icon.color} />
       <Text style={styles.title}>No meals planned</Text>
       <Text style={styles.subtitle}>
         {format(selectedDate, 'EEEE, MMMM d')}

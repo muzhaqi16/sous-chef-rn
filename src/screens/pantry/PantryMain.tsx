@@ -84,7 +84,7 @@ const PantryMainInner: React.FC = () => {
 
   // Sync scroll direction → tab bar visibility (UI thread only)
   useAnimatedReaction(
-    () => isScrolledDown.value,
+    () => isScrolledDown.get(),
     hidden => {
       scrollTabBarHidden.set(hidden);
     },

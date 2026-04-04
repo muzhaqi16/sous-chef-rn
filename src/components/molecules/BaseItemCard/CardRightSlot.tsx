@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { CardRightSlotProps } from './types';
@@ -7,11 +8,9 @@ import type { CardRightSlotProps } from './types';
 /**
  * Lightweight meta slot — no useUnistyles, all colors from stylesheet
  */
-const MetaSlot: React.FC<Pick<CardRightSlotProps, 'primary' | 'secondary' | 'tertiary'>> = ({
-  primary,
-  secondary,
-  tertiary,
-}) => (
+const MetaSlot: React.FC<
+  Pick<CardRightSlotProps, 'primary' | 'secondary' | 'tertiary'>
+> = ({ primary, secondary, tertiary }) => (
   <View style={styles.metaContainer}>
     {primary ? <Text style={styles.primary}>{primary}</Text> : null}
     {secondary ? <Text style={styles.secondary}>{secondary}</Text> : null}
@@ -41,7 +40,11 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
   if (type === 'dragHandle' && onDrag) {
     return (
       <Pressable onLongPress={onDrag} style={styles.dragHandle}>
-        <Icon name="reorder-three" size={24} color={theme.colors.textTertiary} />
+        <Icon
+          name="reorder-three"
+          size={24}
+          color={theme.colors.textTertiary}
+        />
       </Pressable>
     );
   }
@@ -60,7 +63,11 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
         <Icon
           name="remove-outline"
           size={18}
-          color={disabled || quantity === 0 ? theme.colors.textTertiary : theme.colors.primary}
+          color={
+            disabled || quantity === 0
+              ? theme.colors.textTertiary
+              : theme.colors.primary
+          }
         />
       </Pressable>
       <View style={styles.counterValue}>
@@ -86,12 +93,18 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
  * Right slot component for BaseItemCard
  * Renders meta info, counter, drag handle, or custom content
  */
-export const CardRightSlot: React.FC<CardRightSlotProps> = (props) => {
+export const CardRightSlot: React.FC<CardRightSlotProps> = props => {
   const { type } = props;
 
   // Meta path is lightweight — no useUnistyles needed
   if (type === 'meta' || (!type && !props.children)) {
-    return <MetaSlot primary={props.primary} secondary={props.secondary} tertiary={props.tertiary} />;
+    return (
+      <MetaSlot
+        primary={props.primary}
+        secondary={props.secondary}
+        tertiary={props.tertiary}
+      />
+    );
   }
 
   // All other types need theme access

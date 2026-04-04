@@ -40,7 +40,6 @@ export const styles = StyleSheet.create(theme => {
       alignItems: 'center',
       backgroundColor: theme.colors.charade['950'],
       justifyContent: 'center',
-      width: 160,
       marginLeft: -12, // Extend under card edge to cover rounded corners
       paddingLeft: 12, // Compensate for margin to maintain button positioning
       marginVertical: -theme.spacing.xs, // Extend beyond swipeable bounds to cover card border/corners
@@ -55,7 +54,6 @@ export const styles = StyleSheet.create(theme => {
       alignItems: 'center',
       backgroundColor: theme.colors.charade['950'],
       justifyContent: 'center',
-      width: 180,
       gap: theme.spacing.xs,
       marginRight: -12, // Extend under card edge to cover rounded corners
       paddingRight: 12, // Compensate for margin to maintain button positioning

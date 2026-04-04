@@ -109,9 +109,8 @@ export const SearchResultsScreen: React.FC<
   };
 
   const handleBackPress = () => {
-    // Simply pop the Barcode stack to reveal Home
-    // This preserves Home's state without triggering remounts
-    const rootNavigator = navigation.getParent()?.getParent();
+    // Dismiss the Barcode modal stack to reveal Home
+    const rootNavigator = navigation.getParent('Barcode');
     if (rootNavigator?.canGoBack()) {
       rootNavigator.goBack();
     } else {

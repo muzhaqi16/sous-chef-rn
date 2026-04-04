@@ -1,4 +1,8 @@
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import type { StaticParamList } from '@react-navigation/native';
+import {
+  createNativeStackNavigator,
+  createNativeStackScreen,
+} from '@react-navigation/native-stack';
 import { ShoppingListMain } from '#screens/shoppingList/ShoppingListMain';
 import { ListSettings } from '#screens/shoppingList/ListSettings';
 import { ShareList } from '#screens/shoppingList/ShareList';
@@ -15,21 +19,23 @@ export const ShoppingListStack = createNativeStackNavigator({
     contentStyle: { backgroundColor: theme.colors.background },
   }),
   screens: {
-    ShoppingListMain: {
+    ShoppingListMain: createNativeStackScreen({
       screen: ShoppingListMain,
       linking: 'shopping',
-    },
+    }),
     ListSettings: ListSettings,
     ShareList: ShareList,
-    AddItem: {
+    AddItem: createNativeStackScreen({
       screen: AddEditItem,
       linking: 'shopping/add',
-    },
-    EditItem: {
+    }),
+    EditItem: createNativeStackScreen({
       screen: AddEditItem,
       linking: 'shopping/edit/:itemId',
-    },
+    }),
     ItemDetail: ShoppingListItemDetail,
     PurchaseHistory: PurchaseHistoryScreen,
   },
 });
+
+export type ShoppingListStackParams = StaticParamList<typeof ShoppingListStack>;

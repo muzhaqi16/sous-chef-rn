@@ -54,40 +54,48 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       }
     };
 
+    useImperativeHandle(
+      ref,
+      () => {
+        const dismiss = () => {
+          if (enableBackdrop) {
+            hideBackdrop();
+          }
+          bottomSheetRef.current?.dismiss();
+        };
+        return {
+          open: () => {
+            if (mounted) return;
+            if (enableBackdrop) {
+              showBackdrop({ opacity: 0.5, onPress: dismiss });
+            }
+            onOpen?.();
+            setMounted(true);
+          },
+          close: dismiss,
+          toggle: () => {
+            if (mounted) {
+              dismiss();
+            } else {
+              if (enableBackdrop) {
+                showBackdrop({ opacity: 0.5, onPress: dismiss });
+              }
+              onOpen?.();
+              setMounted(true);
+            }
+          },
+          isActive: () => mounted,
+        };
+      },
+      [mounted, enableBackdrop, showBackdrop, hideBackdrop, onOpen],
+    );
+
     const handleDismiss = () => {
       if (enableBackdrop) {
         hideBackdrop();
       }
       bottomSheetRef.current?.dismiss();
     };
-
-    useImperativeHandle(
-      ref,
-      () => ({
-        open: () => {
-          if (mounted) return;
-          if (enableBackdrop) {
-            showBackdrop({ opacity: 0.5, onPress: handleDismiss });
-          }
-          onOpen?.();
-          setMounted(true);
-        },
-        close: handleDismiss,
-        toggle: () => {
-          if (mounted) {
-            handleDismiss();
-          } else {
-            if (enableBackdrop) {
-              showBackdrop({ opacity: 0.5, onPress: handleDismiss });
-            }
-            onOpen?.();
-            setMounted(true);
-          }
-        },
-        isActive: () => mounted,
-      }),
-      [mounted, enableBackdrop, showBackdrop, onOpen, handleDismiss],
-    );
 
     if (!mounted) return null;
 

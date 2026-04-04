@@ -7,6 +7,7 @@ import Animated, {
   withSequence,
   withTiming,
   withDelay,
+  cancelAnimation,
   Easing,
   type SharedValue,
 } from 'react-native-reanimated';
@@ -46,11 +47,15 @@ export const SwipeHandIndicator: React.FC<SwipeHandIndicatorProps> = ({
         ),
       ),
     );
+
+    return () => {
+      cancelAnimation(translateX);
+    };
   }, [translateX, direction]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-    opacity: visible.value,
+    transform: [{ translateX: translateX.get() }],
+    opacity: visible.get(),
   }));
 
   // Use finger emoji — more intuitive for "swipe here" than Ionicons hand icons

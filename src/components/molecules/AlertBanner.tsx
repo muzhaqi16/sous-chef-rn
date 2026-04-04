@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, IconLibrary } from '#utils/iconUtils';
 
@@ -77,7 +78,12 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
         ]}
       >
         {iconLibrary ? (
-          <Icon name={icon} size={20} color={variantColors.text} library={iconLibrary} />
+          <Icon
+            name={icon}
+            size={20}
+            color={variantColors.text}
+            library={iconLibrary}
+          />
         ) : (
           <Text style={styles.icon}>{icon}</Text>
         )}
@@ -94,7 +100,9 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
         )}
       </View>
 
-      {!!shouldShowChevron && <Icon name="chevron-forward" size={24} color={variantColors.text} />}
+      {!!shouldShowChevron && (
+        <Icon name="chevron-forward" size={24} color={variantColors.text} />
+      )}
     </View>
   );
 

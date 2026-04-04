@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Pressable } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { Pressable } from 'react-native-gesture-handler';
 
 interface SwipeableContentProps {
   children: React.ReactNode;

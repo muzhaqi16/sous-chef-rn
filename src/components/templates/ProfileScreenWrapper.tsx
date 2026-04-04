@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, RefreshControlProps } from 'react-native';
+import { View, RefreshControlProps, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Header } from '#components/molecules/Header';

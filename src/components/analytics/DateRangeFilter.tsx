@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { DateRange } from '#generated';
 
@@ -39,7 +40,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
             <Pressable
               key={option.value}
               onPress={() => onSelect(option.value)}
-              style={({pressed}) => [
+              style={({ pressed }) => [
                 styles.chip,
                 {
                   backgroundColor: isSelected

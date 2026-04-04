@@ -1,16 +1,21 @@
 import React from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, ActivityIndicator } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { FlashList } from '@shopify/flash-list';
-import {
-  BottomSheetModal,
-  BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { createPropsComparator } from '#utils/memoUtils';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { TemplateCard } from './TemplateCard';
-import { TemplateBrowserProvider, useTemplateBrowserActions } from './TemplateBrowserContext';
-import { ChipScrollRow, type ChipOption } from '#components/atoms/ChipScrollRow';
+import {
+  TemplateBrowserProvider,
+  useTemplateBrowserActions,
+} from './TemplateBrowserContext';
+import {
+  ChipScrollRow,
+  type ChipOption,
+} from '#components/atoms/ChipScrollRow';
 import { useMealTemplates } from '#hooks/mealPlan/useMealTemplates';
 import { TemplateCategory, type MealTemplateDisplayFragment } from '#generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -29,18 +34,25 @@ const CATEGORIES: ChipOption<TemplateCategory | undefined>[] = [
 
 const keyExtractor = (item: MealTemplateDisplayFragment) => item.id;
 
-const TemplateBrowserRenderItemComponent: React.FC<{ item: MealTemplateDisplayFragment }> = ({ item }) => {
+const TemplateBrowserRenderItemComponent: React.FC<{
+  item: MealTemplateDisplayFragment;
+}> = ({ item }) => {
   const { onSelectTemplate } = useTemplateBrowserActions();
   return <TemplateCard template={item} onPress={onSelectTemplate} />;
 };
 
-const areTemplatePropsEqual = createPropsComparator<{ item: MealTemplateDisplayFragment }>({
+const areTemplatePropsEqual = createPropsComparator<{
+  item: MealTemplateDisplayFragment;
+}>({
   nestedComparisons: {
     item: ['id', 'name', 'description'],
   },
 });
 
-const TemplateBrowserRenderItem = React.memo(TemplateBrowserRenderItemComponent, areTemplatePropsEqual);
+const TemplateBrowserRenderItem = React.memo(
+  TemplateBrowserRenderItemComponent,
+  areTemplatePropsEqual,
+);
 
 const renderTemplate = ({ item }: { item: MealTemplateDisplayFragment }) => (
   <TemplateBrowserRenderItem item={item} />
@@ -57,11 +69,14 @@ interface TemplateBrowserSheetProps {
 export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   visible,
   onClose,
-  onSelectTemplate }) => {
-  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['85%'] });
+  onSelectTemplate,
+}) => {
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      visible,
+      onDismiss: onClose,
+      snapPoints: ['85%'],
+    });
 
   const {
     templates,
@@ -71,13 +86,12 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
     selectedCategory,
     setSelectedCategory,
     loadMore,
-    hasMore } = useMealTemplates();
+    hasMore,
+  } = useMealTemplates();
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetView
-        style={[styles.container, contentContainerStyle]}
-      >
+      <BottomSheetView style={[styles.container, contentContainerStyle]}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Browse Templates</Text>
@@ -143,17 +157,20 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    flex: 1 },
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.sm },
+    paddingBottom: theme.spacing.sm,
+  },
   title: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -165,28 +182,37 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border },
+    borderColor: theme.colors.border,
+  },
   searchInput: {
     flex: 1,
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
-    padding: 0 },
+    padding: 0,
+  },
   chipScroll: {
     maxHeight: 44,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   chipRowContent: {
-    paddingHorizontal: theme.spacing.md },
+    paddingHorizontal: theme.spacing.md,
+  },
   list: {
-    flex: 1 },
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   emptyText: {
     fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary } }));
+    color: theme.colors.textSecondary,
+  },
+}));

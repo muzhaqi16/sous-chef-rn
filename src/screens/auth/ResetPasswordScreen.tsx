@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -233,7 +234,7 @@ export const ResetPasswordScreen: React.FC = () => {
               styles.primaryButton,
               pressed && { opacity: 0.7 },
             ]}
-            onPress={form.handleSubmit(onSubmit)}
+            onPress={() => form.handleSubmit(onSubmit)()}
             disabled={isSubmitting || !form.formState.isValid}
           >
             {isSubmitting ? (

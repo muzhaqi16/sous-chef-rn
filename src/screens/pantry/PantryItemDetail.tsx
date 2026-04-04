@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   RefreshControl,
-  Pressable,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
 import {

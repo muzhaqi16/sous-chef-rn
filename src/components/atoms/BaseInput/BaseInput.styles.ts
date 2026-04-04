@@ -102,6 +102,7 @@ export default StyleSheet.create(theme => ({
           right: 0,
           top: 0,
           bottom: 0,
+          zIndex: 1,
           marginLeft: 0,
           paddingHorizontal: {
             xs: theme.spacing.sm,

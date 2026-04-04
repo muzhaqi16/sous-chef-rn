@@ -5,7 +5,8 @@ import Animated, {
   useAnimatedStyle,
   interpolate,
   Extrapolation,
-  type SharedValue } from 'react-native-reanimated';
+  type SharedValue,
+} from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
 import { styles } from './styles';
 import { useUnistyles } from 'react-native-unistyles';
@@ -25,7 +26,8 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
   library,
   testID,
   progress,
-  index = 0 }) => {
+  index = 0,
+}) => {
   const { theme } = useUnistyles();
 
   const buttonStyle = circular
@@ -40,7 +42,10 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
   // Third button starts at 0.4, fully visible at 0.7
   // PERFORMANCE: Memoize to avoid recalculating on every render
   const start = 0.1 + index * 0.15;
-  const { startThreshold, endThreshold } = { startThreshold: start, endThreshold: start + 0.25 };
+  const { startThreshold, endThreshold } = {
+    startThreshold: start,
+    endThreshold: start + 0.25,
+  };
 
   // Use Reanimated's useAnimatedStyle for SharedValue-based animations
   const animatedStyle = useAnimatedStyle(() => {
@@ -49,14 +54,14 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
     }
 
     const opacity = interpolate(
-      progress.value,
+      progress.get(),
       [startThreshold, endThreshold],
       [0, 1],
       Extrapolation.CLAMP,
     );
 
     const scale = interpolate(
-      progress.value,
+      progress.get(),
       [startThreshold, endThreshold],
       [0.5, 1],
       Extrapolation.CLAMP,
@@ -64,7 +69,8 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
 
     return {
       opacity,
-      transform: [{ scale }] };
+      transform: [{ scale }],
+    };
   }, [progress, startThreshold, endThreshold]);
 
   // PERFORMANCE: Memoize the press handler

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 interface BottomSheetHeaderProps {
@@ -50,11 +51,13 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
       <View style={styles.header}>
         <Pressable
           onPress={onCancel}
-          style={({pressed}) => [styles.button, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
           accessibilityRole="button"
           accessibilityLabel={cancelLabel}
         >
-          <Text style={[styles.cancelText, { color: theme.colors.textSecondary }]}>
+          <Text
+            style={[styles.cancelText, { color: theme.colors.textSecondary }]}
+          >
             {cancelLabel}
           </Text>
         </Pressable>
@@ -68,7 +71,7 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
 
         <Pressable
           onPress={onConfirm}
-          style={({pressed}) => [styles.button, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
           disabled={confirmDisabled}
           accessibilityRole="button"
           accessibilityLabel={confirmLabel}
@@ -79,7 +82,9 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           </Text>
         </Pressable>
       </View>
-      <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+      <View
+        style={[styles.divider, { backgroundColor: theme.colors.border }]}
+      />
     </View>
   );
 };

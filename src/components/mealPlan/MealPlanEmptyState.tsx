@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
@@ -14,15 +15,11 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <Icon
-
-        name="calendar-outline"
-        size={64}
-        color={styles.icon.color}
-      />
+      <Icon name="calendar-outline" size={64} color={styles.icon.color} />
       <Text style={styles.title}>Plan Your Meals</Text>
       <Text style={styles.subtitle}>
-        Create a meal plan to organize your weekly or monthly meals, track nutrition, and generate shopping lists.
+        Create a meal plan to organize your weekly or monthly meals, track
+        nutrition, and generate shopping lists.
       </Text>
       <Pressable
         onPress={onCreatePlan}
@@ -34,9 +31,16 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
       {!!onCreateFromTemplate && (
         <Pressable
           onPress={onCreateFromTemplate}
-          style={({ pressed }) => [styles.templateButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.templateButton,
+            pressed && styles.pressed,
+          ]}
         >
-          <Icon name="document-text-outline" size={20} color={styles.templateButtonIcon.color} />
+          <Icon
+            name="document-text-outline"
+            size={20}
+            color={styles.templateButtonIcon.color}
+          />
           <Text style={styles.templateButtonText}>Create from Template</Text>
         </Pressable>
       )}

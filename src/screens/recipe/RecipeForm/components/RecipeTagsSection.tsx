@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { MultiSelectChipSheet } from '#components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
 import { Diet, HealthGoal, Intolerance } from '#generated';
@@ -77,7 +78,10 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
       <MultiSelectChipSheet<HealthGoal>
         visible={showHealthGoals}
         title="Health Goals"
-        items={ALL_HEALTH_GOALS.map(g => ({ id: g, label: formatEnumLabel(g) }))}
+        items={ALL_HEALTH_GOALS.map(g => ({
+          id: g,
+          label: formatEnumLabel(g),
+        }))}
         selectedItems={healthGoals}
         onSelect={onHealthGoalsChange}
         onClose={() => setShowHealthGoals(false)}
@@ -87,7 +91,10 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
       <MultiSelectChipSheet<Intolerance>
         visible={showIntolerances}
         title="Intolerances"
-        items={ALL_INTOLERANCES.map(i => ({ id: i, label: formatEnumLabel(i) }))}
+        items={ALL_INTOLERANCES.map(i => ({
+          id: i,
+          label: formatEnumLabel(i),
+        }))}
         selectedItems={intolerances}
         onSelect={onIntolerancesChange}
         onClose={() => setShowIntolerances(false)}
@@ -104,8 +111,16 @@ interface ChipGroupProps {
   onPress: () => void;
 }
 
-const ChipGroup: React.FC<ChipGroupProps> = ({ label, items, formatLabel, onPress }) => (
-  <Pressable onPress={onPress} style={({ pressed }) => [styles.chipGroup, pressed && styles.pressed]}>
+const ChipGroup: React.FC<ChipGroupProps> = ({
+  label,
+  items,
+  formatLabel,
+  onPress,
+}) => (
+  <Pressable
+    onPress={onPress}
+    style={({ pressed }) => [styles.chipGroup, pressed && styles.pressed]}
+  >
     <Text style={styles.chipGroupLabel}>{label}</Text>
     <View style={styles.chipsRow}>
       {items.length > 0 ? (

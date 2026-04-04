@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  ViewStyle,
-  ActivityIndicator,
-  Pressable,
-} from 'react-native';
+import { View, ViewStyle, ActivityIndicator } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -39,8 +35,8 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
   const { theme } = useUnistyles();
 
   const parsedImages = Array.isArray(imagesRaw)
-        ? (imagesRaw as ItemImage[])
-        : parseImages(imagesRaw);
+    ? (imagesRaw as ItemImage[])
+    : parseImages(imagesRaw);
 
   const tabs = groupImagesByPerspective(parsedImages);
 
@@ -86,7 +82,6 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
             name="image-outline"
             size={48}
             color={theme.colors.textTertiary}
-
           />
         </View>
       </View>
@@ -140,13 +135,13 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
             <Pressable
               key={key}
               onPress={() => setSelectedTab(key)}
-              style={({pressed}) => [styles.dotTouchable, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.dotTouchable,
+                pressed && styles.pressed,
+              ]}
             >
               <View
-                style={[
-                  styles.dot,
-                  selectedTab === key && styles.dotActive,
-                ]}
+                style={[styles.dot, selectedTab === key && styles.dotActive]}
               />
             </Pressable>
           ))}

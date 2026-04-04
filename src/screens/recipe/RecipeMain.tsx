@@ -4,7 +4,8 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -135,7 +136,7 @@ const RecipeMainInner: React.FC = () => {
   } = useCollapsibleScroll();
 
   useAnimatedReaction(
-    () => isScrolledDown.value,
+    () => isScrolledDown.get(),
     hidden => {
       scrollTabBarHidden.set(hidden);
     },

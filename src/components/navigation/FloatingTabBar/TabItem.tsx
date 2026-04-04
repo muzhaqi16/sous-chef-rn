@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, Pressable } from 'react-native';
+import { Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
   useSharedValue,
@@ -28,7 +29,10 @@ interface TabItemProps {
     params?: object;
   };
   isFocused: boolean;
-  options: Pick<BottomTabNavigationOptions, 'title' | 'tabBarAccessibilityLabel'>;
+  options: Pick<
+    BottomTabNavigationOptions,
+    'title' | 'tabBarAccessibilityLabel'
+  >;
   onPress: () => void;
   showLabel: boolean;
   activeTabIndex: SharedValue<number>;
@@ -52,10 +56,12 @@ export const TabItem: React.FC<TabItemProps> = ({
     () => activeTabIndex.get() === tabIndex,
     (isActive, prevIsActive) => {
       if (isActive !== prevIsActive) {
-        iconScale.set(withTiming(isActive ? 1.2 : 1, {
-          duration: TIMING.FAST,
-          easing: Easing.inOut(Easing.ease),
-        }));
+        iconScale.set(
+          withTiming(isActive ? 1.2 : 1, {
+            duration: TIMING.FAST,
+            easing: Easing.inOut(Easing.ease),
+          }),
+        );
       }
     },
     [tabIndex],
@@ -63,10 +69,12 @@ export const TabItem: React.FC<TabItemProps> = ({
 
   const handlePress = () => {
     // Animate icon scale on press (squeeze then expand to active size)
-    iconScale.set(withSequence(
-      withTiming(0.85, { duration: 75, easing: Easing.inOut(Easing.ease) }),
-      withTiming(1.2, { duration: 75, easing: Easing.inOut(Easing.ease) })
-    ));
+    iconScale.set(
+      withSequence(
+        withTiming(0.85, { duration: 75, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.2, { duration: 75, easing: Easing.inOut(Easing.ease) }),
+      ),
+    );
     onPress();
   };
 
@@ -75,8 +83,13 @@ export const TabItem: React.FC<TabItemProps> = ({
   }));
 
   const label = options.title || route.name;
-  const iconColor = isFocused ? theme.colors.primary : theme.colors.textTertiary;
-  const [activeIcon, inactiveIcon] = TAB_ICON_MAP[route.name] || ['help-circle', 'help-circle'];
+  const iconColor = isFocused
+    ? theme.colors.primary
+    : theme.colors.textTertiary;
+  const [activeIcon, inactiveIcon] = TAB_ICON_MAP[route.name] || [
+    'help-circle',
+    'help-circle',
+  ];
 
   const renderIcon = () => (
     <Icon
@@ -95,11 +108,12 @@ export const TabItem: React.FC<TabItemProps> = ({
       onPress={handlePress}
       style={styles.tabItem}
     >
-      <Animated.View style={animatedIconStyle}>
-        {renderIcon()}
-      </Animated.View>
+      <Animated.View style={animatedIconStyle}>{renderIcon()}</Animated.View>
       {!!showLabel && (
-        <Text maxFontSizeMultiplier={1.2} style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
+        <Text
+          maxFontSizeMultiplier={1.2}
+          style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}
+        >
           {label}
         </Text>
       )}

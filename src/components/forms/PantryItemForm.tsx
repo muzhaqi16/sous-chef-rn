@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
   View,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Text,
+  ScrollView,
 } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';

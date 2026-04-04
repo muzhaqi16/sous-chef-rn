@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMappingHelper } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
@@ -11,78 +12,100 @@ interface TemplateCardProps {
   onPress: (template: MealTemplateDisplayFragment) => void;
 }
 
-const TemplateCardComponent: React.FC<TemplateCardProps> =
-  ({ template, onPress }) => {
-    const { getMappingKey } = useMappingHelper();
-    return (
-      <Pressable
-        onPress={() => onPress(template)}
-        style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-      >
-        <View style={styles.header}>
-          <Text style={styles.name} numberOfLines={1}>
-            {template.name}
-          </Text>
-          {template.usageCount > 0 && (
-            <Text style={styles.usageCount}>
-              Used {template.usageCount}x
-            </Text>
-          )}
-        </View>
-
-        {!!template.description && (
-          <Text style={styles.description} numberOfLines={2}>
-            {template.description}
-          </Text>
+const TemplateCardComponent: React.FC<TemplateCardProps> = ({
+  template,
+  onPress,
+}) => {
+  const { getMappingKey } = useMappingHelper();
+  return (
+    <Pressable
+      onPress={() => onPress(template)}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+    >
+      <View style={styles.header}>
+        <Text style={styles.name} numberOfLines={1}>
+          {template.name}
+        </Text>
+        {template.usageCount > 0 && (
+          <Text style={styles.usageCount}>Used {template.usageCount}x</Text>
         )}
+      </View>
 
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Icon name="calendar-outline" size={14} color={styles.metaIcon.color} />
-            <Text style={styles.metaText}>{template.durationDays} days</Text>
+      {!!template.description && (
+        <Text style={styles.description} numberOfLines={2}>
+          {template.description}
+        </Text>
+      )}
+
+      <View style={styles.metaRow}>
+        <View style={styles.metaItem}>
+          <Icon
+            name="calendar-outline"
+            size={14}
+            color={styles.metaIcon.color}
+          />
+          <Text style={styles.metaText}>{template.durationDays} days</Text>
+        </View>
+        <View style={styles.metaItem}>
+          <Icon name="people-outline" size={14} color={styles.metaIcon.color} />
+          <Text style={styles.metaText}>
+            {template.defaultServings} servings
+          </Text>
+        </View>
+        {!!template.home?.name && (
+          <View style={styles.homeBadge}>
+            <Icon
+              name="home-outline"
+              size={12}
+              color={styles.homeBadgeText.color}
+            />
+            <Text style={styles.homeBadgeText}>{template.home.name}</Text>
           </View>
-          <View style={styles.metaItem}>
-            <Icon name="people-outline" size={14} color={styles.metaIcon.color} />
-            <Text style={styles.metaText}>{template.defaultServings} servings</Text>
-          </View>
-          {!!template.home?.name && (
-            <View style={styles.homeBadge}>
-              <Icon name="home-outline" size={12} color={styles.homeBadgeText.color} />
-              <Text style={styles.homeBadgeText}>{template.home.name}</Text>
+        )}
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryText}>
+            {template.category.charAt(0) +
+              template.category.slice(1).toLowerCase()}
+          </Text>
+        </View>
+      </View>
+
+      {template.tags.length > 0 && (
+        <View style={styles.tagRow}>
+          {template.tags.slice(0, 3).map((tag, index) => (
+            <View key={getMappingKey(tag, index)} style={styles.tag}>
+              <Text style={styles.tagText}>{tag}</Text>
             </View>
+          ))}
+          {template.tags.length > 3 && (
+            <Text style={styles.moreText}>+{template.tags.length - 3}</Text>
           )}
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>
-              {template.category.charAt(0) + template.category.slice(1).toLowerCase()}
-            </Text>
-          </View>
         </View>
-
-        {template.tags.length > 0 && (
-          <View style={styles.tagRow}>
-            {template.tags.slice(0, 3).map((tag, index) => (
-              <View key={getMappingKey(tag, index)} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
-              </View>
-            ))}
-            {template.tags.length > 3 && (
-              <Text style={styles.moreText}>+{template.tags.length - 3}</Text>
-            )}
-          </View>
-        )}
-      </Pressable>
-    );
-  };
+      )}
+    </Pressable>
+  );
+};
 
 TemplateCardComponent.displayName = 'TemplateCard';
 
 const areTemplateCardPropsEqual = createPropsComparator<TemplateCardProps>({
   nestedComparisons: {
-    template: ['id', 'name', 'usageCount', 'description', 'durationDays', 'defaultServings', 'category'],
+    template: [
+      'id',
+      'name',
+      'usageCount',
+      'description',
+      'durationDays',
+      'defaultServings',
+      'category',
+    ],
   },
 });
 
-export const TemplateCard = React.memo(TemplateCardComponent, areTemplateCardPropsEqual);
+export const TemplateCard = React.memo(
+  TemplateCardComponent,
+  areTemplateCardPropsEqual,
+);
 
 const styles = StyleSheet.create(theme => ({
   card: {

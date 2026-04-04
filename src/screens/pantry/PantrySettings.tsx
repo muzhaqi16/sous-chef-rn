@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, Switch } from 'react-native';
+import { View, Text, Switch, ScrollView } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#/utils/iconUtils';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';

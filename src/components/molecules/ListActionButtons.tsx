@@ -1,7 +1,8 @@
 import React from 'react';
-import {Pressable, Text, View} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon, IconLibrary} from '#utils/iconUtils';
+import { Text, View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon, IconLibrary } from '#utils/iconUtils';
 
 interface ActionButton {
   icon: string;
@@ -18,15 +19,19 @@ interface ListActionButtonsProps {
 export const ListActionButtons: React.FC<ListActionButtonsProps> = ({
   actions,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
 
   return (
     <View style={styles.container}>
       {actions.map((action, index) => (
         <Pressable
           key={index}
-          style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
-          onPress={action.onPress}>
+          style={({ pressed }) => [
+            styles.actionButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={action.onPress}
+        >
           <Icon
             name={action.icon}
             size={20}
@@ -36,8 +41,9 @@ export const ListActionButtons: React.FC<ListActionButtonsProps> = ({
           <Text
             style={[
               styles.actionButtonText,
-              {color: action.color || theme.colors.primary},
-            ]}>
+              { color: action.color || theme.colors.primary },
+            ]}
+          >
             {action.label}
           </Text>
         </Pressable>

@@ -1,7 +1,8 @@
 import React from 'react';
-import {View, Text, Pressable, ViewStyle} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#utils/iconUtils';
+import { View, Text, ViewStyle } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
 
 interface FormCheckboxProps {
   label: string;
@@ -20,21 +21,25 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
   disabled = false,
   containerStyle,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
 
   return (
     <View style={[styles.container, containerStyle]}>
       <Pressable
-        style={({pressed}) => [styles.checkboxRow, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.checkboxRow, pressed && styles.pressed]}
         onPress={onPress}
-        disabled={disabled}>
+        disabled={disabled}
+      >
         <View
           style={[
             styles.checkbox,
             checked && styles.checkboxChecked,
             disabled && styles.disabledCheckbox,
-          ]}>
-          {!!checked && <Icon name="checkmark" size={18} color={theme.colors.white} />}
+          ]}
+        >
+          {!!checked && (
+            <Icon name="checkmark" size={18} color={theme.colors.white} />
+          )}
         </View>
         <Text style={[styles.label, disabled && styles.disabledLabel]}>
           {label}

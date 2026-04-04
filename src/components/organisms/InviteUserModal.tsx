@@ -4,9 +4,9 @@ import {
   View,
   Text,
   TextInput,
-  Pressable,
   ActivityIndicator,
   ScrollView,
+  Pressable,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { MembershipRole } from '#generated';

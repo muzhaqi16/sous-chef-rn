@@ -1,11 +1,6 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  ActivityIndicator,
-  Dimensions,
-} from 'react-native';
+import { View, Text, ActivityIndicator, Dimensions } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';

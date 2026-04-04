@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { Icon as IconType } from '#utils/iconUtils';
@@ -27,7 +28,7 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
 
   return (
     <Pressable
-      style={({pressed}) => [styles.navigationRow, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.navigationRow, pressed && styles.pressed]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
@@ -37,7 +38,9 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
         <Icon name={icon} size={24} color={iconColor} />
         <View style={styles.navigationText}>
           <Text style={styles.navigationTitle}>{title}</Text>
-          {!!subtitle && <Text style={styles.navigationSubtitle}>{subtitle}</Text>}
+          {!!subtitle && (
+            <Text style={styles.navigationSubtitle}>{subtitle}</Text>
+          )}
         </View>
       </View>
       <Icon name="chevron-forward" size={20} />

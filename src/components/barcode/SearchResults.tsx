@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { ScrollView } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { ItemCard } from './ItemCard';
 import { ActionButtons } from './ActionButtons';
@@ -21,6 +20,7 @@ import { useAppStore } from '#store/useAppStore';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import type { ScannedItem } from '#/store/slices/barcodeScannerSlice';
 import type { BarcodeSource } from '#/types/navigation';
+import { ScrollView } from 'react-native';
 
 // Cache updater for Pantry.itemsConnection
 const addToPantryItemsConnection =

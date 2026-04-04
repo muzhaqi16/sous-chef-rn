@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { FieldValues, Control, FieldErrors } from 'react-hook-form';
 import { DynamicFormFields, FieldDef } from '../molecules/DynamicFormFields';
 import { Button } from '../base/Button';
 import { BackButton } from '../atoms/BackButton';
+import { Pressable } from 'react-native-gesture-handler';
 
 interface Props<T extends FieldValues> {
   title: string;
@@ -67,7 +68,11 @@ export function AuthFormTemplate<T extends FieldValues>({
       <DynamicFormFields<T> fields={fields} control={control} errors={errors} />
 
       {!!linkText && !!onLinkPress && (
-        <Pressable onPress={onLinkPress} testID={linkTestID} style={({pressed}) => pressed && styles.pressed}>
+        <Pressable
+          onPress={onLinkPress}
+          testID={linkTestID}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
           <Text style={styles.link}>{linkText}</Text>
         </Pressable>
       )}
@@ -87,7 +92,7 @@ export function AuthFormTemplate<T extends FieldValues>({
           onPress={onFooterLinkPress}
           disabled={footerLinkDisabled}
           testID={footerLinkTestID}
-          style={({pressed}) => pressed && styles.pressed}
+          style={({ pressed }) => pressed && styles.pressed}
         >
           <Text
             style={[styles.footer, footerLinkDisabled && styles.footerDisabled]}

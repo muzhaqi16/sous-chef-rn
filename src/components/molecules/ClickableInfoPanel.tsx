@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, ViewStyle } from 'react-native';
+import { View, Text, ViewStyle } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -31,7 +32,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
       <Text style={styles.title}>{title}</Text>
 
       <Pressable
-        style={({pressed}) => [styles.panel, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.panel, pressed && styles.pressed]}
         onPress={onPress}
       >
         {hasItems ? (
@@ -87,7 +88,15 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: theme.spacing.md,
-    boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 4, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.08)' }],
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 2,
+        blurRadius: 4,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.08)',
+      },
+    ],
   },
   infoRow: {
     flexDirection: 'row',

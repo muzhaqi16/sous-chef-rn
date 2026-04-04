@@ -9,9 +9,12 @@ jest.mock('@react-navigation/bottom-tabs', () => ({
     Screen: 'Screen',
     Group: 'Group',
   }),
+  createBottomTabScreen: (config: any) => config,
 }));
 jest.mock('../PantryStack', () => ({ PantryStack: 'PantryStack' }));
-jest.mock('../ShoppingListStack', () => ({ ShoppingListStack: 'ShoppingListStack' }));
+jest.mock('../ShoppingListStack', () => ({
+  ShoppingListStack: 'ShoppingListStack',
+}));
 jest.mock('../RecipeStack', () => ({ RecipeStack: 'RecipeStack' }));
 jest.mock('../MealPlanStack', () => ({ MealPlanStack: 'MealPlanStack' }));
 jest.mock('#/context/TabBarActionsContext', () => ({

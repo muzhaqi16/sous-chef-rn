@@ -2,11 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   RefreshControl,
-  Pressable,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { EmailInput } from '#components/atoms/EmailInput';
@@ -565,8 +565,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                     </View>
                     {!isHomeLinked && (
                       <Pressable
-                        onPress={e => {
-                          e?.stopPropagation?.();
+                        onPress={() => {
                           if (member.id) {
                             handleRemoveMember(member.id);
                           }

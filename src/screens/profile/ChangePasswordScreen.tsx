@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  Pressable,
   ActivityIndicator,
   KeyboardAvoidingView,
-  ScrollView,
   Platform,
+  ScrollView,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -173,7 +173,7 @@ export const ChangePasswordScreen: React.FC = () => {
                 (!isFormValid || isSubmitting) && styles.submitButtonDisabled,
                 pressed && styles.pressed,
               ]}
-              onPress={form.handleSubmit(onSubmit)}
+              onPress={() => form.handleSubmit(onSubmit)()}
               disabled={!isFormValid || isSubmitting}
             >
               {isSubmitting ? (

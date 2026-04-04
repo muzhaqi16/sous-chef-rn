@@ -4,6 +4,21 @@
 - estimatedItemSize has been deprecated in version 2 of flashlist and to never use it which is the version that is app is uisng
 - **Never use `InteractionManager` from `react-native`.** It has been deprecated. Avoid long-running work on the JS thread and use `requestIdleCallback` instead for deferring non-urgent tasks.
 
+### Pressable & Modal Convention
+
+- **Use `Pressable` from `react-native-gesture-handler`** as the default across the app.
+  RNGH's Pressable integrates properly with the gesture system and is preferred.
+- **Exception: inside RN's `<Modal>`**, always use `Pressable` from `react-native`.
+  React Native's `Modal` renders in a separate native window that has **no
+  `GestureHandlerRootView` ancestor**. RNGH components (Pressable, RectButton,
+  GestureDetector, etc.) silently stop responding to touches without that root view.
+  If you must use RNGH components inside a Modal, wrap the Modal content in
+  `<GestureHandlerRootView>` (see `SpotlightCoachMark.tsx` for an example).
+- **`ScrollView` from `react-native-gesture-handler`** is only needed when the scroll
+  container has RNGH gesture components inside it (Swipeable, GestureDetector, pan
+  gestures). For plain forms, settings, and display screens, use `ScrollView` from
+  `react-native`.
+
 ### React Compiler Conventions
 
 - **Do not use `useMemo` or `useCallback`.**  The `babel-plugin-react-compiler` plugin automatically

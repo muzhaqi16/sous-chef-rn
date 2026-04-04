@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Pressable, type LayoutChangeEvent } from 'react-native';
+import { View, type LayoutChangeEvent } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   useSharedValue,
@@ -49,7 +50,7 @@ const SegmentedTab = <T extends string>({
 
   const textAnimatedStyle = useAnimatedStyle(() => {
     const tabCenter = index * tabWidth + tabWidth / 2;
-    const indicatorCenter = indicatorX.value + tabWidth / 2;
+    const indicatorCenter = indicatorX.get() + tabWidth / 2;
     const distance = Math.abs(tabCenter - indicatorCenter);
     const progress = Math.min(distance / Math.max(tabWidth, 1), 1);
 
@@ -120,7 +121,7 @@ export const SegmentedControl = <T extends string>({
   }
 
   const indicatorAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: indicatorX.value }],
+    transform: [{ translateX: indicatorX.get() }],
     width: tabWidth,
   }));
 

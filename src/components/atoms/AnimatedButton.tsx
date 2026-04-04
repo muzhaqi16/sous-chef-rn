@@ -1,13 +1,12 @@
 import React, { useLayoutEffect } from 'react';
 import {
-  Pressable,
   Text,
   ActivityIndicator,
-  PressableProps,
   View,
   StyleProp,
   ViewStyle,
 } from 'react-native';
+import { Pressable, type PressableProps } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -51,7 +50,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
 
   const animatedTextStyle = useAnimatedStyle(() => {
     return {
-      opacity: textOpacity.value,
+      opacity: textOpacity.get(),
     };
   });
 
@@ -89,7 +88,8 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   };
 
   // Generate default accessibility label from children if not provided
-  const defaultLabel = typeof children === 'string' ? children : accessibilityLabel;
+  const defaultLabel =
+    typeof children === 'string' ? children : accessibilityLabel;
 
   // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View,
   // only Reanimated/inline styles on AnimatedTouchable

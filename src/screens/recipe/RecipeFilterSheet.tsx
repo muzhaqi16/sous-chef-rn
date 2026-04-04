@@ -1,5 +1,6 @@
 import React, { useState, type RefObject } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';

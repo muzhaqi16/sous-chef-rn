@@ -1,5 +1,6 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -67,7 +68,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
   }, [expanded, chevronRotation]);
 
   const animatedChevronStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${chevronRotation.value}deg` }],
+    transform: [{ rotate: `${chevronRotation.get()}deg` }],
   }));
 
   // Find selected unit for collapsed display

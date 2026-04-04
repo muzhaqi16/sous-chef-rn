@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, Modal } from 'react-native';
+import { View, Text, Modal, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
@@ -50,10 +50,7 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
       navigationBarTranslucent
       onRequestClose={onDismiss}
     >
-      <Animated.View
-        style={styles.overlay}
-        testID="feature-hint-overlay"
-      >
+      <Animated.View style={styles.overlay} testID="feature-hint-overlay">
         <Pressable
           style={styles.backdrop}
           onPress={onDismiss}
@@ -79,11 +76,16 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
               ) : null}
 
               <Text style={styles.hintTitle}>{title}</Text>
-              {subtitle ? <Text style={styles.hintSubtitle}>{subtitle}</Text> : null}
+              {subtitle ? (
+                <Text style={styles.hintSubtitle}>{subtitle}</Text>
+              ) : null}
             </View>
 
             <Pressable
-              style={({pressed}) => [styles.dismissButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.dismissButton,
+                pressed && styles.pressed,
+              ]}
               onPress={onDismiss}
               testID="feature-hint-overlay-dismiss"
             >
@@ -115,7 +117,15 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.xl,
     maxWidth: 400,
     alignItems: 'center',
-    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 8, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.3)' }],
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 8,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.3)',
+      },
+    ],
   },
   hintContent: {
     alignItems: 'center',

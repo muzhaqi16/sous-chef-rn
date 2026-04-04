@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -29,11 +30,12 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   onCancel,
   loading = false,
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
-    onDismiss: onCancel,
-    snapPoints: ['55%', '70%'],
-    keyboardBehavior: 'interactive',
-  });
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      onDismiss: onCancel,
+      snapPoints: ['55%', '70%'],
+      keyboardBehavior: 'interactive',
+    });
   const [searchQuery, setSearchQuery] = useState('');
 
   // Reset search query when sheet opens (render-time state update)
@@ -75,8 +77,13 @@ export const TagPicker: React.FC<TagPickerProps> = ({
     const isSelected = selectedTags.includes(item);
     return (
       <Pressable
-        style={({pressed}) => [styles.tagItem, isSelected && styles.tagItemSelected, pressed && styles.pressed]}
-        onPress={() => handleToggleTag(item)}>
+        style={({ pressed }) => [
+          styles.tagItem,
+          isSelected && styles.tagItemSelected,
+          pressed && styles.pressed,
+        ]}
+        onPress={() => handleToggleTag(item)}
+      >
         <Icon
           name="pricetag-outline"
           size={20}
@@ -84,15 +91,12 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         />
         <Text
           style={[styles.tagName, isSelected && styles.tagNameSelected]}
-          numberOfLines={1}>
+          numberOfLines={1}
+        >
           {item}
         </Text>
         {!!isSelected && (
-          <Icon
-            name="checkmark"
-            size={20}
-            color={theme.colors.primary}
-          />
+          <Icon name="checkmark" size={20} color={theme.colors.primary} />
         )}
       </Pressable>
     );
@@ -101,10 +105,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetView
-        style={[
-          styles.bottomSheetContent,
-          contentContainerStyle,
-        ]}
+        style={[styles.bottomSheetContent, contentContainerStyle]}
       >
         <View style={styles.header}>
           <Text style={styles.title}>Filter by Tags</Text>
@@ -113,11 +114,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         {/* Search Input */}
         {tags.length > 5 && (
           <View style={styles.searchContainer}>
-            <Icon
-              name="search"
-              size={18}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="search" size={18} color={theme.colors.textSecondary} />
             <BottomSheetTextInput
               style={styles.searchInput}
               placeholder="Search tags..."
@@ -134,10 +131,15 @@ export const TagPicker: React.FC<TagPickerProps> = ({
           <Text style={styles.selectionText}>
             {selectedTags.length === 0
               ? 'No tags selected'
-              : `${selectedTags.length} tag${selectedTags.length > 1 ? 's' : ''} selected`}
+              : `${selectedTags.length} tag${
+                  selectedTags.length > 1 ? 's' : ''
+                } selected`}
           </Text>
           {selectedTags.length > 0 && (
-            <Pressable onPress={handleClearAll} style={({pressed}) => pressed && styles.pressed}>
+            <Pressable
+              onPress={handleClearAll}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
               <Text style={styles.clearText}>Clear all</Text>
             </Pressable>
           )}
@@ -171,7 +173,6 @@ export const TagPicker: React.FC<TagPickerProps> = ({
             <Text style={styles.emptyText}>No tags available</Text>
           </View>
         )}
-
       </BottomSheetView>
     </BottomSheetModal>
   );

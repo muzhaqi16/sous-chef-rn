@@ -4,9 +4,9 @@ import {
   Text,
   ActivityIndicator,
   RefreshControl,
-  Pressable,
   ScrollView,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   LinearTransition,
   FadeInDown,

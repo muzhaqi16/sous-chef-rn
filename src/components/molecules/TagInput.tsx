@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, Keyboard } from 'react-native';
+import { View, Text, Keyboard, ScrollView } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -43,18 +44,14 @@ export const TagInput: React.FC<TagInputProps> = ({
       .filter(
         suggestion =>
           suggestion.toLowerCase().includes(query) &&
-          !tags.includes(suggestion)
+          !tags.includes(suggestion),
       )
       .slice(0, 5);
   })();
 
   const handleAddTag = (tag: string) => {
     const trimmedTag = tag.trim();
-    if (
-      trimmedTag &&
-      !tags.includes(trimmedTag) &&
-      tags.length < maxTags
-    ) {
+    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < maxTags) {
       onTagsChange([...tags, trimmedTag]);
       setInputValue('');
       setInputKey(k => k + 1);
@@ -89,12 +86,9 @@ export const TagInput: React.FC<TagInputProps> = ({
               <Pressable
                 onPress={() => handleRemoveTag(tag)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={({pressed}) => pressed && styles.pressed}>
-                <Icon
-                  name="close"
-                  size={14}
-                  color={theme.colors.primary}
-                />
+                style={({ pressed }) => pressed && styles.pressed}
+              >
+                <Icon name="close" size={14} color={theme.colors.primary} />
               </Pressable>
             )}
           </View>
@@ -134,9 +128,7 @@ export const TagInput: React.FC<TagInputProps> = ({
 
       {/* Tag limit indicator */}
       {!!editable && tags.length >= maxTags && (
-        <Text style={styles.limitText}>
-          Maximum {maxTags} tags reached
-        </Text>
+        <Text style={styles.limitText}>Maximum {maxTags} tags reached</Text>
       )}
 
       {/* Suggestions dropdown */}
@@ -145,15 +137,20 @@ export const TagInput: React.FC<TagInputProps> = ({
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled">
+            keyboardShouldPersistTaps="handled"
+          >
             {filteredSuggestions.map((suggestion, index) => (
               <Pressable
                 key={`${suggestion}-${index}`}
-                style={({pressed}) => [styles.suggestionChip, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.suggestionChip,
+                  pressed && styles.pressed,
+                ]}
                 onPress={() => {
                   handleAddTag(suggestion);
                   Keyboard.dismiss();
-                }}>
+                }}
+              >
                 <Text style={styles.suggestionText}>{suggestion}</Text>
               </Pressable>
             ))}

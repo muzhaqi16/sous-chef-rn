@@ -1,15 +1,16 @@
-import React, {useState, useEffect, useRef} from 'react';
-import {View, Text, Pressable, ScrollView} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#/utils/iconUtils';
-import {Button} from '#components/base/Button';
-import {ActionTray} from '#components/templates/ActionTray/ActionTray';
-import type {ActionTrayRef} from '#components/templates/ActionTray/types';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#/utils/iconUtils';
+import { Button } from '#components/base/Button';
+import { ActionTray } from '#components/templates/ActionTray/ActionTray';
+import type { ActionTrayRef } from '#components/templates/ActionTray/types';
+import { Pressable } from 'react-native-gesture-handler';
 
 export interface ModalPickerProps {
   label: string;
   visible: boolean;
-  options: {label: string; value: string}[];
+  options: { label: string; value: string }[];
   selected: string;
   onSelect: (value: string) => void;
   onCancel: () => void;
@@ -26,7 +27,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
   onCancel,
   confirmLabel,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
   const trayRef = useRef<ActionTrayRef>(null);
 
   // Local pending selection for confirm mode
@@ -56,21 +57,18 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
         {options.map(opt => (
           <Pressable
             key={opt.value}
-            style={({pressed}) => [styles.option, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.option, pressed && styles.pressed]}
             onPress={() => {
               if (confirmLabel) {
                 setPendingValue(opt.value);
               } else {
                 onSelect(opt.value);
               }
-            }}>
+            }}
+          >
             <Text style={styles.optionText}>{opt.label}</Text>
             {activeValue === opt.value && (
-              <Icon
-                name="checkmark"
-                size={20}
-                color={theme.colors.primary}
-              />
+              <Icon name="checkmark" size={20} color={theme.colors.primary} />
             )}
           </Pressable>
         ))}

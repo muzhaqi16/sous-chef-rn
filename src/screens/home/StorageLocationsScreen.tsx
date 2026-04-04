@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
@@ -20,9 +21,9 @@ type RouteParams = {
   homeId: string;
 };
 
-export const StorageLocationsScreen: React.FC<{
-  route: { params: RouteParams };
-}> = ({ route }) => {
+export const StorageLocationsScreen: React.FC<
+  StaticScreenProps<RouteParams>
+> = ({ route }) => {
   useScreenTransition('StorageLocationsScreen');
   const { homeId } = route.params;
   const { goBack } = useAppNavigation();

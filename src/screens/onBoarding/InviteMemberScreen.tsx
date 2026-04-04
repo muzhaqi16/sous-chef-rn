@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Text, View, Pressable } from 'react-native';
+import { Text, View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';

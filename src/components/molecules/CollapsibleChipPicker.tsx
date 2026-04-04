@@ -1,5 +1,6 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -36,7 +37,7 @@ export const CollapsibleChipPicker = <T extends string>({
   }, [expanded, chevronRotation]);
 
   const animatedChevronStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${chevronRotation.value}deg` }],
+    transform: [{ rotate: `${chevronRotation.get()}deg` }],
   }));
 
   // Find selected option label for collapsed display

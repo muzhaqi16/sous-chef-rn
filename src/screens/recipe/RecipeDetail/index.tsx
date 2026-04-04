@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
-  Pressable,
   ActivityIndicator,
   Linking,
+  ScrollView,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import Animated, {
   useAnimatedScrollHandler,
@@ -311,7 +311,7 @@ const RecipeDetailScreen: React.FC = () => {
 
   const imageAnimatedStyle = useAnimatedStyle(() => {
     const scale = interpolate(
-      scrollY.value,
+      scrollY.get(),
       [0, 300],
       [1, 0.95],
       Extrapolation.CLAMP,

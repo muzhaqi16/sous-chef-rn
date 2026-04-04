@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, TextInput, Pressable, Keyboard } from 'react-native';
+import { View, TextInput, Keyboard } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 
@@ -52,12 +53,16 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
           accessibilityHint="Enter the quantity"
         />
         <Pressable
-          style={({pressed}) => [styles.addButton, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
           onPress={handleAdd}
           disabled={!itemName.trim()}
           accessibilityRole="button"
           accessibilityLabel="Add item"
-          accessibilityHint={itemName.trim() ? `Add ${itemName} to list` : 'Enter item name first'}
+          accessibilityHint={
+            itemName.trim()
+              ? `Add ${itemName} to list`
+              : 'Enter item name first'
+          }
           accessibilityState={{ disabled: !itemName.trim() }}
         >
           <Icon name="add" size={24} color="white" />

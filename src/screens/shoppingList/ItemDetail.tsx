@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useGetShoppingListItemQuery } from '#generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -20,9 +21,9 @@ type RouteParams = {
   itemId: string;
 };
 
-export const ShoppingListItemDetail: React.FC<{
-  route: { params: RouteParams };
-}> = ({ route }) => {
+export const ShoppingListItemDetail: React.FC<
+  StaticScreenProps<RouteParams>
+> = ({ route }) => {
   useScreenTransition('ShoppingListItemDetail');
   const { theme } = useUnistyles();
   const { navigate, goBack } = useAppNavigation();

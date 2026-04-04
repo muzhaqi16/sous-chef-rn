@@ -42,7 +42,7 @@ export function useCrossTabNavigation() {
     }
 
     // Modal dismissal scenario - navigate instead of reset to preserve state
-    const rootNavigator = navigation.getParent();
+    const rootNavigator = navigation.getParent('Home');
 
     if (rootNavigator) {
       // Navigate to Home with the specific tab
@@ -53,7 +53,8 @@ export function useCrossTabNavigation() {
           params: {
             screen: source.sourceTab,
             // Don't specify nested screen params - preserve the tab's current state
-          } })
+          },
+        }),
       );
     } else {
       goBack();

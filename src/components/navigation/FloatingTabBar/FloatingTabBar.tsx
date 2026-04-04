@@ -143,10 +143,10 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   // Scroll-driven tab bar hide (SharedValue from screen scroll handlers).
   // Skips when navigation/overlay is hiding the bar to prevent race conditions.
   useAnimatedReaction(
-    () => scrollTabBarHidden.value,
+    () => scrollTabBarHidden.get(),
     (hidden, prevHidden) => {
       if (hidden === prevHidden) return;
-      if (navHidden.value) return;
+      if (navHidden.get()) return;
       translateY.set(withSpring(hidden ? 150 : 0, SPRING.HEAVY));
       opacity.set(withTiming(hidden ? 0 : 1, { duration: TIMING.FAST }));
     },
@@ -154,8 +154,8 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
 
   // Animated style for smooth transitions
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-    opacity: opacity.value,
+    transform: [{ translateY: translateY.get() }],
+    opacity: opacity.get(),
   }));
 
   // Memoize container style

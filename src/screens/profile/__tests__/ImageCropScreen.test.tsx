@@ -32,6 +32,7 @@ jest.mock('react-native-gesture-handler', () => {
     minPointers: jest.fn().mockReturnThis(),
   });
   return {
+    Pressable: require('react-native').Pressable,
     Swipeable: View,
     DrawerLayout: View,
     State: {},

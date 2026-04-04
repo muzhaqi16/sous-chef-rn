@@ -1,6 +1,9 @@
 import React, { useState, useRef, useLayoutEffect, ComponentRef } from 'react';
-import { View, Text, Modal, Pressable } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { View, Text, Modal } from 'react-native';
+import {
+  GestureHandlerRootView,
+  Pressable,
+} from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { type SharedValue } from 'react-native-reanimated';
 import Animated, {
@@ -158,8 +161,8 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
 
   // Checkmark animation
   const checkAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: checkScale.value }],
-    opacity: checkScale.value,
+    transform: [{ scale: checkScale.get() }],
+    opacity: checkScale.get(),
   }));
 
   if (completed) {

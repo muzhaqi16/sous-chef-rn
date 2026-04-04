@@ -1,6 +1,6 @@
 import React from 'react';
-import { Text, Pressable, type StyleProp, type ViewStyle } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import { Text, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 
 export interface ChipOption<T> {

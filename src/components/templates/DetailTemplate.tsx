@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, Text, RefreshControl } from 'react-native';
+import { View, Text, RefreshControl, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '#utils/iconUtils';

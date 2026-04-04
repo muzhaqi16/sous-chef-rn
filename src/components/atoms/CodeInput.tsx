@@ -1,18 +1,19 @@
-import React, {useRef} from 'react';
-import {Text, TextInput, Pressable, View} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import React, { useRef } from 'react';
+import { Text, TextInput, View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { Pressable } from 'react-native-gesture-handler';
 
 export const CodeInput: React.FC<{
   value: string;
   onChange: (v: string) => void;
   error?: string;
-}> = ({value, onChange}) => {
+}> = ({ value, onChange }) => {
   const inputRef = useRef<TextInput>(null);
 
   return (
     <Pressable
       onPress={() => inputRef.current?.focus()}
-      style={({pressed}) => pressed && styles.pressed}
+      style={({ pressed }) => pressed && styles.pressed}
     >
       <View style={styles.formInput}>
         <TextInput
@@ -28,7 +29,7 @@ export const CodeInput: React.FC<{
           returnKeyType="done"
         />
         <View style={styles.formInputOverflow}>
-          {Array.from({length: 6}).map((_, idx) => (
+          {Array.from({ length: 6 }).map((_, idx) => (
             <Text key={idx} style={styles.formInputChar}>
               {value[idx] ?? <Text style={styles.formInputCharEmpty}>-</Text>}
             </Text>

@@ -16,6 +16,7 @@ import {
   withSequence,
   withTiming,
   withDelay,
+  cancelAnimation,
   Easing,
 } from 'react-native-reanimated';
 
@@ -40,6 +41,103 @@ const SIZES = {
   medium: { canvas: 180, scale: 0.9 },
   large: { canvas: 240, scale: 1.2 },
 };
+
+/** Build all Skia path objects for a given size configuration. */
+function buildPaths(cx: number, cy: number, scale: number) {
+  const baguette = Skia.Path.Make();
+  baguette.moveTo(cx - 25 * scale, cy - 45 * scale);
+  baguette.quadTo(
+    cx - 30 * scale,
+    cy - 55 * scale,
+    cx - 20 * scale,
+    cy - 70 * scale,
+  );
+  baguette.quadTo(
+    cx - 15 * scale,
+    cy - 80 * scale,
+    cx - 10 * scale,
+    cy - 75 * scale,
+  );
+  baguette.quadTo(
+    cx - 5 * scale,
+    cy - 65 * scale,
+    cx - 15 * scale,
+    cy - 45 * scale,
+  );
+  baguette.close();
+
+  const line1 = Skia.Path.Make();
+  line1.moveTo(cx - 22 * scale, cy - 55 * scale);
+  line1.lineTo(cx - 14 * scale, cy - 52 * scale);
+
+  const line2 = Skia.Path.Make();
+  line2.moveTo(cx - 20 * scale, cy - 62 * scale);
+  line2.lineTo(cx - 12 * scale, cy - 59 * scale);
+
+  const line3 = Skia.Path.Make();
+  line3.moveTo(cx - 17 * scale, cy - 69 * scale);
+  line3.lineTo(cx - 11 * scale, cy - 67 * scale);
+
+  const leaf1 = Skia.Path.Make();
+  leaf1.moveTo(cx + 20 * scale, cy - 40 * scale);
+  leaf1.quadTo(
+    cx + 30 * scale,
+    cy - 60 * scale,
+    cx + 25 * scale,
+    cy - 70 * scale,
+  );
+  leaf1.quadTo(
+    cx + 20 * scale,
+    cy - 65 * scale,
+    cx + 15 * scale,
+    cy - 50 * scale,
+  );
+  leaf1.close();
+
+  const leaf2 = Skia.Path.Make();
+  leaf2.moveTo(cx + 30 * scale, cy - 35 * scale);
+  leaf2.quadTo(
+    cx + 45 * scale,
+    cy - 50 * scale,
+    cx + 40 * scale,
+    cy - 60 * scale,
+  );
+  leaf2.quadTo(
+    cx + 35 * scale,
+    cy - 55 * scale,
+    cx + 25 * scale,
+    cy - 40 * scale,
+  );
+  leaf2.close();
+
+  const stem = Skia.Path.Make();
+  stem.moveTo(cx + 5 * scale, cy - 68 * scale);
+  stem.quadTo(
+    cx + 8 * scale,
+    cy - 73 * scale,
+    cx + 12 * scale,
+    cy - 71 * scale,
+  );
+  stem.quadTo(cx + 8 * scale, cy - 69 * scale, cx + 5 * scale, cy - 68 * scale);
+
+  return {
+    baguettePath: baguette,
+    baguetteLine1: line1,
+    baguetteLine2: line2,
+    baguetteLine3: line3,
+    leaf1Path: leaf1,
+    leaf2Path: leaf2,
+    stemPath: stem,
+  };
+}
+
+// Pre-build paths for each size at module scope (only 3 variants, created once)
+const PATH_CACHE = Object.fromEntries(
+  Object.entries(SIZES).map(([key, { canvas, scale }]) => [
+    key,
+    buildPaths(canvas / 2, canvas / 2, scale),
+  ]),
+) as Record<keyof typeof SIZES, ReturnType<typeof buildPaths>>;
 
 interface SousChefLoaderProps {
   size?: 'small' | 'medium' | 'large';
@@ -85,19 +183,25 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
 
     // Leaves bounce (delayed by 400ms on UI thread)
     leavesY.set(withDelay(400, bounce(8)));
+
+    return () => {
+      cancelAnimation(baguetteY);
+      cancelAnimation(tomatoY);
+      cancelAnimation(leavesY);
+    };
   }, [baguetteY, tomatoY, leavesY]);
 
   // Derived transforms for Skia
   const baguetteTransform = useDerivedValue(() => [
-    { translateY: baguetteY.value * config.scale },
+    { translateY: baguetteY.get() * config.scale },
   ]);
 
   const tomatoTransform = useDerivedValue(() => [
-    { translateY: tomatoY.value * config.scale },
+    { translateY: tomatoY.get() * config.scale },
   ]);
 
   const leavesTransform = useDerivedValue(() => [
-    { translateY: leavesY.value * config.scale },
+    { translateY: leavesY.get() * config.scale },
   ]);
 
   // Canvas center point
@@ -105,51 +209,16 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
   const cy = config.canvas / 2;
   const scale = config.scale;
 
-  // Memoize all Skia path objects to avoid re-creating native objects on every render
-  const baguette = Skia.Path.Make();
-  baguette.moveTo(cx - 25 * scale, cy - 45 * scale);
-  baguette.quadTo(cx - 30 * scale, cy - 55 * scale, cx - 20 * scale, cy - 70 * scale);
-  baguette.quadTo(cx - 15 * scale, cy - 80 * scale, cx - 10 * scale, cy - 75 * scale);
-  baguette.quadTo(cx - 5 * scale, cy - 65 * scale, cx - 15 * scale, cy - 45 * scale);
-  baguette.close();
-
-  const line1 = Skia.Path.Make();
-  line1.moveTo(cx - 22 * scale, cy - 55 * scale);
-  line1.lineTo(cx - 14 * scale, cy - 52 * scale);
-
-  const line2 = Skia.Path.Make();
-  line2.moveTo(cx - 20 * scale, cy - 62 * scale);
-  line2.lineTo(cx - 12 * scale, cy - 59 * scale);
-
-  const line3 = Skia.Path.Make();
-  line3.moveTo(cx - 17 * scale, cy - 69 * scale);
-  line3.lineTo(cx - 11 * scale, cy - 67 * scale);
-
-  const leaf1 = Skia.Path.Make();
-  leaf1.moveTo(cx + 20 * scale, cy - 40 * scale);
-  leaf1.quadTo(cx + 30 * scale, cy - 60 * scale, cx + 25 * scale, cy - 70 * scale);
-  leaf1.quadTo(cx + 20 * scale, cy - 65 * scale, cx + 15 * scale, cy - 50 * scale);
-  leaf1.close();
-
-  const leaf2 = Skia.Path.Make();
-  leaf2.moveTo(cx + 30 * scale, cy - 35 * scale);
-  leaf2.quadTo(cx + 45 * scale, cy - 50 * scale, cx + 40 * scale, cy - 60 * scale);
-  leaf2.quadTo(cx + 35 * scale, cy - 55 * scale, cx + 25 * scale, cy - 40 * scale);
-  leaf2.close();
-
-  const stem = Skia.Path.Make();
-  stem.moveTo(cx + 5 * scale, cy - 68 * scale);
-  stem.quadTo(cx + 8 * scale, cy - 73 * scale, cx + 12 * scale, cy - 71 * scale);
-  stem.quadTo(cx + 8 * scale, cy - 69 * scale, cx + 5 * scale, cy - 68 * scale);
-  const { baguettePath, baguetteLine1, baguetteLine2, baguetteLine3, leaf1Path, leaf2Path, stemPath } = {
-      baguettePath: baguette,
-      baguetteLine1: line1,
-      baguetteLine2: line2,
-      baguetteLine3: line3,
-      leaf1Path: leaf1,
-      leaf2Path: leaf2,
-      stemPath: stem,
-    };
+  // Use pre-built paths from module-scope cache (avoids native object allocation per render)
+  const {
+    baguettePath,
+    baguetteLine1,
+    baguetteLine2,
+    baguetteLine3,
+    leaf1Path,
+    leaf2Path,
+    stemPath,
+  } = PATH_CACHE[size];
 
   return (
     <View style={componentStyles.container}>
@@ -159,14 +228,16 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
             style={[
               componentStyles.brandTitle,
               { color: theme.colors.textPrimary },
-            ]}>
+            ]}
+          >
             Sous Chef
           </Text>
           <Text
             style={[
               componentStyles.brandSubtitle,
               { color: theme.colors.textSecondary },
-            ]}>
+            ]}
+          >
             Your Kitchen Assistant
           </Text>
         </View>
@@ -176,7 +247,8 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
         style={{
           width: config.canvas,
           height: config.canvas,
-        }}>
+        }}
+      >
         {/* Baguette (bounces independently) */}
         <Group transform={baguetteTransform}>
           <Path path={baguettePath} color={COLORS.baguette} />
@@ -268,7 +340,8 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
             marginTop: -35 * scale,
             width: 110 * scale,
           },
-        ]}>
+        ]}
+      >
         <Text
           style={[
             componentStyles.bannerText,
@@ -276,7 +349,8 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
               fontSize: theme.typography.fontSize['2xs'] * scale,
               color: COLORS.bannerText,
             },
-          ]}>
+          ]}
+        >
           {message.toUpperCase()}
         </Text>
       </View>

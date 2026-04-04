@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import PagerView from 'react-native-pager-view';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -37,7 +38,10 @@ const PageIndicator: React.FC<{
         <Pressable
           key={label}
           onPress={() => onPagePress(index)}
-          style={({pressed}) => [indicatorStyles.item, pressed && indicatorStyles.pressed]}
+          style={({ pressed }) => [
+            indicatorStyles.item,
+            pressed && indicatorStyles.pressed,
+          ]}
         >
           <View
             style={[
@@ -46,7 +50,8 @@ const PageIndicator: React.FC<{
                 backgroundColor:
                   currentPage === index
                     ? theme.colors.primary
-                    : theme.colors.border },
+                    : theme.colors.border,
+              },
             ]}
           />
           <Text
@@ -57,7 +62,8 @@ const PageIndicator: React.FC<{
                   currentPage === index
                     ? theme.colors.primary
                     : theme.colors.textSecondary,
-                fontWeight: currentPage === index ? '600' : '400' },
+                fontWeight: currentPage === index ? '600' : '400',
+              },
             ]}
           >
             {label}
@@ -76,18 +82,24 @@ const indicatorStyles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   item: {
     alignItems: 'center',
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   dot: {
     width: 8,
     height: 8,
-    borderRadius: theme.radii.full },
+    borderRadius: theme.radii.full,
+  },
   label: {
-    fontSize: theme.fonts.size.sm },
+    fontSize: theme.fonts.size.sm,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));
 
 export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   visible,
@@ -95,11 +107,13 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   prefilledItemName = '',
   storageLocations = [],
   onClose,
-  onSuccess }) => {
+  onSuccess,
+}) => {
   const { ref, modalProps, insets } = useStandardBottomSheet({
     visible: visible && !!pantryId,
     onDismiss: onClose,
-    snapPoints: ['75%', '90%'] });
+    snapPoints: ['75%', '90%'],
+  });
   const pagerRef = useRef<PagerView>(null);
 
   // Page state
@@ -126,7 +140,9 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   // Form state - Pantry Net Weight (on Page 2, always visible)
   const [pantryNetWeight, setPantryNetWeight] = useState('');
   const [pantryNetWeightUnit, setPantryNetWeightUnit] = useState('');
-  const [pantryNetWeightUnitId, setPantryNetWeightUnitId] = useState<string | null>(null);
+  const [pantryNetWeightUnitId, setPantryNetWeightUnitId] = useState<
+    string | null
+  >(null);
 
   // Form state - Page 2 (Details)
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
@@ -151,9 +167,14 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   // Render-time form reset: detect when sheet opens and reset all fields
   const [prevVisible, setPrevVisible] = useState(visible);
   const [prevPantryId, setPrevPantryId] = useState(pantryId);
-  const [prevPrefilledItemName, setPrevPrefilledItemName] = useState(prefilledItemName);
+  const [prevPrefilledItemName, setPrevPrefilledItemName] =
+    useState(prefilledItemName);
 
-  if (visible !== prevVisible || pantryId !== prevPantryId || prefilledItemName !== prevPrefilledItemName) {
+  if (
+    visible !== prevVisible ||
+    pantryId !== prevPantryId ||
+    prefilledItemName !== prevPrefilledItemName
+  ) {
     setPrevVisible(visible);
     setPrevPantryId(pantryId);
     setPrevPrefilledItemName(prefilledItemName);
@@ -198,40 +219,49 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
   // Handle unit selection
   const handleUnitSelected = (id: string | null, name: string | null) => {
-      setUnitId(id);
-      if (name) setUnit(name);
-    };
+    setUnitId(id);
+    if (name) setUnit(name);
+  };
 
   // Handle content unit selection
-  const handleContentUnitSelected = (id: string | null, name: string | null) => {
-      setContentUnitId(id);
-      if (name) setContentUnit(name);
-    };
+  const handleContentUnitSelected = (
+    id: string | null,
+    name: string | null,
+  ) => {
+    setContentUnitId(id);
+    if (name) setContentUnit(name);
+  };
 
   // Handle pantry net weight unit selection
-  const handlePantryNetWeightUnitSelected = (id: string | null, name: string | null) => {
-      setPantryNetWeightUnitId(id);
-      if (name) setPantryNetWeightUnit(name);
-    };
+  const handlePantryNetWeightUnitSelected = (
+    id: string | null,
+    name: string | null,
+  ) => {
+    setPantryNetWeightUnitId(id);
+    if (name) setPantryNetWeightUnit(name);
+  };
 
   // Handle weight unit selection
   const handleWeightUnitSelected = (id: string | null, name: string | null) => {
-      setWeightUnitId(id);
-      if (name) setWeightUnit(name);
-    };
+    setWeightUnitId(id);
+    if (name) setWeightUnit(name);
+  };
 
   // Handle storage location selection
-  const handleStorageLocationSelected = (locationId: string | null, location: StorageLocation | null) => {
-      setSelectedStorageLocationId(locationId);
-      // Auto-set storage state based on location temperature
-      if (location?.temperature) {
-        const temp = location.temperature.toLowerCase();
-        if (temp === 'frozen') setStorageState(StorageState.Frozen);
-        else if (temp === 'refrigerated')
-          setStorageState(StorageState.Refrigerated);
-        else setStorageState(StorageState.Ambient);
-      }
-    };
+  const handleStorageLocationSelected = (
+    locationId: string | null,
+    location: StorageLocation | null,
+  ) => {
+    setSelectedStorageLocationId(locationId);
+    // Auto-set storage state based on location temperature
+    if (location?.temperature) {
+      const temp = location.temperature.toLowerCase();
+      if (temp === 'frozen') setStorageState(StorageState.Frozen);
+      else if (temp === 'refrigerated')
+        setStorageState(StorageState.Refrigerated);
+      else setStorageState(StorageState.Ambient);
+    }
+  };
 
   // Handle add new storage location
   const handleAddNewLocation = (name: string) => {
@@ -241,8 +271,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
   // Handle brand selection
   const handleBrandSelected = (brandId: string | null) => {
-      setSelectedBrandId(brandId);
-    };
+    setSelectedBrandId(brandId);
+  };
 
   // Handle page change
   const handlePageChange = (index: number) => {
@@ -275,7 +305,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     minQuantity,
     restockQuantity,
     onSuccess,
-    handlePageChange });
+    handlePageChange,
+  });
 
   return (
     <BottomSheetModal
@@ -289,13 +320,20 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         <View style={styles.header}>
           <Pressable
             onPress={onClose}
-            style={({pressed}) => [styles.cancelButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.cancelButton,
+              pressed && styles.pressed,
+            ]}
           >
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </Pressable>
           <Text style={styles.title}>Add Item Details</Text>
           <Pressable
-            style={({pressed}) => [styles.saveButton, loading && styles.saveButtonDisabled, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.saveButton,
+              loading && styles.saveButtonDisabled,
+              pressed && styles.pressed,
+            ]}
             onPress={handleConfirm}
             disabled={loading}
             testID="add-pantry-item-submit-button"
@@ -347,7 +385,9 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             setPantryNetWeight={setPantryNetWeight}
             pantryNetWeightUnit={pantryNetWeightUnit}
             setPantryNetWeightUnit={setPantryNetWeightUnit}
-            handlePantryNetWeightUnitSelected={handlePantryNetWeightUnitSelected}
+            handlePantryNetWeightUnitSelected={
+              handlePantryNetWeightUnitSelected
+            }
             showPackageDetails={showPackageDetails}
             setShowPackageDetails={setShowPackageDetails}
             packageSize={packageSize}
@@ -393,37 +433,48 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    flex: 1 },
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md },
+    paddingVertical: theme.spacing.md,
+  },
   cancelButton: {
-    minWidth: 60 },
+    minWidth: 60,
+  },
   cancelButtonText: {
     color: theme.colors.textSecondary,
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   title: {
     flex: 1,
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   saveButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md },
+    borderRadius: theme.radii.md,
+  },
   saveButtonDisabled: {
-    opacity: theme.opacity.disabled },
+    opacity: theme.opacity.disabled,
+  },
   saveButtonText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   pager: {
-    flex: 1 },
+    flex: 1,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

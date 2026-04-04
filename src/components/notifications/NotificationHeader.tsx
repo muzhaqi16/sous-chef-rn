@@ -1,7 +1,8 @@
 import React from 'react';
-import {View, Text, Pressable} from 'react-native';
-import {Icon} from '#utils/iconUtils';
-import {StyleSheet} from 'react-native-unistyles';
+import { View, Text } from 'react-native';
+import { Icon } from '#utils/iconUtils';
+import { StyleSheet } from 'react-native-unistyles';
+import { Pressable } from 'react-native-gesture-handler';
 
 interface NotificationHeaderProps {
   onMarkAllRead: () => void;
@@ -18,12 +19,18 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
 
   return (
     <View style={styles.container}>
-      <Pressable style={({pressed}) => [styles.button, pressed && styles.pressed]} onPress={onMarkAllRead}>
+      <Pressable
+        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+        onPress={onMarkAllRead}
+      >
         <Icon name="checkmark-done" size={20} color={styles.buttonText.color} />
         <Text style={styles.buttonText}>Mark all read</Text>
       </Pressable>
 
-      <Pressable style={({pressed}) => [styles.button, pressed && styles.pressed]} onPress={onClearAll}>
+      <Pressable
+        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+        onPress={onClearAll}
+      >
         <Icon name="list-outline" size={20} color={styles.buttonText.color} />
         <Text style={styles.buttonText}>Clear all</Text>
       </Pressable>

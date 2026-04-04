@@ -6,6 +6,7 @@ import Animated, {
   withRepeat,
   withTiming,
   interpolate,
+  cancelAnimation,
   Easing,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
@@ -46,20 +47,26 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
 
   useLayoutEffect(() => {
     if (animated) {
-      shimmerTranslate.set(withRepeat(
-        withTiming(1, {
-          duration: 1500,
-          easing: Easing.ease,
-        }),
-        -1, // infinite
-        false, // don't reverse
-      ));
+      shimmerTranslate.set(
+        withRepeat(
+          withTiming(1, {
+            duration: 1500,
+            easing: Easing.ease,
+          }),
+          -1, // infinite
+          false, // don't reverse
+        ),
+      );
     }
+
+    return () => {
+      cancelAnimation(shimmerTranslate);
+    };
   }, [animated, shimmerTranslate]);
 
   const animatedStyle = useAnimatedStyle(() => {
     const translateX = interpolate(
-      shimmerTranslate.value,
+      shimmerTranslate.get(),
       [0, 1],
       [-300, 300], // Shimmer moves from left to right
     );
@@ -84,7 +91,9 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
       {/* UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View */}
       {!!animated && (
         <View style={styles.shimmer}>
-          <Animated.View style={[{ width: '100%', height: '100%' }, animatedStyle]} />
+          <Animated.View
+            style={[{ width: '100%', height: '100%' }, animatedStyle]}
+          />
         </View>
       )}
     </View>

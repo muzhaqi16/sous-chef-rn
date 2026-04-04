@@ -4,7 +4,8 @@ import React, {
   useRef,
   useImperativeHandle,
 } from 'react';
-import { View, Pressable, RefreshControl } from 'react-native';
+import { View, RefreshControl } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import {
   FlashList,
   type FlashListRef,

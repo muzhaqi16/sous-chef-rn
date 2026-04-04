@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Pressable,
   Text,
   Image,
   Dimensions,
-  ScrollView,
   ActivityIndicator,
   Platform,
+  ScrollView,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';

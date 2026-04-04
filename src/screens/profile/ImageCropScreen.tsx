@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { View, Pressable, Text, Image, Dimensions } from 'react-native';
+import { View, Text, Image, Dimensions } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import {
+  Gesture,
+  GestureDetector,
+  Pressable,
+} from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
