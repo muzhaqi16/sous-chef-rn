@@ -1,10 +1,9 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
-import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Button } from '../base/Button';
 import { Icon } from '#utils/iconUtils';
 import {
@@ -13,6 +12,7 @@ import {
 } from '#generated';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { ROLE_PERMISSIONS } from '#/constants/collaboratorRoles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 interface CollaboratorPermissionsBottomSheetProps {
   shoppingListId: string;
@@ -35,13 +35,23 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   CollaboratorPermissionsBottomSheetRef,
   Omit<CollaboratorPermissionsBottomSheetProps, 'collaborator'>
 >(({ shoppingListId, onSuccess }, ref) => {
-  const { theme } = useUnistyles();
-  const bottomSheetRef = React.useRef<BottomSheet>(null);
   const [collaborator, setCollaborator] = useState<any>(null);
   const [selectedRole, setSelectedRole] = useState<CollaboratorRole | null>(
     null,
   );
+  const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    ref: bottomSheetRef,
+    modalProps,
+    contentContainerStyle,
+    theme,
+  } = useStandardBottomSheet({
+    visible: isVisible,
+    onDismiss: () => setIsVisible(false),
+    snapPoints: ['75%', '90%'],
+  });
 
   const [updateRole] = useUpdateCollaboratorRoleMutation();
 
@@ -49,10 +59,10 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     open: (collab: any) => {
       setCollaborator(collab);
       setSelectedRole(collab.role);
-      bottomSheetRef.current?.expand();
+      setIsVisible(true);
     },
     close: () => {
-      bottomSheetRef.current?.close();
+      setIsVisible(false);
     },
   }));
 
@@ -64,7 +74,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
     if (selectedRole === collaborator.role) {
       // No change, just close
-      bottomSheetRef.current?.close();
+      setIsVisible(false);
       return;
     }
 
@@ -80,7 +90,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
           },
         });
 
-        bottomSheetRef.current?.close();
+        setIsVisible(false);
         onSuccess?.();
       },
       setIsSubmitting,
@@ -91,11 +101,6 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
         );
       },
     );
-  };
-
-  const handleClose = () => {
-    // Don't clear state here - open() always sets fresh data
-    // Clearing here causes race conditions when user quickly reopens the sheet
   };
 
   // Available roles (excluding OWNER - that's only for list owners)
@@ -110,21 +115,10 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   if (!collaborator) return null;
 
   return (
-    <BottomSheet
-      ref={bottomSheetRef}
-      snapPoints={['75%', '90%']}
-      enableDynamicSizing={false}
-      maxDynamicContentSize={Dimensions.get('window').height * 0.85}
-      onClose={handleClose}
-      enablePanDownToClose
-      animateOnMount={true}
-      backdropComponent={DismissBackdrop}
-      backgroundStyle={{ backgroundColor: theme.colors.surface }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-    >
+    <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
       <BottomSheetScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>Edit Permissions</Text>
@@ -225,7 +219,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
             )}
           </Button>
           <Button
-            onPress={() => bottomSheetRef.current?.close()}
+            onPress={() => setIsVisible(false)}
             variant="secondary"
             disabled={isSubmitting}
             style={styles.cancelButton}
@@ -234,7 +228,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
           </Button>
         </View>
       </BottomSheetScrollView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 });
 
@@ -336,7 +330,6 @@ const styles = StyleSheet.create(theme => ({
   actions: {
     gap: theme.spacing.sm,
     marginTop: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
   },
   submitButton: {
     backgroundColor: theme.colors.primary,

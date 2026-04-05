@@ -3,7 +3,7 @@ import { Text } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import { createPropsComparator } from '#utils/memoUtils';
+
 import { useIngredientSelector } from './IngredientSelectorContext';
 
 // ── Ingredient list item components (FlashList compatible) ──
@@ -34,20 +34,7 @@ const IngredientItemComponent: React.FC<{
   );
 };
 
-const areIngredientItemPropsEqual = createPropsComparator<{
-  name: string;
-  selected: boolean;
-  onToggle: (name: string) => void;
-  primaryColor: string;
-  textSecondary: string;
-}>({
-  referenceKeys: ['name', 'selected', 'primaryColor', 'textSecondary'],
-});
-
-const IngredientItem = React.memo(
-  IngredientItemComponent,
-  areIngredientItemPropsEqual,
-);
+const IngredientItem = IngredientItemComponent;
 
 export const ingredientKeyExtractor = (item: any) => item.id;
 

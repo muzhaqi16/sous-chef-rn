@@ -36,7 +36,7 @@ import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
 import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
 import { useRecipeReviews } from '#/hooks/recipe/useRecipeReviews';
 import { ReviewSection } from '#/components/recipe/ReviewSection';
-import { createPropsComparator } from '#utils/memoUtils';
+
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useRecipeDetail } from './useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
@@ -100,27 +100,7 @@ const SelectableIngredientItemComponent: React.FC<
   );
 };
 
-// PERFORMANCE: Custom comparator for React.memo — value-equality on nested item fields
-type SelectableItemRenderInfo = ListRenderItemInfo<
-  SelectableIngredientItemProps['item']
-> & {
-  primaryColor: string;
-  textSecondary: string;
-};
-
-const areIngredientPropsEqual = createPropsComparator<SelectableItemRenderInfo>(
-  {
-    referenceKeys: ['primaryColor', 'textSecondary'],
-    nestedComparisons: {
-      item: ['id', 'name', 'quantity'],
-    },
-  },
-);
-
-const SelectableIngredientItem = React.memo(
-  SelectableIngredientItemComponent,
-  areIngredientPropsEqual,
-);
+const SelectableIngredientItem = SelectableIngredientItemComponent;
 
 const getSelectableIngredientItemType = () => 'item';
 

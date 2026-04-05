@@ -23,7 +23,7 @@ import {
   type TutorialStep,
 } from '#hooks/ui/useTutorialSequence';
 import { commonStyles } from '#/styles/commonStyles';
-import { createPropsComparator } from '#utils/memoUtils';
+
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import {
   FilteredItemsActionsProvider,
@@ -192,18 +192,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
   );
 };
 
-const arePropsEqual = createPropsComparator<FilteredRenderItemProps>({
-  referenceKeys: ['primaryColor', 'onCartMeasure', 'subtitleFn', 'showCart'],
-  nestedComparisons: {
-    item: ['id', 'itemName', 'quantity', 'expiresAt'],
-    'item.unit': ['symbol'],
-  },
-});
-
-const FilteredRenderItem = React.memo(
-  FilteredRenderItemComponent,
-  arePropsEqual,
-);
+const FilteredRenderItem = FilteredRenderItemComponent;
 
 // ── Empty state ──
 

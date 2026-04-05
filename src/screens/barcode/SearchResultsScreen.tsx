@@ -110,7 +110,7 @@ export const SearchResultsScreen: React.FC<
 
   const handleBackPress = () => {
     // Dismiss the Barcode modal stack to reveal Home
-    const rootNavigator = navigation.getParent('Barcode');
+    const rootNavigator = navigation.getParent();
     if (rootNavigator?.canGoBack()) {
       rootNavigator.goBack();
     } else {

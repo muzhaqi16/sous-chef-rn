@@ -5,7 +5,7 @@ import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { createPropsComparator } from '#utils/memoUtils';
+
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { IngredientMatchRow } from '#components/recipe/IngredientMatchRow';
@@ -37,22 +37,7 @@ const IngredientMatchRenderItemComponent = ({
   );
 };
 
-const areMatchPropsEqual = createPropsComparator<{
-  item: EditableMatch;
-  index: number;
-}>({
-  referenceKeys: ['index'],
-  nestedComparisons: {
-    item: ['adjustedQuantity', 'isIncluded'],
-    'item.match': [],
-    'item.match.ingredient': ['id', 'name'],
-  },
-});
-
-const IngredientMatchRenderItem = React.memo(
-  IngredientMatchRenderItemComponent,
-  areMatchPropsEqual,
-);
+const IngredientMatchRenderItem = IngredientMatchRenderItemComponent;
 
 const renderItem = ({ item, index }: ListRenderItemInfo<EditableMatch>) => (
   <IngredientMatchRenderItem item={item} index={index} />

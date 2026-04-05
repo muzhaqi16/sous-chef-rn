@@ -5,7 +5,6 @@ import { FlashList } from '@shopify/flash-list';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { createPropsComparator } from '#utils/memoUtils';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { TemplateCard } from './TemplateCard';
 import {
@@ -41,18 +40,7 @@ const TemplateBrowserRenderItemComponent: React.FC<{
   return <TemplateCard template={item} onPress={onSelectTemplate} />;
 };
 
-const areTemplatePropsEqual = createPropsComparator<{
-  item: MealTemplateDisplayFragment;
-}>({
-  nestedComparisons: {
-    item: ['id', 'name', 'description'],
-  },
-});
-
-const TemplateBrowserRenderItem = React.memo(
-  TemplateBrowserRenderItemComponent,
-  areTemplatePropsEqual,
-);
+const TemplateBrowserRenderItem = TemplateBrowserRenderItemComponent;
 
 const renderTemplate = ({ item }: { item: MealTemplateDisplayFragment }) => (
   <TemplateBrowserRenderItem item={item} />

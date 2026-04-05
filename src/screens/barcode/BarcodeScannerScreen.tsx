@@ -125,7 +125,7 @@ export const BarcodeScannerScreen: React.FC<
 
   const handleGoBack = () => {
     // Dismiss the Barcode modal stack to reveal Home
-    const rootNavigator = navigation.getParent('Barcode');
+    const rootNavigator = navigation.getParent();
     if (rootNavigator?.canGoBack()) {
       rootNavigator.goBack();
     } else {

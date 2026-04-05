@@ -6,7 +6,7 @@ import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { NotificationItem as NotificationType } from '#store/slices/notificationSlice';
 import { getNotificationIcon } from '#utils/notifications/notificationHelpers';
 import { safeParseDate } from '#utils/dateUtils';
-import { createPropsComparator } from '#utils/memoUtils';
+
 import { Pressable } from 'react-native-gesture-handler';
 
 interface NotificationItemProps {
@@ -144,16 +144,4 @@ const styles = StyleSheet.create(theme => ({
   },
 }));
 
-// PERFORMANCE: Custom comparator — value-equality on notification fields,
-// ignores callback reference changes (callbacks are functionally stable)
-const areNotificationItemPropsEqual =
-  createPropsComparator<NotificationItemProps>({
-    nestedComparisons: {
-      notification: ['id', 'isRead', 'title', 'message', 'sentAt'],
-    },
-  });
-
-export const NotificationItem = React.memo(
-  NotificationItemComponent,
-  areNotificationItemPropsEqual,
-);
+export const NotificationItem = NotificationItemComponent;

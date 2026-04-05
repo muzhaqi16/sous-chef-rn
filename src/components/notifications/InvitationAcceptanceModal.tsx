@@ -3,6 +3,7 @@ import { View, Text, Modal, ActivityIndicator, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { useApolloClient } from '@apollo/client/react';
+import type { ApolloCache } from '@apollo/client';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
 import {
@@ -19,16 +20,7 @@ import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 
 /** Module-level cache updater to keep try-catch out of the component body (React Compiler). */
-function updateShoppingListCache(
-  cache: Parameters<
-    Parameters<typeof createAddToQueryFieldUpdater>[0] extends string
-      ? never
-      : never
-  >[0] extends never
-    ? any
-    : any,
-  collaborator: any,
-): void {
+function updateShoppingListCache(cache: ApolloCache, collaborator: any): void {
   try {
     const addToShoppingListsCache =
       createAddToQueryFieldUpdater('shoppingLists');

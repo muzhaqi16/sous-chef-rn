@@ -4,6 +4,19 @@
 - estimatedItemSize has been deprecated in version 2 of flashlist and to never use it which is the version that is app is uisng
 - **Never use `InteractionManager` from `react-native`.** It has been deprecated. Avoid long-running work on the JS thread and use `requestIdleCallback` instead for deferring non-urgent tasks.
 
+### Bottom Sheet Convention
+
+- **Always use `BottomSheetModal`** (not `BottomSheet`) from `@gorhom/bottom-sheet`.
+  The app uses a global backdrop system (`OverlayBackdropProvider` + `GlobalBackdrop`
+  rendered at the App level). `BottomSheet` renders inline and its backdrop conflicts
+  with the global overlay, causing the backdrop to appear on top of the sheet content.
+  `BottomSheetModal` is portal-based and renders inside `BottomSheetModalProvider` at the
+  correct stacking order.
+- **Always use `useStandardBottomSheet`** from `src/hooks/useStandardBottomSheet.ts`.
+  It provides the ref, standard `modalProps` (backdrop, animations, insets, back handler),
+  and `contentContainerStyle`. Control visibility via a `visible` boolean state + `onDismiss`
+  callback — never call `present()` / `dismiss()` directly outside of an effect.
+
 ### Pressable & Modal Convention
 
 - **Use `Pressable` from `react-native-gesture-handler`** as the default across the app.
@@ -35,12 +48,11 @@
   pattern (`useState` + conditional `setState`) for comparing previous/current values.
 - **Hook return objects are auto-memoized by the compiler** — but only if the compiler doesn't
   bail out. Once try-catch is extracted, return objects like `{ actions }` become stable automatically.
-- **`React.memo` is unnecessary for most components** — the compiler caches JSX elements at the
-  parent call site, making `React.memo` redundant. **Exception: FlashList/FlatList `renderItem`
-  components** still need `React.memo` because the parent call site is either module-scope
-  (not compiled) or library internals (not compiled), so there is no compiled parent to cache
-  the element. Custom comparators doing value-equality on nested fields (via `createPropsComparator`)
-  remain valuable since the compiler only uses reference equality (`===`).
+- **`React.memo` is unnecessary** — the compiler caches JSX elements at the parent call site,
+  making `React.memo` redundant. This includes FlashList/FlatList `renderItem` components:
+  FlashList v2's `ViewHolder` already applies `===` reference equality on `item`, and the
+  compiler memoizes inline `renderItem` functions in compiled parents. Do not add `React.memo`
+  or custom comparators to any component.
 
 ### `scheduleOnRN` Worklet Convention
 

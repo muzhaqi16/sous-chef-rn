@@ -7,7 +7,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
 import { BackButton } from '#components/atoms/BackButton';
 import { commonStyles } from '#/styles/commonStyles';
-import { createPropsComparator } from '#utils/memoUtils';
+
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import {
   PurchaseHistoryProvider,
@@ -95,19 +95,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
   );
 };
 
-// PERFORMANCE: Custom comparator for React.memo
-const arePurchaseItemPropsEqual =
-  createPropsComparator<PurchaseHistoryItemProps>({
-    referenceKeys: ['index', 'iconSecondaryColor'],
-    nestedComparisons: {
-      item: ['id', 'purchaseDate', 'quantity', 'unitSymbol'],
-    },
-  });
-
-const PurchaseHistoryItem = React.memo(
-  PurchaseHistoryItemComponent,
-  arePurchaseItemPropsEqual,
-);
+const PurchaseHistoryItem = PurchaseHistoryItemComponent;
 
 const getPurchaseItemType = () => 'item';
 

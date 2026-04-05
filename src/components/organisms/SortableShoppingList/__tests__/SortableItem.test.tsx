@@ -10,7 +10,13 @@ jest.mock('#/components/molecules/SwipeableItem/SwipeableItem', () => ({
 }));
 
 jest.mock('#/components/molecules/ListItem', () => ({
-  ListItem: ({ title, subtitle, checkboxElement, leftElement, rightElement }: any) => {
+  ListItem: ({
+    title,
+    subtitle,
+    checkboxElement,
+    leftElement,
+    rightElement,
+  }: any) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="list-item">
@@ -63,10 +69,6 @@ jest.mock('#/styles/commonStyles', () => ({
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
-}));
-
-jest.mock('#utils/memoUtils', () => ({
-  createPropsComparator: () => () => false,
 }));
 
 jest.mock('#/constants/touch', () => ({

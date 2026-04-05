@@ -28,6 +28,12 @@ describe('validateImageFile', () => {
       ).not.toThrow();
     });
 
+    it('accepts image/jpg', () => {
+      expect(() =>
+        validateImageFile({ type: 'image/jpg', size: 1000 }),
+      ).not.toThrow();
+    });
+
     it('accepts fileSize (react-native-image-picker)', () => {
       expect(() =>
         validateImageFile({ type: 'image/jpeg', fileSize: 1000 }),
@@ -157,9 +163,10 @@ describe('createImageValidationError', () => {
 });
 
 describe('constants', () => {
-  it('ALLOWED_IMAGE_TYPES includes 3 types', () => {
+  it('ALLOWED_IMAGE_TYPES includes 4 types', () => {
     expect(ALLOWED_IMAGE_TYPES).toEqual([
       'image/jpeg',
+      'image/jpg',
       'image/png',
       'image/webp',
     ]);
