@@ -1,11 +1,11 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { Button } from '../base/Button';
 import { Icon } from '#utils/iconUtils';
+import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import {
   CollaboratorRole,
   useUpdateCollaboratorRoleMutation,
@@ -116,12 +116,18 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
   return (
     <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
+      <BottomSheetHeader
+        title="Edit Permissions"
+        onCancel={() => setIsVisible(false)}
+        onConfirm={handleSubmit}
+        confirmLabel="Update"
+        confirmDisabled={isSubmitting || !selectedRole}
+      />
       <BottomSheetScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Edit Permissions</Text>
         <Text style={styles.subtitle}>{collaborator.email}</Text>
 
         <View style={styles.rolesContainer}>
@@ -205,28 +211,6 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
             );
           })}
         </View>
-
-        <View style={styles.actions}>
-          <Button
-            onPress={handleSubmit}
-            disabled={isSubmitting || !selectedRole}
-            style={styles.submitButton}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color="white" size="small" />
-            ) : (
-              'Update Role'
-            )}
-          </Button>
-          <Button
-            onPress={() => setIsVisible(false)}
-            variant="secondary"
-            disabled={isSubmitting}
-            style={styles.cancelButton}
-          >
-            Cancel
-          </Button>
-        </View>
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
@@ -238,12 +222,6 @@ const styles = StyleSheet.create(theme => ({
   },
   scrollContent: {
     padding: theme.spacing.lg,
-  },
-  title: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
   },
   subtitle: {
     fontSize: theme.fonts.size.md,
@@ -326,16 +304,6 @@ const styles = StyleSheet.create(theme => ({
   permissionDenied: {
     color: theme.colors.textSecondary,
     textDecorationLine: 'line-through',
-  },
-  actions: {
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
-  },
-  submitButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
   },
   pressed: {
     opacity: theme.opacity.pressed,

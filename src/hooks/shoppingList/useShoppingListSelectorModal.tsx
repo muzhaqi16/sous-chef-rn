@@ -185,15 +185,9 @@ export function useShoppingListSelectorModal({
 
             if (!result) return;
 
-            // If current list was deleted, fall back to another list
+            // Clear selection — useShoppingListSelection auto-selects the next list
             if (currentListId && idsToDelete.includes(currentListId)) {
-              const remaining = listDataWithOwnership.filter(
-                l => !idsToDelete.includes(l.id),
-              );
-              const defaultList = remaining.find(l => l.isDefault);
-              useStore
-                .getState()
-                .setSelectedShoppingListId(defaultList?.id || null);
+              useStore.getState().setSelectedShoppingListId(null);
             }
 
             toastService.success(

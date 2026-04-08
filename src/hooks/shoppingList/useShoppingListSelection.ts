@@ -1,67 +1,93 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore, selectShoppingListState } from '#store/useAppStore';
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 
 /**
- * useShoppingListSelection - Shopping list selection
+ * useShoppingListSelection - Centralized shopping list selection
  *
  * Shows all shopping lists (no home-based filtering).
  * Grouping by home is handled in the UI layer (selector modal).
  *
- * Auto-selects first list when no valid selection exists.
+ * Handles:
+ * - Auto-selecting a default list when selection is null
+ * - Pending selections: when the user switches to a newly created list that
+ *   hasn't appeared in query results yet, the auto-select is suppressed
+ * - Stale detection: when a list is removed (subscription/deletion), auto-select fires
+ *
+ * Deletion callers should set selectedShoppingListId to null — auto-select handles the rest.
  */
 export function useShoppingListSelection(lists: ShoppingListFromQuery[]) {
   const { selectedShoppingListId, setSelectedShoppingListId } = useAppStore(
     useShallow(selectShoppingListState),
   );
 
-  // Show all lists - grouping by home is handled in the UI layer
-  const relevantLists = lists;
+  // Default: first with isDefault flag, or first list
+  const defaultList = lists.find(list => list.isDefault) || lists[0];
 
-  // Default: first with isDefault flag from relevant lists, or first relevant list
-  const defaultList = relevantLists.find(list => list.isDefault) || relevantLists[0];
+  const isInLists =
+    !!selectedShoppingListId &&
+    lists.some(l => l.id === selectedShoppingListId);
+
+  // --- Pending selection tracking ---
+  // When the user explicitly switches from one list to another (e.g., creates a new
+  // list), the target may not be in query results yet. We track this as "pending" so
+  // the auto-select effect doesn't override it.
+  // Uses "adjusting state during render" pattern per project conventions.
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [prevSelectedId, setPrevSelectedId] = useState(selectedShoppingListId);
+
+  if (selectedShoppingListId !== prevSelectedId) {
+    setPrevSelectedId(selectedShoppingListId);
+    // Only mark pending for explicit list switches (non-null → non-null, target not
+    // yet in results). Null → non-null (hydration/bootstrap) and anything → null
+    // (deletion) are NOT pending, preserving stale-ID correction and auto-select.
+    if (
+      prevSelectedId !== null &&
+      selectedShoppingListId !== null &&
+      !lists.some(l => l.id === selectedShoppingListId)
+    ) {
+      setPendingId(selectedShoppingListId);
+    } else {
+      setPendingId(null);
+    }
+  }
+
+  // Clear pending when the target list appears in query results
+  if (pendingId && lists.some(l => l.id === pendingId)) {
+    setPendingId(null);
+  }
 
   // Derive currentListId: use selected if valid, otherwise use default
-  const currentListId = (() => {
-    if (
-      selectedShoppingListId &&
-      relevantLists.some(l => l.id === selectedShoppingListId)
-    ) {
-      return selectedShoppingListId;
-    }
-    return defaultList?.id;
-  })();
+  const currentListId = isInLists ? selectedShoppingListId : defaultList?.id;
 
   // Current list object
-  const currentList = relevantLists.find(list => list.id === currentListId) || defaultList;
+  const currentList =
+    lists.find(list => list.id === currentListId) || defaultList;
 
   // Auto-select when lists load and current selection is invalid
   useEffect(() => {
-    // Skip if no lists available yet (query still loading)
-    if (relevantLists.length === 0) return;
+    if (lists.length === 0) return;
 
-    // Check if current selection is valid
+    // Don't override a pending user selection — the cache hasn't caught up yet
+    if (pendingId) return;
+
     const hasValidSelection =
       selectedShoppingListId &&
-      relevantLists.some(l => l.id === selectedShoppingListId);
-
-    // Skip if already have valid selection
+      lists.some(l => l.id === selectedShoppingListId);
     if (hasValidSelection) return;
 
-    // Auto-select: first with isDefault flag, or first list
-    const listToSelect =
-      relevantLists.find(l => l.isDefault) || relevantLists[0];
+    const listToSelect = lists.find(l => l.isDefault) || lists[0];
     if (listToSelect?.id) {
       setSelectedShoppingListId(listToSelect.id);
     }
-  }, [relevantLists, selectedShoppingListId, setSelectedShoppingListId]);
+  }, [lists, selectedShoppingListId, pendingId, setSelectedShoppingListId]);
 
   // PERF: Trust persisted Zustand ID for queries before lists finish loading.
   // This breaks the query waterfall: detail/items queries fire immediately
   // instead of waiting for GetShoppingListsLite to resolve first.
   // If the ID is stale (list was deleted), the detail query returns null
-  // and we fall back to the default list reactively via the useEffect above.
+  // and we fall back to the default list reactively via the auto-select effect.
   const optimisticListId = selectedShoppingListId ?? currentListId;
 
   return {

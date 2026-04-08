@@ -37,6 +37,7 @@ import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
+import { ChipScrollRow } from '#components/atoms/ChipScrollRow';
 
 const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingList',
@@ -49,6 +50,11 @@ const removeCollaboratorFromCache = createRemoveFromParentConnectionUpdater(
   'collaboratorsConnection',
   'ShoppingListCollaborator',
 );
+
+const ROLE_OPTIONS = INVITE_ROLES.map(role => ({
+  key: role,
+  label: `${ROLE_PERMISSIONS[role].icon} ${ROLE_PERMISSIONS[role].label}`,
+}));
 
 // PERFORMANCE: Helper functions moved outside component to avoid recreation on every render
 const getStatusColor = (
@@ -364,145 +370,122 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               </View>
             </View>
           ) : (
-            <View style={styles.inviteSection}>
-              <Text style={styles.sectionTitle}>Invite Members</Text>
-              <View style={styles.inputRow}>
-                <EmailInput
-                  containerStyle={styles.emailInputContainer}
-                  value={email}
-                  onChangeText={setEmail}
-                />
+            <>
+              <View style={styles.shareCodeSection}>
+                <Text style={styles.sectionTitle}>Share via Code</Text>
+                <Text style={styles.shareCodeDescription}>
+                  Enable public sharing to generate a code anyone can use to
+                  join this list.
+                </Text>
                 <Pressable
                   style={({ pressed }) => [
-                    styles.sendButton,
+                    styles.shareCodeToggle,
                     pressed && styles.pressed,
                   ]}
-                  onPress={handleShare}
-                  disabled={sharing}
+                  onPress={handleToggleShareCode}
+                  disabled={togglingShareCode}
                 >
-                  {sharing ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <Icon name="send" size={20} color="white" />
-                  )}
-                </Pressable>
-              </View>
-              <Text style={styles.roleLabel}>Role</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.roleRow}
-              >
-                {INVITE_ROLES.map(role => {
-                  const info = ROLE_PERMISSIONS[role];
-                  const isSelected = selectedRole === role;
-                  return (
-                    <Pressable
-                      key={role}
-                      style={({ pressed }) => [
-                        styles.roleChip,
-                        isSelected && styles.roleChipSelected,
-                        pressed && styles.pressed,
-                      ]}
-                      onPress={() => setSelectedRole(role)}
-                    >
-                      <Text style={styles.roleChipIcon}>{info.icon}</Text>
-                      <Text
-                        style={[
-                          styles.roleChipText,
-                          isSelected && styles.roleChipTextSelected,
-                        ]}
-                      >
-                        {info.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-
-          {!isHomeLinked && (
-            <View style={styles.shareCodeSection}>
-              <Text style={styles.sectionTitle}>Share via Code</Text>
-              <Text style={styles.shareCodeDescription}>
-                Enable public sharing to generate a code anyone can use to join
-                this list.
-              </Text>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.shareCodeToggle,
-                  pressed && styles.pressed,
-                ]}
-                onPress={handleToggleShareCode}
-                disabled={togglingShareCode}
-              >
-                <View style={styles.shareCodeToggleContent}>
-                  <Icon
-                    name={isPublic ? 'link-outline' : 'lock-closed-outline'}
-                    size={20}
-                    color={
-                      isPublic
-                        ? theme.colors.primary
-                        : theme.colors.textSecondary
-                    }
-                  />
-                  <Text style={styles.shareCodeToggleText}>
-                    {isPublic
-                      ? 'Public sharing enabled'
-                      : 'Public sharing disabled'}
-                  </Text>
-                </View>
-                {togglingShareCode ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.primary}
-                  />
-                ) : (
-                  <View
-                    style={[
-                      styles.toggleTrack,
-                      isPublic && styles.toggleTrackActive,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.toggleThumb,
-                        isPublic && styles.toggleThumbActive,
-                      ]}
-                    />
-                  </View>
-                )}
-              </Pressable>
-              {isPublic && shareCode ? (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.shareCodeDisplay,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={handleCopyShareCode}
-                >
-                  <Text style={styles.shareCodeValue}>{shareCode}</Text>
-                  <View style={styles.copyButton}>
+                  <View style={styles.shareCodeToggleContent}>
                     <Icon
-                      name={copied ? 'checkmark' : 'copy-outline'}
-                      size={18}
+                      name={isPublic ? 'link-outline' : 'lock-closed-outline'}
+                      size={20}
                       color={
-                        copied ? theme.colors.success : theme.colors.primary
+                        isPublic
+                          ? theme.colors.primary
+                          : theme.colors.textSecondary
                       }
                     />
-                    <Text
-                      style={[
-                        styles.copyText,
-                        copied && { color: theme.colors.success },
-                      ]}
-                    >
-                      {copied ? 'Copied' : 'Copy'}
+                    <Text style={styles.shareCodeToggleText}>
+                      {isPublic
+                        ? 'Public sharing enabled'
+                        : 'Public sharing disabled'}
                     </Text>
                   </View>
+                  {togglingShareCode ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={theme.colors.primary}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.toggleTrack,
+                        isPublic && styles.toggleTrackActive,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.toggleThumb,
+                          isPublic && styles.toggleThumbActive,
+                        ]}
+                      />
+                    </View>
+                  )}
                 </Pressable>
-              ) : null}
-            </View>
+                {isPublic && shareCode ? (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.shareCodeDisplay,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={handleCopyShareCode}
+                  >
+                    <Text style={styles.shareCodeValue}>{shareCode}</Text>
+                    <View style={styles.copyButton}>
+                      <Icon
+                        name={copied ? 'checkmark' : 'copy-outline'}
+                        size={18}
+                        color={
+                          copied ? theme.colors.success : theme.colors.primary
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.copyText,
+                          copied && { color: theme.colors.success },
+                        ]}
+                      >
+                        {copied ? 'Copied' : 'Copy'}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ) : null}
+              </View>
+
+              <View style={styles.inviteSection}>
+                <Text style={styles.sectionTitle}>Invite Members</Text>
+                <View style={styles.inputRow}>
+                  <EmailInput
+                    containerStyle={styles.emailInputContainer}
+                    value={email}
+                    onChangeText={setEmail}
+                  />
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.sendButton,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={handleShare}
+                    disabled={sharing}
+                  >
+                    {sharing ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <Icon name="send" size={20} color="white" />
+                    )}
+                  </Pressable>
+                </View>
+                <Text style={styles.roleLabel}>Role</Text>
+                <ChipScrollRow
+                  options={ROLE_OPTIONS}
+                  selected={selectedRole}
+                  onSelect={setSelectedRole}
+                  size="md"
+                  style={styles.chipScroll}
+                  contentContainerStyle={styles.chipRowContent}
+                />
+              </View>
+            </>
           )}
 
           {activeCollaborators.length > 0 && (
@@ -662,35 +645,11 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
-  roleRow: {
-    gap: theme.spacing.sm,
+  chipScroll: {
+    marginHorizontal: -theme.spacing.md,
   },
-  roleChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.pill,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    gap: theme.spacing.xs,
-  },
-  roleChipSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary + '15',
-  },
-  roleChipIcon: {
-    fontSize: theme.typography.fontSize.sm,
-  },
-  roleChipText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  roleChipTextSelected: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
+  chipRowContent: {
+    paddingHorizontal: theme.spacing.md,
   },
   shareCodeSection: {
     padding: theme.spacing.md,

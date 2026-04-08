@@ -11,12 +11,31 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#components/base/Button', () => ({
-  Button: ({ children, onPress, disabled }: any) => {
+jest.mock('#components/atoms/BottomSheetHeader', () => ({
+  BottomSheetHeader: ({
+    title,
+    cancelLabel,
+    confirmLabel,
+    onCancel,
+    onConfirm,
+    confirmDisabled,
+  }: any) => {
     const RN = require('react-native');
     const R = require('react');
-    return R.createElement(RN.Pressable, { onPress, disabled },
-      typeof children === 'string' ? R.createElement(RN.Text, null, children) : children,
+    return R.createElement(
+      RN.View,
+      null,
+      R.createElement(
+        RN.Pressable,
+        { onPress: onCancel },
+        R.createElement(RN.Text, null, cancelLabel ?? 'Cancel'),
+      ),
+      R.createElement(RN.Text, null, title),
+      R.createElement(
+        RN.Pressable,
+        { onPress: onConfirm, disabled: confirmDisabled },
+        R.createElement(RN.Text, null, confirmLabel ?? 'Save'),
+      ),
     );
   },
 }));
@@ -27,7 +46,10 @@ jest.mock('#components/atoms/GlobalBottomSheetBackdrop', () => ({
 
 jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
-  useUpdateCollaboratorRoleMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+  useUpdateCollaboratorRoleMutation: jest.fn(() => [
+    jest.fn(),
+    { loading: false },
+  ]),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -95,7 +117,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
     expect(screen.getByText('Editor')).toBeTruthy();
   });
 
-  it('renders Update Role and Cancel buttons', () => {
+  it('renders Update and Cancel in the header', () => {
     const ref = React.createRef<any>();
     renderWithProviders(
       <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
@@ -109,7 +131,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
         status: 'active',
       });
     });
-    expect(screen.getByText('Update Role')).toBeTruthy();
+    expect(screen.getByText('Update')).toBeTruthy();
     expect(screen.getByText('Cancel')).toBeTruthy();
   });
 });

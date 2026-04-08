@@ -11,7 +11,6 @@ import { InfoRow } from '#components/molecules/InfoRow';
 import { useShoppingListDetails } from '#hooks/shoppingList/useShoppingListDetails';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useLazyHomeData } from '#/hooks/home/useLazyHomeData';
-import { useShoppingListsQuery } from '#hooks/shoppingList/useShoppingListsQuery';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import {
   useUpdateShoppingListMutation,
@@ -86,9 +85,6 @@ export const ListSettings: React.FC<
   // Use lazy loading for homes data to avoid triggering Zustand store updates
   // that would cause ShoppingListMain to re-render
   const { homes, fetchHomeData, isLoaded: homesLoaded } = useLazyHomeData();
-
-  // Get lists for finding default list after delete
-  const { lists } = useShoppingListsQuery();
 
   // Check if current user is the owner
   const isOwner =
@@ -224,13 +220,8 @@ export const ListSettings: React.FC<
               async () => {
                 await deleteList({ variables: { id: listId! } });
 
-                // Find next list to select (default list from remaining lists)
-                const remainingLists = lists.filter(l => l.id !== listId);
-                const defaultList = remainingLists.find(l => l.isDefault);
-
-                // Set default list if found, otherwise null to trigger auto-select
-                const nextListId = defaultList?.id || null;
-                setSelectedShoppingListId(nextListId);
+                // Clear selection — useShoppingListSelection auto-selects the next list
+                setSelectedShoppingListId(null);
                 // Use goBack() to pop ListSettings off the stack, unmounting its
                 // query watcher so late subscription updates can't trigger a refetch
                 goBack();

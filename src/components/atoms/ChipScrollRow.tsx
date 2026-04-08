@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, type StyleProp, type ViewStyle } from 'react-native';
+import { View, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { Pressable, ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -12,6 +12,7 @@ interface ChipScrollRowProps<T> {
   options: ChipOption<T>[];
   selected: T;
   onSelect: (key: T) => void;
+  size?: 'sm' | 'md';
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
 }
@@ -20,9 +21,11 @@ export function ChipScrollRow<T>({
   options,
   selected,
   onSelect,
+  size = 'sm',
   style,
   contentContainerStyle,
 }: ChipScrollRowProps<T>) {
+  styles.useVariants({ size });
   return (
     <ScrollView
       horizontal
@@ -33,14 +36,14 @@ export function ChipScrollRow<T>({
       {options.map(opt => {
         const isActive = selected === opt.key;
         return (
-          <Pressable
-            key={opt.label}
-            onPress={() => onSelect(opt.key)}
-            style={[styles.chip, isActive && styles.chipActive]}
-          >
-            <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-              {opt.label}
-            </Text>
+          <Pressable key={opt.label} onPress={() => onSelect(opt.key)}>
+            <View style={[styles.chip, isActive && styles.chipActive]}>
+              <Text
+                style={[styles.chipText, isActive && styles.chipTextActive]}
+              >
+                {opt.label}
+              </Text>
+            </View>
           </Pressable>
         );
       })}
@@ -53,24 +56,44 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   chip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.lg,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    variants: {
+      size: {
+        sm: {
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: theme.spacing.xs,
+        },
+        md: {
+          paddingHorizontal: theme.spacing['5'],
+          paddingVertical: theme.spacing.sm,
+        },
+      },
+    },
   },
   chipActive: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
   chipText: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     includeFontPadding: false,
     textAlignVertical: 'center',
+    variants: {
+      size: {
+        sm: {
+          fontSize: theme.fonts.size.sm,
+        },
+        md: {
+          fontSize: theme.fonts.size.md,
+        },
+      },
+    },
   },
   chipTextActive: {
     color: theme.colors.white,
