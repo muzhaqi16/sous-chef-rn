@@ -26,7 +26,9 @@ export const RecipeSkeleton: React.FC = () => (
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing['3'],
+    paddingTop: theme.spacing.xs,
+    paddingBottom: theme.spacing.md,
     gap: theme.spacing.sm,
   },
   itemList: {

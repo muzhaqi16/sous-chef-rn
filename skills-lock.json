@@ -6,6 +6,11 @@
       "sourceType": "github",
       "computedHash": "052dbba0f84ad2376c07e60c9619d7088d8e728a0107ff00c5bf47e8c7ad2923"
     },
+    "react-native-best-practices": {
+      "source": "callstackincubator/agent-skills",
+      "sourceType": "github",
+      "computedHash": "bad5e73a1c3ddca2ed4bcd93b05ff913e8f9cc5495feacc3717c69e07fee540f"
+    },
     "upgrade-react-navigation": {
       "source": "react-navigation/skills",
       "sourceType": "github",
