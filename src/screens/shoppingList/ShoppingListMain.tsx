@@ -7,6 +7,7 @@ import { FilterTabBar } from '#components/organisms/ShoppingListTabs/FilterTabBa
 import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { ShoppingListSkeleton } from '#components/base/Skeleton/ShoppingListSkeleton';
+import { TabMainScreen } from '#components/templates/TabMainScreen';
 
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
@@ -75,7 +76,7 @@ export const ShoppingListMain: React.FC = () => (
   <ShoppingListErrorBoundary>
     <DeferredScreen
       fallback={
-        <View style={styles.container} testID="shopping-list-screen">
+        <TabMainScreen testID="shopping-list-screen">
           <TabScreenHeader label="Shopping list" title="Shopping List" />
           <View style={styles.searchBarContainer}>
             <SearchBar
@@ -92,7 +93,7 @@ export const ShoppingListMain: React.FC = () => (
             counts={{ shopping: 0, purchased: 0 }}
           />
           <ShoppingListSkeleton />
-        </View>
+        </TabMainScreen>
       }
       component={ShoppingListMainInner}
     />
@@ -100,10 +101,6 @@ export const ShoppingListMain: React.FC = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   searchBarContainer: {
     paddingHorizontal: theme.spacing['3'],
   },

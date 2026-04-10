@@ -5,6 +5,7 @@ import type { FieldValues, Control, FieldErrors } from 'react-hook-form';
 import { DynamicFormFields, FieldDef } from '../molecules/DynamicFormFields';
 import { Button } from '../base/Button';
 import { BackButton } from '../atoms/BackButton';
+import { Link } from '../atoms/Link';
 import { Pressable } from 'react-native-gesture-handler';
 
 interface Props<T extends FieldValues> {
@@ -68,13 +69,11 @@ export function AuthFormTemplate<T extends FieldValues>({
       <DynamicFormFields<T> fields={fields} control={control} errors={errors} />
 
       {!!linkText && !!onLinkPress && (
-        <Pressable
-          onPress={onLinkPress}
-          testID={linkTestID}
-          style={({ pressed }) => pressed && styles.pressed}
-        >
-          <Text style={styles.link}>{linkText}</Text>
-        </Pressable>
+        <View style={styles.linkRow}>
+          <Link onPress={onLinkPress} testID={linkTestID}>
+            {linkText}
+          </Link>
+        </View>
       )}
 
       <View style={styles.action}>
@@ -98,13 +97,11 @@ export function AuthFormTemplate<T extends FieldValues>({
             style={[styles.footer, footerLinkDisabled && styles.footerDisabled]}
           >
             {footerText}{' '}
-            <Text
-              style={[styles.link, footerLinkDisabled && styles.linkDisabled]}
-            >
+            <Link disabled={footerLinkDisabled}>
               {footerLinkCountdown && footerLinkCountdown > 0
                 ? `${footerLinkText} (${footerLinkCountdown}s)`
                 : footerLinkText}
-            </Text>
+            </Link>
           </Text>
         </Pressable>
       )}
@@ -139,11 +136,8 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
   },
-  link: {
-    textAlign: 'right',
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
-    textDecorationLine: 'underline',
+  linkRow: {
+    alignItems: 'flex-end',
   },
   action: {
     marginVertical: theme.spacing.xl,
@@ -156,9 +150,6 @@ const styles = StyleSheet.create(theme => ({
   },
   footerDisabled: {
     opacity: theme.opacity.disabled,
-  },
-  linkDisabled: {
-    textDecorationLine: 'none',
   },
   pressed: {
     opacity: theme.opacity.pressed,

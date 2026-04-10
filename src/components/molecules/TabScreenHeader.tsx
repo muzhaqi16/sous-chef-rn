@@ -58,7 +58,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
   leftContent: {

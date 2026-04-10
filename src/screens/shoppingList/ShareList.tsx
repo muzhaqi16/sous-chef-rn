@@ -38,6 +38,9 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
 import { ChipScrollRow } from '#components/atoms/ChipScrollRow';
+import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { getFormAnimationPreset } from '#/constants/animations';
 
 const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingList',
@@ -175,7 +178,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               'Failed to update share settings',
           );
         }
-        await refetch();
+        // No refetch needed: the mutation returns shoppingList { id, shareCode, isPublic }
+        // which Apollo normalizes by ShoppingList:${id}, auto-updating the cache.
       },
       setTogglingShareCode,
       error => {
@@ -227,7 +231,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           );
         }
         setEmail('');
-        await refetch();
+        // No refetch needed: the update() callback above already inserts the
+        // new collaborator into the cached collaboratorsConnection.
       },
       setSharing,
       error => {
@@ -258,7 +263,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                   });
                 },
               });
-              refetch();
+              // No refetch needed: the update() callback removes the
+              // collaborator from the cached connection in place.
             } catch {
               alertService.alert('Error', 'Failed to remove member');
             }
@@ -324,7 +330,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     );
   };
 
-  if (loading) {
+  // Only block the UI on the initial cold load. usePreservedQueryData keeps
+  // shoppingList truthy across refetches, so this avoids the full-screen flash
+  // every time a mutation triggers a refetch.
+  if (loading && !shoppingList) {
     return <LoadingInline />;
   }
 
@@ -385,7 +394,11 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                   onPress={handleToggleShareCode}
                   disabled={togglingShareCode}
                 >
-                  <View style={styles.shareCodeToggleContent}>
+                  <Animated.View
+                    key={isPublic ? 'public-on' : 'public-off'}
+                    entering={FadeIn.duration(200)}
+                    style={styles.shareCodeToggleContent}
+                  >
                     <Icon
                       name={isPublic ? 'link-outline' : 'lock-closed-outline'}
                       size={20}
@@ -400,55 +413,59 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                         ? 'Public sharing enabled'
                         : 'Public sharing disabled'}
                     </Text>
-                  </View>
-                  {togglingShareCode ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={theme.colors.primary}
-                    />
-                  ) : (
-                    <View
-                      style={[
-                        styles.toggleTrack,
-                        isPublic && styles.toggleTrackActive,
-                      ]}
-                    >
+                  </Animated.View>
+                  <View style={styles.toggleSlot}>
+                    {togglingShareCode ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={theme.colors.primary}
+                      />
+                    ) : (
                       <View
                         style={[
-                          styles.toggleThumb,
-                          isPublic && styles.toggleThumbActive,
-                        ]}
-                      />
-                    </View>
-                  )}
-                </Pressable>
-                {isPublic && shareCode ? (
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.shareCodeDisplay,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={handleCopyShareCode}
-                  >
-                    <Text style={styles.shareCodeValue}>{shareCode}</Text>
-                    <View style={styles.copyButton}>
-                      <Icon
-                        name={copied ? 'checkmark' : 'copy-outline'}
-                        size={18}
-                        color={
-                          copied ? theme.colors.success : theme.colors.primary
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.copyText,
-                          copied && { color: theme.colors.success },
+                          styles.toggleTrack,
+                          isPublic && styles.toggleTrackActive,
                         ]}
                       >
-                        {copied ? 'Copied' : 'Copy'}
-                      </Text>
-                    </View>
-                  </Pressable>
+                        <View
+                          style={[
+                            styles.toggleThumb,
+                            isPublic && styles.toggleThumbActive,
+                          ]}
+                        />
+                      </View>
+                    )}
+                  </View>
+                </Pressable>
+                {isPublic && shareCode ? (
+                  <Animated.View {...getFormAnimationPreset()}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.shareCodeDisplay,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={handleCopyShareCode}
+                    >
+                      <Text style={styles.shareCodeValue}>{shareCode}</Text>
+                      <View style={styles.copyButton}>
+                        <Icon
+                          name={copied ? 'checkmark' : 'copy-outline'}
+                          size={18}
+                          color={
+                            copied ? theme.colors.success : theme.colors.primary
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.copyText,
+                            copied && { color: theme.colors.success },
+                          ]}
+                        >
+                          {copied ? 'Copied' : 'Copy'}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  </Animated.View>
                 ) : null}
               </View>
 
@@ -494,6 +511,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               {activeCollaborators.map(member => {
                 const statusColor = getStatusColor(member.status, theme.colors);
                 const statusText = formatStatus(member.status);
+                const displayName = getCollaboratorDisplayName(
+                  member,
+                  currentUser?.id,
+                );
+                const memberEmail =
+                  member.collaborator?.email ?? member.email ?? '';
+                const showEmailRow =
+                  !!memberEmail && memberEmail !== displayName;
                 return (
                   <Pressable
                     key={member.id}
@@ -508,16 +533,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                     <View style={styles.memberInfo}>
                       <View style={styles.avatar}>
                         <Text style={styles.avatarText}>
-                          {member.email?.[0]?.toUpperCase() || '?'}
+                          {displayName[0]?.toUpperCase() || '?'}
                         </Text>
                       </View>
                       <View style={styles.memberDetails}>
-                        <Text style={styles.memberName}>
-                          {member.email || 'Unknown'}
-                        </Text>
-                        <Text style={styles.memberEmail}>
-                          {member.email || ''}
-                        </Text>
+                        <Text style={styles.memberName}>{displayName}</Text>
+                        {showEmailRow ? (
+                          <Text style={styles.memberEmail}>{memberEmail}</Text>
+                        ) : null}
                         <View style={styles.statusContainer}>
                           <View
                             style={[
@@ -679,6 +702,12 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
     fontWeight: theme.fonts.weight.medium,
+  },
+  toggleSlot: {
+    width: 44,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   toggleTrack: {
     width: 44,

@@ -20,6 +20,7 @@ import {
   type SearchBarAction,
 } from '#components/molecules/SearchBar';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import { TabMainScreen } from '#components/templates/TabMainScreen';
 import { Icon } from '#/utils/iconUtils';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
@@ -426,7 +427,7 @@ const RecipeMainInner: React.FC = () => {
   );
 
   return (
-    <View key={themeKey} style={styles.container} testID="recipes-screen">
+    <TabMainScreen key={themeKey} testID="recipes-screen">
       {(screen.discovery.loading || screen.searchLoading) &&
       !screen.showSearchResults ? (
         <>
@@ -502,7 +503,7 @@ const RecipeMainInner: React.FC = () => {
           }}
         />
       ) : null}
-    </View>
+    </TabMainScreen>
   );
 };
 
@@ -511,7 +512,7 @@ const noop = () => {};
 export const RecipeMain: React.FC = () => (
   <DeferredScreen
     fallback={
-      <View style={styles.container} testID="recipes-screen">
+      <TabMainScreen testID="recipes-screen">
         <TabScreenHeader label="What to cook?" title="Recipes" />
         <View style={styles.searchBarContainer}>
           <SearchBar
@@ -523,14 +524,13 @@ export const RecipeMain: React.FC = () => (
           />
         </View>
         <RecipeSkeleton />
-      </View>
+      </TabMainScreen>
     }
     component={RecipeMainInner}
   />
 );
 
 const styles = StyleSheet.create(theme => ({
-  container: { flex: 1, backgroundColor: theme.colors.background },
   searchBarContainer: { paddingHorizontal: theme.spacing['3'] },
   headerActions: {
     flexDirection: 'row',

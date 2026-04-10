@@ -77,7 +77,6 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   chipActive: {
-    backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
   chipText: {
@@ -96,7 +95,7 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   chipTextActive: {
-    color: theme.colors.white,
+    color: theme.colors.primary,
     fontWeight: theme.fonts.weight.medium,
   },
 }));

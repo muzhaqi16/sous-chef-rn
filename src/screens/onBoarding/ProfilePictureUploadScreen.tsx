@@ -12,6 +12,7 @@ import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
+import { Link } from '#components/atoms/Link';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
@@ -401,24 +402,14 @@ export const ProfilePictureUploadScreen = () => {
           </Text>
 
           <View style={styles.formFooterLinks}>
-            <Pressable
+            <Link
               onPress={() => {
                 // handle onPress
               }}
-              style={({ pressed }) => [
-                styles.formFooterLink,
-                pressed && styles.pressed,
-              ]}
+              style={styles.formFooterLinkText}
             >
-              <Text
-                style={[
-                  styles.formFooterLinkText,
-                  { color: theme.colors.primary },
-                ]}
-              >
-                Terms of Service
-              </Text>
-            </Pressable>
+              Terms of Service
+            </Link>
 
             <Text
               style={[
@@ -431,24 +422,14 @@ export const ProfilePictureUploadScreen = () => {
               {'   '}
             </Text>
 
-            <Pressable
+            <Link
               onPress={() => {
                 // handle onPress
               }}
-              style={({ pressed }) => [
-                styles.formFooterLink,
-                pressed && styles.pressed,
-              ]}
+              style={styles.formFooterLinkText}
             >
-              <Text
-                style={[
-                  styles.formFooterLinkText,
-                  { color: theme.colors.primary },
-                ]}
-              >
-                Privacy Policy
-              </Text>
-            </Pressable>
+              Privacy Policy
+            </Link>
           </View>
         </View>
       </ScrollView>
@@ -589,14 +570,9 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
     gap: theme.spacing.xs,
   },
-  formFooterLink: {
-    // Empty style for Pressable wrapper
-  },
   formFooterLinkText: {
     fontSize: theme.typography.fontSize.sm - 1,
     lineHeight: theme.typography.lineHeight.tight,
-    textDecorationLine: 'underline',
-    textDecorationStyle: 'solid',
   },
   nextText: {
     fontSize: theme.typography.fontSize.md,

@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { CommonActions } from '@react-navigation/native';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
 import { Button } from '#components/base/Button';
+import { Link } from '#components/atoms/Link';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { getWebAppUrl } from '#utils/environment';
 
@@ -62,8 +63,8 @@ export function LandingAuthScreen() {
         >
           <Text style={styles.footerText}>
             By continuing, you agree to our{'\n'}
-            <Text style={styles.link}>Terms & Conditions</Text> and{' '}
-            <Text style={styles.link}>Privacy Policy</Text>.
+            <Link variant="subtle">Terms & Conditions</Link> and{' '}
+            <Link variant="subtle">Privacy Policy</Link>.
           </Text>
         </Pressable>
       </View>
@@ -128,12 +129,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: theme.spacing.lg,
-  },
-  link: {
-    color: theme.colors.textOnSurfaceVariant,
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    textDecorationLine: 'underline',
   },
   pressed: {
     opacity: theme.opacity.pressed,

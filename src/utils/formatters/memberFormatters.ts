@@ -1,3 +1,5 @@
+import type { ShoppingListCollaboratorFragment } from '#/graphql/generated';
+
 /**
  * Member interface for type safety
  */
@@ -66,4 +68,47 @@ export function getMemberDisplayName(
     'Unknown Member';
 
   return displayName;
+}
+
+/**
+ * Minimal shape needed to resolve a shopping list collaborator's display name.
+ * Picked from the generated `ShoppingListCollaboratorFragment` so the function
+ * stays in sync with the GraphQL schema and accepts any object that matches
+ * what the fragment queries.
+ */
+export type CollaboratorDisplayShape = Pick<
+  ShoppingListCollaboratorFragment,
+  'email' | 'collaboratorId' | 'collaborator'
+>;
+
+/**
+ * Display name for a ShoppingListCollaborator.
+ *
+ * Unlike `getMemberDisplayName`, this reads from the `collaborator` sub-object
+ * (matching the GraphQL fragment shape) and only uses `displayName` from the
+ * profile — firstName/lastName aren't queried for shopping list collaborators.
+ *
+ * Priority order:
+ * 1. "You" if current user
+ * 2. collaborator.profile.displayName
+ * 3. email username (part before @)
+ * 4. full email
+ * 5. "Unknown"
+ */
+export function getCollaboratorDisplayName(
+  collaborator: CollaboratorDisplayShape,
+  currentUserId?: string,
+): string {
+  if (currentUserId && collaborator.collaboratorId === currentUserId) {
+    return 'You';
+  }
+
+  const email = collaborator.collaborator?.email ?? collaborator.email ?? null;
+
+  return (
+    collaborator.collaborator?.profile?.displayName ||
+    email?.split('@')[0] ||
+    email ||
+    'Unknown'
+  );
 }

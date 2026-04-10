@@ -5,6 +5,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import { TabMainScreen } from '#components/templates/TabMainScreen';
 import { WeekStrip } from '#components/mealPlan/WeekStrip';
 import { MonthCalendar } from '#components/mealPlan/MonthCalendar';
 import { DayMealList } from '#components/mealPlan/DayMealList';
@@ -71,10 +72,10 @@ async function executeMealPlanRefresh(
 export const MealPlanMain: React.FC = () => (
   <DeferredScreen
     fallback={
-      <View style={styles.container} testID="meal-plan-screen">
+      <TabMainScreen testID="meal-plan-screen">
         <TabScreenHeader label="Plan your meals" title="Meal Plan" />
         <MealPlanSkeleton />
-      </View>
+      </TabMainScreen>
     }
     component={MealPlanMainInner}
   />
@@ -179,10 +180,7 @@ const MealPlanMainInner: React.FC = () => {
   });
 
   // Daily meals for selected date
-  const { dailyMeals, totalCalories, isEmpty } = useDailyMeals(
-    items,
-    calendar.selectedDate,
-  );
+  const { dailyMeals, isEmpty } = useDailyMeals(items, calendar.selectedDate);
 
   // Meal plan item actions
   const { createItem, updateItem, toggleCompleted, deleteItem } =
@@ -423,7 +421,7 @@ const MealPlanMainInner: React.FC = () => {
   // Show empty state if no plans exist and not loading
   if (!plansLoading && mealPlans.length === 0) {
     return (
-      <View style={styles.container} testID="meal-plan-screen">
+      <TabMainScreen testID="meal-plan-screen">
         <TabScreenHeader label="Plan your meals" title="Meal Plan" />
         <MealPlanEmptyState
           onCreatePlan={handleCreatePlan}
@@ -448,12 +446,12 @@ const MealPlanMainInner: React.FC = () => {
           onConfirm={handleCreateFromTemplate}
           confirmLoading={creatingFromTemplate}
         />
-      </View>
+      </TabMainScreen>
     );
   }
 
   return (
-    <View key={themeKey} style={styles.container} testID="meal-plan-screen">
+    <TabMainScreen key={themeKey} testID="meal-plan-screen">
       <View style={styles.headerRow}>
         <View style={styles.headerContent}>
           <TabScreenHeader
@@ -549,7 +547,6 @@ const MealPlanMainInner: React.FC = () => {
       <DayMealList
         selectedDate={calendar.selectedDate}
         dailyMeals={dailyMeals}
-        totalCalories={totalCalories}
         isEmpty={isEmpty}
         onToggleCompleted={
           permissions.canEdit ? handleToggleCompleted : undefined
@@ -672,15 +669,11 @@ const MealPlanMainInner: React.FC = () => {
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       />
-    </View>
+    </TabMainScreen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

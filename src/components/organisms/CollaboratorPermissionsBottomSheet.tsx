@@ -8,34 +8,30 @@ import { Icon } from '#utils/iconUtils';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import {
   CollaboratorRole,
+  ShoppingListCollaboratorFragment,
   useUpdateCollaboratorRoleMutation,
 } from '#generated';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { ROLE_PERMISSIONS } from '#/constants/collaboratorRoles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
 
 interface CollaboratorPermissionsBottomSheetProps {
   shoppingListId: string;
-  collaborator: {
-    id: string;
-    collaboratorId?: string;
-    email: string;
-    role: CollaboratorRole;
-    status: string;
-  } | null;
   onSuccess?: () => void;
 }
 
 export interface CollaboratorPermissionsBottomSheetRef {
-  open: (collaborator: any) => void;
+  open: (collaborator: ShoppingListCollaboratorFragment) => void;
   close: () => void;
 }
 
 const CollaboratorPermissionsBottomSheet = forwardRef<
   CollaboratorPermissionsBottomSheetRef,
-  Omit<CollaboratorPermissionsBottomSheetProps, 'collaborator'>
+  CollaboratorPermissionsBottomSheetProps
 >(({ shoppingListId, onSuccess }, ref) => {
-  const [collaborator, setCollaborator] = useState<any>(null);
+  const [collaborator, setCollaborator] =
+    useState<ShoppingListCollaboratorFragment | null>(null);
   const [selectedRole, setSelectedRole] = useState<CollaboratorRole | null>(
     null,
   );
@@ -56,7 +52,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   const [updateRole] = useUpdateCollaboratorRoleMutation();
 
   useImperativeHandle(ref, () => ({
-    open: (collab: any) => {
+    open: (collab: ShoppingListCollaboratorFragment) => {
       setCollaborator(collab);
       setSelectedRole(collab.role);
       setIsVisible(true);
@@ -78,14 +74,18 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
       return;
     }
 
+    // Capture narrowed values so the closure below doesn't lose nullability narrowing.
+    const collaboratorId = collaborator.collaboratorId;
+    const role = selectedRole;
+
     executeWithLoadingState(
       async () => {
         await updateRole({
           variables: {
             input: {
               shoppingListId,
-              collaboratorId: collaborator.collaboratorId,
-              role: selectedRole,
+              collaboratorId,
+              role,
             },
           },
         });
@@ -128,7 +128,15 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
         contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.subtitle}>{collaborator.email}</Text>
+        <View style={styles.headerBlock}>
+          <Text style={styles.subtitle}>
+            {getCollaboratorDisplayName(collaborator)}
+          </Text>
+          {!!collaborator.email &&
+            collaborator.email !== getCollaboratorDisplayName(collaborator) && (
+              <Text style={styles.emailCaption}>{collaborator.email}</Text>
+            )}
+        </View>
 
         <View style={styles.rolesContainer}>
           {availableRoles.map(role => {
@@ -223,10 +231,18 @@ const styles = StyleSheet.create(theme => ({
   scrollContent: {
     padding: theme.spacing.lg,
   },
+  headerBlock: {
+    marginBottom: theme.spacing.lg,
+  },
   subtitle: {
     fontSize: theme.fonts.size.md,
+    color: theme.colors.textPrimary,
+    fontWeight: theme.fonts.weight.semibold,
+  },
+  emailCaption: {
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.lg,
+    marginTop: 2,
   },
   rolesContainer: {
     gap: theme.spacing.md,

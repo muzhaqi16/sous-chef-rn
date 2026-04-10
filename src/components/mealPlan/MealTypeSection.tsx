@@ -67,7 +67,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
   sectionTitle: {
