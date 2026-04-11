@@ -76,6 +76,7 @@ export function useHomeDetailManagement(homeId: string) {
   const { data, loading, error, refetch } = useGetHomeQuery({
     variables: { homeId },
     fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
     errorPolicy: 'all',
   });
 

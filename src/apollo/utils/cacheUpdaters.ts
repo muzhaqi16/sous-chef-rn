@@ -19,11 +19,17 @@ import { serializeError } from '#/utils/errorSerialization';
  * referencing evicted entities are discarded immediately.
  *
  * `ApolloCache.gc()` doesn't expose the `resetResultCache` option in its
- * type signature, but `InMemoryCache` (the runtime type) supports it.
+ * abstract type signature, but `InMemoryCache` (the runtime type) does.
+ * Narrow the input via a typed `gc` interface so we don't fall back to `any`.
  */
-// justified: ApolloCache abstract type omits the options param that InMemoryCache accepts at runtime
+interface GcWithResetResultCache {
+  gc(options?: { resetResultCache?: boolean }): string[];
+}
+
 export function gcResetResultCache(cache: ApolloCache): string[] {
-  return (cache as any).gc({ resetResultCache: true });
+  return (cache as unknown as GcWithResetResultCache).gc({
+    resetResultCache: true,
+  });
 }
 
 // =============================================================================

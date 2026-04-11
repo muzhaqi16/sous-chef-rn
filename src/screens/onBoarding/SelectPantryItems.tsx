@@ -52,12 +52,14 @@ export const SelectPantryItems = () => {
       first: 50,
     },
     fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
   });
 
   const { data: pantryData, loading: pantryLoading } = useGetPantryQuery({
     variables: { id: selectedPantryId!, itemsFirst: 100 },
     skip: !selectedPantryId,
     fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
   });
 
   const [addItemToPantry] = useCreatePantryItemMutation();

@@ -104,7 +104,29 @@ describe('useBrandAutocomplete', () => {
     expect(result.current.searchTerm).toBe('test');
   });
 
-  it('triggers lazy query search after debounce when term meets minChars', () => {
+  it('triggers lazy query search after debounce when term has no local matches', () => {
+    // localFirst: true skips the network when any suggestedBrand matches.
+    // 'xy' does not match Heinz/Hellmann/Kraft, so the API must fire.
+    const { result } = renderHook(() =>
+      useBrandAutocomplete({ suggestedBrands }),
+    );
+
+    act(() => {
+      result.current.handleSearchTermChange('xy');
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(mockSearchBrands).toHaveBeenCalledWith({
+      variables: { search: 'xy', limit: 20 },
+    });
+  });
+
+  it('does NOT trigger lazy query when local suggestions match the search term', () => {
+    // 'he' matches Heinz and Hellmann via filterFallback — localFirst should
+    // serve those results instantly without firing the API.
     const { result } = renderHook(() =>
       useBrandAutocomplete({ suggestedBrands }),
     );
@@ -117,9 +139,10 @@ describe('useBrandAutocomplete', () => {
       jest.advanceTimersByTime(300);
     });
 
-    expect(mockSearchBrands).toHaveBeenCalledWith({
-      variables: { search: 'he', limit: 20 },
-    });
+    expect(mockSearchBrands).not.toHaveBeenCalled();
+    const names = result.current.displayItems.map(i => i.name);
+    expect(names).toContain('Heinz');
+    expect(names).toContain('Hellmann');
   });
 
   it('resets state when reset is called', () => {

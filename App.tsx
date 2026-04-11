@@ -197,14 +197,19 @@ const App = () => {
       Telemetry.updateConfig(telemetryConfig);
       Telemetry.initialize();
 
-      // Initialize native performance metrics (startup marks, bundle load, HTTP timing)
+      // Initialize native performance metrics (startup marks, bundle load, HTTP timing).
+      // Defer to requestIdleCallback so they don't compete with the navigation
+      // mount that follows hydration — these services aren't needed for first
+      // paint and benefit from running on the JS idle queue.
       if (!detoxDisabled) {
-        NativePerformanceService.initialize();
-        // Auto-start memory monitoring in production so Overview dashboard
-        // memory gauge populates without requiring manual opt-in
-        if (!__DEV__) {
-          MemoryMonitor.start();
-        }
+        requestIdleCallback(() => {
+          NativePerformanceService.initialize();
+          if (!__DEV__) {
+            // Auto-start memory monitoring in production so Overview dashboard
+            // memory gauge populates without requiring manual opt-in.
+            MemoryMonitor.start();
+          }
+        });
       }
 
       // Report JS startup duration (time from index.js entry to store hydration)

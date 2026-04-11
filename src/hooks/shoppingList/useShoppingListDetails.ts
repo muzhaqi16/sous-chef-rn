@@ -6,8 +6,8 @@ export function useShoppingListDetails(listId: string | undefined) {
   // Fetch policies per docs/apollo-client-patterns.md:
   // - cache-and-network: Shows cache immediately, fetches fresh in background
   // - nextFetchPolicy: cache-first prevents re-fetch on re-render/tab switch
-  // - notifyOnNetworkStatusChange: Enables tracking of refetch status
-
+  // - notifyOnNetworkStatusChange: lets Apollo emit a re-render when the
+  //   network status transitions (used by RefreshControl in ShareList).
   const { data, loading, error, refetch, networkStatus } =
     useGetShoppingListDetailsQuery({
       variables: { id: listId ?? '' },
@@ -18,9 +18,9 @@ export function useShoppingListDetails(listId: string | undefined) {
       notifyOnNetworkStatusChange: true,
     });
 
-  // Real-time updates via subscription are now handled by SubscriptionProvider
+  // Real-time updates via subscription are now handled by SubscriptionProvider.
   // The ShoppingListUpdated subscription automatically updates the cache via
-  // Apollo's normalization, eliminating the need for manual client.writeQuery
+  // Apollo's normalization, eliminating the need for manual client.writeQuery.
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
   const shoppingList = usePreservedQueryData(data?.shoppingList, null);

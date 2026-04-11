@@ -20,9 +20,22 @@ import {
   ShoppingListItemDisplayFragmentDoc,
   ShoppingListChangeType,
   MutationType,
+  type ShoppingListChangesSubscription,
+  type MyShoppingListsChangesSubscription,
+  type CollaborationChangesSubscription,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { CacheStrategy } from '#/services/subscriptions/types';
+import {
+  CacheStrategy,
+  type SubscriptionApolloClient,
+} from '#/services/subscriptions/types';
+
+type ShoppingListChangesPayload =
+  ShoppingListChangesSubscription['shoppingListChanged'];
+type MyShoppingListsChangesPayload =
+  MyShoppingListsChangesSubscription['myShoppingListsChanged'];
+type CollaborationChangesPayload =
+  CollaborationChangesSubscription['collaborationChanged'];
 import {
   removeFromShoppingListItemsConnection,
   moveShoppingListItemToPurchased,
@@ -166,78 +179,98 @@ export function useShoppingListSubscriptions(
   // - STATUS_CHANGED: status transitions (no-op currently)
   // Note: Collaborator events use the separate collaborationChanged subscription
   //
-  const changesHandlers = subscriptionService.register({
-    subscriptionName: 'ShoppingListChanges',
-    entityType: 'ShoppingListItem',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.NONE, // Disable default - using custom handler
-    enableLogging: true,
-    entityId: selectedShoppingListId,
-    customOnData: (payload: any, client: any) => {
-      if (__DEV__) {
-        console.log(
-          `📊 [Subscription] ShoppingListChanges event: changeType=${payload?.changeType} mutation=${payload?.mutation}`,
-        );
-      }
+  const changesHandlers =
+    subscriptionService.register<ShoppingListChangesPayload>({
+      subscriptionName: 'ShoppingListChanges',
+      entityType: 'ShoppingListItem',
+      enableDeduplication: true,
+      userId,
+      cacheUpdateStrategy: CacheStrategy.NONE, // Disable default - using custom handler
+      enableLogging: true,
+      entityId: selectedShoppingListId,
+      customOnData: (
+        payload: ShoppingListChangesPayload,
+        client: SubscriptionApolloClient,
+      ) => {
+        if (__DEV__) {
+          console.log(
+            `📊 [Subscription] ShoppingListChanges event: changeType=${payload?.changeType} mutation=${payload?.mutation}`,
+          );
+        }
 
-      if (!payload || !selectedShoppingListId) return;
+        if (!payload || !selectedShoppingListId) return;
 
-      // Skip processing if the parent list is being deleted
-      if (subscriptionService.isParentDeleting(selectedShoppingListId)) return;
+        // Skip processing if the parent list is being deleted
+        if (subscriptionService.isParentDeleting(selectedShoppingListId))
+          return;
 
-      const changeType = payload.changeType;
-      const payloadUserId = payload.userId;
+        const changeType = payload.changeType;
+        const payloadUserId = payload.userId;
 
-      switch (changeType) {
-        case ShoppingListChangeType.ItemsChanged: {
-          const mutation = payload.mutation;
-          const item = payload.item;
+        switch (changeType) {
+          case ShoppingListChangeType.ItemsChanged: {
+            const mutation = payload.mutation;
+            const item = payload.item;
 
-          if (!item) return;
+            if (!item) return;
 
-          if (!item.id) {
-            console.warn(
-              '⚠️ [ShoppingListChanges] Received item with no id, skipping cache update',
-              {
-                changeType,
-                mutation: payload.mutation,
-              },
-            );
-            return;
-          }
-
-          // Skip self-echo
-          if (payloadUserId && userId && payloadUserId === userId) {
-            if (__DEV__) {
-              console.log(
-                '⏭️ [Subscription] Skipping self-echo (same user)',
-                item.id,
+            if (!item.id) {
+              console.warn(
+                '⚠️ [ShoppingListChanges] Received item with no id, skipping cache update',
+                {
+                  changeType,
+                  mutation: payload.mutation,
+                },
               );
+              return;
             }
-            return;
-          }
 
-          if (
-            mutation === MutationType.Created ||
-            mutation === MutationType.ItemAdded
-          ) {
-            // PERF: Batch so the internal modify + any follow-up writes coalesce into one notification
-            client.cache.batch({
-              update(cache: ApolloCache) {
-                addNewItemToShoppingListCache(
-                  cache,
-                  selectedShoppingListId,
-                  item,
+            // Skip self-echo
+            if (payloadUserId && userId && payloadUserId === userId) {
+              if (__DEV__) {
+                console.log(
+                  '⏭️ [Subscription] Skipping self-echo (same user)',
+                  item.id,
                 );
-              },
-            });
-          } else if (
-            mutation === MutationType.Deleted ||
-            mutation === MutationType.ItemRemoved
-          ) {
-            if (scheduleAnimation) {
-              scheduleAnimation(item.id, -1, () => {
+              }
+              return;
+            }
+
+            if (
+              mutation === MutationType.Created ||
+              mutation === MutationType.ItemAdded
+            ) {
+              // PERF: Batch so the internal modify + any follow-up writes coalesce into one notification
+              client.cache.batch({
+                update(cache: ApolloCache) {
+                  addNewItemToShoppingListCache(
+                    cache,
+                    selectedShoppingListId,
+                    item,
+                  );
+                },
+              });
+            } else if (
+              mutation === MutationType.Deleted ||
+              mutation === MutationType.ItemRemoved
+            ) {
+              if (scheduleAnimation) {
+                scheduleAnimation(item.id, -1, () => {
+                  // PERF: Batch remove + evict + gc into a single observer notification
+                  client.cache.batch({
+                    update(cache: ApolloCache) {
+                      removeFromShoppingListItemsConnection(
+                        cache,
+                        selectedShoppingListId,
+                        item.id,
+                        {
+                          evictItem: true,
+                        },
+                      );
+                    },
+                  });
+                });
+              } else {
                 // PERF: Batch remove + evict + gc into a single observer notification
                 client.cache.batch({
                   update(cache: ApolloCache) {
@@ -251,166 +284,152 @@ export function useShoppingListSubscriptions(
                     );
                   },
                 });
-              });
-            } else {
-              // PERF: Batch remove + evict + gc into a single observer notification
-              client.cache.batch({
-                update(cache: ApolloCache) {
-                  removeFromShoppingListItemsConnection(
-                    cache,
-                    selectedShoppingListId,
-                    item.id,
-                    {
-                      evictItem: true,
-                    },
-                  );
-                },
-              });
-            }
-          } else if (
-            mutation === MutationType.ItemUpdated ||
-            mutation === MutationType.ItemCompleted ||
-            mutation === MutationType.ItemUncompleted
-          ) {
-            const sortOrderChanged = item.sortOrder != null;
-            const isCompletedMutation = mutation === MutationType.ItemCompleted;
-            const isUncompletedMutation =
-              mutation === MutationType.ItemUncompleted;
-
-            if (__DEV__) {
-              console.log('🔍 [Subscription Cache Debug]', {
-                mutation,
-                itemId: item.id,
-                isCompletedMutation,
-                isUncompletedMutation,
-                willMoveItem: isCompletedMutation || isUncompletedMutation,
-              });
-            }
-
-            if (
-              scheduleAnimation &&
-              (isCompletedMutation || isUncompletedMutation)
+              }
+            } else if (
+              mutation === MutationType.ItemUpdated ||
+              mutation === MutationType.ItemCompleted ||
+              mutation === MutationType.ItemUncompleted
             ) {
-              // Animated path: write fragment immediately for visual feedback,
-              // then batch the move + sort in the animation callback
-              client.cache.writeFragment({
-                id: client.cache.identify({
-                  __typename: 'ShoppingListItem',
-                  id: item.id,
-                }),
-                fragment: ShoppingListItemDisplayFragmentDoc,
-                fragmentName: 'ShoppingListItemDisplayFragment',
-                data: item,
-              });
+              const sortOrderChanged = item.sortOrder != null;
+              const isCompletedMutation =
+                mutation === MutationType.ItemCompleted;
+              const isUncompletedMutation =
+                mutation === MutationType.ItemUncompleted;
 
-              const direction: 1 | -1 = isCompletedMutation ? 1 : -1;
-              const moveOp = isCompletedMutation
-                ? moveShoppingListItemToPurchased
-                : moveShoppingListItemToUnpurchased;
+              if (__DEV__) {
+                console.log('🔍 [Subscription Cache Debug]', {
+                  mutation,
+                  itemId: item.id,
+                  isCompletedMutation,
+                  isUncompletedMutation,
+                  willMoveItem: isCompletedMutation || isUncompletedMutation,
+                });
+              }
 
-              // Sort only the destination variant after the move
-              const sortVariant = isCompletedMutation
-                ? '"isPurchased":true'
-                : '"isPurchased":false';
+              if (
+                scheduleAnimation &&
+                (isCompletedMutation || isUncompletedMutation)
+              ) {
+                // Animated path: write fragment immediately for visual feedback,
+                // then batch the move + sort in the animation callback
+                client.cache.writeFragment({
+                  id: client.cache.identify({
+                    __typename: 'ShoppingListItem',
+                    id: item.id,
+                  }),
+                  fragment: ShoppingListItemDisplayFragmentDoc,
+                  fragmentName: 'ShoppingListItemDisplayFragment',
+                  data: item,
+                });
 
-              scheduleAnimation(item.id, direction, () => {
-                // PERF: Batch move + sort into a single cache notification
+                const direction: 1 | -1 = isCompletedMutation ? 1 : -1;
+                const moveOp = isCompletedMutation
+                  ? moveShoppingListItemToPurchased
+                  : moveShoppingListItemToUnpurchased;
+
+                // Sort only the destination variant after the move
+                const sortVariant = isCompletedMutation
+                  ? '"isPurchased":true'
+                  : '"isPurchased":false';
+
+                scheduleAnimation(item.id, direction, () => {
+                  // PERF: Batch move + sort into a single cache notification
+                  client.cache.batch({
+                    update(cache: ApolloCache) {
+                      moveOp(cache, selectedShoppingListId, item);
+                      if (sortOrderChanged) {
+                        resortEdges(cache, selectedShoppingListId, sortVariant);
+                      }
+                    },
+                  });
+                  scheduleEntryAnimation?.(item.id, direction);
+                });
+              } else {
+                // Determine which variant to sort: completed→purchased, uncompleted→unpurchased,
+                // otherwise sort all variants (general ItemUpdated — variant unknown)
+                const nonAnimSortVariant = isCompletedMutation
+                  ? '"isPurchased":true'
+                  : isUncompletedMutation
+                  ? '"isPurchased":false'
+                  : undefined;
+
+                // PERF: Non-animated path — batch ALL cache operations into a single
+                // observer notification. This prevents cascading re-renders when
+                // writeFragment + move + sort would otherwise trigger 2-3 notifications.
                 client.cache.batch({
                   update(cache: ApolloCache) {
-                    moveOp(cache, selectedShoppingListId, item);
+                    cache.writeFragment({
+                      id: cache.identify({
+                        __typename: 'ShoppingListItem',
+                        id: item.id,
+                      }),
+                      fragment: ShoppingListItemDisplayFragmentDoc,
+                      fragmentName: 'ShoppingListItemDisplayFragment',
+                      data: item,
+                    });
+
+                    if (isCompletedMutation) {
+                      moveShoppingListItemToPurchased(
+                        cache,
+                        selectedShoppingListId,
+                        item,
+                      );
+                    } else if (isUncompletedMutation) {
+                      moveShoppingListItemToUnpurchased(
+                        cache,
+                        selectedShoppingListId,
+                        item,
+                      );
+                    }
+
                     if (sortOrderChanged) {
-                      resortEdges(cache, selectedShoppingListId, sortVariant);
+                      resortEdges(
+                        cache,
+                        selectedShoppingListId,
+                        nonAnimSortVariant,
+                      );
                     }
                   },
                 });
-                scheduleEntryAnimation?.(item.id, direction);
-              });
-            } else {
-              // Determine which variant to sort: completed→purchased, uncompleted→unpurchased,
-              // otherwise sort all variants (general ItemUpdated — variant unknown)
-              const nonAnimSortVariant = isCompletedMutation
-                ? '"isPurchased":true'
-                : isUncompletedMutation
-                ? '"isPurchased":false'
-                : undefined;
-
-              // PERF: Non-animated path — batch ALL cache operations into a single
-              // observer notification. This prevents cascading re-renders when
-              // writeFragment + move + sort would otherwise trigger 2-3 notifications.
-              client.cache.batch({
-                update(cache: ApolloCache) {
-                  cache.writeFragment({
-                    id: cache.identify({
-                      __typename: 'ShoppingListItem',
-                      id: item.id,
-                    }),
-                    fragment: ShoppingListItemDisplayFragmentDoc,
-                    fragmentName: 'ShoppingListItemDisplayFragment',
-                    data: item,
-                  });
-
-                  if (isCompletedMutation) {
-                    moveShoppingListItemToPurchased(
-                      cache,
-                      selectedShoppingListId,
-                      item,
-                    );
-                  } else if (isUncompletedMutation) {
-                    moveShoppingListItemToUnpurchased(
-                      cache,
-                      selectedShoppingListId,
-                      item,
-                    );
-                  }
-
-                  if (sortOrderChanged) {
-                    resortEdges(
-                      cache,
-                      selectedShoppingListId,
-                      nonAnimSortVariant,
-                    );
-                  }
-                },
-              });
+              }
             }
+            break;
           }
-          break;
-        }
-        case ShoppingListChangeType.ListUpdated: {
-          // Metadata updates - handle deletion re-eviction
-          const node = payload.shoppingList;
-          if (!node?.id) return;
-          if (subscriptionService.isParentDeleting(node.id)) {
-            safeEvict(client.cache, 'ShoppingList', node.id);
-          }
-          break;
-        }
-        case ShoppingListChangeType.ItemsBatchCleared: {
-          const clearedItemIds = payload.clearedItemIds || [];
-
-          // Skip self-echo
-          if (payloadUserId && userId && payloadUserId === userId) {
-            if (__DEV__) {
-              console.log('⏭️ [Subscription] Skipping batch clear self-echo');
+          case ShoppingListChangeType.ListUpdated: {
+            // Metadata updates - handle deletion re-eviction
+            const node = payload.shoppingList;
+            if (!node?.id) return;
+            if (subscriptionService.isParentDeleting(node.id)) {
+              safeEvict(client.cache, 'ShoppingList', node.id);
             }
-            return;
+            break;
           }
+          case ShoppingListChangeType.ItemsBatchCleared: {
+            const clearedItemIds = payload.clearedItemIds || [];
 
-          clearAllPurchasedItemsFromCache(
-            client.cache,
-            selectedShoppingListId,
-            clearedItemIds,
-          );
-          break;
+            // Skip self-echo
+            if (payloadUserId && userId && payloadUserId === userId) {
+              if (__DEV__) {
+                console.log('⏭️ [Subscription] Skipping batch clear self-echo');
+              }
+              return;
+            }
+
+            clearAllPurchasedItemsFromCache(
+              client.cache,
+              selectedShoppingListId,
+              clearedItemIds,
+            );
+            break;
+          }
+          case ShoppingListChangeType.StatusChanged:
+            // Currently unused
+            break;
+          default:
+            break;
         }
-        case ShoppingListChangeType.StatusChanged:
-          // Currently unused
-          break;
-        default:
-          break;
-      }
-    },
-  });
+      },
+    });
 
   useShoppingListChangesSubscription({
     variables: { listId: selectedShoppingListId! },
@@ -433,46 +452,50 @@ export function useShoppingListSubscriptions(
     'ShoppingList',
   );
 
-  const myListsHandlers = subscriptionService.register({
-    subscriptionName: 'MyShoppingListsChanges',
-    entityType: 'ShoppingList',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.NONE,
-    enableLogging: true,
-    customOnData: (payload: any, client: any) => {
-      if (!payload) return;
+  const myListsHandlers =
+    subscriptionService.register<MyShoppingListsChangesPayload>({
+      subscriptionName: 'MyShoppingListsChanges',
+      entityType: 'ShoppingList',
+      enableDeduplication: true,
+      userId,
+      cacheUpdateStrategy: CacheStrategy.NONE,
+      enableLogging: true,
+      customOnData: (
+        payload: MyShoppingListsChangesPayload,
+        client: SubscriptionApolloClient,
+      ) => {
+        if (!payload) return;
 
-      // Skip self-echo
-      if (payload.userId && userId && payload.userId === userId) {
-        if (__DEV__) {
-          console.log('⏭️ [MyShoppingListsChanges] Skipping self-echo');
+        // Skip self-echo
+        if (payload.userId && userId && payload.userId === userId) {
+          if (__DEV__) {
+            console.log('⏭️ [MyShoppingListsChanges] Skipping self-echo');
+          }
+          return;
         }
-        return;
-      }
 
-      const mutation = payload.mutation;
-      const shoppingList = payload.shoppingList;
+        const mutation = payload.mutation;
+        const shoppingList = payload.shoppingList;
 
-      // Handle list creation/deletion via mutation field
-      if (mutation === MutationType.Created && shoppingList?.id) {
-        addToShoppingLists(client.cache, shoppingList);
-        return;
-      }
+        // Handle list creation/deletion via mutation field
+        if (mutation === MutationType.Created && shoppingList?.id) {
+          addToShoppingLists(client.cache, shoppingList);
+          return;
+        }
 
-      if (mutation === MutationType.Deleted && payload.listId) {
-        removeFromShoppingLists(client.cache, payload.listId, {
-          evictItem: true,
-        });
-        return;
-      }
+        if (mutation === MutationType.Deleted && payload.listId) {
+          removeFromShoppingLists(client.cache, payload.listId, {
+            evictItem: true,
+          });
+          return;
+        }
 
-      // For all other changeTypes (LIST_UPDATED, STATUS_CHANGED, ITEMS_CHANGED,
-      // ITEMS_BATCH_CLEARED), Apollo auto-normalizes the shoppingList entity by id —
-      // the returned metadata fields (totalItems, completedItems, name, status,
-      // isCompleted, estimatedTotal) merge automatically.
-    },
-  });
+        // For all other changeTypes (LIST_UPDATED, STATUS_CHANGED, ITEMS_CHANGED,
+        // ITEMS_BATCH_CLEARED), Apollo auto-normalizes the shoppingList entity by id —
+        // the returned metadata fields (totalItems, completedItems, name, status,
+        // isCompleted, estimatedTotal) merge automatically.
+      },
+    });
 
   useMyShoppingListsChangesSubscription({
     skip: !userId,
@@ -498,57 +521,61 @@ export function useShoppingListSubscriptions(
     'ShoppingListCollaborator',
   );
 
-  const collaborationHandlers = subscriptionService.register({
-    subscriptionName: 'CollaborationChanges',
-    entityType: 'ShoppingListCollaborator',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.NONE,
-    enableLogging: true,
-    entityId: selectedShoppingListId,
-    customOnData: (payload: any, client: any) => {
-      if (!payload) return;
+  const collaborationHandlers =
+    subscriptionService.register<CollaborationChangesPayload>({
+      subscriptionName: 'CollaborationChanges',
+      entityType: 'ShoppingListCollaborator',
+      enableDeduplication: true,
+      userId,
+      cacheUpdateStrategy: CacheStrategy.NONE,
+      enableLogging: true,
+      entityId: selectedShoppingListId,
+      customOnData: (
+        payload: CollaborationChangesPayload,
+        client: SubscriptionApolloClient,
+      ) => {
+        if (!payload) return;
 
-      // Skip self-echo
-      if (payload.userId && userId && payload.userId === userId) {
-        if (__DEV__) {
-          console.log('⏭️ [CollaborationChanges] Skipping self-echo');
-        }
-        return;
-      }
-
-      const mutation = payload.mutation;
-      const collaborator = payload.collaborator;
-      const listId = payload.listId;
-
-      if (!collaborator?.id || !listId) return;
-
-      switch (mutation) {
-        case MutationType.Created:
-          // New invite sent or collaborator added
-          addCollaborator(client.cache, listId, collaborator);
-          break;
-        case MutationType.Updated:
-          // Invite accepted, role changed, or permissions updated.
-          // Apollo auto-normalizes the collaborator entity by id,
-          // so role/permission changes merge automatically.
-          // If the collaborator just became ACTIVE (invite accepted),
-          // ensure they're in the connection.
-          if (collaborator.status === CollaboratorStatus.Active) {
-            addCollaborator(client.cache, listId, collaborator);
+        // Skip self-echo
+        if (payload.userId && userId && payload.userId === userId) {
+          if (__DEV__) {
+            console.log('⏭️ [CollaborationChanges] Skipping self-echo');
           }
-          break;
-        case MutationType.Deleted:
-          // Invite declined or collaborator removed
-          removeCollaborator(client.cache, listId, collaborator.id, {
-            evictItem: true,
-          });
-          break;
-        default:
-          break;
-      }
-    },
-  });
+          return;
+        }
+
+        const mutation = payload.mutation;
+        const collaborator = payload.collaborator;
+        const listId = payload.listId;
+
+        if (!collaborator?.id || !listId) return;
+
+        switch (mutation) {
+          case MutationType.Created:
+            // New invite sent or collaborator added
+            addCollaborator(client.cache, listId, collaborator);
+            break;
+          case MutationType.Updated:
+            // Invite accepted, role changed, or permissions updated.
+            // Apollo auto-normalizes the collaborator entity by id,
+            // so role/permission changes merge automatically.
+            // If the collaborator just became ACTIVE (invite accepted),
+            // ensure they're in the connection.
+            if (collaborator.status === CollaboratorStatus.Active) {
+              addCollaborator(client.cache, listId, collaborator);
+            }
+            break;
+          case MutationType.Deleted:
+            // Invite declined or collaborator removed
+            removeCollaborator(client.cache, listId, collaborator.id, {
+              evictItem: true,
+            });
+            break;
+          default:
+            break;
+        }
+      },
+    });
 
   useCollaborationChangesSubscription({
     variables: { listId: selectedShoppingListId! },

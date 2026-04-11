@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '#/storage/mmkv';
 import type {
@@ -77,7 +78,7 @@ export function randomCacheKey(tags?: string): string {
 
 export const useRecipeCacheStore = create<RecipeCacheState>()(
   persist(
-    (set, get) => ({
+    immer((set, get) => ({
       cache: {},
 
       getCached: (key: string) => {
@@ -86,9 +87,7 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
 
         if (Date.now() - cached.cachedAt > CACHE_TTL_MS) {
           set(state => {
-            const newCache = { ...state.cache };
-            delete newCache[key];
-            return { cache: newCache };
+            delete state.cache[key];
           });
           return null;
         }
@@ -97,26 +96,18 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
       },
 
       setCached: (key, results, enrichment = {}) => {
-        set(state => ({
-          cache: {
-            ...state.cache,
-            [key]: { results, enrichment, cachedAt: Date.now() },
-          },
-        }));
+        set(state => {
+          state.cache[key] = { results, enrichment, cachedAt: Date.now() };
+        });
       },
 
       updateEnrichment: (key, enrichment) => {
         set(state => {
           const existing = state.cache[key];
-          if (!existing) return state;
-          return {
-            cache: {
-              ...state.cache,
-              [key]: {
-                ...existing,
-                enrichment: { ...existing.enrichment, ...enrichment },
-              },
-            },
+          if (!existing) return;
+          state.cache[key] = {
+            ...existing,
+            enrichment: { ...existing.enrichment, ...enrichment },
           };
         });
       },
@@ -124,18 +115,19 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
       clearExpiredCache: () => {
         const now = Date.now();
         set(state => {
-          const newCache: Record<string, CachedRecipeSearch> = {};
-          Object.entries(state.cache).forEach(([key, value]) => {
-            if (now - value.cachedAt <= CACHE_TTL_MS) {
-              newCache[key] = value;
+          for (const key of Object.keys(state.cache)) {
+            if (now - state.cache[key].cachedAt > CACHE_TTL_MS) {
+              delete state.cache[key];
             }
-          });
-          return { cache: newCache };
+          }
         });
       },
 
-      clearAllCache: () => set({ cache: {} }),
-    }),
+      clearAllCache: () =>
+        set(state => {
+          state.cache = {};
+        }),
+    })),
     {
       name: 'recipe-search-cache',
       storage: createJSONStorage(() => zustandStorage),

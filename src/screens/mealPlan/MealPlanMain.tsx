@@ -50,6 +50,7 @@ import {
 } from '#generated';
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 async function executeMealPlanRefresh(
   refetchFn: () => Promise<unknown>,
@@ -389,14 +390,12 @@ const MealPlanMainInner: React.FC = () => {
   };
 
   const handleDeletePlan = async (id: string) => {
-    let result;
-    try {
-      result = await deletePlanMutation({ variables: { id } });
-    } catch {
-      // Error handled by onError callback
-      return;
-    }
-    if (result.data?.deleteMealPlan?.success) {
+    const result = await executeMutation(
+      () => deletePlanMutation({ variables: { id } }),
+      // Error handled by onError callback on the mutation hook
+      () => {},
+    );
+    if (result && result.data?.deleteMealPlan?.success) {
       toastService.success('Meal plan deleted');
       // If we deleted the active plan, clear the selection so the UI falls back
       // to the next available plan (or the empty state if none remain).

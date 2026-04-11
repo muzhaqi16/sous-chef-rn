@@ -18,6 +18,29 @@ import { useDeleteAccountMutation, useCanDeleteAccountQuery } from '#generated';
 import { authService } from '#/services/authService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { errorService } from '#/services/errorService';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
+
+/** Module-level wrapper around the deleteAccount mutation. Extracted from the
+ *  inline `onPress` arrow inside the component body so the surrounding try/catch
+ *  does not bail out the React Compiler. */
+async function performDeleteAccount(
+  deleteAccountMutation: () => Promise<unknown>,
+  setIsDeleting: (v: boolean) => void,
+): Promise<void> {
+  setIsDeleting(true);
+  const result = await executeMutation(
+    () => deleteAccountMutation(),
+    error => {
+      errorService.reportError(error, {
+        operation: 'DeleteAccount.deleteAccount',
+      });
+      setIsDeleting(false);
+    },
+  );
+  if (result === false) {
+    // executeMutation already invoked the error callback above; nothing else to do
+  }
+}
 
 export const DeleteAccountScreen: React.FC = () => {
   const { goBack } = useAppNavigation();
@@ -64,17 +87,8 @@ export const DeleteAccountScreen: React.FC = () => {
         {
           text: 'Delete Forever',
           style: 'destructive',
-          onPress: async () => {
-            setIsDeleting(true);
-            try {
-              await deleteAccountMutation();
-            } catch (error) {
-              errorService.reportError(error, {
-                operation: 'DeleteAccount.deleteAccount',
-              });
-              setIsDeleting(false);
-            }
-          },
+          onPress: () =>
+            performDeleteAccount(deleteAccountMutation, setIsDeleting),
         },
       ],
     );

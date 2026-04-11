@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -55,6 +55,18 @@ export const HomeManagement: React.FC = () => {
     null,
   );
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clear any in-flight highlight timer on unmount to prevent setState on
+  // an unmounted component if the user navigates away within 2s of setting
+  // a default home.
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+        highlightTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const {
     homes,
@@ -360,6 +372,12 @@ export const HomeManagement: React.FC = () => {
               />
             }
           >
+            {/* NOTE: Per-item entering + LinearTransition layout animations on
+                a `.map()`-rendered list are acceptable here because the home
+                list is bounded (typically <10 items). For longer lists, prefer
+                a single FlashList `itemLayoutAnimation` or stagger-gate the
+                entering animations after the first render — see
+                js-animations-reanimated.md for the long-list pattern. */}
             {sortedHomes.map((home, index) => {
               const userCanInvite = home.myMembership
                 ? canInviteToHome(

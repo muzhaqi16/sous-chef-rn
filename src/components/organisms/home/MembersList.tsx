@@ -3,25 +3,15 @@ import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppStore } from '#store/useAppStore';
 import { formatRole } from '#/utils/formatters/roleFormatters';
-import { formatInviteStatus, getInviteStatusColor, getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
-import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
-
-interface Member {
-  id: string;
-  role: string;
-  status: string;
-  userId?: string;
-  displayName?: string;
-  user?: {
-    id: string;
-    email?: string;
-    profile?: {
-      firstName?: string;
-      lastName?: string;
-      displayName?: string;
-    };
-  };
-}
+import {
+  formatInviteStatus,
+  getInviteStatusColor,
+  getInviteDisplayName,
+} from '#/utils/formatters/inviteFormatters';
+import {
+  getMemberDisplayName,
+  type Member,
+} from '#/utils/formatters/memberFormatters';
 
 interface ListInvite {
   id: string;
@@ -75,7 +65,12 @@ export const MembersList: React.FC<MembersListProps> = ({
               >
                 {displayName}
               </Text>
-              <Text style={[styles.memberRole, isCurrentUser && styles.currentUserRole]}>
+              <Text
+                style={[
+                  styles.memberRole,
+                  isCurrentUser && styles.currentUserRole,
+                ]}
+              >
                 {formatRole(member.role)}
               </Text>
             </View>

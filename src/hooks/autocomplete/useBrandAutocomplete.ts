@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useSearchBrandsLazyQuery } from '#generated';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
@@ -17,17 +16,21 @@ interface UseBrandAutocompleteOptions {
   suggestedBrands?: SuggestedBrand[];
 }
 
-export function useBrandAutocomplete(options: UseBrandAutocompleteOptions = {}) {
+export function useBrandAutocomplete(
+  options: UseBrandAutocompleteOptions = {},
+) {
   const { suggestedBrands = [] } = options;
-  const [searchBrands, { data: brandsData, loading }] = useSearchBrandsLazyQuery();
-  const [lastSearchedTerm, setLastSearchedTerm] = useState('');
+  const [searchBrands, { data: brandsData, loading }] =
+    useSearchBrandsLazyQuery();
 
   const search = (term: string) => {
-    setLastSearchedTerm(term);
     searchBrands({ variables: { search: term, limit: 20 } });
   };
 
-  const fallbackItems: BrandItem[] = suggestedBrands.map(b => ({ ...b, isSuggested: true }));
+  const fallbackItems: BrandItem[] = suggestedBrands.map(b => ({
+    ...b,
+    isSuggested: true,
+  }));
 
   const filterFallback = (term: string, items: BrandItem[]): BrandItem[] => {
     const lower = term.toLowerCase();
@@ -36,11 +39,17 @@ export function useBrandAutocomplete(options: UseBrandAutocompleteOptions = {}) 
 
   const getResults = (): BrandItem[] => {
     const searchedBrands = brandsData?.brands?.edges?.map(e => e.node) || [];
-    if (searchedBrands.length === 0) return [];
-    return searchedBrands.map(brand => ({ id: brand.id, name: brand.name, isSuggested: false }));
+    return searchedBrands.map(brand => ({
+      id: brand.id,
+      name: brand.name,
+      isSuggested: false,
+    }));
   };
 
-  const autocomplete = useAutocompleteSearch<BrandItem>({
+  // localFirst: true means useAutocompleteSearch filters cached suggestedBrands
+  // before firing the network query. If a user types a brand that's already in
+  // suggestedBrands, no API request is made — instant local results.
+  return useAutocompleteSearch<BrandItem>({
     search,
     getResults,
     loading,
@@ -51,37 +60,6 @@ export function useBrandAutocomplete(options: UseBrandAutocompleteOptions = {}) 
     fallbackItems,
     filterFallback,
     maxResults: 10,
+    localFirst: true,
   });
-
-  // Override displayItems to handle the stale-data check and suggested brand priority
-  const { searchTerm, shouldSearch } = autocomplete;
-  const searchedBrands = brandsData?.brands?.edges?.map(e => e.node) || [];
-
-  // Check if API results are relevant to current search
-  const resultsAreRelevant =
-    shouldSearch &&
-    searchedBrands.length > 0 &&
-    searchTerm.toLowerCase().startsWith(lastSearchedTerm.toLowerCase());
-
-  let displayItems: BrandItem[];
-  if (resultsAreRelevant) {
-    displayItems = searchedBrands.map(brand => ({ id: brand.id, name: brand.name, isSuggested: false }));
-  } else if (suggestedBrands.length > 0) {
-    // Show fallback (suggested brands) with filtering
-    if (searchTerm.length > 0) {
-      const lower = searchTerm.toLowerCase();
-      displayItems = suggestedBrands
-        .filter(b => b.name.toLowerCase().includes(lower))
-        .map(b => ({ ...b, isSuggested: true }));
-    } else {
-      displayItems = suggestedBrands.map(b => ({ ...b, isSuggested: true }));
-    }
-  } else {
-    displayItems = [];
-  }
-
-  return {
-    ...autocomplete,
-    displayItems,
-  };
 }

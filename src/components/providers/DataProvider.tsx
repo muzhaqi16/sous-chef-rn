@@ -44,10 +44,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
   // Fetch profile on every app load to keep Zustand store in sync
   // (e.g., profilePicture is only set at login/register and goes stale).
-  // Uses cache-first so there's no extra network cost when data is cached.
+  // First mount fires the network once; subsequent re-renders read cache only.
   const { data: profileData } = useGetUserProfileQuery({
-    fetchPolicy: 'cache-first',
-    nextFetchPolicy: 'cache-and-network',
+    fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
     skip: !user || isLoggingOut,
     notifyOnNetworkStatusChange: false,
   });

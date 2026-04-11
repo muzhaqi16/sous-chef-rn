@@ -44,21 +44,21 @@ interface PantryItemCardProps {
 
 /**
  * Expiration text — pure presentational, color precomputed by parent list.
- * Eliminates per-item useUnistyles subscription.
- * Memoized to prevent re-renders from context-triggered parent re-renders.
+ * Eliminates per-item useUnistyles subscription. React Compiler memoizes the
+ * JSX at the parent call site, so React.memo is redundant per CLAUDE.md.
  */
-const ExpirationText = React.memo<{
+const ExpirationText: React.FC<{
   text: string;
   color: string;
   bold: boolean;
-}>(({ text, color, bold }) => (
+}> = ({ text, color, bold }) => (
   <Text
     style={[styles.expiration, { color }, bold && styles.expirationBold]}
     numberOfLines={1}
   >
     {text}
   </Text>
-));
+);
 
 /**
  * Lightweight slide-right + fade animation wrapper for delete.

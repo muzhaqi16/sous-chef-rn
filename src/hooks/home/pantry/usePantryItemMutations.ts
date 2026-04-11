@@ -43,7 +43,8 @@ import type { PantryItemDisplayFragment } from '#generated';
 interface UsePantryItemMutationsOptions {
   pantryId: string | undefined;
   pantryItems: PantryItemDisplayFragment[];
-  refetch: () => Promise<void>;
+
+  refetch: () => Promise<any>;
 }
 
 /**

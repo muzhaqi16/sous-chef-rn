@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { alertService } from '#/services/alertService';
-import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { DIETARY_LIMITS } from '#/constants/dietary';
@@ -33,10 +32,15 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
   onSave,
   initialValues,
 }) => {
-  const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
+
+  // Standard bottom-sheet boilerplate handled by useStandardBottomSheet.
+  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['65%'],
+    keyboardBehavior: 'interactive',
+  });
 
   // Form state
   const [calories, setCalories] = useState('');
@@ -58,15 +62,6 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
       setFat(initialValues?.fatTarget?.toString() || '');
     }
   }
-
-  // Control bottom sheet visibility based on visible prop
-  useEffect(() => {
-    if (visible) {
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
-    }
-  }, [visible]);
 
   const handleSave = async () => {
     const updates: {
@@ -154,20 +149,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
   };
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['65%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.surface }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      backdropComponent={DismissBackdrop}
-    >
+    <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
       <BottomSheetScrollView
         style={styles.scrollView}
         contentContainerStyle={[

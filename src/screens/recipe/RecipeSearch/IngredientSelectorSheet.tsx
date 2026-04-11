@@ -24,6 +24,7 @@ import type { useRecipeScreen } from '#/hooks/recipe/useRecipeScreen';
 
 export interface IngredientSelectorSheetRef {
   present: () => void;
+  dismiss: () => void;
 }
 
 interface IngredientSelectorSheetProps {
@@ -51,6 +52,7 @@ export const IngredientSelectorSheet = forwardRef<
 
   useImperativeHandle(ref, () => ({
     present: () => sheetRef.current?.present(),
+    dismiss: () => sheetRef.current?.dismiss(),
   }));
 
   const handleSheetChange = (index: number) => {

@@ -12,6 +12,7 @@ import { useGetNotificationStatsQuery } from '#generated';
 export function useNotificationStats(skip?: boolean) {
   const { data } = useGetNotificationStatsQuery({
     fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
     pollInterval: 60_000,
     skip,
   });

@@ -1,30 +1,47 @@
-import type { ShoppingListCollaboratorFragment } from '#/graphql/generated';
+import type {
+  MemberShipFragment,
+  ShoppingListCollaboratorFragment,
+} from '#/graphql/generated';
 
 /**
- * Member interface for type safety
+ * Loose `Membership` shape used by home-membership UI components.
+ *
+ * Different queries select different subsets of `Membership`:
+ *  - `HomeFragment.membersConnection` selects `user { id, email }` + `canManageHome`
+ *  - `HomeListFragment.membersConnection` selects no `user` and no permissions
+ *  - `HomeFragment.myMembership` selects all permissions but no `user`
+ *
+ * To accept all three at the same call site, every field beyond the
+ * always-present `id`/`role`/`status` is optional. Field types are pulled
+ * from `MemberShipFragment` so the schema stays the source of truth.
+ *
+ * `user` is defined locally rather than as `MemberShipFragment['user']`
+ * because slim queries (e.g. `HomeFragment.membersConnection`) select only
+ * `{ id, email }` without `profile` — narrower than the full `UserSummary`.
  */
-export interface Member {
-  id: string;
-  role: string;
-  status: string;
-  userId?: string;
-  displayName?: string | null;
-  canViewPantry?: boolean;
-  canEditPantry?: boolean;
-  canAddItems?: boolean;
-  canRemoveItems?: boolean;
-  canInviteOthers?: boolean;
-  canManageHome?: boolean;
-  user?: {
-    id: string;
-    email?: string | null;
-    profile?: {
-      firstName?: string | null;
-      lastName?: string | null;
-      displayName?: string | null;
+export type Member = Pick<MemberShipFragment, 'id' | 'role' | 'status'> &
+  Partial<
+    Pick<
+      MemberShipFragment,
+      | 'homeId'
+      | 'userId'
+      | 'displayName'
+      | 'canManageHome'
+      | 'canViewPantry'
+      | 'canEditPantry'
+      | 'canAddItems'
+      | 'canRemoveItems'
+      | 'canInviteOthers'
+    >
+  > & {
+    user?: {
+      id: string;
+      email?: string | null;
+      profile?: {
+        displayName?: string | null;
+      } | null;
     } | null;
-  } | null;
-}
+  };
 
 /**
  * Get display name for a member with comprehensive fallback logic
@@ -38,36 +55,25 @@ export interface Member {
  * 1. "You" if current user
  * 2. member.displayName
  * 3. user.profile.displayName
- * 4. user.profile.firstName
- * 5. firstName + lastName combination
- * 6. email username (part before @)
- * 7. full email
- * 8. "Unknown Member"
+ * 4. email username (part before @)
+ * 5. full email
+ * 6. "Unknown Member"
  */
 export function getMemberDisplayName(
   member: Member,
   currentUserId?: string,
 ): string {
-  // Check if this member is the current user
-  const isCurrentUser = currentUserId && member.user?.id === currentUserId;
-
-  if (isCurrentUser) {
+  if (currentUserId && member.user?.id === currentUserId) {
     return 'You';
   }
 
-  // Try to get display name in order of preference
-  const displayName =
+  return (
     member.displayName ||
     member.user?.profile?.displayName ||
-    member.user?.profile?.firstName ||
-    (member.user?.profile?.firstName && member.user?.profile?.lastName
-      ? `${member.user.profile.firstName} ${member.user.profile.lastName}`
-      : null) ||
-    member.user?.email?.split('@')[0] || // Use email username part
+    member.user?.email?.split('@')[0] ||
     member.user?.email ||
-    'Unknown Member';
-
-  return displayName;
+    'Unknown Member'
+  );
 }
 
 /**

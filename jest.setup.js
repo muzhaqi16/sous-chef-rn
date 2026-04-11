@@ -561,6 +561,10 @@ jest.mock('@gorhom/bottom-sheet', () => {
       handleContentLayout: jest.fn(),
     })),
     useBottomSheetSpringConfigs: jest.fn(config => config),
+    useBottomSheetScrollableCreator: jest.fn(() => {
+      const ScrollableMock = props => React.createElement(View, props);
+      return ScrollableMock;
+    }),
   };
 });
 
@@ -909,6 +913,19 @@ jest.mock('react-native-performance', () => {
 globalThis.requestIdleCallback = cb =>
   setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 50 }), 0);
 globalThis.cancelIdleCallback = id => clearTimeout(id);
+
+// crypto.getRandomValues is provided in production by react-native-get-random-values
+// (imported in index.js). Provide a deterministic stub for tests.
+if (!globalThis.crypto) {
+  globalThis.crypto = {
+    getRandomValues: arr => {
+      for (let i = 0; i < arr.length; i++) {
+        arr[i] = Math.floor(Math.random() * 256);
+      }
+      return arr;
+    },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Suppress all console output in tests by default.

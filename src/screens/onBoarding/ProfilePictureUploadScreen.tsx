@@ -53,6 +53,26 @@ function syncExistingAvatar(
   }
 }
 
+/** Module-level function for reading any cropped image left behind by ImageCropScreen.
+ *  Extracted to avoid try/catch inside useFocusEffect (React Compiler bailout). */
+function readPendingCroppedImage(): ImageFile | null {
+  try {
+    const storedCroppedImage = storage.getString('temp_cropped_image');
+    if (!storedCroppedImage) return null;
+    const croppedImageFile = JSON.parse(storedCroppedImage) as ImageFile;
+    storage.remove('temp_cropped_image');
+    return croppedImageFile;
+  } catch (error) {
+    console.error('Error reading cropped image from MMKV:', error);
+    try {
+      storage.remove('temp_cropped_image');
+    } catch {
+      // ignore
+    }
+    return null;
+  }
+}
+
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   mediaType: 'photo' as MediaType,
   includeBase64: false,
@@ -87,20 +107,9 @@ export const ProfilePictureUploadScreen = () => {
 
   // Check for cropped image from MMKV when screen comes into focus
   useFocusEffect(() => {
-    try {
-      const storedCroppedImage = storage.getString('temp_cropped_image');
-      if (storedCroppedImage) {
-        const croppedImageFile: ImageFile = JSON.parse(storedCroppedImage);
-
-        setCroppedImage(croppedImageFile);
-
-        // Clean up the temporary storage
-        storage.remove('temp_cropped_image');
-      }
-    } catch (error) {
-      console.error('Error reading cropped image from MMKV:', error);
-      // Clean up potentially corrupted data
-      storage.remove('temp_cropped_image');
+    const pending = readPendingCroppedImage();
+    if (pending) {
+      setCroppedImage(pending);
     }
   });
 

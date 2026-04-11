@@ -1,4 +1,5 @@
 import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { useShallow } from 'zustand/react/shallow';
 import { storeApi, RootState } from './index';
 
 /**
@@ -206,3 +207,44 @@ export const selectCanAccessDevTools = (state: RootState) =>
 
 // Single property selector for network status
 export const selectIsOnline = (state: RootState) => state.isOnline;
+
+// =========================================================================
+// Safe grouped-selector hooks
+// =========================================================================
+//
+// Each `selectXxx` selector above returns a fresh object literal, which means
+// callers MUST wrap them with `useShallow` to avoid an infinite re-render
+// loop. That's a footgun: a future caller who forgets `useShallow` won't get
+// any warning until profiling reveals the wasted renders.
+//
+// The hooks below bake `useShallow` in. Prefer these over the raw selectors
+// for new call sites:
+//
+//   const { user, accessToken, refreshToken } = useAuthTokens();   // ✅
+//   // instead of:
+//   const { user, accessToken, refreshToken } = useAppStore(useShallow(selectAuthTokens));
+//
+// Existing call sites that already wrap with `useShallow` continue to work.
+// =========================================================================
+
+export const useAuthState = () => useAppStore(useShallow(selectAuthState));
+export const useAuthTokens = () => useAppStore(useShallow(selectAuthTokens));
+export const useAuthActions = () => useAppStore(useShallow(selectAuthActions));
+export const usePostLoginState = () =>
+  useAppStore(useShallow(selectPostLoginState));
+export const useNavigationState = () =>
+  useAppStore(useShallow(selectNavigationState));
+export const useBottomSheetState = () =>
+  useAppStore(useShallow(selectBottomSheetState));
+export const useSetters = () => useAppStore(useShallow(selectSetters));
+export const usePantryState = () => useAppStore(useShallow(selectPantryState));
+export const useShoppingListState = () =>
+  useAppStore(useShallow(selectShoppingListState));
+export const useMealPlanState = () =>
+  useAppStore(useShallow(selectMealPlanState));
+export const useHomeState = () => useAppStore(useShallow(selectHomeState));
+export const usePreferences = () => useAppStore(useShallow(selectPreferences));
+export const useTokenState = () => useAppStore(useShallow(selectTokenState));
+export const useNavigationUtils = () =>
+  useAppStore(useShallow(selectNavigationUtils));
+export const useSearchState = () => useAppStore(useShallow(selectSearchState));

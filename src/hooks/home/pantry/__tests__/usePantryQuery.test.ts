@@ -45,10 +45,11 @@ jest.mock('#/hooks/utils/usePagination', () => ({
   })),
 }));
 
+// The pantry query no longer touches subscriptionService — pending-delete
+// echoes are filtered at the subscription-handler layer instead. Mock is
+// still registered so any accidental call fails loudly.
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
-  subscriptionService: {
-    filterPendingDeletes: jest.fn((items: any[]) => items),
-  },
+  subscriptionService: {},
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
@@ -201,14 +202,13 @@ describe('usePantryQuery', () => {
     expect(result.current.state.isLoadingMore).toBe(false);
   });
 
-  it('filters pending deletes from items', () => {
-    const {
-      subscriptionService,
-    } = require('#/services/subscriptions/SubscriptionService');
-    subscriptionService.filterPendingDeletes.mockReturnValue([]);
+  it('returns items directly from the cache (pending-delete filtering now happens in subscription handlers)', () => {
+    const { result } = renderHook(() => usePantryQuery('pantry-1'));
 
-    renderHook(() => usePantryQuery('pantry-1'));
-
-    expect(subscriptionService.filterPendingDeletes).toHaveBeenCalled();
+    // Items come straight from normalizePantry → usePreservedArrayData with
+    // no intermediate JS-layer filtering. The Apollo cache is the single
+    // source of truth; pending-delete echoes are skipped at the subscription
+    // handler level in `usePantrySubscriptions.ts`.
+    expect(Array.isArray(result.current.state.pantryItems)).toBe(true);
   });
 });

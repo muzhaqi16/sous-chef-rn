@@ -113,6 +113,7 @@ export const PantryItemDetail: React.FC<
   const { data, refetch } = useGetPantryItemQuery({
     variables: { id: itemId },
     fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
   });
 
   const handleRefresh = () => {

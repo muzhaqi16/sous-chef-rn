@@ -13,6 +13,8 @@ import { Icon } from '#utils/iconUtils';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { Pressable } from 'react-native-gesture-handler';
+import type { Member } from '#/utils/formatters/memberFormatters';
+
 export type PartialHome = {
   id: string;
   name: string;
@@ -20,22 +22,7 @@ export type PartialHome = {
   allowJoinCode?: boolean;
   membersTotalCount?: number;
   pantriesTotalCount?: number;
-  members?: Array<{
-    id: string;
-    role: string;
-    status: string;
-    userId?: string;
-    displayName?: string;
-    user?: {
-      id: string;
-      email?: string;
-      profile?: {
-        firstName?: string;
-        lastName?: string;
-        displayName?: string;
-      };
-    };
-  }>;
+  members?: Member[];
   pantries?: Array<{ id: string }>;
   invites?: Array<{
     id: string;
@@ -43,13 +30,7 @@ export type PartialHome = {
     recipientName: string | null;
     status: string;
   }>;
-  myMembership?: {
-    id: string;
-    role: string;
-    status: string;
-    displayName?: string;
-    canManageHome?: boolean;
-  } | null;
+  myMembership?: Member | null;
 };
 
 interface HomeCardProps {

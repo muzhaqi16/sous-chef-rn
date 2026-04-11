@@ -1,4 +1,5 @@
 import React, {
+  useEffect,
   useState,
   useRef,
   useImperativeHandle,
@@ -175,6 +176,28 @@ const RecipeMainInner: React.FC = () => {
   const ingredientSheetRef = useRef<IngredientSelectorSheetRef>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
+  // Per CLAUDE.md: never call present()/dismiss() directly outside of an
+  // effect. We track desired sheet visibility in state and let an effect
+  // imperatively present/dismiss the underlying ref-based sheets.
+  const [ingredientSheetVisible, setIngredientSheetVisible] = useState(false);
+  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
+
+  useEffect(() => {
+    if (ingredientSheetVisible) {
+      ingredientSheetRef.current?.present();
+    } else {
+      ingredientSheetRef.current?.dismiss();
+    }
+  }, [ingredientSheetVisible]);
+
+  useEffect(() => {
+    if (filterSheetVisible) {
+      filterSheetRef.current?.present();
+    } else {
+      filterSheetRef.current?.dismiss();
+    }
+  }, [filterSheetVisible]);
+
   const tutorial = useTutorialSequence({
     steps: RECIPE_TUTORIAL_STEPS,
     targetRects: {
@@ -199,17 +222,21 @@ const RecipeMainInner: React.FC = () => {
   useTabBarAddButton(() => navigate('RecipeCreate'));
 
   const openIngredientSelector = () => {
-    ingredientSheetRef.current?.present();
+    setIngredientSheetVisible(true);
   };
 
   const openFilterSheet = () => {
-    filterSheetRef.current?.present();
+    setFilterSheetVisible(true);
   };
 
   // Track sheet open/close — filters are saved on close but search is NOT
   // auto-triggered; the user presses the search button to apply new filters.
+  // Also keep our visibility state in sync when the user dismisses via swipe.
   const handleSheetChange = (index: number) => {
     setIsSheetOpen(index >= 0);
+    if (index < 0) {
+      setFilterSheetVisible(false);
+    }
   };
 
   const handleItemPress = (id: string | number) => {
@@ -467,7 +494,12 @@ const RecipeMainInner: React.FC = () => {
       <IngredientSelectorSheet
         ref={ingredientSheetRef}
         screen={screen}
-        onSheetChange={open => setIsSheetOpen(open)}
+        onSheetChange={open => {
+          setIsSheetOpen(open);
+          if (!open) {
+            setIngredientSheetVisible(false);
+          }
+        }}
       />
 
       {/* Filter Bottom Sheet — lazy-mounted for performance */}

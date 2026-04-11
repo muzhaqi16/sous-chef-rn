@@ -1,8 +1,13 @@
 import React from 'react';
-import { View, Text, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { FlashList } from '@shopify/flash-list';
-import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetModal,
+  BottomSheetTextInput,
+  BottomSheetView,
+  useBottomSheetScrollableCreator,
+} from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
@@ -65,6 +70,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
       onDismiss: onClose,
       snapPoints: ['85%'],
     });
+  const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   const {
     templates,
@@ -91,7 +97,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         {/* Search bar */}
         <View style={styles.searchContainer}>
           <Icon name="search" size={18} color={theme.colors.textTertiary} />
-          <TextInput
+          <BottomSheetTextInput
             style={styles.searchInput}
             placeholder="Search templates..."
             placeholderTextColor={theme.colors.textTertiary}
@@ -126,6 +132,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         ) : (
           <TemplateBrowserProvider onSelectTemplate={onSelectTemplate}>
             <FlashList
+              renderScrollComponent={BottomSheetScrollable}
               data={templates}
               renderItem={renderTemplate}
               keyExtractor={keyExtractor}

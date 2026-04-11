@@ -183,7 +183,7 @@ export function useRecipeDetail() {
       return;
     }
     setPendingAction(action);
-    listPickerRef.current?.present();
+    setListPickerVisible(true);
   };
 
   // State for external recipes
@@ -240,6 +240,30 @@ export function useRecipeDetail() {
   const shoppingListOptionsRef = useRef<BottomSheetModal>(null);
   const ingredientSelectorRef = useRef<BottomSheetModal>(null);
   const listPickerRef = useRef<BottomSheetModal>(null);
+
+  // Per CLAUDE.md: control sheet visibility via state + effect, never call
+  // present()/dismiss() directly from event handlers. The state below tracks
+  // desired visibility for each sheet; the effects below dispatch the
+  // imperative present/dismiss after render commits.
+  const [listPickerVisible, setListPickerVisible] = useState(false);
+  const [ingredientSelectorVisible, setIngredientSelectorVisible] =
+    useState(false);
+
+  useEffect(() => {
+    if (listPickerVisible) {
+      listPickerRef.current?.present();
+    } else {
+      listPickerRef.current?.dismiss();
+    }
+  }, [listPickerVisible]);
+
+  useEffect(() => {
+    if (ingredientSelectorVisible) {
+      ingredientSelectorRef.current?.present();
+    } else {
+      ingredientSelectorRef.current?.dismiss();
+    }
+  }, [ingredientSelectorVisible]);
 
   // Pending action to execute after a sheet dismisses (avoids setTimeout between sheets)
   const pendingDismissActionRef = useRef<(() => void) | null>(null);
@@ -740,7 +764,7 @@ export function useRecipeDetail() {
 
   // Handle list selection from picker
   const handleListSelected = (listId: string) => {
-    listPickerRef.current?.dismiss();
+    setListPickerVisible(false);
 
     if (pendingAction?.type === 'all') {
       executeAddAllIngredientsToList(listId);
@@ -781,7 +805,7 @@ export function useRecipeDetail() {
         }
 
         setSelectedShoppingListId(newList.id);
-        listPickerRef.current?.dismiss();
+        setListPickerVisible(false);
 
         if (currentPendingAction?.type === 'all') {
           executeAddAllIngredientsToList(newList.id, newList.name);
@@ -813,8 +837,10 @@ export function useRecipeDetail() {
   };
 
   const openIngredientSelector = () => {
-    pendingDismissActionRef.current = () =>
-      ingredientSelectorRef.current?.present();
+    // Queue the show — once the parent options sheet finishes dismissing,
+    // its onDismiss callback fires handleSheetDismiss which sets state →
+    // the effect-driven present() runs after that render commit.
+    pendingDismissActionRef.current = () => setIngredientSelectorVisible(true);
     shoppingListOptionsRef.current?.dismiss();
   };
 
@@ -841,7 +867,7 @@ export function useRecipeDetail() {
     // Set pending action, then dismiss — onDismiss will execute it
     pendingDismissActionRef.current = () =>
       openListPicker({ type: 'selected' });
-    ingredientSelectorRef.current?.dismiss();
+    setIngredientSelectorVisible(false);
   };
 
   // Executes any pending action after a bottom sheet dismisses

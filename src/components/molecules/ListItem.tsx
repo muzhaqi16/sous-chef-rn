@@ -131,7 +131,9 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   );
 };
 
-export const ListItem = React.memo(ListItemComponent);
+// React Compiler memoizes JSX at the parent call site, so React.memo is
+// redundant on non-FlashList components. Per CLAUDE.md / project memory.
+export const ListItem = ListItemComponent;
 
 const styles = StyleSheet.create(theme => ({
   container: {
