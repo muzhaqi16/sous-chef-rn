@@ -150,17 +150,11 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   );
 };
 
-export const BatchListItem = React.memo(
-  BatchListItemComponent,
-  (prev, next) =>
-    prev.batch.id === next.batch.id &&
-    prev.batch.status === next.batch.status &&
-    prev.batch.quantity === next.batch.quantity &&
-    prev.batch.isOpened === next.batch.isOpened &&
-    prev.batch.expiresAt === next.batch.expiresAt &&
-    prev.batch.expiresAtIsManual === next.batch.expiresAtIsManual &&
-    prev.unitSymbol === next.unitSymbol,
-);
+// React Compiler memoizes JSX at the parent call site (BatchSection renders
+// BatchListItem via .map(), not FlashList), so React.memo + custom
+// comparator is redundant — and custom comparators are explicitly banned per
+// CLAUDE.md / project memory.
+export const BatchListItem = BatchListItemComponent;
 
 const styles = StyleSheet.create(theme => ({
   container: {

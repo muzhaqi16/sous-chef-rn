@@ -42,6 +42,7 @@ export function useNotificationsOnLaunch(userId?: string) {
   const [fetchUnreadNotifications, { data, error }] =
     useGetUnreadNotificationsLazyQuery({
       fetchPolicy: 'cache-and-network',
+      nextFetchPolicy: 'cache-first',
       errorPolicy: 'all',
     });
 

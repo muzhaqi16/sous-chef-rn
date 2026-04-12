@@ -26,7 +26,7 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(() => null),
-  selectSelectedShoppingListId: jest.fn(() => null),
+  useSelectedShoppingListId: jest.fn(() => null),
 }));
 
 jest.mock('@gorhom/bottom-sheet', () => ({
@@ -3571,6 +3571,8 @@ describe('useRecipeDetail', () => {
       const { toastService } = require('#/services/toastService');
 
       useAppStore.mockReturnValue('sl-2');
+      const storeModule = require('#store/useAppStore');
+      storeModule.useSelectedShoppingListId.mockReturnValue('sl-2');
       useGetShoppingListsLiteQuery.mockReturnValue({
         data: {
           shoppingLists: {

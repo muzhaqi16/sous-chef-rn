@@ -21,8 +21,8 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { BackButton } from '#components/atoms/BackButton';
 
 import {
-  BottomSheetFlatList,
   BottomSheetTextInput,
+  useBottomSheetScrollableCreator,
 } from '@gorhom/bottom-sheet';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { FolderPicker } from '#components/molecules/FolderPicker';
@@ -46,7 +46,7 @@ import {
 } from './SelectableIngredientContext';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
@@ -111,7 +111,7 @@ const RecipeDetailScreen: React.FC = () => {
   const { theme } = useUnistyles();
 
   const { navigate } = useAppNavigation();
-  const user = useAuthUser();
+  const user = useUser();
   const {
     goBack,
     recipeId,
@@ -162,6 +162,9 @@ const RecipeDetailScreen: React.FC = () => {
     cookedCount,
     handleUnfavoriteRecipe,
   } = useRecipeDetail();
+
+  // Scroll component for FlashList instances rendered inside bottom sheets.
+  const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   // Get available folders and tags for picker and autocomplete
   const { folders } = useRecipeFolders();
@@ -907,6 +910,7 @@ const RecipeDetailScreen: React.FC = () => {
           toggleIngredient={toggleIngredient}
         >
           <FlashList
+            renderScrollComponent={BottomSheetScrollable}
             data={backendRecipe?.ingredients || []}
             keyExtractor={ingredientKeyExtractor}
             renderItem={(
@@ -957,7 +961,8 @@ const RecipeDetailScreen: React.FC = () => {
           handleSheetDismiss();
         }}
       >
-        <BottomSheetFlatList
+        <FlashList
+          renderScrollComponent={BottomSheetScrollable}
           data={shoppingLists}
           keyExtractor={(item: (typeof shoppingLists)[number]) => item.id}
           style={{ flex: 1 }}

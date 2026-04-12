@@ -5,8 +5,9 @@ import {
   BottomSheetModal,
   BottomSheetTextInput,
   BottomSheetView,
-  BottomSheetFlatList,
+  useBottomSheetScrollableCreator,
 } from '@gorhom/bottom-sheet';
+import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { useAppStore } from '#store/useAppStore';
@@ -112,6 +113,7 @@ export function BottomSheetAutocompleteInput<T>({
     onDismiss: handleDismiss,
     snapPoints: [snapPoint],
   });
+  const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   // Check online status to prevent autocomplete when offline
   const isOnline = useAppStore(state => state.isOnline);
@@ -274,7 +276,8 @@ export function BottomSheetAutocompleteInput<T>({
               autoCapitalize={autoCapitalize}
             />
           </View>
-          <BottomSheetFlatList
+          <FlashList
+            renderScrollComponent={BottomSheetScrollable}
             data={data}
             keyExtractor={keyExtractor}
             renderItem={renderAutocompleteItem}
@@ -282,12 +285,6 @@ export function BottomSheetAutocompleteInput<T>({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
-            // Performance optimizations
-            maxToRenderPerBatch={10}
-            windowSize={5}
-            removeClippedSubviews={true}
-            initialNumToRender={10}
-            updateCellsBatchingPeriod={50}
             ListFooterComponent={listFooterComponent}
             ListEmptyComponent={
               loading

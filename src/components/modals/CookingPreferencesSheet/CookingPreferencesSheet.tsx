@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { alertService } from '#/services/alertService';
-import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
 import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '#/constants/dietary';
@@ -31,10 +30,16 @@ interface CookingPreferencesSheetProps {
 export const CookingPreferencesSheet: React.FC<
   CookingPreferencesSheetProps
 > = ({ visible, onClose, onSave, initialValues }) => {
-  const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
+
+  // Standard bottom-sheet boilerplate (ref + modalProps + present/dismiss
+  // effect) is provided by useStandardBottomSheet.
+  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['65%'],
+    keyboardBehavior: 'interactive',
+  });
 
   // Form state
   const [skillLevel, setSkillLevel] = useState('');
@@ -56,15 +61,6 @@ export const CookingPreferencesSheet: React.FC<
       setBudget(initialValues?.budgetPerMeal?.toString() || '');
     }
   }
-
-  // Control bottom sheet visibility based on visible prop
-  useEffect(() => {
-    if (visible) {
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
-    }
-  }, [visible]);
 
   const handleSave = async () => {
     const updates: {
@@ -140,20 +136,7 @@ export const CookingPreferencesSheet: React.FC<
   };
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['65%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.surface }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      backdropComponent={DismissBackdrop}
-    >
+    <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
       <BottomSheetScrollView
         style={styles.scrollView}
         contentContainerStyle={[

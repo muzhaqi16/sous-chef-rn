@@ -34,6 +34,7 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   const [fetchAllBatches, { data: allBatchesData }] =
     useGetPantryItemBatchesLazyQuery({
       fetchPolicy: 'cache-and-network',
+      nextFetchPolicy: 'cache-first',
     });
 
   // Sort active batches by expiration (FIFO order) — earliest first

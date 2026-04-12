@@ -14,7 +14,7 @@ import {
 } from '#generated';
 import { useAppStore } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
@@ -26,7 +26,7 @@ type InviteEntry = {
 export const InviteMemberScreen = () => {
   useScreenTransition('InviteMemberScreen');
   const { navigateToNextStep } = useOnboardingNavigation();
-  const user = useAuthUser();
+  const user = useUser();
 
   const selectedHomeId = useAppStore(state => state.selectedHomeId);
   const selectedShoppingListId = useAppStore(

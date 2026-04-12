@@ -32,11 +32,7 @@ import {
 } from '#generated';
 
 // Store & Navigation
-import {
-  useAppStore,
-  selectUser,
-  selectSelectedHomeId,
-} from '#store/useAppStore';
+import { useAppStore, useUser, useSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 
 // Validation & Helpers
@@ -49,6 +45,43 @@ import {
   executeWithLoadingState,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
+
+/** Module-level cache update closure for `useAcceptHomeInviteMutation`.
+ *  Extracted from the component body to keep the surrounding try/catch outside
+ *  hook call sites (React Compiler bailout). */
+function buildAcceptHomeInviteUpdater(userId: string | undefined) {
+  return function acceptHomeInviteUpdater(cache: any, { data }: any) {
+    if (!data?.acceptHomeInvite?.membership?.homeId || !userId) return;
+    try {
+      const homeId = data.acceptHomeInvite.membership.homeId;
+      const userCacheId = cache.identify({
+        __typename: 'User',
+        id: userId,
+      });
+      if (!userCacheId) return;
+
+      cache.modify({
+        id: userCacheId,
+        fields: {
+          homes(existingHomes: any[] = [], { readField, toReference }: any) {
+            const homeRef = toReference({
+              __typename: 'Home',
+              id: homeId,
+            });
+            const exists = existingHomes.some(
+              (ref: any) => readField('id', ref) === homeId,
+            );
+            if (exists) return existingHomes;
+            return [...existingHomes, homeRef];
+          },
+        },
+      });
+    } catch (error) {
+      console.warn('Cache update failed for acceptHomeInvite:', error);
+      // UI will still work via optimistic/onCompleted handlers
+    }
+  };
+}
 
 /** Module-level async function for home/pantry creation.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
@@ -211,8 +244,8 @@ const CreateHomeScreenComponent = () => {
   const { navigateToNextStep, setUserNavigationState, skipToStep } =
     useOnboardingNavigation();
 
-  const user = useAppStore(selectUser);
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const user = useUser();
+  const selectedHomeId = useSelectedHomeId();
   const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
   const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
 
@@ -321,52 +354,10 @@ const CreateHomeScreenComponent = () => {
 
   const [acceptHomeInvite, { loading: accepting }] =
     useAcceptHomeInviteMutation({
-      // Manual cache update instead of refetchQueries for better performance
-      // The mutation returns a Membership object with homeId; the Home entity
-      // should already exist in cache from the invite query
-      update: (cache, { data }) => {
-        if (!data?.acceptHomeInvite?.membership?.homeId || !user?.id) return;
-
-        try {
-          const homeId = data.acceptHomeInvite.membership.homeId;
-
-          // The Home entity should already be cached from the invite query
-          // We just need to ensure it's in the GetHomes query result
-          const userCacheId = cache.identify({
-            __typename: 'User',
-            id: user.id,
-          });
-
-          if (!userCacheId) return;
-
-          // Update the user's homes field to include the new home
-          cache.modify({
-            id: userCacheId,
-            fields: {
-              homes(existingHomes = [], { readField, toReference }) {
-                const homeRef = toReference({
-                  __typename: 'Home',
-                  id: homeId,
-                });
-
-                // Check if home already exists in the list
-                const exists = existingHomes.some(
-                  (ref: any) => readField('id', ref) === homeId,
-                );
-
-                if (exists) {
-                  return existingHomes;
-                }
-
-                return [...existingHomes, homeRef];
-              },
-            },
-          });
-        } catch (error) {
-          console.warn('Cache update failed for acceptHomeInvite:', error);
-          // UI will still work via optimistic/onCompleted handlers
-        }
-      },
+      // Manual cache update instead of refetchQueries for better performance.
+      // Builder is module-scope so the inner try/catch is not inside the
+      // component body (React Compiler bailout).
+      update: buildAcceptHomeInviteUpdater(user?.id),
       onCompleted: data => {
         if (data.acceptHomeInvite?.membership?.homeId) {
           setSelectedHomeId(data.acceptHomeInvite.membership.homeId);

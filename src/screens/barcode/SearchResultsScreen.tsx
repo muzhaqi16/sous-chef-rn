@@ -16,9 +16,8 @@ import AddItemForm, {
   type AddItemFormInitialData,
 } from '#components/organisms/AddItemForm/AddItemForm';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useAppStore, selectBottomSheetState } from '#store/useAppStore';
+import { useBottomSheetState } from '#store/useAppStore';
 import { useSearchResults } from '#hooks/useSearchResults';
-import { useShallow } from 'zustand/react/shallow';
 import type { BarcodeSource } from '#/types/navigation';
 import type { ScannedItem } from '#/store/slices/barcodeScannerSlice';
 
@@ -63,7 +62,7 @@ export const SearchResultsScreen: React.FC<
     isSearching,
     hideBottomSheet,
     showBottomSheet,
-  } = useAppStore(useShallow(selectBottomSheetState));
+  } = useBottomSheetState();
 
   const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
     onDismiss: hideBottomSheet,

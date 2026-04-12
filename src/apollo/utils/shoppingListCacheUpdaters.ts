@@ -18,6 +18,41 @@ import {
   safeEvictMany,
 } from './cacheUpdaters';
 
+// =============================================================================
+// storeFieldName filter detection
+// =============================================================================
+
+/**
+ * Check whether an Apollo `storeFieldName` matches a specific filter value.
+ *
+ * Apollo serializes `keyArgs` into storeFieldName, e.g.:
+ *   `itemsConnection:{"filters":{"isPurchased":true}}`
+ *
+ * This helper avoids brittle `.includes()` string matching by encoding the
+ * expected JSON fragment consistently.
+ *
+ * @example
+ * matchesFilter(storeFieldName, 'isPurchased', true)
+ * matchesFilter(storeFieldName, 'isPurchased', false)
+ */
+export function matchesFilter(
+  storeFieldName: string,
+  key: string,
+  value: boolean,
+): boolean {
+  return storeFieldName.includes(`${key}":${value}`);
+}
+
+/** Shorthand: does this storeFieldName target the purchased variant? */
+export function isPurchasedVariant(storeFieldName: string): boolean {
+  return matchesFilter(storeFieldName, 'isPurchased', true);
+}
+
+/** Shorthand: does this storeFieldName target the unpurchased variant? */
+export function isUnpurchasedVariant(storeFieldName: string): boolean {
+  return matchesFilter(storeFieldName, 'isPurchased', false);
+}
+
 /**
  * Remove item from ShoppingList.itemsConnection (all variants).
  * Correct for deletion — runs on every storeFieldName variant.
@@ -51,13 +86,15 @@ function clearItemsFromCache(
 
   if (!parentCacheId) return;
 
-  const filterKey = `isPurchased":${isPurchased}`;
-
   cache.modify({
     id: parentCacheId,
     fields: {
       itemsConnection(existing: any, { storeFieldName }: any) {
-        if (!storeFieldName.includes(filterKey) || !existing) return existing;
+        if (
+          !matchesFilter(storeFieldName, 'isPurchased', isPurchased) ||
+          !existing
+        )
+          return existing;
         return {
           ...existing,
           edges: [],
@@ -125,10 +162,8 @@ function updateItemsConnectionForPurchaseStatusChange(
           { readField, storeFieldName, toReference }: any,
         ) {
           // Detect which filtered variant this is by checking storeFieldName
-          const isUnpurchasedConnection =
-            storeFieldName.includes('isPurchased":false');
-          const isPurchasedConnection =
-            storeFieldName.includes('isPurchased":true');
+          const isUnpurchasedConnection = isUnpurchasedVariant(storeFieldName);
+          const isPurchasedConnection = isPurchasedVariant(storeFieldName);
 
           if (!existing?.edges) return existing;
 
@@ -265,10 +300,7 @@ export function addNewItemToShoppingListCache(
         ) {
           if (!existing?.edges) return existing;
 
-          const isPurchasedConnection =
-            storeFieldName.includes('isPurchased":true');
-
-          if (isPurchasedConnection) {
+          if (isPurchasedVariant(storeFieldName)) {
             // REMOVE from purchased variant (handles re-add of previously purchased item)
             const hadItem = existing.edges.some(
               (edge: any) => readField('id', edge?.node) === item.id,
@@ -339,13 +371,14 @@ export function removeItemFromShoppingListForMoveToPantry(
 
     if (!parentCacheId) return;
 
-    const filterKey = `isPurchased":${wasPurchased}`;
-
     cache.modify({
       id: parentCacheId,
       fields: {
         itemsConnection(existing: any, { readField, storeFieldName }: any) {
-          if (!storeFieldName.includes(filterKey) || !existing?.edges)
+          if (
+            !matchesFilter(storeFieldName, 'isPurchased', wasPurchased) ||
+            !existing?.edges
+          )
             return existing;
 
           return {

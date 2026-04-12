@@ -41,6 +41,7 @@ import {
   isCircularStructureError,
   isTimerCircularStructureError,
 } from '#/utils/errorSerialization';
+import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 
 export class SubscriptionService {
   private static instance: SubscriptionService;
@@ -673,10 +674,7 @@ export class SubscriptionService {
             }
 
             // Then evict the item itself
-            if (cacheId) {
-              cache.evict({ id: cacheId });
-              cache.gc({ resetResultCache: true });
-            }
+            safeEvict(cache, config.entityType, itemId);
             this.pendingDeletes.delete(itemId);
             break;
           }
@@ -709,8 +707,7 @@ export class SubscriptionService {
           });
 
           // Evict item from cache
-          cache.evict({ id: cacheId });
-          cache.gc({ resetResultCache: true }); // Garbage collect orphaned references
+          safeEvict(cache, config.entityType, itemId);
           this.log(
             config,
             LogLevel.DEBUG,

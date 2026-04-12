@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   useGetShoppingListItemsFilteredQuery,
   ShoppingListItemDisplayFragment,
@@ -273,53 +273,6 @@ export function usePaginatedShoppingItems({
       ),
     ]);
   };
-
-  // Auto-refetch when edges are depleted but totalCount indicates items remain
-  // (e.g., all visible items toggled but server has more pages)
-  useEffect(() => {
-    const purchasedNeedsRefetch =
-      (purchasedTotalCount ?? 0) > 0 &&
-      purchasedItems.length === 0 &&
-      !pLoading;
-    const unpurchasedNeedsRefetch =
-      unpurchasedTotalCount > 0 && unpurchasedItems.length === 0 && !uLoading;
-
-    if (
-      !hasValidListId ||
-      (!purchasedNeedsRefetch && !unpurchasedNeedsRefetch)
-    ) {
-      return;
-    }
-
-    const idleId = requestIdleCallback(() => {
-      if (unpurchasedNeedsRefetch) {
-        executeRefetch(
-          uRefetch,
-          '[usePaginatedShoppingItems] Auto-refetch unpurchased failed:',
-        );
-      }
-      if (purchasedNeedsRefetch) {
-        executeRefetch(
-          pRefetch,
-          '[usePaginatedShoppingItems] Auto-refetch purchased failed:',
-        );
-      }
-    });
-
-    return () => {
-      cancelIdleCallback(idleId);
-    };
-  }, [
-    purchasedTotalCount,
-    purchasedItems.length,
-    unpurchasedTotalCount,
-    unpurchasedItems.length,
-    pLoading,
-    uLoading,
-    hasValidListId,
-    uRefetch,
-    pRefetch,
-  ]);
 
   // --- Combined loading state ---
   // Only block on unpurchased (the default tab); purchased is deferred

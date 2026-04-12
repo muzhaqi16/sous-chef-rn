@@ -1,3 +1,4 @@
+import { MembershipRole, MembershipStatus } from '#/graphql/generated';
 import {
   CollaboratorDisplayShape,
   getCollaboratorDisplayName,
@@ -8,8 +9,8 @@ import {
 function makeMember(overrides: Partial<Member> = {}): Member {
   return {
     id: 'm1',
-    role: 'MEMBER',
-    status: 'ACTIVE',
+    role: MembershipRole.Member,
+    status: MembershipStatus.Active,
     ...overrides,
   };
 }
@@ -28,11 +29,7 @@ describe('getMemberDisplayName', () => {
       user: {
         id: 'u2',
         email: 'test@example.com',
-        profile: {
-          firstName: 'John',
-          lastName: 'Doe',
-          displayName: 'Profile Name',
-        },
+        profile: { displayName: 'Profile Name' },
       },
     });
     expect(getMemberDisplayName(member, 'different-user')).toBe('Custom Name');
@@ -43,25 +40,10 @@ describe('getMemberDisplayName', () => {
       user: {
         id: 'u2',
         email: 'test@example.com',
-        profile: {
-          firstName: 'John',
-          lastName: 'Doe',
-          displayName: 'Profile Name',
-        },
+        profile: { displayName: 'Profile Name' },
       },
     });
     expect(getMemberDisplayName(member)).toBe('Profile Name');
-  });
-
-  it('falls back to profile firstName', () => {
-    const member = makeMember({
-      user: {
-        id: 'u2',
-        email: 'test@example.com',
-        profile: { firstName: 'John', lastName: 'Doe', displayName: null },
-      },
-    });
-    expect(getMemberDisplayName(member)).toBe('John');
   });
 
   it('falls back to email username part', () => {

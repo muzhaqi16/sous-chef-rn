@@ -124,13 +124,19 @@ if no local matches exist — eliminating unnecessary network requests for commo
 | Hook                             | `localFirst` | Notes                                       |
 |----------------------------------|:------------:|---------------------------------------------|
 | `useUnitAutocomplete`            | `true`       | Uses `cachedUnits` from Zustand             |
-| `useBrandAutocomplete`           | `false`      | Has `suggestedBrands` fallback — ready to opt in when desired |
+| `useBrandAutocomplete`           | `true`       | Uses `suggestedBrands` fallback              |
 | `useCategoryAutocomplete`        | `false`      | No cached data yet — add when categories are cached |
 | `useItemAutocomplete`            | `false`      | No cached data yet — add when items are cached |
 | `useStorageLocationAutocomplete` | N/A          | Fully local, doesn't use `useAutocompleteSearch` |
 
 When adding cached data to a new autocomplete hook, pass `localFirst: true` along with
 `fallbackItems` and `filterFallback` to enable local-first behavior.
+
+**Staleness guard:** `useAutocompleteSearch` tracks the last term sent to `search()` via
+`lastFiredTerm` state. API results are only displayed when `searchTerm.startsWith(lastFiredTerm)`
+(case-insensitive). This prevents stale results from appearing when the user types faster than
+the debounce cycle — e.g., switching from "app" to "banana" won't flash "app" results.
+Consumer hooks do not need to implement their own relevance checks.
 
 ### Verification Commands
 

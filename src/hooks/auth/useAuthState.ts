@@ -1,6 +1,8 @@
-;
-import { useAppStore, selectAuthTokens, selectAuthActions, selectPostLoginState } from '#store/useAppStore';
-import { useShallow } from 'zustand/react/shallow';
+import {
+  useAuthTokens,
+  useAuthActions,
+  usePostLoginState,
+} from '#store/useAppStore';
 
 /**
  * Hook for managing core authentication state from Zustand store.
@@ -9,11 +11,9 @@ import { useShallow } from 'zustand/react/shallow';
  * PERFORMANCE: Uses grouped selectors to reduce subscriptions from 16+ to 3
  */
 export const useAuthState = () => {
-  // PERFORMANCE: Group auth tokens into single subscription with useShallow (Zustand v5 API)
   const { user, accessToken, refreshToken, isLoggingOut, isAutoLoggingIn } =
-    useAppStore(useShallow(selectAuthTokens));
+    useAuthTokens();
 
-  // PERFORMANCE: Group auth actions into single subscription with useShallow (Zustand v5 API)
   const {
     setAuth,
     clearAuth,
@@ -24,9 +24,8 @@ export const useAuthState = () => {
     setRememberMe,
     setIsAutoLoggingIn,
     setUserNavigationState,
-  } = useAppStore(useShallow(selectAuthActions));
+  } = useAuthActions();
 
-  // PERFORMANCE: Group post-login state into single subscription with useShallow (Zustand v5 API)
   const {
     navigationState,
     showBiometricSetup,
@@ -34,7 +33,7 @@ export const useAuthState = () => {
     setNavigationState,
     setShowBiometricSetup,
     setPostLoginCredentials,
-  } = useAppStore(useShallow(selectPostLoginState));
+  } = usePostLoginState();
 
   // Computed properties
   const isAuthenticated = !!(user && accessToken);
@@ -45,38 +44,38 @@ export const useAuthState = () => {
 
   // PERFORMANCE: Memoize return object to prevent infinite re-renders
   // Without memoization, every render creates a new object reference causing cascade re-renders
-  return ({
-      // Core auth state
-      user,
-      accessToken,
-      refreshToken,
-      isLoggingOut,
-      isAutoLoggingIn,
+  return {
+    // Core auth state
+    user,
+    accessToken,
+    refreshToken,
+    isLoggingOut,
+    isAutoLoggingIn,
 
-      // Computed properties
-      isAuthenticated,
-      hasAnyToken,
-      isLoggedOut,
-      isTokenRefreshing,
-      canAttemptQueries,
+    // Computed properties
+    isAuthenticated,
+    hasAnyToken,
+    isLoggedOut,
+    isTokenRefreshing,
+    canAttemptQueries,
 
-      // Auth state actions
-      setAuth,
-      clearAuth,
-      setTokens,
-      updateUser,
-      setEmailVerified,
-      setOnboarded,
-      setRememberMe,
-      setIsAutoLoggingIn,
-      setUserNavigationState,
+    // Auth state actions
+    setAuth,
+    clearAuth,
+    setTokens,
+    updateUser,
+    setEmailVerified,
+    setOnboarded,
+    setRememberMe,
+    setIsAutoLoggingIn,
+    setUserNavigationState,
 
-      // Navigation state machine
-      navigationState,
-      showBiometricSetup,
-      postLoginCredentials,
-      setNavigationState,
-      setShowBiometricSetup,
-      setPostLoginCredentials,
-    });
+    // Navigation state machine
+    navigationState,
+    showBiometricSetup,
+    postLoginCredentials,
+    setNavigationState,
+    setShowBiometricSetup,
+    setPostLoginCredentials,
+  };
 };

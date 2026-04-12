@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useDataPreloading } from '#/hooks/useDataPreloading';
 import { useNotificationsOnLaunch } from '#/hooks/notifications/useNotificationsOnLaunch';
-import { useAuthUser } from '#/hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { useGetUserProfileQuery } from '#/graphql/generated';
 import { useAppStore } from '#store/useAppStore';
 
@@ -30,7 +30,7 @@ interface DataProviderProps {
  * the main navigation to ensure data is loaded early in the app lifecycle.
  */
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
-  const user = useAuthUser();
+  const user = useUser();
   const isLoggingOut = useAppStore(state => state.isLoggingOut);
   const updateUser = useAppStore(state => state.updateUser);
 
@@ -44,10 +44,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
   // Fetch profile on every app load to keep Zustand store in sync
   // (e.g., profilePicture is only set at login/register and goes stale).
-  // Uses cache-first so there's no extra network cost when data is cached.
+  // First mount fires the network once; subsequent re-renders read cache only.
   const { data: profileData } = useGetUserProfileQuery({
-    fetchPolicy: 'cache-first',
-    nextFetchPolicy: 'cache-and-network',
+    fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
     skip: !user || isLoggingOut,
     notifyOnNetworkStatusChange: false,
   });

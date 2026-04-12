@@ -22,13 +22,13 @@ jest.mock('#store/useAppStore', () => ({
       showBottomSheet: mockShowBottomSheet,
     }),
   ),
-  selectBottomSheetState: (s: any) => ({
-    scannerSheetVisible: s.scannerSheetVisible,
-    searchError: s.searchError,
-    isSearching: s.isSearching,
-    hideBottomSheet: s.hideBottomSheet,
-    showBottomSheet: s.showBottomSheet,
-  }),
+  useBottomSheetState: jest.fn(() => ({
+    scannerSheetVisible: false,
+    searchError: null,
+    isSearching: false,
+    hideBottomSheet: mockHideBottomSheet,
+    showBottomSheet: mockShowBottomSheet,
+  })),
 }));
 
 jest.mock('zustand/react/shallow', () => ({
@@ -100,8 +100,8 @@ jest.mock('#components/atoms/BottomSheetKeyboardAwareScrollView', () => ({
 beforeEach(() => {
   jest.clearAllMocks();
   // Restore default mock implementations after clearAllMocks
-  const { useAppStore } = require('#store/useAppStore');
-  useAppStore.mockImplementation((selector: any) =>
+  const storeModule = require('#store/useAppStore');
+  storeModule.useAppStore.mockImplementation((selector: any) =>
     selector({
       scannerSheetVisible: false,
       searchError: null,
@@ -110,6 +110,13 @@ beforeEach(() => {
       showBottomSheet: mockShowBottomSheet,
     }),
   );
+  storeModule.useBottomSheetState.mockReturnValue({
+    scannerSheetVisible: false,
+    searchError: null,
+    isSearching: false,
+    hideBottomSheet: mockHideBottomSheet,
+    showBottomSheet: mockShowBottomSheet,
+  });
 
   const { useSearchResults } = require('#hooks/useSearchResults');
   useSearchResults.mockReturnValue({
@@ -173,8 +180,8 @@ describe('SearchResultsScreen', () => {
   });
 
   it('shows error state when search error exists', () => {
-    const { useAppStore } = require('#store/useAppStore');
-    useAppStore.mockImplementation((selector: any) =>
+    const storeModule = require('#store/useAppStore');
+    storeModule.useAppStore.mockImplementation((selector: any) =>
       selector({
         scannerSheetVisible: false,
         searchError: 'Network error',
@@ -183,6 +190,13 @@ describe('SearchResultsScreen', () => {
         showBottomSheet: mockShowBottomSheet,
       }),
     );
+    storeModule.useBottomSheetState.mockReturnValue({
+      scannerSheetVisible: false,
+      searchError: 'Network error',
+      isSearching: false,
+      hideBottomSheet: mockHideBottomSheet,
+      showBottomSheet: mockShowBottomSheet,
+    });
 
     const { getByText } = render(<SearchResultsScreen {...defaultProps} />);
     expect(getByText('Network error')).toBeTruthy();

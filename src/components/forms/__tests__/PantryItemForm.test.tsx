@@ -23,8 +23,8 @@ jest.mock('#/services/alertService', () => ({
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(() => null),
-  selectSelectedPantryId: jest.fn(),
-  selectSelectedHomeId: jest.fn(),
+  useSelectedPantryId: jest.fn(() => null),
+  useSelectedHomeId: jest.fn(() => null),
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({

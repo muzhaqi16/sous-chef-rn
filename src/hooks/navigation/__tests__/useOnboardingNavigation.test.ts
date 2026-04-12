@@ -39,13 +39,13 @@ jest.mock('#store/useAppStore', () => ({
     };
     return selectorOrFn(state);
   },
-  selectUser: (state: any) => state.user,
-  selectNavigationUtils: (state: any) => ({
-    getUserNavigationState: state.getUserNavigationState,
-    setUserNavigationState: state.setUserNavigationState,
-    setOnBoardingStep: state.setOnBoardingStep,
-    setOnboarded: state.setOnboarded,
-  }),
+  useUser: jest.fn(() => mockUser),
+  useNavigationUtils: jest.fn(() => ({
+    getUserNavigationState: mockGetUserNavigationState,
+    setUserNavigationState: mockSetUserNavigationState,
+    setOnBoardingStep: mockSetOnBoardingStep,
+    setOnboarded: mockSetOnboarded,
+  })),
 }));
 
 jest.mock('zustand/shallow', () => ({
@@ -100,7 +100,9 @@ describe('useOnboardingNavigation', () => {
       expect(mockDispatch).toHaveBeenCalledWith(
         CommonActions.navigate('CreateShoppingList'),
       );
-      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(OnBoardingSteps.createShoppingList);
+      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(
+        OnBoardingSteps.createShoppingList,
+      );
     });
 
     it('resets navigation stack when navigating to OnboardingComplete', () => {
@@ -116,7 +118,9 @@ describe('useOnboardingNavigation', () => {
           routes: [{ name: 'OnboardingComplete' }],
         }),
       );
-      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(OnBoardingSteps.complete);
+      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(
+        OnBoardingSteps.complete,
+      );
     });
 
     it('does nothing if already on the last step', () => {
@@ -137,7 +141,9 @@ describe('useOnboardingNavigation', () => {
         result.current.navigateToNextStep('CreateShoppingList');
       });
 
-      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(OnBoardingSteps.selectPantryItems);
+      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(
+        OnBoardingSteps.selectPantryItems,
+      );
     });
   });
 
@@ -152,7 +158,9 @@ describe('useOnboardingNavigation', () => {
       expect(mockDispatch).toHaveBeenCalledWith(
         CommonActions.navigate('CreateHome'),
       );
-      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(OnBoardingSteps.createHome);
+      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(
+        OnBoardingSteps.createHome,
+      );
     });
 
     it('does nothing when on the first step', () => {
@@ -178,7 +186,9 @@ describe('useOnboardingNavigation', () => {
       expect(mockDispatch).toHaveBeenCalledWith(
         CommonActions.navigate('InviteMembers'),
       );
-      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(OnBoardingSteps.inviteMembers);
+      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(
+        OnBoardingSteps.inviteMembers,
+      );
     });
 
     it('does nothing for an invalid step name', () => {
@@ -280,7 +290,11 @@ describe('useOnboardingNavigation', () => {
 
   it('exposes setUserNavigationState and getUserNavigationState', () => {
     const { result } = renderHook(() => useOnboardingNavigation());
-    expect(result.current.setUserNavigationState).toBe(mockSetUserNavigationState);
-    expect(result.current.getUserNavigationState).toBe(mockGetUserNavigationState);
+    expect(result.current.setUserNavigationState).toBe(
+      mockSetUserNavigationState,
+    );
+    expect(result.current.getUserNavigationState).toBe(
+      mockGetUserNavigationState,
+    );
   });
 });

@@ -49,16 +49,17 @@ const mockStoreState = {
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
-  selectPantryState: (state: any) => ({
-    selectedPantryId: state.selectedPantryId,
-    setSelectedPantryId: state.setSelectedPantryId,
-    selectedHomeId: state.selectedHomeId,
-    setSelectedHomeId: state.setSelectedHomeId,
-  }),
-  selectSelectedHomeId: (state: any) => state.selectedHomeId,
-  selectIsHomeSelectionReady: (state: any) => state.isHomeSelectionReady,
-  selectSetIsHomeSelectionReady: (state: any) => state.setIsHomeSelectionReady,
-  selectIsLoggingOut: (state: any) => state.isLoggingOut,
+  usePantryState: jest.fn(() => ({
+    selectedPantryId: mockStoreState.selectedPantryId,
+    setSelectedPantryId: mockStoreState.setSelectedPantryId,
+    selectedHomeId: mockStoreState.selectedHomeId,
+    setSelectedHomeId: mockStoreState.setSelectedHomeId,
+  })),
+  useIsHomeSelectionReady: jest.fn(() => mockStoreState.isHomeSelectionReady),
+  useSetIsHomeSelectionReady: jest.fn(
+    () => mockStoreState.setIsHomeSelectionReady,
+  ),
+  useIsLoggingOut: jest.fn(() => mockStoreState.isLoggingOut),
 }));
 
 jest.mock('#store', () => ({
@@ -266,7 +267,9 @@ describe('useDefaultHome', () => {
     renderHook(() => useDefaultHome());
 
     // Should not set ready without pantry
-    expect(mockStoreState.setIsHomeSelectionReady).not.toHaveBeenCalledWith(true);
+    expect(mockStoreState.setIsHomeSelectionReady).not.toHaveBeenCalledWith(
+      true,
+    );
   });
 
   describe('getDefaultPantry - additional', () => {
@@ -302,9 +305,7 @@ describe('useDefaultHome', () => {
       mockHomesQueryResult.loading = false;
       mockHomesQueryResult.data = {
         homes: {
-          edges: [
-            { node: { id: 'home-1', isDefault: true, pantries: [] } },
-          ],
+          edges: [{ node: { id: 'home-1', isDefault: true, pantries: [] } }],
         },
       };
 
@@ -356,9 +357,7 @@ describe('useDefaultHome', () => {
               node: {
                 id: 'home-1',
                 isDefault: true,
-                pantries: [
-                  { id: 'pantry-1', isDefault: false },
-                ],
+                pantries: [{ id: 'pantry-1', isDefault: false }],
               },
             },
           ],

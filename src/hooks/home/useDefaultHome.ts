@@ -1,14 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { useShallow } from 'zustand/shallow';
 import { useApolloClient } from '@apollo/client/react';
 import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
 import { useGetHomesLazyQuery, useSetDefaultHomeMutation } from '#generated';
 import {
+  usePantryState,
+  useIsHomeSelectionReady,
+  useSetIsHomeSelectionReady,
+  useIsLoggingOut,
   useAppStore,
-  selectPantryState,
-  selectIsHomeSelectionReady,
-  selectSetIsHomeSelectionReady,
-  selectIsLoggingOut,
 } from '#store/useAppStore';
 import { useStore } from '#store';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
@@ -30,7 +29,7 @@ export const useDefaultHome = () => {
     setSelectedHomeId,
     selectedPantryId,
     setSelectedPantryId,
-  } = useAppStore(useShallow(selectPantryState));
+  } = usePantryState();
   const canAttemptQueries = useAppStore(
     state => !!(state.accessToken || state.refreshToken) && !state.isLoggingOut,
   );
@@ -41,7 +40,7 @@ export const useDefaultHome = () => {
   const hasAutoSelectedRef = useRef(false);
 
   // Track logout state to reset refs when user logs out
-  const isLoggingOut = useAppStore(selectIsLoggingOut);
+  const isLoggingOut = useIsLoggingOut();
   const wasLoggingOutRef = useRef(false);
 
   // Reset refs when logout starts
@@ -56,8 +55,8 @@ export const useDefaultHome = () => {
   }, [isLoggingOut]);
 
   // Home selection ready state - gates pantry queries
-  const isHomeSelectionReady = useAppStore(selectIsHomeSelectionReady);
-  const setIsHomeSelectionReady = useAppStore(selectSetIsHomeSelectionReady);
+  const isHomeSelectionReady = useIsHomeSelectionReady();
+  const setIsHomeSelectionReady = useSetIsHomeSelectionReady();
 
   // SetDefaultHome mutation for syncing auto-selection to server
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation({

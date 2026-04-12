@@ -17,7 +17,10 @@ jest.mock('#store/useAppStore', () => {
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn };
+  return {
+    useAppStore: fn,
+    useUser: jest.fn(() => ({ id: 'u1', email: 'test@test.com' })),
+  };
 });
 
 jest.mock('#hooks/shoppingList/useShoppingListDetails', () => ({
@@ -34,10 +37,6 @@ jest.mock('#hooks/shoppingList/useShoppingListDetails', () => ({
     isShared: false,
     collaborators: [],
   }),
-}));
-
-jest.mock('#hooks/auth/useAuthUser', () => ({
-  useAuthUser: () => ({ id: 'u1', email: 'test@test.com' }),
 }));
 
 jest.mock('#/hooks/home/useLazyHomeData', () => ({

@@ -1,17 +1,17 @@
 import { useGetUserProfileQuery } from '#generated';
 import { useAppStore } from '#store/useAppStore';
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 
 export const useProfileData = () => {
-  const user = useAuthUser();
+  const user = useUser();
   const isLoggingOut = useAppStore(state => state.isLoggingOut);
 
   const { data, loading, refetch } = useGetUserProfileQuery({
-    // ✅ OPTIMIZED: Use cache-first for instant loading
-    // First load shows cached data immediately, then updates in background if needed
-    fetchPolicy: 'cache-first',
-    // For subsequent fetches, use cache-and-network to keep data fresh
-    nextFetchPolicy: 'cache-and-network',
+    // First mount: read cache + fire one network request to refresh.
+    // Subsequent re-renders: serve from cache only (no network thrash).
+    // Per CLAUDE.md cache persistence convention.
+    fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
     skip: !user || isLoggingOut, // Skip query if logging out
     // Don't trigger loading state during background refresh
     notifyOnNetworkStatusChange: false,

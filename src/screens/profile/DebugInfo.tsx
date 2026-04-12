@@ -9,10 +9,10 @@ import Config from 'react-native-config';
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { useAppStore, selectCanAccessDevTools } from '#/store/useAppStore';
+import { useCanAccessDevTools } from '#/store/useAppStore';
 
 export const DebugInfo: React.FC = () => {
-  const canAccessDevTools = useAppStore(selectCanAccessDevTools);
+  const canAccessDevTools = useCanAccessDevTools();
   const config = Environment.getConfig();
   const apiConfig = Environment.getApiConfig();
 

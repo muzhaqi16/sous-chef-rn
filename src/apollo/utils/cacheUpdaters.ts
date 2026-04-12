@@ -1,4 +1,5 @@
 import type { ApolloCache, Reference } from '@apollo/client';
+import { InMemoryCache } from '@apollo/client';
 import { serializeError } from '#/utils/errorSerialization';
 
 /**
@@ -19,11 +20,14 @@ import { serializeError } from '#/utils/errorSerialization';
  * referencing evicted entities are discarded immediately.
  *
  * `ApolloCache.gc()` doesn't expose the `resetResultCache` option in its
- * type signature, but `InMemoryCache` (the runtime type) supports it.
+ * abstract type signature, but `InMemoryCache` (the runtime type) does.
+ * We use `instanceof` to narrow safely.
  */
-// justified: ApolloCache abstract type omits the options param that InMemoryCache accepts at runtime
 export function gcResetResultCache(cache: ApolloCache): string[] {
-  return (cache as any).gc({ resetResultCache: true });
+  if (cache instanceof InMemoryCache) {
+    return cache.gc({ resetResultCache: true });
+  }
+  return cache.gc();
 }
 
 // =============================================================================
@@ -31,13 +35,15 @@ export function gcResetResultCache(cache: ApolloCache): string[] {
 // =============================================================================
 
 /**
- * Apollo cache field helpers provided to merge/read functions
+ * Shape of a Connection field value in cache.modify() callbacks.
+ * Apollo wraps field values as `Reference | AsStoreObject<T>`, so
+ * the optional `__ref` makes this structurally compatible with `Reference`.
  */
-export interface CacheFieldHelpers {
-  toReference: (object: any, mergeIntoStore?: boolean) => Reference | undefined;
-  readField: (fieldName: string, ref: any) => any;
-  storeFieldName: string;
-}
+export type ConnectionData = {
+  edges?: ReadonlyArray<{ node: Reference }>;
+  totalCount?: number;
+  readonly __ref?: string;
+};
 
 /**
  * Position where new items should be added in arrays/connections
@@ -106,7 +112,7 @@ export function createAddToQueryFieldUpdater<T extends { id: string }>(
         fields: {
           [fieldName](
             existingItems: readonly Reference[] = [],
-            { toReference, readField }: CacheFieldHelpers,
+            { toReference, readField },
           ) {
             const newItemRef = toReference(newItem, true);
 
@@ -115,7 +121,7 @@ export function createAddToQueryFieldUpdater<T extends { id: string }>(
             // Check for duplicates if enabled
             if (checkDuplicates) {
               const exists = existingItems.some(
-                (itemRef: Reference) => readField('id', itemRef) === newItem.id,
+                itemRef => readField('id', itemRef) === newItem.id,
               );
 
               if (exists) return existingItems;
@@ -131,139 +137,6 @@ export function createAddToQueryFieldUpdater<T extends { id: string }>(
     } catch (error) {
       console.warn(`Cache update failed for adding to ${fieldName}:`, error);
       // Fail silently - caller can handle refetch if needed
-    }
-  };
-}
-
-/**
- * Creates a function to add items to a Query root field with keyArgs (flat array)
- *
- * Use this for Query fields that have keyArgs (like pantryId, shoppingListId):
- * - Query.pantryItems (keyArgs: ['pantryId'])
- * - Query.shoppingListItems (keyArgs: ['shoppingListId'])
- *
- * The function will only update the cache when the args match the current context.
- *
- * @example
- * const addToShoppingListItems = createAddToKeyedQueryFieldUpdater('shoppingListItems', 'shoppingListId');
- * addToShoppingListItems(cache, newItem, currentListId);
- *
- * @param fieldName - Query field name
- * @param keyArgName - Name of the key argument (e.g., 'pantryId', 'shoppingListId')
- * @returns Function to add items to the keyed field
- */
-export function createAddToKeyedQueryFieldUpdater<T extends { id: string }>(
-  fieldName: string,
-  keyArgName: string,
-) {
-  return (
-    cache: ApolloCache,
-    newItem: T,
-    currentKeyValue: string,
-    options: AddToArrayOptions = {},
-  ): void => {
-    const { position = 'start', checkDuplicates = true } = options;
-
-    try {
-      cache.modify({
-        fields: {
-          [fieldName](
-            existingItems: readonly Reference[] = [],
-            { toReference, readField, storeFieldName }: CacheFieldHelpers,
-          ) {
-            // Only update if storeFieldName contains the matching key value
-            // Apollo serializes keyArgs into storeFieldName, e.g.:
-            // "shoppingListItems:{\"shoppingListId\":\"abc123\"}"
-            if (
-              !storeFieldName.includes(`${keyArgName}":"${currentKeyValue}"`)
-            ) {
-              return existingItems;
-            }
-
-            const newItemRef = toReference(newItem, true);
-
-            if (!newItemRef) return existingItems;
-
-            // Check for duplicates if enabled
-            if (checkDuplicates) {
-              const exists = existingItems.some(
-                (itemRef: Reference) => readField('id', itemRef) === newItem.id,
-              );
-
-              if (exists) return existingItems;
-            }
-
-            // PERFORMANCE: Use concat instead of spread for better performance with large arrays
-            // concat is generally faster than spread for arrays with 50+ items
-            return position === 'start'
-              ? [newItemRef].concat(existingItems as Reference[])
-              : (existingItems as Reference[]).concat(newItemRef);
-          },
-        },
-      });
-    } catch (error) {
-      console.warn(`Cache update failed for adding to ${fieldName}:`, error);
-    }
-  };
-}
-
-/**
- * Creates a function to remove items from a Query root field (flat array)
- *
- * Use this for Query fields that return arrays directly:
- * - Query.homes
- * - Query.storageLocations
- * - Query.pantryItems
- * - Query.shoppingListItems
- *
- * @example
- * const removeFromHomes = createRemoveFromQueryFieldUpdater('homes', 'Home');
- * removeFromHomes(cache, deletedHomeId, { evictItem: true });
- *
- * @param fieldName - Query field name
- * @param typename - GraphQL typename for eviction (e.g., 'Home', 'PantryItem')
- * @returns Function to remove items from the field
- */
-export function createRemoveFromQueryFieldUpdater(
-  fieldName: string,
-  typename: string,
-) {
-  return (
-    cache: ApolloCache,
-    itemId: string,
-    options: RemoveFromArrayOptions = {},
-  ): void => {
-    const { evictItem = false, gc = true } = options;
-
-    try {
-      // Remove from Query field
-      cache.modify({
-        fields: {
-          [fieldName](
-            existingItems: readonly Reference[] = [],
-            { readField }: CacheFieldHelpers,
-          ) {
-            return existingItems.filter(
-              (itemRef: Reference) => readField('id', itemRef) !== itemId,
-            );
-          },
-        },
-      });
-
-      // Optionally evict the item itself from cache
-      if (evictItem) {
-        cache.evict({
-          id: cache.identify({ __typename: typename, id: itemId }),
-        });
-        if (gc) {
-          gcResetResultCache(cache);
-        }
-      }
-    } catch (error) {
-      console.warn(
-        `Cache update failed for removing from ${fieldName}:`,
-        error,
-      );
     }
   };
 }
@@ -305,8 +178,8 @@ export function createAddToQueryConnectionUpdater<T extends { id: string }>(
       cache.modify({
         fields: {
           [fieldName](
-            existingConnection: any = {},
-            { toReference, readField }: CacheFieldHelpers,
+            existingConnection: ConnectionData = {},
+            { toReference, readField },
           ) {
             const newItemRef = toReference(newItem, true);
             if (!newItemRef) return existingConnection;
@@ -316,7 +189,7 @@ export function createAddToQueryConnectionUpdater<T extends { id: string }>(
             // Check for duplicates if enabled
             if (checkDuplicates) {
               const exists = existingEdges.some(
-                (edge: any) => readField('id', edge?.node) === newItem.id,
+                edge => readField('id', edge?.node) === newItem.id,
               );
               if (exists) return existingConnection;
             }
@@ -384,14 +257,11 @@ export function createRemoveFromQueryConnectionUpdater(
     try {
       cache.modify({
         fields: {
-          [fieldName](
-            existingConnection: any = {},
-            { readField }: CacheFieldHelpers,
-          ) {
+          [fieldName](existingConnection: ConnectionData = {}, { readField }) {
             const existingEdges = existingConnection?.edges || [];
 
             const edges = existingEdges.filter(
-              (edge: any) => readField('id', edge?.node) !== itemId,
+              edge => readField('id', edge?.node) !== itemId,
             );
 
             const totalCount = updateTotalCount
@@ -482,8 +352,8 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
         id: parentCacheId,
         fields: {
           [connectionField](
-            existingConnection: any = {},
-            { readField, toReference }: CacheFieldHelpers,
+            existingConnection: ConnectionData = {},
+            { readField, toReference },
           ) {
             const newItemRef = toReference(newItem, true);
 
@@ -497,7 +367,7 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
             // Check for duplicates if enabled
             if (checkDuplicates) {
               const exists = existingEdges.some(
-                (edge: any) => readField('id', edge?.node) === newItem.id,
+                edge => readField('id', edge?.node) === newItem.id,
               );
 
               if (exists) {
@@ -583,7 +453,7 @@ export function createAddToParentArrayUpdater<T extends { id: string }>(
         fields: {
           [arrayField](
             existingItems: readonly Reference[] = [],
-            { toReference, readField }: CacheFieldHelpers,
+            { toReference, readField },
           ) {
             const newItemRef = toReference(newItem, true);
 
@@ -592,7 +462,7 @@ export function createAddToParentArrayUpdater<T extends { id: string }>(
             // Check for duplicates if enabled
             if (checkDuplicates) {
               const exists = existingItems.some(
-                (itemRef: Reference) => readField('id', itemRef) === newItem.id,
+                itemRef => readField('id', itemRef) === newItem.id,
               );
 
               if (exists) return existingItems;
@@ -663,15 +533,15 @@ export function createRemoveFromParentConnectionUpdater(
         id: parentCacheId,
         fields: {
           [connectionField](
-            existingConnection: any = {},
-            { readField }: CacheFieldHelpers,
+            existingConnection: ConnectionData = {},
+            { readField },
           ) {
             const existingEdges = existingConnection?.edges || [];
 
             // Filter out only the specific item being removed
             // Note: We intentionally don't filter edges with temporarily unresolved nodeIds
             // as this can cause valid items to be incorrectly removed during rapid cache operations
-            const edges = existingEdges.filter((edge: any) => {
+            const edges = existingEdges.filter(edge => {
               const nodeId = readField('id', edge?.node);
               return nodeId !== itemId;
             });
@@ -751,10 +621,10 @@ export function createRemoveFromParentArrayUpdater(
         fields: {
           [arrayField](
             existingItems: readonly Reference[] = [],
-            { readField }: CacheFieldHelpers,
+            { readField },
           ) {
             return existingItems.filter(
-              (itemRef: Reference) => readField('id', itemRef) !== itemId,
+              itemRef => readField('id', itemRef) !== itemId,
             );
           },
         },
@@ -772,6 +642,161 @@ export function createRemoveFromParentArrayUpdater(
     } catch (error) {
       console.warn(
         `Cache update failed for removing from ${parentTypename}.${arrayField}:`,
+        error,
+      );
+    }
+  };
+}
+
+// =============================================================================
+// Entity Field Updaters
+// =============================================================================
+
+/**
+ * Set one or more fields on a cached entity to specific values.
+ *
+ * Wraps the identify → modify → error-handling boilerplate.
+ * Use for simple field replacements (quantity, role, timestamps).
+ *
+ * @example
+ * setCachedFields(cache, 'ShoppingListItem', itemId, { quantity: 5 });
+ * setCachedFields(cache, 'Membership', id, { role: 'ADMIN', updatedAt: new Date().toISOString() });
+ */
+export function setCachedFields(
+  cache: ApolloCache,
+  typename: string,
+  entityId: string,
+  fieldValues: Record<string, string | number | boolean | null | undefined>,
+): void {
+  try {
+    const cacheId = cache.identify({ __typename: typename, id: entityId });
+    if (!cacheId) return;
+
+    const fields: Record<
+      string,
+      () => string | number | boolean | null | undefined
+    > = {};
+    for (const [key, value] of Object.entries(fieldValues)) {
+      fields[key] = () => value;
+    }
+
+    cache.modify({ id: cacheId, fields });
+  } catch (error) {
+    console.warn(`Cache update failed for ${typename}:${entityId}:`, error);
+  }
+}
+
+/**
+ * Increment or decrement a numeric counter inside a nested object field.
+ *
+ * Spreads the existing object and updates the specified counter key.
+ * Clamps to a minimum of 0 to prevent negative counts.
+ *
+ * @example
+ * incrementNestedCounter(cache, 'Pantry', pantryId, 'stats', 'totalItems', 1);
+ * incrementNestedCounter(cache, 'Pantry', pantryId, 'stats', 'totalItems', -1);
+ */
+export function incrementNestedCounter(
+  cache: ApolloCache,
+  typename: string,
+  entityId: string,
+  objectField: string,
+  counterKey: string,
+  delta: number,
+): void {
+  try {
+    const cacheId = cache.identify({ __typename: typename, id: entityId });
+    if (!cacheId) return;
+    const fieldModifier = (existingValue: Record<string, number>) => {
+      if (!existingValue) return existingValue;
+      return {
+        ...existingValue,
+        [counterKey]: Math.max(0, (existingValue[counterKey] || 0) + delta),
+      };
+    };
+
+    // @ts-expect-error Apollo's Modifier wraps values with Reference (interface without
+    // index signature), but nested object fields are never References at runtime
+    cache.modify({ id: cacheId, fields: { [objectField]: fieldModifier } });
+  } catch (error) {
+    console.warn(
+      `Cache update failed for ${typename}:${entityId}.${objectField}.${counterKey}:`,
+      error,
+    );
+  }
+}
+
+// =============================================================================
+// Batch Operations
+// =============================================================================
+
+/**
+ * Creates a function to batch-add multiple items to a parent entity's Connection.
+ *
+ * More efficient than calling addToParentConnection N times — produces a single
+ * cache.modify() call and one watcher notification instead of N.
+ *
+ * @example
+ * const batchAddToPantry = createBatchAddToConnectionUpdater('Pantry', 'itemsConnection', 'PantryItem');
+ * batchAddToPantry(cache, pantryId, newItems);
+ */
+export function createBatchAddToConnectionUpdater<T extends { id: string }>(
+  parentTypename: string,
+  connectionField: string,
+  itemTypename: string,
+) {
+  return (cache: ApolloCache, parentId: string, newItems: T[]): void => {
+    if (newItems.length === 0) return;
+
+    try {
+      const parentCacheId = cache.identify({
+        __typename: parentTypename,
+        id: parentId,
+      });
+      if (!parentCacheId) return;
+
+      cache.modify({
+        id: parentCacheId,
+        fields: {
+          [connectionField](
+            existingConnection: ConnectionData = {},
+            { readField, toReference },
+          ): ConnectionData {
+            const existingEdges = existingConnection?.edges || [];
+            const existingIds = new Set(
+              existingEdges.map(edge => readField('id', edge?.node)),
+            );
+
+            const newEdges = newItems
+              .filter(item => !existingIds.has(item.id))
+              .map(item => {
+                const ref = toReference(item, true);
+                return ref
+                  ? {
+                      __typename: `${itemTypename}Edge`,
+                      node: ref,
+                      cursor: '',
+                    }
+                  : null;
+              })
+              .filter(
+                (edge): edge is NonNullable<typeof edge> => edge !== null,
+              );
+
+            if (newEdges.length === 0) return existingConnection;
+
+            return {
+              ...existingConnection,
+              edges: [...newEdges, ...existingEdges],
+              totalCount:
+                (existingConnection?.totalCount || 0) + newEdges.length,
+            };
+          },
+        },
+      });
+    } catch (error) {
+      console.warn(
+        `Cache update failed for batch adding to ${parentTypename}.${connectionField}:`,
         error,
       );
     }

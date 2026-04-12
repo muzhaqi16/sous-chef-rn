@@ -8,7 +8,8 @@
  * - Preserve data during failures
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useEffect } from 'react';
+import { NetworkStatus } from '@apollo/client';
 import {
   useGetPantryQuery,
   type PantryItemFilters,
@@ -17,15 +18,13 @@ import {
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { usePagination } from '#/hooks/utils/usePagination';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   usePreservedArrayData,
   usePreservedQueryData,
 } from '#/hooks/apollo/usePreservedQueryData';
 import {
-  useAppStore,
-  selectIsHomeSelectionReady,
-  selectSetIsPantryQueryComplete,
+  useIsHomeSelectionReady,
+  useSetIsPantryQueryComplete,
 } from '#store/useAppStore';
 import { PAGE_SIZE } from '#/constants/pagination';
 
@@ -53,38 +52,15 @@ function stabilizePantryItems<
   return items;
 }
 
-// Module-level helpers — outside hook body so React Compiler doesn't bail out on try-catch
-async function executePantryRefetch(
-  refetchFn: () => Promise<unknown>,
-  setIsRefreshing: (v: boolean) => void,
-) {
-  setIsRefreshing(true);
-  try {
-    await refetchFn();
-  } catch (error) {
-    throw error;
-  } finally {
-    setIsRefreshing(false);
-  }
-}
-
-async function executeAutoRefetch(
-  refetchFn: () => Promise<unknown>,
-  guard: React.RefObject<boolean>,
-) {
-  try {
-    await refetchFn();
-  } catch (error) {
-    console.warn('[usePantryQuery] Auto-refetch failed:', error);
-  } finally {
-    guard.current = false;
-  }
-}
-
 /**
  * Fetches pantry data with items, storage locations, and pagination.
  *
- * PERFORMANCE: Hardcoded policies prevent query cascade from network status changes.
+ * The Apollo cache is the single source of truth:
+ * - Mutations update `itemsConnection.edges` and `totalCount` together via
+ *   `removeFromPantryItemsCache` / `addToPantryItemsCache`.
+ * - Subscription echoes for pending-delete items are skipped at the
+ *   subscription-handler level (`usePantrySubscriptions.ts`), so the cache
+ *   never drifts from the rendered list.
  *
  * @param pantryId - The pantry to fetch
  * @param itemsFilter - Optional filter for pantry items
@@ -98,31 +74,34 @@ export function usePantryQuery(
   itemsOrderBy?: PantryItemOrderBy | null,
 ) {
   const isLoggedOut = useIsLoggedOut();
-  const isHomeSelectionReady = useAppStore(selectIsHomeSelectionReady);
+  const isHomeSelectionReady = useIsHomeSelectionReady();
 
   // Explicit validation - only execute query when pantryId is genuinely valid
   // Gate on isHomeSelectionReady to prevent queries with stale IDs after home deletion
   const hasValidPantryId =
     !!pantryId?.trim() && !isLoggedOut && isHomeSelectionReady;
 
-  const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
-    variables: {
-      id: pantryId || '',
-      itemsFirst: PAGE_SIZE.DEFAULT,
-      itemsFilter: itemsFilter ?? undefined,
-      itemsOrderBy: itemsOrderBy ?? undefined,
-      storageLocationsFirst: PAGE_SIZE.COMPACT,
-    },
-    skip: !hasValidPantryId,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    // PERF: Removed notifyOnNetworkStatusChange to eliminate 2 extra re-renders
-    // per mount (loading→ready transitions). Manual isRefreshing tracks pull-to-refresh instead.
-    errorPolicy: 'ignore', // Return cached data on network errors
-  });
+  const { data, loading, error, refetch, fetchMore, networkStatus } =
+    useGetPantryQuery({
+      variables: {
+        id: pantryId || '',
+        itemsFirst: PAGE_SIZE.DEFAULT,
+        itemsFilter: itemsFilter ?? undefined,
+        itemsOrderBy: itemsOrderBy ?? undefined,
+        storageLocationsFirst: PAGE_SIZE.COMPACT,
+      },
+      skip: !hasValidPantryId,
+      fetchPolicy: 'cache-and-network',
+      nextFetchPolicy: 'cache-first',
+      errorPolicy: 'ignore', // Return cached data on network errors
+      // Apollo emits a re-render when networkStatus transitions, so the
+      // RefreshControl in PantryMain can observe pull-to-refresh state via
+      // `isRefreshing` below.
+      notifyOnNetworkStatusChange: true,
+    });
 
-  // Track pull-to-refresh state manually (replaces notifyOnNetworkStatusChange)
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  // Pull-to-refresh state — derived directly from Apollo's networkStatus.
+  const isRefreshing = networkStatus === NetworkStatus.refetch;
 
   // Normalize pantry data to flatten Connection pattern
   const normalizedPantry = normalizePantry(data?.pantry);
@@ -130,11 +109,10 @@ export function usePantryQuery(
   // Stabilize array reference when content is structurally identical
   const stableItems = stabilizePantryItems(normalizedPantry?.items);
 
-  // Preserve pantry items across network failures
-  const preservedItems = usePreservedArrayData(stableItems);
-
-  // Filter out items that are pending deletion to prevent flicker
-  const pantryItems = subscriptionService.filterPendingDeletes(preservedItems);
+  // Preserve pantry items across network failures — the cache is now the
+  // single source of truth for which items exist, so no additional JS-layer
+  // filtering (e.g. filterPendingDeletes) is needed.
+  const pantryItems = usePreservedArrayData(stableItems);
 
   // Pagination using generic utility hook
   const { hasMore, loadMore, isLoadingMore } = usePagination({
@@ -149,12 +127,6 @@ export function usePantryQuery(
     cursorVariableName: 'itemsCursor',
   });
 
-  // Wrap refetch to track pull-to-refresh state
-  const memoizedRefetch = () => executePantryRefetch(refetch, setIsRefreshing);
-
-  // Guard to prevent multiple auto-refetches when edges are depleted
-  const isAutoRefetchingRef = useRef(false);
-
   const pantryStorageLocations = usePreservedArrayData(
     normalizedPantry?.storageLocations,
   );
@@ -165,7 +137,7 @@ export function usePantryQuery(
   );
   const totalCount = normalizedPantry?.itemsTotalCount ?? 0;
 
-  const setIsPantryQueryComplete = useAppStore(selectSetIsPantryQueryComplete);
+  const setIsPantryQueryComplete = useSetIsPantryQueryComplete();
 
   // Signal to useDataPreloading that GetPantry has settled.
   // Fires on first load completion (cache hit or network response).
@@ -189,27 +161,6 @@ export function usePantryQuery(
     }
   }, [hasMore, totalCount, pantryItems.length]);
 
-  // Auto-refetch when edges are depleted but totalCount indicates items remain
-  // (pagination edge depletion scenario — same pattern as usePaginatedShoppingItems)
-  useEffect(() => {
-    if (isAutoRefetchingRef.current || loading || !hasValidPantryId) {
-      return;
-    }
-
-    if (totalCount > 0 && pantryItems.length === 0) {
-      isAutoRefetchingRef.current = true;
-
-      const idleId = requestIdleCallback(() =>
-        executeAutoRefetch(refetch, isAutoRefetchingRef),
-      );
-
-      return () => {
-        cancelIdleCallback(idleId);
-        isAutoRefetchingRef.current = false;
-      };
-    }
-  }, [totalCount, pantryItems.length, loading, hasValidPantryId, refetch]);
-
   return {
     state: {
       pantryItems,
@@ -224,7 +175,7 @@ export function usePantryQuery(
       isLoadingMore,
     },
     actions: {
-      refetch: memoizedRefetch,
+      refetch,
       loadMore,
     },
   };

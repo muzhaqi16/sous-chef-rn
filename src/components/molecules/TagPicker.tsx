@@ -5,8 +5,9 @@ import {
   BottomSheetModal,
   BottomSheetTextInput,
   BottomSheetView,
-  BottomSheetFlatList,
+  useBottomSheetScrollableCreator,
 } from '@gorhom/bottom-sheet';
+import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -30,6 +31,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   onCancel,
   loading = false,
 }) => {
+  const BottomSheetScrollable = useBottomSheetScrollableCreator();
   const { ref, modalProps, contentContainerStyle, theme } =
     useStandardBottomSheet({
       onDismiss: onCancel,
@@ -154,7 +156,8 @@ export const TagPicker: React.FC<TagPickerProps> = ({
             <Text style={styles.loadingText}>Loading tags...</Text>
           </View>
         ) : filteredTags.length > 0 ? (
-          <BottomSheetFlatList
+          <FlashList
+            renderScrollComponent={BottomSheetScrollable}
             data={filteredTags}
             renderItem={renderTagItem}
             keyExtractor={(item: string) => item}

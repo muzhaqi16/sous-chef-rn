@@ -52,32 +52,32 @@ jest.mock('#store/useAppStore', () => ({
       setShowBiometricSetup: mockSetShowBiometricSetup,
       setPostLoginCredentials: mockSetPostLoginCredentials,
     }),
-  selectAuthTokens: (state: any) => ({
-    user: state.user,
-    accessToken: state.accessToken,
-    refreshToken: state.refreshToken,
-    isAutoLoggingIn: state.isAutoLoggingIn,
-    isLoggingOut: state.isLoggingOut,
-  }),
-  selectAuthActions: (state: any) => ({
-    setAuth: state.setAuth,
-    clearAuth: state.clearAuth,
-    setTokens: state.setTokens,
-    updateUser: state.updateUser,
-    setEmailVerified: state.setEmailVerified,
-    setOnboarded: state.setOnboarded,
-    setRememberMe: state.setRememberMe,
-    setIsAutoLoggingIn: state.setIsAutoLoggingIn,
-    setUserNavigationState: state.setUserNavigationState,
-  }),
-  selectPostLoginState: (state: any) => ({
-    navigationState: state.navigationState,
-    showBiometricSetup: state.showBiometricSetup,
-    postLoginCredentials: state.postLoginCredentials,
-    setNavigationState: state.setNavigationState,
-    setShowBiometricSetup: state.setShowBiometricSetup,
-    setPostLoginCredentials: state.setPostLoginCredentials,
-  }),
+  useAuthTokens: jest.fn(() => ({
+    user: mockUser,
+    accessToken: mockAccessToken,
+    refreshToken: mockRefreshToken,
+    isAutoLoggingIn: mockIsAutoLoggingIn,
+    isLoggingOut: mockIsLoggingOut,
+  })),
+  useAuthActions: jest.fn(() => ({
+    setAuth: mockSetAuth,
+    clearAuth: mockClearAuth,
+    setTokens: mockSetTokens,
+    updateUser: mockUpdateUser,
+    setEmailVerified: mockSetEmailVerified,
+    setOnboarded: mockSetOnboarded,
+    setRememberMe: mockSetRememberMe,
+    setIsAutoLoggingIn: mockSetIsAutoLoggingIn,
+    setUserNavigationState: mockSetUserNavigationState,
+  })),
+  usePostLoginState: jest.fn(() => ({
+    navigationState: mockNavigationState,
+    showBiometricSetup: mockShowBiometricSetup,
+    postLoginCredentials: mockPostLoginCredentials,
+    setNavigationState: mockSetNavigationState,
+    setShowBiometricSetup: mockSetShowBiometricSetup,
+    setPostLoginCredentials: mockSetPostLoginCredentials,
+  })),
 }));
 
 beforeEach(() => {
@@ -184,7 +184,9 @@ describe('useAuthState', () => {
     expect(result.current.setOnboarded).toBe(mockSetOnboarded);
     expect(result.current.setRememberMe).toBe(mockSetRememberMe);
     expect(result.current.setIsAutoLoggingIn).toBe(mockSetIsAutoLoggingIn);
-    expect(result.current.setUserNavigationState).toBe(mockSetUserNavigationState);
+    expect(result.current.setUserNavigationState).toBe(
+      mockSetUserNavigationState,
+    );
   });
 
   it('exposes post-login navigation state', () => {
@@ -196,9 +198,16 @@ describe('useAuthState', () => {
 
     expect(result.current.navigationState).toBe('main_app');
     expect(result.current.showBiometricSetup).toBe(true);
-    expect(result.current.postLoginCredentials).toEqual({ email: 'a@b.com', password: 'pw' });
+    expect(result.current.postLoginCredentials).toEqual({
+      email: 'a@b.com',
+      password: 'pw',
+    });
     expect(result.current.setNavigationState).toBe(mockSetNavigationState);
-    expect(result.current.setShowBiometricSetup).toBe(mockSetShowBiometricSetup);
-    expect(result.current.setPostLoginCredentials).toBe(mockSetPostLoginCredentials);
+    expect(result.current.setShowBiometricSetup).toBe(
+      mockSetShowBiometricSetup,
+    );
+    expect(result.current.setPostLoginCredentials).toBe(
+      mockSetPostLoginCredentials,
+    );
   });
 });

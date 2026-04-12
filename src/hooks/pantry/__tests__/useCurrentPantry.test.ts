@@ -20,12 +20,12 @@ const mockStoreState = {
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
-  selectSelectedHomeId: (state: any) => state.selectedHomeId,
-  selectPantryState: (state: any) => ({
-    selectedPantryId: state.selectedPantryId,
-    setSelectedPantryId: state.setSelectedPantryId,
-  }),
-  selectIsHomeSelectionReady: (state: any) => state.isHomeSelectionReady,
+  useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
+  usePantryState: jest.fn(() => ({
+    selectedPantryId: mockStoreState.selectedPantryId,
+    setSelectedPantryId: mockStoreState.setSelectedPantryId,
+  })),
+  useIsHomeSelectionReady: jest.fn(() => mockStoreState.isHomeSelectionReady),
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
@@ -100,9 +100,7 @@ describe('useCurrentPantry', () => {
     mockHomesQueryResult.data = createHomesData([
       {
         id: 'home-1',
-        pantries: [
-          { id: 'pantry-1', name: 'Default', isDefault: true },
-        ],
+        pantries: [{ id: 'pantry-1', name: 'Default', isDefault: true }],
       },
     ]);
 
@@ -207,6 +205,8 @@ describe('useCurrentPantry', () => {
   it('exposes setSelectedPantryId', () => {
     const { result } = renderHook(() => useCurrentPantry());
 
-    expect(result.current.setSelectedPantryId).toBe(mockStoreState.setSelectedPantryId);
+    expect(result.current.setSelectedPantryId).toBe(
+      mockStoreState.setSelectedPantryId,
+    );
   });
 });

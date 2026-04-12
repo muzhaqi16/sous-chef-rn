@@ -21,13 +21,15 @@ const mockStoreState = {
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
-  selectSelectedHomeId: (state: any) => state.selectedHomeId,
-  selectHomeState: (state: any) => ({
-    selectedHomeId: state.selectedHomeId,
-    setSelectedHomeId: state.setSelectedHomeId,
-  }),
-  selectSetHomeAndPantry: (state: any) => state.setHomeAndPantry,
-  selectSetIsHomeSelectionReady: (state: any) => state.setIsHomeSelectionReady,
+  useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
+  useHomeState: jest.fn(() => ({
+    selectedHomeId: mockStoreState.selectedHomeId,
+    setSelectedHomeId: mockStoreState.setSelectedHomeId,
+  })),
+  useSetHomeAndPantry: jest.fn(() => mockStoreState.setHomeAndPantry),
+  useSetIsHomeSelectionReady: jest.fn(
+    () => mockStoreState.setIsHomeSelectionReady,
+  ),
 }));
 
 jest.mock('#/services/errorService', () => ({

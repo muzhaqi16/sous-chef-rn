@@ -11,16 +11,18 @@ jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
-  const selectSelectedHomeId = (s: any) => s.selectedHomeId;
-  const fn = (selector: any) =>
-    selector({
-      selectedHomeId: 'h1',
-      setSelectedPantryId: jest.fn(),
-    });
+  const mockState = {
+    selectedHomeId: 'h1',
+    setSelectedPantryId: jest.fn(),
+  };
+  const fn = (selector: any) => selector(mockState);
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn, selectSelectedHomeId };
+  return {
+    useAppStore: fn,
+    useSelectedHomeId: jest.fn(() => mockState.selectedHomeId),
+  };
 });
 
 jest.mock('#generated', () => ({
@@ -294,14 +296,14 @@ describe('PantrySettings', () => {
 
   it('shows no home selected error when saving without selectedHomeId', () => {
     // Override the store mock to return null for selectedHomeId
-    jest
-      .spyOn(require('#store/useAppStore'), 'useAppStore')
-      .mockImplementation((selector: any) =>
-        selector({
-          selectedHomeId: null,
-          setSelectedPantryId: jest.fn(),
-        }),
-      );
+    const storeModule = require('#store/useAppStore');
+    jest.spyOn(storeModule, 'useAppStore').mockImplementation((selector: any) =>
+      selector({
+        selectedHomeId: null,
+        setSelectedPantryId: jest.fn(),
+      }),
+    );
+    jest.spyOn(storeModule, 'useSelectedHomeId').mockReturnValue(null);
 
     render(<PantrySettings route={createRoute} />);
 

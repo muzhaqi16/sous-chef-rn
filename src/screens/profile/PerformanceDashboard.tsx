@@ -8,7 +8,7 @@ import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { usePerformanceStore } from '#/store/performanceStore';
 import { Environment } from '#/utils/environment';
-import { useAppStore, selectCanAccessDevTools } from '#/store/useAppStore';
+import { useCanAccessDevTools } from '#/store/useAppStore';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { useFPSMonitor } from '#/hooks/performance/useFPSMonitor';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
@@ -174,7 +174,7 @@ export const PerformanceDashboard: React.FC = () => {
     return date.toLocaleTimeString();
   };
 
-  const canAccessDevTools = useAppStore(selectCanAccessDevTools);
+  const canAccessDevTools = useCanAccessDevTools();
 
   // lastUpdated is used to ensure IIFEs below recompute on interval/pull-to-refresh
   // eslint-disable-next-line no-void

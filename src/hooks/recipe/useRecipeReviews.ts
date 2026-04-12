@@ -9,7 +9,7 @@ import {
   type RecipeFragment,
   type RecipeReviewFragment,
 } from '#generated';
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 
@@ -29,7 +29,7 @@ export function useRecipeReviews({
   recipeId,
   backendRecipe,
 }: UseRecipeReviewsOptions) {
-  const user = useAuthUser();
+  const user = useUser();
   const userId = user?.id;
 
   // Fetch reviews separately to avoid exceeding query depth limit

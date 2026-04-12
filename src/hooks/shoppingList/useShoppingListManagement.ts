@@ -47,11 +47,18 @@ export function useShoppingListManagement(currentListId: string | undefined) {
   // Extract data from combined query result
   const unpurchasedItems = unpurchased.items;
   const purchasedItems = purchased.items;
-  const totalCountUnpurchased = unpurchased.totalCount;
-  // Fallback to completedItems from GetShoppingListDetails so the tab badge
-  // shows immediately before the deferred purchased query completes
+  // Prefer entity-level counts from GetShoppingListDetails — they come from
+  // `shoppingList.totalItems` / `shoppingList.completedItems` which are
+  // server-authoritative and can't drift from the paginated connection's
+  // `totalCount` (which reflects only the pages the client has fetched).
   const totalCountPurchased =
     purchased.totalCount ?? shoppingList?.completedItems ?? 0;
+  const totalItemsEntity = shoppingList?.totalItems;
+  const totalCountUnpurchased =
+    unpurchased.totalCount ??
+    (totalItemsEntity != null
+      ? Math.max(0, totalItemsEntity - (shoppingList?.completedItems ?? 0))
+      : 0);
 
   // Combined loading/error state
   const loading = itemsLoading;

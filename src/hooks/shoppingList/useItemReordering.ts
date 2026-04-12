@@ -11,6 +11,7 @@ import {
 } from '#/utils/errors/versionConflict';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { isUnpurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
 
 interface ShoppingListItem {
   id: string;
@@ -209,7 +210,7 @@ export function useItemReordering<T extends ShoppingListItem>(
             // Target the actual field name with its keyArgs to match the cache key
             itemsConnection(existing, { storeFieldName, readField }) {
               // Only modify the unpurchased connection (check filter in storeFieldName)
-              if (!storeFieldName.includes('"isPurchased":false')) {
+              if (!isUnpurchasedVariant(storeFieldName)) {
                 return existing;
               }
 

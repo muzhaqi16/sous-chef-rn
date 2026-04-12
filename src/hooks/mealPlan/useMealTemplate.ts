@@ -13,6 +13,7 @@ export function useMealTemplate(templateId: string | undefined) {
     variables: { id: templateId! },
     skip: !templateId,
     fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
   });
 
   const template = data?.mealTemplate ?? null;

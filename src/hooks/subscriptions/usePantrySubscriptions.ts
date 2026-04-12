@@ -17,14 +17,23 @@ import {
   usePantryAlertsSubscription,
   useExpirationNotificationChangedSubscription,
   PantryItemDisplayFragmentDoc,
+  type PantryChangesSubscription,
+  type ExpirationNotificationChangedSubscription,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { CacheStrategy } from '#/services/subscriptions/types';
+import {
+  CacheStrategy,
+  type SubscriptionApolloClient,
+} from '#/services/subscriptions/types';
 import { MutationType } from '#generated';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
+
+type PantryChangesPayload = PantryChangesSubscription['pantryChanged'];
+type ExpirationChangePayload =
+  ExpirationNotificationChangedSubscription['expirationNotificationChanged'];
 
 // Cache updaters for Pantry.itemsConnection (connection pattern)
 const addToPantryItemsConnection = createAddToParentConnectionUpdater<any>(
@@ -61,7 +70,7 @@ export function usePantrySubscriptions(userId?: string) {
   // - UPDATED: pantry metadata changes via pantry field
   // - USAGE_CHANGED: usage record changes (no-op for cache)
   //
-  const changesHandlers = subscriptionService.register({
+  const changesHandlers = subscriptionService.register<PantryChangesPayload>({
     subscriptionName: 'PantryChanges',
     entityType: 'PantryItem',
     enableDeduplication: true,
@@ -69,7 +78,10 @@ export function usePantrySubscriptions(userId?: string) {
     cacheUpdateStrategy: CacheStrategy.NONE, // Disable default - using custom handler for connection pattern
     enableLogging: true,
     entityId: selectedPantryId,
-    customOnData: (payload: any, client: any) => {
+    customOnData: (
+      payload: PantryChangesPayload,
+      client: SubscriptionApolloClient,
+    ) => {
       if (!payload || !selectedPantryId) return;
 
       const changeType = payload.changeType;
@@ -90,6 +102,22 @@ export function usePantrySubscriptions(userId?: string) {
           const mutation = payload.mutation;
 
           if (!item) return;
+
+          // Skip echoes for items this client is currently deleting. Our
+          // mutation already updated the cache correctly (edge removed,
+          // totalCount decremented, entity evicted). Re-adding the item
+          // here would create drift between `edges` and `totalCount` that
+          // used to be masked by `filterPendingDeletes` + an auto-refetch
+          // effect. The single source of truth is the Apollo cache.
+          if (subscriptionService.isPendingDelete(item.id)) {
+            if (__DEV__) {
+              console.log(
+                '⏭️ [Subscription] Skipping pantry echo for pending-delete',
+                item.id,
+              );
+            }
+            return;
+          }
 
           if (mutation === MutationType.ItemAdded) {
             addToPantryItemsConnection(client.cache, selectedPantryId, item);
@@ -176,30 +204,31 @@ export function usePantrySubscriptions(userId?: string) {
   // Closure-captured store actions (same pattern as PantryChanges above)
   const linkExpirationData = useAppStore(state => state.linkExpirationData);
 
-  const expirationHandlers = subscriptionService.register({
-    subscriptionName: 'ExpirationNotificationChanged',
-    entityType: 'ExpirationNotification',
-    enableDeduplication: false, // Server-only events, no self-echo
-    userId,
-    cacheUpdateStrategy: CacheStrategy.NONE,
-    enableLogging: true,
-    entityId: selectedPantryId,
-    customOnData: (payload: any) => {
-      if (!payload) return;
-      const { changeType, notification } = payload;
-      if (!notification?.genericNotificationId) return;
+  const expirationHandlers =
+    subscriptionService.register<ExpirationChangePayload>({
+      subscriptionName: 'ExpirationNotificationChanged',
+      entityType: 'ExpirationNotification',
+      enableDeduplication: false, // Server-only events, no self-echo
+      userId,
+      cacheUpdateStrategy: CacheStrategy.NONE,
+      enableLogging: true,
+      entityId: selectedPantryId,
+      customOnData: (payload: ExpirationChangePayload) => {
+        if (!payload) return;
+        const { changeType, notification } = payload;
+        if (!notification?.genericNotificationId) return;
 
-      if (changeType === 'CREATED' || changeType === 'UPDATED') {
-        linkExpirationData(notification.genericNotificationId, {
-          expirationNotificationId: notification.id,
-          expirationAction: notification.actionTaken ?? undefined,
-          daysUntilExpiry: notification.daysUntilExpiry,
-          pantryItemName: notification.pantryItem?.item?.name,
-          pantryItemImageUrl: notification.pantryItem?.item?.imageUrl,
-        });
-      }
-    },
-  });
+        if (changeType === 'CREATED' || changeType === 'UPDATED') {
+          linkExpirationData(notification.genericNotificationId, {
+            expirationNotificationId: notification.id,
+            expirationAction: notification.actionTaken ?? undefined,
+            daysUntilExpiry: notification.daysUntilExpiry,
+            pantryItemName: notification.pantryItem?.item?.name,
+            pantryItemImageUrl: notification.pantryItem?.item?.imageUrl,
+          });
+        }
+      },
+    });
 
   useExpirationNotificationChangedSubscription({
     variables: { pantryId: selectedPantryId! },

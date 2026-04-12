@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, TextInput, Keyboard } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -9,21 +9,50 @@ interface QuickAddBarProps {
   visible?: boolean;
 }
 
+/**
+ * Lightweight inline add bar.
+ *
+ * The TextInputs are uncontrolled (defaultValue + ref) so each keystroke does
+ * not trigger a parent re-render. The add button mirrors `itemName` into a
+ * separate `hasName` boolean — that's the only thing the JSX needs to react
+ * to so the disabled state and accessibility label can update.
+ */
 export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   onAddItem,
   visible = true,
 }) => {
   const { theme } = useUnistyles();
-  const [itemName, setItemName] = useState('');
-  const [quantity, setQuantity] = useState('1');
+  const nameRef = useRef<TextInput>(null);
+  const quantityRef = useRef<TextInput>(null);
+  const itemNameRef = useRef('');
+  const quantityValueRef = useRef('1');
+  const [hasName, setHasName] = useState(false);
+
+  const handleNameChange = (text: string) => {
+    itemNameRef.current = text;
+    const trimmedHasContent = text.trim().length > 0;
+    if (trimmedHasContent !== hasName) {
+      setHasName(trimmedHasContent);
+    }
+  };
+
+  const handleQuantityChange = (text: string) => {
+    quantityValueRef.current = text;
+  };
 
   const handleAdd = () => {
-    if (itemName.trim()) {
-      onAddItem(itemName.trim(), parseInt(quantity) || 1);
-      setItemName('');
-      setQuantity('1');
-      Keyboard.dismiss();
-    }
+    const trimmed = itemNameRef.current.trim();
+    if (!trimmed) return;
+    const qty = parseInt(quantityValueRef.current) || 1;
+    onAddItem(trimmed, qty);
+
+    // Reset inputs
+    itemNameRef.current = '';
+    quantityValueRef.current = '1';
+    nameRef.current?.clear();
+    quantityRef.current?.setNativeProps({ text: '1' });
+    setHasName(false);
+    Keyboard.dismiss();
   };
 
   if (!visible) return null;
@@ -32,10 +61,11 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     <View style={styles.container}>
       <View style={styles.inputRow}>
         <TextInput
+          ref={nameRef}
           style={styles.nameInput}
           placeholder="Add item..."
-          value={itemName}
-          onChangeText={setItemName}
+          defaultValue=""
+          onChangeText={handleNameChange}
           placeholderTextColor={theme.colors.textSecondary}
           returnKeyType="done"
           onSubmitEditing={handleAdd}
@@ -43,10 +73,11 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
           accessibilityHint="Enter the name of the item to add"
         />
         <TextInput
+          ref={quantityRef}
           style={styles.quantityInput}
           placeholder="Qty"
-          value={quantity}
-          onChangeText={setQuantity}
+          defaultValue="1"
+          onChangeText={handleQuantityChange}
           keyboardType="numeric"
           placeholderTextColor={theme.colors.textSecondary}
           accessibilityLabel="Quantity"
@@ -55,15 +86,11 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
         <Pressable
           style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
           onPress={handleAdd}
-          disabled={!itemName.trim()}
+          disabled={!hasName}
           accessibilityRole="button"
           accessibilityLabel="Add item"
-          accessibilityHint={
-            itemName.trim()
-              ? `Add ${itemName} to list`
-              : 'Enter item name first'
-          }
-          accessibilityState={{ disabled: !itemName.trim() }}
+          accessibilityHint={hasName ? 'Add to list' : 'Enter item name first'}
+          accessibilityState={{ disabled: !hasName }}
         >
           <Icon name="add" size={24} color="white" />
         </Pressable>

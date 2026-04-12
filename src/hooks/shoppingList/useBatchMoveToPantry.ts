@@ -6,6 +6,7 @@ import {
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
+import { isPurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
 
 interface UseBatchMoveToPantryOptions {
   currentListId: string | undefined;
@@ -42,7 +43,6 @@ export function useBatchMoveToPantry({
           if (!parentCacheId) return;
 
           // Single cache.modify: remove from purchased variant only + update counters
-          const purchasedFilterKey = 'isPurchased":true';
           cache.modify({
             id: parentCacheId,
             fields: {
@@ -50,10 +50,7 @@ export function useBatchMoveToPantry({
                 existing: any,
                 { readField, storeFieldName }: any,
               ) {
-                if (
-                  !storeFieldName.includes(purchasedFilterKey) ||
-                  !existing?.edges
-                )
+                if (!isPurchasedVariant(storeFieldName) || !existing?.edges)
                   return existing;
 
                 return {

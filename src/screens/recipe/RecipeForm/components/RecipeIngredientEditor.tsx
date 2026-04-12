@@ -1,5 +1,6 @@
 import React, {
   forwardRef,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -43,6 +44,19 @@ export const RecipeIngredientEditor = forwardRef<
   const [notes, setNotes] = useState('');
   const [isOptional, setIsOptional] = useState(false);
 
+  // Per CLAUDE.md: never call present()/dismiss() outside an effect.
+  // The imperative `open` / `close` API is preserved (parents still pass a
+  // ref), but internally it sets a `visible` state and an effect dispatches
+  // the present/dismiss after render commits.
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (visible) {
+      bottomSheetRef.current?.present();
+    } else {
+      bottomSheetRef.current?.dismiss();
+    }
+  }, [visible]);
+
   useImperativeHandle(ref, () => ({
     open: (ingredient?: IngredientFormState) => {
       if (ingredient) {
@@ -68,9 +82,9 @@ export const RecipeIngredientEditor = forwardRef<
         setNotes('');
         setIsOptional(false);
       }
-      bottomSheetRef.current?.present();
+      setVisible(true);
     },
-    close: () => bottomSheetRef.current?.dismiss(),
+    close: () => setVisible(false),
   }));
 
   const handleNameChange = (text: string) => {
@@ -106,7 +120,7 @@ export const RecipeIngredientEditor = forwardRef<
       isOptional,
       sortOrder: 0,
     });
-    bottomSheetRef.current?.dismiss();
+    setVisible(false);
   };
 
   return (
@@ -118,6 +132,7 @@ export const RecipeIngredientEditor = forwardRef<
       backdropComponent={DismissBackdrop}
       handleIndicatorStyle={styles.handleIndicator}
       backgroundStyle={styles.sheetBackground}
+      onDismiss={() => setVisible(false)}
     >
       <Header
         title={editingId ? 'Edit Ingredient' : 'Add Ingredient'}
@@ -125,7 +140,7 @@ export const RecipeIngredientEditor = forwardRef<
         leftActions={[
           {
             icon: 'close',
-            onPress: () => bottomSheetRef.current?.dismiss(),
+            onPress: () => setVisible(false),
           },
         ]}
         rightActions={[

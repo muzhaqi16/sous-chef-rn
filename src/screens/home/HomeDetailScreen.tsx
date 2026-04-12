@@ -16,7 +16,7 @@ import { EditableField } from '#components/molecules/EditableField';
 import { NavigationRow } from '#components/molecules/NavigationRow';
 import { HomeMembersSection } from '#components/organisms/home/HomeMembersSection';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
-import { useAppStore, selectUser } from '#store/useAppStore';
+import { useUser } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
 import { Button } from '#components/base/Button';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -34,7 +34,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
   const { goBack, navigate } = useAppNavigation();
   const { homeId } = route.params;
   // PERFORMANCE: Use selective selector instead of full store subscription
-  const currentUser = useAppStore(selectUser);
+  const currentUser = useUser();
   const { theme } = useUnistyles();
 
   const [copied, setCopied] = useState(false);

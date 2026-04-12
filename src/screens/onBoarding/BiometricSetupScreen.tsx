@@ -9,7 +9,7 @@ import { authService } from '#/services/authService';
 import { useTextInputModal } from '#components/organisms/modal/useTextInputModal';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
-import { useAppStore, selectUser } from '#store/useAppStore';
+import { useAppStore, useUser } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
   loadTempRegistrationPassword,
@@ -17,11 +17,42 @@ import {
 } from '#/storage/keychain';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
+/** Module-level helper to fetch biometric availability info.
+ *  Extracted to avoid try/catch inside the component's useEffect (React Compiler bailout). */
+async function loadBiometricInfoSafe(
+  setBiometricInfo: (info: {
+    isAvailable: boolean;
+    biometryType: string | null;
+  }) => void,
+  setHasCheckedBiometric: (v: boolean) => void,
+): Promise<void> {
+  try {
+    const info = await authService.getBiometricInfo();
+    setBiometricInfo(info);
+  } catch (error) {
+    console.error('Error loading biometric info:', error);
+    setBiometricInfo({ isAvailable: false, biometryType: null });
+  } finally {
+    setHasCheckedBiometric(true);
+  }
+}
+
+/** Module-level helper that tries to load a temp registration password from keychain.
+ *  Returns null on failure. Extracted to avoid try/catch inside an event handler closure
+ *  in the component body (React Compiler bailout). */
+async function tryLoadTempPassword(email: string): Promise<string | null> {
+  try {
+    return await loadTempRegistrationPassword(email);
+  } catch {
+    return null;
+  }
+}
+
 export const BiometricSetupScreen = () => {
   useScreenTransition('BiometricSetupScreen');
   const { theme } = useUnistyles();
   const { navigateToNextStep } = useOnboardingNavigation();
-  const user = useAppStore(selectUser);
+  const user = useUser();
   const setUserNavigationState = useAppStore(
     state => state.setUserNavigationState,
   );
@@ -39,18 +70,7 @@ export const BiometricSetupScreen = () => {
   const [hasCheckedBiometric, setHasCheckedBiometric] = useState(false);
 
   useEffect(() => {
-    const loadBiometricInfo = async () => {
-      try {
-        const info = await authService.getBiometricInfo();
-        setBiometricInfo(info);
-        setHasCheckedBiometric(true);
-      } catch (error) {
-        console.error('Error loading biometric info:', error);
-        setBiometricInfo({ isAvailable: false, biometryType: null });
-        setHasCheckedBiometric(true);
-      }
-    };
-    loadBiometricInfo();
+    loadBiometricInfoSafe(setBiometricInfo, setHasCheckedBiometric);
   }, []);
 
   // Handle completion
@@ -144,14 +164,10 @@ export const BiometricSetupScreen = () => {
 
     if (!registrationPassword) {
       // Password lost from memory (app restart) — try loading from keychain first
-      try {
-        const keychainPassword = await loadTempRegistrationPassword(user.email);
-        if (keychainPassword) {
-          await enableBiometricWithPassword(user.email, keychainPassword);
-          return;
-        }
-      } catch {
-        // Fall through to modal
+      const keychainPassword = await tryLoadTempPassword(user.email);
+      if (keychainPassword) {
+        await enableBiometricWithPassword(user.email, keychainPassword);
+        return;
       }
 
       // Keychain didn't have it either — ask the user to re-enter

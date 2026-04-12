@@ -50,15 +50,13 @@ export const useDietaryProfile = () => {
   const user = useAppStore(state => state.user);
   const { handleApolloError } = useErrorService();
 
-  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
-  // - cache-first: Uses cache if available for profile data
-  // - errorPolicy: 'ignore' returns cached data when network fails
-
-  const { data, loading, networkStatus } = useGetDietaryProfileQuery({
+  // The cache-and-network → cache-first pair
+  // means first mount fires once, subsequent mounts read cache only.
+  const { data, loading } = useGetDietaryProfileQuery({
     skip: !user?.id,
-    fetchPolicy: 'cache-first',
+    fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
     errorPolicy: 'ignore',
-    notifyOnNetworkStatusChange: true,
   });
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
@@ -314,7 +312,6 @@ export const useDietaryProfile = () => {
   return {
     profile: getDietaryProfile(),
     loading,
-    networkStatus,
     updateDietaryProfile,
     addDietaryRestriction,
     updateDietaryRestriction,

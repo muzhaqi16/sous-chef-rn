@@ -15,11 +15,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useNavigation } from '@react-navigation/native';
 
 import { commonStyles } from '#/styles/commonStyles';
-import {
-  useAppStore,
-  selectSelectedPantryId,
-  selectSelectedHomeId,
-} from '#store/useAppStore';
+import { useSelectedPantryId, useSelectedHomeId } from '#store/useAppStore';
 import { normalizeHome } from '#/utils/connectionUtils';
 import {
   StorageState,
@@ -150,9 +146,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
   const [netWeightUnitId, setNetWeightUnitId] = useState<string | null>(null);
 
-  const selectedPantryId = useAppStore(selectSelectedPantryId);
+  const selectedPantryId = useSelectedPantryId();
   // Get selectedHomeId from Zustand (no GraphQL query triggered)
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const selectedHomeId = useSelectedHomeId();
 
   // Helper to get default pantry (inline to avoid useDefaultHome dependency)
   const getDefaultPantry = (data: any) => {

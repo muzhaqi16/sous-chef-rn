@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { alertService } from '#/services/alertService';
-import { useShallow } from 'zustand/shallow';
 import {
   useAppStore,
-  selectUser,
-  selectSetters,
-  selectNavigationUtils,
-  selectPreferences,
+  useUser,
+  useNavigationUtils,
+  usePreferences,
 } from '#store/useAppStore';
 import { useTheme } from '#hooks/useTheme';
 import { useCredentialStorage } from '#hooks/auth/useCredentialStorage';
@@ -24,12 +22,10 @@ import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 
 export const useConfigurableSettings = (profile: any) => {
-  const user = useAppStore(selectUser);
-  const { logout } = useAppStore(useShallow(selectSetters));
-  const { getUserNavigationState } = useAppStore(
-    useShallow(selectNavigationUtils),
-  );
-  const { language, setLanguage } = useAppStore(useShallow(selectPreferences));
+  const user = useUser();
+  const logout = useAppStore(state => state.logout);
+  const { getUserNavigationState } = useNavigationUtils();
+  const { language, setLanguage } = usePreferences();
   const { userThemePreference, setTheme } = useTheme();
   const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
     useCredentialStorage();

@@ -77,7 +77,7 @@ jest.mock('#/store/useAppStore', () => ({
     const state = { canAccessDevTools: false };
     return selector(state);
   },
-  selectCanAccessDevTools: (state: any) => state.canAccessDevTools,
+  useCanAccessDevTools: jest.fn(() => false),
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');

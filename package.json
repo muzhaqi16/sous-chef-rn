@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "3.2.23",
+  "version": "3.3.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -110,7 +110,7 @@
     "react-native": "^0.83.4",
     "react-native-calendars": "^1.1314.0",
     "react-native-config": "^1.6.1",
-    "react-native-device-info": "^15.0.1",
+    "react-native-device-info": "^15.0.2",
     "react-native-edge-to-edge": "^1.8.1",
     "react-native-gesture-handler": "^2.30.0",
     "react-native-get-random-values": "^2.0.0",

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useShallow } from 'zustand/react/shallow';
-import { useAppStore, selectShoppingListState } from '#store/useAppStore';
+import { useShoppingListState } from '#store/useAppStore';
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 
 /**
@@ -18,9 +17,8 @@ import type { ShoppingListFromQuery } from './useShoppingListsQuery';
  * Deletion callers should set selectedShoppingListId to null — auto-select handles the rest.
  */
 export function useShoppingListSelection(lists: ShoppingListFromQuery[]) {
-  const { selectedShoppingListId, setSelectedShoppingListId } = useAppStore(
-    useShallow(selectShoppingListState),
-  );
+  const { selectedShoppingListId, setSelectedShoppingListId } =
+    useShoppingListState();
 
   // Default: first with isDefault flag, or first list
   const defaultList = lists.find(list => list.isDefault) || lists[0];

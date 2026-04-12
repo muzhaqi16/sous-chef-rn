@@ -36,272 +36,6 @@ describe('cache', () => {
     });
   });
 
-  describe('mergeArrayByIdIntelligent (via Query.shoppingListItems)', () => {
-    const SHOPPING_LIST_ITEMS_QUERY = gql`
-      query GetItems($shoppingListId: ID!) {
-        shoppingListItems(shoppingListId: $shoppingListId) {
-          id
-          version
-          updatedAt
-          name
-        }
-      }
-    `;
-
-    const vars = { shoppingListId: 'list-1' };
-
-    it('returns incoming when no existing data', () => {
-      const cache = makeCache();
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Apples' },
-          ],
-        },
-      });
-
-      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
-      expect(result?.shoppingListItems).toHaveLength(1);
-      expect(result?.shoppingListItems[0].name).toBe('Apples');
-    });
-
-    it('incoming null preserves existing', () => {
-      const cache = makeCache();
-
-      // Write initial data
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Apples' },
-          ],
-        },
-      });
-
-      // Write null (simulating network error)
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: null,
-        },
-      });
-
-      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
-      expect(result?.shoppingListItems).toHaveLength(1);
-      expect(result?.shoppingListItems[0].name).toBe('Apples');
-    });
-
-    it('incoming empty array replaces existing', () => {
-      const cache = makeCache();
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Apples' },
-          ],
-        },
-      });
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [],
-        },
-      });
-
-      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
-      expect(result?.shoppingListItems).toEqual([]);
-    });
-
-    it('prefers incoming item with higher version', () => {
-      const cache = makeCache();
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Old' },
-          ],
-        },
-      });
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 2, updatedAt: '2024-01-02', name: 'New' },
-          ],
-        },
-      });
-
-      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
-      expect(result?.shoppingListItems).toHaveLength(1);
-      expect(result?.shoppingListItems[0].name).toBe('New');
-    });
-
-    it('keeps list position for item with higher existing version (entity is normalized)', () => {
-      const cache = makeCache();
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 3, updatedAt: '2024-01-03', name: 'Optimistic' },
-          ],
-        },
-      });
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 2, updatedAt: '2024-01-02', name: 'Stale' },
-          ],
-        },
-      });
-
-      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
-      // The item is still in the list (merge kept the existing reference)
-      expect(result?.shoppingListItems).toHaveLength(1);
-      // Note: Apollo normalizes entities by id, so the underlying entity is always
-      // updated to the latest write. The merge function controls which references
-      // appear in the array, not the entity data itself.
-      expect(result?.shoppingListItems[0].id).toBe('1');
-    });
-
-    it('uses updatedAt as tiebreaker when versions are equal', () => {
-      const cache = makeCache();
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Older' },
-          ],
-        },
-      });
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-05', name: 'Newer' },
-          ],
-        },
-      });
-
-      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
-      expect(result?.shoppingListItems).toHaveLength(1);
-      // Incoming has newer updatedAt
-      expect(result?.shoppingListItems[0].name).toBe('Newer');
-    });
-
-    it('preserves optimistic items with temp- IDs', () => {
-      const cache = makeCache();
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: 'temp-1', version: 0, updatedAt: '', name: 'Pending' },
-            { __typename: 'ShoppingListItem', id: '2', version: 1, updatedAt: '2024-01-01', name: 'Existing' },
-          ],
-        },
-      });
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '2', version: 1, updatedAt: '2024-01-01', name: 'Existing' },
-            { __typename: 'ShoppingListItem', id: '3', version: 1, updatedAt: '2024-01-01', name: 'New' },
-          ],
-        },
-      });
-
-      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
-      const ids = result?.shoppingListItems.map((i: any) => i.id);
-      // temp-1 should be preserved, plus id 2 and 3
-      expect(ids).toContain('temp-1');
-      expect(ids).toContain('2');
-      expect(ids).toContain('3');
-    });
-
-    it('drops existing non-temp items that server removed', () => {
-      const cache = makeCache();
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Removed' },
-            { __typename: 'ShoppingListItem', id: '2', version: 1, updatedAt: '2024-01-01', name: 'Kept' },
-          ],
-        },
-      });
-
-      // Server returns only item 2 (item 1 was deleted)
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '2', version: 1, updatedAt: '2024-01-01', name: 'Kept' },
-          ],
-        },
-      });
-
-      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
-      expect(result?.shoppingListItems).toHaveLength(1);
-      expect(result?.shoppingListItems[0].id).toBe('2');
-    });
-
-    it('adds new incoming items', () => {
-      const cache = makeCache();
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'A' },
-          ],
-        },
-      });
-
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: vars,
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'A' },
-            { __typename: 'ShoppingListItem', id: '2', version: 1, updatedAt: '2024-01-01', name: 'B' },
-          ],
-        },
-      });
-
-      const result: any = cache.readQuery({ query: SHOPPING_LIST_ITEMS_QUERY, variables: vars });
-      expect(result?.shoppingListItems).toHaveLength(2);
-    });
-  });
-
   describe('mergeConnectionByNodeId (via Home.shoppingListsConnection)', () => {
     const HOME_QUERY_INITIAL = gql`
       query GetHome($id: ID!) {
@@ -358,16 +92,27 @@ describe('cache', () => {
               edges: [
                 {
                   __typename: 'ShoppingListEdge',
-                  node: { __typename: 'ShoppingList', id: 'sl-1', name: 'Groceries' },
+                  node: {
+                    __typename: 'ShoppingList',
+                    id: 'sl-1',
+                    name: 'Groceries',
+                  },
                 },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: true,
+                endCursor: 'c1',
+              },
             },
           },
         },
       });
 
-      const result: any = cache.readQuery({ query: HOME_QUERY_INITIAL, variables: { id: 'home-1' } });
+      const result: any = cache.readQuery({
+        query: HOME_QUERY_INITIAL,
+        variables: { id: 'home-1' },
+      });
       expect(result?.home.shoppingListsConnection.edges).toHaveLength(1);
     });
 
@@ -385,10 +130,20 @@ describe('cache', () => {
             shoppingListsConnection: {
               __typename: 'ShoppingListsConnection',
               edges: [
-                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' } },
-                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B' } },
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' },
+                },
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c2' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: true,
+                endCursor: 'c2',
+              },
             },
           },
         },
@@ -405,10 +160,24 @@ describe('cache', () => {
             shoppingListsConnection: {
               __typename: 'ShoppingListsConnection',
               edges: [
-                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B-updated' } },
-                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-3', name: 'C' } },
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: {
+                    __typename: 'ShoppingList',
+                    id: 'sl-2',
+                    name: 'B-updated',
+                  },
+                },
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: { __typename: 'ShoppingList', id: 'sl-3', name: 'C' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c3' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c3',
+              },
             },
           },
         },
@@ -464,10 +233,20 @@ describe('cache', () => {
             shoppingListsConnection: {
               __typename: 'ShoppingListsConnection',
               edges: [
-                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' } },
-                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B' } },
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' },
+                },
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c2' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: true,
+                endCursor: 'c2',
+              },
             },
           },
         },
@@ -484,16 +263,26 @@ describe('cache', () => {
             shoppingListsConnection: {
               __typename: 'ShoppingListsConnection',
               edges: [
-                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-3', name: 'C' } },
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: { __typename: 'ShoppingList', id: 'sl-3', name: 'C' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c3' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c3',
+              },
             },
           },
         },
       });
 
       // Verify all 3 items exist
-      let result: any = cache.readQuery({ query: HOME_QUERY, variables: { id: 'home-1' } });
+      let result: any = cache.readQuery({
+        query: HOME_QUERY,
+        variables: { id: 'home-1' },
+      });
       expect(result?.home.shoppingListsConnection.edges).toHaveLength(3);
 
       // Refetch page 1 (no cursor, hasNextPage: true) — should NOT wipe page 2
@@ -507,17 +296,32 @@ describe('cache', () => {
             shoppingListsConnection: {
               __typename: 'ShoppingListsConnection',
               edges: [
-                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' } },
-                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B' } },
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' },
+                },
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c2' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: true,
+                endCursor: 'c2',
+              },
             },
           },
         },
       });
 
-      result = cache.readQuery({ query: HOME_QUERY, variables: { id: 'home-1' } });
-      const ids = result?.home.shoppingListsConnection.edges.map((e: any) => e.node.id);
+      result = cache.readQuery({
+        query: HOME_QUERY,
+        variables: { id: 'home-1' },
+      });
+      const ids = result?.home.shoppingListsConnection.edges.map(
+        (e: any) => e.node.id,
+      );
       expect(ids).toContain('sl-1');
       expect(ids).toContain('sl-2');
       expect(ids).toContain('sl-3');
@@ -537,9 +341,16 @@ describe('cache', () => {
             shoppingListsConnection: {
               __typename: 'ShoppingListsConnection',
               edges: [
-                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' } },
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: true,
+                endCursor: 'c1',
+              },
             },
           },
         },
@@ -555,9 +366,16 @@ describe('cache', () => {
             shoppingListsConnection: {
               __typename: 'ShoppingListsConnection',
               edges: [
-                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B' } },
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: { __typename: 'ShoppingList', id: 'sl-2', name: 'B' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c2' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c2',
+              },
             },
           },
         },
@@ -574,18 +392,30 @@ describe('cache', () => {
             shoppingListsConnection: {
               __typename: 'ShoppingListsConnection',
               edges: [
-                { __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' } },
+                {
+                  __typename: 'ShoppingListEdge',
+                  node: { __typename: 'ShoppingList', id: 'sl-1', name: 'A' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c1' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c1',
+              },
             },
           },
         },
       });
 
-      const result: any = cache.readQuery({ query: HOME_QUERY, variables: { id: 'home-1' } });
+      const result: any = cache.readQuery({
+        query: HOME_QUERY,
+        variables: { id: 'home-1' },
+      });
       // sl-2 should be gone since all items fit in one page now
       expect(result?.home.shoppingListsConnection.edges).toHaveLength(1);
-      expect(result?.home.shoppingListsConnection.edges[0].node.id).toBe('sl-1');
+      expect(result?.home.shoppingListsConnection.edges[0].node.id).toBe(
+        'sl-1',
+      );
     });
   });
 
@@ -601,9 +431,15 @@ describe('cache', () => {
               id
               itemsConnection {
                 edges {
-                  node { id name }
+                  node {
+                    id
+                    name
+                  }
                 }
-                pageInfo { hasNextPage endCursor }
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
               }
             }
           }
@@ -618,10 +454,18 @@ describe('cache', () => {
               edges: [
                 {
                   __typename: 'ShoppingListItemEdge',
-                  node: { __typename: 'ShoppingListItem', id: 'item-1', name: 'Milk' },
+                  node: {
+                    __typename: 'ShoppingListItem',
+                    id: 'item-1',
+                    name: 'Milk',
+                  },
                 },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: true,
+                endCursor: 'c1',
+              },
             },
           },
         },
@@ -634,9 +478,15 @@ describe('cache', () => {
               id
               itemsConnection {
                 edges {
-                  node { id name }
+                  node {
+                    id
+                    name
+                  }
                 }
-                pageInfo { hasNextPage endCursor }
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
               }
             }
           }
@@ -749,7 +599,10 @@ describe('cache', () => {
         variables: { homeId: 'h1' },
         data: { pantries: null },
       });
-      const result: any = cache.readQuery({ query: PANTRIES_QUERY, variables: { homeId: 'h1' } });
+      const result: any = cache.readQuery({
+        query: PANTRIES_QUERY,
+        variables: { homeId: 'h1' },
+      });
       expect(result?.pantries).toHaveLength(1);
     });
 
@@ -769,7 +622,10 @@ describe('cache', () => {
           pantries: [{ __typename: 'Pantry', id: 'p2', name: 'Garage' }],
         },
       });
-      const result: any = cache.readQuery({ query: PANTRIES_QUERY, variables: { homeId: 'h1' } });
+      const result: any = cache.readQuery({
+        query: PANTRIES_QUERY,
+        variables: { homeId: 'h1' },
+      });
       expect(result?.pantries).toHaveLength(1);
       expect(result?.pantries[0].name).toBe('Garage');
     });
@@ -791,7 +647,9 @@ describe('cache', () => {
         query: STORAGE_QUERY,
         variables: { homeId: 'h1' },
         data: {
-          storageLocations: [{ __typename: 'StorageLocation', id: 's1', name: 'Fridge' }],
+          storageLocations: [
+            { __typename: 'StorageLocation', id: 's1', name: 'Fridge' },
+          ],
         },
       });
       cache.writeQuery({
@@ -799,7 +657,10 @@ describe('cache', () => {
         variables: { homeId: 'h1' },
         data: { storageLocations: null },
       });
-      const result: any = cache.readQuery({ query: STORAGE_QUERY, variables: { homeId: 'h1' } });
+      const result: any = cache.readQuery({
+        query: STORAGE_QUERY,
+        variables: { homeId: 'h1' },
+      });
       expect(result?.storageLocations).toHaveLength(1);
     });
   });
@@ -820,7 +681,9 @@ describe('cache', () => {
         query: PANTRY_SUGGESTIONS_QUERY,
         variables: { pantryId: 'p1' },
         data: {
-          pantryItemSuggestions: [{ __typename: 'PantryItem', id: 'ps1', name: 'Milk' }],
+          pantryItemSuggestions: [
+            { __typename: 'PantryItem', id: 'ps1', name: 'Milk' },
+          ],
         },
       });
       cache.writeQuery({
@@ -828,7 +691,10 @@ describe('cache', () => {
         variables: { pantryId: 'p1' },
         data: { pantryItemSuggestions: null },
       });
-      const result: any = cache.readQuery({ query: PANTRY_SUGGESTIONS_QUERY, variables: { pantryId: 'p1' } });
+      const result: any = cache.readQuery({
+        query: PANTRY_SUGGESTIONS_QUERY,
+        variables: { pantryId: 'p1' },
+      });
       expect(result?.pantryItemSuggestions).toHaveLength(1);
     });
 
@@ -838,17 +704,24 @@ describe('cache', () => {
         query: PANTRY_SUGGESTIONS_QUERY,
         variables: { pantryId: 'p1' },
         data: {
-          pantryItemSuggestions: [{ __typename: 'PantryItem', id: 'ps1', name: 'Milk' }],
+          pantryItemSuggestions: [
+            { __typename: 'PantryItem', id: 'ps1', name: 'Milk' },
+          ],
         },
       });
       cache.writeQuery({
         query: PANTRY_SUGGESTIONS_QUERY,
         variables: { pantryId: 'p1' },
         data: {
-          pantryItemSuggestions: [{ __typename: 'PantryItem', id: 'ps2', name: 'Eggs' }],
+          pantryItemSuggestions: [
+            { __typename: 'PantryItem', id: 'ps2', name: 'Eggs' },
+          ],
         },
       });
-      const result: any = cache.readQuery({ query: PANTRY_SUGGESTIONS_QUERY, variables: { pantryId: 'p1' } });
+      const result: any = cache.readQuery({
+        query: PANTRY_SUGGESTIONS_QUERY,
+        variables: { pantryId: 'p1' },
+      });
       expect(result?.pantryItemSuggestions).toHaveLength(1);
       expect(result?.pantryItemSuggestions[0].name).toBe('Eggs');
     });
@@ -876,7 +749,9 @@ describe('cache', () => {
           shoppingList: {
             __typename: 'ShoppingList',
             id: 'list-1',
-            suggestions: [{ __typename: 'ShoppingListItem', id: 'sug-1', name: 'Butter' }],
+            suggestions: [
+              { __typename: 'ShoppingListItem', id: 'sug-1', name: 'Butter' },
+            ],
           },
         },
       });
@@ -891,7 +766,10 @@ describe('cache', () => {
           },
         },
       });
-      const result: any = cache.readQuery({ query: LIST_SUGGESTIONS_QUERY, variables: { id: 'list-1' } });
+      const result: any = cache.readQuery({
+        query: LIST_SUGGESTIONS_QUERY,
+        variables: { id: 'list-1' },
+      });
       expect(result?.shoppingList.suggestions).toHaveLength(1);
     });
   });
@@ -903,9 +781,15 @@ describe('cache', () => {
           id
           itemsConnection(after: $after) {
             edges {
-              node { id name }
+              node {
+                id
+                name
+              }
             }
-            pageInfo { hasNextPage endCursor }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
           }
         }
       }
@@ -925,10 +809,20 @@ describe('cache', () => {
             itemsConnection: {
               __typename: 'PantryItemsConnection',
               edges: [
-                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' } },
-                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' } },
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' },
+                },
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c2' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: true,
+                endCursor: 'c2',
+              },
             },
           },
         },
@@ -945,16 +839,30 @@ describe('cache', () => {
             itemsConnection: {
               __typename: 'PantryItemsConnection',
               edges: [
-                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-3', name: 'Olive Oil' } },
+                {
+                  __typename: 'PantryItemEdge',
+                  node: {
+                    __typename: 'PantryItem',
+                    id: 'pi-3',
+                    name: 'Olive Oil',
+                  },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c3' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c3',
+              },
             },
           },
         },
       });
 
       // Verify all 3 items
-      let result: any = cache.readQuery({ query: PANTRY_CONNECTION_QUERY, variables: { id: 'p1' } });
+      let result: any = cache.readQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+      });
       expect(result?.pantry.itemsConnection.edges).toHaveLength(3);
 
       // Refetch page 1 (no cursor, hasNextPage:true) — must NOT wipe Olive Oil
@@ -968,17 +876,32 @@ describe('cache', () => {
             itemsConnection: {
               __typename: 'PantryItemsConnection',
               edges: [
-                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' } },
-                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' } },
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' },
+                },
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c2' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: true,
+                endCursor: 'c2',
+              },
             },
           },
         },
       });
 
-      result = cache.readQuery({ query: PANTRY_CONNECTION_QUERY, variables: { id: 'p1' } });
-      const ids = result?.pantry.itemsConnection.edges.map((e: any) => e.node.id);
+      result = cache.readQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+      });
+      const ids = result?.pantry.itemsConnection.edges.map(
+        (e: any) => e.node.id,
+      );
       expect(ids).toContain('pi-1');
       expect(ids).toContain('pi-2');
       expect(ids).toContain('pi-3');
@@ -998,9 +921,16 @@ describe('cache', () => {
             itemsConnection: {
               __typename: 'PantryItemsConnection',
               edges: [
-                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' } },
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: true,
+                endCursor: 'c1',
+              },
             },
           },
         },
@@ -1017,9 +947,16 @@ describe('cache', () => {
             itemsConnection: {
               __typename: 'PantryItemsConnection',
               edges: [
-                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' } },
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-2', name: 'Sugar' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c2' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c2',
+              },
             },
           },
         },
@@ -1036,15 +973,25 @@ describe('cache', () => {
             itemsConnection: {
               __typename: 'PantryItemsConnection',
               edges: [
-                { __typename: 'PantryItemEdge', node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' } },
+                {
+                  __typename: 'PantryItemEdge',
+                  node: { __typename: 'PantryItem', id: 'pi-1', name: 'Flour' },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c1' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c1',
+              },
             },
           },
         },
       });
 
-      const result: any = cache.readQuery({ query: PANTRY_CONNECTION_QUERY, variables: { id: 'p1' } });
+      const result: any = cache.readQuery({
+        query: PANTRY_CONNECTION_QUERY,
+        variables: { id: 'p1' },
+      });
       expect(result?.pantry.itemsConnection.edges).toHaveLength(1);
       expect(result?.pantry.itemsConnection.edges[0].node.id).toBe('pi-1');
     });
@@ -1057,9 +1004,15 @@ describe('cache', () => {
           id
           itemsConnection(after: $after) {
             edges {
-              node { id name }
+              node {
+                id
+                name
+              }
             }
-            pageInfo { hasNextPage endCursor }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
           }
         }
       }
@@ -1079,9 +1032,20 @@ describe('cache', () => {
             itemsConnection: {
               __typename: 'ShoppingListItemsConnection',
               edges: [
-                { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: 'si-1', name: 'Milk' } },
+                {
+                  __typename: 'ShoppingListItemEdge',
+                  node: {
+                    __typename: 'ShoppingListItem',
+                    id: 'si-1',
+                    name: 'Milk',
+                  },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: true,
+                endCursor: 'c1',
+              },
             },
           },
         },
@@ -1098,16 +1062,30 @@ describe('cache', () => {
             itemsConnection: {
               __typename: 'ShoppingListItemsConnection',
               edges: [
-                { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: 'si-2', name: 'Bread' } },
+                {
+                  __typename: 'ShoppingListItemEdge',
+                  node: {
+                    __typename: 'ShoppingListItem',
+                    id: 'si-2',
+                    name: 'Bread',
+                  },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c2' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c2',
+              },
             },
           },
         },
       });
 
       // Verify both pages present
-      let result: any = cache.readQuery({ query: LIST_CONNECTION_QUERY, variables: { id: 'list-1' } });
+      let result: any = cache.readQuery({
+        query: LIST_CONNECTION_QUERY,
+        variables: { id: 'list-1' },
+      });
       expect(result?.shoppingList.itemsConnection.edges).toHaveLength(2);
 
       // Refetch page 1 (no cursor, hasNextPage:true) — must preserve page 2
@@ -1121,16 +1099,32 @@ describe('cache', () => {
             itemsConnection: {
               __typename: 'ShoppingListItemsConnection',
               edges: [
-                { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: 'si-1', name: 'Milk' } },
+                {
+                  __typename: 'ShoppingListItemEdge',
+                  node: {
+                    __typename: 'ShoppingListItem',
+                    id: 'si-1',
+                    name: 'Milk',
+                  },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: true,
+                endCursor: 'c1',
+              },
             },
           },
         },
       });
 
-      result = cache.readQuery({ query: LIST_CONNECTION_QUERY, variables: { id: 'list-1' } });
-      const ids = result?.shoppingList.itemsConnection.edges.map((e: any) => e.node.id);
+      result = cache.readQuery({
+        query: LIST_CONNECTION_QUERY,
+        variables: { id: 'list-1' },
+      });
+      const ids = result?.shoppingList.itemsConnection.edges.map(
+        (e: any) => e.node.id,
+      );
       expect(ids).toContain('si-1');
       expect(ids).toContain('si-2');
     });
@@ -1149,9 +1143,20 @@ describe('cache', () => {
             itemsConnection: {
               __typename: 'ShoppingListItemsConnection',
               edges: [
-                { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: 'si-1', name: 'Milk' } },
+                {
+                  __typename: 'ShoppingListItemEdge',
+                  node: {
+                    __typename: 'ShoppingListItem',
+                    id: 'si-1',
+                    name: 'Milk',
+                  },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: true, endCursor: 'c1' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: true,
+                endCursor: 'c1',
+              },
             },
           },
         },
@@ -1168,9 +1173,20 @@ describe('cache', () => {
             itemsConnection: {
               __typename: 'ShoppingListItemsConnection',
               edges: [
-                { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: 'si-2', name: 'Bread' } },
+                {
+                  __typename: 'ShoppingListItemEdge',
+                  node: {
+                    __typename: 'ShoppingListItem',
+                    id: 'si-2',
+                    name: 'Bread',
+                  },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c2' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c2',
+              },
             },
           },
         },
@@ -1187,55 +1203,33 @@ describe('cache', () => {
             itemsConnection: {
               __typename: 'ShoppingListItemsConnection',
               edges: [
-                { __typename: 'ShoppingListItemEdge', node: { __typename: 'ShoppingListItem', id: 'si-1', name: 'Milk' } },
+                {
+                  __typename: 'ShoppingListItemEdge',
+                  node: {
+                    __typename: 'ShoppingListItem',
+                    id: 'si-1',
+                    name: 'Milk',
+                  },
+                },
               ],
-              pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c1' },
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: 'c1',
+              },
             },
           },
         },
       });
 
-      const result: any = cache.readQuery({ query: LIST_CONNECTION_QUERY, variables: { id: 'list-1' } });
+      const result: any = cache.readQuery({
+        query: LIST_CONNECTION_QUERY,
+        variables: { id: 'list-1' },
+      });
       expect(result?.shoppingList.itemsConnection.edges).toHaveLength(1);
-      expect(result?.shoppingList.itemsConnection.edges[0].node.id).toBe('si-1');
-    });
-  });
-
-  describe('Pantry.items merge', () => {
-    const PANTRY_ITEMS_QUERY = gql`
-      query GetPantryItems($pantryId: ID!) {
-        pantryItems(pantryId: $pantryId) {
-          id
-          version
-          updatedAt
-          name
-        }
-      }
-    `;
-
-    it('uses intelligent merge for pantry items', () => {
-      const cache = makeCache();
-      cache.writeQuery({
-        query: PANTRY_ITEMS_QUERY,
-        variables: { pantryId: 'p1' },
-        data: {
-          pantryItems: [
-            { __typename: 'PantryItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Flour' },
-          ],
-        },
-      });
-      cache.writeQuery({
-        query: PANTRY_ITEMS_QUERY,
-        variables: { pantryId: 'p1' },
-        data: {
-          pantryItems: [
-            { __typename: 'PantryItem', id: '1', version: 2, updatedAt: '2024-01-02', name: 'Flour Updated' },
-          ],
-        },
-      });
-      const result: any = cache.readQuery({ query: PANTRY_ITEMS_QUERY, variables: { pantryId: 'p1' } });
-      expect(result?.pantryItems).toHaveLength(1);
-      expect(result?.pantryItems[0].name).toBe('Flour Updated');
+      expect(result?.shoppingList.itemsConnection.edges[0].node.id).toBe(
+        'si-1',
+      );
     });
   });
 
@@ -1264,7 +1258,13 @@ describe('cache', () => {
             __typename: 'MealPlan',
             id: 'mp1',
             mealPlanItems: [
-              { __typename: 'MealPlanItem', id: 'mpi-1', version: 1, updatedAt: '2024-01-01', name: 'Monday Dinner' },
+              {
+                __typename: 'MealPlanItem',
+                id: 'mpi-1',
+                version: 1,
+                updatedAt: '2024-01-01',
+                name: 'Monday Dinner',
+              },
             ],
           },
         },
@@ -1277,13 +1277,28 @@ describe('cache', () => {
             __typename: 'MealPlan',
             id: 'mp1',
             mealPlanItems: [
-              { __typename: 'MealPlanItem', id: 'mpi-1', version: 2, updatedAt: '2024-01-02', name: 'Monday Dinner Updated' },
-              { __typename: 'MealPlanItem', id: 'mpi-2', version: 1, updatedAt: '2024-01-02', name: 'Tuesday Lunch' },
+              {
+                __typename: 'MealPlanItem',
+                id: 'mpi-1',
+                version: 2,
+                updatedAt: '2024-01-02',
+                name: 'Monday Dinner Updated',
+              },
+              {
+                __typename: 'MealPlanItem',
+                id: 'mpi-2',
+                version: 1,
+                updatedAt: '2024-01-02',
+                name: 'Tuesday Lunch',
+              },
             ],
           },
         },
       });
-      const result: any = cache.readQuery({ query: MEAL_PLAN_QUERY, variables: { id: 'mp1' } });
+      const result: any = cache.readQuery({
+        query: MEAL_PLAN_QUERY,
+        variables: { id: 'mp1' },
+      });
       expect(result?.mealPlan.mealPlanItems).toHaveLength(2);
     });
   });
@@ -1480,50 +1495,6 @@ describe('cache', () => {
         `,
       });
       expect(result?.imageUrl).toBeNull();
-    });
-  });
-
-  describe('mergeArrayByIdIntelligent - timestamp tiebreaker existing wins', () => {
-    const SHOPPING_LIST_ITEMS_QUERY = gql`
-      query GetItems($shoppingListId: ID!) {
-        shoppingListItems(shoppingListId: $shoppingListId) {
-          id
-          version
-          updatedAt
-          name
-        }
-      }
-    `;
-
-    it('keeps existing when same version and existing has newer timestamp', () => {
-      const cache = makeCache();
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: { shoppingListId: 'list-1' },
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-06-01', name: 'Newer Local' },
-          ],
-        },
-      });
-      cache.writeQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: { shoppingListId: 'list-1' },
-        data: {
-          shoppingListItems: [
-            { __typename: 'ShoppingListItem', id: '1', version: 1, updatedAt: '2024-01-01', name: 'Older Server' },
-          ],
-        },
-      });
-      const result: any = cache.readQuery({
-        query: SHOPPING_LIST_ITEMS_QUERY,
-        variables: { shoppingListId: 'list-1' },
-      });
-      // The merge keeps existing ref when existing updatedAt is newer
-      expect(result?.shoppingListItems).toHaveLength(1);
-      // With Apollo normalization, the entity data is always latest write,
-      // but the array reference preserves existing
-      expect(result?.shoppingListItems[0].id).toBe('1');
     });
   });
 

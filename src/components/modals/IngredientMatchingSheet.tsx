@@ -2,7 +2,11 @@ import React from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
-import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetModal,
+  BottomSheetView,
+  useBottomSheetScrollableCreator,
+} from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -78,6 +82,7 @@ export const IngredientMatchingSheet: React.FC<
       onDismiss: onClose,
       snapPoints: ['80%'],
     });
+  const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -116,6 +121,7 @@ export const IngredientMatchingSheet: React.FC<
         {/* Ingredient list */}
         <IngredientMatchingProvider onUpdate={onUpdate}>
           <FlashList
+            renderScrollComponent={BottomSheetScrollable}
             data={editableMatches}
             renderItem={renderItem}
             keyExtractor={keyExtractor}

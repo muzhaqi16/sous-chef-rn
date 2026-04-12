@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { useShallow } from 'zustand/shallow';
 import {
   useItemByUpcFilterQuery,
   useItemBySkuFilterQuery,
@@ -9,11 +8,7 @@ import {
   CreateItemInput,
   UpcFormat,
 } from '#generated';
-import {
-  useAppStore,
-  selectSearchState,
-  selectBottomSheetState,
-} from '#store/useAppStore';
+import { useSearchState, useBottomSheetState } from '#store/useAppStore';
 import { ScannedItem } from '../store/slices/barcodeScannerSlice';
 import { alertService } from '#/services/alertService';
 import { useImageUpload } from './useImageUpload';
@@ -254,10 +249,8 @@ export const useSearchResults = (barcode: string, format?: string) => {
     clearSearch,
     setSearchError,
     setSearchResults,
-  } = useAppStore(useShallow(selectSearchState));
-  const { showBottomSheet, hideBottomSheet } = useAppStore(
-    useShallow(selectBottomSheetState),
-  );
+  } = useSearchState();
+  const { showBottomSheet, hideBottomSheet } = useBottomSheetState();
 
   const { uploadItemImage } = useImageUpload();
 

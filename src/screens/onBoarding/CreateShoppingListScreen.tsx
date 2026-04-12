@@ -13,11 +13,7 @@ import {
   useGetShoppingListsLiteQuery,
 } from '#generated';
 import { extractNodes } from '#/utils/connectionUtils';
-import {
-  useAppStore,
-  selectUser,
-  selectSelectedHomeId,
-} from '#store/useAppStore';
+import { useAppStore, useUser, useSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { createShoppingListSchema } from '#utils/validation/onboarding';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -49,7 +45,9 @@ async function performCreateShoppingList(
   console.log('CreateShoppingList response:', response);
 
   if (response.error) {
-    errorService.reportError(response.error, { operation: 'CreateShoppingList.graphqlError' });
+    errorService.reportError(response.error, {
+      operation: 'CreateShoppingList.graphqlError',
+    });
     throw new Error(response.error.message);
   }
 
@@ -88,8 +86,8 @@ export const CreateShoppingListScreen = () => {
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
-  const user = useAppStore(selectUser);
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const user = useUser();
+  const selectedHomeId = useSelectedHomeId();
 
   // State management
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
@@ -122,7 +120,11 @@ export const CreateShoppingListScreen = () => {
   useEffect(() => {
     if (listsLoading || !user?.id) return;
 
-    syncExistingListState(existingList, setSelectedShoppingListId, setCheckingExisting);
+    syncExistingListState(
+      existingList,
+      setSelectedShoppingListId,
+      setCheckingExisting,
+    );
   }, [listsLoading, user?.id, existingList, setSelectedShoppingListId]);
 
   // Submit handler - creates new list
@@ -130,18 +132,22 @@ export const CreateShoppingListScreen = () => {
     setGraphqlError(null);
 
     executeWithLoadingState(
-      () => performCreateShoppingList(
-        data,
-        createShoppingList,
-        selectedHomeId,
-        setSelectedShoppingListId,
-        navigateToNextStep,
-      ),
+      () =>
+        performCreateShoppingList(
+          data,
+          createShoppingList,
+          selectedHomeId,
+          setSelectedShoppingListId,
+          navigateToNextStep,
+        ),
       setIsCreating,
       (error: unknown) => {
-        errorService.reportError(error, { operation: 'CreateShoppingList.submit' });
+        errorService.reportError(error, {
+          operation: 'CreateShoppingList.submit',
+        });
         setGraphqlError(
-          (error as any)?.message || 'An error occurred while creating the list.',
+          (error as any)?.message ||
+            'An error occurred while creating the list.',
         );
       },
     );
@@ -158,7 +164,11 @@ export const CreateShoppingListScreen = () => {
         onSkip={() => skipToStep('SelectPantryItems')}
       >
         <View style={styles.loadingContainer}>
-          <SousChefLoader size="small" showBrand={false} message="Checking your shopping lists..." />
+          <SousChefLoader
+            size="small"
+            showBrand={false}
+            message="Checking your shopping lists..."
+          />
         </View>
       </OnBoardingWrapper>
     );
@@ -231,7 +241,9 @@ export const CreateShoppingListScreen = () => {
         disabled={isCreating}
       />
 
-      {graphqlError ? <Text style={styles.errorText}>{graphqlError}</Text> : null}
+      {graphqlError ? (
+        <Text style={styles.errorText}>{graphqlError}</Text>
+      ) : null}
     </OnBoardingWrapper>
   );
 };

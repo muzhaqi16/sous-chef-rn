@@ -30,7 +30,7 @@ import {
   useTabBarState,
 } from '#/context/TabBarActionsContext';
 import { useShoppingListModals } from '#/context/ShoppingListModalsContext';
-import { useAuthUser } from '#/hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import {
   useShoppingListTutorial,
   ShoppingListTutorialStep,
@@ -134,7 +134,7 @@ export const ShoppingListMainContent: React.FC<
   useFocusEffect(onScreenFocus);
 
   // Get current user for permission calculations
-  const user = useAuthUser();
+  const user = useUser();
 
   // --- Actions Hook ---
   const {
