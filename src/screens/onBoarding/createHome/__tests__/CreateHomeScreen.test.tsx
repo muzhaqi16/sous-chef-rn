@@ -32,8 +32,8 @@ jest.mock('#store/useAppStore', () => ({
       setSelectedPantryId: mockSetSelectedPantryId,
     }),
   ),
-  selectUser: (s: any) => s.user,
-  selectSelectedHomeId: (s: any) => s.selectedHomeId,
+  useUser: jest.fn(() => ({ id: 'user-1' })),
+  useSelectedHomeId: jest.fn(() => null),
 }));
 
 const mockCreateHome = jest.fn();
@@ -816,8 +816,8 @@ describe('CreateHomeScreen', () => {
       },
     ]);
 
-    const { useAppStore } = require('#store/useAppStore');
-    useAppStore.mockImplementation((selector: any) =>
+    const storeModule = require('#store/useAppStore');
+    storeModule.useAppStore.mockImplementation((selector: any) =>
       selector({
         user: { id: 'user-1' },
         selectedHomeId: 'home-1',
@@ -825,6 +825,8 @@ describe('CreateHomeScreen', () => {
         setSelectedPantryId: mockSetSelectedPantryId,
       }),
     );
+    storeModule.useUser.mockReturnValue({ id: 'user-1' });
+    storeModule.useSelectedHomeId.mockReturnValue('home-1');
 
     const { createPantryForHome } = require('../helpers');
     createPantryForHome.mockResolvedValue(true);
@@ -845,8 +847,8 @@ describe('CreateHomeScreen', () => {
       },
     ]);
 
-    const { useAppStore } = require('#store/useAppStore');
-    useAppStore.mockImplementation((selector: any) =>
+    const storeModule = require('#store/useAppStore');
+    storeModule.useAppStore.mockImplementation((selector: any) =>
       selector({
         user: { id: 'user-1' },
         selectedHomeId: 'home-1',
@@ -854,6 +856,8 @@ describe('CreateHomeScreen', () => {
         setSelectedPantryId: mockSetSelectedPantryId,
       }),
     );
+    storeModule.useUser.mockReturnValue({ id: 'user-1' });
+    storeModule.useSelectedHomeId.mockReturnValue('home-1');
 
     const {
       createPantryForHome,

@@ -23,15 +23,14 @@ jest.mock('#store/useAppStore', () => ({
     };
     return typeof selector === 'function' ? selector(state) : state;
   }),
-  selectUser: (s: any) => s.user,
-  selectSetters: (s: any) => ({ logout: s.logout }),
-  selectNavigationUtils: (s: any) => ({
-    getUserNavigationState: s.getUserNavigationState,
-  }),
-  selectPreferences: (s: any) => ({
-    language: s.language,
-    setLanguage: s.setLanguage,
-  }),
+  useUser: jest.fn(() => ({ id: 'user-1', email: 'test@example.com' })),
+  useNavigationUtils: jest.fn(() => ({
+    getUserNavigationState: mockGetUserNavigationState,
+  })),
+  usePreferences: jest.fn(() => ({
+    language: 'en',
+    setLanguage: mockSetLanguage,
+  })),
 }));
 
 const mockSetTheme = jest.fn();
@@ -957,8 +956,8 @@ describe('useConfigurableSettings', () => {
     });
 
     it('biometric loading starts false when no user email', () => {
-      const { useAppStore } = require('#store/useAppStore');
-      useAppStore.mockImplementation((selector: any) => {
+      const storeModule = require('#store/useAppStore');
+      storeModule.useAppStore.mockImplementation((selector: any) => {
         const state = {
           user: { id: 'user-1', email: '' },
           logout: mockLogout,
@@ -968,12 +967,13 @@ describe('useConfigurableSettings', () => {
         };
         return typeof selector === 'function' ? selector(state) : state;
       });
+      storeModule.useUser.mockReturnValue({ id: 'user-1', email: '' });
 
       const { result } = renderHook(() => useConfigurableSettings(mockProfile));
       expect(result.current.biometricLoading).toBe(false);
 
       // Restore mock
-      useAppStore.mockImplementation((selector: any) => {
+      storeModule.useAppStore.mockImplementation((selector: any) => {
         const state = {
           user: { id: 'user-1', email: 'test@example.com' },
           logout: mockLogout,
@@ -982,6 +982,10 @@ describe('useConfigurableSettings', () => {
           setLanguage: mockSetLanguage,
         };
         return typeof selector === 'function' ? selector(state) : state;
+      });
+      storeModule.useUser.mockReturnValue({
+        id: 'user-1',
+        email: 'test@example.com',
       });
     });
   });

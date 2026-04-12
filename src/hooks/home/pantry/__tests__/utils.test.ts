@@ -5,14 +5,10 @@ jest.mock('../../../../apollo/links/tokenScheduler');
 jest.mock('../../../../apollo/links/refreshToken');
 
 jest.mock('../../../../apollo/utils/cacheUpdaters', () => ({
-  createAddToParentConnectionUpdater: jest.fn(
-    () =>
-      jest.fn(),
-  ),
-  createRemoveFromParentConnectionUpdater: jest.fn(
-    () =>
-      jest.fn(),
-  ),
+  createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
+  createBatchAddToConnectionUpdater: jest.fn(() => jest.fn()),
+  incrementNestedCounter: jest.fn(),
 }));
 
 import {
@@ -20,7 +16,12 @@ import {
   removeFromPantryItemsCache,
   batchAddToPantryItemsCache,
 } from '../utils';
-import { createAddToParentConnectionUpdater, createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import {
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
+  createBatchAddToConnectionUpdater,
+  incrementNestedCounter,
+} from '#/apollo/utils/cacheUpdaters';
 
 describe('pantry/utils', () => {
   describe('addToPantryItemsCache', () => {
@@ -52,139 +53,68 @@ describe('pantry/utils', () => {
   });
 
   describe('batchAddToPantryItemsCache', () => {
-    it('does nothing when parentCacheId is not found', () => {
-      const mockCache = {
-        identify: jest.fn(() => undefined),
-        modify: jest.fn(),
-      };
-
-      batchAddToPantryItemsCache(mockCache as any, 'pantry-1', [{ id: 'item-1' }]);
-
-      expect(mockCache.modify).not.toHaveBeenCalled();
-    });
-
-    it('does nothing when newItems is empty', () => {
-      const mockCache = {
-        identify: jest.fn(() => 'Pantry:pantry-1'),
-        modify: jest.fn(),
-      };
-
-      batchAddToPantryItemsCache(mockCache as any, 'pantry-1', []);
-
-      expect(mockCache.modify).not.toHaveBeenCalled();
-    });
-
-    it('calls cache.modify with correct id when items are present', () => {
-      const mockCache = {
-        identify: jest.fn(() => 'Pantry:pantry-1'),
-        modify: jest.fn(),
-      };
-
-      batchAddToPantryItemsCache(mockCache as any, 'pantry-1', [{ id: 'item-1' }]);
-
-      expect(mockCache.modify).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'Pantry:pantry-1',
-        }),
+    it('is created with correct factory arguments', () => {
+      expect(createBatchAddToConnectionUpdater).toHaveBeenCalledWith(
+        'Pantry',
+        'itemsConnection',
+        'PantryItem',
       );
     });
 
-    it('itemsConnection field modifier adds new edges and updates totalCount', () => {
+    it('delegates to the batch factory', () => {
       const mockCache = {
         identify: jest.fn(() => 'Pantry:pantry-1'),
         modify: jest.fn(),
       };
+      const mockBatchFn = (createBatchAddToConnectionUpdater as jest.Mock).mock
+        .results[0].value;
 
       batchAddToPantryItemsCache(mockCache as any, 'pantry-1', [
         { id: 'item-1' },
-        { id: 'item-2' },
       ]);
 
-      const modifyCall = mockCache.modify.mock.calls[0][0];
-      const itemsConnectionFn = modifyCall.fields.itemsConnection;
-
-      const existingConnection = {
-        edges: [],
-        totalCount: 0,
-      };
-
-      const helpers = {
-        readField: jest.fn((field: string, ref: any) => ref?.id),
-        toReference: jest.fn((item: any) => ({ __ref: `PantryItem:${item.id}`, id: item.id })),
-      };
-
-      const result = itemsConnectionFn(existingConnection, helpers);
-
-      expect(result.edges).toHaveLength(2);
-      expect(result.totalCount).toBe(2);
+      expect(mockBatchFn).toHaveBeenCalledWith(mockCache, 'pantry-1', [
+        { id: 'item-1' },
+      ]);
     });
 
-    it('itemsConnection field modifier skips duplicate items', () => {
+    it('calls incrementNestedCounter when updateStats is true', () => {
       const mockCache = {
         identify: jest.fn(() => 'Pantry:pantry-1'),
         modify: jest.fn(),
       };
 
-      batchAddToPantryItemsCache(mockCache as any, 'pantry-1', [{ id: 'item-1' }]);
+      batchAddToPantryItemsCache(
+        mockCache as any,
+        'pantry-1',
+        [{ id: 'item-1' }, { id: 'item-2' }],
+        {
+          updateStats: true,
+        },
+      );
 
-      const modifyCall = mockCache.modify.mock.calls[0][0];
-      const itemsConnectionFn = modifyCall.fields.itemsConnection;
-
-      const existingEdge = { node: { __ref: 'PantryItem:item-1', id: 'item-1' } };
-      const existingConnection = {
-        edges: [existingEdge],
-        totalCount: 1,
-      };
-
-      const helpers = {
-        readField: jest.fn(() => 'item-1'),
-        toReference: jest.fn((item: any) => ({ __ref: `PantryItem:${item.id}` })),
-      };
-
-      const result = itemsConnectionFn(existingConnection, helpers);
-
-      // No new edges, returns existing connection unchanged
-      expect(result).toBe(existingConnection);
+      expect(incrementNestedCounter).toHaveBeenCalledWith(
+        mockCache,
+        'Pantry',
+        'pantry-1',
+        'stats',
+        'totalItems',
+        2,
+      );
     });
 
-    it('includes stats updater when updateStats option is true', () => {
+    it('does not call incrementNestedCounter when updateStats is not set', () => {
       const mockCache = {
         identify: jest.fn(() => 'Pantry:pantry-1'),
         modify: jest.fn(),
       };
+      (incrementNestedCounter as jest.Mock).mockClear();
 
-      batchAddToPantryItemsCache(mockCache as any, 'pantry-1', [{ id: 'item-1' }], {
-        updateStats: true,
-      });
+      batchAddToPantryItemsCache(mockCache as any, 'pantry-1', [
+        { id: 'item-1' },
+      ]);
 
-      const modifyCall = mockCache.modify.mock.calls[0][0];
-      expect(modifyCall.fields.stats).toBeDefined();
-
-      // Test the stats modifier function
-      const statsFn = modifyCall.fields.stats;
-
-      // Returns null for null input
-      expect(statsFn(null)).toBeNull();
-
-      // Returns ref unchanged
-      const ref = { __ref: 'PantryStats:1' };
-      expect(statsFn(ref)).toBe(ref);
-
-      // Updates totalItems for plain objects
-      const stats = { totalItems: 5 };
-      expect(statsFn(stats)).toEqual({ totalItems: 6 });
-    });
-
-    it('does not include stats updater when updateStats is not set', () => {
-      const mockCache = {
-        identify: jest.fn(() => 'Pantry:pantry-1'),
-        modify: jest.fn(),
-      };
-
-      batchAddToPantryItemsCache(mockCache as any, 'pantry-1', [{ id: 'item-1' }]);
-
-      const modifyCall = mockCache.modify.mock.calls[0][0];
-      expect(modifyCall.fields.stats).toBeUndefined();
+      expect(incrementNestedCounter).not.toHaveBeenCalled();
     });
   });
 });

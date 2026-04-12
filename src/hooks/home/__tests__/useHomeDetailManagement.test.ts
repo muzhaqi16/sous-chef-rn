@@ -46,11 +46,11 @@ const mockStoreState = {
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
-  selectSelectedHomeId: (state: any) => state.selectedHomeId,
-  selectHomeState: (state: any) => ({
-    selectedHomeId: state.selectedHomeId,
-    setSelectedHomeId: state.setSelectedHomeId,
-  }),
+  useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
+  useHomeState: jest.fn(() => ({
+    selectedHomeId: mockStoreState.selectedHomeId,
+    setSelectedHomeId: mockStoreState.setSelectedHomeId,
+  })),
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({

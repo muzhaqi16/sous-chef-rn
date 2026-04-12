@@ -1,5 +1,10 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react-native';
 import { EmailVerificationDeepLinkScreen } from '../EmailVerificationDeepLinkScreen';
 
 // --- Mocks ---
@@ -27,14 +32,16 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 
-jest.mock('#hooks/auth/useAuthUser', () => ({
-  useAuthUser: () => ({ id: '1', email: 'test@example.com', onBoarded: true }),
-}));
-
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: any) => selector({
-    updateUser: mockUpdateUser,
-  }),
+  useAppStore: (selector: any) =>
+    selector({
+      updateUser: mockUpdateUser,
+    }),
+  useUser: jest.fn(() => ({
+    id: '1',
+    email: 'test@example.com',
+    onBoarded: true,
+  })),
 }));
 
 jest.mock('#generated', () => ({
@@ -79,7 +86,9 @@ jest.mock('#components/molecules/Header', () => {
 jest.mock('#/components/base/SousChefLoader', () => {
   const { Text } = require('react-native');
   return {
-    SousChefLoader: ({ message }: any) => <Text testID="loader">{message}</Text>,
+    SousChefLoader: ({ message }: any) => (
+      <Text testID="loader">{message}</Text>
+    ),
   };
 });
 

@@ -1,9 +1,9 @@
 import { useGetUserProfileQuery } from '#generated';
 import { useAppStore } from '#store/useAppStore';
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 
 export const useProfileData = () => {
-  const user = useAuthUser();
+  const user = useUser();
   const isLoggingOut = useAppStore(state => state.isLoggingOut);
 
   const { data, loading, refetch } = useGetUserProfileQuery({

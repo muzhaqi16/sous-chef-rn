@@ -66,8 +66,8 @@ jest.mock('#store/useAppStore', () => ({
       setIsPantryQueryComplete: mockSetIsPantryQueryComplete,
     }),
   ),
-  selectIsHomeSelectionReady: (s: any) => s.isHomeSelectionReady,
-  selectSetIsPantryQueryComplete: (s: any) => s.setIsPantryQueryComplete,
+  useIsHomeSelectionReady: jest.fn(() => true),
+  useSetIsPantryQueryComplete: jest.fn(() => mockSetIsPantryQueryComplete),
 }));
 
 (global as any).requestIdleCallback = jest.fn((cb: any) => {

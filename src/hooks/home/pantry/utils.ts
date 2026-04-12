@@ -2,11 +2,12 @@
  * Shared utilities for pantry management hooks
  */
 
-import type { ApolloCache, Reference } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
-  type CacheFieldHelpers,
+  createBatchAddToConnectionUpdater,
+  incrementNestedCounter,
 } from '#/apollo/utils/cacheUpdaters';
 
 // Cache updater utilities for pantry items
@@ -23,6 +24,12 @@ export const removeFromPantryItemsCache =
     'PantryItem',
   );
 
+const batchAddToPantryItems = createBatchAddToConnectionUpdater(
+  'Pantry',
+  'itemsConnection',
+  'PantryItem',
+);
+
 /**
  * Batch-add multiple pantry items to the cache in a single cache.modify() call.
  * Use this instead of calling addToPantryItemsCache N times during rapid-fire
@@ -34,50 +41,16 @@ export function batchAddToPantryItemsCache(
   newItems: Array<{ id: string }>,
   options?: { updateStats?: boolean },
 ): void {
-  const parentCacheId = cache.identify({ __typename: 'Pantry', id: pantryId });
-  if (!parentCacheId || newItems.length === 0) return;
+  batchAddToPantryItems(cache, pantryId, newItems);
 
-  cache.modify({
-    id: parentCacheId,
-    fields: {
-      itemsConnection(
-        existingConnection: any = {},
-        { readField, toReference }: CacheFieldHelpers,
-      ) {
-        const existingEdges: ReadonlyArray<{ node: Reference }> =
-          existingConnection?.edges ?? [];
-        const existingIds = new Set(
-          existingEdges.map(edge => readField('id', edge?.node)),
-        );
-
-        const newEdges = newItems
-          .filter(item => !existingIds.has(item.id))
-          .map(item => ({
-            __typename: 'PantryItemEdge',
-            node: toReference(item, true),
-            cursor: '',
-          }))
-          .filter(
-            (edge): edge is typeof edge & { node: Reference } => !!edge.node,
-          );
-
-        if (newEdges.length === 0) return existingConnection;
-
-        return {
-          ...existingConnection,
-          edges: [...newEdges, ...existingEdges],
-          totalCount: (existingConnection?.totalCount ?? 0) + newEdges.length,
-        };
-      },
-      ...(options?.updateStats && {
-        stats(existingStats: Reference | { totalItems: number } | null) {
-          if (!existingStats || '__ref' in existingStats) return existingStats;
-          return {
-            ...existingStats,
-            totalItems: (existingStats.totalItems || 0) + newItems.length,
-          };
-        },
-      }),
-    },
-  });
+  if (options?.updateStats) {
+    incrementNestedCounter(
+      cache,
+      'Pantry',
+      pantryId,
+      'stats',
+      'totalItems',
+      newItems.length,
+    );
+  }
 }

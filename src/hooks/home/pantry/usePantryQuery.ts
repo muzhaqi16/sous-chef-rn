@@ -23,9 +23,8 @@ import {
   usePreservedQueryData,
 } from '#/hooks/apollo/usePreservedQueryData';
 import {
-  useAppStore,
-  selectIsHomeSelectionReady,
-  selectSetIsPantryQueryComplete,
+  useIsHomeSelectionReady,
+  useSetIsPantryQueryComplete,
 } from '#store/useAppStore';
 import { PAGE_SIZE } from '#/constants/pagination';
 
@@ -75,7 +74,7 @@ export function usePantryQuery(
   itemsOrderBy?: PantryItemOrderBy | null,
 ) {
   const isLoggedOut = useIsLoggedOut();
-  const isHomeSelectionReady = useAppStore(selectIsHomeSelectionReady);
+  const isHomeSelectionReady = useIsHomeSelectionReady();
 
   // Explicit validation - only execute query when pantryId is genuinely valid
   // Gate on isHomeSelectionReady to prevent queries with stale IDs after home deletion
@@ -138,7 +137,7 @@ export function usePantryQuery(
   );
   const totalCount = normalizedPantry?.itemsTotalCount ?? 0;
 
-  const setIsPantryQueryComplete = useAppStore(selectSetIsPantryQueryComplete);
+  const setIsPantryQueryComplete = useSetIsPantryQueryComplete();
 
   // Signal to useDataPreloading that GetPantry has settled.
   // Fires on first load completion (cache hit or network response).

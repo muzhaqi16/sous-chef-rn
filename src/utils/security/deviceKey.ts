@@ -1,6 +1,5 @@
 import { Platform } from 'react-native';
 import {
-  ACCESS_CONTROL,
   SECURITY_LEVEL,
   ACCESSIBLE,
   getSupportedBiometryType,
@@ -8,12 +7,9 @@ import {
   getGenericPassword,
   resetGenericPassword,
 } from 'react-native-keychain';
-import { storage } from '#/storage/mmkv';
-
+import { generateId } from '../generateId';
 const DEVICE_KEY_SERVICE = 'dev.souschef.app.devicekey';
 const DEVICE_KEY_USERNAME = 'device_key';
-// Legacy MMKV key — only read for migration to Keychain on first launch after upgrade.
-const LEGACY_MMKV_KEY = 'device_encryption_key';
 
 interface DeviceKeyOptions {
   forceRegenerate?: boolean;
@@ -23,11 +19,8 @@ interface DeviceKeyOptions {
  * Generates a secure, device-specific encryption key for MMKV storage.
  *
  * Storage tier: react-native-keychain (iOS Keychain / Android Keystore).
- * The key is generated with crypto-secure randomness via crypto.getRandomValues
- * (polyfilled by react-native-get-random-values, imported in index.js).
- *
- * Migration: any legacy key stored under `device_encryption_key` in unencrypted
- * MMKV (from prior versions) is read once, copied to the Keychain, and removed.
+ * The key is generated via uuid v4 (generateId()),
+ * backed by react-native-get-random-values.
  */
 export class DeviceKeyManager {
   private static cachedKey: string | null = null;
@@ -46,7 +39,7 @@ export class DeviceKeyManager {
 
     try {
       if (!forceRegenerate) {
-        const existingKey = await DeviceKeyManager.loadExistingKey();
+        const existingKey = await readKeyFromKeychain();
         if (existingKey) {
           DeviceKeyManager.cachedKey = existingKey;
           return existingKey;
@@ -66,55 +59,11 @@ export class DeviceKeyManager {
   }
 
   /**
-   * Load existing encryption key from the keychain. Falls back to a one-time
-   * migration read of any legacy MMKV-stored key, then immediately copies it
-   * to the keychain and clears the unencrypted MMKV entry.
-   */
-  private static async loadExistingKey(): Promise<string | null> {
-    // 1. Try keychain first (the source of truth from now on).
-    const fromKeychain = await readKeyFromKeychain();
-    if (fromKeychain) {
-      // Best-effort cleanup of any leftover legacy entry.
-      try {
-        if (storage.getString(LEGACY_MMKV_KEY)) {
-          storage.remove(LEGACY_MMKV_KEY);
-        }
-      } catch {
-        // ignore
-      }
-      return fromKeychain;
-    }
-
-    // 2. One-time migration: legacy installs stored the key in MMKV.
-    let legacyKey: string | undefined;
-    try {
-      legacyKey = storage.getString(LEGACY_MMKV_KEY);
-    } catch {
-      legacyKey = undefined;
-    }
-
-    if (legacyKey) {
-      const migrated = await writeKeyToKeychain(legacyKey);
-      if (migrated) {
-        try {
-          storage.remove(LEGACY_MMKV_KEY);
-        } catch {
-          // ignore
-        }
-      }
-      return legacyKey;
-    }
-
-    return null;
-  }
-
-  /**
-   * Generate a new device-specific encryption key using crypto-secure RNG.
-   * Uses crypto.getRandomValues (polyfilled by react-native-get-random-values
-   * in index.js) for cryptographic-quality entropy.
+   * Generate a new device-specific encryption key using uuid v4
+   * (via generateId(), backed by react-native-get-random-values).
    */
   private static async generateNewKey(): Promise<string> {
-    const key = generateSecureRandomHex(32); // 32 bytes -> 64 hex chars
+    const key = generateId().replaceAll('-', '');
 
     const stored = await writeKeyToKeychain(key);
     if (!stored) {
@@ -134,10 +83,7 @@ export class DeviceKeyManager {
   private static getFallbackKey(): string {
     try {
       const seed = `${Platform.OS}-${Platform.Version}-sous-chef-fallback`;
-      // Deterministic 32-char hex from a stable seed using a simple FNV-1a hash.
-      // This is intentionally NOT cryptographically secure — it only protects
-      // against the catastrophic case where the keychain is unavailable.
-      return fnvHashHex(seed).padEnd(32, '0').substring(0, 32);
+      return seed.padEnd(32, '0').substring(0, 32);
     } catch {
       console.warn('Using static fallback key - security reduced');
       return ('sous-chef-emergency-fallback-key-' + Platform.OS)
@@ -174,11 +120,6 @@ export class DeviceKeyManager {
     } catch (error) {
       console.warn('Error clearing old key from keychain:', error);
     }
-    try {
-      storage.remove(LEGACY_MMKV_KEY);
-    } catch {
-      // ignore
-    }
     DeviceKeyManager.clearCachedKey();
     return DeviceKeyManager.getDeviceEncryptionKey({ forceRegenerate: true });
   }
@@ -186,9 +127,6 @@ export class DeviceKeyManager {
 
 /**
  * Read the device key from the keychain. Returns null on failure or absence.
- * Tries hardware-backed (biometric/passcode) storage first, but does NOT
- * trigger a biometric prompt — we use device-passcode-only access control to
- * avoid blocking app startup.
  */
 async function readKeyFromKeychain(): Promise<string | null> {
   try {
@@ -204,16 +142,15 @@ async function readKeyFromKeychain(): Promise<string | null> {
 }
 
 /**
- * Write the device key to the keychain. Tries device-passcode-protected
- * storage first (no biometric prompt). Returns true on success.
+ * Write the device key to the keychain with hardware-backed storage.
+ * No access control is set — the key must be readable on every cold start
+ * without prompting the user. WHEN_UNLOCKED_THIS_DEVICE_ONLY already ensures
+ * the key is only accessible while the device is unlocked.
  */
 async function writeKeyToKeychain(key: string): Promise<boolean> {
-  // Use WHEN_UNLOCKED_THIS_DEVICE_ONLY without biometric access control —
-  // we need this readable on every cold start without prompting the user.
-  const passcodeOptions = {
+  const hardwareOptions = {
     service: DEVICE_KEY_SERVICE,
     accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    accessControl: ACCESS_CONTROL.DEVICE_PASSCODE,
     securityLevel:
       Platform.OS === 'android' ? SECURITY_LEVEL.SECURE_HARDWARE : undefined,
   };
@@ -222,7 +159,7 @@ async function writeKeyToKeychain(key: string): Promise<boolean> {
     const result = await setGenericPassword(
       DEVICE_KEY_USERNAME,
       key,
-      passcodeOptions,
+      hardwareOptions,
     );
     if (result) return true;
   } catch (error) {
@@ -250,41 +187,4 @@ async function writeKeyToKeychain(key: string): Promise<boolean> {
     console.error('Failed to write device key to keychain:', error);
     return false;
   }
-}
-
-/**
- * Generate a cryptographically secure random hex string of the given byte length.
- * Uses crypto.getRandomValues (polyfilled by react-native-get-random-values
- * in index.js).
- */
-function generateSecureRandomHex(byteLength: number): string {
-  const bytes = new Uint8Array(byteLength);
-  // crypto is provided by react-native-get-random-values (imported in index.js).
-  // eslint-disable-next-line no-undef
-  crypto.getRandomValues(bytes);
-  let hex = '';
-  for (let i = 0; i < bytes.length; i++) {
-    hex += bytes[i].toString(16).padStart(2, '0');
-  }
-  return hex;
-}
-
-/**
- * FNV-1a hash for the deterministic fallback key. NOT cryptographically secure.
- */
-function fnvHashHex(input: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= input.charCodeAt(i);
-    hash = (hash * 0x01000193) >>> 0;
-  }
-  // Combine with a second pass over the reversed string for a longer output.
-  let hash2 = 0x811c9dc5;
-  for (let i = input.length - 1; i >= 0; i--) {
-    hash2 ^= input.charCodeAt(i);
-    hash2 = (hash2 * 0x01000193) >>> 0;
-  }
-  return (
-    hash.toString(16).padStart(8, '0') + hash2.toString(16).padStart(8, '0')
-  );
 }

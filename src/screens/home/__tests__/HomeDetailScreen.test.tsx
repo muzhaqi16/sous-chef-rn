@@ -67,7 +67,7 @@ jest.mock('#hooks/home/useHomeDetailManagement', () => ({
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn((selector: any) => selector({ user: { id: 'user-1' } })),
-  selectUser: (s: any) => s.user,
+  useUser: jest.fn(() => ({ id: 'user-1' })),
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');

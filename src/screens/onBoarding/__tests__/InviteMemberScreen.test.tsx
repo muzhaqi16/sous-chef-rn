@@ -15,10 +15,6 @@ jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
   }),
 }));
 
-jest.mock('#hooks/auth/useAuthUser', () => ({
-  useAuthUser: () => ({ id: 'u1', email: 'me@test.com' }),
-}));
-
 let mockSelectedHomeId: string | null = 'h1';
 let mockSelectedShoppingListId: string | null = 'sl1';
 
@@ -31,7 +27,10 @@ jest.mock('#store/useAppStore', () => {
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn };
+  return {
+    useAppStore: fn,
+    useUser: jest.fn(() => ({ id: 'u1', email: 'me@test.com' })),
+  };
 });
 
 jest.mock('#generated', () => ({

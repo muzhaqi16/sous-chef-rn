@@ -25,11 +25,11 @@ import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { ProfileSkeleton } from '#components/base/Skeleton/ProfileSkeleton';
-import { useAppStore, selectCanAccessDevTools } from '#/store/useAppStore';
+import { useCanAccessDevTools } from '#/store/useAppStore';
 
 export const ProfileScreen = () => {
   useScreenTransition('ProfileScreen');
-  const canAccessDevTools = useAppStore(selectCanAccessDevTools);
+  const canAccessDevTools = useCanAccessDevTools();
   const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal } = useConfigurableSettings(profile);

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { alertService } from '#/services/alertService';
-import { useShallow } from 'zustand/shallow';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import {
   useGetHomeQuery,
@@ -18,6 +17,7 @@ import { normalizeHome } from '#/utils/connectionUtils';
 import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
+  setCachedFields,
 } from '#/apollo/utils/cacheUpdaters';
 import {
   executeCacheUpdate,
@@ -30,8 +30,8 @@ import {
 } from '#/utils/errors/versionConflict';
 import {
   useAppStore,
-  selectSelectedHomeId,
-  selectHomeState,
+  useSelectedHomeId,
+  useHomeState,
 } from '#store/useAppStore';
 
 export interface RolePickerState {
@@ -61,8 +61,8 @@ const INITIAL_ROLE_PICKER_STATE: RolePickerState = {
  */
 export function useHomeDetailManagement(homeId: string) {
   // Store state and actions for managing selections after leaving
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
-  const { setSelectedHomeId } = useAppStore(useShallow(selectHomeState));
+  const selectedHomeId = useSelectedHomeId();
+  const { setSelectedHomeId } = useHomeState();
   const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
@@ -101,17 +101,9 @@ export function useHomeDetailManagement(homeId: string) {
       const membershipId = variables.id;
       const newRole = variables.input.role;
 
-      // Directly modify the cached membership's role field
-      cache.modify({
-        id: cache.identify({ __typename: 'Membership', id: membershipId }),
-        fields: {
-          role() {
-            return newRole;
-          },
-          updatedAt() {
-            return new Date().toISOString();
-          },
-        },
+      setCachedFields(cache, 'Membership', membershipId, {
+        role: newRole,
+        updatedAt: new Date().toISOString(),
       });
     },
     onError: error => {

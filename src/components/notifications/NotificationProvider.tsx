@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNotifications } from '#hooks/notifications/useNotifications';
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { useAppStore } from '#store/useAppStore';
 
 interface NotificationProviderProps {
@@ -16,7 +16,7 @@ interface NotificationProviderProps {
  * since it returns null (no React elements to reconcile).
  */
 const NotificationListener: React.FC = () => {
-  const user = useAuthUser();
+  const user = useUser();
   const isAuthenticated = useAppStore(
     state => !!(state.user && state.accessToken),
   );

@@ -16,7 +16,7 @@ import {
   useCreatePantryMutation,
   useSetDefaultPantryMutation,
 } from '#generated';
-import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
+import { useAppStore, useSelectedHomeId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useErrorService, errorService } from '#/services/errorService';
@@ -192,7 +192,7 @@ export const PantrySettings: React.FC<
   const { theme } = useUnistyles();
   const pantryId = route.params?.pantryId;
 
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const selectedHomeId = useSelectedHomeId();
   const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const { handleApolloError } = useErrorService();
   const permissions = usePantryPermissions();

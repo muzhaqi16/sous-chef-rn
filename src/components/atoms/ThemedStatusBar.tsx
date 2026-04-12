@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { SystemBars } from 'react-native-edge-to-edge';
 import { UnistylesRuntime, useUnistyles } from 'react-native-unistyles';
-import { useAppStore, selectHydrated } from '#store/useAppStore';
+import { useAppStore, useIsHydrated } from '#store/useAppStore';
 import { Telemetry } from '#services/telemetry';
 import { WindowBackground } from '#/native/WindowBackground';
 import { lightTheme, darkTheme } from '#/theme/themes';
@@ -9,7 +9,7 @@ import { ThemePreference } from '#/store/slices/preferencesSlice';
 
 export const ThemedStatusBar = () => {
   const { rt } = useUnistyles();
-  const isHydrated = useAppStore(selectHydrated);
+  const isHydrated = useIsHydrated();
   const userThemePreference = useAppStore(state => state.theme);
 
   // Derive theme from user preference + system color scheme directly.
@@ -19,10 +19,10 @@ export const ThemedStatusBar = () => {
     userThemePreference === ThemePreference.DARK
       ? 'dark'
       : userThemePreference === ThemePreference.LIGHT
-        ? 'light'
-        : rt.colorScheme === 'dark'
-          ? 'dark'
-          : 'light';
+      ? 'light'
+      : rt.colorScheme === 'dark'
+      ? 'dark'
+      : 'light';
 
   const barStyle = resolvedTheme === 'dark' ? 'light' : 'dark';
 

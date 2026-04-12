@@ -1,6 +1,9 @@
 'use no memo';
 import { renderHook } from '@testing-library/react-native';
-import { useOptimisticDataRestoration, useOptimisticDataRestorationMultiple } from '../useOptimisticDataRestoration';
+import {
+  useOptimisticDataRestoration,
+  useOptimisticDataRestorationMultiple,
+} from '../useOptimisticDataRestoration';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -22,12 +25,14 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
     getAllForType: (...args: any[]) => (mockGetAllForType as any)(...args),
   },
 }));
-jest.mock('#/hooks/auth/useAuthUser', () => ({
-  useAuthUser: () => ({ id: 'user-1' }),
+jest.mock('#store/useAppStore', () => ({
+  useUser: () => ({ id: 'user-1' }),
 }));
 
 // Mock startTransition to execute synchronously
-jest.spyOn(require('react'), 'startTransition').mockImplementation((fn: any) => fn());
+jest
+  .spyOn(require('react'), 'startTransition')
+  .mockImplementation((fn: any) => fn());
 
 describe('useOptimisticDataRestoration', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -58,7 +63,10 @@ describe('useOptimisticDataRestorationMultiple', () => {
   it('processes multiple entity types', () => {
     mockGetAllForType.mockReturnValue(new Map());
     renderHook(() =>
-      useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']),
+      useOptimisticDataRestorationMultiple([
+        'ShoppingList',
+        'ShoppingListItem',
+      ]),
     );
     expect(mockBatch).toHaveBeenCalled();
   });

@@ -3,26 +3,11 @@ import { useShallow } from 'zustand/react/shallow';
 import { storeApi, RootState } from './index';
 
 /**
- * Typed selector hook for Zustand store
+ * Core store hook. Prefer the named hooks below for common state.
+ * Use this directly only for one-off or uncommon selections:
  *
- * Usage:
  * ```tsx
- * // Instead of:
- * const { user, accessToken } = useStore();  // ❌ Re-renders on ANY state change
- *
- * // Do this:
- * const user = useAppStore(state => state.user);  // ✅ Only re-renders when user changes
- * const accessToken = useAppStore(state => state.accessToken);  // ✅ Only re-renders when accessToken changes
- * ```
- *
- * With equality function for complex objects:
- * ```tsx
- * import { shallow } from 'zustand/shallow';
- *
- * const homeState = useAppStore(
- *   state => ({ homeId: state.selectedHomeId, pantryId: state.selectedPantryId }),
- *   shallow
- * );
+ * const theme = useAppStore(state => state.theme);
  * ```
  */
 export function useAppStore<T>(
@@ -32,31 +17,40 @@ export function useAppStore<T>(
   return useStoreWithEqualityFn(storeApi, selector, equalityFn);
 }
 
-// Common selectors for frequently accessed state
-export const selectUser = (state: RootState) => state.user;
-export const selectAccessToken = (state: RootState) => state.accessToken;
-export const selectRefreshToken = (state: RootState) => state.refreshToken;
-export const selectSelectedHomeId = (state: RootState) => state.selectedHomeId;
-export const selectSelectedPantryId = (state: RootState) =>
-  state.selectedPantryId;
-export const selectSelectedShoppingListId = (state: RootState) =>
+// ─── Internal selectors ──────────────────────────────────────────────────────
+// Not exported — used as building blocks for the hooks below.
+
+// Auth
+const selectUser = (state: RootState) => state.user;
+const selectIsLoggingOut = (state: RootState) => state.isLoggingOut;
+const selectHydrated = (state: RootState) => state.isHydrated;
+const selectIsAdminUser = (state: RootState) =>
+  state.user?.role === 'ADMIN' || state.user?.role === 'SUPER_ADMIN';
+const selectCanAccessDevTools = (state: RootState) =>
+  state.user?.canAccessDevTools === true;
+
+// Navigation / selection IDs
+const selectSelectedHomeId = (state: RootState) => state.selectedHomeId;
+const selectSelectedPantryId = (state: RootState) => state.selectedPantryId;
+const selectSelectedShoppingListId = (state: RootState) =>
   state.selectedShoppingListId;
-export const selectSelectedMealPlanId = (state: RootState) =>
-  state.selectedMealPlanId;
-export const selectIsLoggedOut = (state: RootState) => !state.accessToken;
-export const selectIsLoggingOut = (state: RootState) => state.isLoggingOut;
-export const selectHydrated = (state: RootState) => state.isHydrated;
 
-// Auth-related selectors
-export const selectAuthState = (state: RootState) => ({
-  user: state.user,
-  accessToken: state.accessToken,
-  refreshToken: state.refreshToken,
-});
+// Home initialization flags
+const selectIsHomeSelectionReady = (state: RootState) =>
+  state.isHomeSelectionReady;
+const selectSetIsHomeSelectionReady = (state: RootState) =>
+  state.setIsHomeSelectionReady;
+const selectSetIsPantryQueryComplete = (state: RootState) =>
+  state.setIsPantryQueryComplete;
 
-// PERFORMANCE: Grouped auth state selector for useAuthState hook
-// Reduces 16+ individual subscriptions to 3 grouped subscriptions
-export const selectAuthTokens = (state: RootState) => ({
+// Atomic action selectors
+const selectSetHomeAndPantry = (state: RootState) => state.setHomeAndPantry;
+
+// Network
+const selectIsOnline = (state: RootState) => state.isOnline;
+
+// Grouped selectors (return object literals — always consumed via useShallow)
+const selectAuthTokens = (state: RootState) => ({
   user: state.user,
   accessToken: state.accessToken,
   refreshToken: state.refreshToken,
@@ -64,7 +58,7 @@ export const selectAuthTokens = (state: RootState) => ({
   isLoggingOut: state.isLoggingOut,
 });
 
-export const selectAuthActions = (state: RootState) => ({
+const selectAuthActions = (state: RootState) => ({
   setAuth: state.setAuth,
   clearAuth: state.clearAuth,
   setTokens: state.setTokens,
@@ -76,7 +70,7 @@ export const selectAuthActions = (state: RootState) => ({
   setUserNavigationState: state.setUserNavigationState,
 });
 
-export const selectPostLoginState = (state: RootState) => ({
+const selectPostLoginState = (state: RootState) => ({
   navigationState: state.navigationState,
   showBiometricSetup: state.showBiometricSetup,
   postLoginCredentials: state.postLoginCredentials,
@@ -85,16 +79,7 @@ export const selectPostLoginState = (state: RootState) => ({
   setPostLoginCredentials: state.setPostLoginCredentials,
 });
 
-// Navigation-related selectors
-export const selectNavigationState = (state: RootState) => ({
-  selectedHomeId: state.selectedHomeId,
-  selectedPantryId: state.selectedPantryId,
-  selectedShoppingListId: state.selectedShoppingListId,
-});
-
-// PERFORMANCE: Scanner bottom sheet state selector for SearchResultsScreen
-// Reduces 6 individual subscriptions to 1 grouped subscription
-export const selectBottomSheetState = (state: RootState) => ({
+const selectBottomSheetState = (state: RootState) => ({
   scannerSheetVisible: state.scannerSheetVisible,
   searchError: state.searchError,
   scannerSheetIndex: state.scannerSheetIndex,
@@ -103,90 +88,38 @@ export const selectBottomSheetState = (state: RootState) => ({
   showBottomSheet: state.showBottomSheet,
 });
 
-// Actions (non-selector exports for setting state)
-export const selectSetters = (state: RootState) => ({
-  updateUser: state.updateUser,
-  setTokens: state.setTokens,
-  setSelectedHomeId: state.setSelectedHomeId,
-  setSelectedPantryId: state.setSelectedPantryId,
-  setSelectedShoppingListId: state.setSelectedShoppingListId,
-  logout: state.logout,
-});
-
-// PERFORMANCE: Pantry state selector - reduces multiple subscriptions to 1
-export const selectPantryState = (state: RootState) => ({
+const selectPantryState = (state: RootState) => ({
   selectedPantryId: state.selectedPantryId,
   setSelectedPantryId: state.setSelectedPantryId,
   selectedHomeId: state.selectedHomeId,
   setSelectedHomeId: state.setSelectedHomeId,
 });
 
-// Atomic home+pantry action selector - prevents race conditions during home switch
-export const selectSetHomeAndPantry = (state: RootState) =>
-  state.setHomeAndPantry;
-
-// PERFORMANCE: Shopping list state selector - reduces multiple subscriptions to 1
-// Note: selectedHomeId removed - shopping lists are independent of homes
-export const selectShoppingListState = (state: RootState) => ({
+const selectShoppingListState = (state: RootState) => ({
   selectedShoppingListId: state.selectedShoppingListId,
   setSelectedShoppingListId: state.setSelectedShoppingListId,
 });
 
-// PERFORMANCE: Meal plan state selector - reduces multiple subscriptions to 1
-export const selectMealPlanState = (state: RootState) => ({
-  selectedMealPlanId: state.selectedMealPlanId,
-  setSelectedMealPlanId: state.setSelectedMealPlanId,
-});
-
-// PERFORMANCE: Home state selector - reduces multiple subscriptions to 1
-export const selectHomeState = (state: RootState) => ({
+const selectHomeState = (state: RootState) => ({
   selectedHomeId: state.selectedHomeId,
   setSelectedHomeId: state.setSelectedHomeId,
 });
 
-// Home initialization flag selector (for useDefaultHome)
-export const selectHasInitializedHomeData = (state: RootState) =>
-  state.hasInitializedHomeData;
-export const selectSetHasInitializedHomeData = (state: RootState) =>
-  state.setHasInitializedHomeData;
-
-// Home selection ready flag selectors - gates pantry queries until home selection is complete
-export const selectIsHomeSelectionReady = (state: RootState) =>
-  state.isHomeSelectionReady;
-export const selectSetIsHomeSelectionReady = (state: RootState) =>
-  state.setIsHomeSelectionReady;
-
-// Pantry query complete flag selectors - gates GetCommonUnits until GetPantry first settles
-export const selectIsPantryQueryComplete = (state: RootState) =>
-  state.isPantryQueryComplete;
-export const selectSetIsPantryQueryComplete = (state: RootState) =>
-  state.setIsPantryQueryComplete;
-
-// PERFORMANCE: Theme/preferences selector - reduces multiple subscriptions to 1
-export const selectPreferences = (state: RootState) => ({
+const selectPreferences = (state: RootState) => ({
   theme: state.theme,
   language: state.language,
   setTheme: state.setTheme,
   setLanguage: state.setLanguage,
 });
 
-// PERFORMANCE: Token manager selector - reduces multiple subscriptions to 1
-export const selectTokenState = (state: RootState) => ({
-  accessToken: state.accessToken,
-  refreshToken: state.refreshToken,
-  setTokens: state.setTokens,
-});
-
-// PERFORMANCE: Navigation utilities selector - for getUserNavigationState usage
-export const selectNavigationUtils = (state: RootState) => ({
+const selectNavigationUtils = (state: RootState) => ({
   getUserNavigationState: state.getUserNavigationState,
   setUserNavigationState: state.setUserNavigationState,
   setOnBoardingStep: state.setOnBoardingStep,
   setOnboarded: state.setOnboarded,
 });
 
-// PERFORMANCE: Search state selector - comprehensive search functionality
-export const selectSearchState = (state: RootState) => ({
+const selectSearchState = (state: RootState) => ({
   searchResults: state.searchResults,
   isSearching: state.isSearching,
   searchError: state.searchError,
@@ -197,54 +130,42 @@ export const selectSearchState = (state: RootState) => ({
   addToRecentlyScanned: state.addToRecentlyScanned,
 });
 
-// Admin role selector
-export const selectIsAdminUser = (state: RootState) =>
-  state.user?.role === 'ADMIN' || state.user?.role === 'SUPER_ADMIN';
+// ─── Atomic hooks ────────────────────────────────────────────────────────────
 
-// Dev tools access selector — decouples feature gating from data-access roles
-export const selectCanAccessDevTools = (state: RootState) =>
-  state.user?.canAccessDevTools === true;
+export const useUser = () => useAppStore(selectUser);
+export const useSelectedHomeId = () => useAppStore(selectSelectedHomeId);
+export const useSelectedPantryId = () => useAppStore(selectSelectedPantryId);
+export const useSelectedShoppingListId = () =>
+  useAppStore(selectSelectedShoppingListId);
+export const useIsLoggingOut = () => useAppStore(selectIsLoggingOut);
+export const useIsHydrated = () => useAppStore(selectHydrated);
+export const useIsOnline = () => useAppStore(selectIsOnline);
+export const useCanAccessDevTools = () => useAppStore(selectCanAccessDevTools);
+export const useIsAdminUser = () => useAppStore(selectIsAdminUser);
+export const useIsHomeSelectionReady = () =>
+  useAppStore(selectIsHomeSelectionReady);
+export const useSetIsHomeSelectionReady = () =>
+  useAppStore(selectSetIsHomeSelectionReady);
+export const useSetIsPantryQueryComplete = () =>
+  useAppStore(selectSetIsPantryQueryComplete);
+export const useSetHomeAndPantry = () => useAppStore(selectSetHomeAndPantry);
 
-// Single property selector for network status
-export const selectIsOnline = (state: RootState) => state.isOnline;
+// ─── Grouped hooks (useShallow baked in) ─────────────────────────────────────
+// Grouped selectors return fresh object literals on every call. useShallow
+// prevents unnecessary re-renders by comparing each property individually
+// instead of the object reference.
 
-// =========================================================================
-// Safe grouped-selector hooks
-// =========================================================================
-//
-// Each `selectXxx` selector above returns a fresh object literal, which means
-// callers MUST wrap them with `useShallow` to avoid an infinite re-render
-// loop. That's a footgun: a future caller who forgets `useShallow` won't get
-// any warning until profiling reveals the wasted renders.
-//
-// The hooks below bake `useShallow` in. Prefer these over the raw selectors
-// for new call sites:
-//
-//   const { user, accessToken, refreshToken } = useAuthTokens();   // ✅
-//   // instead of:
-//   const { user, accessToken, refreshToken } = useAppStore(useShallow(selectAuthTokens));
-//
-// Existing call sites that already wrap with `useShallow` continue to work.
-// =========================================================================
-
-export const useAuthState = () => useAppStore(useShallow(selectAuthState));
 export const useAuthTokens = () => useAppStore(useShallow(selectAuthTokens));
 export const useAuthActions = () => useAppStore(useShallow(selectAuthActions));
 export const usePostLoginState = () =>
   useAppStore(useShallow(selectPostLoginState));
-export const useNavigationState = () =>
-  useAppStore(useShallow(selectNavigationState));
 export const useBottomSheetState = () =>
   useAppStore(useShallow(selectBottomSheetState));
-export const useSetters = () => useAppStore(useShallow(selectSetters));
 export const usePantryState = () => useAppStore(useShallow(selectPantryState));
 export const useShoppingListState = () =>
   useAppStore(useShallow(selectShoppingListState));
-export const useMealPlanState = () =>
-  useAppStore(useShallow(selectMealPlanState));
 export const useHomeState = () => useAppStore(useShallow(selectHomeState));
 export const usePreferences = () => useAppStore(useShallow(selectPreferences));
-export const useTokenState = () => useAppStore(useShallow(selectTokenState));
 export const useNavigationUtils = () =>
   useAppStore(useShallow(selectNavigationUtils));
 export const useSearchState = () => useAppStore(useShallow(selectSearchState));

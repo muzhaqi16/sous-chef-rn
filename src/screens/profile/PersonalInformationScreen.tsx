@@ -3,7 +3,7 @@ import { RefreshControl } from 'react-native';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#hooks/profile/useProfileData';
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { PERSONAL_INFO_CONFIG } from '#/config/settingsConfig';
 import { useUpdateUserProfileMutation, ProfileVisibility } from '#generated';
 import { useApolloClient } from '@apollo/client/react';
@@ -56,7 +56,7 @@ async function performProfileUpdate(
 
 export const PersonalInformationScreen: React.FC = () => {
   const { profile, refetch } = useProfileData();
-  const user = useAuthUser();
+  const user = useUser();
   const client = useApolloClient();
   const { theme } = useUnistyles();
   const [updateProfileMutation] = useUpdateUserProfileMutation();

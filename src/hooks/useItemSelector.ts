@@ -5,7 +5,7 @@ import {
   useGetHomesQuery,
 } from '../graphql/generated';
 import { usePreservedArrayData } from './apollo/usePreservedQueryData';
-import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
+import { useSelectedHomeId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
 
 interface UseItemSelectorConfig {
@@ -34,7 +34,7 @@ export const useItemSelector = ({
 
   // Get selectedHomeId from Zustand store directly (without triggering GraphQL queries)
   // This prevents cascade: useDefaultHome uses cache-and-network which always fires network requests
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const selectedHomeId = useSelectedHomeId();
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
   // - cache-and-network: Shows cached data immediately, fetches fresh in background

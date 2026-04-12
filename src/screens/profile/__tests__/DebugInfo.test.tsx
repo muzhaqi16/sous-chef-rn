@@ -10,7 +10,7 @@ jest.mock('#/store/useAppStore', () => ({
   useAppStore: jest.fn((selector: any) =>
     selector({ canAccessDevTools: false }),
   ),
-  selectCanAccessDevTools: (s: any) => s.canAccessDevTools,
+  useCanAccessDevTools: jest.fn(() => false),
 }));
 jest.mock('#components/templates/ProfileScreenWrapper', () => ({
   ProfileScreenWrapper: ({ title, children }: any) => {

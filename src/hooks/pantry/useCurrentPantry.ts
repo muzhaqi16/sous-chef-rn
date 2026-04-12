@@ -1,8 +1,15 @@
 import { useEffect } from 'react';
-import { useAppStore, selectPantryState, selectSelectedHomeId, selectIsHomeSelectionReady } from '#store/useAppStore';
-import { useShallow } from 'zustand/react/shallow';
+import {
+  useSelectedHomeId,
+  usePantryState,
+  useIsHomeSelectionReady,
+} from '#store/useAppStore';
 import { useGetHomesQuery } from '#generated';
-import { normalizeHomes, normalizeHome, extractNodes } from '#/utils/connectionUtils';
+import {
+  normalizeHomes,
+  normalizeHome,
+  extractNodes,
+} from '#/utils/connectionUtils';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 
 /**
@@ -17,22 +24,25 @@ import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
  * duplicate GetHomes network request during startup.
  */
 export function useCurrentPantry() {
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
-  const { selectedPantryId, setSelectedPantryId } = useAppStore(
-    useShallow(selectPantryState),
-  );
-  const isHomeSelectionReady = useAppStore(selectIsHomeSelectionReady);
+  const selectedHomeId = useSelectedHomeId();
+  const { selectedPantryId, setSelectedPantryId } = usePantryState();
+  const isHomeSelectionReady = useIsHomeSelectionReady();
 
   const { data: homesData } = useGetHomesQuery({
     fetchPolicy: 'cache-only',
-    errorPolicy: 'ignore' });
+    errorPolicy: 'ignore',
+  });
 
   // Preserve homes data and normalize
   // Extract nodes from connection type (homes returns HomeConnection)
-  const homes = normalizeHomes(usePreservedArrayData(extractNodes(homesData?.homes)));
+  const homes = normalizeHomes(
+    usePreservedArrayData(extractNodes(homesData?.homes)),
+  );
 
   // Get current home from cached homes
-  const currentHome = (isHomeSelectionReady ? homes.find((h: any) => h.id === selectedHomeId) : undefined);
+  const currentHome = isHomeSelectionReady
+    ? homes.find((h: any) => h.id === selectedHomeId)
+    : undefined;
 
   // Helper to get default pantry from a home
   // Handle both normalized homes (with pantries array) and raw homes (with pantriesConnection)
@@ -44,14 +54,14 @@ export function useCurrentPantry() {
       return null;
     }
     return (
-      pantries.find((pantry: any) => pantry.isDefault) ||
-      pantries[0] ||
-      null
+      pantries.find((pantry: any) => pantry.isDefault) || pantries[0] || null
     );
   };
 
   // Get home's default pantry (isDefault=true or first)
-  const defaultPantry = (isHomeSelectionReady ? getDefaultPantry({ home: currentHome }) : null);
+  const defaultPantry = isHomeSelectionReady
+    ? getDefaultPantry({ home: currentHome })
+    : null;
 
   // Resolve pantry with fallback chain
   const pantry = (() => {
@@ -82,7 +92,12 @@ export function useCurrentPantry() {
     if (isHomeSelectionReady && !selectedPantryId && defaultPantry?.id) {
       setSelectedPantryId(defaultPantry.id);
     }
-  }, [isHomeSelectionReady, selectedPantryId, defaultPantry?.id, setSelectedPantryId]);
+  }, [
+    isHomeSelectionReady,
+    selectedPantryId,
+    defaultPantry?.id,
+    setSelectedPantryId,
+  ]);
 
   // Return early values if not ready, otherwise return resolved values
   if (!isHomeSelectionReady) {
@@ -94,7 +109,8 @@ export function useCurrentPantry() {
       currentHome: null,
       selectedHomeId: null,
       homeCount: homes.length,
-      isReady: false };
+      isReady: false,
+    };
   }
 
   return {
@@ -105,5 +121,6 @@ export function useCurrentPantry() {
     currentHome,
     selectedHomeId,
     homeCount: homes.length,
-    isReady: true };
+    isReady: true,
+  };
 }

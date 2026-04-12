@@ -10,13 +10,12 @@ jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
-  const selectUser = (s: any) => s.user;
-  const fn = (selector: any) =>
-    selector({ user: { id: 'u1', email: 'owner@test.com' } });
+  const mockState = { user: { id: 'u1', email: 'owner@test.com' } };
+  const fn = (selector: any) => selector(mockState);
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn, selectUser };
+  return { useAppStore: fn, useUser: jest.fn(() => mockState.user) };
 });
 
 const mockCollaborators = [

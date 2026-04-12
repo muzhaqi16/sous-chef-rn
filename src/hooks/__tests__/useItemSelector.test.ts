@@ -19,7 +19,7 @@ jest.mock('#generated', () => ({
 }));
 
 jest.mock('#hooks/apollo/usePreservedQueryData', () => ({
-  usePreservedArrayData: <T,>(data: T[] | undefined | null) => data ?? [],
+  usePreservedArrayData: <T>(data: T[] | undefined | null) => data ?? [],
 }));
 
 jest.mock('#utils/connectionUtils', () => ({
@@ -30,7 +30,7 @@ jest.mock('#utils/connectionUtils', () => ({
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: any) => any) =>
     selector({ selectedHomeId: 'home-1' }),
-  selectSelectedHomeId: (state: any) => state.selectedHomeId,
+  useSelectedHomeId: jest.fn(() => 'home-1'),
 }));
 
 describe('useItemSelector', () => {
@@ -51,9 +51,7 @@ describe('useItemSelector', () => {
     });
 
     it('returns empty array when customData is undefined', () => {
-      const { result } = renderHook(() =>
-        useItemSelector({ type: 'custom' }),
-      );
+      const { result } = renderHook(() => useItemSelector({ type: 'custom' }));
 
       expect(result.current.data).toEqual([]);
       expect(result.current.loading).toBe(false);

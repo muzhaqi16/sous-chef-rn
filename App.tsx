@@ -9,7 +9,7 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
-import { useAppStore, selectHydrated } from '#store/useAppStore';
+import { useAppStore, useIsHydrated } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { client } from '#/apollo/client';
 import { Navigation } from '#navigation/RootNavigator';
@@ -114,7 +114,7 @@ function injectDetoxLaunchArgs(
 }
 
 const App = () => {
-  const isHydrated = useAppStore(selectHydrated);
+  const isHydrated = useIsHydrated();
   const isOnline = useAppStore(state => state.isOnline);
   const setHasStoredCredentials = useAppStore(
     state => state.setHasStoredCredentials,

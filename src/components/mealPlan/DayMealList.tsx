@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, RefreshControl } from 'react-native';
+import { Text, RefreshControl } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   type useAnimatedScrollHandler,

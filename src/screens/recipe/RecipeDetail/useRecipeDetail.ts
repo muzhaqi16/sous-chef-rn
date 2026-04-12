@@ -20,7 +20,7 @@ import {
   type SavedRecipeFoldersQuery,
   type BatchAddShoppingListItemInput,
 } from '#generated';
-import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
+import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { normalizeRecipes, extractNodes } from '#/utils/connectionUtils';
@@ -145,7 +145,7 @@ export function useRecipeDetail() {
   const shoppingLists = extractNodes(shoppingListsData?.shoppingLists);
 
   // Get user's selected shopping list ID from app store
-  const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
+  const selectedShoppingListId = useSelectedShoppingListId();
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );

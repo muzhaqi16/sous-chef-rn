@@ -18,18 +18,21 @@ jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
 }));
 
 jest.mock('#store/useAppStore', () => {
-  const selectUser = (s: any) => s.user;
-  const selectSelectedHomeId = (s: any) => s.selectedHomeId;
-  const fn = (selector: any) => selector({
+  const mockState = {
     user: { id: 'u1', email: 'test@test.com' },
     selectedHomeId: null,
     setSelectedHomeId: jest.fn(),
     setSelectedPantryId: jest.fn(),
-  });
+  };
+  const fn = (selector: any) => selector(mockState);
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn, selectUser, selectSelectedHomeId };
+  return {
+    useAppStore: fn,
+    useUser: jest.fn(() => mockState.user),
+    useSelectedHomeId: jest.fn(() => mockState.selectedHomeId),
+  };
 });
 
 jest.mock('#generated', () => ({
@@ -58,12 +61,12 @@ jest.mock('#/utils/validation/onboarding', () => ({
   })),
 }));
 jest.mock('#/utils/connectionUtils', () => ({
-  normalizeHomes: jest.fn((h) => h || []),
-  extractNodes: jest.fn((c) => c?.edges?.map((e: any) => e.node) || []),
+  normalizeHomes: jest.fn(h => h || []),
+  extractNodes: jest.fn(c => c?.edges?.map((e: any) => e.node) || []),
 }));
 jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#utils/formatters/roleFormatters', () => ({
-  formatRole: jest.fn((r) => r),
+  formatRole: jest.fn(r => r),
 }));
 jest.mock('../createHome/helpers', () => ({
   createPantryForHome: jest.fn(),
@@ -71,7 +74,9 @@ jest.mock('../createHome/helpers', () => ({
 }));
 
 jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
-  OnboardingErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  OnboardingErrorBoundary: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
   OnBoardingWrapper: ({ title, subtitle, children, testID }: any) => {
@@ -88,13 +93,21 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
 jest.mock('../createHome/FormContent', () => ({
   FormContent: () => {
     const { View, Text } = require('react-native');
-    return <View testID="form-content"><Text>Form Content</Text></View>;
+    return (
+      <View testID="form-content">
+        <Text>Form Content</Text>
+      </View>
+    );
   },
 }));
 jest.mock('../createHome/LoadingView', () => ({
   LoadingView: () => {
     const { View, Text } = require('react-native');
-    return <View testID="loading-view"><Text>Loading...</Text></View>;
+    return (
+      <View testID="loading-view">
+        <Text>Loading...</Text>
+      </View>
+    );
   },
 }));
 jest.mock('../createHome/SubmitButton', () => ({
@@ -112,7 +125,11 @@ jest.mock('../createHome/ErrorMessage', () => ({
 jest.mock('#components/base/Button', () => ({
   Button: ({ title, onPress }: any) => {
     const { Pressable, Text } = require('react-native');
-    return <Pressable onPress={onPress}><Text>{title}</Text></Pressable>;
+    return (
+      <Pressable onPress={onPress}>
+        <Text>{title}</Text>
+      </Pressable>
+    );
   },
 }));
 
@@ -136,7 +153,9 @@ describe('CreateHomeScreen', () => {
 
   it('shows subtitle text', () => {
     render(<CreateHomeScreen />);
-    expect(screen.getByText('Create your home and pantry to get started')).toBeTruthy();
+    expect(
+      screen.getByText('Create your home and pantry to get started'),
+    ).toBeTruthy();
   });
 
   it('wraps in error boundary', () => {

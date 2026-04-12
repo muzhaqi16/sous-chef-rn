@@ -46,7 +46,7 @@ import {
 } from './SelectableIngredientContext';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
@@ -111,7 +111,7 @@ const RecipeDetailScreen: React.FC = () => {
   const { theme } = useUnistyles();
 
   const { navigate } = useAppNavigation();
-  const user = useAuthUser();
+  const user = useUser();
   const {
     goBack,
     recipeId,

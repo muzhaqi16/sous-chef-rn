@@ -15,9 +15,8 @@ import {
   useAddItemToShoppingListMutation,
 } from '#generated';
 import {
-  useAppStore,
-  selectSelectedShoppingListId,
-  selectSelectedPantryId,
+  useSelectedShoppingListId,
+  useSelectedPantryId,
 } from '#store/useAppStore';
 import { removeFromPantryItemsCache } from '#hooks/home/pantry/utils';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
@@ -81,8 +80,8 @@ export const PantryItemDetail: React.FC<
   const { goBack, navigateTo, navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
-  const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
-  const selectedPantryId = useAppStore(selectSelectedPantryId);
+  const selectedShoppingListId = useSelectedShoppingListId();
+  const selectedPantryId = useSelectedPantryId();
   const { getCachedSuggestions, setCachedSuggestions } =
     useRecipeSuggestionsStore();
 

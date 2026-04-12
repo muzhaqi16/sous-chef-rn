@@ -24,8 +24,6 @@ const mockNav = (
 
 // --- Store ---
 jest.mock('#store/useAppStore', () => {
-  const selectSelectedShoppingListId = (s: any) => s.selectedShoppingListId;
-  const selectSelectedPantryId = (s: any) => s.selectedPantryId;
   const mockState = { selectedShoppingListId: 'sl1', selectedPantryId: 'p1' };
   const fn = (selector: any) => selector(mockState);
   fn.getState = () => mockState;
@@ -33,8 +31,8 @@ jest.mock('#store/useAppStore', () => {
   fn.subscribe = jest.fn();
   return {
     useAppStore: fn,
-    selectSelectedShoppingListId,
-    selectSelectedPantryId,
+    useSelectedShoppingListId: jest.fn(() => mockState.selectedShoppingListId),
+    useSelectedPantryId: jest.fn(() => mockState.selectedPantryId),
   };
 });
 
@@ -1977,6 +1975,7 @@ describe('PantryItemDetail – additional UI branch coverage', () => {
     storeModule.useAppStore.getState = () => ({ selectedShoppingListId: null });
     storeModule.useAppStore.setState = jest.fn();
     storeModule.useAppStore.subscribe = jest.fn();
+    storeModule.useSelectedShoppingListId.mockReturnValue(null);
 
     const mockHeader = require('#components/molecules/Header');
     let capturedRightActions: any[];

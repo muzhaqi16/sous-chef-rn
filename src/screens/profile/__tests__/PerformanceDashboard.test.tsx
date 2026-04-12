@@ -73,7 +73,7 @@ jest.mock('#/store/useAppStore', () => ({
   useAppStore: jest.fn((selector: any) =>
     selector({ canAccessDevTools: true }),
   ),
-  selectCanAccessDevTools: (s: any) => s.canAccessDevTools,
+  useCanAccessDevTools: jest.fn(() => true),
 }));
 
 jest.mock('#components/settings/SettingSwitch', () => ({
@@ -190,10 +190,11 @@ describe('PerformanceDashboard', () => {
     const { Environment } = require('#/utils/environment');
     Environment.shouldEnableDebugFeatures.mockReturnValue(false);
 
-    const { useAppStore } = require('#/store/useAppStore');
-    useAppStore.mockImplementation((selector: any) =>
+    const storeModule = require('#/store/useAppStore');
+    storeModule.useAppStore.mockImplementation((selector: any) =>
       selector({ canAccessDevTools: false }),
     );
+    storeModule.useCanAccessDevTools.mockReturnValue(false);
 
     const { getByText } = render(<PerformanceDashboard />);
     expect(

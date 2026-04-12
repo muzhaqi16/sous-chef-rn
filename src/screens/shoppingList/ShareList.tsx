@@ -30,7 +30,7 @@ import { useShoppingListDetails } from '#hooks/shoppingList/useShoppingListDetai
 import CollaboratorPermissionsBottomSheet, {
   CollaboratorPermissionsBottomSheetRef,
 } from '#/components/organisms/CollaboratorPermissionsBottomSheet';
-import { useAppStore, selectUser } from '#store/useAppStore';
+import { useUser } from '#store/useAppStore';
 import { Button } from '#components/base/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
@@ -120,7 +120,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     useRef<CollaboratorPermissionsBottomSheetRef>(null);
 
   // Get current user to check if they are owner
-  const currentUser = useAppStore(selectUser);
+  const currentUser = useUser();
 
   const {
     shoppingList,

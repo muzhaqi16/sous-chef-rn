@@ -13,16 +13,28 @@ jest.mock('#/apollo/links/refreshToken');
 
 const mockRefetch = jest.fn().mockResolvedValue({});
 const mockCreateMutation = jest.fn().mockResolvedValue({
-  data: { createStorageLocation: { storageLocation: { id: 'new-1', name: 'New Loc' } } },
+  data: {
+    createStorageLocation: {
+      storageLocation: { id: 'new-1', name: 'New Loc' },
+    },
+  },
 });
 const mockUpdateMutation = jest.fn().mockResolvedValue({
-  data: { updateStorageLocation: { storageLocation: { id: 'loc-1', name: 'Updated' } } },
+  data: {
+    updateStorageLocation: {
+      storageLocation: { id: 'loc-1', name: 'Updated' },
+    },
+  },
 });
 const mockDeleteMutation = jest.fn().mockResolvedValue({
   data: { deleteStorageLocation: { success: true } },
 });
 const mockSetDefaultMutation = jest.fn().mockResolvedValue({
-  data: { setDefaultStorageLocation: { storageLocation: { id: 'loc-1', isDefault: true } } },
+  data: {
+    setDefaultStorageLocation: {
+      storageLocation: { id: 'loc-1', isDefault: true },
+    },
+  },
 });
 const mockFetchTree = jest.fn();
 
@@ -32,8 +44,22 @@ jest.mock('#generated', () => ({
     data: {
       storageLocations: {
         edges: [
-          { node: { id: 'loc-1', name: 'Fridge', sortOrder: 1, isDefault: true } },
-          { node: { id: 'loc-2', name: 'Pantry', sortOrder: 2, isDefault: false } },
+          {
+            node: {
+              id: 'loc-1',
+              name: 'Fridge',
+              sortOrder: 1,
+              isDefault: true,
+            },
+          },
+          {
+            node: {
+              id: 'loc-2',
+              name: 'Pantry',
+              sortOrder: 2,
+              isDefault: false,
+            },
+          },
         ],
       },
     },
@@ -41,9 +67,18 @@ jest.mock('#generated', () => ({
     error: undefined,
     refetch: mockRefetch,
   })),
-  useGetStorageLocationTreeLazyQuery: jest.fn(() => [mockFetchTree, { data: null }]),
-  useCreateStorageLocationMutation: jest.fn(() => [mockCreateMutation, { loading: false }]),
-  useUpdateStorageLocationMutation: jest.fn(() => [mockUpdateMutation, { loading: false }]),
+  useGetStorageLocationTreeLazyQuery: jest.fn(() => [
+    mockFetchTree,
+    { data: null },
+  ]),
+  useCreateStorageLocationMutation: jest.fn(() => [
+    mockCreateMutation,
+    { loading: false },
+  ]),
+  useUpdateStorageLocationMutation: jest.fn(() => [
+    mockUpdateMutation,
+    { loading: false },
+  ]),
   useDeleteStorageLocationMutation: jest.fn(() => [mockDeleteMutation]),
   useSetDefaultStorageLocationMutation: jest.fn(() => [mockSetDefaultMutation]),
 }));
@@ -56,7 +91,9 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: jest.fn(() => ({
     createAddOperation: jest.fn((config: any) => {
       return async (input: any) => {
-        const result = await config.mutation({ variables: { input: config.transformInput(input) } });
+        const result = await config.mutation({
+          variables: { input: config.transformInput(input) },
+        });
         return config.onSuccess(result.data);
       };
     }),
@@ -65,7 +102,6 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToQueryFieldUpdater: jest.fn(() => jest.fn()),
-  createRemoveFromQueryFieldUpdater: jest.fn(() => jest.fn()),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -167,7 +203,12 @@ describe('useStorageLocationManagement', () => {
 
   it('shows error toast when delete returns success: false', async () => {
     mockDeleteMutation.mockResolvedValueOnce({
-      data: { deleteStorageLocation: { success: false, message: 'Location has items' } },
+      data: {
+        deleteStorageLocation: {
+          success: false,
+          message: 'Location has items',
+        },
+      },
     });
 
     const { result } = renderHook(() => useStorageLocationManagement('home-1'));

@@ -9,18 +9,13 @@
 
 import type { ErrorLike } from '@apollo/client';
 import { alertService } from '#/services/alertService';
-import { useShallow } from 'zustand/shallow';
 import {
   useCreateHomeMutation,
   useUpdateHomeMutation,
   useDeleteHomeMutation,
   GetHomesDocument,
 } from '#generated';
-import {
-  useAppStore,
-  selectSelectedHomeId,
-  selectHomeState,
-} from '#store/useAppStore';
+import { useSelectedHomeId, useHomeState } from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
@@ -61,8 +56,8 @@ export function useHomeMutations({
   setDefaultHome,
   setSelectedPantryId,
 }: UseHomeMutationsOptions) {
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
-  const { setSelectedHomeId } = useAppStore(useShallow(selectHomeState));
+  const selectedHomeId = useSelectedHomeId();
+  const { setSelectedHomeId } = useHomeState();
   const { handleApolloError } = useErrorService();
   const { createAddOperation, createRemoveOperation } = useCrudOperations();
 

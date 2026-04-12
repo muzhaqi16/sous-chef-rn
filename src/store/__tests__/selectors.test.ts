@@ -1,423 +1,292 @@
+import { renderHook } from '@testing-library/react-native';
 import {
-  selectUser,
-  selectAccessToken,
-  selectRefreshToken,
-  selectSelectedHomeId,
-  selectSelectedPantryId,
-  selectSelectedShoppingListId,
-  selectSelectedMealPlanId,
-  selectIsLoggedOut,
-  selectIsLoggingOut,
-  selectHydrated,
-  selectAuthState,
-  selectAuthTokens,
-  selectAuthActions,
-  selectPostLoginState,
-  selectNavigationState,
-  selectIsOnline,
-  selectIsHomeSelectionReady,
-  selectHasInitializedHomeData,
-  selectSetHasInitializedHomeData,
-  selectSetIsHomeSelectionReady,
-  selectIsPantryQueryComplete,
-  selectSetIsPantryQueryComplete,
-  selectBottomSheetState,
-  selectSetters,
-  selectPantryState,
-  selectSetHomeAndPantry,
-  selectShoppingListState,
-  selectMealPlanState,
-  selectHomeState,
-  selectPreferences,
-  selectTokenState,
-  selectNavigationUtils,
-  selectSearchState,
-  selectIsAdminUser,
-  selectCanAccessDevTools,
+  useUser,
+  useSelectedHomeId,
+  useSelectedPantryId,
+  useSelectedShoppingListId,
+  useIsLoggingOut,
+  useIsHydrated,
+  useIsOnline,
+  useIsHomeSelectionReady,
+  useIsAdminUser,
+  useCanAccessDevTools,
+  useAuthTokens,
+  useAuthActions,
+  usePostLoginState,
+  useBottomSheetState,
+  usePantryState,
+  useShoppingListState,
+  useHomeState,
+  usePreferences,
+  useNavigationUtils,
+  useSearchState,
+  useSetHomeAndPantry,
+  useSetIsHomeSelectionReady,
+  useSetIsPantryQueryComplete,
 } from '../useAppStore';
 
-// Create a minimal mock state matching the RootState shape
-function makeState(overrides: Record<string, unknown> = {}) {
-  return {
+// Mock state
+const mockState: Record<string, unknown> = {
+  user: {
+    id: 'u1',
+    email: 'test@example.com',
+    emailVerified: true,
+    onBoarded: true,
+  },
+  accessToken: 'access-token-123',
+  refreshToken: 'refresh-token-456',
+  selectedHomeId: 'home-1',
+  selectedPantryId: 'pantry-1',
+  selectedShoppingListId: 'list-1',
+  isLoggingOut: false,
+  isHydrated: true,
+  isAutoLoggingIn: false,
+  isOnline: true,
+  isHomeSelectionReady: true,
+  setHomeAndPantry: jest.fn(),
+  setIsHomeSelectionReady: jest.fn(),
+  setIsPantryQueryComplete: jest.fn(),
+  // Actions for grouped selectors
+  setAuth: jest.fn(),
+  clearAuth: jest.fn(),
+  setTokens: jest.fn(),
+  updateUser: jest.fn(),
+  setEmailVerified: jest.fn(),
+  setOnboarded: jest.fn(),
+  setRememberMe: jest.fn(),
+  setIsAutoLoggingIn: jest.fn(),
+  setUserNavigationState: jest.fn(),
+  navigationState: 'main_app',
+  showBiometricSetup: false,
+  postLoginCredentials: null,
+  setNavigationState: jest.fn(),
+  setShowBiometricSetup: jest.fn(),
+  setPostLoginCredentials: jest.fn(),
+  scannerSheetVisible: false,
+  searchError: null,
+  scannerSheetIndex: 0,
+  isSearching: false,
+  hideBottomSheet: jest.fn(),
+  showBottomSheet: jest.fn(),
+  setSelectedPantryId: jest.fn(),
+  setSelectedHomeId: jest.fn(),
+  setSelectedShoppingListId: jest.fn(),
+  theme: 'LIGHT',
+  language: 'en',
+  setTheme: jest.fn(),
+  setLanguage: jest.fn(),
+  getUserNavigationState: jest.fn(),
+  setOnBoardingStep: jest.fn(),
+  searchResults: [],
+  setSearchResults: jest.fn(),
+  setSearching: jest.fn(),
+  setSearchError: jest.fn(),
+  clearSearch: jest.fn(),
+  addToRecentlyScanned: jest.fn(),
+};
+
+// Mock the store module so hooks read from mockState
+jest.mock('../index', () => ({
+  storeApi: {
+    getState: () => mockState,
+    subscribe: jest.fn(() => jest.fn()),
+    getInitialState: () => mockState,
+  },
+}));
+
+function updateMockState(overrides: Record<string, unknown>) {
+  Object.assign(mockState, overrides);
+}
+
+afterEach(() => {
+  // Reset any state overrides after each test
+  updateMockState({
     user: {
       id: 'u1',
       email: 'test@example.com',
       emailVerified: true,
       onBoarded: true,
     },
-    accessToken: 'access-token-123',
-    refreshToken: 'refresh-token-456',
-    selectedHomeId: 'home-1',
-    selectedPantryId: 'pantry-1',
-    selectedShoppingListId: 'list-1',
     isLoggingOut: false,
-    isHydrated: true,
-    isAutoLoggingIn: false,
     isOnline: true,
-    hasInitializedHomeData: true,
     isHomeSelectionReady: true,
-    ...overrides,
-  } as any;
-}
-
-describe('primitive selectors', () => {
-  it('selectUser returns user', () => {
-    const state = makeState();
-    expect(selectUser(state)).toEqual(state.user);
-  });
-
-  it('selectAccessToken returns accessToken', () => {
-    expect(selectAccessToken(makeState())).toBe('access-token-123');
-  });
-
-  it('selectRefreshToken returns refreshToken', () => {
-    expect(selectRefreshToken(makeState())).toBe('refresh-token-456');
-  });
-
-  it('selectSelectedHomeId returns selectedHomeId', () => {
-    expect(selectSelectedHomeId(makeState())).toBe('home-1');
-  });
-
-  it('selectSelectedPantryId returns selectedPantryId', () => {
-    expect(selectSelectedPantryId(makeState())).toBe('pantry-1');
-  });
-
-  it('selectSelectedShoppingListId returns selectedShoppingListId', () => {
-    expect(selectSelectedShoppingListId(makeState())).toBe('list-1');
-  });
-
-  it('selectIsOnline returns isOnline', () => {
-    expect(selectIsOnline(makeState())).toBe(true);
-    expect(selectIsOnline(makeState({ isOnline: false }))).toBe(false);
-  });
-
-  it('selectHydrated returns isHydrated', () => {
-    expect(selectHydrated(makeState())).toBe(true);
-  });
-
-  it('selectIsHomeSelectionReady returns flag', () => {
-    expect(selectIsHomeSelectionReady(makeState())).toBe(true);
-  });
-
-  it('selectHasInitializedHomeData returns flag', () => {
-    expect(selectHasInitializedHomeData(makeState())).toBe(true);
   });
 });
 
-describe('computed selectors', () => {
-  it('selectIsLoggedOut returns true when no accessToken', () => {
-    expect(selectIsLoggedOut(makeState({ accessToken: null }))).toBe(true);
+describe('atomic hooks', () => {
+  it('useUser returns user', () => {
+    const { result } = renderHook(() => useUser());
+    expect(result.current).toEqual(mockState.user);
   });
 
-  it('selectIsLoggedOut returns false when accessToken exists', () => {
-    expect(selectIsLoggedOut(makeState())).toBe(false);
+  it('useSelectedHomeId returns selectedHomeId', () => {
+    const { result } = renderHook(() => useSelectedHomeId());
+    expect(result.current).toBe('home-1');
   });
 
-  it('selectIsLoggingOut returns isLoggingOut', () => {
-    expect(selectIsLoggingOut(makeState())).toBe(false);
-    expect(selectIsLoggingOut(makeState({ isLoggingOut: true }))).toBe(true);
-  });
-});
-
-describe('grouped selectors', () => {
-  it('selectAuthState returns grouped auth state', () => {
-    const state = makeState();
-    const result = selectAuthState(state);
-    expect(result).toEqual({
-      user: state.user,
-      accessToken: 'access-token-123',
-      refreshToken: 'refresh-token-456',
-    });
+  it('useSelectedPantryId returns selectedPantryId', () => {
+    const { result } = renderHook(() => useSelectedPantryId());
+    expect(result.current).toBe('pantry-1');
   });
 
-  it('selectAuthTokens returns grouped auth tokens with loading flags', () => {
-    const state = makeState();
-    const result = selectAuthTokens(state);
-    expect(result.user).toEqual(state.user);
-    expect(result.accessToken).toBe('access-token-123');
-    expect(result.refreshToken).toBe('refresh-token-456');
-    expect(result.isAutoLoggingIn).toBe(false);
-    expect(result.isLoggingOut).toBe(false);
+  it('useSelectedShoppingListId returns selectedShoppingListId', () => {
+    const { result } = renderHook(() => useSelectedShoppingListId());
+    expect(result.current).toBe('list-1');
   });
 
-  it('selectNavigationState returns grouped navigation IDs', () => {
-    const result = selectNavigationState(makeState());
-    expect(result).toEqual({
-      selectedHomeId: 'home-1',
-      selectedPantryId: 'pantry-1',
-      selectedShoppingListId: 'list-1',
-    });
-  });
-});
-
-describe('additional primitive selectors', () => {
-  it('selectSelectedMealPlanId returns selectedMealPlanId', () => {
-    expect(
-      selectSelectedMealPlanId(makeState({ selectedMealPlanId: 'mp-1' })),
-    ).toBe('mp-1');
+  it('useIsOnline returns isOnline', () => {
+    const { result } = renderHook(() => useIsOnline());
+    expect(result.current).toBe(true);
   });
 
-  it('selectSetHasInitializedHomeData returns setter', () => {
-    const setter = jest.fn();
-    expect(
-      selectSetHasInitializedHomeData(
-        makeState({ setHasInitializedHomeData: setter }),
-      ),
-    ).toBe(setter);
+  it('useIsHydrated returns isHydrated', () => {
+    const { result } = renderHook(() => useIsHydrated());
+    expect(result.current).toBe(true);
   });
 
-  it('selectSetIsHomeSelectionReady returns setter', () => {
-    const setter = jest.fn();
-    expect(
-      selectSetIsHomeSelectionReady(
-        makeState({ setIsHomeSelectionReady: setter }),
-      ),
-    ).toBe(setter);
+  it('useIsLoggingOut returns isLoggingOut', () => {
+    const { result } = renderHook(() => useIsLoggingOut());
+    expect(result.current).toBe(false);
   });
 
-  it('selectIsPantryQueryComplete returns flag', () => {
-    expect(
-      selectIsPantryQueryComplete(makeState({ isPantryQueryComplete: true })),
-    ).toBe(true);
-    expect(
-      selectIsPantryQueryComplete(makeState({ isPantryQueryComplete: false })),
-    ).toBe(false);
+  it('useIsHomeSelectionReady returns flag', () => {
+    const { result } = renderHook(() => useIsHomeSelectionReady());
+    expect(result.current).toBe(true);
   });
 
-  it('selectSetIsPantryQueryComplete returns setter', () => {
-    const setter = jest.fn();
-    expect(
-      selectSetIsPantryQueryComplete(
-        makeState({ setIsPantryQueryComplete: setter }),
-      ),
-    ).toBe(setter);
+  it('useSetHomeAndPantry returns setter', () => {
+    const { result } = renderHook(() => useSetHomeAndPantry());
+    expect(result.current).toBe(mockState.setHomeAndPantry);
+  });
+
+  it('useSetIsHomeSelectionReady returns setter', () => {
+    const { result } = renderHook(() => useSetIsHomeSelectionReady());
+    expect(result.current).toBe(mockState.setIsHomeSelectionReady);
+  });
+
+  it('useSetIsPantryQueryComplete returns setter', () => {
+    const { result } = renderHook(() => useSetIsPantryQueryComplete());
+    expect(result.current).toBe(mockState.setIsPantryQueryComplete);
   });
 });
 
-describe('action and grouped selectors', () => {
-  it('selectAuthActions returns all auth action functions', () => {
-    const actions = {
-      setAuth: jest.fn(),
-      clearAuth: jest.fn(),
-      setTokens: jest.fn(),
-      updateUser: jest.fn(),
-      setEmailVerified: jest.fn(),
-      setOnboarded: jest.fn(),
-      setRememberMe: jest.fn(),
-      setIsAutoLoggingIn: jest.fn(),
-      setUserNavigationState: jest.fn(),
-    };
-    const result = selectAuthActions(makeState(actions));
-    expect(result.setAuth).toBe(actions.setAuth);
-    expect(result.clearAuth).toBe(actions.clearAuth);
-    expect(result.setTokens).toBe(actions.setTokens);
-    expect(result.updateUser).toBe(actions.updateUser);
-    expect(result.setEmailVerified).toBe(actions.setEmailVerified);
-    expect(result.setOnboarded).toBe(actions.setOnboarded);
-    expect(result.setRememberMe).toBe(actions.setRememberMe);
-    expect(result.setIsAutoLoggingIn).toBe(actions.setIsAutoLoggingIn);
-    expect(result.setUserNavigationState).toBe(actions.setUserNavigationState);
+describe('computed hooks', () => {
+  it('useIsAdminUser returns true for ADMIN role', () => {
+    updateMockState({ user: { role: 'ADMIN' } });
+    const { result } = renderHook(() => useIsAdminUser());
+    expect(result.current).toBe(true);
   });
 
-  it('selectPostLoginState returns grouped post-login state', () => {
-    const overrides = {
-      navigationState: 'HOME',
-      showBiometricSetup: true,
-      postLoginCredentials: { email: 'a@b.com' },
-      setNavigationState: jest.fn(),
-      setShowBiometricSetup: jest.fn(),
-      setPostLoginCredentials: jest.fn(),
-    };
-    const result = selectPostLoginState(makeState(overrides));
-    expect(result.navigationState).toBe('HOME');
-    expect(result.showBiometricSetup).toBe(true);
-    expect(result.postLoginCredentials).toEqual({ email: 'a@b.com' });
-    expect(result.setNavigationState).toBe(overrides.setNavigationState);
-    expect(result.setShowBiometricSetup).toBe(overrides.setShowBiometricSetup);
-    expect(result.setPostLoginCredentials).toBe(
-      overrides.setPostLoginCredentials,
+  it('useIsAdminUser returns true for SUPER_ADMIN role', () => {
+    updateMockState({ user: { role: 'SUPER_ADMIN' } });
+    const { result } = renderHook(() => useIsAdminUser());
+    expect(result.current).toBe(true);
+  });
+
+  it('useIsAdminUser returns false for regular user', () => {
+    updateMockState({ user: { role: 'MEMBER' } });
+    const { result } = renderHook(() => useIsAdminUser());
+    expect(result.current).toBe(false);
+  });
+
+  it('useIsAdminUser returns false when user is null', () => {
+    updateMockState({ user: null });
+    const { result } = renderHook(() => useIsAdminUser());
+    expect(result.current).toBeFalsy();
+  });
+
+  it('useCanAccessDevTools returns true when canAccessDevTools is true', () => {
+    updateMockState({ user: { canAccessDevTools: true } });
+    const { result } = renderHook(() => useCanAccessDevTools());
+    expect(result.current).toBe(true);
+  });
+
+  it('useCanAccessDevTools returns false when canAccessDevTools is false', () => {
+    updateMockState({ user: { canAccessDevTools: false } });
+    const { result } = renderHook(() => useCanAccessDevTools());
+    expect(result.current).toBe(false);
+  });
+
+  it('useCanAccessDevTools returns false when user is null', () => {
+    updateMockState({ user: null });
+    const { result } = renderHook(() => useCanAccessDevTools());
+    expect(result.current).toBeFalsy();
+  });
+});
+
+describe('grouped hooks', () => {
+  it('useAuthTokens returns grouped auth tokens with loading flags', () => {
+    const { result } = renderHook(() => useAuthTokens());
+    expect(result.current.user).toEqual(mockState.user);
+    expect(result.current.accessToken).toBe('access-token-123');
+    expect(result.current.refreshToken).toBe('refresh-token-456');
+    expect(result.current.isAutoLoggingIn).toBe(false);
+    expect(result.current.isLoggingOut).toBe(false);
+  });
+
+  it('useAuthActions returns all auth action functions', () => {
+    const { result } = renderHook(() => useAuthActions());
+    expect(result.current.setAuth).toBe(mockState.setAuth);
+    expect(result.current.clearAuth).toBe(mockState.clearAuth);
+    expect(result.current.setTokens).toBe(mockState.setTokens);
+    expect(result.current.updateUser).toBe(mockState.updateUser);
+  });
+
+  it('usePostLoginState returns grouped post-login state', () => {
+    const { result } = renderHook(() => usePostLoginState());
+    expect(result.current.navigationState).toBe('main_app');
+    expect(result.current.showBiometricSetup).toBe(false);
+    expect(result.current.setNavigationState).toBe(
+      mockState.setNavigationState,
     );
   });
 
-  it('selectBottomSheetState returns scanner bottom sheet state', () => {
-    const overrides = {
-      scannerSheetVisible: true,
-      searchError: 'err',
-      scannerSheetIndex: 1,
-      isSearching: true,
-      hideBottomSheet: jest.fn(),
-      showBottomSheet: jest.fn(),
-    };
-    const result = selectBottomSheetState(makeState(overrides));
-    expect(result.scannerSheetVisible).toBe(true);
-    expect(result.searchError).toBe('err');
-    expect(result.scannerSheetIndex).toBe(1);
-    expect(result.isSearching).toBe(true);
-    expect(result.hideBottomSheet).toBe(overrides.hideBottomSheet);
-    expect(result.showBottomSheet).toBe(overrides.showBottomSheet);
+  it('useBottomSheetState returns scanner bottom sheet state', () => {
+    const { result } = renderHook(() => useBottomSheetState());
+    expect(result.current.scannerSheetVisible).toBe(false);
+    expect(result.current.isSearching).toBe(false);
+    expect(result.current.hideBottomSheet).toBe(mockState.hideBottomSheet);
   });
 
-  it('selectSetters returns all setter functions', () => {
-    const setters = {
-      updateUser: jest.fn(),
-      setTokens: jest.fn(),
-      setSelectedHomeId: jest.fn(),
-      setSelectedPantryId: jest.fn(),
-      setSelectedShoppingListId: jest.fn(),
-      logout: jest.fn(),
-    };
-    const result = selectSetters(makeState(setters));
-    expect(result.updateUser).toBe(setters.updateUser);
-    expect(result.setSelectedHomeId).toBe(setters.setSelectedHomeId);
-    expect(result.logout).toBe(setters.logout);
-  });
-
-  it('selectPantryState returns pantry-related state', () => {
-    const overrides = {
-      selectedPantryId: 'p-1',
-      setSelectedPantryId: jest.fn(),
-      selectedHomeId: 'h-1',
-      setSelectedHomeId: jest.fn(),
-    };
-    const result = selectPantryState(makeState(overrides));
-    expect(result.selectedPantryId).toBe('p-1');
-    expect(result.setSelectedPantryId).toBe(overrides.setSelectedPantryId);
-    expect(result.selectedHomeId).toBe('h-1');
-  });
-
-  it('selectSetHomeAndPantry returns the atomic setter', () => {
-    const setter = jest.fn();
-    expect(
-      selectSetHomeAndPantry(makeState({ setHomeAndPantry: setter })),
-    ).toBe(setter);
-  });
-
-  it('selectShoppingListState returns shopping list state', () => {
-    const overrides = {
-      selectedShoppingListId: 'sl-1',
-      setSelectedShoppingListId: jest.fn(),
-    };
-    const result = selectShoppingListState(makeState(overrides));
-    expect(result.selectedShoppingListId).toBe('sl-1');
-    expect(result.setSelectedShoppingListId).toBe(
-      overrides.setSelectedShoppingListId,
+  it('usePantryState returns pantry-related state', () => {
+    const { result } = renderHook(() => usePantryState());
+    expect(result.current.selectedPantryId).toBe('pantry-1');
+    expect(result.current.selectedHomeId).toBe('home-1');
+    expect(result.current.setSelectedPantryId).toBe(
+      mockState.setSelectedPantryId,
     );
   });
 
-  it('selectMealPlanState returns meal plan state', () => {
-    const overrides = {
-      selectedMealPlanId: 'mp-1',
-      setSelectedMealPlanId: jest.fn(),
-    };
-    const result = selectMealPlanState(makeState(overrides));
-    expect(result.selectedMealPlanId).toBe('mp-1');
-    expect(result.setSelectedMealPlanId).toBe(overrides.setSelectedMealPlanId);
+  it('useShoppingListState returns shopping list state', () => {
+    const { result } = renderHook(() => useShoppingListState());
+    expect(result.current.selectedShoppingListId).toBe('list-1');
   });
 
-  it('selectHomeState returns home state', () => {
-    const overrides = {
-      selectedHomeId: 'h-1',
-      setSelectedHomeId: jest.fn(),
-    };
-    const result = selectHomeState(makeState(overrides));
-    expect(result.selectedHomeId).toBe('h-1');
-    expect(result.setSelectedHomeId).toBe(overrides.setSelectedHomeId);
+  it('useHomeState returns home state', () => {
+    const { result } = renderHook(() => useHomeState());
+    expect(result.current.selectedHomeId).toBe('home-1');
+    expect(result.current.setSelectedHomeId).toBe(mockState.setSelectedHomeId);
   });
 
-  it('selectPreferences returns theme and language', () => {
-    const overrides = {
-      theme: 'dark',
-      language: 'en',
-      setTheme: jest.fn(),
-      setLanguage: jest.fn(),
-    };
-    const result = selectPreferences(makeState(overrides));
-    expect(result.theme).toBe('dark');
-    expect(result.language).toBe('en');
-    expect(result.setTheme).toBe(overrides.setTheme);
-    expect(result.setLanguage).toBe(overrides.setLanguage);
+  it('usePreferences returns theme and language', () => {
+    const { result } = renderHook(() => usePreferences());
+    expect(result.current.theme).toBe('LIGHT');
+    expect(result.current.language).toBe('en');
+    expect(result.current.setTheme).toBe(mockState.setTheme);
   });
 
-  it('selectTokenState returns token state', () => {
-    const result = selectTokenState(makeState());
-    expect(result.accessToken).toBe('access-token-123');
-    expect(result.refreshToken).toBe('refresh-token-456');
-  });
-
-  it('selectNavigationUtils returns navigation utility functions', () => {
-    const overrides = {
-      getUserNavigationState: jest.fn(),
-      setUserNavigationState: jest.fn(),
-      setOnBoardingStep: jest.fn(),
-      setOnboarded: jest.fn(),
-    };
-    const result = selectNavigationUtils(makeState(overrides));
-    expect(result.getUserNavigationState).toBe(
-      overrides.getUserNavigationState,
+  it('useNavigationUtils returns navigation utility functions', () => {
+    const { result } = renderHook(() => useNavigationUtils());
+    expect(result.current.getUserNavigationState).toBe(
+      mockState.getUserNavigationState,
     );
-    expect(result.setOnBoardingStep).toBe(overrides.setOnBoardingStep);
+    expect(result.current.setOnBoardingStep).toBe(mockState.setOnBoardingStep);
   });
 
-  it('selectSearchState returns search state', () => {
-    const overrides = {
-      searchResults: ['r1'],
-      isSearching: false,
-      searchError: null,
-      setSearchResults: jest.fn(),
-      setSearching: jest.fn(),
-      setSearchError: jest.fn(),
-      clearSearch: jest.fn(),
-      addToRecentlyScanned: jest.fn(),
-    };
-    const result = selectSearchState(makeState(overrides));
-    expect(result.searchResults).toEqual(['r1']);
-    expect(result.isSearching).toBe(false);
-    expect(result.clearSearch).toBe(overrides.clearSearch);
-  });
-
-  it('selectIsAdminUser returns true for ADMIN role', () => {
-    expect(selectIsAdminUser(makeState({ user: { role: 'ADMIN' } }))).toBe(
-      true,
-    );
-  });
-
-  it('selectIsAdminUser returns true for SUPER_ADMIN role', () => {
-    expect(
-      selectIsAdminUser(makeState({ user: { role: 'SUPER_ADMIN' } })),
-    ).toBe(true);
-  });
-
-  it('selectIsAdminUser returns false for regular user', () => {
-    expect(selectIsAdminUser(makeState({ user: { role: 'MEMBER' } }))).toBe(
-      false,
-    );
-  });
-
-  it('selectIsAdminUser returns false when user is null', () => {
-    expect(selectIsAdminUser(makeState({ user: null }))).toBeFalsy();
-  });
-
-  it('selectCanAccessDevTools returns true when canAccessDevTools is true', () => {
-    expect(
-      selectCanAccessDevTools(makeState({ user: { canAccessDevTools: true } })),
-    ).toBe(true);
-  });
-
-  it('selectCanAccessDevTools returns false when canAccessDevTools is false', () => {
-    expect(
-      selectCanAccessDevTools(
-        makeState({ user: { canAccessDevTools: false } }),
-      ),
-    ).toBe(false);
-  });
-
-  it('selectCanAccessDevTools returns false when canAccessDevTools is undefined', () => {
-    expect(selectCanAccessDevTools(makeState({ user: { id: 'u1' } }))).toBe(
-      false,
-    );
-  });
-
-  it('selectCanAccessDevTools returns false when user is null', () => {
-    expect(selectCanAccessDevTools(makeState({ user: null }))).toBeFalsy();
+  it('useSearchState returns search state', () => {
+    const { result } = renderHook(() => useSearchState());
+    expect(result.current.searchResults).toEqual([]);
+    expect(result.current.isSearching).toBe(false);
+    expect(result.current.clearSearch).toBe(mockState.clearSearch);
   });
 });

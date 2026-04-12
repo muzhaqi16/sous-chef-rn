@@ -139,15 +139,16 @@ jest.mock('#store/useAppStore', () => ({
     };
     return selector(state);
   }),
-  selectHydrated: (s: any) => s.isHydrated,
-  selectUser: (s: any) => s.user,
-  selectPostLoginState: (s: any) => ({
-    navigationState: s.navigationState,
-    showBiometricSetup: s.showBiometricSetup,
-    postLoginCredentials: s.postLoginCredentials,
-    setNavigationState: s.setNavigationState,
-    setShowBiometricSetup: s.setShowBiometricSetup,
-  }),
+  useIsHydrated: jest.fn(() => mockIsHydrated),
+  useUser: jest.fn(() => mockUser),
+  usePostLoginState: jest.fn(() => ({
+    navigationState: mockNavigationState,
+    showBiometricSetup: mockShowBiometricSetup,
+    postLoginCredentials: mockPostLoginCredentials,
+    setNavigationState: mockSetNavigationState,
+    setShowBiometricSetup: jest.fn(),
+    setPostLoginCredentials: jest.fn(),
+  })),
 }));
 
 // Mock all navigation stacks

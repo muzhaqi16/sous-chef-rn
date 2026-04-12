@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 
-import { useAuthUser } from '#/hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { useCurrentPantry } from '#/hooks/pantry/useCurrentPantry';
 import { usePantryManagement } from '#/hooks/home/pantry/usePantryManagement';
 import { useHybridSearch } from '#/hooks/search/useHybridSearch';
 import { useCreateStorageLocation } from '#/hooks/storageLocation/useCreateStorageLocation';
-import { useAppStore, selectIsOnline } from '#/store/useAppStore';
+import { useAppStore, useIsOnline } from '#/store/useAppStore';
 import { useShallow } from 'zustand/shallow';
 import { GetPantryDocument, type GetPantryQuery } from '#generated';
 import { normalizePantry } from '#/utils/connectionUtils';
@@ -47,7 +47,7 @@ export function usePantryScreen() {
   // -------------------------------------------------------------------------
   // 1. User info
   // -------------------------------------------------------------------------
-  const authUser = useAuthUser();
+  const authUser = useUser();
 
   // -------------------------------------------------------------------------
   // 2. Home/pantry resolution
@@ -91,7 +91,7 @@ export function usePantryScreen() {
   // 4. Location filter + pantry management + hybrid search
   // -------------------------------------------------------------------------
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
-  const isOnline = useAppStore(selectIsOnline);
+  const isOnline = useIsOnline();
 
   const locationQueryFilter = locationFilterToQueryFilter(locationFilter);
   const queryFilter = locationQueryFilter;

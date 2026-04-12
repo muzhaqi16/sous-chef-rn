@@ -13,13 +13,7 @@ import {
   createNativeStackScreen,
 } from '@react-navigation/native-stack';
 import { useUnistyles } from 'react-native-unistyles';
-import { useShallow } from 'zustand/shallow';
-import {
-  useAppStore,
-  selectHydrated,
-  selectUser,
-  selectPostLoginState,
-} from '#store/useAppStore';
+import { useIsHydrated, useUser, usePostLoginState } from '#store/useAppStore';
 import { useBiometricPrompting } from '#hooks/auth/useBiometricPrompting';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 import { SplashScreen } from '#screens/SplashScreen';
@@ -242,8 +236,8 @@ const StaticNavigation = createStaticNavigation(RootStack);
 
 export function Navigation() {
   const { theme } = useUnistyles();
-  const isHydrated = useAppStore(selectHydrated);
-  const user = useAppStore(selectUser);
+  const isHydrated = useIsHydrated();
+  const user = useUser();
   const {
     navigationState,
     showBiometricSetup,
@@ -251,7 +245,7 @@ export function Navigation() {
     setNavigationState,
     setShowBiometricSetup,
     setPostLoginCredentials,
-  } = useAppStore(useShallow(selectPostLoginState));
+  } = usePostLoginState();
   const { recordBiometricPromptResponse } = useBiometricPrompting();
   const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
 

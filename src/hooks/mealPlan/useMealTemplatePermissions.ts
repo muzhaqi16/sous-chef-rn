@@ -1,4 +1,4 @@
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import {
   getMealTemplatePermissions,
   type MealTemplatePermissions,
@@ -18,7 +18,7 @@ const NO_PERMISSIONS: MealTemplatePermissions = {
 export function useMealTemplatePermissions(
   template: MealTemplateDisplayFragment | null | undefined,
 ): MealTemplatePermissions {
-  const user = useAuthUser();
+  const user = useUser();
 
   if (!template) {
     return NO_PERMISSIONS;

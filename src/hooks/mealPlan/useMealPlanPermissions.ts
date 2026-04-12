@@ -1,5 +1,4 @@
-;
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import {
   getMealPlanPermissions,
   type MealPlanPermissions,
@@ -15,7 +14,7 @@ type MealPlanLike = MealPlanDisplayFragment | MealPlanFullFragment;
 export function useMealPlanPermissions(
   mealPlan: MealPlanLike | null | undefined,
 ): MealPlanPermissions {
-  const user = useAuthUser();
+  const user = useUser();
 
   return (() => {
     if (!mealPlan) {

@@ -26,18 +26,18 @@ jest.mock('#store/useAppStore', () => ({
       showBottomSheet: mockShowBottomSheet,
       hideBottomSheet: mockHideBottomSheet,
     }),
-  selectSearchState: (s: any) => ({
-    searchResults: s.searchResults,
-    setSearchResults: s.setSearchResults,
-    setSearching: s.setSearching,
-    addToRecentlyScanned: s.addToRecentlyScanned,
-    clearSearch: s.clearSearch,
-    setSearchError: s.setSearchError,
-  }),
-  selectBottomSheetState: (s: any) => ({
-    showBottomSheet: s.showBottomSheet,
-    hideBottomSheet: s.hideBottomSheet,
-  }),
+  useSearchState: jest.fn(() => ({
+    searchResults: [],
+    setSearchResults: mockSetSearchResults,
+    setSearching: mockSetSearching,
+    addToRecentlyScanned: mockAddToRecentlyScanned,
+    clearSearch: mockClearSearch,
+    setSearchError: mockSetSearchError,
+  })),
+  useBottomSheetState: jest.fn(() => ({
+    showBottomSheet: mockShowBottomSheet,
+    hideBottomSheet: mockHideBottomSheet,
+  })),
 }));
 
 jest.mock('zustand/shallow', () => ({

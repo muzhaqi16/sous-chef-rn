@@ -32,11 +32,7 @@ import {
 } from '#generated';
 
 // Store & Navigation
-import {
-  useAppStore,
-  selectUser,
-  selectSelectedHomeId,
-} from '#store/useAppStore';
+import { useAppStore, useUser, useSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 
 // Validation & Helpers
@@ -248,8 +244,8 @@ const CreateHomeScreenComponent = () => {
   const { navigateToNextStep, setUserNavigationState, skipToStep } =
     useOnboardingNavigation();
 
-  const user = useAppStore(selectUser);
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const user = useUser();
+  const selectedHomeId = useSelectedHomeId();
   const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
   const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
 

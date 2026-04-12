@@ -5,8 +5,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
-import { useAuthUser } from '#hooks/auth/useAuthUser';
-import { useAppStore } from '#store/useAppStore';
+import { useUser, useAppStore } from '#store/useAppStore';
 import { useVerifyEmailMutation } from '#generated';
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
@@ -21,7 +20,7 @@ interface EmailVerificationRouteParams {
 async function performVerificationImpl(
   token: string | undefined,
   verifyEmail: ReturnType<typeof useVerifyEmailMutation>[0],
-  user: ReturnType<typeof useAuthUser>,
+  user: ReturnType<typeof useUser>,
   updateUser: (updates: Partial<{ emailVerified: boolean }>) => void,
   toast: ReturnType<typeof useToast>,
   setVerificationResult: (v: 'success' | 'error' | null) => void,
@@ -94,7 +93,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { theme } = useUnistyles();
-  const user = useAuthUser();
+  const user = useUser();
   const updateUser = useAppStore(state => state.updateUser);
   const toast = useToast();
 

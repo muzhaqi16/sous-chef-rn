@@ -7,7 +7,6 @@ import {
   getGenericPassword,
   resetGenericPassword,
 } from 'react-native-keychain';
-import { storage } from '#/storage/mmkv';
 
 import { DeviceKeyManager } from '../deviceKey';
 
@@ -34,11 +33,6 @@ describe('DeviceKeyManager', () => {
       value: '17.0',
       configurable: true,
     });
-
-    // Reset MMKV mock state (including any once-only queued values from prior tests)
-    (storage.getString as jest.Mock).mockReset?.();
-    (storage.set as jest.Mock).mockReset?.();
-    (storage.remove as jest.Mock).mockReset?.();
 
     // Reset keychain mocks fully — clears any leftover mockResolvedValueOnce
     // queues that were set but never consumed by a prior test.
@@ -77,8 +71,8 @@ describe('DeviceKeyManager', () => {
       const key = await DeviceKeyManager.getDeviceEncryptionKey();
       expect(key).toBeTruthy();
       expect(typeof key).toBe('string');
-      // 32 bytes -> 64 hex chars
-      expect(key).toMatch(/^[0-9a-f]{64}$/);
+      // UUID v4 without dashes -> 32 hex chars
+      expect(key).toMatch(/^[0-9a-f]{32}$/);
     });
 
     it('returns cached key on subsequent calls', async () => {
@@ -104,25 +98,9 @@ describe('DeviceKeyManager', () => {
       mockedGetGenericPassword.mockResolvedValue(false);
       const key = await DeviceKeyManager.getDeviceEncryptionKey();
       expect(key).toBeTruthy();
-      expect(key.length).toBe(64);
+      expect(key.length).toBe(32);
       // The new key must be persisted to keychain
       expect(mockedSetGenericPassword).toHaveBeenCalled();
-    });
-
-    it('migrates legacy MMKV-stored key to keychain on first launch', async () => {
-      mockedGetGenericPassword.mockResolvedValue(false);
-      (storage.getString as jest.Mock).mockReturnValueOnce('legacy-mmkv-key');
-
-      const key = await DeviceKeyManager.getDeviceEncryptionKey();
-      expect(key).toBe('legacy-mmkv-key');
-      // Key should be migrated to keychain
-      expect(mockedSetGenericPassword).toHaveBeenCalledWith(
-        'device_key',
-        'legacy-mmkv-key',
-        expect.any(Object),
-      );
-      // And the legacy MMKV entry removed
-      expect(storage.remove).toHaveBeenCalledWith('device_encryption_key');
     });
 
     it('returns fallback key when keychain write fails', async () => {
@@ -148,7 +126,7 @@ describe('DeviceKeyManager', () => {
         forceRegenerate: true,
       });
       expect(key).not.toBe('old-key');
-      expect(key).toMatch(/^[0-9a-f]{64}$/);
+      expect(key).toMatch(/^[0-9a-f]{32}$/);
     });
   });
 
@@ -187,11 +165,6 @@ describe('DeviceKeyManager', () => {
       mockedResetGenericPassword.mockRejectedValue(new Error('reset failed'));
       const key = await DeviceKeyManager.regenerateKey();
       expect(key).toBeTruthy();
-    });
-
-    it('clears any leftover legacy MMKV entry on regenerate', async () => {
-      await DeviceKeyManager.regenerateKey();
-      expect(storage.remove).toHaveBeenCalledWith('device_encryption_key');
     });
   });
 

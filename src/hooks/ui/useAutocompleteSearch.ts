@@ -58,14 +58,17 @@ export function useAutocompleteSearch<TItem>(
     fallbackItems = [],
     filterFallback,
     maxResults = 10,
-    localFirst = false } = config;
+    localFirst = false,
+  } = config;
 
   const [searchTerm, setSearchTerm] = useState('');
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [lastResults, setLastResults] = useState<TItem[]>([]);
+  const [lastFiredTerm, setLastFiredTerm] = useState('');
 
   const isOnline = useAppStore(state => state.isOnline);
-  const shouldSearch = searchTerm.length >= minChars && (!requiresNetwork || isOnline);
+  const shouldSearch =
+    searchTerm.length >= minChars && (!requiresNetwork || isOnline);
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
@@ -93,6 +96,7 @@ export function useAutocompleteSearch<TItem>(
       }
 
       debounceTimerRef.current = setTimeout(() => {
+        setLastFiredTerm(searchTerm);
         search(searchTerm);
       }, debounceMs);
     }
@@ -103,10 +107,24 @@ export function useAutocompleteSearch<TItem>(
         debounceTimerRef.current = null;
       }
     };
-  }, [searchTerm, shouldSearch, search, debounceMs, localFirst, filterFallback, fallbackItems]);
+  }, [
+    searchTerm,
+    shouldSearch,
+    search,
+    debounceMs,
+    localFirst,
+    filterFallback,
+    fallbackItems,
+  ]);
 
   // Get current results
   const results = getResults();
+
+  // Staleness guard: API results are relevant only if the current search term
+  // is a progressive refinement of (or identical to) the last fired query.
+  const apiResultsAreRelevant =
+    lastFiredTerm !== '' &&
+    searchTerm.toLowerCase().startsWith(lastFiredTerm.toLowerCase());
 
   // Anti-flicker: track last results using render-time conditional state update
   // (React-recommended pattern for syncing derived state with render values)
@@ -140,13 +158,13 @@ export function useAutocompleteSearch<TItem>(
       }
     }
 
-    // Show current results if available
-    if (results.length > 0) {
+    // Show current results if available and relevant to current search term
+    if (results.length > 0 && apiResultsAreRelevant) {
       return results.slice(0, maxResults);
     }
 
-    // Anti-flicker: show last results while loading
-    if (loading && lastResults.length > 0) {
+    // Anti-flicker: show last results while loading, but only if still relevant
+    if (loading && lastResults.length > 0 && apiResultsAreRelevant) {
       return lastResults.slice(0, maxResults);
     }
 
@@ -160,6 +178,7 @@ export function useAutocompleteSearch<TItem>(
   const reset = () => {
     setSearchTerm('');
     setLastResults([]);
+    setLastFiredTerm('');
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
@@ -174,5 +193,6 @@ export function useAutocompleteSearch<TItem>(
     shouldSearch,
     handleSearchTermChange,
     setSearchTerm,
-    reset };
+    reset,
+  };
 }

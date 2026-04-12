@@ -14,10 +14,10 @@ jest.mock('#store/useAppStore', () => ({
       selectedShoppingListId: mockSelectedShoppingListId,
       setSelectedShoppingListId: mockSetSelectedShoppingListId,
     }),
-  selectShoppingListState: (state: any) => ({
-    selectedShoppingListId: state.selectedShoppingListId,
-    setSelectedShoppingListId: state.setSelectedShoppingListId,
-  }),
+  useShoppingListState: jest.fn(() => ({
+    selectedShoppingListId: mockSelectedShoppingListId,
+    setSelectedShoppingListId: mockSetSelectedShoppingListId,
+  })),
 }));
 
 type MockList = {
@@ -53,10 +53,7 @@ describe('useShoppingListSelection', () => {
   });
 
   it('auto-selects the first list when no default flag exists', () => {
-    const lists = [
-      createList({ id: 'list-1' }),
-      createList({ id: 'list-2' }),
-    ];
+    const lists = [createList({ id: 'list-1' }), createList({ id: 'list-2' })];
 
     renderHook(() => useShoppingListSelection(lists as any));
 
@@ -71,9 +68,7 @@ describe('useShoppingListSelection', () => {
       createList({ id: 'list-3' }),
     ];
 
-    const { result } = renderHook(() =>
-      useShoppingListSelection(lists as any),
-    );
+    const { result } = renderHook(() => useShoppingListSelection(lists as any));
 
     // Should NOT call setSelectedShoppingListId since selection is valid
     expect(mockSetSelectedShoppingListId).not.toHaveBeenCalled();
@@ -82,14 +77,9 @@ describe('useShoppingListSelection', () => {
 
   it('returns currentListId from valid selection', () => {
     mockSelectedShoppingListId = 'list-2';
-    const lists = [
-      createList({ id: 'list-1' }),
-      createList({ id: 'list-2' }),
-    ];
+    const lists = [createList({ id: 'list-1' }), createList({ id: 'list-2' })];
 
-    const { result } = renderHook(() =>
-      useShoppingListSelection(lists as any),
-    );
+    const { result } = renderHook(() => useShoppingListSelection(lists as any));
 
     expect(result.current.currentListId).toBe('list-2');
   });
@@ -101,9 +91,7 @@ describe('useShoppingListSelection', () => {
       createList({ id: 'list-2', isDefault: true }),
     ];
 
-    const { result } = renderHook(() =>
-      useShoppingListSelection(lists as any),
-    );
+    const { result } = renderHook(() => useShoppingListSelection(lists as any));
 
     // currentListId should fall back to default
     expect(result.current.currentListId).toBe('list-2');
@@ -117,22 +105,15 @@ describe('useShoppingListSelection', () => {
       createList({ id: 'list-2', isDefault: true }),
     ];
 
-    const { result } = renderHook(() =>
-      useShoppingListSelection(lists as any),
-    );
+    const { result } = renderHook(() => useShoppingListSelection(lists as any));
 
     expect(result.current.defaultList?.id).toBe('list-2');
   });
 
   it('returns first list as defaultList when no isDefault flag', () => {
-    const lists = [
-      createList({ id: 'list-1' }),
-      createList({ id: 'list-2' }),
-    ];
+    const lists = [createList({ id: 'list-1' }), createList({ id: 'list-2' })];
 
-    const { result } = renderHook(() =>
-      useShoppingListSelection(lists as any),
-    );
+    const { result } = renderHook(() => useShoppingListSelection(lists as any));
 
     expect(result.current.defaultList?.id).toBe('list-1');
   });
@@ -146,9 +127,7 @@ describe('useShoppingListSelection', () => {
   it('exposes setSelectedShoppingListId for manual selection', () => {
     const lists = [createList({ id: 'list-1' })];
 
-    const { result } = renderHook(() =>
-      useShoppingListSelection(lists as any),
-    );
+    const { result } = renderHook(() => useShoppingListSelection(lists as any));
 
     expect(result.current.setSelectedShoppingListId).toBe(
       mockSetSelectedShoppingListId,
@@ -162,9 +141,7 @@ describe('useShoppingListSelection', () => {
       createList({ id: 'list-2', name: 'Weekly' }),
     ];
 
-    const { result } = renderHook(() =>
-      useShoppingListSelection(lists as any),
-    );
+    const { result } = renderHook(() => useShoppingListSelection(lists as any));
 
     expect(result.current.currentList?.name).toBe('Weekly');
   });

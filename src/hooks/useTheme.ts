@@ -1,16 +1,13 @@
 import { useEffect } from 'react';
-import { useShallow } from 'zustand/shallow';
 import { useUnistyles, UnistylesRuntime } from 'react-native-unistyles';
-import { useAppStore, selectPreferences, selectHydrated } from '#/store/useAppStore';
+import { useIsHydrated, usePreferences } from '#/store/useAppStore';
 import { ThemePreference } from '#/store/slices/preferencesSlice';
 
 export const useTheme = () => {
   const { rt } = useUnistyles();
-  const isHydrated = useAppStore(selectHydrated);
+  const isHydrated = useIsHydrated();
 
-  const { theme: userThemePreference, setTheme } = useAppStore(
-    useShallow(selectPreferences),
-  );
+  const { theme: userThemePreference, setTheme } = usePreferences();
 
   const systemColorScheme = rt.colorScheme;
 

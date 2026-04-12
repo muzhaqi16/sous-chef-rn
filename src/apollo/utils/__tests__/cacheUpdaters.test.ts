@@ -1,7 +1,5 @@
 import {
   createAddToQueryFieldUpdater,
-  createAddToKeyedQueryFieldUpdater,
-  createRemoveFromQueryFieldUpdater,
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
   createAddToParentConnectionUpdater,
@@ -26,7 +24,8 @@ function createMockCache() {
     evict: jest.fn(),
     gc: jest.fn(),
     identify: jest.fn(
-      (obj: { __typename: string; id: string }) => `${obj.__typename}:${obj.id}`,
+      (obj: { __typename: string; id: string }) =>
+        `${obj.__typename}:${obj.id}`,
     ),
   } as any;
 }
@@ -180,228 +179,13 @@ describe('createAddToQueryFieldUpdater', () => {
     cache.modify.mockImplementation(() => {
       throw new Error('cache error');
     });
-    expect(() => addToHomes(cache, { id: '1', __typename: 'Home' } as any)).not.toThrow();
+    expect(() =>
+      addToHomes(cache, { id: '1', __typename: 'Home' } as any),
+    ).not.toThrow();
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('Cache update failed for adding to homes'),
       expect.any(Error),
     );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// createAddToKeyedQueryFieldUpdater
-// ---------------------------------------------------------------------------
-
-describe('createAddToKeyedQueryFieldUpdater', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('adds item when storeFieldName matches the key value', () => {
-    const addToItems = createAddToKeyedQueryFieldUpdater(
-      'shoppingListItems',
-      'shoppingListId',
-    );
-    const cache = createMockCache();
-    const newItem = { id: 'item-1', __typename: 'ShoppingListItem' };
-
-    addToItems(cache, newItem, 'list-abc');
-
-    const helpers = createFieldHelpers({
-      storeFieldName: 'shoppingListItems:{"shoppingListId":"list-abc"}',
-    });
-    const result = invokeFieldModifier(
-      cache,
-      'shoppingListItems',
-      [],
-      helpers,
-    );
-
-    expect(result).toHaveLength(1);
-  });
-
-  it('returns existing items when storeFieldName does not match', () => {
-    const addToItems = createAddToKeyedQueryFieldUpdater(
-      'shoppingListItems',
-      'shoppingListId',
-    );
-    const cache = createMockCache();
-    const newItem = { id: 'item-1', __typename: 'ShoppingListItem' };
-
-    addToItems(cache, newItem, 'list-abc');
-
-    const helpers = createFieldHelpers({
-      storeFieldName: 'shoppingListItems:{"shoppingListId":"list-xyz"}',
-    });
-    const existing = [{ __ref: 'ShoppingListItem:other' }];
-    const result = invokeFieldModifier(
-      cache,
-      'shoppingListItems',
-      existing,
-      helpers,
-    );
-
-    expect(result).toBe(existing);
-  });
-
-  it('adds at end when position is end', () => {
-    const addToItems = createAddToKeyedQueryFieldUpdater(
-      'pantryItems',
-      'pantryId',
-    );
-    const cache = createMockCache();
-
-    addToItems(cache, { id: 'new', __typename: 'PantryItem' } as any, 'p-1', {
-      position: 'end',
-    });
-
-    const helpers = createFieldHelpers({
-      storeFieldName: 'pantryItems:{"pantryId":"p-1"}',
-    });
-    const existing = [{ __ref: 'PantryItem:old' }];
-    const result = invokeFieldModifier(
-      cache,
-      'pantryItems',
-      existing,
-      helpers,
-    );
-
-    expect(result).toHaveLength(2);
-    expect(result[0]).toBe(existing[0]);
-  });
-
-  it('prevents duplicates by default', () => {
-    const addToItems = createAddToKeyedQueryFieldUpdater(
-      'shoppingListItems',
-      'shoppingListId',
-    );
-    const cache = createMockCache();
-
-    addToItems(cache, { id: 'item-1', __typename: 'ShoppingListItem' } as any, 'list-1');
-
-    const helpers = createFieldHelpers({
-      storeFieldName: 'shoppingListItems:{"shoppingListId":"list-1"}',
-    });
-    helpers.readField.mockImplementation((field: string) => {
-      if (field === 'id') return 'item-1';
-      return undefined;
-    });
-
-    const existing = [{ __ref: 'ShoppingListItem:item-1' }];
-    const result = invokeFieldModifier(
-      cache,
-      'shoppingListItems',
-      existing,
-      helpers,
-    );
-
-    expect(result).toBe(existing);
-  });
-
-  it('returns existing items when toReference returns undefined', () => {
-    const addToItems = createAddToKeyedQueryFieldUpdater(
-      'shoppingListItems',
-      'shoppingListId',
-    );
-    const cache = createMockCache();
-
-    addToItems(cache, { id: '1', __typename: 'Item' } as any, 'list-1');
-
-    const helpers = createFieldHelpers({
-      storeFieldName: 'shoppingListItems:{"shoppingListId":"list-1"}',
-    });
-    helpers.toReference.mockReturnValue(undefined);
-    const existing = [{ __ref: 'Item:old' }];
-    const result = invokeFieldModifier(
-      cache,
-      'shoppingListItems',
-      existing,
-      helpers,
-    );
-
-    expect(result).toBe(existing);
-  });
-
-  it('does not throw when cache.modify throws', () => {
-    const addToItems = createAddToKeyedQueryFieldUpdater('items', 'listId');
-    const cache = createMockCache();
-    cache.modify.mockImplementation(() => {
-      throw new Error('fail');
-    });
-    expect(() => addToItems(cache, { id: '1' }, 'list-1')).not.toThrow();
-    expect(console.warn).toHaveBeenCalled();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// createRemoveFromQueryFieldUpdater
-// ---------------------------------------------------------------------------
-
-describe('createRemoveFromQueryFieldUpdater', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('filters out the item with the given id', () => {
-    const removeFromHomes = createRemoveFromQueryFieldUpdater('homes', 'Home');
-    const cache = createMockCache();
-
-    removeFromHomes(cache, 'home-1');
-
-    const helpers = createFieldHelpers();
-    helpers.readField.mockImplementation((field: string, ref: any) => {
-      if (field === 'id') {
-        if (ref.__ref === 'Home:home-1') return 'home-1';
-        if (ref.__ref === 'Home:home-2') return 'home-2';
-      }
-      return undefined;
-    });
-
-    const existing = [{ __ref: 'Home:home-1' }, { __ref: 'Home:home-2' }];
-    const result = invokeFieldModifier(cache, 'homes', existing, helpers);
-
-    expect(result).toHaveLength(1);
-    expect(result[0].__ref).toBe('Home:home-2');
-  });
-
-  it('does not evict or gc by default', () => {
-    const removeFromHomes = createRemoveFromQueryFieldUpdater('homes', 'Home');
-    const cache = createMockCache();
-
-    removeFromHomes(cache, 'home-1');
-
-    expect(cache.evict).not.toHaveBeenCalled();
-    expect(cache.gc).not.toHaveBeenCalled();
-  });
-
-  it('evicts the item and runs gc when evictItem is true', () => {
-    const removeFromHomes = createRemoveFromQueryFieldUpdater('homes', 'Home');
-    const cache = createMockCache();
-
-    removeFromHomes(cache, 'home-1', { evictItem: true });
-
-    expect(cache.evict).toHaveBeenCalledWith({ id: 'Home:home-1' });
-    expect(cache.gc).toHaveBeenCalled();
-  });
-
-  it('evicts the item but skips gc when gc is false', () => {
-    const removeFromHomes = createRemoveFromQueryFieldUpdater('homes', 'Home');
-    const cache = createMockCache();
-
-    removeFromHomes(cache, 'home-1', { evictItem: true, gc: false });
-
-    expect(cache.evict).toHaveBeenCalledWith({ id: 'Home:home-1' });
-    expect(cache.gc).not.toHaveBeenCalled();
-  });
-
-  it('does not throw when cache.modify throws', () => {
-    const removeFromHomes = createRemoveFromQueryFieldUpdater('homes', 'Home');
-    const cache = createMockCache();
-    cache.modify.mockImplementation(() => {
-      throw new Error('fail');
-    });
-    expect(() => removeFromHomes(cache, 'home-1')).not.toThrow();
-    expect(console.warn).toHaveBeenCalled();
   });
 });
 
@@ -420,13 +204,23 @@ describe('createAddToQueryConnectionUpdater', () => {
       'ShoppingList',
     );
     const cache = createMockCache();
-    const newItem = { id: 'sl-1', __typename: 'ShoppingList', name: 'Groceries' };
+    const newItem = {
+      id: 'sl-1',
+      __typename: 'ShoppingList',
+      name: 'Groceries',
+    };
 
     addToShoppingLists(cache, newItem);
 
     const helpers = createFieldHelpers();
     const existingConnection = {
-      edges: [{ __typename: 'ShoppingListEdge', node: { __ref: 'ShoppingList:sl-2' }, cursor: 'c1' }],
+      edges: [
+        {
+          __typename: 'ShoppingListEdge',
+          node: { __ref: 'ShoppingList:sl-2' },
+          cursor: 'c1',
+        },
+      ],
       totalCount: 1,
     };
     const result = invokeFieldModifier(
@@ -446,7 +240,9 @@ describe('createAddToQueryConnectionUpdater', () => {
     const addToLists = createAddToQueryConnectionUpdater('lists', 'List');
     const cache = createMockCache();
 
-    addToLists(cache, { id: 'l-1', __typename: 'List' } as any, { position: 'end' });
+    addToLists(cache, { id: 'l-1', __typename: 'List' } as any, {
+      position: 'end',
+    });
 
     const helpers = createFieldHelpers();
     const existingConnection = {
@@ -493,7 +289,9 @@ describe('createAddToQueryConnectionUpdater', () => {
     const addToLists = createAddToQueryConnectionUpdater('lists', 'List');
     const cache = createMockCache();
 
-    addToLists(cache, { id: 'l-1', __typename: 'List' } as any, { updateTotalCount: false });
+    addToLists(cache, { id: 'l-1', __typename: 'List' } as any, {
+      updateTotalCount: false,
+    });
 
     const helpers = createFieldHelpers();
     const existingConnection = { edges: [], totalCount: 5 };
@@ -728,7 +526,9 @@ describe('createAddToParentConnectionUpdater', () => {
     );
     const cache = createMockCache();
 
-    add(cache, 'p-1', { id: 'pi-new', __typename: 'PantryItem' } as any, { position: 'end' });
+    add(cache, 'p-1', { id: 'pi-new', __typename: 'PantryItem' } as any, {
+      position: 'end',
+    });
 
     const helpers = createFieldHelpers();
     const existing = {
@@ -800,12 +600,9 @@ describe('createAddToParentConnectionUpdater', () => {
     );
     const cache = createMockCache();
 
-    add(
-      cache,
-      'p-1',
-      { id: 'pi-new', __typename: 'PantryItem' } as any,
-      { updateTotalCount: false },
-    );
+    add(cache, 'p-1', { id: 'pi-new', __typename: 'PantryItem' } as any, {
+      updateTotalCount: false,
+    });
 
     const helpers = createFieldHelpers();
     const existing = { edges: [], totalCount: 5 };
@@ -856,7 +653,10 @@ describe('createAddToParentArrayUpdater', () => {
     const addToItems = createAddToParentArrayUpdater('Pantry', 'items');
     const cache = createMockCache();
 
-    addToItems(cache, 'p-1', { id: 'item-new', __typename: 'PantryItem' } as any);
+    addToItems(cache, 'p-1', {
+      id: 'item-new',
+      __typename: 'PantryItem',
+    } as any);
 
     const helpers = createFieldHelpers();
     const existing = [{ __ref: 'PantryItem:item-old' }];
@@ -870,7 +670,12 @@ describe('createAddToParentArrayUpdater', () => {
     const addToItems = createAddToParentArrayUpdater('Pantry', 'items');
     const cache = createMockCache();
 
-    addToItems(cache, 'p-1', { id: 'item-new', __typename: 'PantryItem' } as any, { position: 'end' });
+    addToItems(
+      cache,
+      'p-1',
+      { id: 'item-new', __typename: 'PantryItem' } as any,
+      { position: 'end' },
+    );
 
     const helpers = createFieldHelpers();
     const existing = [{ __ref: 'PantryItem:item-old' }];
@@ -910,7 +715,10 @@ describe('createAddToParentArrayUpdater', () => {
     const cache = createMockCache();
     cache.identify.mockReturnValue(undefined);
 
-    addToItems(cache, 'p-missing', { id: 'item-1', __typename: 'PantryItem' } as any);
+    addToItems(cache, 'p-missing', {
+      id: 'item-1',
+      __typename: 'PantryItem',
+    } as any);
 
     expect(cache.modify).not.toHaveBeenCalled();
     expect(console.warn).toHaveBeenCalledWith(
