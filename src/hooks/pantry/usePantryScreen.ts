@@ -260,8 +260,10 @@ export function usePantryScreen() {
   };
 
   // -------------------------------------------------------------------------
-  // Refetch pantry items when switching between pantries
+  // Reset UI state when switching between pantries
   // Uses "adjusting state during render" pattern (no ref.current read during render)
+  // NOTE: No explicit refetch() needed — Apollo re-executes the query automatically
+  // when variables.id changes (via cache-and-network fetch policy).
   // -------------------------------------------------------------------------
   const [prevPantryId, setPrevPantryId] = useState<string | undefined>(
     pantry?.id,
@@ -270,9 +272,6 @@ export function usePantryScreen() {
     setPrevPantryId(pantry?.id);
     setLocationFilter('all');
     setSearchQuery('');
-    if (prevPantryId && pantry?.id) {
-      refetch();
-    }
   }
 
   // -------------------------------------------------------------------------

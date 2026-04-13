@@ -664,6 +664,106 @@ Instead of dynamic policies, handle offline gracefully via:
 - `usePreservedArrayData()` - Preserves last successful data across renders
 - `nextFetchPolicy: 'cache-first'` - Prevents re-fetches on subsequent renders
 
+### `nextFetchPolicy` — String vs Function Form
+
+Apollo Client 4.x supports both a string and a function for `nextFetchPolicy`.
+
+**String form** (simple cases):
+```typescript
+nextFetchPolicy: 'cache-first',
+```
+After the first fetch, all re-renders use `cache-first`. On variable changes, Apollo automatically reverts to `initialFetchPolicy` (`cache-and-network`). Suitable for most queries.
+
+**Function form** (fine-grained control):
+```typescript
+nextFetchPolicy(currentFetchPolicy, context) {
+  if (context.reason === 'variables-changed') {
+    return context.initialFetchPolicy; // cache-and-network for fresh data
+  }
+  return 'cache-first'; // cache-first after fetch completes
+},
+```
+The function receives a `context` with:
+- `reason: 'after-fetch'` — query just completed a network request
+- `reason: 'variables-changed'` — query variables changed (filter/sort/ID)
+- `initialFetchPolicy` — the original `fetchPolicy` value
+- `observable` / `options` — the query observable and current options
+
+Use the function form when you need different behavior for variable changes vs post-fetch re-renders. For offline-first queries with filters/sort, the function form makes the intent explicit: fresh data on user-initiated changes, cached data for re-renders.
+
+### Skip Toggle Pitfall & Query Activation Latch
+
+**Problem:** When a query uses `skip` and the skip value toggles (`true → false → true → false`) during initialization, Apollo resets the `fetchPolicy` to its initial value on each `true → false` transition. With `cache-and-network`, this fires a duplicate network request every time.
+
+This commonly occurs when the skip condition depends on multiple upstream states that settle at different times during app startup (e.g., `isHomeSelectionReady`, `selectedPantryId`).
+
+```typescript
+// ❌ PROBLEM: hasValidId flickers during startup → duplicate requests
+const hasValidId = !!id && isReady && !isLoggedOut;
+const { data } = useQuery(QUERY, {
+  skip: !hasValidId,              // toggles during init
+  fetchPolicy: 'cache-and-network', // re-applied on each skip→unskip
+  nextFetchPolicy: 'cache-first',   // ← ignored when skip resets the policy
+});
+```
+
+**Solution — Query Activation Latch:** Once the query activates for a given entity ID, latch it active so transient state churn doesn't re-skip it. The latch resets when the ID changes or the user logs out.
+
+```typescript
+// ✅ CORRECT: Latch prevents skip flickering
+const [activatedForId, setActivatedForId] = useState<string | null>(null);
+
+// Latch: once validation passes, keep query active for this ID
+if (hasValidId && entityId && activatedForId !== entityId) {
+  setActivatedForId(entityId);
+}
+
+// Release: clear on logout
+if (activatedForId && isLoggedOut) {
+  setActivatedForId(null);
+}
+
+const isLatched = activatedForId === entityId && !!entityId;
+const shouldSkip = !hasValidId && !isLatched;
+
+const { data } = useQuery(QUERY, {
+  skip: shouldSkip,
+  fetchPolicy: 'cache-and-network',
+  nextFetchPolicy: 'cache-first',
+});
+```
+
+**How the latch auto-resets:**
+- **Entity ID changes** (e.g., user switches pantries): `activatedForId !== entityId` → latch doesn't match → `isLatched = false` → skip depends on `hasValidId` again → fresh fetch when ready
+- **Logout**: explicitly clears the latch
+- **Home deletion**: entity ID becomes `undefined` → `isLatched = false` → query skips
+
+**Important:** Uses the "adjusting state during render" pattern (`useState` + conditional `setState`) to stay compatible with the React Compiler. Do not use `useRef` for this — reading `ref.current` during render causes compiler bailout.
+
+**Reference implementation:** `src/hooks/home/pantry/usePantryQuery.ts`
+
+### Avoid Redundant `refetch()` on Variable Changes
+
+Apollo automatically re-executes a query when its variables change. Calling `refetch()` explicitly in addition to a variable change causes a **double network request**.
+
+```typescript
+// ❌ WRONG: Double fetch on ID change
+if (prevId !== currentId) {
+  setPrevId(currentId);
+  refetch(); // Apollo already refetches because variables.id changed
+}
+
+// ✅ CORRECT: Let Apollo handle variable-change refetches
+if (prevId !== currentId) {
+  setPrevId(currentId);
+  // Reset UI state only — Apollo handles the refetch
+  setFilter('all');
+  setSearch('');
+}
+```
+
+Use `refetch()` only for user-initiated actions (pull-to-refresh) or when you need to re-fetch with the **same** variables.
+
 ---
 
 ## Query Data Preservation
@@ -1007,6 +1107,12 @@ import { useStandardSubscription } from '#/hooks/apollo/useStandardSubscription'
 
 ❌ **Don't**: Use dynamic fetch policies like `useOfflinePresetPolicy()` (causes query cascade)
 ✅ **Do**: Use hardcoded `'cache-and-network'` with `nextFetchPolicy: 'cache-first'`
+
+❌ **Don't**: Let `skip` depend on volatile upstream state without a latch (causes duplicate network requests)
+✅ **Do**: Use the [query activation latch](#skip-toggle-pitfall--query-activation-latch) pattern for queries gated on multi-step initialization
+
+❌ **Don't**: Call `refetch()` when query variables already changed (double network request)
+✅ **Do**: Let Apollo handle variable-change refetches automatically; use `refetch()` only for same-variable refreshes
 
 ❌ **Don't**: Skip optimistic responses on frequently-used mutations
 ✅ **Do**: Add optimistic responses for instant UI feedback
@@ -1402,5 +1508,5 @@ See `src/apollo/utils/shoppingListCacheUpdaters.ts` for the full implementation.
 
 ---
 
-**Last Updated**: 2026-02-25
+**Last Updated**: 2026-04-12
 **Maintainers**: Development Team

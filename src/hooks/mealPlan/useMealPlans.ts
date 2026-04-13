@@ -1,8 +1,11 @@
-
-
-import { useGetMealPlansQuery, SortOrder, type MealPlanFilters } from '#generated';
+import {
+  useGetMealPlansQuery,
+  SortOrder,
+  type MealPlanFilters,
+} from '#generated';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { useConnectionData } from '#hooks/utils/useConnectionData';
 
 export function useMealPlans(filters?: MealPlanFilters) {
   const isLoggedOut = useIsLoggedOut();
@@ -19,12 +22,16 @@ export function useMealPlans(filters?: MealPlanFilters) {
     errorPolicy: 'all',
   });
 
-  const mealPlans = !data?.mealPlans?.edges ? [] : data.mealPlans.edges.map(edge => edge.node);
-
-  const totalCount = data?.mealPlans?.totalCount ?? 0;
-  const hasMore = data?.mealPlans?.pageInfo?.hasNextPage ?? false;
-
   useApolloErrorLogger('GetMealPlans', error);
+
+  const connectionData = useConnectionData({
+    data,
+    selector: d => d.mealPlans,
+    loading,
+    fetchMore,
+  });
+
+  const mealPlans = connectionData.items;
 
   // Find the current meal plan (active > nearest upcoming > most recent past)
   const now = new Date();
@@ -43,7 +50,10 @@ export function useMealPlans(filters?: MealPlanFilters) {
     // 2. Nearest upcoming plan
     const upcoming = mealPlans
       .filter(plan => new Date(plan.startDate) > now)
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+      .sort(
+        (a, b) =>
+          new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+      );
     if (upcoming.length > 0) {
       currentPlan = upcoming[0];
     } else {
@@ -52,22 +62,18 @@ export function useMealPlans(filters?: MealPlanFilters) {
     }
   }
 
-  const loadMore = () => {
-    if (!hasMore || loading) return;
-    const endCursor = data?.mealPlans?.pageInfo?.endCursor;
-    if (endCursor) {
-      fetchMore({ variables: { after: endCursor } });
-    }
-  };
-
   return {
-    mealPlans,
-    currentPlan,
-    loading,
-    error,
-    totalCount,
-    hasMore,
-    refetch,
-    loadMore,
+    state: {
+      mealPlans,
+      currentPlan,
+      loading,
+      error: error as Error | undefined,
+      totalCount: connectionData.totalCount,
+      hasMore: connectionData.hasMore,
+    },
+    actions: {
+      refetch,
+      loadMore: connectionData.loadMore,
+    },
   };
 }

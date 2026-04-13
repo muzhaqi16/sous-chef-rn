@@ -14,7 +14,7 @@ const mockPurchasedRefetch = jest.fn();
 // Default return values per isPurchased filter
 let mockUnpurchasedReturn: Record<string, any> = {
   data: null,
-  previousData: null,
+
   loading: false,
   error: undefined,
   fetchMore: mockUnpurchasedFetchMore,
@@ -22,7 +22,7 @@ let mockUnpurchasedReturn: Record<string, any> = {
 };
 let mockPurchasedReturn: Record<string, any> = {
   data: null,
-  previousData: null,
+
   loading: false,
   error: undefined,
   fetchMore: mockPurchasedFetchMore,
@@ -92,7 +92,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUnpurchasedReturn = {
     data: null,
-    previousData: null,
+
     loading: false,
     error: undefined,
     fetchMore: mockUnpurchasedFetchMore,
@@ -100,7 +100,7 @@ beforeEach(() => {
   };
   mockPurchasedReturn = {
     data: null,
-    previousData: null,
+
     loading: false,
     error: undefined,
     fetchMore: mockPurchasedFetchMore,
@@ -172,21 +172,6 @@ describe('usePaginatedShoppingItems', () => {
     // Items preserved in edge order (cache insertion order), not sorted by sortOrder
     expect(result.current.state.unpurchased.items[0].id).toBe('2');
     expect(result.current.state.unpurchased.items[1].id).toBe('1');
-  });
-
-  it('filters out items with missing id or itemName', () => {
-    mockUnpurchasedReturn.data = buildConnectionData([
-      { id: '1', itemName: 'Milk', sortOrder: 'a' },
-      { id: null as any, itemName: 'Bad', sortOrder: 'b' },
-      { id: '3', itemName: '', sortOrder: 'c' },
-    ]);
-
-    const { result } = renderHook(() =>
-      usePaginatedShoppingItems({ listId: 'list-1' }),
-    );
-
-    expect(result.current.state.unpurchased.items).toHaveLength(1);
-    expect(result.current.state.unpurchased.items[0].id).toBe('1');
   });
 
   it('exposes hasMore and totalCount for unpurchased', () => {

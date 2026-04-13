@@ -374,7 +374,11 @@ function PantryMainContent({
         onSelectHome={onSelectHome}
         onAddItem={handleAddItem}
         onRefresh={screen.handleRefresh}
-        onEndReached={screen.loadMore}
+        onEndReached={
+          screen.hasMore && screen.pantryItems.length > 0
+            ? screen.loadMore
+            : undefined
+        }
         isLoadingMore={screen.searchActive ? false : screen.isLoadingMore}
         hasMore={screen.searchActive ? false : screen.hasMore}
         refreshing={screen.isRefreshing}

@@ -915,7 +915,7 @@ globalThis.requestIdleCallback = cb =>
 globalThis.cancelIdleCallback = id => clearTimeout(id);
 
 // crypto.getRandomValues is provided in production by react-native-get-random-values
-// (imported in index.js). Provide a deterministic stub for tests.
+// (imported in index.js). Provide a stub for tests so crypto.getRandomValues is available.
 if (!globalThis.crypto) {
   globalThis.crypto = {
     getRandomValues: arr => {

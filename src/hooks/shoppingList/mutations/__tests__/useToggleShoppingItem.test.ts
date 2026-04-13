@@ -6,17 +6,24 @@ import { useToggleShoppingItem } from '../useToggleShoppingItem';
 const mockToggleMutation = jest.fn();
 const mockHandleApolloError = jest.fn(() => ({ message: 'Toggle error' }));
 const mockReadFragment = jest.fn();
+const mockReadQuery = jest.fn();
 const mockIdentify = jest.fn((obj: any) => `${obj.__typename}:${obj.id}`);
+
+let capturedMutationOptions: Record<string, any> = {};
 
 jest.mock('#generated', () => ({
   ...jest.requireActual('#generated'),
-  useToggleShoppingListItemPurchasedMutation: () => [mockToggleMutation],
+  useToggleShoppingListItemPurchasedMutation: (options: any) => {
+    capturedMutationOptions = options;
+    return [mockToggleMutation];
+  },
 }));
 
 jest.mock('@apollo/client/react', () => ({
   useApolloClient: () => ({
     cache: {
       readFragment: mockReadFragment,
+      readQuery: mockReadQuery,
       identify: mockIdentify,
     },
   }),
@@ -112,11 +119,16 @@ describe('useToggleShoppingItem', () => {
   });
 
   it('calls mutation with correct variables to mark as purchased', async () => {
-    mockReadFragment.mockReturnValue(createItem({ purchaseInfo: { isPurchased: false } }));
+    mockReadFragment.mockReturnValue(
+      createItem({ purchaseInfo: { isPurchased: false } }),
+    );
     mockToggleMutation.mockResolvedValue({
       data: {
         toggleShoppingListItemPurchased: {
-          shoppingListItem: { id: 'item-1', purchaseInfo: { isPurchased: true } },
+          shoppingListItem: {
+            id: 'item-1',
+            purchaseInfo: { isPurchased: true },
+          },
         },
       },
     });
@@ -138,11 +150,16 @@ describe('useToggleShoppingItem', () => {
   });
 
   it('calls mutation with correct variables to mark as unpurchased', async () => {
-    mockReadFragment.mockReturnValue(createItem({ purchaseInfo: { isPurchased: true } }));
+    mockReadFragment.mockReturnValue(
+      createItem({ purchaseInfo: { isPurchased: true } }),
+    );
     mockToggleMutation.mockResolvedValue({
       data: {
         toggleShoppingListItemPurchased: {
-          shoppingListItem: { id: 'item-1', purchaseInfo: { isPurchased: false } },
+          shoppingListItem: {
+            id: 'item-1',
+            purchaseInfo: { isPurchased: false },
+          },
         },
       },
     });
@@ -208,5 +225,92 @@ describe('useToggleShoppingItem', () => {
     });
 
     expect(toggleResult).toBe(false);
+  });
+
+  describe('depletion recovery (onCompleted)', () => {
+    it('refetches when source connection is depleted after toggle', () => {
+      mockReadQuery.mockReturnValue({
+        shoppingList: {
+          itemsConnection: {
+            edges: [],
+            totalCount: 20,
+          },
+        },
+      });
+
+      renderHook(() =>
+        useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      );
+
+      // Simulate server confirming a toggle to purchased
+      // → source connection is unpurchased (isPurchased: false)
+      capturedMutationOptions.onCompleted({
+        toggleShoppingListItemPurchased: {
+          shoppingListItem: {
+            id: 'item-1',
+            purchaseInfo: { isPurchased: true },
+          },
+        },
+      });
+
+      expect(mockReadQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variables: expect.objectContaining({ isPurchased: false }),
+        }),
+      );
+      expect(mockRefetch).toHaveBeenCalled();
+    });
+
+    it('does not refetch when source connection still has items', () => {
+      mockReadQuery.mockReturnValue({
+        shoppingList: {
+          itemsConnection: {
+            edges: [{ cursor: 'c1', node: { id: 'item-2' } }],
+            totalCount: 5,
+          },
+        },
+      });
+
+      renderHook(() =>
+        useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      );
+
+      capturedMutationOptions.onCompleted({
+        toggleShoppingListItemPurchased: {
+          shoppingListItem: {
+            id: 'item-1',
+            purchaseInfo: { isPurchased: true },
+          },
+        },
+      });
+
+      expect(mockRefetch).not.toHaveBeenCalled();
+    });
+
+    it('does not refetch when totalCount is 0', () => {
+      mockReadQuery.mockReturnValue({
+        shoppingList: {
+          itemsConnection: {
+            edges: [],
+            totalCount: 0,
+          },
+        },
+      });
+
+      renderHook(() =>
+        useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      );
+
+      capturedMutationOptions.onCompleted({
+        toggleShoppingListItemPurchased: {
+          shoppingListItem: {
+            id: 'item-1',
+            purchaseInfo: { isPurchased: true },
+          },
+        },
+      });
+
+      expect(mockRefetch).not.toHaveBeenCalled();
+    });
   });
 });

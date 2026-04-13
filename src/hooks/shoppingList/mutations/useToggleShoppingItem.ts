@@ -12,8 +12,13 @@ import { alertService } from '#/services/alertService';
 import {
   useToggleShoppingListItemPurchasedMutation,
   ShoppingListItemDisplayFragmentDoc,
+  GetShoppingListItemsFilteredDocument,
 } from '#generated';
-import type { ShoppingListItemDisplayFragment } from '#generated';
+import type {
+  ShoppingListItemDisplayFragment,
+  GetShoppingListItemsFilteredQuery,
+  GetShoppingListItemsFilteredQueryVariables,
+} from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   moveShoppingListItemToPurchased,
@@ -22,6 +27,7 @@ import {
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { PAGINATION } from '#/constants/shoppingList';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
@@ -129,6 +135,28 @@ export function useToggleShoppingItem({
           item.id,
           'isPurchased',
         );
+      }
+
+      // Depletion recovery: if the source connection (the tab we toggled FROM)
+      // is now empty but totalCount > 0, server has unfetched items — refetch.
+      // Only fires when online (server responded), safe for offline-first.
+      if (listId && item) {
+        const sourceIsPurchased = !item.purchaseInfo?.isPurchased;
+        const sourceQuery = client.cache.readQuery<
+          GetShoppingListItemsFilteredQuery,
+          GetShoppingListItemsFilteredQueryVariables
+        >({
+          query: GetShoppingListItemsFilteredDocument,
+          variables: {
+            id: listId,
+            first: PAGINATION.ITEMS_PAGE_SIZE,
+            isPurchased: sourceIsPurchased,
+          },
+        });
+        const conn = sourceQuery?.shoppingList?.itemsConnection;
+        if (conn && conn.edges.length === 0 && (conn.totalCount ?? 0) > 0) {
+          refetch();
+        }
       }
     },
     onError: error => {

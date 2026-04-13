@@ -119,7 +119,7 @@ describe('useSavedRecipes', () => {
     const { result } = renderHook(() => useSavedRecipes());
 
     expect(result.current.state.totalCount).toBe(10);
-    expect(result.current.state.hasNextPage).toBe(true);
+    expect(result.current.state.hasMore).toBe(true);
   });
 
   it('getRecipeById finds by recipeId', () => {

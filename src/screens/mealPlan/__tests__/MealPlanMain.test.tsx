@@ -37,12 +37,21 @@ jest.mock('#hooks/ui/useSelectorManagement', () => ({
   })),
 }));
 
-jest.mock('#hooks/mealPlan/useMealPlans', () => ({
-  useMealPlans: jest.fn(() => ({
+const mockMealPlansState = (overrides: Record<string, any> = {}) => ({
+  state: {
     currentPlan: null,
     mealPlans: [],
     loading: false,
-  })),
+    error: undefined,
+    totalCount: undefined,
+    hasMore: false,
+    ...overrides,
+  },
+  actions: { refetch: jest.fn(), loadMore: jest.fn() },
+});
+
+jest.mock('#hooks/mealPlan/useMealPlans', () => ({
+  useMealPlans: jest.fn(() => mockMealPlansState()),
 }));
 
 jest.mock('#hooks/mealPlan/useMealPlan', () => ({
@@ -226,11 +235,7 @@ describe('MealPlanMain', () => {
     ));
 
     const { useMealPlans } = jest.requireMock('#hooks/mealPlan/useMealPlans');
-    useMealPlans.mockReturnValue({
-      currentPlan: null,
-      mealPlans: [],
-      loading: false,
-    });
+    useMealPlans.mockReturnValue(mockMealPlansState());
 
     const { getByTestId } = render(<MealPlanMain />);
     expect(getByTestId('meal-plan-screen')).toBeTruthy();
@@ -242,11 +247,7 @@ describe('MealPlanMain', () => {
     ));
 
     const { useMealPlans } = jest.requireMock('#hooks/mealPlan/useMealPlans');
-    useMealPlans.mockReturnValue({
-      currentPlan: null,
-      mealPlans: [],
-      loading: false,
-    });
+    useMealPlans.mockReturnValue(mockMealPlansState());
 
     const tree = render(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
@@ -258,11 +259,12 @@ describe('MealPlanMain', () => {
     ));
 
     const { useMealPlans } = jest.requireMock('#hooks/mealPlan/useMealPlans');
-    useMealPlans.mockReturnValue({
-      currentPlan: { id: 'plan-1', name: 'My Plan' },
-      mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
-      loading: false,
-    });
+    useMealPlans.mockReturnValue(
+      mockMealPlansState({
+        currentPlan: { id: 'plan-1', name: 'My Plan' },
+        mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
+      }),
+    );
 
     const tree = render(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
@@ -274,11 +276,7 @@ describe('MealPlanMain', () => {
     ));
 
     const { useMealPlans } = jest.requireMock('#hooks/mealPlan/useMealPlans');
-    useMealPlans.mockReturnValue({
-      currentPlan: null,
-      mealPlans: [],
-      loading: true,
-    });
+    useMealPlans.mockReturnValue(mockMealPlansState({ loading: true }));
 
     const tree = render(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
@@ -290,11 +288,12 @@ describe('MealPlanMain', () => {
     ));
 
     const { useMealPlans } = jest.requireMock('#hooks/mealPlan/useMealPlans');
-    useMealPlans.mockReturnValue({
-      currentPlan: { id: 'plan-1', name: 'My Plan' },
-      mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
-      loading: false,
-    });
+    useMealPlans.mockReturnValue(
+      mockMealPlansState({
+        currentPlan: { id: 'plan-1', name: 'My Plan' },
+        mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
+      }),
+    );
 
     const { useDailyMeals } = jest.requireMock('#hooks/mealPlan/useDailyMeals');
     useDailyMeals.mockReturnValue({
@@ -315,14 +314,15 @@ describe('MealPlanMain', () => {
     ));
 
     const { useMealPlans } = jest.requireMock('#hooks/mealPlan/useMealPlans');
-    useMealPlans.mockReturnValue({
-      currentPlan: { id: 'plan-1', name: 'Plan 1' },
-      mealPlans: [
-        { id: 'plan-1', name: 'Plan 1' },
-        { id: 'plan-2', name: 'Plan 2' },
-      ],
-      loading: false,
-    });
+    useMealPlans.mockReturnValue(
+      mockMealPlansState({
+        currentPlan: { id: 'plan-1', name: 'Plan 1' },
+        mealPlans: [
+          { id: 'plan-1', name: 'Plan 1' },
+          { id: 'plan-2', name: 'Plan 2' },
+        ],
+      }),
+    );
 
     const tree = render(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
@@ -334,11 +334,12 @@ describe('MealPlanMain', () => {
     ));
 
     const { useMealPlans } = jest.requireMock('#hooks/mealPlan/useMealPlans');
-    useMealPlans.mockReturnValue({
-      currentPlan: { id: 'plan-1', name: 'My Plan' },
-      mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
-      loading: false,
-    });
+    useMealPlans.mockReturnValue(
+      mockMealPlansState({
+        currentPlan: { id: 'plan-1', name: 'My Plan' },
+        mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
+      }),
+    );
 
     const { useMealPlanCalendar } = jest.requireMock(
       '#hooks/mealPlan/useMealPlanCalendar',
@@ -367,11 +368,12 @@ describe('MealPlanMain', () => {
     ));
 
     const { useMealPlans } = jest.requireMock('#hooks/mealPlan/useMealPlans');
-    useMealPlans.mockReturnValue({
-      currentPlan: { id: 'plan-1', name: 'My Plan' },
-      mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
-      loading: false,
-    });
+    useMealPlans.mockReturnValue(
+      mockMealPlansState({
+        currentPlan: { id: 'plan-1', name: 'My Plan' },
+        mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
+      }),
+    );
 
     const { useMealPlan } = jest.requireMock('#hooks/mealPlan/useMealPlan');
     useMealPlan.mockReturnValue({
@@ -391,11 +393,12 @@ describe('MealPlanMain', () => {
     ));
 
     const { useMealPlans } = jest.requireMock('#hooks/mealPlan/useMealPlans');
-    useMealPlans.mockReturnValue({
-      currentPlan: { id: 'plan-1', name: 'My Plan' },
-      mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
-      loading: false,
-    });
+    useMealPlans.mockReturnValue(
+      mockMealPlansState({
+        currentPlan: { id: 'plan-1', name: 'My Plan' },
+        mealPlans: [{ id: 'plan-1', name: 'My Plan' }],
+      }),
+    );
 
     const { useMealPlanPermissions } = jest.requireMock(
       '#hooks/mealPlan/useMealPlanPermissions',

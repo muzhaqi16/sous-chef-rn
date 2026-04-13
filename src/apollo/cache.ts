@@ -494,6 +494,7 @@ export function makeCache(): InMemoryCache {
               return mergeObjects(existing, incoming);
             },
           },
+          savedRecipesConnection: mergeConnectionByNodeId(),
         },
       },
       Query: {
@@ -572,6 +573,10 @@ export function makeCache(): InMemoryCache {
             merge: mergeConnectionByNodeId().merge,
           },
           mealPlans: {
+            ...mergeConnectionByNodeId(),
+            keyArgs: ['filters'],
+          },
+          mealTemplates: {
             ...mergeConnectionByNodeId(),
             keyArgs: ['filters'],
           },

@@ -9,8 +9,12 @@ interface UseAddRecipeToMealPlanOptions {
   date?: Date;
 }
 
-export function useAddRecipeToMealPlan(options?: UseAddRecipeToMealPlanOptions) {
-  const { currentPlan, mealPlans } = useMealPlans();
+export function useAddRecipeToMealPlan(
+  options?: UseAddRecipeToMealPlanOptions,
+) {
+  const {
+    state: { currentPlan, mealPlans },
+  } = useMealPlans();
 
   const activePlan = (() => {
     if (options?.planId) {
@@ -31,22 +35,38 @@ export function useAddRecipeToMealPlan(options?: UseAddRecipeToMealPlanOptions) 
     return clamp(today, { start, end });
   })();
 
-  const addRecipeToMealPlan = async ({ recipeId, mealType, date }: { recipeId: string; mealType: MealType; date: Date }) => {
-      if (!activePlanId) {
-        toastService.error('No active meal plan. Create one first.');
-        return false;
-      }
-      const result = await createItem({
-        mealPlanId: activePlanId,
-        recipeId,
-        mealType,
-        date: date.toISOString() });
-      if (result?.success) {
-        toastService.success('Added to meal plan');
-        return true;
-      }
+  const addRecipeToMealPlan = async ({
+    recipeId,
+    mealType,
+    date,
+  }: {
+    recipeId: string;
+    mealType: MealType;
+    date: Date;
+  }) => {
+    if (!activePlanId) {
+      toastService.error('No active meal plan. Create one first.');
       return false;
-    };
+    }
+    const result = await createItem({
+      mealPlanId: activePlanId,
+      recipeId,
+      mealType,
+      date: date.toISOString(),
+    });
+    if (result?.success) {
+      toastService.success('Added to meal plan');
+      return true;
+    }
+    return false;
+  };
 
-  return { addRecipeToMealPlan, adding: creating, hasPlan: !!activePlanId, targetDate, mealPlans, activePlanId };
+  return {
+    addRecipeToMealPlan,
+    adding: creating,
+    hasPlan: !!activePlanId,
+    targetDate,
+    mealPlans,
+    activePlanId,
+  };
 }

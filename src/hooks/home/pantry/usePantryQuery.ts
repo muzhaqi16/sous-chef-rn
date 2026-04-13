@@ -8,7 +8,7 @@
  * - Preserve data during failures
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { NetworkStatus } from '@apollo/client';
 import {
   useGetPantryQuery,
@@ -27,30 +27,6 @@ import {
   useSetIsPantryQueryComplete,
 } from '#store/useAppStore';
 import { PAGE_SIZE } from '#/constants/pagination';
-
-// Structural fingerprint: return stable array reference when item IDs + content are unchanged.
-// Prevents unnecessary FlashList diffing when normalizePantry produces a new array object
-// but the content is structurally identical.
-// Includes updatedAt in the fingerprint so subscription echoes with identical data
-// return the stable reference, but genuine field changes propagate correctly.
-let _pantryLastFingerprint = '';
-let _pantryLastItems: any[] = [];
-
-function stabilizePantryItems<
-  T extends { id: string; updatedAt?: string | null },
->(items: T[] | undefined): T[] | undefined {
-  if (!items || items.length === 0) return items;
-  const fingerprint = items.map(i => `${i.id}:${i.updatedAt ?? ''}`).join(',');
-  if (
-    fingerprint === _pantryLastFingerprint &&
-    _pantryLastItems.length === items.length
-  ) {
-    return _pantryLastItems as T[];
-  }
-  _pantryLastFingerprint = fingerprint;
-  _pantryLastItems = items;
-  return items;
-}
 
 /**
  * Fetches pantry data with items, storage locations, and pagination.
@@ -81,6 +57,36 @@ export function usePantryQuery(
   const hasValidPantryId =
     !!pantryId?.trim() && !isLoggedOut && isHomeSelectionReady;
 
+  // ── Query activation latch ──
+  // During startup initialization, upstream state churn (isHomeSelectionReady,
+  // selectedHomeId) can cause hasValidPantryId to flicker. Each skip toggle
+  // (true→false) resets Apollo's fetchPolicy to the initial cache-and-network,
+  // firing a duplicate network request.
+  //
+  // Once the query activates for a given pantryId, latch it active so transient
+  // state changes don't re-skip it. The latch auto-resets when:
+  //  • pantryId changes (user switches pantries → fresh fetch needed)
+  //  • user logs out (query must stop)
+  //
+  // Uses "adjusting state during render" pattern (no ref.current reads).
+  const [activatedForId, setActivatedForId] = useState<string | null>(null);
+
+  // Latch: once validation passes for this pantryId, keep the query active
+  if (hasValidPantryId && pantryId && activatedForId !== pantryId) {
+    setActivatedForId(pantryId);
+  }
+
+  // Release: on logout, clear the latch so the query skips
+  if (activatedForId && isLoggedOut) {
+    setActivatedForId(null);
+  }
+
+  // The query should run when EITHER:
+  // 1. hasValidPantryId is currently true (normal path), OR
+  // 2. We previously activated for this exact pantryId (latch prevents flickering)
+  const isLatched = activatedForId === pantryId && !!pantryId;
+  const shouldSkip = !hasValidPantryId && !isLatched;
+
   const { data, loading, error, refetch, fetchMore, networkStatus } =
     useGetPantryQuery({
       variables: {
@@ -90,9 +96,17 @@ export function usePantryQuery(
         itemsOrderBy: itemsOrderBy ?? undefined,
         storageLocationsFirst: PAGE_SIZE.COMPACT,
       },
-      skip: !hasValidPantryId,
+      skip: shouldSkip,
       fetchPolicy: 'cache-and-network',
-      nextFetchPolicy: 'cache-first',
+      // After the initial network fetch, use cache-first for re-renders to avoid
+      // duplicate requests. On variable changes (filter/sort), revert to the
+      // initial policy so the user gets fresh data.
+      nextFetchPolicy(currentFetchPolicy, context) {
+        if (context.reason === 'variables-changed') {
+          return context.initialFetchPolicy;
+        }
+        return 'cache-first';
+      },
       errorPolicy: 'ignore', // Return cached data on network errors
       // Apollo emits a re-render when networkStatus transitions, so the
       // RefreshControl in PantryMain can observe pull-to-refresh state via
@@ -106,13 +120,10 @@ export function usePantryQuery(
   // Normalize pantry data to flatten Connection pattern
   const normalizedPantry = normalizePantry(data?.pantry);
 
-  // Stabilize array reference when content is structurally identical
-  const stableItems = stabilizePantryItems(normalizedPantry?.items);
-
   // Preserve pantry items across network failures — the cache is now the
   // single source of truth for which items exist, so no additional JS-layer
   // filtering (e.g. filterPendingDeletes) is needed.
-  const pantryItems = usePreservedArrayData(stableItems);
+  const pantryItems = usePreservedArrayData(normalizedPantry?.items);
 
   // Pagination using generic utility hook
   const { hasMore, loadMore, isLoadingMore } = usePagination({

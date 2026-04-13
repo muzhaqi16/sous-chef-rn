@@ -146,7 +146,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   );
   const [searchQuery, setSearchQuery] = useState('');
   const {
-    state: { recipes, hasNextPage },
+    state: { recipes, hasMore },
     actions: { loadMore },
   } = useSavedRecipes();
 
@@ -262,7 +262,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
       layoutMeasurement.height + contentOffset.y >=
       contentSize.height - paddingToBottom
     ) {
-      if (hasNextPage && !searchQuery.trim()) {
+      if (hasMore && !searchQuery.trim()) {
         loadMore();
       }
     }

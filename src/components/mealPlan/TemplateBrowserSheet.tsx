@@ -73,14 +73,8 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   const {
-    templates,
-    loading,
-    searchQuery,
-    setSearchQuery,
-    selectedCategory,
-    setSelectedCategory,
-    loadMore,
-    hasMore,
+    state: { templates, loading, searchQuery, selectedCategory, hasMore },
+    actions: { setSearchQuery, setSelectedCategory, loadMore },
   } = useMealTemplates();
 
   return (

@@ -26,14 +26,21 @@ jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
 }));
 jest.mock('../../../src/hooks/mealPlan/useMealTemplates', () => ({
   useMealTemplates: () => ({
-    templates: [],
-    loading: false,
-    searchQuery: '',
-    setSearchQuery: jest.fn(),
-    selectedCategory: undefined,
-    setSelectedCategory: jest.fn(),
-    loadMore: jest.fn(),
-    hasMore: false,
+    state: {
+      templates: [],
+      loading: false,
+      error: undefined,
+      hasMore: false,
+      totalCount: 0,
+      searchQuery: '',
+      selectedCategory: undefined,
+    },
+    actions: {
+      refetch: jest.fn(),
+      loadMore: jest.fn(),
+      setSearchQuery: jest.fn(),
+      setSelectedCategory: jest.fn(),
+    },
   }),
 }));
 jest.mock('../../../src/components/mealPlan/TemplateCard', () => ({

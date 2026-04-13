@@ -136,7 +136,9 @@ const MealPlanMainInner: React.FC = () => {
   } = useMealTemplateActions();
 
   // Fetch meal plans and resolve active plan
-  const { currentPlan, mealPlans, loading: plansLoading } = useMealPlans();
+  const {
+    state: { currentPlan, mealPlans, loading: plansLoading },
+  } = useMealPlans();
   const activePlanId =
     selectedMealPlanId ?? currentPlan?.id ?? mealPlans[0]?.id ?? null;
 

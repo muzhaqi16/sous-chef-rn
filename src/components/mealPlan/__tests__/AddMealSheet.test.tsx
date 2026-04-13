@@ -61,7 +61,7 @@ jest.mock('#hooks/recipe/useSavedRecipes', () => ({
           imageUrl: null,
         },
       ],
-      hasNextPage: false,
+      hasMore: false,
     },
     actions: {
       loadMore: jest.fn(),
