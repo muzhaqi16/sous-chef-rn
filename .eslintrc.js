@@ -23,8 +23,8 @@ module.exports = {
       },
     },
     {
-      // jest.setup.js runs in Node/Jest — declare globals via config instead of inline directives
-      files: ['jest.setup.js'],
+      // jest.setup.js and test setup files run in Node/Jest — declare globals via config
+      files: ['jest.setup.js', '__tests__/setup/**/*.js'],
       env: { node: true },
       globals: { __DEV__: 'readonly', globalThis: 'readonly' },
     },

@@ -2,12 +2,6 @@
 global.__APP_START_TIMESTAMP = Date.now();
 
 /**
- * Polyfill for crypto.getRandomValues()
- * Required for crypto.randomUUID() to work in React Native
- * MUST be imported before any other imports that use crypto
- */
-import 'react-native-get-random-values';
-/**
  * Configure Reanimated logger BEFORE any Reanimated code runs
  * This prevents "Cannot read property 'level' of undefined" errors
  * Must be called before any imports that use Reanimated animations
