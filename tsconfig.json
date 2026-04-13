@@ -4,7 +4,6 @@
   "exclude": ["**/node_modules", "**/Pods", "__tests__", "e2e"],
   "compilerOptions": {
     "types": ["react-native", "jest", "node"],
-    "baseUrl": ".",
     "paths": {
       "#/test-utils/*": ["./__tests__/helpers/*"],
       "#/*": ["./src/*"],
