@@ -93,14 +93,14 @@ export function BottomSheetAutocompleteInput<T>({
   onModalOpen,
   onModalClose,
 }: BottomSheetAutocompleteInputProps<T>) {
-  const userDismissedRef = useRef(false);
-  const hasInteractedRef = useRef(false);
+  const [userDismissed, setUserDismissed] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
 
   const handleDismiss = () => {
-    userDismissedRef.current = true; // Mark as user-dismissed
-    hasInteractedRef.current = false; // Reset interaction flag to prevent auto-reopen
+    setUserDismissed(true);
+    setHasInteracted(false);
     setShowAutocomplete(false);
     onModalClose?.();
   };
@@ -131,32 +131,26 @@ export function BottomSheetAutocompleteInput<T>({
     }
   }
 
-  // Show modal only when we have results (search-first pattern)
-  // Don't re-open if user explicitly dismissed (via selection or backdrop tap)
-  // Only show if user has interacted with the field (prevents auto-open on form load)
+  // Auto-open when data arrives and conditions are met (render-time state adjustment)
+  const shouldAutoOpen =
+    data.length > 0 &&
+    searchTerm.length >= minSearchLength &&
+    isOnline &&
+    !userDismissed &&
+    hasInteracted;
+  if (shouldAutoOpen && !showAutocomplete) {
+    setShowAutocomplete(true);
+  }
+
+  // Present modal when showAutocomplete transitions to true
+  const wasShowingRef = useRef(false);
   useEffect(() => {
-    if (
-      data.length > 0 &&
-      searchTerm.length >= minSearchLength &&
-      isOnline &&
-      !showAutocomplete &&
-      !userDismissedRef.current &&
-      hasInteractedRef.current
-    ) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- must sync state with imperative present() and ref guards
-      setShowAutocomplete(true);
+    if (showAutocomplete && !wasShowingRef.current) {
       bottomSheetRef.current?.present();
       onModalOpen?.();
     }
-  }, [
-    data.length,
-    searchTerm.length,
-    minSearchLength,
-    isOnline,
-    showAutocomplete,
-    onModalOpen,
-    bottomSheetRef,
-  ]);
+    wasShowingRef.current = showAutocomplete;
+  });
 
   // Modal only closes via explicit user action:
   // - handleSelectItem (user selects an item)
@@ -164,11 +158,10 @@ export function BottomSheetAutocompleteInput<T>({
   // - handleSubmitCustomValue (user presses return/done)
 
   const handleTextChange = (text: string) => {
-    hasInteractedRef.current = true; // User has interacted with the field
-    userDismissedRef.current = false; // Clear flag - user is typing again
+    setHasInteracted(true);
+    setUserDismissed(false);
     onChangeText(text);
     setSearchTerm(text);
-    // Modal visibility now controlled by data-based effects above
   };
 
   const handleBottomSheetTextChange = (text: string) => {
@@ -178,8 +171,8 @@ export function BottomSheetAutocompleteInput<T>({
   };
 
   const handleSelectItem = (item: T) => {
-    userDismissedRef.current = true; // Mark as user-dismissed
-    hasInteractedRef.current = false; // Reset interaction flag to prevent auto-reopen
+    setUserDismissed(true);
+    setHasInteracted(false);
     setShowAutocomplete(false);
     bottomSheetRef.current?.dismiss();
     onSelectItem(item);
@@ -187,13 +180,11 @@ export function BottomSheetAutocompleteInput<T>({
   };
 
   const handleSubmitCustomValue = () => {
-    // Accept the current searchTerm as the custom value
     if (searchTerm.trim()) {
       onChangeText(searchTerm.trim());
     }
-    // Dismiss the modal
-    userDismissedRef.current = true; // Mark as user-dismissed
-    hasInteractedRef.current = false; // Reset interaction flag to prevent auto-reopen
+    setUserDismissed(true);
+    setHasInteracted(false);
     setShowAutocomplete(false);
     bottomSheetRef.current?.dismiss();
     onModalClose?.();

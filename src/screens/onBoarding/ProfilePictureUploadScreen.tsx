@@ -263,7 +263,11 @@ export const ProfilePictureUploadScreen = () => {
             </>
           ) : hasExistingAvatar ? (
             <>
-              <CachedImage uri={existingAvatarUrl} style={styles.avatarImage} />
+              <CachedImage
+                uri={existingAvatarUrl}
+                style={styles.avatarImage}
+                displaySize={200}
+              />
               <Pressable
                 onPress={handleRemoveImage}
                 style={({ pressed }) => [

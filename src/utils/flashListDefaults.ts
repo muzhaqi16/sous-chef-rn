@@ -12,8 +12,8 @@ export const FLASHLIST_DEFAULTS: Record<string, FlashListPerformanceProps> = {
     maxItemsInRecyclePool: 15,
   },
   bottomSheet: {
-    drawDistance: 150,
-    maxItemsInRecyclePool: 10,
+    drawDistance: 250,
+    maxItemsInRecyclePool: 12,
   },
 };
 

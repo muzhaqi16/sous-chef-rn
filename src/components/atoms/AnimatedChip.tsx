@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -61,16 +61,10 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   };
 
   // Animated container style driven by shared value
+  // paddingRight is fixed — the LinearTransition layout animation handles spacing
+  // when the checkmark icon appears/disappears, avoiding non-GPU layout recalc.
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
-      paddingLeft: imageUrl
-        ? animatedTheme.get().spacing.sm
-        : animatedTheme.get().spacing['3'],
-      paddingRight: interpolate(
-        selectedProgress.get(),
-        [0, 1],
-        [animatedTheme.get().spacing['3'], animatedTheme.get().spacing.sm],
-      ),
       borderColor: interpolateColor(
         selectedProgress.get(),
         [0, 1],
@@ -86,7 +80,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
       ),
       opacity: disabled ? animatedTheme.get().opacity.disabled : 1,
     };
-  }, [selectedProgress, disabled, imageUrl]);
+  }, [selectedProgress, disabled]);
 
   // Animated text style driven by shared value
   const animatedTextStyle = useAnimatedStyle(() => {
@@ -113,50 +107,56 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
     };
   }, [selectedProgress]);
 
-  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View
+  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer Animated.View
+  // Layout animation on outer container so Pressable doesn't conflict with it
   return (
-    <View style={styles.container}>
-      <Animated.View
-        layout={LinearTransition.springify()
-          .mass(0.8)
-          .damping(30)
-          .stiffness(250)}
-        onTouchEnd={handlePress}
-        style={[styles.chip, animatedContainerStyle]}
+    <Animated.View
+      style={styles.container}
+      layout={LinearTransition.springify().mass(0.8).damping(30).stiffness(250)}
+    >
+      <Pressable
+        onPress={handlePress}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ selected }}
+        style={({ pressed }) => pressed && styles.pressed}
       >
-        {!!imageUrl && (
-          <CachedImage uri={imageUrl} style={styles.image} displaySize={24} />
-        )}
-        <Animated.Text style={[styles.label, animatedTextStyle]}>
-          {label}
-        </Animated.Text>
-        {!!selected && (
-          <Animated.View
-            style={styles.iconContainer}
-            layout={LinearTransition}
-            entering={FadeIn.duration(TIMING.STANDARD).easing(
-              standardEasing.factory(),
-            )}
-            exiting={FadeOut.duration(TIMING.FAST).easing(
-              standardEasing.factory(),
-            )}
-          >
-            <Svg width={14} height={14} viewBox="0 0 14 14">
-              <AnimatedPath
-                d={CHECKMARK_PATH}
-                stroke={theme.colors.primary}
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-                strokeDasharray={CHECKMARK_LENGTH}
-                animatedProps={checkmarkAnimatedProps}
-              />
-            </Svg>
-          </Animated.View>
-        )}
-      </Animated.View>
-    </View>
+        <Animated.View style={[styles.chip, animatedContainerStyle]}>
+          {!!imageUrl && (
+            <CachedImage uri={imageUrl} style={styles.image} displaySize={24} />
+          )}
+          <Animated.Text style={[styles.label, animatedTextStyle]}>
+            {label}
+          </Animated.Text>
+          {!!selected && (
+            <Animated.View
+              style={styles.iconContainer}
+              layout={LinearTransition}
+              entering={FadeIn.duration(TIMING.STANDARD).easing(
+                standardEasing.factory(),
+              )}
+              exiting={FadeOut.duration(TIMING.FAST).easing(
+                standardEasing.factory(),
+              )}
+            >
+              <Svg width={14} height={14} viewBox="0 0 14 14">
+                <AnimatedPath
+                  d={CHECKMARK_PATH}
+                  stroke={theme.colors.primary}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                  strokeDasharray={CHECKMARK_LENGTH}
+                  animatedProps={checkmarkAnimatedProps}
+                />
+              </Svg>
+            </Animated.View>
+          )}
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
   );
 };
 
@@ -164,12 +164,16 @@ const styles = StyleSheet.create(theme => ({
   container: {
     margin: 0,
   },
+  pressed: {
+    opacity: theme.opacity.pressed,
+  },
   chip: {
     alignItems: 'center',
     borderRadius: theme.radii['2xl'],
     flexDirection: 'row',
     justifyContent: 'center',
     paddingVertical: 6,
+    paddingHorizontal: theme.spacing.sm,
     borderWidth: 1.5,
   },
   image: {

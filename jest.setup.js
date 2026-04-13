@@ -1,5 +1,4 @@
 'use no memo';
-/* eslint-disable no-undef */
 /**
  * Jest Global Setup
  *
@@ -98,7 +97,7 @@ jest.mock('react-native-reanimated', () => {
       modify: noOp,
       get: jest.fn(() => sv.value),
       set: jest.fn(v => {
-        sv.value = v; // eslint-disable-line no-restricted-syntax -- mock simulates SharedValue internals
+        Object.assign(sv, { value: v });
       }),
     };
     return sv;
@@ -626,14 +625,21 @@ jest.mock('@shopify/flash-list', () => {
     FlashList: FlatList,
     MasonryFlashList: FlatList,
     useRecyclingState: (initialState, deps, onReset) => {
-      // Minimal implementation: reset state when deps change via useMemo
+      // Manual deps comparison — avoids dynamic deps array in hooks
       const valueRef = React.useRef();
-      React.useMemo(() => {
+      const prevDepsRef = React.useRef(null);
+
+      const isFirstRender = prevDepsRef.current === null;
+      const depsChanged =
+        isFirstRender || deps.some((d, i) => d !== prevDepsRef.current[i]);
+
+      if (depsChanged) {
+        prevDepsRef.current = deps;
         valueRef.current =
           typeof initialState === 'function' ? initialState() : initialState;
-        onReset?.();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, deps);
+        if (!isFirstRender) onReset?.();
+      }
+
       const [, setCounter] = React.useState(0);
       const setState = React.useCallback(newValue => {
         const next =

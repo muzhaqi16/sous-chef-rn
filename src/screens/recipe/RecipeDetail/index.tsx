@@ -67,13 +67,11 @@ interface SelectableIngredientItemProps {
 // Module-scope keyExtractor — zero runtime overhead
 const ingredientKeyExtractor = (item: { id: string }) => item.id;
 
-// Bridge component — reads selection state from context, receives theme colors via props
-const SelectableIngredientItemComponent: React.FC<
-  ListRenderItemInfo<SelectableIngredientItemProps['item']> & {
-    primaryColor: string;
-    textSecondary: string;
-  }
-> = ({ item, primaryColor, textSecondary }) => {
+// Bridge component — reads selection state from context and theme colors internally
+const SelectableIngredientItem: React.FC<
+  ListRenderItemInfo<SelectableIngredientItemProps['item']>
+> = ({ item }) => {
+  const { theme } = useUnistyles();
   const { selectedIngredients, toggleIngredient } = useSelectableIngredients();
   const isSelected = selectedIngredients.has(item.id);
 
@@ -88,7 +86,7 @@ const SelectableIngredientItemComponent: React.FC<
       <Ionicons
         name={isSelected ? 'checkbox' : 'square-outline'}
         size={24}
-        color={isSelected ? primaryColor : textSecondary}
+        color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
       />
       <View style={styles.ingredientInfo}>
         <Text style={styles.ingredientName}>{item.name}</Text>
@@ -100,9 +98,12 @@ const SelectableIngredientItemComponent: React.FC<
   );
 };
 
-const SelectableIngredientItem = SelectableIngredientItemComponent;
-
 const getSelectableIngredientItemType = () => 'item';
+
+// Module-scope renderItem — avoids inline function allocation on every render
+const renderSelectableIngredientItem = (
+  info: ListRenderItemInfo<SelectableIngredientItemProps['item']>,
+) => <SelectableIngredientItem {...info} />;
 
 // --- End module-scope FlashList infrastructure ---
 
@@ -913,15 +914,7 @@ const RecipeDetailScreen: React.FC = () => {
             renderScrollComponent={BottomSheetScrollable}
             data={backendRecipe?.ingredients || []}
             keyExtractor={ingredientKeyExtractor}
-            renderItem={(
-              info: ListRenderItemInfo<SelectableIngredientItemProps['item']>,
-            ) => (
-              <SelectableIngredientItem
-                {...info}
-                primaryColor={theme.colors.primary}
-                textSecondary={theme.colors.textSecondary}
-              />
-            )}
+            renderItem={renderSelectableIngredientItem}
             getItemType={getSelectableIngredientItemType}
             extraData={selectedIngredients.size}
             {...FLASHLIST_DEFAULTS.fullScreen}

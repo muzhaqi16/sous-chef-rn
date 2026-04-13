@@ -1,15 +1,17 @@
 import React from 'react';
-import { View, useWindowDimensions } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   useAnimatedStyle,
   withTiming,
+  LinearTransition,
 } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
 import { NavigationButton } from './NavigationButton';
 import type { OnboardingNavigationProps } from './types';
 
 const ButtonHeight = 60;
+const LAYOUT_TRANSITION = LinearTransition.duration(TIMING.MODERATE);
 
 export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
   showBackButton,
@@ -20,42 +22,14 @@ export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
   skipAction,
   isLastStep = false,
 }) => {
-  const { width: windowWidth } = useWindowDimensions();
-
-  const paddingHorizontal = 20;
-  const gap = 10;
-
-  // Calculate button widths based on what's shown
-  const getButtonWidths = () => {
-    const availableWidth = windowWidth - paddingHorizontal * 2;
-
-    if (showBackButton && showContinueButton) {
-      // Split layout: back button smaller, continue button larger
-      const backWidth = availableWidth * 0.35;
-      const continueWidth = availableWidth * 0.65 - gap;
-      return { backWidth, continueWidth };
-    } else {
-      // Single button takes full width
-      const fullWidth = availableWidth;
-      return { backWidth: 0, continueWidth: fullWidth };
-    }
-  };
-
-  const { backWidth, continueWidth } = getButtonWidths();
-
+  // GPU-composited opacity animation (no width/marginLeft layout recalc)
   const backButtonStyle = useAnimatedStyle(() => {
     return {
-      width: withTiming(showBackButton ? backWidth : 0, { duration: TIMING.MODERATE }),
-      opacity: withTiming(showBackButton ? 1 : 0, { duration: TIMING.STANDARD }),
+      opacity: withTiming(showBackButton ? 1 : 0, {
+        duration: TIMING.STANDARD,
+      }),
     };
-  }, [showBackButton, backWidth]);
-
-  const continueButtonStyle = useAnimatedStyle(() => {
-    return {
-      width: withTiming(continueWidth, { duration: TIMING.MODERATE }),
-      marginLeft: withTiming(showBackButton ? gap : 0, { duration: TIMING.MODERATE }),
-    };
-  }, [showBackButton, continueWidth, gap]);
+  }, [showBackButton]);
 
   return (
     <View style={styles.container}>
@@ -70,11 +44,17 @@ export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
         </View>
       )}
 
-      {/* Main navigation buttons */}
-      <View style={styles.navigationContainer}>
+      {/* Main navigation buttons — LinearTransition handles reflow when back button appears/disappears */}
+      <Animated.View
+        style={styles.navigationContainer}
+        layout={LAYOUT_TRANSITION}
+      >
         {/* Back button */}
         {!!showBackButton && !!backAction && (
-          <Animated.View style={[backButtonStyle]}>
+          <Animated.View
+            style={[styles.backButtonContainer, backButtonStyle]}
+            layout={LAYOUT_TRANSITION}
+          >
             <NavigationButton
               action={backAction}
               style={styles.backButton}
@@ -85,7 +65,10 @@ export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
 
         {/* Continue/Finish button */}
         {!!showContinueButton && (
-          <Animated.View style={[continueButtonStyle]}>
+          <Animated.View
+            style={styles.continueButtonContainer}
+            layout={LAYOUT_TRANSITION}
+          >
             <NavigationButton
               action={{
                 ...continueAction,
@@ -96,7 +79,7 @@ export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
             />
           </Animated.View>
         )}
-      </View>
+      </Animated.View>
     </View>
   );
 };
@@ -123,6 +106,13 @@ const styles = StyleSheet.create(theme => ({
   navigationContainer: {
     flexDirection: 'row',
     height: ButtonHeight,
+    gap: 10,
+  },
+  backButtonContainer: {
+    flex: 0.54, // 35% / 65% ≈ 0.54 ratio
+  },
+  continueButtonContainer: {
+    flex: 1,
   },
   backButton: {
     backgroundColor: theme.colors.surface,

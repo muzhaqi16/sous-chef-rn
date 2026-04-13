@@ -69,13 +69,20 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     return { opacity, transform: [{ scale }] };
   });
 
-  // User info: collapse height + fade
+  // User info: collapse via GPU-composited scaleY + translateY + opacity
+  // (avoids Yoga layout recalculation every scroll frame)
   const userInfoStyle = useAnimatedStyle(() => {
     if (!progress) return {};
-    const height = interpolate(
+    const scaleY = interpolate(
       progress.get(),
       [0, 1],
-      [USER_INFO_HEIGHT, 0],
+      [1, 0],
+      Extrapolation.CLAMP,
+    );
+    const translateY = interpolate(
+      progress.get(),
+      [0, 1],
+      [0, -USER_INFO_HEIGHT / 2],
       Extrapolation.CLAMP,
     );
     const opacity = interpolate(
@@ -84,7 +91,10 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       [1, 0],
       Extrapolation.CLAMP,
     );
-    return { height, opacity };
+    return {
+      transform: [{ translateY }, { scaleY }],
+      opacity,
+    };
   });
 
   return (
@@ -200,8 +210,10 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   userInfo: {
+    height: USER_INFO_HEIGHT,
     alignItems: 'center',
     overflow: 'hidden',
+    transformOrigin: 'top',
   },
   nameText: {
     fontSize: theme.fonts.size.lg,

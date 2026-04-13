@@ -91,7 +91,11 @@ export const ShoppingListItemDetail: React.FC<
                 imageHeight={160}
               />
             ) : imageUrl ? (
-              <CachedImage uri={imageUrl} style={styles.itemImage} />
+              <CachedImage
+                uri={imageUrl}
+                style={styles.itemImage}
+                displaySize={120}
+              />
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Icon

@@ -114,6 +114,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
             key={currentImageUrl}
             uri={currentImageUrl}
             style={styles.image}
+            displaySize={imageHeight}
             resizeMode="contain"
             onStart={() => {
               setImageLoading(true);

@@ -7,9 +7,9 @@ import { Telemetry } from '#/services/telemetry';
 /**
  * Maximum number of edges to retain in an itemsConnection cache entry.
  * When a merge would exceed this limit, the oldest edges are evicted.
- * 150 = 3 pages of 50 (pantry) or ~7 pages of 20 (shopping list).
+ * 100 = 2 pages of 50 (pantry) or 5 pages of 20 (shopping list).
  */
-const MAX_WINDOW_EDGES = 150;
+const MAX_WINDOW_EDGES = 100;
 
 /**
  * Version-aware merge function that handles optimistic updates and conflict resolution
@@ -585,7 +585,7 @@ export function makeCache(): InMemoryCache {
     },
   });
 
-  const MAX_CACHE_SIZE_MB = 100;
+  const MAX_CACHE_SIZE_MB = 50;
   const GC_THRESHOLD = 0.8; // Trigger GC at 80% capacity
   const SAMPLE_SIZE = 100; // Sample first 100 top-level keys for estimation
 
@@ -689,8 +689,8 @@ export function makeCache(): InMemoryCache {
   stopCacheMonitoring();
 
   // Dev: monitor every 5 minutes with logging
-  // Production: GC check every 10 minutes (sampling takes <5ms, safe for prod)
-  const interval = __DEV__ ? 5 * 60 * 1000 : 10 * 60 * 1000;
+  // Production: GC check every 5 minutes (sampling takes <5ms, safe for prod)
+  const interval = 5 * 60 * 1000;
   cacheMonitoringInterval = setInterval(runCacheGC, interval);
 
   return cache;

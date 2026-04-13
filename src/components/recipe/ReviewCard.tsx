@@ -33,7 +33,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       {/* Header: avatar, name, date */}
       <View style={styles.header}>
         {avatar ? (
-          <CachedImage uri={avatar} style={styles.avatar} />
+          <CachedImage uri={avatar} style={styles.avatar} displaySize={36} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Ionicons

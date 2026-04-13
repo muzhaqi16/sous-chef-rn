@@ -99,6 +99,13 @@ export interface NotificationState {
   resetNotifications: () => void;
 }
 
+/**
+ * Maximum number of notifications to retain in the store.
+ * When exceeded, oldest read notifications are evicted first.
+ * Prevents unbounded memory growth from immer patches and persist serialization.
+ */
+const MAX_NOTIFICATIONS = 100;
+
 const initialNotificationState: Omit<
   NotificationState,
   | 'addNotification'
@@ -205,6 +212,21 @@ export const createNotificationSlice: StateCreator<
       }
 
       state.notifications.unshift(newNotification);
+
+      // Evict oldest read notifications when over the cap
+      if (state.notifications.length > MAX_NOTIFICATIONS) {
+        const keep: NotificationItem[] = [];
+        const readOverflow: NotificationItem[] = [];
+        for (const n of state.notifications) {
+          if (!n.isRead || keep.length < MAX_NOTIFICATIONS) {
+            keep.push(n);
+          } else {
+            readOverflow.push(n);
+          }
+        }
+        state.notifications = keep.slice(0, MAX_NOTIFICATIONS);
+      }
+
       state.unreadCount = state.notifications.filter(n => !n.isRead).length;
       state.urgentCount = state.notifications.filter(
         n => !n.isRead && n.priority === NotificationPriority.URGENT,
@@ -268,6 +290,17 @@ export const createNotificationSlice: StateCreator<
 
       if (newNotifications.length > 0) {
         state.notifications.unshift(...newNotifications);
+      }
+
+      // Evict oldest read notifications when over the cap
+      if (state.notifications.length > MAX_NOTIFICATIONS) {
+        const keep: NotificationItem[] = [];
+        for (const n of state.notifications) {
+          if (!n.isRead || keep.length < MAX_NOTIFICATIONS) {
+            keep.push(n);
+          }
+        }
+        state.notifications = keep.slice(0, MAX_NOTIFICATIONS);
       }
 
       state.unreadCount = state.notifications.filter(n => !n.isRead).length;

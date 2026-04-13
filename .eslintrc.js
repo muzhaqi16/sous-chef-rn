@@ -22,13 +22,18 @@ module.exports = {
         '@typescript-eslint/no-deprecated': 'warn',
       },
     },
+    {
+      // jest.setup.js runs in Node/Jest — declare globals via config instead of inline directives
+      files: ['jest.setup.js'],
+      env: { node: true },
+      globals: { __DEV__: 'readonly', globalThis: 'readonly' },
+    },
   ],
   rules: {
     // Prevent barrel file imports for better tree shaking
     'no-barrel-files/no-barrel-files': 'error',
 
     // Detect React Compiler bail-outs at lint time
-    // Warn level — existing eslint-disable comments cause bail-outs in a few files
     'react-compiler/react-compiler': 'warn',
 
     // Surface silent compiler bailouts (try/finally, unsupported syntax).
@@ -69,6 +74,7 @@ module.exports = {
 
     // Disable rules not relevant for React Native
     'no-bitwise': 'off', // Allow bitwise operations for hash functions
+    'no-void': ['error', { allowAsStatement: true }], // Allow void as statement (e.g. void expr to reference a value)
     'no-catch-shadow': 'off', // IE 8 compatibility not needed
     'react-native/no-inline-styles': 'off', // Allow inline styles for simple one-offs
 
@@ -92,9 +98,8 @@ module.exports = {
       },
     ],
 
-    // Allow unlimited eslint-disable for generated files
-    'eslint-comments/no-unlimited-disable': 'off',
-    'eslint-comments/no-unused-disable': 'off',
+    // Ban all eslint-disable directives — fix the root cause instead of suppressing
+    'eslint-comments/no-use': 'error',
 
     // Allow missing radix for parseInt in specific contexts
     radix: ['warn', 'as-needed'],
