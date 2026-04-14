@@ -64,10 +64,6 @@ jest.mock('#components/molecules/Header', () => ({
   Header: ({ title }: any) => title,
 }));
 
-jest.mock('#/components/atoms/AnimatedButton', () => ({
-  AnimatedButton: () => null,
-}));
-
 jest.mock('#/components/atoms/BaseInput/BaseInput', () => ({
   BaseInput: () => null,
 }));

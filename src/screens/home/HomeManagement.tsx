@@ -19,7 +19,6 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useHomeManagement } from '#hooks/home/hooks/useHomeManagement';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
-import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
 import { Button } from '#/components/base/Button';
 import { toastService } from '#/services/toastService';
@@ -339,7 +338,7 @@ export const HomeManagement: React.FC = () => {
                   >
                     Cancel
                   </Button>
-                  <AnimatedButton
+                  <Button
                     loading={joiningByCode}
                     disabled={!joinCode.trim()}
                     onPress={handleJoinHome}
@@ -347,7 +346,7 @@ export const HomeManagement: React.FC = () => {
                     style={styles.actionButton}
                   >
                     Join
-                  </AnimatedButton>
+                  </Button>
                 </View>
               </View>
             )}

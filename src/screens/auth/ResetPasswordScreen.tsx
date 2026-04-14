@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
+import { View, Text } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -9,6 +8,7 @@ import { object, string, ref } from 'yup';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { PasswordInput } from '#components/atoms/PasswordInput';
+import { Button } from '#components/base/Button';
 import { useAppStore } from '#store/useAppStore';
 import { useResetPasswordMutation } from '#generated';
 import { logger } from '#/utils/environment';
@@ -175,15 +175,13 @@ export const ResetPasswordScreen: React.FC = () => {
             new password reset from the login screen.
           </Text>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              pressed && { opacity: 0.7 },
-            ]}
+          <Button
+            variant="primary"
             onPress={handleReturnToLogin}
+            style={styles.buttonSpacing}
           >
-            <Text style={styles.primaryButtonText}>Return to Login</Text>
-          </Pressable>
+            Return to Login
+          </Button>
         </View>
       </View>
     );
@@ -229,20 +227,15 @@ export const ResetPasswordScreen: React.FC = () => {
             />
           </View>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              pressed && { opacity: 0.7 },
-            ]}
-            onPress={() => form.handleSubmit(onSubmit)()}
-            disabled={isSubmitting || !form.formState.isValid}
+          <Button
+            variant="primary"
+            onPress={form.handleSubmit(onSubmit)}
+            disabled={!form.formState.isValid}
+            loading={isSubmitting}
+            style={styles.buttonSpacing}
           >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Reset Password</Text>
-            )}
-          </Pressable>
+            Reset Password
+          </Button>
         </View>
       </View>
     </View>
@@ -290,17 +283,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
-  primaryButton: {
-    paddingVertical: theme.spacing.sm + 2,
-    paddingHorizontal: theme.spacing.xl,
-    borderRadius: theme.radii.sm,
-    alignItems: 'center',
+  buttonSpacing: {
     marginTop: theme.spacing['3'],
-    backgroundColor: theme.colors.primary,
-  },
-  primaryButtonText: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
 }));

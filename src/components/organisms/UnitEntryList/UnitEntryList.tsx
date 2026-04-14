@@ -5,7 +5,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
-import { AnimatedButton } from '#/components/atoms/AnimatedButton';
+import { Button } from '#/components/base/Button';
 
 export interface UnitEntry {
   id: string;
@@ -159,13 +159,9 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
         </View>
       ))}
 
-      <AnimatedButton
-        variant="secondary"
-        onPress={handleAddEntry}
-        disabled={disabled}
-      >
+      <Button variant="secondary" onPress={handleAddEntry} disabled={disabled}>
         Add Unit
-      </AnimatedButton>
+      </Button>
     </View>
   );
 };

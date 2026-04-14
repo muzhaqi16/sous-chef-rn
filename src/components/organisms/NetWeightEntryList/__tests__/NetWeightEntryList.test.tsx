@@ -11,29 +11,53 @@ jest.mock('#/components/molecules/FormInput', () => ({
   FormInput: ({ label, value, onChangeText, placeholder }: any) => {
     const RN = require('react-native');
     const R = require('react');
-    return R.createElement(RN.View, null,
+    return R.createElement(
+      RN.View,
+      null,
       R.createElement(RN.Text, null, label),
-      R.createElement(RN.TextInput, { value, onChangeText, placeholder, testID: `input-${label}` }),
+      R.createElement(RN.TextInput, {
+        value,
+        onChangeText,
+        placeholder,
+        testID: `input-${label}`,
+      }),
     );
   },
 }));
 
-jest.mock('#/components/molecules/AutocompleteField/UnitAutocompleteField', () => ({
-  UnitAutocompleteField: ({ label, value, onChangeText, placeholder }: any) => {
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(RN.View, null,
-      R.createElement(RN.Text, null, label),
-      R.createElement(RN.TextInput, { value, onChangeText, placeholder, testID: `unit-input-${label}` }),
-    );
-  },
-}));
+jest.mock(
+  '#/components/molecules/AutocompleteField/UnitAutocompleteField',
+  () => ({
+    UnitAutocompleteField: ({
+      label,
+      value,
+      onChangeText,
+      placeholder,
+    }: any) => {
+      const RN = require('react-native');
+      const R = require('react');
+      return R.createElement(
+        RN.View,
+        null,
+        R.createElement(RN.Text, null, label),
+        R.createElement(RN.TextInput, {
+          value,
+          onChangeText,
+          placeholder,
+          testID: `unit-input-${label}`,
+        }),
+      );
+    },
+  }),
+);
 
-jest.mock('#/components/atoms/AnimatedButton', () => ({
-  AnimatedButton: ({ children, onPress, disabled }: any) => {
+jest.mock('#/components/base/Button', () => ({
+  Button: ({ children, onPress, disabled }: any) => {
     const RN = require('react-native');
     const R = require('react');
-    return R.createElement(RN.Pressable, { onPress, disabled, testID: 'add-btn' },
+    return R.createElement(
+      RN.Pressable,
+      { onPress, disabled, testID: 'add-btn' },
       R.createElement(RN.Text, null, children),
     );
   },

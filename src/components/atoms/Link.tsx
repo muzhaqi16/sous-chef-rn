@@ -27,7 +27,6 @@ export const Link: React.FC<LinkProps> = ({
       {...rest}
       testID={testID}
       onPress={disabled ? undefined : onPress}
-      disabled={disabled}
       accessibilityRole="link"
       accessibilityState={{ disabled }}
       style={[

@@ -3,7 +3,6 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
 import { Button } from '#/components/base/Button';
-import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 import { FormCheckbox } from '#/components/molecules/FormCheckbox';
 
 interface CreateHomeFormProps {
@@ -44,14 +43,10 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
         onPress={() => onAllowJoinCodeChange(!allowJoinCode)}
       />
       <View style={styles.formActions}>
-        <Button
-          variant="secondary"
-          onPress={onCancel}
-          fullWidth
-        >
+        <Button variant="secondary" onPress={onCancel} fullWidth>
           Cancel
         </Button>
-        <AnimatedButton
+        <Button
           loading={isCreating}
           disabled={!homeName.trim()}
           onPress={onSubmit}
@@ -59,7 +54,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
           style={styles.button}
         >
           Create
-        </AnimatedButton>
+        </Button>
       </View>
     </View>
   );

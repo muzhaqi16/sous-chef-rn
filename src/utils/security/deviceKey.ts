@@ -19,8 +19,8 @@ interface DeviceKeyOptions {
  * Generates a secure, device-specific encryption key for MMKV storage.
  *
  * Storage tier: react-native-keychain (iOS Keychain / Android Keystore).
- * The key is generated via uuid v4 (generateId()),
- * backed by Hermes's native crypto.getRandomValues().
+ * The key is generated via uuid v4 (generateId()), backed by
+ * crypto.getRandomValues() (polyfilled by react-native-get-random-values).
  */
 export class DeviceKeyManager {
   private static cachedKey: string | null = null;
@@ -60,7 +60,7 @@ export class DeviceKeyManager {
 
   /**
    * Generate a new device-specific encryption key using uuid v4
-   * (via generateId(), backed by Hermes's native crypto.getRandomValues()).
+   * (via generateId(), backed by react-native-get-random-values).
    */
   private static async generateNewKey(): Promise<string> {
     const key = generateId().replaceAll('-', '');

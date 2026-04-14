@@ -7,11 +7,15 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/components/atoms/AnimatedButton', () => ({
-  AnimatedButton: ({ children, onPress, disabled, loading }: any) => {
+jest.mock('#/components/base/Button', () => ({
+  Button: ({ children, onPress, disabled, loading }: any) => {
     const { Pressable, Text } = require('react-native');
     return (
-      <Pressable onPress={onPress} disabled={disabled || loading} testID={`button-${children}`}>
+      <Pressable
+        onPress={onPress}
+        disabled={disabled || loading}
+        testID={`button-${children}`}
+      >
         <Text>{loading ? 'Loading...' : children}</Text>
       </Pressable>
     );
@@ -95,12 +99,15 @@ jest.mock('#/components/organisms/UnitEntryList/UnitEntryList', () => ({
   },
 }));
 
-jest.mock('#/components/organisms/NetWeightEntryList/NetWeightEntryList', () => ({
-  NetWeightEntryList: () => {
-    const { View } = require('react-native');
-    return <View testID="net-weight-entry-list" />;
-  },
-}));
+jest.mock(
+  '#/components/organisms/NetWeightEntryList/NetWeightEntryList',
+  () => ({
+    NetWeightEntryList: () => {
+      const { View } = require('react-native');
+      return <View testID="net-weight-entry-list" />;
+    },
+  }),
+);
 
 jest.mock('#/components/molecules/DynamicFormFields', () => ({
   DynamicFormFields: ({ fields }: any) => {
@@ -168,11 +175,7 @@ describe('AddItemForm', () => {
 
   it('shows format when format is provided with barcode', () => {
     render(
-      <AddItemForm
-        {...defaultProps}
-        barcode="123456789012"
-        format="ean13"
-      />,
+      <AddItemForm {...defaultProps} barcode="123456789012" format="ean13" />,
     );
     expect(screen.getByText('EAN13')).toBeTruthy();
   });
@@ -207,12 +210,16 @@ describe('AddItemForm', () => {
 
   it('shows barcode subtitle when barcode prop is given', () => {
     render(<AddItemForm {...defaultProps} barcode="123456789012" />);
-    expect(screen.getByText('Add this item to the database for future scans')).toBeTruthy();
+    expect(
+      screen.getByText('Add this item to the database for future scans'),
+    ).toBeTruthy();
   });
 
   it('shows non-barcode subtitle when no barcode', () => {
     render(<AddItemForm {...defaultProps} />);
-    expect(screen.getByText('Create a new item with basic information')).toBeTruthy();
+    expect(
+      screen.getByText('Create a new item with basic information'),
+    ).toBeTruthy();
   });
 
   it('shows UPC/Barcode label when scannedValue is numeric barcode', () => {
@@ -230,7 +237,13 @@ describe('AddItemForm', () => {
   });
 
   it('shows format in uppercase when format prop provided', () => {
-    render(<AddItemForm {...defaultProps} scannedValue="123456789012" format="ean13" />);
+    render(
+      <AddItemForm
+        {...defaultProps}
+        scannedValue="123456789012"
+        format="ean13"
+      />,
+    );
     expect(screen.getByText('Format')).toBeTruthy();
     expect(screen.getByText('EAN13')).toBeTruthy();
   });
@@ -292,12 +305,16 @@ describe('AddItemForm', () => {
   describe('detectScanType logic', () => {
     it('detects 12-digit value as barcode (UPC-A)', () => {
       render(<AddItemForm {...defaultProps} scannedValue="012345678901" />);
-      expect(screen.getAllByText('UPC/Barcode').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('UPC/Barcode').length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
 
     it('detects 13-digit value as barcode (EAN-13)', () => {
       render(<AddItemForm {...defaultProps} scannedValue="1234567890123" />);
-      expect(screen.getAllByText('UPC/Barcode').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('UPC/Barcode').length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
 
     it('treats 7-digit numeric value as SKU (too short for barcode)', () => {
@@ -398,15 +415,21 @@ describe('AddItemForm', () => {
     it('disables cancel button when loading', () => {
       render(<AddItemForm {...defaultProps} loading={true} />);
       const cancelButton = screen.getByTestId('button-Cancel');
-      // The mock AnimatedButton passes disabled={disabled || loading}, so it should be truthy
-      expect(cancelButton.props.accessibilityState?.disabled ?? cancelButton.props.disabled).toBeTruthy();
+      // The mock Button passes disabled={disabled || loading}, so it should be truthy
+      expect(
+        cancelButton.props.accessibilityState?.disabled ??
+          cancelButton.props.disabled,
+      ).toBeTruthy();
     });
 
     it('cancel button is not disabled when not loading', () => {
       render(<AddItemForm {...defaultProps} loading={false} />);
       const cancelButton = screen.getByTestId('button-Cancel');
       // When not loading, disabled should be falsy
-      expect(cancelButton.props.accessibilityState?.disabled ?? cancelButton.props.disabled).toBeFalsy();
+      expect(
+        cancelButton.props.accessibilityState?.disabled ??
+          cancelButton.props.disabled,
+      ).toBeFalsy();
     });
   });
 

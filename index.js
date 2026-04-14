@@ -1,3 +1,8 @@
+// Install crypto.getRandomValues polyfill before any module that uses uuid.
+// Must be the very first import — generateId() runs during app startup
+// (deviceKey, deviceId) and uuid v4 reads globalThis.crypto.getRandomValues.
+import 'react-native-get-random-values';
+
 // Record JS entry timestamp before any imports for startup time measurement
 global.__APP_START_TIMESTAMP = Date.now();
 

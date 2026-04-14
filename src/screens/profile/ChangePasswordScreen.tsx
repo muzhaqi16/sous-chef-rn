@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -15,6 +13,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { Header } from '#components/molecules/Header';
+import { Button } from '#components/base/Button';
 import { useChangePasswordMutation } from '#generated';
 import { useToast } from '#hooks/useToast';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -167,21 +166,15 @@ export const ChangePasswordScreen: React.FC = () => {
               />
             </View>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.submitButton,
-                (!isFormValid || isSubmitting) && styles.submitButtonDisabled,
-                pressed && styles.pressed,
-              ]}
-              onPress={() => form.handleSubmit(onSubmit)()}
-              disabled={!isFormValid || isSubmitting}
+            <Button
+              variant="primary"
+              onPress={form.handleSubmit(onSubmit)}
+              disabled={!isFormValid}
+              loading={isSubmitting}
+              style={styles.buttonSpacing}
             >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color={theme.colors.white} />
-              ) : (
-                <Text style={styles.submitButtonText}>Change Password</Text>
-              )}
-            </Pressable>
+              Change Password
+            </Button>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -224,24 +217,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
-  submitButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.xl,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
+  buttonSpacing: {
     marginTop: theme.spacing.md,
-  },
-  submitButtonDisabled: {
-    opacity: theme.opacity.disabled,
-  },
-  submitButtonText: {
-    color: theme.colors.white,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));
 

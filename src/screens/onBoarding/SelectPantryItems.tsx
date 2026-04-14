@@ -21,7 +21,6 @@ import { removeFromPantryItemsCache } from '#/hooks/home/pantry/utils';
 import { useAppStore } from '#store/useAppStore';
 import { Button } from '#components/base/Button';
 import { AnimatedChip } from '#components/atoms/AnimatedChip';
-import { AnimatedButton } from '#components/atoms/AnimatedButton';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
@@ -128,9 +127,9 @@ export const SelectPantryItems = () => {
           <Text style={styles.errorText}>
             Unable to load items. Please try again.
           </Text>
-          <AnimatedButton onPress={() => refetch()} variant="primary">
+          <Button onPress={() => refetch()} variant="primary">
             Try Again
-          </AnimatedButton>
+          </Button>
         </View>
       </OnBoardingWrapper>
     );
