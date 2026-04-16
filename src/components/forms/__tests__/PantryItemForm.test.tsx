@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { screen, fireEvent } from '@testing-library/react-native';
 import { PantryItemForm } from '../PantryItemForm';
 import { renderWithProviders } from '#/test-utils/renderWithProviders';
 
@@ -127,9 +127,15 @@ jest.mock('#components/molecules/Header', () => ({
 }));
 
 jest.mock('#components/molecules/DynamicFormFields', () => ({
-  DynamicFormFields: () => {
-    const { View } = require('react-native');
-    return <View testID="dynamic-form-fields" />;
+  DynamicFormFields: ({ fields }: any) => {
+    const { Text, View } = require('react-native');
+    return (
+      <View testID="dynamic-form-fields">
+        {(fields || []).map((field: any, i: number) => (
+          <Text key={i}>{field.label}</Text>
+        ))}
+      </View>
+    );
   },
 }));
 
@@ -190,18 +196,21 @@ describe('PantryItemForm', () => {
     expect(screen.getByText('Item Information (add)')).toBeTruthy();
   });
 
-  it('renders quantity section in add mode', () => {
+  it('renders quantity section on the Inventory tab', () => {
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Inventory'));
     expect(screen.getByText('Quantity (add)')).toBeTruthy();
   });
 
-  it('renders storage details section in add mode', () => {
+  it('renders storage details section on the Storage tab', () => {
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Storage'));
     expect(screen.getByText('Storage Details (add)')).toBeTruthy();
   });
 
-  it('renders net weight section', () => {
+  it('renders net weight section on the Product tab', () => {
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Product'));
     expect(screen.getAllByText('Net Weight').length).toBeGreaterThanOrEqual(1);
   });
 
@@ -305,6 +314,8 @@ describe('PantryItemForm', () => {
       refetch: jest.fn(),
     });
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
+    fireEvent.press(screen.getByText('Inventory'));
+    fireEvent.press(screen.getByText('More options'));
     expect(screen.getByText('Tags')).toBeTruthy();
     expect(screen.getByTestId('dynamic-form-fields')).toBeTruthy();
     // Restore
@@ -414,6 +425,7 @@ describe('PantryItemForm', () => {
       refetch: jest.fn(),
     });
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
+    fireEvent.press(screen.getByText('Product'));
     expect(screen.getByText(/Weight locked after use/)).toBeTruthy();
     // Restore
     useGetPantryItemQuery.mockReturnValue({
@@ -459,9 +471,10 @@ describe('PantryItemForm', () => {
     });
   });
 
-  it('renders add mode with proper testIDs', () => {
+  it('renders add mode with proper testIDs across tabs', () => {
     renderWithProviders(<PantryItemForm mode="add" />);
     expect(screen.getByTestId('add-pantry-item-name-input')).toBeTruthy();
+    fireEvent.press(screen.getByText('Inventory'));
     expect(screen.getByTestId('add-pantry-item-quantity-input')).toBeTruthy();
   });
 
@@ -492,6 +505,7 @@ describe('PantryItemForm', () => {
       refetch: jest.fn(),
     });
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
+    fireEvent.press(screen.getByText('Inventory'));
     expect(screen.getByTestId('edit-pantry-item-quantity-input')).toBeTruthy();
     // Restore
     useGetPantryItemQuery.mockReturnValue({
@@ -565,6 +579,7 @@ describe('PantryItemForm', () => {
     });
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
+    fireEvent.press(screen.getByText('Product'));
     expect(screen.getByText(/Weight locked after use/)).toBeTruthy();
     // Restore
     useGetPantryItemQuery.mockReturnValue({
@@ -1009,6 +1024,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Storage'));
     capturedOnLocationSelect('loc1', { temperature: 'FROZEN' });
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1039,6 +1055,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Storage'));
     capturedOnLocationSelect('loc2', { temperature: 'Refrigerated' });
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1069,6 +1086,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Storage'));
     capturedOnLocationSelect('loc3', { temperature: 'Ambient' });
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1099,6 +1117,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Storage'));
     capturedOnLocationSelect('loc4', { temperature: null });
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1129,6 +1148,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Storage'));
     capturedOnLocationSelect(null, null);
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1161,6 +1181,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Storage'));
     capturedOnAddNewLocation('New Shelf');
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1193,6 +1214,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Inventory'));
     capturedOnUnitSelected('u99', 'grams', 'MASS', 'g');
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1223,6 +1245,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Inventory'));
     capturedOnUnitSelected(null, null, null, null);
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1256,6 +1279,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Product'));
     capturedOnUnitSelected('nwu1', 'grams');
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1290,6 +1314,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Product'));
     capturedOnUnitSelected(null, null);
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1457,6 +1482,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Storage'));
     capturedOnStorageStateChange('FROZEN');
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1487,6 +1513,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Storage'));
     capturedOnDateChange(new Date('2026-06-15'));
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1517,6 +1544,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Storage'));
     capturedOnDateChange(null);
     expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
 
@@ -1577,6 +1605,8 @@ describe('PantryItemForm – additional branch coverage', () => {
       refetch: jest.fn(),
     });
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
+    fireEvent.press(screen.getByText('Inventory'));
+    fireEvent.press(screen.getByText('More options'));
     expect(screen.getByText('Tags')).toBeTruthy();
   });
 
@@ -1613,6 +1643,7 @@ describe('PantryItemForm – additional branch coverage', () => {
       refetch: jest.fn(),
     });
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
+    fireEvent.press(screen.getByText('Product'));
     expect(screen.getByText(/Weight locked after use/)).toBeTruthy();
   });
 
@@ -1647,6 +1678,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     });
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Storage'));
     expect(screen.getByTestId('storage-details-section')).toBeTruthy();
 
     // Restore
@@ -1661,6 +1693,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     });
 
     renderWithProviders(<PantryItemForm mode="add" />);
+    fireEvent.press(screen.getByText('Storage'));
     expect(screen.getByTestId('storage-details-section')).toBeTruthy();
 
     // Restore
@@ -1698,6 +1731,8 @@ describe('PantryItemForm – additional branch coverage', () => {
       refetch: jest.fn(),
     });
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
+    fireEvent.press(screen.getByText('Inventory'));
+    fireEvent.press(screen.getByText('More options'));
     // Tags section should always render in edit mode regardless of content
     expect(screen.getByText('Tags')).toBeTruthy();
   });
@@ -1855,6 +1890,7 @@ describe('PantryItemForm – additional branch coverage', () => {
     );
 
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
+    fireEvent.press(screen.getByText('Storage'));
     // The fallback should be 'AMBIENT'
     expect(capturedStorageState).toBe('AMBIENT');
 

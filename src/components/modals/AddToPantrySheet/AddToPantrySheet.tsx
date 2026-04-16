@@ -143,8 +143,11 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     );
   };
 
-  // Handle scan barcode press — keep the sheet open underneath so the user
-  // returns to it if they cancel the scan and want to pick a different option.
+  // Keep the sheet "open" across the barcode / identify navigation so the
+  // user lands back on it if they cancel. useStandardBottomSheet's
+  // dismissOnBlur (default true) dismisses the underlying BottomSheetModal
+  // on screen blur and re-presents it on refocus, keeping the global
+  // backdrop's ref-count clean.
   const handleScanPress = () => {
     navigateTo.barcode({
       source: 'pantry',
@@ -152,7 +155,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     });
   };
 
-  // Handle identify-with-camera (OCR) press — same pattern as scan.
   const handleIdentifyPress = () => {
     navigateTo.identifyItem({
       source: 'pantry',

@@ -3,10 +3,11 @@ import { View, Text } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import PagerView from 'react-native-pager-view';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { usePantryItemSubmission } from '#hooks/pantry/usePantryItemSubmission';
 import { StorageState, type StorageLocation } from '#generated';
+import { PageIndicator } from '#/components/molecules/PageIndicator/PageIndicator';
 
 import { MainDetailsPage } from './MainDetailsPage';
 import { DetailsPage } from './DetailsPage';
@@ -23,83 +24,6 @@ interface AddDetailsSheetProps {
   onClose: () => void;
   onSuccess: () => void;
 }
-
-// Page Indicator Component
-const PageIndicator: React.FC<{
-  pages: readonly string[];
-  currentPage: number;
-  onPagePress: (index: number) => void;
-}> = ({ pages, currentPage, onPagePress }) => {
-  const { theme } = useUnistyles();
-
-  return (
-    <View style={indicatorStyles.container}>
-      {pages.map((label, index) => (
-        <Pressable
-          key={label}
-          onPress={() => onPagePress(index)}
-          style={({ pressed }) => [
-            indicatorStyles.item,
-            pressed && indicatorStyles.pressed,
-          ]}
-        >
-          <View
-            style={[
-              indicatorStyles.dot,
-              {
-                backgroundColor:
-                  currentPage === index
-                    ? theme.colors.primary
-                    : theme.colors.border,
-              },
-            ]}
-          />
-          <Text
-            style={[
-              indicatorStyles.label,
-              {
-                color:
-                  currentPage === index
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary,
-                fontWeight: currentPage === index ? '600' : '400',
-              },
-            ]}
-          >
-            {label}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-};
-
-const indicatorStyles = StyleSheet.create(theme => ({
-  container: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    marginBottom: theme.spacing.md,
-  },
-  item: {
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: theme.radii.full,
-  },
-  label: {
-    fontSize: theme.fonts.size.sm,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
 
 export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   visible,

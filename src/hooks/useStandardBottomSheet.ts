@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Keyboard } from 'react-native';
 import type {
   BottomSheetModal,
@@ -6,6 +6,7 @@ import type {
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUnistyles } from 'react-native-unistyles';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
@@ -27,6 +28,17 @@ interface UseStandardBottomSheetOptions {
    * or a string (e.g. `'85%'`) to specify a custom expanded snap point.
    */
   keyboardAware?: boolean | string;
+  /**
+   * When true (default), dismiss the sheet when the owning screen loses
+   * navigation focus and re-present it on refocus (if `visible` is still
+   * truthy). This keeps the global backdrop's ref-count clean when a sheet
+   * stays "open" across a navigation push — without this, the underlying
+   * BottomSheetModal can be torn down by the navigator while its tracker
+   * in OverlayBackdropProvider still holds a count, leaving the backdrop
+   * painted over the next screen. Pass `false` for sheets that are
+   * intentionally rendered across multiple focus scopes.
+   */
+  dismissOnBlur?: boolean;
 }
 
 /**
@@ -58,12 +70,22 @@ export function useStandardBottomSheet({
   keyboardBehavior,
   enableDynamicSizing = false,
   keyboardAware = false,
+  dismissOnBlur = true,
 }: UseStandardBottomSheetOptions) {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const ref = useRef<BottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
   useBottomSheetBackHandler(ref, visible ?? false);
+
+  // Track the latest values for the focus-aware callback below without
+  // rebuilding the callback each render.
+  const visibleRef = useRef(visible);
+  const dismissOnBlurRef = useRef(dismissOnBlur);
+  useEffect(() => {
+    visibleRef.current = visible;
+    dismissOnBlurRef.current = dismissOnBlur;
+  });
 
   // Compute final snap points: append expanded point when keyboardAware and not already present
   const expandedPoint =
@@ -86,6 +108,30 @@ export function useStandardBottomSheet({
       ref.current?.dismiss();
     }
   }, [visible]);
+
+  // Navigation focus awareness — dismiss the sheet when the owning screen
+  // blurs and re-present it on refocus. This keeps OverlayBackdropProvider's
+  // ref-count clean when a sheet stays mounted across a navigation push
+  // (e.g. AddToPantrySheet → BarcodeStack → back). The caller's `visible`
+  // state is preserved, so the sheet's inner form state survives the round
+  // trip. Short-circuits for manual-presentation callers (visible === undefined)
+  // — they own the full lifecycle — and for callers that explicitly opt out
+  // via dismissOnBlur: false.
+  const [onScreenFocus] = useState(() => () => {
+    if (!dismissOnBlurRef.current || visibleRef.current === undefined) {
+      return undefined;
+    }
+    if (visibleRef.current) {
+      ref.current?.present();
+    }
+    return () => {
+      // Only dismiss if the sheet is meant to be open — avoids a redundant
+      // dismiss() on an already-closed sheet.
+      if (!dismissOnBlurRef.current || !visibleRef.current) return;
+      ref.current?.dismiss();
+    };
+  });
+  useFocusEffect(onScreenFocus);
 
   // Snap back to initial position when keyboard hides (keyboardAware only)
   useEffect(() => {
