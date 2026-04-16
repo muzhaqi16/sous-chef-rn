@@ -189,7 +189,6 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
 
   const panGesture = Gesture.Pan()
     .onUpdate(event => {
-      'worklet';
       // Allow upward swipe (negative Y) for top-positioned toast
       if (event.translationY < 0) {
         translateY.set(insets.top + 16 + event.translationY);
@@ -198,7 +197,6 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
       translateX.set(event.translationX);
     })
     .onEnd(event => {
-      'worklet';
       const shouldDismiss =
         event.translationY < -TOAST.SWIPE_THRESHOLD ||
         Math.abs(event.translationX) > TOAST.SWIPE_THRESHOLD;

@@ -17,6 +17,7 @@ import {
   withTiming,
   withDelay,
   cancelAnimation,
+  useReducedMotion,
   Easing,
 } from 'react-native-reanimated';
 
@@ -157,9 +158,12 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
   const baguetteY = useSharedValue(0);
   const tomatoY = useSharedValue(0);
   const leavesY = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
 
   // Start animations on mount with staggered timing (all on UI thread)
   useLayoutEffect(() => {
+    if (reducedMotion) return;
+
     const bounceConfig = {
       duration: 600,
       easing: Easing.bezier(0.25, 0.1, 0.25, 1),
@@ -189,7 +193,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
       cancelAnimation(tomatoY);
       cancelAnimation(leavesY);
     };
-  }, [baguetteY, tomatoY, leavesY]);
+  }, [baguetteY, tomatoY, leavesY, reducedMotion]);
 
   // Derived transforms for Skia
   const baguetteTransform = useDerivedValue(() => [

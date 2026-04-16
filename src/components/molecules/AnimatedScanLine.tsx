@@ -7,6 +7,7 @@ import Animated, {
   withTiming,
   interpolate,
   cancelAnimation,
+  useReducedMotion,
 } from 'react-native-reanimated';
 
 interface AnimatedScanLineProps {
@@ -29,13 +30,15 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
   cornerOffset = 4,
 }) => {
   const animatedValue = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
 
   useLayoutEffect(() => {
+    if (reducedMotion) return;
     animatedValue.set(withRepeat(withTiming(1, { duration }), -1, true));
     return () => {
       cancelAnimation(animatedValue);
     };
-  }, [animatedValue, duration]);
+  }, [animatedValue, duration, reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => {
     const translateY = interpolate(

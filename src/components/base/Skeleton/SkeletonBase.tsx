@@ -7,6 +7,7 @@ import Animated, {
   withTiming,
   interpolate,
   cancelAnimation,
+  useReducedMotion,
   Easing,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
@@ -44,9 +45,11 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
   animated = true,
 }) => {
   const shimmerTranslate = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
+  const shouldAnimate = animated && !reducedMotion;
 
   useLayoutEffect(() => {
-    if (animated) {
+    if (shouldAnimate) {
       shimmerTranslate.set(
         withRepeat(
           withTiming(1, {
@@ -62,7 +65,7 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
     return () => {
       cancelAnimation(shimmerTranslate);
     };
-  }, [animated, shimmerTranslate]);
+  }, [shouldAnimate, shimmerTranslate]);
 
   const animatedStyle = useAnimatedStyle(() => {
     const translateX = interpolate(

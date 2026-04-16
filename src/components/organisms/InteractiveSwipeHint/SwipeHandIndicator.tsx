@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
   withDelay,
   cancelAnimation,
+  useReducedMotion,
   Easing,
   type SharedValue,
 } from 'react-native-reanimated';
@@ -28,8 +29,10 @@ export const SwipeHandIndicator: React.FC<SwipeHandIndicatorProps> = ({
   visible,
 }) => {
   const translateX = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
 
   useLayoutEffect(() => {
+    if (reducedMotion) return;
     const distance = direction === 'left' ? -30 : 30;
     translateX.set(
       withDelay(
@@ -51,7 +54,7 @@ export const SwipeHandIndicator: React.FC<SwipeHandIndicatorProps> = ({
     return () => {
       cancelAnimation(translateX);
     };
-  }, [translateX, direction]);
+  }, [translateX, direction, reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.get() }],

@@ -94,11 +94,9 @@ export const ImageCropScreen: React.FC<
   // Create pinch gesture
   const pinch = Gesture.Pinch()
     .onStart(() => {
-      'worklet';
       startScale.set(scale.get());
     })
     .onUpdate(e => {
-      'worklet';
       scale.set(clamp(startScale.get() * e.scale, 0.5, 3));
     });
 
@@ -106,12 +104,10 @@ export const ImageCropScreen: React.FC<
   const pan = Gesture.Pan()
     .averageTouches(true)
     .onStart(() => {
-      'worklet';
       const currentOffset = offset.get();
       startOffset.set({ x: currentOffset.x, y: currentOffset.y });
     })
     .onUpdate(e => {
-      'worklet';
       // Calculate bounds based on current scale and image size
       const scaledWidth = (imageSize.width || CROP_SIZE) * scale.get();
       const scaledHeight = (imageSize.height || CROP_SIZE) * scale.get();

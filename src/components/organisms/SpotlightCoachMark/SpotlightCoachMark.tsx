@@ -247,7 +247,6 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const swipeGesture = Gesture.Pan()
     .activeOffsetX([-20, 20])
     .onEnd(event => {
-      'worklet';
       if (event.translationX < -SWIPE_THRESHOLD) {
         scheduleOnRN(handleSwipeAdvance);
       }
