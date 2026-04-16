@@ -89,6 +89,7 @@
     "@react-native-community/image-editor": "^4.3.0",
     "@react-native-community/netinfo": "^11.4.1",
     "@react-native-masked-view/masked-view": "^0.3.2",
+    "@react-native-ml-kit/text-recognition": "^2.0.0",
     "@react-native-picker/picker": "^2.11.4",
     "@react-native-vector-icons/common": "^12.4.0",
     "@react-native-vector-icons/ionicons": "^12.3.0",

@@ -120,6 +120,9 @@ export interface AddItemSheetProps {
   onAddManually: (searchValue: string) => void;
   /** Handler for barcode scan button */
   onScanPress: () => void;
+  /** Optional: Handler for "Identify with camera" (OCR) button. When provided,
+   *  a third action card is rendered alongside Scan Barcode / Add Manually. */
+  onIdentifyPress?: () => void;
   /** Optional: Items currently animating out (for exit animations) */
   exitingItems?: Set<string>;
   /** Optional: Callback when exit animation completes */

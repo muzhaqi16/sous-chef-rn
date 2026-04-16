@@ -43,6 +43,7 @@ export function AddItemSheet({
   isMutating,
   onAddManually,
   onScanPress,
+  onIdentifyPress,
   exitingItems: externalExitingItems,
   onExitComplete,
   initialSearchQuery = '',
@@ -228,6 +229,14 @@ export function AddItemSheet({
                   label="Scan Barcode"
                   onPress={onScanPress}
                 />
+                {!!onIdentifyPress && (
+                  <ActionCard
+                    icon="camera-outline"
+                    label="Identify"
+                    onPress={onIdentifyPress}
+                    testID={`${config.testIDPrefix}-identify-button`}
+                  />
+                )}
                 <ActionCard
                   icon="add"
                   label="Add Manually"

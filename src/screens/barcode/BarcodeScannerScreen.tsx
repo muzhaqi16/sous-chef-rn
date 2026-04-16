@@ -16,7 +16,7 @@ import BarcodeMask from '#components/organisms/BarcodeMask';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
-import { SystemBars } from 'react-native-edge-to-edge';
+import { useHiddenStatusBar } from '#hooks/useHiddenStatusBar';
 import type { BarcodeSource } from '#/types/navigation';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -27,12 +27,15 @@ export const BarcodeScannerScreen: React.FC<
         source?: BarcodeSource;
         pantryId?: string;
         shoppingListId?: string;
+        /** When set, the scanner pops back to the named screen with the
+         *  detected UPC as a route param instead of opening SearchResults. */
+        returnTo?: 'identify-form';
       }
     | undefined
   >
 > = ({ route }) => {
   const { navigate, goBack, navigation } = useAppNavigation();
-  const { source, pantryId, shoppingListId } = route?.params || {};
+  const { source, pantryId, shoppingListId, returnTo } = route?.params || {};
   const devices = useCameraDevices();
   const device = devices.find(d => d.position === 'back');
 
@@ -50,6 +53,8 @@ export const BarcodeScannerScreen: React.FC<
 
   const { setScannedBarcode, setScanning, resetScanner, isScanning } =
     useBarcodeScanner();
+
+  useHiddenStatusBar();
 
   // local UI state
   const [isActive, setIsActive] = useState(false);
@@ -98,12 +103,20 @@ export const BarcodeScannerScreen: React.FC<
       if (value) {
         hasNavigatedRef.current = true;
         setHasScanned(true);
-        setScannedBarcode(value);
         setScanning(false);
 
         // Haptic feedback on successful barcode scan
         HapticService.success();
 
+        if (returnTo === 'identify-form') {
+          // Pop back to the in-progress Identify form with the UPC; merge
+          // semantics mean the form stays mounted and existing fields
+          // survive the round-trip.
+          navigate('IdentifiedItemForm', { upc: value });
+          return;
+        }
+
+        setScannedBarcode(value);
         navigate('SearchResults', {
           barcode: value,
           format: type,
@@ -173,7 +186,6 @@ export const BarcodeScannerScreen: React.FC<
   // C) Permission granted & device ready → show scanner
   return (
     <View style={styles.container}>
-      <SystemBars hidden />
       <Camera
         style={styles.camera}
         device={device}

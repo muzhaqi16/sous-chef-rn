@@ -10,6 +10,9 @@ module.exports = {
     // Native module that needs to be mocked before anything imports unistyles
     'react-native-nitro-modules':
       '<rootDir>/__tests__/__mocks__/react-native-nitro-modules.js',
+    // MLKit text recognition — stubbed in tests to avoid loading native bindings
+    '^@react-native-ml-kit/text-recognition$':
+      '<rootDir>/__tests__/__mocks__/react-native-ml-kit-text-recognition.js',
     // Test utilities (moved out of src/ to keep production code clean)
     '^#/test-utils/(.*)$': '<rootDir>/__tests__/helpers/$1',
     // Path aliases matching tsconfig.json / babel module-resolver

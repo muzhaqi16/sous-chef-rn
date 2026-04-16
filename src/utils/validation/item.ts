@@ -18,7 +18,13 @@ export const descriptionRule = string()
   .optional();
 
 // UPC validation (replaces barcode)
+// Transform: empty string -> undefined so the optional flag actually kicks in.
+// Without this, `.min(8)` and `.matches()` run on '' and fail, which blocks
+// form submission for any flow that doesn't start with a scanned barcode.
 export const upcRule = string()
+  .transform(value =>
+    typeof value === 'string' && value.trim() === '' ? undefined : value,
+  )
   .matches(/^[0-9]+$/, 'UPC must contain only numbers')
   .min(8, 'UPC must be at least 8 digits')
   .max(18, 'UPC cannot exceed 18 digits')

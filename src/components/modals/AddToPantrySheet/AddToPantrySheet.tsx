@@ -143,10 +143,18 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     );
   };
 
-  // Handle scan barcode press
+  // Handle scan barcode press — keep the sheet open underneath so the user
+  // returns to it if they cancel the scan and want to pick a different option.
   const handleScanPress = () => {
-    onClose();
     navigateTo.barcode({
+      source: 'pantry',
+      pantryId,
+    });
+  };
+
+  // Handle identify-with-camera (OCR) press — same pattern as scan.
+  const handleIdentifyPress = () => {
+    navigateTo.identifyItem({
       source: 'pantry',
       pantryId,
     });
@@ -307,6 +315,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       isMutating={false}
       onAddManually={handleAddManually}
       onScanPress={handleScanPress}
+      onIdentifyPress={handleIdentifyPress}
       exitingItems={state.exitingItems}
       onExitComplete={handleExitComplete}
       shouldFetch={state.shouldFetch}

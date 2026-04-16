@@ -52,6 +52,18 @@ export function useAppNavigation() {
         params,
       }),
 
+    // Identify-item modal (OCR-based item entry, shares BarcodeStack)
+    identifyItem: (params?: BarcodeStackParams['IdentifyItem']) =>
+      navigation.navigate('Barcode', {
+        screen: 'IdentifyItem',
+        params,
+      }),
+    identifiedItemForm: (params: BarcodeStackParams['IdentifiedItemForm']) =>
+      navigation.navigate('Barcode', {
+        screen: 'IdentifiedItemForm',
+        params,
+      }),
+
     // Media (root-level screen, fully typed by v8)
     imageCrop: (params: RootStackParamList['ImageCrop']) =>
       navigation.navigate('ImageCrop', params),

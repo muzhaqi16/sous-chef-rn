@@ -1,5 +1,5 @@
 import React from 'react';
-import { TextInput, TextInputProps, ViewStyle } from 'react-native';
+import { TextInput, TextInputProps, View, ViewStyle } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
@@ -15,6 +15,8 @@ interface FormInputProps extends Omit<TextInputProps, 'style'> {
   accessibilityHint?: string;
   /** Use BottomSheetTextInput for proper keyboard handling inside bottom sheets */
   useBottomSheetInput?: boolean;
+  /** Optional element rendered inside the input on the right (e.g. an icon button). */
+  trailing?: React.ReactNode;
 }
 
 export const FormInput: React.FC<FormInputProps> = ({
@@ -26,10 +28,12 @@ export const FormInput: React.FC<FormInputProps> = ({
   accessibilityLabel,
   accessibilityHint,
   useBottomSheetInput = false,
+  trailing,
   ...textInputProps
 }) => {
   const contextValue = useIsBottomSheetInput();
-  const InputComponent = (useBottomSheetInput || contextValue) ? BottomSheetTextInput : TextInput;
+  const InputComponent =
+    useBottomSheetInput || contextValue ? BottomSheetTextInput : TextInput;
   const { theme } = useUnistyles();
 
   // Generate accessibility label with required indicator if needed
@@ -48,22 +52,33 @@ export const FormInput: React.FC<FormInputProps> = ({
       required={required}
       containerStyle={containerStyle}
     >
-      <InputComponent
-        style={[styles.input, error && styles.inputError, inputStyle]}
-        placeholderTextColor={theme.colors.textSecondary}
-        accessible={true}
-        accessibilityLabel={fullLabel}
-        accessibilityHint={fullHint}
-        accessibilityState={{
-          disabled: textInputProps.editable === false,
-        }}
-        {...textInputProps}
-      />
+      <View style={styles.inputContainer}>
+        <InputComponent
+          style={[
+            styles.input,
+            error && styles.inputError,
+            !!trailing && styles.inputWithTrailing,
+            inputStyle,
+          ]}
+          placeholderTextColor={theme.colors.textSecondary}
+          accessible={true}
+          accessibilityLabel={fullLabel}
+          accessibilityHint={fullHint}
+          accessibilityState={{
+            disabled: textInputProps.editable === false,
+          }}
+          {...textInputProps}
+        />
+        {!!trailing && <View style={styles.trailing}>{trailing}</View>}
+      </View>
     </FormFieldWrapper>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  inputContainer: {
+    position: 'relative',
+  },
   input: {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -74,7 +89,18 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     color: theme.colors.textPrimary,
   },
+  inputWithTrailing: {
+    paddingRight: 52,
+  },
   inputError: {
     borderColor: theme.colors.error,
+  },
+  trailing: {
+    position: 'absolute',
+    right: 4,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }));

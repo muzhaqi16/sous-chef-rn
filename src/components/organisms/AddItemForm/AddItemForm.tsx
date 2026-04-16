@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Pressable } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Button } from '#/components/base/Button';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -12,6 +12,7 @@ import {
   type ItemUnitInput,
 } from '#generated';
 import { FormInput } from '#/components/molecules/FormInput';
+import { Icon } from '#/utils/iconUtils';
 import { FormTextArea } from '#/components/molecules/FormTextArea';
 import { FormNumberInput } from '#/components/molecules/FormNumberInput';
 import { FormSelect } from '#/components/molecules/FormSelect';
@@ -49,6 +50,7 @@ export interface AddItemFormInitialData {
   shelfLifeOpenedDays?: number;
   tags?: string[];
   categoryIds?: string[];
+  netWeights?: Array<{ value: number; unitName: string; unitId?: string }>;
 }
 
 interface AddItemFormProps {
@@ -62,6 +64,11 @@ interface AddItemFormProps {
   enableAutocomplete?: boolean;
   mode?: AddItemFormMode;
   initialData?: AddItemFormInitialData;
+  /** Optional: when provided, UPC field renders a barcode icon that invokes this.
+   *  The caller is responsible for navigating to a scanner and pushing the result
+   *  back via `initialData.upc` — this component will `setValue('upc', ...)` in
+   *  response to changes on that prop. */
+  onScanUpc?: () => void;
 }
 
 const STORAGE_STATES = Object.values(StorageState);
@@ -81,10 +88,42 @@ const detectScanType = (value: string): 'barcode' | 'sku' => {
   return 'sku';
 };
 
+const ScanUpcButton: React.FC<{ onPress: () => void }> = ({ onPress }) => {
+  const { theme } = useUnistyles();
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel="Scan UPC with camera"
+      style={({ pressed }) => [
+        scanButtonStyles.button,
+        pressed && scanButtonStyles.pressed,
+      ]}
+    >
+      <Icon name="barcode-outline" size={22} color={theme.colors.primary} />
+    </Pressable>
+  );
+};
+
+const scanButtonStyles = StyleSheet.create(theme => ({
+  button: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radii.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
+  },
+}));
+
 const getFormSections = (
   setSelectedBrandId: (id: string | null) => void,
   setSelectedStoreId: (id: string | null) => void,
   mode: AddItemFormMode = 'create',
+  onScanUpc?: () => void,
 ): Array<{
   title: string;
   fields: FieldDef<CreateItemFormData>[];
@@ -126,7 +165,10 @@ const getFormSections = (
       label: 'UPC/Barcode',
       placeholder: 'Enter UPC/Barcode (optional)',
       component: FormInput,
-      props: { keyboardType: 'numeric' },
+      props: {
+        keyboardType: 'numeric',
+        trailing: onScanUpc ? <ScanUpcButton onPress={onScanUpc} /> : undefined,
+      },
     },
   ];
 
@@ -306,6 +348,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   title,
   mode = 'create',
   initialData,
+  onScanUpc,
 }) => {
   // Track selected brand/store IDs separately from the display names
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
@@ -315,7 +358,13 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [unitEntries, setUnitEntries] = useState<UnitEntry[]>([]);
   const [netWeightEntries, setNetWeightEntries] = useState<NetWeightEntry[]>(
-    [],
+    () =>
+      (initialData?.netWeights ?? []).map((nw, i) => ({
+        id: `nw-initial-${i}`,
+        value: String(nw.value),
+        unitName: nw.unitName,
+        unitId: nw.unitId,
+      })),
   );
 
   const modeConfig = MODE_CONFIG[mode];
@@ -389,17 +438,27 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     setSelectedBrandId,
     setSelectedStoreId,
     mode,
+    onScanUpc,
   );
 
   const {
     control,
     handleSubmit,
+    setValue,
     formState: { errors, isValid },
   } = useForm<CreateItemFormData>({
     resolver: yupResolver(createItemSchema) as Resolver<CreateItemFormData>,
     defaultValues: getInitialValues(),
     mode: 'onChange',
   });
+
+  // Sync UPC when the consumer pushes a new one (e.g. returned from the
+  // barcode scanner via the trailing icon on the UPC field).
+  useEffect(() => {
+    if (initialData?.upc) {
+      setValue('upc', initialData.upc, { shouldValidate: true });
+    }
+  }, [initialData?.upc, setValue]);
 
   const handleFormSubmit = (data: CreateItemFormData) => {
     // Process existing tags

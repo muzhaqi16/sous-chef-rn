@@ -5,7 +5,6 @@ import {
   useCreateItemMutation,
   useFlagItemForReviewMutation,
   CreateItemMutation,
-  CreateItemInput,
   UpcFormat,
 } from '#generated';
 import { useSearchState, useBottomSheetState } from '#store/useAppStore';
@@ -14,6 +13,12 @@ import { alertService } from '#/services/alertService';
 import { useImageUpload } from './useImageUpload';
 import { storage } from '#/storage/mmkv';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  mapFormToCreateItemInput,
+  stashPendingFormImages,
+  uploadPendingImages as sharedUploadPendingImages,
+  cleanupPendingImageStorage as sharedCleanupPendingImageStorage,
+} from '#/utils/items/createItemMapping';
 
 // Map Vision Camera barcode format to GraphQL UpcFormat enum
 const mapVisionCameraFormatToUpcFormat = (
@@ -143,48 +148,8 @@ const convertToScannedItem = (
   };
 };
 
-/** Upload pending images after item creation (module-level to avoid try-catch in hook body) */
-async function uploadPendingImages<
-  T extends { id: string; imageUrl?: string | null },
->(
-  createdItem: T,
-  uploadItemImage: (image: any, itemId: string) => Promise<string | null>,
-): Promise<T> {
-  let finalItem = createdItem;
-
-  const pendingImagesJson = storage.getString('temp_pending_item_images');
-  if (pendingImagesJson && createdItem.id) {
-    const images = JSON.parse(pendingImagesJson);
-    let firstImageUrl: string | null = null;
-    for (const image of images) {
-      const imageUrl = await uploadItemImage(image, createdItem.id);
-      if (imageUrl && !firstImageUrl) {
-        firstImageUrl = imageUrl;
-      }
-    }
-    if (firstImageUrl) {
-      finalItem = { ...createdItem, imageUrl: firstImageUrl };
-    }
-  }
-
-  // Backward compat: also check old singular key
-  const pendingImageUpload = storage.getString('temp_pending_item_image');
-  if (pendingImageUpload && createdItem.id) {
-    const imageFile = JSON.parse(pendingImageUpload);
-    const imageUrl = await uploadItemImage(imageFile, createdItem.id);
-    if (imageUrl) {
-      finalItem = { ...createdItem, imageUrl };
-    }
-  }
-
-  return finalItem;
-}
-
-/** Clean up temporary image storage keys */
-function cleanupPendingImageStorage(): void {
-  storage.remove('temp_pending_item_images');
-  storage.remove('temp_pending_item_image');
-}
+const uploadPendingImages = sharedUploadPendingImages;
+const cleanupPendingImageStorage = sharedCleanupPendingImageStorage;
 
 /** Build a human-readable reason string from form corrections */
 function buildSuggestEditReason(formData: Record<string, unknown>): string {
@@ -440,77 +405,13 @@ export const useSearchResults = (barcode: string, format?: string) => {
     // Store brand name for use in mutation callback
     pendingBrandNameRef.current = formData.brandName;
 
-    // Store the selected images in MMKV for post-creation upload
-    if (formData.selectedImages && formData.selectedImages.length > 0) {
-      storage.set(
-        'temp_pending_item_images',
-        JSON.stringify(formData.selectedImages),
-      );
-    } else if (formData.selectedImage) {
-      // Backward compat: support singular selectedImage
-      storage.set(
-        'temp_pending_item_image',
-        JSON.stringify(formData.selectedImage),
-      );
-    }
-
-    // Map flat form fields to the nested CreateItemInput structure
-    const processedInput: CreateItemInput = {
-      name: formData.name,
-      description: formData.description || undefined,
-      type: formData.type || undefined,
-      brand:
-        formData.brandId || formData.brandName
-          ? { brandId: formData.brandId, brandName: formData.brandName }
-          : undefined,
-      classification:
-        formData.storageState ||
-        formData.tags?.length ||
-        formData.categoryIds?.length
-          ? {
-              storageState: formData.storageState || undefined,
-              tags: formData.tags?.length ? formData.tags : undefined,
-              categoryIds: formData.categoryIds?.length
-                ? formData.categoryIds
-                : undefined,
-            }
-          : undefined,
-      productDetails:
-        formData.primaryUpc ||
-        formData.vendor ||
-        formData.shelfLifeDays ||
-        formData.shelfLifeOpenedDays
-          ? {
-              primaryUpc: formData.primaryUpc || undefined,
-              vendor: formData.vendor || undefined,
-              shelfLifeDays: formData.shelfLifeDays || undefined,
-              shelfLifeOpenedDays: formData.shelfLifeOpenedDays || undefined,
-            }
-          : undefined,
-      packageInfo:
-        formData.baseDimension ||
-        formData.defaultConsumeIncrement ||
-        formData.defaultConsumeUnitId
-          ? {
-              baseDimension: formData.baseDimension || undefined,
-              defaultConsumeIncrement:
-                formData.defaultConsumeIncrement || undefined,
-              defaultConsumeUnitId: formData.defaultConsumeUnitId || undefined,
-            }
-          : undefined,
-      netWeights: formData.netWeights?.length ? formData.netWeights : undefined,
-      unitConfig: formData.units?.length
-        ? { units: formData.units }
-        : undefined,
-      media: formData.imageUrl ? { imageUrl: formData.imageUrl } : undefined,
-      storeSkus:
-        formData.sku && formData.storeId
-          ? [{ sku: formData.sku, storeId: formData.storeId }]
-          : undefined,
-    };
+    stashPendingFormImages(formData);
 
     await executeMutation(
-      () => addNewItem({ variables: { input: processedInput } }),
+      () =>
+        addNewItem({
+          variables: { input: mapFormToCreateItemInput(formData) },
+        }),
       'Error adding item:',
     );
   };
