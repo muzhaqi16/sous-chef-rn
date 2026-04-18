@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -22,6 +22,7 @@ import {
   executeWithLoadingState,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
+import { Text } from '#components/atoms/Text';
 
 /** Module-level function to load auth info.
  *  Extracted from useEffect to avoid try-catch bailout. */
@@ -257,6 +258,8 @@ export function LoginScreen(): React.JSX.Element {
               }
             />
             <Text
+              size="md"
+              weight="medium"
               style={[
                 styles.biometricText,
                 (isBiometricLoading || isLoggingIn) &&
@@ -297,9 +300,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   biometricText: {
-    fontSize: theme.fonts.size.md,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
   biometricTextDisabled: {
     color: theme.colors.textSecondary,

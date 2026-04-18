@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
@@ -20,6 +20,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { Text } from '#components/atoms/Text';
 
 /** Module-level async function for shopping list creation.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
@@ -187,16 +188,33 @@ export const CreateShoppingListScreen = () => {
       >
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
-            <Text style={styles.resourceLabel}>Shopping List</Text>
-            <Text style={styles.resourceName}>{existingList.name}</Text>
+            <Text size="xs" tone="secondary" style={styles.resourceLabel}>
+              Shopping List
+            </Text>
+            <Text size="lg" weight="semibold">
+              {existingList.name}
+            </Text>
             {!!existingList.isDefault && (
               <View style={styles.defaultBadge}>
-                <Text style={styles.defaultBadgeText}>Default</Text>
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  tone="accent"
+                  style={styles.defaultBadgeText}
+                >
+                  Default
+                </Text>
               </View>
             )}
           </View>
 
-          <Text style={styles.infoText}>
+          <Text
+            size="sm"
+            tone="secondary"
+            align="center"
+            lineHeight="normal"
+            style={styles.infoText}
+          >
             This was already set up. You can continue to the next step or create
             additional ones later in settings.
           </Text>
@@ -242,7 +260,9 @@ export const CreateShoppingListScreen = () => {
       />
 
       {graphqlError ? (
-        <Text style={styles.errorText}>{graphqlError}</Text>
+        <Text tone="error" align="center" style={styles.errorText}>
+          {graphqlError}
+        </Text>
       ) : null}
     </OnBoardingWrapper>
   );
@@ -250,9 +270,7 @@ export const CreateShoppingListScreen = () => {
 
 const styles = StyleSheet.create(theme => ({
   errorText: {
-    color: theme.colors.error,
     marginTop: theme.spacing['3'],
-    textAlign: 'center',
   },
   loadingContainer: {
     alignItems: 'center',
@@ -271,16 +289,9 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   resourceLabel: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-  },
-  resourceName: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
   },
   defaultBadge: {
     backgroundColor: theme.colors.surface,
@@ -293,16 +304,9 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
   },
   defaultBadgeText: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
     textTransform: 'uppercase',
   },
   infoText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
     marginTop: theme.spacing.md,
-    lineHeight: theme.typography.lineHeight.normal,
   },
 }));

@@ -43,7 +43,7 @@ import {
 import {
   BarcodeScannerState,
   createBarcodeScannerSlice,
-} from './slices/barcodeScannerSlice';
+} from '#features/barcode/store/barcodeScannerSlice';
 import { createAppSlice, AppState } from './slices/appSlice';
 import {
   createNotificationSlice,

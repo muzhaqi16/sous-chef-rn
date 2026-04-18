@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { ConversionPreview } from '#components/atoms/ConversionPreview';
 import { FractionQuickSelect } from '#components/atoms/FractionQuickSelect';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { commonStyles } from '#/styles/commonStyles';
+import { Text } from '#components/atoms/Text';
 
 interface QuantityInputFeedbackProps {
   /** Remaining quantity after subtracting user input (null = no valid input) */

@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { Icon as IconType } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 interface NavigationRowProps {
   icon: React.ComponentProps<typeof IconType>['name'];
@@ -37,9 +38,13 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
       <View style={styles.navigationContent}>
         <Icon name={icon} size={24} color={iconColor} />
         <View style={styles.navigationText}>
-          <Text style={styles.navigationTitle}>{title}</Text>
+          <Text size="md" weight="semibold">
+            {title}
+          </Text>
           {!!subtitle && (
-            <Text style={styles.navigationSubtitle}>{subtitle}</Text>
+            <Text size="sm" tone="secondary" style={styles.navigationSubtitle}>
+              {subtitle}
+            </Text>
           )}
         </View>
       </View>
@@ -64,14 +69,7 @@ const styles = StyleSheet.create(theme => ({
   navigationText: {
     flex: 1,
   },
-  navigationTitle: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   navigationSubtitle: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
   pressed: {

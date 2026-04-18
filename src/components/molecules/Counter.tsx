@@ -1,6 +1,6 @@
 import React, { useLayoutEffect } from 'react';
 import Icon from '@react-native-vector-icons/ionicons';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -11,6 +11,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { HapticService } from '#services/haptic/HapticService';
 import { SPRING } from '#/constants/animations';
 import { Pressable } from 'react-native-gesture-handler';
+import { Text } from '#components/atoms/Text';
 
 export const Counter = ({
   count,
@@ -103,8 +104,12 @@ export const Counter = ({
       </Pressable>
       <Animated.View style={countAnimatedStyle}>
         <Text
+          size="xl"
+          weight="medium"
+          lineHeight="tight"
+          tone={disabled ? 'tertiary' : 'primary'}
           maxFontSizeMultiplier={1.5}
-          style={[styles.counterActionText, disabled && styles.textDisabled]}
+          style={styles.counterActionText}
           accessibilityLabel={`${label} count: ${count}`}
         >
           {count}
@@ -152,11 +157,7 @@ const styles = StyleSheet.create(theme => ({
     ...theme.shadows.sm,
   },
   counterActionText: {
-    fontSize: theme.typography.fontSize.xl,
     paddingHorizontal: theme.spacing['2.5'],
-    lineHeight: 20,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
   },
   pressed: {
     opacity: theme.opacity.pressed,
@@ -164,8 +165,5 @@ const styles = StyleSheet.create(theme => ({
   },
   containerDisabled: {
     borderColor: theme.colors.border,
-  },
-  textDisabled: {
-    color: theme.colors.textTertiary,
   },
 }));

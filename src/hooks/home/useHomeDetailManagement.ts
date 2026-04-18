@@ -12,7 +12,7 @@ import {
   GetHomesDocument,
   MembershipRole,
 } from '#generated';
-import { MESSAGES } from '#/constants/messages';
+import { t } from '#/i18n/t';
 import { normalizeHome } from '#/utils/connectionUtils';
 import {
   createRemoveFromParentConnectionUpdater,
@@ -87,7 +87,7 @@ export function useHomeDetailManagement(homeId: string) {
     onError: error => {
       alertService.alert(
         'Error',
-        error.message || MESSAGES.errors.updateHomeNameFailed,
+        error.message || t('errors.updateHomeNameFailed'),
       );
     },
   });
@@ -109,7 +109,7 @@ export function useHomeDetailManagement(homeId: string) {
     onError: error => {
       alertService.alert(
         'Error',
-        error.message || MESSAGES.errors.updateMemberRoleFailed,
+        error.message || t('errors.updateMemberRoleFailed'),
       );
     },
   });
@@ -142,7 +142,7 @@ export function useHomeDetailManagement(homeId: string) {
 
       alertService.alert(
         'Error',
-        error.message || MESSAGES.errors.removeMemberFailed,
+        error.message || t('errors.removeMemberFailed'),
       );
     },
   });
@@ -175,7 +175,7 @@ export function useHomeDetailManagement(homeId: string) {
 
       alertService.alert(
         'Error',
-        error.message || MESSAGES.errors.revokeInviteFailed,
+        error.message || t('errors.revokeInviteFailed'),
       );
     },
   });

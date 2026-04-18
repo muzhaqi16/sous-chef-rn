@@ -40,8 +40,8 @@ export const styles = StyleSheet.create(theme => {
       alignItems: 'center',
       backgroundColor: theme.colors.charade['950'],
       justifyContent: 'center',
-      marginLeft: -12, // Extend under card edge to cover rounded corners
-      paddingLeft: 12, // Compensate for margin to maintain button positioning
+      marginLeft: -theme.spacing['3'], // Extend under card edge to cover rounded corners
+      paddingLeft: theme.spacing['3'], // Compensate for margin to maintain button positioning
       marginVertical: -theme.spacing.xs, // Extend beyond swipeable bounds to cover card border/corners
       paddingVertical: theme.spacing.xs, // Compensate to keep buttons centered
       borderTopLeftRadius: 0, // Square edge where it meets the card
@@ -55,8 +55,8 @@ export const styles = StyleSheet.create(theme => {
       backgroundColor: theme.colors.charade['950'],
       justifyContent: 'center',
       gap: theme.spacing.xs,
-      marginRight: -12, // Extend under card edge to cover rounded corners
-      paddingRight: 12, // Compensate for margin to maintain button positioning
+      marginRight: -theme.spacing['3'], // Extend under card edge to cover rounded corners
+      paddingRight: theme.spacing['3'], // Compensate for margin to maintain button positioning
       marginVertical: -theme.spacing.xs, // Extend beyond swipeable bounds to cover card border/corners
       paddingVertical: theme.spacing.xs, // Compensate to keep buttons centered
       borderTopRightRadius: 0, // Square edge where it meets the card
@@ -79,7 +79,7 @@ export const styles = StyleSheet.create(theme => {
       borderRadius: theme.radii.full,
       justifyContent: 'center',
       alignItems: 'center',
-      marginHorizontal: 4,
+      marginHorizontal: theme.spacing.xs,
       zIndex: 100, // Ensure button is above other elements for touch priority
       borderWidth: 1.5,
       borderColor: theme.colors.white, // Subtle white border
@@ -96,7 +96,7 @@ export const styles = StyleSheet.create(theme => {
 
     deleteText: {
       color: theme.colors.white,
-      fontSize: 12,
+      fontSize: theme.fonts.size.xs,
       marginTop: theme.spacing.xs,
       fontWeight: theme.fonts.weight.semibold,
     },

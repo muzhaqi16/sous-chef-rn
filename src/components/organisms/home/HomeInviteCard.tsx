@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -8,6 +8,7 @@ import {
   getInviteStatusColor,
 } from '#/utils/formatters/inviteFormatters';
 import { InviteStatus } from '#/graphql/generated';
+import { Text } from '#components/atoms/Text';
 
 interface Invite {
   id: string;
@@ -39,8 +40,12 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
   return (
     <View style={[styles.inviteCard, { borderColor: statusColor }]}>
       <View style={styles.inviteInfo}>
-        <Text style={styles.inviteName}>{displayName}</Text>
-        <Text style={styles.inviteEmail}>{invite.email}</Text>
+        <Text size="md" weight="medium" style={styles.inviteName}>
+          {displayName}
+        </Text>
+        <Text size="sm" tone="secondary">
+          {invite.email}
+        </Text>
       </View>
       <View style={styles.inviteActions}>
         <View
@@ -49,7 +54,7 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
             { backgroundColor: statusColor + '20' },
           ]}
         >
-          <Text style={[styles.inviteStatusText, { color: statusColor }]}>
+          <Text size="xs" weight="semibold" style={{ color: statusColor }}>
             {statusText}
           </Text>
         </View>
@@ -86,14 +91,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   inviteName: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
     marginBottom: 2,
-  },
-  inviteEmail: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
   },
   inviteActions: {
     flexDirection: 'row',
@@ -105,11 +103,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
     // backgroundColor applied dynamically based on status
-  },
-  inviteStatusText: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
-    // color applied dynamically based on status
   },
   revokeButton: {
     padding: theme.spacing.xs,

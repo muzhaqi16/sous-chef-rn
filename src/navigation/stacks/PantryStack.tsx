@@ -4,17 +4,17 @@ import {
   createNativeStackNavigator,
   createNativeStackScreen,
 } from '@react-navigation/native-stack';
-import { PantryMain } from '#screens/pantry/PantryMain';
-import { PantryItemScreen } from '#screens/pantry/PantryItemScreen';
-import { PantryItemDetail } from '#screens/pantry/PantryItemDetail';
-import { FilteredPantryItems } from '#screens/pantry/FilteredPantryItems';
-import { PantrySettings } from '#screens/pantry/PantrySettings';
-import { NutritionScreen } from '#screens/pantry/NutritionScreen';
-import { RecipeDetail } from '#screens/recipe/RecipeDetail';
+import { PantryMain } from '#features/pantry/screens/PantryMain';
+import { PantryItemScreen } from '#features/pantry/screens/PantryItemScreen';
+import { PantryItemDetail } from '#features/pantry/screens/PantryItemDetail';
+import { FilteredPantryItems } from '#features/pantry/screens/FilteredPantryItems';
+import { PantrySettings } from '#features/pantry/screens/PantrySettings';
+import { NutritionScreen } from '#features/pantry/screens/NutritionScreen';
+import { RecipeDetail } from '#features/recipes/screens/RecipeDetail';
 
 // Lazy-load PantryAnalytics to defer Skia + victory-native JS loading
 const PantryAnalytics = React.lazy(() =>
-  import('#screens/pantry/PantryAnalytics').then(m => ({
+  import('#features/pantry/screens/PantryAnalytics').then(m => ({
     default: m.PantryAnalytics,
   })),
 );

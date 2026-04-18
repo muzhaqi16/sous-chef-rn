@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetModal, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
@@ -7,6 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { TagInput } from '#components/molecules/TagInput';
+import { Text } from '#components/atoms/Text';
 
 export interface ManageRecipeSheetProps {
   visible: boolean;
@@ -153,9 +154,16 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.title}>Manage Recipe</Text>
+            <Text size="xl" weight="semibold">
+              Manage Recipe
+            </Text>
             {!!recipeName && (
-              <Text style={styles.recipeName} numberOfLines={1}>
+              <Text
+                size="sm"
+                tone="secondary"
+                style={styles.recipeName}
+                numberOfLines={1}
+              >
                 {recipeName}
               </Text>
             )}
@@ -191,12 +199,21 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         {!!updating && (
           <View style={styles.updatingBanner}>
             <ActivityIndicator size="small" color={theme.colors.primary} />
-            <Text style={styles.updatingText}>Updating...</Text>
+            <Text size="sm" weight="medium" tone="accent">
+              Updating...
+            </Text>
           </View>
         )}
 
         {/* Rating */}
-        <Text style={styles.sectionLabel}>Your Rating</Text>
+        <Text
+          size="sm"
+          weight="semibold"
+          tone="secondary"
+          style={styles.sectionLabel}
+        >
+          Your Rating
+        </Text>
         <View style={styles.ratingContainer}>
           {[1, 2, 3, 4, 5].map(star => (
             <Pressable
@@ -219,11 +236,22 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               />
             </Pressable>
           ))}
-          {rating !== null && <Text style={styles.ratingText}>{rating}/5</Text>}
+          {rating !== null && (
+            <Text size="sm" tone="secondary" style={styles.ratingText}>
+              {rating}/5
+            </Text>
+          )}
         </View>
 
         {/* Folder Selection */}
-        <Text style={styles.sectionLabel}>Folder</Text>
+        <Text
+          size="sm"
+          weight="semibold"
+          tone="secondary"
+          style={styles.sectionLabel}
+        >
+          Folder
+        </Text>
         <View style={styles.folderList}>
           {[null, ...displayFolders].map(folder => {
             const isSelected =
@@ -311,12 +339,21 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
             disabled={updating}
           >
             <Ionicons name="add" size={18} color={theme.colors.primary} />
-            <Text style={styles.newFolderButtonText}>Create New Folder</Text>
+            <Text size="base" weight="medium" tone="accent">
+              Create New Folder
+            </Text>
           </Pressable>
         )}
 
         {/* Tags */}
-        <Text style={styles.sectionLabel}>Tags</Text>
+        <Text
+          size="sm"
+          weight="semibold"
+          tone="secondary"
+          style={styles.sectionLabel}
+        >
+          Tags
+        </Text>
         <TagInput
           tags={tags}
           onTagsChange={handleTagsChange}
@@ -327,7 +364,14 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         />
 
         {/* Notes */}
-        <Text style={styles.sectionLabel}>Notes</Text>
+        <Text
+          size="sm"
+          weight="semibold"
+          tone="secondary"
+          style={styles.sectionLabel}
+        >
+          Notes
+        </Text>
         <BottomSheetTextInput
           style={styles.notesInput}
           placeholder="Add any notes about this recipe..."
@@ -367,14 +411,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.md,
   },
-  title: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   recipeName: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
   updatingBanner: {
@@ -388,15 +425,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
     gap: theme.spacing.sm,
   },
-  updatingText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
   sectionLabel: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
     marginTop: theme.spacing.lg,
   },
@@ -406,8 +435,6 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   ratingText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginLeft: theme.spacing.sm,
   },
   folderList: {},
@@ -439,11 +466,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.sm,
     marginTop: theme.spacing.lg,
-  },
-  newFolderButtonText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
   newFolderContainer: {
     flexDirection: 'row',

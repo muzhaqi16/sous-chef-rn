@@ -1,17 +1,23 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Control, Controller, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FieldRow } from '#components/molecules/FieldRow';
+import { Text } from '#components/atoms/Text';
 
 interface QuantitySectionProps {
   control: Control<any>;
   errors: FieldErrors<any>;
   mode: 'add' | 'edit';
-  onUnitSelected?: (unitId: string | null, unitName: string | null, unitType?: string | null, unitSymbol?: string | null) => void;
+  onUnitSelected?: (
+    unitId: string | null,
+    unitName: string | null,
+    unitType?: string | null,
+    unitSymbol?: string | null,
+  ) => void;
   testID?: string;
   unitTestID?: string;
   unitSymbol?: string | null;
@@ -27,7 +33,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
 }) => {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>
+      <Text size="lg" weight="semibold" style={styles.sectionTitle}>
         {mode === 'add' ? 'Quantity & Unit' : 'Quantity & Stock'}
       </Text>
 
@@ -106,9 +112,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   sectionTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,

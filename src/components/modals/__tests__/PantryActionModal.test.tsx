@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { PantryActionModal } from '../PantryActionModal';
 import type { PantryItemFragment } from '#generated';
-import { PantryOperation } from '#hooks/pantry/useOperationUnits';
+import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -86,8 +86,8 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#hooks/pantry/useOperationUnits', () => ({
-  ...jest.requireActual('#hooks/pantry/useOperationUnits'),
+jest.mock('#features/pantry/hooks/useOperationUnits', () => ({
+  ...jest.requireActual('#features/pantry/hooks/useOperationUnits'),
   useOperationUnits: () => ({
     groups: [],
     allUnits: [],
@@ -99,7 +99,7 @@ jest.mock('#hooks/pantry/useOperationUnits', () => ({
   }),
 }));
 
-jest.mock('#hooks/pantry/useConvertAvailableQuantity', () => ({
+jest.mock('#features/pantry/hooks/useConvertAvailableQuantity', () => ({
   useConvertAvailableQuantity: jest.fn(() => ({
     availableInSelectedUnit: null,
     availableLoading: false,

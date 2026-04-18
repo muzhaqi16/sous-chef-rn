@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { MealPlanItemCard } from '../../../src/components/mealPlan/MealPlanItemCard';
+import { MealPlanItemCard } from '../../../src/features/mealPlan/components/MealPlanItemCard';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');

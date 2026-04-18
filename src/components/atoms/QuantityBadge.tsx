@@ -1,9 +1,10 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import type { SortableListThemeColors } from '#/components/organisms/SortableShoppingList/SortableListThemeContext';
+import type { SortableListThemeColors } from '#features/shoppingList/components/SortableShoppingList/SortableListThemeContext';
 import { formatQuantity } from '#/utils/formatQuantity';
+import { Text } from '#components/atoms/Text';
 
 interface QuantityBadgeProps {
   quantity: number;
@@ -72,6 +73,9 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
         ]}
       >
         <Text
+          size="sm"
+          weight="semibold"
+          align="center"
           maxFontSizeMultiplier={1.5}
           style={[
             styles.quantityText,
@@ -83,6 +87,9 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
         </Text>
         {!!unit && (
           <Text
+            size={isInlineUnit ? 'sm' : '2xs'}
+            weight="medium"
+            align="center"
             maxFontSizeMultiplier={1.5}
             style={[
               isInlineUnit ? styles.unitTextInline : styles.unitText,
@@ -112,21 +119,12 @@ const styles = StyleSheet.create(theme => ({
     gap: 2,
   },
   quantityText: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'center',
     lineHeight: 16,
   },
   unitText: {
-    fontSize: theme.typography.fontSize['2xs'],
-    fontWeight: theme.fonts.weight.medium,
-    textAlign: 'center',
     lineHeight: 13,
   },
   unitTextInline: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.medium,
-    textAlign: 'center',
     lineHeight: 16,
   },
   disabled: {

@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 interface ConversionPreviewProps {
   previewText: string | null;
@@ -24,10 +25,13 @@ export const ConversionPreview: React.FC<ConversionPreviewProps> = ({
       {loading ? (
         <ActivityIndicator size="small" color={theme.colors.textSecondary} />
       ) : (
-        <Text style={styles.text}>
+        <Text size="sm" tone="secondary" style={styles.text}>
           {previewText}
           {isApproximate ? (
-            <Text style={styles.approxLabel}> (approx.)</Text>
+            <Text size="xs" tone="warning">
+              {' '}
+              (approx.)
+            </Text>
           ) : null}
         </Text>
       )}
@@ -35,19 +39,13 @@ export const ConversionPreview: React.FC<ConversionPreviewProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 20,
   },
   text: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     fontStyle: 'italic',
   },
-  approxLabel: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.warning,
-  },
-}));
+});

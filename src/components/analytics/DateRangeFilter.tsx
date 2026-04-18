@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { DateRange } from '#generated';
+import { Text } from '#components/atoms/Text';
 
 interface DateRangeOption {
   value: DateRange;
@@ -51,14 +52,13 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
               ]}
             >
               <Text
-                style={[
-                  styles.chipText,
-                  {
-                    color: isSelected
-                      ? theme.colors.white
-                      : theme.colors.chipText,
-                  },
-                ]}
+                size="sm"
+                weight="medium"
+                style={{
+                  color: isSelected
+                    ? theme.colors.white
+                    : theme.colors.chipText,
+                }}
               >
                 {option.label}
               </Text>
@@ -82,10 +82,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.full,
-  },
-  chipText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
     opacity: theme.opacity.pressed,

@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, TextInput } from 'react-native';
+import { View, TextInput } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import type { GreetingHeaderProps } from './types';
+import { Text } from '#components/atoms/Text';
 
 /**
  * Generic greeting header with user info, optional household badge, and search
@@ -71,7 +72,9 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
           hitSlop={8}
           testID={`${testIDPrefix}-settings`}
         >
-          <Text style={styles.settingsIcon}>{settingsIcon}</Text>
+          <Text size="lg" style={styles.settingsIcon}>
+            {settingsIcon}
+          </Text>
         </Pressable>
       );
     }
@@ -86,8 +89,15 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
       {/* Greeting Row */}
       <View style={styles.greetingRow}>
         <View style={styles.greetingContent}>
-          <Text style={[styles.greeting, isCompact && styles.greetingCompact]}>
-            Hello, <Text style={styles.userName}>{userName}</Text>!
+          <Text
+            weight="bold"
+            style={[styles.greeting, isCompact && styles.greetingCompact]}
+          >
+            Hello,{' '}
+            <Text weight="bold" tone="accent">
+              {userName}
+            </Text>
+            !
           </Text>
 
           {/* Household Badge - Optional */}
@@ -97,8 +107,10 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
               style={styles.householdBadge}
               testID={`${testIDPrefix}-household`}
             >
-              <Text style={styles.homeEmoji}>{household.icon || '🏠'}</Text>
-              <Text style={styles.householdName}>{household.name}</Text>
+              <Text size="xs">{household.icon || '🏠'}</Text>
+              <Text size="sm" tone="secondary">
+                {household.name}
+              </Text>
               {!!household.onPress && (
                 <Icon
                   name="chevron-forward"
@@ -124,12 +136,14 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
             />
           ) : (
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{displayInitial}</Text>
+              <Text size="lg" weight="bold" style={styles.avatarText}>
+                {displayInitial}
+              </Text>
             </View>
           )}
           {notificationCount > 0 && (
             <View style={styles.notificationBadge}>
-              <Text style={styles.notificationCount}>
+              <Text weight="bold" style={styles.notificationCount}>
                 {notificationCount > 9 ? '9+' : notificationCount}
               </Text>
             </View>
@@ -140,7 +154,9 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
       {/* Search Bar - Optional */}
       {!!search && (
         <View style={styles.searchContainer}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Text size="md" style={styles.searchIcon}>
+            🔍
+          </Text>
           <TextInput
             style={styles.searchInput}
             placeholder={search.placeholder}
@@ -175,27 +191,15 @@ const styles = StyleSheet.create(theme => ({
   },
   greeting: {
     fontSize: theme.typography.fontSize['2xl'] + 2,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
   },
   greetingCompact: {
     fontSize: theme.typography.fontSize.xl + 2,
-  },
-  userName: {
-    color: theme.colors.primary,
   },
   householdBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: theme.spacing.xs,
     gap: theme.spacing.xs + 2,
-  },
-  homeEmoji: {
-    fontSize: theme.typography.fontSize.xs,
-  },
-  householdName: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
   },
   avatarContainer: {
     position: 'relative',
@@ -216,8 +220,6 @@ const styles = StyleSheet.create(theme => ({
     ...theme.shadows.md,
   },
   avatarText: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.white,
   },
   notificationBadge: {
@@ -235,7 +237,6 @@ const styles = StyleSheet.create(theme => ({
   },
   notificationCount: {
     fontSize: theme.typography.fontSize.xs - 1,
-    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.white,
   },
   searchContainer: {
@@ -247,7 +248,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
   },
   searchIcon: {
-    fontSize: theme.typography.fontSize.md,
     marginRight: theme.spacing.sm + 2,
   },
   searchInput: {
@@ -257,7 +257,6 @@ const styles = StyleSheet.create(theme => ({
     padding: 0,
   },
   settingsIcon: {
-    fontSize: theme.typography.fontSize.lg,
     marginLeft: theme.spacing.sm + 2,
   },
 }));

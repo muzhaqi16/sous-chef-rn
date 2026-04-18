@@ -1,10 +1,11 @@
 import React from 'react';
-import { Text } from 'react-native';
+
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
 import type { NavigationButtonProps } from './types';
+import { Text } from '#components/atoms/Text';
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -34,6 +35,9 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
       layout={LayoutTransitionDefault}
     >
       <AnimatedText
+        size="lg"
+        weight="semibold"
+        align="center"
         layout={action.iconVisible ? LayoutTransitionDefault : undefined}
         numberOfLines={1}
         style={[
@@ -62,10 +66,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.xl,
   },
   label: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
     letterSpacing: 0.5,
-    textAlign: 'center',
   },
   pressed: {
     opacity: theme.opacity.pressed,

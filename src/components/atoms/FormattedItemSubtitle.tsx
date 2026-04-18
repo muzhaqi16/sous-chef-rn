@@ -1,8 +1,9 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { QuantityDisplay } from '#/components/molecules/QuantityDisplay';
 import { DisplayFormat } from '#/graphql/generated';
+import { Text } from '#components/atoms/Text';
 
 interface FormattedItemSubtitleProps {
   quantity?: number | null;
@@ -51,21 +52,24 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
     // Skip "1 ×" when quantity is 1 - just show weight (industry standard)
     // Use tolerance for floating point comparison
     // This also applies to partial single items (initialQuantity=1, quantity<1)
-    const isQuantityOne = displayQuantity != null && Math.abs(displayQuantity - 1) < 0.001;
+    const isQuantityOne =
+      displayQuantity != null && Math.abs(displayQuantity - 1) < 0.001;
     if (isQuantityOne) {
       return (
         <View style={styles.container}>
-          <Text style={[styles.weight, { color: theme.colors.textPrimary }]}>
+          <Text size="sm" tone="primary">
             {displayWeight} {unitSymbol}
           </Text>
-          {!!additionalInfo && <>
-              <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+          {!!additionalInfo && (
+            <>
+              <Text size="sm" tone="secondary">
                 {' • '}
               </Text>
-              <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+              <Text size="sm" tone="secondary">
                 {additionalInfo}
               </Text>
-            </>}
+            </>
+          )}
         </View>
       );
     }
@@ -81,20 +85,23 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           showUnit={false}
           style={[styles.quantity, { color: theme.colors.textPrimary }]}
         />
-        <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+        <Text size="sm" tone="secondary">
           {' × '}
         </Text>
-        <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
-          {displayWeight} {unitSymbol}{isPartialSingleItem ? ' remaining' : ''}
+        <Text size="sm" tone="secondary">
+          {displayWeight} {unitSymbol}
+          {isPartialSingleItem ? ' remaining' : ''}
         </Text>
-        {!!additionalInfo && <>
-            <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+        {!!additionalInfo && (
+          <>
+            <Text size="sm" tone="secondary">
               {' • '}
             </Text>
-            <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+            <Text size="sm" tone="secondary">
               {additionalInfo}
             </Text>
-          </>}
+          </>
+        )}
       </View>
     );
   }
@@ -112,18 +119,21 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           style={[styles.quantity, { color: theme.colors.textPrimary }]}
         />
         {!!isPartialSingleItem && (
-          <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
-            {' '}({Math.round(quantity! * 100)}% remaining)
+          <Text size="sm" tone="secondary">
+            {' '}
+            ({Math.round(quantity! * 100)}% remaining)
           </Text>
         )}
-        {!!additionalInfo && <>
-            <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+        {!!additionalInfo && (
+          <>
+            <Text size="sm" tone="secondary">
               {' • '}
             </Text>
-            <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+            <Text size="sm" tone="secondary">
               {additionalInfo}
             </Text>
-          </>}
+          </>
+        )}
       </View>
     );
   }
@@ -132,17 +142,19 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   if (hasWeight && hasUnit && !hasQuantity) {
     return (
       <View style={styles.container}>
-        <Text style={[styles.weight, { color: theme.colors.textPrimary }]}>
+        <Text size="sm" tone="primary">
           {displayWeight} {unitSymbol}
         </Text>
-        {!!additionalInfo && <>
-            <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+        {!!additionalInfo && (
+          <>
+            <Text size="sm" tone="secondary">
               {' • '}
             </Text>
-            <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+            <Text size="sm" tone="secondary">
               {additionalInfo}
             </Text>
-          </>}
+          </>
+        )}
       </View>
     );
   }
@@ -160,18 +172,21 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           style={[styles.quantity, { color: theme.colors.textPrimary }]}
         />
         {!!isPartialSingleItem && (
-          <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
-            {' '}({Math.round(quantity! * 100)}% remaining)
+          <Text size="sm" tone="secondary">
+            {' '}
+            ({Math.round(quantity! * 100)}% remaining)
           </Text>
         )}
-        {!!additionalInfo && <>
-            <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+        {!!additionalInfo && (
+          <>
+            <Text size="sm" tone="secondary">
               {' • '}
             </Text>
-            <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+            <Text size="sm" tone="secondary">
               {additionalInfo}
             </Text>
-          </>}
+          </>
+        )}
       </View>
     );
   }
@@ -180,7 +195,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   if (additionalInfo) {
     return (
       <View style={styles.container}>
-        <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+        <Text size="sm" tone="secondary">
           {additionalInfo}
         </Text>
       </View>
@@ -200,17 +215,5 @@ const styles = StyleSheet.create(theme => ({
   quantity: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
-  },
-  weight: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.regular,
-  },
-  separator: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.regular,
-  },
-  additionalInfo: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.regular,
   },
 }));

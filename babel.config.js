@@ -45,6 +45,8 @@ module.exports = api => {
             '#config': './src/config',
             '#context': './src/context',
             '#context/*': './src/context/*',
+            '#features': './src/features',
+            '#features/*': './src/features/*',
             '#generated': './src/graphql/generated',
             '#graphql': './src/graphql',
             '#hooks': './src/hooks',

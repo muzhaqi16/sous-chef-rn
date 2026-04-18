@@ -1,8 +1,9 @@
 import React, { Component, ReactNode } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Telemetry } from '#/services/telemetry';
+import { Text } from '#components/atoms/Text';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -30,14 +31,26 @@ const DefaultErrorFallback: React.FC<{
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <View style={styles.content}>
-        <Text style={[styles.title, { color: theme.colors.error }]}>
+        <Text
+          size="xl"
+          weight="bold"
+          align="center"
+          tone="error"
+          style={styles.title}
+        >
           Something went wrong
         </Text>
-        <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
+        <Text
+          size="md"
+          align="center"
+          lineHeight="relaxed"
+          tone="secondary"
+          style={styles.message}
+        >
           {__DEV__ ? error.message : 'An unexpected error occurred'}
         </Text>
         {!!context && !!__DEV__ && (
-          <Text style={[styles.context, { color: theme.colors.textTertiary }]}>
+          <Text size="xs" align="center" tone="tertiary" style={styles.context}>
             Context: {context}
           </Text>
         )}
@@ -49,7 +62,11 @@ const DefaultErrorFallback: React.FC<{
           ]}
           onPress={retry}
         >
-          <Text style={[styles.retryText, { color: theme.colors.background }]}>
+          <Text
+            size="md"
+            weight="semibold"
+            style={{ color: theme.colors.background }}
+          >
             Try Again
           </Text>
         </Pressable>
@@ -222,20 +239,12 @@ const styles = StyleSheet.create(theme => ({
     maxWidth: 300,
   },
   title: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: 'bold',
     marginBottom: theme.spacing['3'],
-    textAlign: 'center',
   },
   message: {
-    fontSize: theme.typography.fontSize.md,
-    textAlign: 'center',
     marginBottom: theme.spacing.sm,
-    lineHeight: theme.typography.lineHeight.relaxed,
   },
   context: {
-    fontSize: theme.typography.fontSize.xs,
-    textAlign: 'center',
     marginBottom: theme.spacing.xl,
     fontStyle: 'italic',
   },
@@ -244,10 +253,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     borderRadius: theme.radii.sm,
     marginTop: theme.spacing.md,
-  },
-  retryText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
     opacity: theme.opacity.pressed,

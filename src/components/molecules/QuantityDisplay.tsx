@@ -1,6 +1,7 @@
 import React from 'react';
-import {Text, TextStyle, StyleProp} from 'react-native';
-import {DisplayFormat} from '#/graphql/generated';
+import { TextStyle, StyleProp } from 'react-native';
+import { DisplayFormat } from '#/graphql/generated';
+import { Text } from '#components/atoms/Text';
 
 interface QuantityDisplayProps {
   quantity: number | null | undefined;
@@ -168,10 +169,10 @@ function shouldUseFraction(decimal: number): boolean {
   if (fractional === 0) return false;
 
   // Check if it's close to a common fraction
-  const commonFractions = [0.125, 0.25, 0.333, 0.375, 0.5, 0.625, 0.667, 0.75, 0.875];
+  const commonFractions = [
+    0.125, 0.25, 0.333, 0.375, 0.5, 0.625, 0.667, 0.75, 0.875,
+  ];
   const tolerance = 0.01;
 
-  return commonFractions.some(
-    frac => Math.abs(fractional - frac) < tolerance
-  );
+  return commonFractions.some(frac => Math.abs(fractional - frac) < tolerance);
 }

@@ -1,8 +1,8 @@
 import type { StaticParamList } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { MealPlanMain } from '#screens/mealPlan/MealPlanMain';
-import { CreateMealPlanScreen } from '#screens/mealPlan/CreateMealPlanScreen';
-import { RecipeDetail } from '#screens/recipe/RecipeDetail';
+import { MealPlanMain } from '#features/mealPlan/screens/MealPlanMain';
+import { CreateMealPlanScreen } from '#features/mealPlan/screens/CreateMealPlanScreen';
+import { RecipeDetail } from '#features/recipes/screens/RecipeDetail';
 
 export const MealPlanStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({

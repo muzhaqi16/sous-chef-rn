@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { alertService } from '#/services/alertService';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -10,7 +10,8 @@ import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
-import { formatNetWeightDisplay } from '#hooks/pantry/usePantryItemTransformation';
+import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
+import { Text } from '#components/atoms/Text';
 
 interface CorrectWeightModalProps {
   visible: boolean;

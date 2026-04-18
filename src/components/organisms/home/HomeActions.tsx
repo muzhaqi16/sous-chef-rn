@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 interface HomeActionsProps {
   homeId: string;
@@ -43,7 +44,9 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
             size={20}
             color={theme.colors.textSecondary}
           />
-          <Text style={styles.actionText}>Set Default</Text>
+          <Text size="sm" tone="secondary" style={styles.actionText}>
+            Set Default
+          </Text>
         </Pressable>
       )}
 
@@ -60,7 +63,9 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
             size={20}
             color={theme.colors.textSecondary}
           />
-          <Text style={styles.actionText}>Invite</Text>
+          <Text size="sm" tone="secondary" style={styles.actionText}>
+            Invite
+          </Text>
         </Pressable>
       )}
 
@@ -73,7 +78,10 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
           onPress={() => onDelete(homeId)}
         >
           <Icon name="trash-outline" size={20} color={theme.colors.error} />
-          <Text style={[styles.actionText, { color: theme.colors.error }]}>
+          <Text
+            size="sm"
+            style={[styles.actionText, { color: theme.colors.error }]}
+          >
             Delete
           </Text>
         </Pressable>
@@ -99,8 +107,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
   },
   actionText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
     marginLeft: theme.spacing.xs + 2,
   },
   pressed: {

@@ -4,7 +4,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   usePantryItemSuggestions,
   type PantryItemSuggestion,
-} from '#hooks/pantry/usePantryItemSuggestions';
+} from '#features/pantry/hooks/usePantryItemSuggestions';
 import { toastService } from '#/services/toastService';
 import {
   useCreatePantryItemMutation,

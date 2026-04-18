@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { alertService } from '#/services/alertService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { DIETARY_LIMITS } from '#/constants/dietary';
+import { Text } from '#components/atoms/Text';
 
 interface MacroTargetsSheetProps {
   visible: boolean;
@@ -168,7 +169,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         />
 
         {/* Description */}
-        <Text style={styles.description}>
+        <Text size="sm" tone="secondary" style={styles.description}>
           Set your daily nutrition goals (optional)
         </Text>
 
@@ -232,8 +233,6 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
   },
   description: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.lg,
   },
   section: {

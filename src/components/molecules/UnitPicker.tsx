@@ -1,5 +1,5 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -13,7 +13,8 @@ import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { SPRING, TIMING } from '#/constants/animations';
 import type { UnitType } from '#generated';
-import type { SelectedUnitInfo } from '#hooks/pantry/useOperationUnits';
+import type { SelectedUnitInfo } from '#features/pantry/hooks/useOperationUnits';
+import { Text } from '#components/atoms/Text';
 
 /** Minimal interface for any unit renderable in the picker */
 export interface PickableUnit {
@@ -121,7 +122,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
         <Text style={commonStyles.bottomSheetSectionLabel}>{label}</Text>
         <View style={styles.collapsedRight}>
           {selectedLabel ? (
-            <Text style={styles.selectedText}>
+            <Text size="base" weight="semibold" tone="accent">
               {selectedLabel}
               {isSelectedLowConfidence ? ' ~' : null}
             </Text>
@@ -146,7 +147,9 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
           {groups.map(group => (
             <View key={group.type} style={styles.groupContainer}>
               {groups.length > 1 && (
-                <Text style={styles.groupLabel}>{group.label}</Text>
+                <Text size="xs" tone="secondary" style={styles.groupLabel}>
+                  {group.label}
+                </Text>
               )}
               <View style={commonStyles.bottomSheetOptionContainer}>
                 {group.units.map(unit => {
@@ -217,11 +220,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
   },
-  selectedText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
-  },
   expandedContainer: {
     marginTop: theme.spacing.sm,
   },
@@ -229,8 +227,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xs,
   },
   groupLabel: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,

@@ -30,7 +30,7 @@ jest.mock('react-native-pager-view', () => {
   };
 });
 
-jest.mock('#hooks/pantry/usePantryItemSubmission', () => ({
+jest.mock('#features/pantry/hooks/usePantryItemSubmission', () => ({
   usePantryItemSubmission: jest.fn(() => ({
     handleConfirm: jest.fn(),
     loading: false,
@@ -109,7 +109,8 @@ describe('AddDetailsSheet', () => {
   });
 
   it('shows Adding... when loading', () => {
-    const usePantryItemSubmission = require('#hooks/pantry/usePantryItemSubmission').usePantryItemSubmission;
+    const usePantryItemSubmission =
+      require('#features/pantry/hooks/usePantryItemSubmission').usePantryItemSubmission;
     usePantryItemSubmission.mockReturnValueOnce({
       handleConfirm: jest.fn(),
       loading: true,
@@ -142,7 +143,8 @@ describe('AddDetailsSheet', () => {
 
   it('calls handleConfirm when Add is pressed', () => {
     const mockHandleConfirm = jest.fn();
-    const usePantryItemSubmission = require('#hooks/pantry/usePantryItemSubmission').usePantryItemSubmission;
+    const usePantryItemSubmission =
+      require('#features/pantry/hooks/usePantryItemSubmission').usePantryItemSubmission;
     usePantryItemSubmission.mockReturnValueOnce({
       handleConfirm: mockHandleConfirm,
       loading: false,
@@ -154,10 +156,7 @@ describe('AddDetailsSheet', () => {
 
   it('uses prefilledItemName when provided', () => {
     render(
-      <AddDetailsSheet
-        {...defaultProps}
-        prefilledItemName="Preloaded Item"
-      />,
+      <AddDetailsSheet {...defaultProps} prefilledItemName="Preloaded Item" />,
     );
     expect(screen.getByText('Add Item Details')).toBeTruthy();
   });

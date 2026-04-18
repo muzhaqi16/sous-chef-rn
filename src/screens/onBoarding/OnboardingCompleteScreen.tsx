@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { useAppStore } from '#store/useAppStore';
 import { useCompleteOnboardingMutation } from '#generated';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { Text } from '#components/atoms/Text';
 
 export const OnboardingCompleteScreen = () => {
   useScreenTransition('OnboardingCompleteScreen');
@@ -59,28 +60,51 @@ export const OnboardingCompleteScreen = () => {
     >
       <View style={styles.container}>
         <View style={styles.successIcon}>
-          <Text style={styles.checkmark}>✓</Text>
+          <Text weight="bold" style={styles.checkmark}>
+            ✓
+          </Text>
         </View>
 
-        <Text style={styles.congratsText}>
+        <Text
+          size="lg"
+          weight="semibold"
+          align="center"
+          style={styles.congratsText}
+        >
           Congratulations! You've successfully set up:
         </Text>
 
         <View style={styles.summaryList}>
-          <Text style={styles.summaryItem}>• Your home and pantry</Text>
-          <Text style={styles.summaryItem}>• Your shopping list</Text>
-          <Text style={styles.summaryItem}>• Initial pantry items</Text>
-          <Text style={styles.summaryItem}>• Invited family & friends</Text>
+          <Text size="md" tone="secondary" style={styles.summaryItem}>
+            • Your home and pantry
+          </Text>
+          <Text size="md" tone="secondary" style={styles.summaryItem}>
+            • Your shopping list
+          </Text>
+          <Text size="md" tone="secondary" style={styles.summaryItem}>
+            • Initial pantry items
+          </Text>
+          <Text size="md" tone="secondary" style={styles.summaryItem}>
+            • Invited family & friends
+          </Text>
         </View>
 
-        <Text style={styles.infoText}>
+        <Text
+          size="sm"
+          tone="secondary"
+          align="center"
+          lineHeight="normal"
+          style={styles.infoText}
+        >
           You can now start managing your pantry, create shopping lists, and
           collaborate with family members!
         </Text>
 
         {!!error && (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text size="sm" tone="error" align="center">
+              {error}
+            </Text>
           </View>
         )}
       </View>
@@ -113,13 +137,8 @@ const styles = StyleSheet.create(theme => ({
   checkmark: {
     fontSize: theme.typography.fontSize['3xl'] + 16,
     color: theme.colors.white,
-    fontWeight: 'bold',
   },
   congratsText: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
     marginBottom: theme.spacing.xl,
     paddingHorizontal: theme.spacing.lg,
   },
@@ -127,24 +146,13 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xl,
   },
   summaryItem: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
   infoText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
     paddingHorizontal: theme.spacing.xl,
-    lineHeight: theme.typography.lineHeight.normal,
   },
   errorContainer: {
     marginTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
-  },
-  errorText: {
-    color: theme.colors.error,
-    fontSize: theme.typography.fontSize.sm,
-    textAlign: 'center',
   },
 }));

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Switch } from 'react-native';
+import { View, Switch } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -8,6 +8,7 @@ import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { parseFractionalInput } from '#/utils/fractionUtils';
+import { Text } from '#components/atoms/Text';
 
 interface MarkCookedModalProps {
   visible: boolean;
@@ -29,12 +30,15 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   defaultServings,
   onClose,
   onConfirm,
-  hasPantry = false }) => {
-  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['55%'],
-    keyboardAware: true });
+  hasPantry = false,
+}) => {
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      visible,
+      onDismiss: onClose,
+      snapPoints: ['55%'],
+      keyboardAware: true,
+    });
 
   // Form state
   const [servingsInput, setServingsInput] = useState('');
@@ -44,7 +48,8 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
 
   // Reset form when modal opens (render-time state update)
   const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevDefaultServings, setPrevDefaultServings] = useState(defaultServings);
+  const [prevDefaultServings, setPrevDefaultServings] =
+    useState(defaultServings);
   if (visible !== prevVisible || defaultServings !== prevDefaultServings) {
     setPrevVisible(visible);
     setPrevDefaultServings(defaultServings);
@@ -58,15 +63,18 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
 
   const handleConfirm = () => {
     const servingsValue = parseFractionalInput(servingsInput);
-    const finalServings = servingsValue && !isNaN(servingsValue) && servingsValue > 0
-      ? servingsValue
-      : defaultServings || 1;
+    const finalServings =
+      servingsValue && !isNaN(servingsValue) && servingsValue > 0
+        ? servingsValue
+        : defaultServings || 1;
 
     onConfirm({
       servings: finalServings,
       deductFromPantry,
-      useGranularDeduction: deductFromPantry && hasPantry && useGranularDeduction,
-      notes: notes || undefined });
+      useGranularDeduction:
+        deductFromPantry && hasPantry && useGranularDeduction,
+      notes: notes || undefined,
+    });
     onClose();
   };
 
@@ -74,10 +82,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetFormScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.contentContainer,
-          contentContainerStyle,
-        ]}
+        contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
         bottomOffset={16}
       >
@@ -92,7 +97,9 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
 
         {/* Recipe Info */}
         <View style={styles.recipeInfo}>
-          <Text style={styles.recipeName}>{recipeName}</Text>
+          <Text size="lg" weight="semibold" align="center">
+            {recipeName}
+          </Text>
         </View>
 
         {/* Servings Input */}
@@ -109,15 +116,20 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         {/* Deduct from Pantry Toggle */}
         <View style={styles.toggleSection}>
           <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>Deduct from Pantry</Text>
-            <Text style={styles.toggleDescription}>
+            <Text size="base" weight="medium">
+              Deduct from Pantry
+            </Text>
+            <Text size="sm" tone="secondary" style={styles.toggleDescription}>
               Automatically reduce ingredient quantities in your pantry
             </Text>
           </View>
           <Switch
             value={deductFromPantry}
             onValueChange={setDeductFromPantry}
-            trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+            trackColor={{
+              false: theme.colors.border,
+              true: theme.colors.primary,
+            }}
             thumbColor={theme.colors.white}
           />
         </View>
@@ -126,15 +138,20 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         {!!deductFromPantry && !!hasPantry && (
           <View style={styles.toggleSection}>
             <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>Smart Deduction</Text>
-              <Text style={styles.toggleDescription}>
+              <Text size="base" weight="medium">
+                Smart Deduction
+              </Text>
+              <Text size="sm" tone="secondary" style={styles.toggleDescription}>
                 Review and adjust ingredient quantities before deducting
               </Text>
             </View>
             <Switch
               value={useGranularDeduction}
               onValueChange={setUseGranularDeduction}
-              trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+              trackColor={{
+                false: theme.colors.border,
+                true: theme.colors.primary,
+              }}
               thumbColor={theme.colors.white}
             />
           </View>
@@ -158,22 +175,21 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   contentContainer: {
-    padding: theme.spacing.md },
+    padding: theme.spacing.md,
+  },
   recipeInfo: {
     marginBottom: theme.spacing.xl,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
-    alignItems: 'center' },
-  recipeName: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center' },
+    alignItems: 'center',
+  },
   section: {
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   toggleSection: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -182,15 +198,13 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md },
+    borderRadius: theme.radii.md,
+  },
   toggleInfo: {
     flex: 1,
-    marginRight: theme.spacing.md },
-  toggleLabel: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    marginRight: theme.spacing.md,
+  },
   toggleDescription: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs } }));
+    marginTop: theme.spacing.xs,
+  },
+}));

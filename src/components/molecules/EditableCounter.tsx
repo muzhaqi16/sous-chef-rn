@@ -172,7 +172,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.borderLight,
     borderStyle: 'solid',
     borderRadius: theme.radii.md,
-    paddingHorizontal: 4,
+    paddingHorizontal: theme.spacing.xs,
   },
   containerFocused: {
     borderColor: theme.colors.primary,

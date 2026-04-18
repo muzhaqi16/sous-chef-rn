@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { Pie, PolarChart } from 'victory-native';
+import { Text } from '#components/atoms/Text';
 
 interface DataItem {
   label: string;
@@ -35,8 +36,6 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
   showLegend = true,
   colorScale = DEFAULT_COLORS,
 }) => {
-  const { theme } = useUnistyles();
-
   const chartData = (() => {
     if (!data || data.length === 0) return [];
     return data.map((item, index) => ({
@@ -50,12 +49,12 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
     return (
       <View style={[styles.container, { minHeight: height }]}>
         {!!title && (
-          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+          <Text size="md" weight="semibold" style={styles.title}>
             {title}
           </Text>
         )}
         <View style={styles.emptyState}>
-          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+          <Text size="sm" tone="secondary">
             No data available
           </Text>
         </View>
@@ -66,7 +65,7 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
   return (
     <View style={styles.container}>
       {!!title && (
-        <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+        <Text size="md" weight="semibold" style={styles.title}>
           {title}
         </Text>
       )}
@@ -92,14 +91,14 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
                   ]}
                 />
                 <View style={styles.legendTextContainer}>
-                  <Text
-                    style={[styles.legendText, { color: theme.colors.textPrimary }]}
-                    numberOfLines={1}
-                  >
+                  <Text size="xs" style={styles.legendText} numberOfLines={1}>
                     {item.label}
                   </Text>
                   <Text
-                    style={[styles.legendPercentage, { color: theme.colors.textSecondary }]}
+                    size="xs"
+                    weight="medium"
+                    tone="secondary"
+                    style={styles.legendPercentage}
                   >
                     {item.percentage.toFixed(0)}%
                   </Text>
@@ -118,8 +117,6 @@ const styles = StyleSheet.create(theme => ({
     marginVertical: theme.spacing.sm,
   },
   title: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
     marginBottom: theme.spacing.sm,
     paddingHorizontal: theme.spacing.sm,
   },
@@ -149,12 +146,9 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   legendText: {
-    fontSize: theme.fonts.size.xs,
     flex: 1,
   },
   legendPercentage: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.medium,
     marginLeft: theme.spacing.xs,
   },
   emptyState: {
@@ -162,8 +156,5 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: 100,
-  },
-  emptyText: {
-    fontSize: theme.fonts.size.sm,
   },
 }));

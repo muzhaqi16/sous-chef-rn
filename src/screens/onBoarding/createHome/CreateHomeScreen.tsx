@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
+import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { formatRole } from '#utils/formatters/roleFormatters';
@@ -195,17 +196,30 @@ const InviteCard: React.FC<{ invite: HomeInviteFragment }> = ({ invite }) => {
 
   return (
     <View style={styles.inviteCard}>
-      <Text style={styles.inviteHomeName}>{inviteHomeName}</Text>
+      <Text
+        size="xl"
+        weight="bold"
+        lineHeight="relaxed"
+        style={styles.inviteHomeName}
+      >
+        {inviteHomeName}
+      </Text>
 
       <View style={styles.inviteDetailsContainer}>
-        <Text style={styles.inviteDetail}>
-          <Text style={styles.inviteDetailLabel}>From: </Text>
-          <Text style={styles.inviteDetailValue}>{inviterName}</Text>
+        <Text size="sm" lineHeight="tight">
+          <Text weight="medium" tone="secondary">
+            From:{' '}
+          </Text>
+          <Text weight="semibold">{inviterName}</Text>
         </Text>
 
-        <Text style={styles.inviteDetail}>
-          <Text style={styles.inviteDetailLabel}>Role: </Text>
-          <Text style={styles.inviteRoleText}>{formatRole(invite.role)}</Text>
+        <Text size="sm" lineHeight="tight">
+          <Text weight="medium" tone="secondary">
+            Role:{' '}
+          </Text>
+          <Text weight="bold" tone="accent">
+            {formatRole(invite.role)}
+          </Text>
         </Text>
       </View>
 
@@ -218,7 +232,9 @@ const InviteCard: React.FC<{ invite: HomeInviteFragment }> = ({ invite }) => {
           onPress={() => handleDeclineInvite(invite.token, inviteHomeName)}
           disabled={accepting}
         >
-          <Text style={styles.inviteDeclineButtonText}>Decline</Text>
+          <Text size="sm" weight="semibold">
+            Decline
+          </Text>
         </Pressable>
         <Pressable
           style={({ pressed }) => [
@@ -231,7 +247,13 @@ const InviteCard: React.FC<{ invite: HomeInviteFragment }> = ({ invite }) => {
           {accepting ? (
             <ActivityIndicator size="small" color={theme.colors.white} />
           ) : (
-            <Text style={styles.inviteAcceptButtonText}>Accept</Text>
+            <Text
+              size="sm"
+              weight="semibold"
+              style={styles.inviteAcceptButtonText}
+            >
+              Accept
+            </Text>
           )}
         </Pressable>
       </View>
@@ -498,7 +520,9 @@ const CreateHomeScreenComponent = () => {
         onSkip={() => skipToStep('CreateShoppingList')}
       >
         <View style={styles.invitesContainer}>
-          <Text style={styles.invitesSectionTitle}>Pending Invitations</Text>
+          <Text size="md" weight="semibold" style={styles.invitesSectionTitle}>
+            Pending Invitations
+          </Text>
           <InviteActionsProvider
             handleAcceptInvite={handleAcceptInvite}
             handleDeclineInvite={handleDeclineInvite}
@@ -512,7 +536,14 @@ const CreateHomeScreenComponent = () => {
 
         <View style={styles.orDivider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OR</Text>
+          <Text
+            size="sm"
+            tone="secondary"
+            weight="medium"
+            style={styles.dividerText}
+          >
+            OR
+          </Text>
           <View style={styles.dividerLine} />
         </View>
 
@@ -543,21 +574,42 @@ const CreateHomeScreenComponent = () => {
       >
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
-            <Text style={styles.resourceLabel}>Home</Text>
-            <Text style={styles.resourceName}>{existingHome.name}</Text>
+            <Text size="xs" tone="secondary" style={styles.resourceLabel}>
+              Home
+            </Text>
+            <Text size="lg" weight="semibold">
+              {existingHome.name}
+            </Text>
 
             <View style={styles.pantrySection}>
-              <Text style={styles.resourceLabel}>Pantry</Text>
-              <Text style={styles.resourceName}>{existingPantry.name}</Text>
+              <Text size="xs" tone="secondary" style={styles.resourceLabel}>
+                Pantry
+              </Text>
+              <Text size="lg" weight="semibold">
+                {existingPantry.name}
+              </Text>
               {!!existingPantry.isDefault && (
                 <View style={styles.defaultBadge}>
-                  <Text style={styles.defaultBadgeText}>Default</Text>
+                  <Text
+                    size="xs"
+                    weight="semibold"
+                    tone="accent"
+                    style={styles.defaultBadgeText}
+                  >
+                    Default
+                  </Text>
                 </View>
               )}
             </View>
           </View>
 
-          <Text style={styles.infoText}>
+          <Text
+            size="sm"
+            tone="secondary"
+            align="center"
+            lineHeight="normal"
+            style={styles.infoText}
+          >
             These were already set up. You can continue to the next step or
             create additional ones later in settings.
           </Text>
@@ -585,8 +637,12 @@ const CreateHomeScreenComponent = () => {
       {!!existingHome && (
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
-            <Text style={styles.resourceLabel}>Existing Home</Text>
-            <Text style={styles.resourceName}>{existingHome.name}</Text>
+            <Text size="xs" tone="secondary" style={styles.resourceLabel}>
+              Existing Home
+            </Text>
+            <Text size="lg" weight="semibold">
+              {existingHome.name}
+            </Text>
           </View>
         </View>
       )}
@@ -628,8 +684,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   resourceLabel: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -639,11 +693,6 @@ const styles = StyleSheet.create(theme => ({
     paddingTop: theme.spacing.md,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
-  },
-  resourceName: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
   },
   defaultBadge: {
     backgroundColor: theme.colors.surface,
@@ -656,25 +705,15 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
   },
   defaultBadgeText: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
     textTransform: 'uppercase',
   },
   infoText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
     marginTop: theme.spacing.md,
-    lineHeight: theme.typography.lineHeight.normal,
   },
   invitesContainer: {
     marginVertical: theme.spacing.lg,
   },
   invitesSectionTitle: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
   },
   inviteCard: {
@@ -695,32 +734,11 @@ const styles = StyleSheet.create(theme => ({
     ],
   },
   inviteHomeName: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
-    lineHeight: theme.typography.lineHeight.relaxed,
   },
   inviteDetailsContainer: {
     gap: theme.spacing.sm,
     marginBottom: theme.spacing.md,
-  },
-  inviteDetail: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textPrimary,
-    lineHeight: 20,
-  },
-  inviteDetailLabel: {
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
-  inviteDetailValue: {
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
-  inviteRoleText: {
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.primary,
   },
   inviteActions: {
     flexDirection: 'row',
@@ -736,11 +754,6 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  inviteDeclineButtonText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   inviteAcceptButton: {
     flex: 1,
     paddingVertical: theme.spacing.sm,
@@ -750,8 +763,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   inviteAcceptButtonText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.white,
   },
   orDivider: {
@@ -766,8 +777,5 @@ const styles = StyleSheet.create(theme => ({
   },
   dividerText: {
     paddingHorizontal: theme.spacing.md,
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium,
   },
 }));

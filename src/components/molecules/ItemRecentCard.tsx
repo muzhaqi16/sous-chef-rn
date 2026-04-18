@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { Text } from '#components/atoms/Text';
 
 /**
  * Generic interface for recently deleted items
@@ -66,10 +67,15 @@ export function ItemRecentCard<T extends RecentItem>({
 
       {/* Item Info */}
       <View style={styles.info}>
-        <Text style={styles.itemName} numberOfLines={1}>
+        <Text
+          size="base"
+          weight="semibold"
+          style={styles.itemName}
+          numberOfLines={1}
+        >
           {item.itemName ?? 'Unknown Item'}
         </Text>
-        <Text style={styles.timeAgo} numberOfLines={1}>
+        <Text size="sm" tone="secondary" numberOfLines={1}>
           {timeAgo}
         </Text>
       </View>
@@ -122,14 +128,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.md,
   },
   itemName: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
-  },
-  timeAgo: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
   },
   addButton: {
     width: 40,

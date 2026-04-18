@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import {
   type FieldValues,
   Control,
@@ -18,6 +18,7 @@ import { CategoryAutocompleteField } from './AutocompleteField/CategoryAutocompl
 import { StorageLocationAutocompleteField } from './AutocompleteField/StorageLocationAutocompleteField';
 import { StoreAutocompleteField } from './AutocompleteField/StoreAutocompleteField';
 import { FormInput } from './FormInput';
+import { Text } from '#components/atoms/Text';
 
 const MemoizedItemAutocomplete = ItemAutocompleteField;
 const MemoizedBrandAutocomplete = BrandAutocompleteField;
@@ -350,6 +351,8 @@ export function DynamicFormFields<T extends FieldValues>({
               Input !== 'categoryAutocomplete' &&
               Input !== 'storeAutocomplete' && (
                 <Text
+                  size="sm"
+                  tone="error"
                   style={styles.errorText}
                   testID={
                     props?.testID || testID
@@ -373,7 +376,5 @@ const styles = StyleSheet.create(theme => ({
   },
   errorText: {
     marginTop: theme.spacing.xs,
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.error,
   },
 }));

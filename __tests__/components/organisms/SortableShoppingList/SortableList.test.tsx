@@ -3,7 +3,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { render } from '@testing-library/react-native';
-import { SortableShoppingList } from '../../../../src/components/organisms/SortableShoppingList/SortableList';
+import { SortableShoppingList } from '../../../../src/features/shoppingList/components/SortableShoppingList/SortableList';
 
 jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
@@ -17,7 +17,7 @@ jest.mock('../../../../src/hooks/ui/useSwipeableCoordinator', () => ({
     handleSwipeableClose: jest.fn(),
   }),
 }));
-jest.mock('../../../../src/components/organisms/SortableShoppingList/SortableItem', () => ({
+jest.mock('../../../../src/features/shoppingList/components/SortableShoppingList/SortableItem', () => ({
   SwipeableListItem: () => null,
 }));
 jest.mock('../../../../src/constants/layout', () => ({

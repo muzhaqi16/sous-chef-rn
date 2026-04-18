@@ -106,7 +106,7 @@ const styles = StyleSheet.create(theme => ({
   navigationContainer: {
     flexDirection: 'row',
     height: ButtonHeight,
-    gap: 10,
+    gap: theme.spacing['2.5'],
   },
   backButtonContainer: {
     flex: 0.54, // 35% / 65% ≈ 0.54 ratio

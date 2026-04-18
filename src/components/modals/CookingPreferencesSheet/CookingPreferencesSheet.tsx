@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { alertService } from '#/services/alertService';
 import { Picker } from '@react-native-picker/picker';
@@ -9,6 +9,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '#/constants/dietary';
+import { Text } from '#components/atoms/Text';
 
 interface CookingPreferencesSheetProps {
   visible: boolean;
@@ -156,7 +157,9 @@ export const CookingPreferencesSheet: React.FC<
 
         {/* Skill Level Picker */}
         <View style={styles.section}>
-          <Text style={styles.label}>Cooking Skill Level</Text>
+          <Text size="base" weight="medium" style={styles.label}>
+            Cooking Skill Level
+          </Text>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={skillLevel}
@@ -222,9 +225,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   label: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   pickerContainer: {

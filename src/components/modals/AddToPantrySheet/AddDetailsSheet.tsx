@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import PagerView from 'react-native-pager-view';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { usePantryItemSubmission } from '#hooks/pantry/usePantryItemSubmission';
+import { usePantryItemSubmission } from '#features/pantry/hooks/usePantryItemSubmission';
 import { StorageState, type StorageLocation } from '#generated';
 import { PageIndicator } from '#/components/molecules/PageIndicator/PageIndicator';
 
@@ -13,6 +13,7 @@ import { MainDetailsPage } from './MainDetailsPage';
 import { DetailsPage } from './DetailsPage';
 import { StoragePage } from './StoragePage';
 import { StockSettingsPage } from './StockSettingsPage';
+import { Text } from '#components/atoms/Text';
 
 const PAGES = ['Main', 'Details', 'Storage', 'Stock'];
 
@@ -249,9 +250,13 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text size="md" weight="medium" tone="secondary">
+              Cancel
+            </Text>
           </Pressable>
-          <Text style={styles.title}>Add Item Details</Text>
+          <Text size="lg" weight="bold" align="center" style={styles.title}>
+            Add Item Details
+          </Text>
           <Pressable
             style={({ pressed }) => [
               styles.saveButton,
@@ -262,7 +267,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             disabled={loading}
             testID="add-pantry-item-submit-button"
           >
-            <Text style={styles.saveButtonText}>
+            <Text size="md" weight="semibold" style={styles.saveButtonText}>
               {loading ? 'Adding...' : 'Add'}
             </Text>
           </Pressable>
@@ -369,17 +374,8 @@ const styles = StyleSheet.create(theme => ({
   cancelButton: {
     minWidth: 60,
   },
-  cancelButtonText: {
-    color: theme.colors.textSecondary,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-  },
   title: {
     flex: 1,
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
   },
   saveButton: {
     backgroundColor: theme.colors.primary,
@@ -392,8 +388,6 @@ const styles = StyleSheet.create(theme => ({
   },
   saveButtonText: {
     color: theme.colors.white,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
   pager: {
     flex: 1,

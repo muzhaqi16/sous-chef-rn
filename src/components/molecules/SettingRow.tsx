@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import Ionicons from '@react-native-vector-icons/ionicons';
@@ -14,6 +14,7 @@ import { Icon } from '#/utils/iconUtils';
 import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet/TextEditBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Pressable } from 'react-native-gesture-handler';
+import { Text } from '#components/atoms/Text';
 
 export interface SettingRowProps {
   item: any;
@@ -135,7 +136,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       >
         <View style={styles.row}>
           {item.icon}
-          <Text style={styles.rowLabel}>{item.label}</Text>
+          <Text size="md" style={styles.rowLabel}>
+            {item.label}
+          </Text>
           <View style={styles.rowSpacer} />
 
           {item.type === 'info' && (
@@ -180,7 +183,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           {item.type === 'modal' && (
             <View style={styles.modalValueContainer}>
               <Text
-                style={styles.modalValueText}
+                size="md"
+                tone="secondary"
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
@@ -237,7 +241,14 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
         >
           <BottomSheetView style={[styles.sheetContent, contentContainerStyle]}>
-            <Text style={styles.sheetTitle}>{item.label}</Text>
+            <Text
+              size="lg"
+              weight="semibold"
+              align="center"
+              style={styles.sheetTitle}
+            >
+              {item.label}
+            </Text>
             <View style={styles.sheetDivider} />
             {item.options.map((opt: any) => (
               <Pressable
@@ -252,7 +263,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                 accessibilityHint={`Select ${opt.label}`}
                 accessibilityState={{ selected: item.value === opt.value }}
               >
-                <Text style={styles.sheetOptionText}>{opt.label}</Text>
+                <Text size="md" style={styles.sheetOptionText}>
+                  {opt.label}
+                </Text>
                 {item.value === opt.value && (
                   <Icon
                     name="checkmark"
@@ -288,8 +301,6 @@ const styles = StyleSheet.create(theme => ({
   row: { flexDirection: 'row', alignItems: 'center' },
   rowLabel: {
     marginLeft: theme.spacing.sm,
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
   },
   rowSpacer: { flex: 1 },
   modalValueContainer: {
@@ -298,18 +309,10 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'flex-end',
     gap: theme.spacing.xs,
   },
-  modalValueText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary,
-  },
   sheetContent: {
     paddingHorizontal: theme.spacing.lg,
   },
   sheetTitle: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
     paddingVertical: theme.spacing.sm,
   },
   sheetDivider: {
@@ -324,9 +327,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
   },
   sheetOptionText: {
-    fontSize: theme.typography.fontSize.md,
     flex: 1,
-    color: theme.colors.textPrimary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

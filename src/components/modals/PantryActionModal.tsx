@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
@@ -10,10 +10,11 @@ import {
   useOperationUnits,
   type SelectedUnitInfo,
   type PantryOperation,
-} from '#hooks/pantry/useOperationUnits';
-import { useConvertAvailableQuantity } from '#hooks/pantry/useConvertAvailableQuantity';
+} from '#features/pantry/hooks/useOperationUnits';
+import { useConvertAvailableQuantity } from '#features/pantry/hooks/useConvertAvailableQuantity';
 import type { PantryItemFragment, UnitType } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
+import { Text } from '#components/atoms/Text';
 
 export interface PantryActionSharedState {
   selectedUnitInfo: SelectedUnitInfo | null;

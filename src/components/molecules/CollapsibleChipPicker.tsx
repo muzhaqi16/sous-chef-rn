@@ -1,5 +1,5 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -12,6 +12,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { SPRING, TIMING } from '#/constants/animations';
+import { Text } from '#components/atoms/Text';
 
 interface CollapsibleChipPickerProps<T extends string> {
   label: string;
@@ -64,7 +65,9 @@ export const CollapsibleChipPicker = <T extends string>({
         <Text style={commonStyles.bottomSheetSectionLabel}>{label}</Text>
         <View style={styles.collapsedRight}>
           {selectedLabel ? (
-            <Text style={styles.selectedText}>{selectedLabel}</Text>
+            <Text size="base" weight="semibold" tone="accent">
+              {selectedLabel}
+            </Text>
           ) : null}
           <Animated.View style={animatedChevronStyle}>
             <Icon
@@ -132,11 +135,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
-  },
-  selectedText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
   },
   expandedContainer: {
     marginTop: theme.spacing.sm,

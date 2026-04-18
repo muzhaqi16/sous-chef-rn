@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+
 import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -11,6 +11,7 @@ import { Icon } from '#utils/iconUtils';
 import { styles } from './styles';
 import { useUnistyles } from 'react-native-unistyles';
 import { ActionButtonProps } from './types';
+import { Text } from '#components/atoms/Text';
 
 interface AnimatedActionButtonProps extends ActionButtonProps {
   progress?: SharedValue<number>;
@@ -85,7 +86,11 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
     <Pressable onPress={handlePress} style={buttonStyle} testID={testID}>
       <Animated.View style={animatedStyle}>
         <Icon name={icon} size={iconSize} color={iconColor} library={library} />
-        {label ? <Text style={styles.deleteText}>{label}</Text> : null}
+        {label ? (
+          <Text size="xs" weight="semibold" style={styles.deleteText}>
+            {label}
+          </Text>
+        ) : null}
       </Animated.View>
     </Pressable>
   );

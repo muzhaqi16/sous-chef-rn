@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatRole } from '#/utils/formatters/roleFormatters';
 import { type Member } from '#/utils/formatters/memberFormatters';
 import { commonStyles } from '#/styles/commonStyles';
+import { Text } from '#components/atoms/Text';
 
 interface HomeMemberCardProps {
   member: Member;
@@ -39,13 +40,19 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
     <View style={[commonStyles.card, commonStyles.shadow, styles.memberCard]}>
       <View style={styles.memberInfo}>
         <View style={styles.memberHeader}>
-          <Text style={styles.memberName}>{displayName}</Text>
+          <Text size="md" weight="semibold" style={styles.memberName}>
+            {displayName}
+          </Text>
           <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>{formatRole(member.role)}</Text>
+            <Text size="xs" weight="semibold" tone="accent">
+              {formatRole(member.role)}
+            </Text>
           </View>
         </View>
         {!!member.user?.email && !isCurrentUser && (
-          <Text style={styles.memberEmail}>{member.user.email}</Text>
+          <Text size="sm" tone="secondary">
+            {member.user.email}
+          </Text>
         )}
       </View>
 
@@ -59,7 +66,9 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
             onPress={onChangeRole}
           >
             <Icon name="swap-horizontal" size={18} />
-            <Text style={styles.actionButtonText}>Change Role</Text>
+            <Text size="sm" weight="medium" style={styles.actionButtonText}>
+              Change Role
+            </Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [
@@ -69,7 +78,9 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
             onPress={onRemove}
           >
             <Icon name="person-remove" size={18} />
-            <Text style={styles.removeButtonText}>Remove</Text>
+            <Text size="sm" weight="medium" tone="error">
+              Remove
+            </Text>
           </Pressable>
         </View>
       )}
@@ -94,25 +105,13 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xs,
   },
   memberName: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     flex: 1,
-  },
-  memberEmail: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
   },
   roleBadge: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.primary + '20',
-  },
-  roleText: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
   },
   memberActions: {
     flexDirection: 'row',
@@ -133,14 +132,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   actionButtonText: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.info,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  removeButtonText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.error,
-    fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
     opacity: theme.opacity.pressed,

@@ -22,6 +22,7 @@ module.exports = {
     '^#constants(.*)$': '<rootDir>/src/constants$1',
     '^#config(.*)$': '<rootDir>/src/config$1',
     '^#context(.*)$': '<rootDir>/src/context$1',
+    '^#features(.*)$': '<rootDir>/src/features$1',
     '^#generated(.*)$': '<rootDir>/src/graphql/generated$1',
     '^#graphql(.*)$': '<rootDir>/src/graphql$1',
     '^#hooks(.*)$': '<rootDir>/src/hooks$1',
@@ -44,6 +45,7 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/graphql/generated/**',
+    '!src/**/*.generated.ts',
     '!src/**/*.d.ts',
     '!src/**/index.ts',
     '!src/types/**',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Button } from '#/components/base/Button';
 import { useForm, type Resolver } from 'react-hook-form';
@@ -35,6 +35,7 @@ import {
 } from '#/components/molecules/DynamicFormFields';
 import { PageIndicator } from '#/components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#/components/molecules/CollapsibleSection';
+import { Text } from '#components/atoms/Text';
 
 export type AddItemFormMode = 'create' | 'edit' | 'variant';
 
@@ -578,22 +579,42 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   return (
     <>
       <View style={styles.header}>
-        <Text style={styles.title}>{title || modeConfig.title}</Text>
-        <Text style={styles.subtitle}>{modeConfig.subtitle(!!barcode)}</Text>
+        <Text size="2xl" weight="bold" style={styles.title}>
+          {title || modeConfig.title}
+        </Text>
+        <Text size="sm" tone="secondary" lineHeight="tight">
+          {modeConfig.subtitle(!!barcode)}
+        </Text>
       </View>
 
       {!!(scannedValue || barcode) && (
         <View style={styles.barcodeInfo}>
-          <Text style={styles.barcodeLabel}>
+          <Text
+            size="xs"
+            weight="semibold"
+            tone="secondary"
+            style={styles.barcodeLabel}
+          >
             {scannedValue && detectScanType(scannedValue) === 'sku'
               ? 'SKU'
               : 'UPC/Barcode'}
           </Text>
-          <Text style={styles.barcodeValue}>{scannedValue || barcode}</Text>
+          <Text size="md" weight="medium" style={styles.barcodeValue}>
+            {scannedValue || barcode}
+          </Text>
           {!!format && (
             <>
-              <Text style={styles.formatLabel}>Format</Text>
-              <Text style={styles.formatValue}>{format.toUpperCase()}</Text>
+              <Text
+                size="xs"
+                weight="semibold"
+                tone="secondary"
+                style={styles.formatLabel}
+              >
+                Format
+              </Text>
+              <Text size="sm" weight="medium" tone="onSurfaceVariant">
+                {format.toUpperCase()}
+              </Text>
             </>
           )}
         </View>
@@ -692,15 +713,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   title: {
-    fontSize: theme.fonts.size['2xl'],
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
-  },
-  subtitle: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    lineHeight: 20,
   },
   barcodeInfo: {
     backgroundColor: theme.colors.background,
@@ -709,30 +722,16 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   barcodeLabel: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     marginBottom: theme.spacing.xs,
   },
   barcodeValue: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
     fontFamily: 'monospace',
     marginBottom: theme.spacing.sm,
   },
   formatLabel: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     marginBottom: theme.spacing.xs,
-  },
-  formatValue: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textOnSurfaceVariant,
   },
   form: {
     marginBottom: theme.spacing.lg,
@@ -744,7 +743,7 @@ const styles = StyleSheet.create(theme => ({
     paddingTop: theme.spacing.md,
   },
   buttonContainer: {
-    gap: 12,
+    gap: theme.spacing['3'],
     paddingBottom: theme.spacing.lg,
   },
 }));

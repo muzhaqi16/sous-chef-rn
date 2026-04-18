@@ -1,16 +1,16 @@
 import React from 'react';
-import {Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
+import { StyleSheet } from 'react-native-unistyles';
 
-export const ErrorMessage = ({message}: {message: string}) => (
-  <Text style={styles.errorText}>{message}</Text>
+export const ErrorMessage = ({ message }: { message: string }) => (
+  <Text tone="error" align="center" style={styles.errorText}>
+    {message}
+  </Text>
 );
 
 // Styles
 const styles = StyleSheet.create(theme => ({
   errorText: {
-    color: theme.colors.error,
-    marginTop: 12,
-    textAlign: 'center',
+    marginTop: theme.spacing['3'],
   },
 }));

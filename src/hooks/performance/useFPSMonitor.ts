@@ -36,7 +36,8 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
   const {
     lowFPSThreshold = 30,
     logInterval = 5000,
-    autoStart = __DEV__ } = options;
+    autoStart = __DEV__,
+  } = options;
 
   const [fps, setFps] = useState(60);
   const [isMonitoring, setIsMonitoring] = useState(autoStart && __DEV__);
@@ -45,7 +46,8 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
     min: 60,
     max: 60,
     avg: 60,
-    lowFPSCount: 0 });
+    lowFPSCount: 0,
+  });
 
   const frameCountRef = useRef(0);
   const lastTimeRef = useRef(0);
@@ -86,7 +88,9 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
       const history = fpsHistoryRef.current;
       const min = Math.min(...history);
       const max = Math.max(...history);
-      const avg = Math.round(history.reduce((a, b) => a + b, 0) / history.length);
+      const avg = Math.round(
+        history.reduce((a, b) => a + b, 0) / history.length,
+      );
 
       setFps(currentFPS);
       setStats({
@@ -94,7 +98,8 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
         min,
         max,
         avg,
-        lowFPSCount: lowFPSCountRef.current });
+        lowFPSCount: lowFPSCountRef.current,
+      });
     }
   };
 
@@ -169,7 +174,8 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
       min: 60,
       max: 60,
       avg: 60,
-      lowFPSCount: 0 });
+      lowFPSCount: 0,
+    });
   };
 
   // Auto-start on mount if enabled
@@ -193,7 +199,9 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
         const elapsed = now - lastTimeRef.current;
 
         if (elapsed >= 1000) {
-          const currentFPS = Math.round((frameCountRef.current * 1000) / elapsed);
+          const currentFPS = Math.round(
+            (frameCountRef.current * 1000) / elapsed,
+          );
           frameCountRef.current = 0;
           lastTimeRef.current = now;
 
@@ -209,7 +217,9 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
           const history = fpsHistoryRef.current;
           const min = Math.min(...history);
           const max = Math.max(...history);
-          const avg = Math.round(history.reduce((a, b) => a + b, 0) / history.length);
+          const avg = Math.round(
+            history.reduce((a, b) => a + b, 0) / history.length,
+          );
 
           setFps(currentFPS);
           setStats({
@@ -217,7 +227,8 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
             min,
             max,
             avg,
-            lowFPSCount: lowFPSCountRef.current });
+            lowFPSCount: lowFPSCountRef.current,
+          });
         }
       };
 
@@ -226,7 +237,9 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
         const history = fpsHistoryRef.current;
         if (history.length === 0) return;
         const min = Math.min(...history);
-        const avg = Math.round(history.reduce((a, b) => a + b, 0) / history.length);
+        const avg = Math.round(
+          history.reduce((a, b) => a + b, 0) / history.length,
+        );
         console.log(`[PERF] FPS: current (avg: ${avg}, min: ${min})`);
         if (avg < lowFPSThreshold) {
           console.log(`[PERF] Low FPS: ${avg} avg`);
@@ -279,7 +292,8 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
     stats,
     startMonitoring,
     stopMonitoring,
-    resetStats };
+    resetStats,
+  };
 }
 
 /**
@@ -292,6 +306,7 @@ export function useSimpleFPS(): number {
     if (!__DEV__) return;
 
     let cancelled = false;
+    let rafId: number | null = null;
     let frames = 0;
     let lastTime = Date.now();
 
@@ -304,11 +319,14 @@ export function useSimpleFPS(): number {
         frames = 0;
         lastTime = now;
       }
-      requestAnimationFrame(countFrame);
+      rafId = requestAnimationFrame(countFrame);
     };
 
-    requestAnimationFrame(countFrame);
-    return () => { cancelled = true; };
+    rafId = requestAnimationFrame(countFrame);
+    return () => {
+      cancelled = true;
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   return fps;

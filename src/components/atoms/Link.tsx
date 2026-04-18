@@ -1,10 +1,12 @@
 import React from 'react';
-import { Text, type TextProps, type TextStyle } from 'react-native';
+import type { TextProps as RNTextProps, TextStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { Text } from './Text';
 
 type LinkVariant = 'primary' | 'subtle';
 
-interface LinkProps extends Omit<TextProps, 'style' | 'onPress' | 'disabled'> {
+interface LinkProps
+  extends Omit<RNTextProps, 'style' | 'onPress' | 'disabled'> {
   children: React.ReactNode;
   onPress?: () => void;
   disabled?: boolean;
@@ -29,12 +31,9 @@ export const Link: React.FC<LinkProps> = ({
       onPress={disabled ? undefined : onPress}
       accessibilityRole="link"
       accessibilityState={{ disabled }}
-      style={[
-        styles.base,
-        variant === 'subtle' ? styles.subtle : styles.primary,
-        disabled && styles.disabled,
-        style,
-      ]}
+      weight="semibold"
+      tone={variant === 'subtle' ? 'onSurfaceVariant' : 'accent'}
+      style={[disabled && styles.disabled, style]}
     >
       {children}
     </Text>
@@ -42,15 +41,6 @@ export const Link: React.FC<LinkProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  base: {
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  primary: {
-    color: theme.colors.primary,
-  },
-  subtle: {
-    color: theme.colors.textOnSurfaceVariant,
-  },
   disabled: {
     opacity: theme.opacity.disabled,
   },

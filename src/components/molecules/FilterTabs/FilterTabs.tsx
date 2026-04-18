@@ -1,10 +1,11 @@
 import { useRef, useEffect, useState } from 'react';
-import { View, Text, type LayoutChangeEvent, ScrollView } from 'react-native';
+import { View, type LayoutChangeEvent, ScrollView } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FilterTabsItem } from './FilterTabsItem';
 import type { FilterTabConfig, FilterTabsProps } from './types';
+import { Text } from '#components/atoms/Text';
 
 // ── Module-level caches for tab layout measurements ──
 // Shared between the regular and sticky-header instances of the same FilterTabs

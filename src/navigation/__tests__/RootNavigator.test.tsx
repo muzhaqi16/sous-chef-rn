@@ -161,7 +161,7 @@ jest.mock('../stacks/NotificationStack', () => ({
 }));
 
 // Mock screen imports
-jest.mock('#screens/profile/ProfileScreen', () => ({
+jest.mock('#features/profile/screens/ProfileScreen', () => ({
   ProfileScreen: () => null,
 }));
 jest.mock('#screens/home/HomeManagement', () => ({
@@ -182,8 +182,15 @@ jest.mock('#screens/auth/EmailVerificationDeepLinkScreen', () => ({
 jest.mock('#screens/auth/ResetPasswordScreen', () => ({
   ResetPasswordScreen: () => null,
 }));
-jest.mock('#screens/shoppingList/AcceptInvite', () => ({
+jest.mock('#features/shoppingList/screens/AcceptInvite', () => ({
   AcceptInvite: () => null,
+}));
+
+// Mock the feature registry so stacks don't load real screen modules
+jest.mock('#features/registry', () => ({
+  TAB_FEATURES: [],
+  FEATURE_DEEP_LINK_SCREENS: [],
+  FEATURE_REGISTRY: [],
 }));
 
 import { Navigation } from '../RootNavigator';

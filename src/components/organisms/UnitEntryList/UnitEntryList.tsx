@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
 import { Button } from '#/components/base/Button';
+import { Text } from '#components/atoms/Text';
 
 export interface UnitEntry {
   id: string;
@@ -99,7 +100,9 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Units</Text>
+      <Text size="lg" weight="semibold" style={styles.sectionTitle}>
+        Units
+      </Text>
 
       {entries.map((entry, index) => (
         <View key={entry.id}>
@@ -171,9 +174,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   sectionTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,

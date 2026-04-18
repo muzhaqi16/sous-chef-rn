@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ViewStyle, ScrollView } from 'react-native';
+import { View, ViewStyle, ScrollView } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -12,6 +12,7 @@ import {
   formatCalories,
   hasNutritionData,
 } from '#utils/nutritionUtils';
+import { Text } from '#components/atoms/Text';
 
 interface NutritionSummaryProps {
   /** Raw nutritions JSON from API or parsed NutritionsData */
@@ -44,12 +45,27 @@ const MacroCircle: React.FC<MacroCircleProps> = ({
   return (
     <View style={circleStyles.container}>
       <View style={[circleStyles.circle, { borderColor: color }]}>
-        <Text style={[circleStyles.value, { color }]}>{value}</Text>
+        <Text size="md" weight="bold" style={{ color }}>
+          {value}
+        </Text>
         {unit ? (
-          <Text style={[circleStyles.unit, { color }]}>{unit}</Text>
+          <Text
+            size="xs"
+            weight="medium"
+            style={[circleStyles.unit, { color }]}
+          >
+            {unit}
+          </Text>
         ) : null}
       </View>
-      <Text style={circleStyles.label}>{label}</Text>
+      <Text
+        size="xs"
+        tone="secondary"
+        align="center"
+        style={circleStyles.label}
+      >
+        {label}
+      </Text>
     </View>
   );
 };
@@ -77,7 +93,7 @@ const HighlightBadge: React.FC<HighlightBadgeProps> = ({ highlight }) => {
 
   return (
     <View style={[badgeStyles.badge, { backgroundColor }]}>
-      <Text style={[badgeStyles.text, { color: textColor }]}>
+      <Text size="xs" weight="medium" style={{ color: textColor }}>
         {highlight.label}
       </Text>
     </View>
@@ -111,7 +127,14 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
     <View style={[styles.container, compact && styles.containerCompact, style]}>
       {/* Serving size label */}
       {!!macros.servingSize && (
-        <Text style={styles.servingSize}>Per {macros.servingSize}</Text>
+        <Text
+          size="xs"
+          tone="secondary"
+          align="center"
+          style={styles.servingSize}
+        >
+          Per {macros.servingSize}
+        </Text>
       )}
 
       {/* Macro circles row */}
@@ -158,7 +181,9 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
       {/* Navigation chevron */}
       {!!onPress && (
         <View style={styles.actionRow}>
-          <Text style={styles.actionText}>View Details</Text>
+          <Text size="sm" weight="medium" tone="accent">
+            View Details
+          </Text>
           <Icon name="chevron-forward" size={20} />
         </View>
       )}
@@ -205,9 +230,6 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.sm,
   },
   servingSize: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
     marginBottom: theme.spacing.sm,
   },
   macrosRow: {
@@ -232,11 +254,6 @@ const styles = StyleSheet.create(theme => ({
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
-  actionText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.primary,
-  },
 }));
 
 const circleStyles = StyleSheet.create(theme => ({
@@ -247,26 +264,17 @@ const circleStyles = StyleSheet.create(theme => ({
   circle: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: theme.radii['4xl'],
     borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.background,
   },
-  value: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.bold,
-  },
   unit: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.medium,
     marginTop: -2,
   },
   label: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
-    textAlign: 'center',
   },
 }));
 
@@ -275,9 +283,5 @@ const badgeStyles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.full,
-  },
-  text: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.medium,
   },
 }));

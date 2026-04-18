@@ -1,10 +1,11 @@
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { ItemSuggestion } from '#generated';
+import { Text } from '#components/atoms/Text';
 
 interface ItemSuggestionsListProps {
   /** Search query for the "Add manually" text */
@@ -67,11 +68,16 @@ const SuggestionRow = ({
         </View>
       )}
       <View style={styles.suggestionInfo}>
-        <Text style={styles.suggestionName} numberOfLines={1}>
+        <Text size="base" weight="medium" numberOfLines={1}>
           {item.name}
         </Text>
         {!!showBrands && !!item.brands && item.brands.length > 0 && (
-          <Text style={styles.suggestionBrands} numberOfLines={1}>
+          <Text
+            size="sm"
+            tone="secondary"
+            style={styles.suggestionBrands}
+            numberOfLines={1}
+          >
             {item.brands[0].name}
           </Text>
         )}
@@ -118,7 +124,7 @@ export const ItemSuggestionsList = ({
       onPress={onAddManually}
     >
       <Icon name="add-circle-outline" size={20} color={theme.colors.primary} />
-      <Text style={styles.addManuallyText}>
+      <Text size="base" tone="accent" weight="medium">
         {hasResults
           ? `Add "${searchQuery}" manually`
           : `No matches. Add "${searchQuery}" manually`}
@@ -191,14 +197,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     marginRight: theme.spacing.md,
   },
-  suggestionName: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
   suggestionBrands: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: 2,
   },
   quickAddButton: {
@@ -217,11 +216,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     padding: theme.spacing.md,
     gap: theme.spacing.sm,
-  },
-  addManuallyText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
     opacity: theme.opacity.pressed,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+
 import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -14,6 +14,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { TIMING } from '#constants/animations';
 import { Icon } from '#/utils/iconUtils';
 import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
+import { Text } from '#components/atoms/Text';
 
 const TAB_ICON_MAP: Record<string, [string, string]> = {
   Pantry: ['home', 'home-outline'],
@@ -111,6 +112,7 @@ export const TabItem: React.FC<TabItemProps> = ({
       <Animated.View style={animatedIconStyle}>{renderIcon()}</Animated.View>
       {!!showLabel && (
         <Text
+          size="xs"
           maxFontSizeMultiplier={1.2}
           style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}
         >
@@ -132,7 +134,6 @@ const styles = StyleSheet.create(theme => ({
     minWidth: theme.sizes.touchTarget.sm,
   },
   tabLabel: {
-    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textTertiary,
     marginTop: theme.spacing.xs,
   },

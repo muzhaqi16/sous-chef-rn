@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Counter } from './Counter';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 /**
  * Shopping List Item Counter
@@ -28,8 +29,6 @@ export const ShoppingListItemCounter = ({
   rightElement?: React.ReactNode;
   disabled?: boolean;
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <View style={styles.container}>
       {/* Left Column: Counter + Unit Text (centered) */}
@@ -41,9 +40,7 @@ export const ShoppingListItemCounter = ({
           disabled={disabled}
         />
         {!!unit && (
-          <Text
-            style={[styles.unitText, { color: theme.colors.textSecondary }]}
-          >
+          <Text align="center" tone="secondary" style={styles.unitText}>
             {unit}
           </Text>
         )}
@@ -69,6 +66,5 @@ const styles = StyleSheet.create(theme => ({
   unitText: {
     fontSize: theme.typography.fontSize.xs - 1,
     marginTop: theme.spacing.xs,
-    textAlign: 'center',
   },
 }));

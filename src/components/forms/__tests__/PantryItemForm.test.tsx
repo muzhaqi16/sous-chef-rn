@@ -47,31 +47,34 @@ jest.mock('#generated', () => ({
   })),
 }));
 
-jest.mock('#hooks/pantry/mutations/useCreatePantryItem', () => ({
+jest.mock('#features/pantry/hooks/mutations/useCreatePantryItem', () => ({
   useCreatePantryItem: jest.fn(() => ({
     createPantryItem: jest.fn(),
   })),
 }));
 
-jest.mock('#hooks/pantry/mutations/useUpdatePantryItem', () => ({
+jest.mock('#features/pantry/hooks/mutations/useUpdatePantryItem', () => ({
   useUpdatePantryItem: jest.fn(() => ({
     updatePantryItemFields: jest.fn(),
   })),
 }));
 
-jest.mock('#hooks/pantry/mutations/useUpdatePantryItemQuantity', () => ({
-  useUpdatePantryItemQuantity: jest.fn(() => ({
-    updateQuantity: jest.fn(),
-  })),
-}));
+jest.mock(
+  '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity',
+  () => ({
+    useUpdatePantryItemQuantity: jest.fn(() => ({
+      updateQuantity: jest.fn(),
+    })),
+  }),
+);
 
-jest.mock('#hooks/pantry/mutations/useResolveUnit', () => ({
+jest.mock('#features/pantry/hooks/mutations/useResolveUnit', () => ({
   useResolveUnit: jest.fn(() => ({
     resolveUnitId: jest.fn(),
   })),
 }));
 
-jest.mock('#hooks/pantry/mutations/types', () => ({
+jest.mock('#features/pantry/hooks/mutations/types', () => ({
   emptyUnitSelection: { id: null, name: null, symbol: null, type: null },
 }));
 

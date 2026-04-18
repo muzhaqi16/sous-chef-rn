@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, Modal, Pressable } from 'react-native';
+import { View, Modal, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
 import { Icon } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 export interface FeatureHintConfig {
   /** Title of the hint */
@@ -75,9 +76,18 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
                 </View>
               ) : null}
 
-              <Text style={styles.hintTitle}>{title}</Text>
+              <Text
+                size="lg"
+                weight="bold"
+                align="center"
+                style={styles.hintTitle}
+              >
+                {title}
+              </Text>
               {subtitle ? (
-                <Text style={styles.hintSubtitle}>{subtitle}</Text>
+                <Text size="md" tone="secondary" align="center">
+                  {subtitle}
+                </Text>
               ) : null}
             </View>
 
@@ -89,7 +99,14 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
               onPress={onDismiss}
               testID="feature-hint-overlay-dismiss"
             >
-              <Text style={styles.dismissButtonText}>{dismissText}</Text>
+              <Text
+                size="md"
+                weight="semibold"
+                align="center"
+                style={styles.dismissButtonText}
+              >
+                {dismissText}
+              </Text>
             </Pressable>
           </Animated.View>
         </Pressable>
@@ -138,16 +155,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
   },
   hintTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
     marginBottom: theme.spacing.sm,
-  },
-  hintSubtitle: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
   },
   dismissButton: {
     backgroundColor: theme.colors.primary,
@@ -157,10 +165,7 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 120,
   },
   dismissButtonText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.white,
-    textAlign: 'center',
   },
   pressed: {
     opacity: theme.opacity.pressed,
