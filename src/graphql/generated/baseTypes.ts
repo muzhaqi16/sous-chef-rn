@@ -313,6 +313,19 @@ export enum AutomatedFlag {
   SuspiciousBehavior = 'SUSPICIOUS_BEHAVIOR'
 }
 
+/** Result of a backfill run — what would/did get queued. */
+export type BackfillEmbeddingsResult = {
+  __typename: 'BackfillEmbeddingsResult';
+  /** Whether dryRun was set. */
+  dryRun: Scalars['Boolean']['output'];
+  /** How many were enqueued this call (0 if dryRun). */
+  enqueued: Scalars['Int']['output'];
+  /** The limit applied to this run. */
+  limit: Scalars['Int']['output'];
+  /** Number of items remaining without embeddings (after this run). */
+  remaining: Scalars['Int']['output'];
+};
+
 export type BanUserInput = {
   reason: Scalars['String']['input'];
   userId: Scalars['ID']['input'];
@@ -4399,6 +4412,12 @@ export type Mutation = {
   approveItem: ItemPayload;
   /** Archive a shopping list. */
   archiveShoppingList: ShoppingListPayload;
+  /**
+   * Admin: enqueue embedding computation for items that don't yet have one.
+   * Returns the number of jobs queued. Use dryRun to estimate backlog without
+   * enqueueing. Throttled server-side to protect the embedding provider.
+   */
+  backfillItemEmbeddings: BackfillEmbeddingsResult;
   /** Create multiple items at once */
   bulkCreateItems: BulkCreateItemsResponse;
   /** Create multiple purchase records at once. */
@@ -5035,6 +5054,12 @@ export type MutationApproveItemArgs = {
 
 export type MutationArchiveShoppingListArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationBackfillItemEmbeddingsArgs = {
+  dryRun?: InputMaybe<Scalars['Boolean']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -7772,6 +7797,16 @@ export type Query = {
   savedRecipeFolders: Array<Scalars['String']['output']>;
   /** Search items with cursor-based pagination (Relay spec). */
   searchItems: ItemConnection;
+  /**
+   * Semantic (vector) search over the catalog. The prompt is embedded
+   * server-side and compared against Item.embedding via pgvector cosine
+   * distance. Intended as an augmentation to exact-match paths (UPC, tsvector)
+   * — use when text search fails or OCR is noisy.
+   *
+   * Items without a cached embedding are excluded until the enrichment
+   * pipeline populates them. Auth-gated to bound embedding-service spend.
+   */
+  searchItemsSemantic: ItemConnection;
   searchRecipes: RecipeConnection;
   /**
    * Search units by name or symbol.
@@ -8347,6 +8382,17 @@ export type QuerySearchItemsArgs = {
   last?: InputMaybe<Scalars['Int']['input']>;
   query: Scalars['String']['input'];
   sort?: InputMaybe<ItemSortInput>;
+};
+
+
+export type QuerySearchItemsSemanticArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  filters?: InputMaybe<ItemFilters>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  maxDistance?: InputMaybe<Scalars['Float']['input']>;
+  prompt: Scalars['String']['input'];
 };
 
 

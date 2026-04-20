@@ -394,6 +394,18 @@ enum AutomatedFlag {
   SUSPICIOUS_BEHAVIOR
 }
 
+"""Result of a backfill run — what would/did get queued."""
+type BackfillEmbeddingsResult {
+  """Whether dryRun was set."""
+  dryRun: Boolean!
+  """How many were enqueued this call (0 if dryRun)."""
+  enqueued: Int!
+  """The limit applied to this run."""
+  limit: Int!
+  """Number of items remaining without embeddings (after this run)."""
+  remaining: Int!
+}
+
 input BanUserInput {
   reason: String!
   userId: ID!
@@ -4265,6 +4277,12 @@ type Mutation {
   approveItem(itemId: ID!): ItemPayload!
   """Archive a shopping list."""
   archiveShoppingList(id: ID!): ShoppingListPayload!
+  """
+  Admin: enqueue embedding computation for items that don't yet have one.
+  Returns the number of jobs queued. Use dryRun to estimate backlog without
+  enqueueing. Throttled server-side to protect the embedding provider.
+  """
+  backfillItemEmbeddings(dryRun: Boolean = false, limit: Int = 1000): BackfillEmbeddingsResult!
   """Create multiple items at once"""
   bulkCreateItems(input: BulkCreateItemInput!): BulkCreateItemsResponse!
   """Create multiple purchase records at once."""
@@ -6301,6 +6319,16 @@ type Query {
   savedRecipeFolders: [String!]!
   """Search items with cursor-based pagination (Relay spec)."""
   searchItems(after: String, before: String, filters: ItemFilters, first: Int, last: Int, query: String!, sort: ItemSortInput): ItemConnection!
+  """
+  Semantic (vector) search over the catalog. The prompt is embedded
+  server-side and compared against Item.embedding via pgvector cosine
+  distance. Intended as an augmentation to exact-match paths (UPC, tsvector)
+  — use when text search fails or OCR is noisy.
+  
+  Items without a cached embedding are excluded until the enrichment
+  pipeline populates them. Auth-gated to bound embedding-service spend.
+  """
+  searchItemsSemantic(after: String, before: String, filters: ItemFilters, first: Int, last: Int, maxDistance: Float, prompt: String!): ItemConnection!
   searchRecipes(after: String, before: String, first: Int, last: Int, query: String!): RecipeConnection!
   """
   Search units by name or symbol.
