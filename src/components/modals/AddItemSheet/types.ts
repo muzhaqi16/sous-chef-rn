@@ -1,7 +1,7 @@
 import type { RefObject } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import type { BottomSheetSearchBarRef } from '#components/molecules/BottomSheetSearchBar';
-import type { ItemSuggestion } from '#generated';
+import { type ItemSuggestion } from '../../../graphql/generated/schemaTypes';
 
 /**
  * Base interface for suggestion items that can be displayed in the sheet.

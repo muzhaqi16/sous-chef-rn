@@ -1,22 +1,36 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, ActivityIndicator, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
+import type { ApolloCache } from '@apollo/client';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
 import {
-  useAcceptHomeInviteMutation,
-  useAcceptShoppingListInviteMutation,
-  useDeclineHomeInviteMutation,
-  useDeclineShoppingListInviteMutation,
-  MyShoppingListInvitesDocument,
-  MyShoppingListInvitesQuery,
+  AcceptHomeInviteDocument,
+  DeclineHomeInviteDocument,
   GetHomesDocument,
   GetMyPendingInvitesDocument,
-} from '#generated';
+} from '../../graphql/operations/home/home.generated';
+import {
+  AcceptShoppingListInviteDocument,
+  DeclineShoppingListInviteDocument,
+  MyShoppingListInvitesDocument,
+  type MyShoppingListInvitesQuery,
+} from '../../graphql/operations/shoppingList/collaboration.generated';
 import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
+
+/** Module-level cache updater to keep try-catch out of the component body (React Compiler). */
+function updateShoppingListCache(cache: ApolloCache, collaborator: any): void {
+  try {
+    const addToShoppingListsCache =
+      createAddToQueryFieldUpdater('shoppingLists');
+    addToShoppingListsCache(cache, collaborator, { position: 'end' });
+  } catch (error) {
+    console.warn('Cache update failed for acceptShoppingListInvite:', error);
+  }
+}
 
 const INVITATION_EXPIRED_MSG =
   'This invitation is no longer valid. It may have expired or already been used.';
@@ -58,40 +72,35 @@ export const InvitationAcceptanceModal: React.FC<
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
-  const [acceptHomeInvite] = useAcceptHomeInviteMutation({
+  const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
     refetchQueries: [
       { query: GetHomesDocument },
       { query: GetMyPendingInvitesDocument },
     ],
     awaitRefetchQueries: true,
   });
-  const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation({
-    refetchQueries: [{ query: MyShoppingListInvitesDocument }],
-    update: (cache, { data }) => {
-      if (!data?.acceptShoppingListInvite?.collaborator) return;
-
-      try {
-        const addToShoppingListsCache =
-          createAddToQueryFieldUpdater('shoppingLists');
-        addToShoppingListsCache(
+  const [acceptShoppingListInvite] = useMutation(
+    AcceptShoppingListInviteDocument,
+    {
+      refetchQueries: [{ query: MyShoppingListInvitesDocument }],
+      update: (cache, { data }) => {
+        if (!data?.acceptShoppingListInvite?.collaborator) return;
+        updateShoppingListCache(
           cache,
           data.acceptShoppingListInvite.collaborator,
-          { position: 'end' },
         );
-      } catch (error) {
-        console.warn(
-          'Cache update failed for acceptShoppingListInvite:',
-          error,
-        );
-      }
+      },
     },
-  });
-  const [declineHomeInvite] = useDeclineHomeInviteMutation({
+  );
+  const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
     refetchQueries: [{ query: GetMyPendingInvitesDocument }],
   });
-  const [declineShoppingListInvite] = useDeclineShoppingListInviteMutation({
-    refetchQueries: [{ query: MyShoppingListInvitesDocument }],
-  });
+  const [declineShoppingListInvite] = useMutation(
+    DeclineShoppingListInviteDocument,
+    {
+      refetchQueries: [{ query: MyShoppingListInvitesDocument }],
+    },
+  );
 
   const resolveToken = async (): Promise<string | undefined> => {
     let token = invitation?.token;

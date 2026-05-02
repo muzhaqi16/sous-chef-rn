@@ -1,12 +1,15 @@
+import { useQuery } from '@apollo/client/react';
 import {
-  useConsumptionUnitsForItemQuery,
-  useRestockUnitsForItemQuery,
+  ConsumptionUnitsForItemDocument,
+  RestockUnitsForItemDocument,
   type ConsumptionUnitsForItemQuery,
   type RestockUnitsForItemQuery,
+} from '#operations/pantry/pantry.generated';
+import {
   UnitType,
   UnitRole,
   UnitSource,
-} from '#generated';
+} from '#/graphql/generated/schemaTypes';
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -184,21 +187,19 @@ export function useOperationUnits({
     operation === PantryOperation.Waste;
 
   // Consumption query (for consume & waste operations)
-  const consumptionResult = useConsumptionUnitsForItemQuery({
+  const consumptionResult = useQuery(ConsumptionUnitsForItemDocument, {
     variables: {
       itemId: itemId!,
       trackingUnitId: trackingUnitId!,
       netWeightUnitId,
     },
     skip: !isConsumption || !itemId || !trackingUnitId,
-    fetchPolicy: 'cache-and-network',
   });
 
   // Restock query
-  const restockResult = useRestockUnitsForItemQuery({
+  const restockResult = useQuery(RestockUnitsForItemDocument, {
     variables: { pantryItemId: pantryItemId! },
     skip: isConsumption || !pantryItemId,
-    fetchPolicy: 'cache-and-network',
   });
 
   const rawUnits = isConsumption

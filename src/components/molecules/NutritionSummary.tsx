@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, ScrollView, ViewStyle } from 'react-native';
+import { View, Text, ViewStyle, ScrollView } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { NutritionsData, NutritionHighlight } from '#/types/nutrition';
@@ -44,7 +45,9 @@ const MacroCircle: React.FC<MacroCircleProps> = ({
     <View style={circleStyles.container}>
       <View style={[circleStyles.circle, { borderColor: color }]}>
         <Text style={[circleStyles.value, { color }]}>{value}</Text>
-        {unit ? <Text style={[circleStyles.unit, { color }]}>{unit}</Text> : null}
+        {unit ? (
+          <Text style={[circleStyles.unit, { color }]}>{unit}</Text>
+        ) : null}
       </View>
       <Text style={circleStyles.label}>{label}</Text>
     </View>
@@ -62,15 +65,15 @@ const HighlightBadge: React.FC<HighlightBadgeProps> = ({ highlight }) => {
     highlight.type === 'positive'
       ? theme.colors.success + '20'
       : highlight.type === 'caution'
-        ? theme.colors.warning + '20'
-        : theme.colors.textSecondary + '20';
+      ? theme.colors.warning + '20'
+      : theme.colors.textSecondary + '20';
 
   const textColor =
     highlight.type === 'positive'
       ? theme.colors.success
       : highlight.type === 'caution'
-        ? theme.colors.warning
-        : theme.colors.textSecondary;
+      ? theme.colors.warning
+      : theme.colors.textSecondary;
 
   return (
     <View style={[badgeStyles.badge, { backgroundColor }]}>
@@ -91,9 +94,10 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
 }) => {
   const { theme } = useUnistyles();
 
-  const nutritions = typeof nutritionsRaw === 'object' && nutritionsRaw !== null
-        ? (nutritionsRaw as NutritionsData)
-        : parseNutritions(nutritionsRaw);
+  const nutritions =
+    typeof nutritionsRaw === 'object' && nutritionsRaw !== null
+      ? (nutritionsRaw as NutritionsData)
+      : parseNutritions(nutritionsRaw);
 
   const macros = extractMacroSummary(nutritions, actualServingGrams);
 
@@ -106,7 +110,9 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
   const content = (
     <View style={[styles.container, compact && styles.containerCompact, style]}>
       {/* Serving size label */}
-      {!!macros.servingSize && <Text style={styles.servingSize}>Per {macros.servingSize}</Text>}
+      {!!macros.servingSize && (
+        <Text style={styles.servingSize}>Per {macros.servingSize}</Text>
+      )}
 
       {/* Macro circles row */}
       <View style={styles.macrosRow}>
@@ -185,7 +191,15 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: theme.spacing.md,
-    boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 4, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.08)' }],
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 2,
+        blurRadius: 4,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.08)',
+      },
+    ],
   },
   containerCompact: {
     padding: theme.spacing.sm,

@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Pressable, Text } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import GroceryBasket from '#assets/icons/svg/grocery-basket.svg';
-import type { PantryStats } from '#generated';
+import { type PantryStats } from '../../graphql/generated/schemaTypes';
 
 interface PantryAlertBarProps {
   stats: Pick<PantryStats, 'totalItems' | 'expiringCount' | 'lowStockCount'>;

@@ -1,3 +1,4 @@
+import type { StaticParamList } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RecipeMain } from '#screens/recipe/RecipeMain';
 import { RecipeDetail } from '#screens/recipe/RecipeDetail';
@@ -22,3 +23,5 @@ export const RecipeStack = createNativeStackNavigator({
     MyRecipes: MyRecipes,
   },
 });
+
+export type RecipeStackParams = StaticParamList<typeof RecipeStack>;

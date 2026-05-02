@@ -4,8 +4,8 @@ import {
   Text,
   Modal,
   TextInput,
-  Pressable,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
@@ -289,7 +289,9 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
                 </Text>
               )}
               {!!helperText && (
-                <Text style={[commonStyles.bodySecondary, localStyles.helperText]}>
+                <Text
+                  style={[commonStyles.bodySecondary, localStyles.helperText]}
+                >
                   {helperText}
                 </Text>
               )}
@@ -304,7 +306,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
               error && localStyles.inputError,
             ]}
             value={inputValue}
-            onChangeText={(text) => {
+            onChangeText={text => {
               setInputValue(text);
               setError(''); // Clear error on input
             }}
@@ -320,7 +322,11 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
           {/* Buttons */}
           <View style={localStyles.modalButtons}>
             <Pressable
-              style={({pressed}) => [commonStyles.button, localStyles.modalButton, pressed && localStyles.pressed]}
+              style={({ pressed }) => [
+                commonStyles.button,
+                localStyles.modalButton,
+                pressed && localStyles.pressed,
+              ]}
               onPress={handleCancel}
               disabled={loading}
             >
@@ -328,7 +334,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
             </Pressable>
 
             <Pressable
-              style={({pressed}) => [
+              style={({ pressed }) => [
                 commonStyles.button,
                 commonStyles.buttonPrimary,
                 localStyles.modalButton,

@@ -1,8 +1,8 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {Icon} from '#utils/iconUtils';
+import { View, Text } from 'react-native';
+import { Icon } from '#utils/iconUtils';
 
-import {StyleSheet} from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
 export const EmptyNotifications: React.FC = () => {
   return (

@@ -2,11 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   RefreshControl,
-  Pressable,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { EmailInput } from '#components/atoms/EmailInput';
@@ -16,12 +16,13 @@ import { LoadingInline } from '#components/base/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { useMutation } from '@apollo/client/react';
 import {
-  useRemoveCollaboratorMutation,
-  useAddCollaboratorMutation,
-  useShareShoppingListMutation,
-  CollaboratorRole,
-} from '#generated';
+  RemoveCollaboratorDocument,
+  AddCollaboratorDocument,
+  ShareShoppingListDocument,
+} from '../../graphql/operations/shoppingList/shoppingList.generated';
+import { CollaboratorRole } from '../../graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -30,13 +31,17 @@ import { useShoppingListDetails } from '#hooks/shoppingList/useShoppingListDetai
 import CollaboratorPermissionsBottomSheet, {
   CollaboratorPermissionsBottomSheetRef,
 } from '#/components/organisms/CollaboratorPermissionsBottomSheet';
-import { useAppStore, selectUser } from '#store/useAppStore';
+import { useUser } from '#store/useAppStore';
 import { Button } from '#components/base/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
+import { ChipScrollRow } from '#components/atoms/ChipScrollRow';
+import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { getFormAnimationPreset } from '#/constants/animations';
 
 const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingList',
@@ -49,6 +54,11 @@ const removeCollaboratorFromCache = createRemoveFromParentConnectionUpdater(
   'collaboratorsConnection',
   'ShoppingListCollaborator',
 );
+
+const ROLE_OPTIONS = INVITE_ROLES.map(role => ({
+  key: role,
+  label: `${ROLE_PERMISSIONS[role].icon} ${ROLE_PERMISSIONS[role].label}`,
+}));
 
 // PERFORMANCE: Helper functions moved outside component to avoid recreation on every render
 const getStatusColor = (
@@ -111,7 +121,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     useRef<CollaboratorPermissionsBottomSheetRef>(null);
 
   // Get current user to check if they are owner
-  const currentUser = useAppStore(selectUser);
+  const currentUser = useUser();
 
   const {
     shoppingList,
@@ -124,9 +134,9 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   const isHomeLinked = !!shoppingList?.homeId;
 
-  const [shareList] = useAddCollaboratorMutation();
-  const [removeMember] = useRemoveCollaboratorMutation();
-  const [shareShoppingList] = useShareShoppingListMutation();
+  const [shareList] = useMutation(AddCollaboratorDocument);
+  const [removeMember] = useMutation(RemoveCollaboratorDocument);
+  const [shareShoppingList] = useMutation(ShareShoppingListDocument);
 
   // Check if current user is owner
   const currentUserCollaborator = collaborators.find(
@@ -169,7 +179,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               'Failed to update share settings',
           );
         }
-        await refetch();
+        // No refetch needed: the mutation returns shoppingList { id, shareCode, isPublic }
+        // which Apollo normalizes by ShoppingList:${id}, auto-updating the cache.
       },
       setTogglingShareCode,
       error => {
@@ -221,7 +232,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           );
         }
         setEmail('');
-        await refetch();
+        // No refetch needed: the update() callback above already inserts the
+        // new collaborator into the cached collaboratorsConnection.
       },
       setSharing,
       error => {
@@ -252,7 +264,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                   });
                 },
               });
-              refetch();
+              // No refetch needed: the update() callback removes the
+              // collaborator from the cached connection in place.
             } catch {
               alertService.alert('Error', 'Failed to remove member');
             }
@@ -318,7 +331,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     );
   };
 
-  if (loading) {
+  // Only block the UI on the initial cold load. usePreservedQueryData keeps
+  // shoppingList truthy across refetches, so this avoids the full-screen flash
+  // every time a mutation triggers a refetch.
+  if (loading && !shoppingList) {
     return <LoadingInline />;
   }
 
@@ -364,145 +380,130 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               </View>
             </View>
           ) : (
-            <View style={styles.inviteSection}>
-              <Text style={styles.sectionTitle}>Invite Members</Text>
-              <View style={styles.inputRow}>
-                <EmailInput
-                  containerStyle={styles.emailInputContainer}
-                  value={email}
-                  onChangeText={setEmail}
-                />
+            <>
+              <View style={styles.shareCodeSection}>
+                <Text style={styles.sectionTitle}>Share via Code</Text>
+                <Text style={styles.shareCodeDescription}>
+                  Enable public sharing to generate a code anyone can use to
+                  join this list.
+                </Text>
                 <Pressable
                   style={({ pressed }) => [
-                    styles.sendButton,
+                    styles.shareCodeToggle,
                     pressed && styles.pressed,
                   ]}
-                  onPress={handleShare}
-                  disabled={sharing}
+                  onPress={handleToggleShareCode}
+                  disabled={togglingShareCode}
                 >
-                  {sharing ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <Icon name="send" size={20} color="white" />
-                  )}
-                </Pressable>
-              </View>
-              <Text style={styles.roleLabel}>Role</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.roleRow}
-              >
-                {INVITE_ROLES.map(role => {
-                  const info = ROLE_PERMISSIONS[role];
-                  const isSelected = selectedRole === role;
-                  return (
-                    <Pressable
-                      key={role}
-                      style={({ pressed }) => [
-                        styles.roleChip,
-                        isSelected && styles.roleChipSelected,
-                        pressed && styles.pressed,
-                      ]}
-                      onPress={() => setSelectedRole(role)}
-                    >
-                      <Text style={styles.roleChipIcon}>{info.icon}</Text>
-                      <Text
-                        style={[
-                          styles.roleChipText,
-                          isSelected && styles.roleChipTextSelected,
-                        ]}
-                      >
-                        {info.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-
-          {!isHomeLinked && (
-            <View style={styles.shareCodeSection}>
-              <Text style={styles.sectionTitle}>Share via Code</Text>
-              <Text style={styles.shareCodeDescription}>
-                Enable public sharing to generate a code anyone can use to join
-                this list.
-              </Text>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.shareCodeToggle,
-                  pressed && styles.pressed,
-                ]}
-                onPress={handleToggleShareCode}
-                disabled={togglingShareCode}
-              >
-                <View style={styles.shareCodeToggleContent}>
-                  <Icon
-                    name={isPublic ? 'link-outline' : 'lock-closed-outline'}
-                    size={20}
-                    color={
-                      isPublic
-                        ? theme.colors.primary
-                        : theme.colors.textSecondary
-                    }
-                  />
-                  <Text style={styles.shareCodeToggleText}>
-                    {isPublic
-                      ? 'Public sharing enabled'
-                      : 'Public sharing disabled'}
-                  </Text>
-                </View>
-                {togglingShareCode ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.primary}
-                  />
-                ) : (
-                  <View
-                    style={[
-                      styles.toggleTrack,
-                      isPublic && styles.toggleTrackActive,
-                    ]}
+                  <Animated.View
+                    key={isPublic ? 'public-on' : 'public-off'}
+                    entering={FadeIn.duration(200)}
+                    style={styles.shareCodeToggleContent}
                   >
-                    <View
-                      style={[
-                        styles.toggleThumb,
-                        isPublic && styles.toggleThumbActive,
-                      ]}
-                    />
-                  </View>
-                )}
-              </Pressable>
-              {isPublic && shareCode ? (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.shareCodeDisplay,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={handleCopyShareCode}
-                >
-                  <Text style={styles.shareCodeValue}>{shareCode}</Text>
-                  <View style={styles.copyButton}>
                     <Icon
-                      name={copied ? 'checkmark' : 'copy-outline'}
-                      size={18}
+                      name={isPublic ? 'link-outline' : 'lock-closed-outline'}
+                      size={20}
                       color={
-                        copied ? theme.colors.success : theme.colors.primary
+                        isPublic
+                          ? theme.colors.primary
+                          : theme.colors.textSecondary
                       }
                     />
-                    <Text
-                      style={[
-                        styles.copyText,
-                        copied && { color: theme.colors.success },
-                      ]}
-                    >
-                      {copied ? 'Copied' : 'Copy'}
+                    <Text style={styles.shareCodeToggleText}>
+                      {isPublic
+                        ? 'Public sharing enabled'
+                        : 'Public sharing disabled'}
                     </Text>
+                  </Animated.View>
+                  <View style={styles.toggleSlot}>
+                    {togglingShareCode ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={theme.colors.primary}
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.toggleTrack,
+                          isPublic && styles.toggleTrackActive,
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.toggleThumb,
+                            isPublic && styles.toggleThumbActive,
+                          ]}
+                        />
+                      </View>
+                    )}
                   </View>
                 </Pressable>
-              ) : null}
-            </View>
+                {isPublic && shareCode ? (
+                  <Animated.View {...getFormAnimationPreset()}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.shareCodeDisplay,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={handleCopyShareCode}
+                    >
+                      <Text style={styles.shareCodeValue}>{shareCode}</Text>
+                      <View style={styles.copyButton}>
+                        <Icon
+                          name={copied ? 'checkmark' : 'copy-outline'}
+                          size={18}
+                          color={
+                            copied ? theme.colors.success : theme.colors.primary
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.copyText,
+                            copied && { color: theme.colors.success },
+                          ]}
+                        >
+                          {copied ? 'Copied' : 'Copy'}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  </Animated.View>
+                ) : null}
+              </View>
+
+              <View style={styles.inviteSection}>
+                <Text style={styles.sectionTitle}>Invite Members</Text>
+                <View style={styles.inputRow}>
+                  <EmailInput
+                    containerStyle={styles.emailInputContainer}
+                    value={email}
+                    onChangeText={setEmail}
+                  />
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.sendButton,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={handleShare}
+                    disabled={sharing}
+                  >
+                    {sharing ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <Icon name="send" size={20} color="white" />
+                    )}
+                  </Pressable>
+                </View>
+                <Text style={styles.roleLabel}>Role</Text>
+                <ChipScrollRow
+                  options={ROLE_OPTIONS}
+                  selected={selectedRole}
+                  onSelect={setSelectedRole}
+                  size="md"
+                  style={styles.chipScroll}
+                  contentContainerStyle={styles.chipRowContent}
+                />
+              </View>
+            </>
           )}
 
           {activeCollaborators.length > 0 && (
@@ -511,6 +512,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
               {activeCollaborators.map(member => {
                 const statusColor = getStatusColor(member.status, theme.colors);
                 const statusText = formatStatus(member.status);
+                const displayName = getCollaboratorDisplayName(
+                  member,
+                  currentUser?.id,
+                );
+                const memberEmail =
+                  member.collaborator?.email ?? member.email ?? '';
+                const showEmailRow =
+                  !!memberEmail && memberEmail !== displayName;
                 return (
                   <Pressable
                     key={member.id}
@@ -525,16 +534,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                     <View style={styles.memberInfo}>
                       <View style={styles.avatar}>
                         <Text style={styles.avatarText}>
-                          {member.email?.[0]?.toUpperCase() || '?'}
+                          {displayName[0]?.toUpperCase() || '?'}
                         </Text>
                       </View>
                       <View style={styles.memberDetails}>
-                        <Text style={styles.memberName}>
-                          {member.email || 'Unknown'}
-                        </Text>
-                        <Text style={styles.memberEmail}>
-                          {member.email || ''}
-                        </Text>
+                        <Text style={styles.memberName}>{displayName}</Text>
+                        {showEmailRow ? (
+                          <Text style={styles.memberEmail}>{memberEmail}</Text>
+                        ) : null}
                         <View style={styles.statusContainer}>
                           <View
                             style={[
@@ -565,8 +572,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                     </View>
                     {!isHomeLinked && (
                       <Pressable
-                        onPress={e => {
-                          e?.stopPropagation?.();
+                        onPress={() => {
                           if (member.id) {
                             handleRemoveMember(member.id);
                           }
@@ -663,35 +669,11 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
-  roleRow: {
-    gap: theme.spacing.sm,
+  chipScroll: {
+    marginHorizontal: -theme.spacing.md,
   },
-  roleChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.pill,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    gap: theme.spacing.xs,
-  },
-  roleChipSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary + '15',
-  },
-  roleChipIcon: {
-    fontSize: theme.typography.fontSize.sm,
-  },
-  roleChipText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  roleChipTextSelected: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
+  chipRowContent: {
+    paddingHorizontal: theme.spacing.md,
   },
   shareCodeSection: {
     padding: theme.spacing.md,
@@ -721,6 +703,12 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
     fontWeight: theme.fonts.weight.medium,
+  },
+  toggleSlot: {
+    width: 44,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   toggleTrack: {
     width: 44,

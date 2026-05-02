@@ -2,11 +2,9 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  Pressable,
-  ActivityIndicator,
   KeyboardAvoidingView,
-  ScrollView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, useWatch } from 'react-hook-form';
@@ -15,7 +13,13 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { Header } from '#components/molecules/Header';
-import { useChangePasswordMutation } from '#generated';
+import { Button } from '#components/base/Button';
+import { useMutation } from '@apollo/client/react';
+import {
+  ChangePasswordDocument,
+  type ChangePasswordMutation,
+  type ChangePasswordMutationVariables,
+} from '../../graphql/operations/auth/auth.generated';
 import { useToast } from '#hooks/useToast';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { changePasswordSchema } from '#utils/validation/auth';
@@ -30,7 +34,10 @@ interface ChangePasswordForm {
 /** Module-level async function to handle password change mutation.
  *  Extracted to avoid try-catch/throw inside component body (React Compiler bailout). */
 async function performChangePassword(
-  changePassword: ReturnType<typeof useChangePasswordMutation>[0],
+  changePassword: useMutation.MutationFunction<
+    ChangePasswordMutation,
+    ChangePasswordMutationVariables
+  >,
   data: ChangePasswordForm,
   toast: ReturnType<typeof useToast>,
   goBack: () => void,
@@ -67,7 +74,7 @@ export const ChangePasswordScreen: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [changePassword] = useChangePasswordMutation();
+  const [changePassword] = useMutation(ChangePasswordDocument);
 
   const form = useForm<ChangePasswordForm>({
     resolver: yupResolver(changePasswordSchema),
@@ -167,21 +174,15 @@ export const ChangePasswordScreen: React.FC = () => {
               />
             </View>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.submitButton,
-                (!isFormValid || isSubmitting) && styles.submitButtonDisabled,
-                pressed && styles.pressed,
-              ]}
+            <Button
+              variant="primary"
               onPress={form.handleSubmit(onSubmit)}
-              disabled={!isFormValid || isSubmitting}
+              disabled={!isFormValid}
+              loading={isSubmitting}
+              style={styles.buttonSpacing}
             >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color={theme.colors.white} />
-              ) : (
-                <Text style={styles.submitButtonText}>Change Password</Text>
-              )}
-            </Pressable>
+              Change Password
+            </Button>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -224,24 +225,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
-  submitButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.xl,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
+  buttonSpacing: {
     marginTop: theme.spacing.md,
-  },
-  submitButtonDisabled: {
-    opacity: theme.opacity.disabled,
-  },
-  submitButtonText: {
-    color: theme.colors.white,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));
 

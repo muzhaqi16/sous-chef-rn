@@ -27,7 +27,13 @@ jest.mock('#components/base/BaseSwitch', () => ({
 }));
 
 jest.mock('#components/atoms/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel, confirmDisabled }: any) => {
+  BottomSheetHeader: ({
+    title,
+    onCancel,
+    onConfirm,
+    confirmLabel,
+    confirmDisabled,
+  }: any) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View testID="bottom-sheet-header">
@@ -35,7 +41,11 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
         <Pressable onPress={onCancel} testID="cancel-button">
           <Text>Cancel</Text>
         </Pressable>
-        <Pressable onPress={onConfirm} testID="confirm-button" disabled={confirmDisabled}>
+        <Pressable
+          onPress={onConfirm}
+          testID="confirm-button"
+          disabled={confirmDisabled}
+        >
           <Text>{confirmLabel}</Text>
         </Pressable>
       </View>
@@ -67,18 +77,29 @@ jest.mock('#components/molecules/FormInput', () => ({
   },
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetShoppingListsLiteQuery: jest.fn(() => ({
-    data: {
-      shoppingLists: {
-        edges: [
-          { node: { id: 'sl-1', name: 'Weekly Groceries', totalItems: 10 } },
-          { node: { id: 'sl-2', name: 'Party Supplies', totalItems: 5 } },
-        ],
-      },
-    },
-  })),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetShoppingListsLite') {
+      return {
+        data: {
+          shoppingLists: {
+            edges: [
+              {
+                node: { id: 'sl-1', name: 'Weekly Groceries', totalItems: 10 },
+              },
+              { node: { id: 'sl-2', name: 'Party Supplies', totalItems: 5 } },
+            ],
+          },
+        },
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -105,7 +126,9 @@ describe('GenerateShoppingListSheet', () => {
   it('renders the check pantry toggle', () => {
     render(<GenerateShoppingListSheet {...defaultProps} />);
     expect(screen.getByText('Check pantry availability')).toBeTruthy();
-    expect(screen.getByText('Deduct items you already have in your pantry')).toBeTruthy();
+    expect(
+      screen.getByText('Deduct items you already have in your pantry'),
+    ).toBeTruthy();
   });
 
   it('renders the destination mode selector', () => {
@@ -127,9 +150,7 @@ describe('GenerateShoppingListSheet', () => {
   });
 
   it('shows home sharing info when homeName is provided', () => {
-    render(
-      <GenerateShoppingListSheet {...defaultProps} homeName="My Home" />,
-    );
+    render(<GenerateShoppingListSheet {...defaultProps} homeName="My Home" />);
     expect(
       screen.getByText('The shopping list will be shared with My Home'),
     ).toBeTruthy();

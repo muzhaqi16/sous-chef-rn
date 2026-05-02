@@ -343,7 +343,12 @@ describe('PantryMain', () => {
 
     it('passes pagination props (hasMore, isLoadingMore, onEndReached)', () => {
       const loadMore = jest.fn();
-      mockPantryScreen({ hasMore: true, isLoadingMore: true, loadMore });
+      mockPantryScreen({
+        hasMore: true,
+        isLoadingMore: true,
+        loadMore,
+        pantryItems: [{ id: 'i1', itemName: 'Milk', quantity: 1 }],
+      });
       render(<PantryMain />);
       expect(capturedPantryContentProps.hasMore).toBe(true);
       expect(capturedPantryContentProps.isLoadingMore).toBe(true);
@@ -431,12 +436,16 @@ describe('PantryMain', () => {
         useServerSort: true,
         hasMore: true,
         isLoadingMore: true,
+        pantryItems: [{ id: 'i1', itemName: 'Milk', quantity: 1 }],
       });
       render(<PantryMain />);
       // PantryMainContent passes searchActive ? false : screen.isLoadingMore
+      // onEndReached is gated on hasMore && items.length > 0
       expect(capturedPantryContentProps.hasMore).toBe(false);
       expect(capturedPantryContentProps.isLoadingMore).toBe(false);
-      expect(capturedPantryContentProps.onEndReached).toBeDefined();
+      expect(capturedPantryContentProps.onEndReached).toBe(
+        defaultPantryScreen.loadMore,
+      );
     });
 
     it('passes items from hook as activeItems to PantryContent', () => {

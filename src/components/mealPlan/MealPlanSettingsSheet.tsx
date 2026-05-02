@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -8,7 +9,7 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
 import { Icon } from '#utils/iconUtils';
-import type { MealPlanFullFragment } from '#generated';
+import { type MealPlanFullFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
 
 interface MealPlanSettingsSheetProps {

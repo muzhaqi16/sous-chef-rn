@@ -23,7 +23,7 @@ export function useScrollNearTop(
   const setNearTopFalse = () => setIsNearTop(false);
 
   useAnimatedReaction(
-    () => scrollY.value <= threshold,
+    () => scrollY.get() <= threshold,
     (nearTop, prevNearTop) => {
       'worklet';
       if (nearTop === prevNearTop) return;

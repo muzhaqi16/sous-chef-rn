@@ -3,8 +3,8 @@ import {
   View,
   Text,
   Modal,
-  Pressable,
   TouchableWithoutFeedback,
+  Pressable,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';

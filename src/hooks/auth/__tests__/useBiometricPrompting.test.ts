@@ -10,8 +10,10 @@ const mockHasCredentialsForAccount = jest.fn();
 const mockGetBiometricCapability = jest.fn();
 
 jest.mock('#/storage/keychain', () => ({
-  hasCredentialsForAccount: (...args: any[]) => mockHasCredentialsForAccount(...args),
-  getBiometricCapability: (...args: any[]) => mockGetBiometricCapability(...args),
+  hasCredentialsForAccount: (...args: any[]) =>
+    mockHasCredentialsForAccount(...args),
+  getBiometricCapability: (...args: any[]) =>
+    mockGetBiometricCapability(...args),
 }));
 
 // Mock store
@@ -32,7 +34,10 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUser = { id: 'u1', email: 'test@test.com' };
   mockGetUserNavigationState.mockReturnValue(null);
-  mockGetBiometricCapability.mockResolvedValue({ isAvailable: true, biometryType: 'FaceID' });
+  mockGetBiometricCapability.mockResolvedValue({
+    isAvailable: true,
+    biometryType: 'FaceID',
+  });
   mockHasCredentialsForAccount.mockResolvedValue(false);
 });
 
@@ -48,7 +53,10 @@ describe('useBiometricPrompting', () => {
   });
 
   it('returns shouldShow false for new user not yet onboarded', async () => {
-    mockGetUserNavigationState.mockReturnValue({ isNewUser: true, hasCompletedOnboarding: false });
+    mockGetUserNavigationState.mockReturnValue({
+      isNewUser: true,
+      hasCompletedOnboarding: false,
+    });
     const { result } = renderHook(() => useBiometricPrompting());
 
     const decision = await result.current.shouldShowPostLoginBiometricPrompt();
@@ -58,7 +66,10 @@ describe('useBiometricPrompting', () => {
   });
 
   it('returns shouldShow false when biometric is not available', async () => {
-    mockGetBiometricCapability.mockResolvedValue({ isAvailable: false, biometryType: null });
+    mockGetBiometricCapability.mockResolvedValue({
+      isAvailable: false,
+      biometryType: null,
+    });
     const { result } = renderHook(() => useBiometricPrompting());
 
     const decision = await result.current.shouldShowPostLoginBiometricPrompt();
@@ -78,7 +89,9 @@ describe('useBiometricPrompting', () => {
   });
 
   it('returns shouldShow false when user permanently declined biometric', async () => {
-    mockGetUserNavigationState.mockReturnValue({ biometricDeclinedPermanently: true });
+    mockGetUserNavigationState.mockReturnValue({
+      biometricDeclinedPermanently: true,
+    });
     const { result } = renderHook(() => useBiometricPrompting());
 
     const decision = await result.current.shouldShowPostLoginBiometricPrompt();

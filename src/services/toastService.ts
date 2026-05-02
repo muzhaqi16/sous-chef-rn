@@ -19,8 +19,8 @@
  * Toast configuration options
  */
 export interface ToastOptions {
-  duration?: number;     // Duration in milliseconds (default: 3000)
-  position?: 'top' | 'center' | 'bottom';  // Position on screen (default: 'bottom')
+  duration?: number; // Duration in milliseconds (default: 3000)
+  position?: 'top' | 'center' | 'bottom'; // Position on screen (default: 'bottom')
   action?: {
     label: string;
     onPress: () => void;

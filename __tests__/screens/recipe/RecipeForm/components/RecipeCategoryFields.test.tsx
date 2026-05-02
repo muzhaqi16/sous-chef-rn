@@ -3,7 +3,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { RecipeCategoryFields } from '../../../../../src/screens/recipe/RecipeForm/components/RecipeCategoryFields';
-import { Difficulty, RecipeStatus } from '../../../../../src/graphql/generated';
+import { Difficulty, RecipeStatus } from '../../../../../src/graphql/generated/schemaTypes';
 
 jest.mock('../../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../../src/apollo/links/refreshToken');

@@ -24,8 +24,8 @@ export const OnboardingSteps: React.FC<OnboardingStepsProps> = ({
     // Calculate the width of the progress bar based on the active index
     // The formula ensures the bar extends to the current active step
     const activeWidth =
-      (activeIndex.value + 1) * stepSize +
-      activeIndex.value * stepSpacing +
+      (activeIndex.get() + 1) * stepSize +
+      activeIndex.get() * stepSpacing +
       externalSpacing;
 
     return {
@@ -46,7 +46,9 @@ export const OnboardingSteps: React.FC<OnboardingStepsProps> = ({
       {/* Animated progress bar background */}
       {/* UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View */}
       <View style={[styles.progressBar, { height }]}>
-        <Animated.View style={[{ width: '100%', height: '100%' }, progressBarStyle]} />
+        <Animated.View
+          style={[{ width: '100%', height: '100%' }, progressBarStyle]}
+        />
       </View>
 
       {/* Step dots */}

@@ -1,7 +1,8 @@
-import {Icon} from '#/utils/iconUtils';
-import React, {useState} from 'react';
-import {Pressable, View, Text, TextInput} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { Icon } from '#/utils/iconUtils';
+import React, { useState } from 'react';
+import { View, Text, TextInput } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable } from 'react-native-gesture-handler';
 
 export interface RowProps {
   label: string;
@@ -24,7 +25,7 @@ export const Row: React.FC<RowProps> = ({
   isFirst = false,
   isLast = false,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value ?? '');
 
@@ -55,19 +56,17 @@ export const Row: React.FC<RowProps> = ({
           onChangeText={setText}
           autoFocus
         />
-        <Pressable onPress={handleSave} style={({pressed}) => [styles.editIcon, pressed && styles.pressed]}>
-          <Icon
-            name="checkmark"
-            size={20}
-            color={theme.colors.primary}
-          />
+        <Pressable
+          onPress={handleSave}
+          style={({ pressed }) => [styles.editIcon, pressed && styles.pressed]}
+        >
+          <Icon name="checkmark" size={20} color={theme.colors.primary} />
         </Pressable>
-        <Pressable onPress={handleCancel} style={({pressed}) => [styles.editIcon, pressed && styles.pressed]}>
-          <Icon
-            name="close"
-            size={20}
-            color={theme.colors.error}
-          />
+        <Pressable
+          onPress={handleCancel}
+          style={({ pressed }) => [styles.editIcon, pressed && styles.pressed]}
+        >
+          <Icon name="close" size={20} color={theme.colors.error} />
         </Pressable>
       </View>
     );
@@ -76,20 +75,24 @@ export const Row: React.FC<RowProps> = ({
   return (
     <Pressable
       onPress={startEdit}
-      style={({pressed}) => [
+      style={({ pressed }) => [
         styles.rowWrapper,
         isFirst && styles.rowFirst,
         isLast && styles.rowLast,
         pressed && (onSave || onPress) && styles.pressed,
-      ]}>
+      ]}
+    >
       <View style={styles.row}>
-        {!!leadingIcon && <View style={styles.iconContainer}>{leadingIcon}</View>}
+        {!!leadingIcon && (
+          <View style={styles.iconContainer}>{leadingIcon}</View>
+        )}
 
         <Text
           style={[
             styles.rowLabel,
             leadingIcon ? styles.rowLabelWithIcon : undefined,
-          ]}>
+          ]}
+        >
           {label}
         </Text>
 
@@ -99,8 +102,9 @@ export const Row: React.FC<RowProps> = ({
           <Text
             style={[
               styles.rowValue,
-              badgeColor ? {color: badgeColor} : undefined,
-            ]}>
+              badgeColor ? { color: badgeColor } : undefined,
+            ]}
+          >
             {value}
           </Text>
         ) : null}

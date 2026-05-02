@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, Text, Modal } from 'react-native';
+import { View, Text, Modal, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 

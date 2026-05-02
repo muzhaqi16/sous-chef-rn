@@ -7,7 +7,9 @@ jest.mock('@react-native-picker/picker', () => {
   const { View, Text } = require('react-native');
   const R = require('react');
   const Picker = ({ children, selectedValue, testID, ...rest }: any) =>
-    R.createElement(View, { testID: testID || 'picker', ...rest },
+    R.createElement(
+      View,
+      { testID: testID || 'picker', ...rest },
       R.createElement(Text, null, selectedValue),
       children,
     );

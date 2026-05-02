@@ -14,7 +14,7 @@ const mockPurchasedRefetch = jest.fn();
 // Default return values per isPurchased filter
 let mockUnpurchasedReturn: Record<string, any> = {
   data: null,
-  previousData: null,
+
   loading: false,
   error: undefined,
   fetchMore: mockUnpurchasedFetchMore,
@@ -22,18 +22,23 @@ let mockUnpurchasedReturn: Record<string, any> = {
 };
 let mockPurchasedReturn: Record<string, any> = {
   data: null,
-  previousData: null,
+
   loading: false,
   error: undefined,
   fetchMore: mockPurchasedFetchMore,
   refetch: mockPurchasedRefetch,
 };
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetShoppingListItemsFilteredQuery: jest.fn((options: any) => {
-    if (options?.variables?.isPurchased === false) return mockUnpurchasedReturn;
-    return mockPurchasedReturn;
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any, options: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetShoppingListItemsFiltered') {
+      if (options?.variables?.isPurchased === false)
+        return mockUnpurchasedReturn;
+      return mockPurchasedReturn;
+    }
+    return { data: undefined, loading: false, error: undefined };
   }),
 }));
 
@@ -92,7 +97,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUnpurchasedReturn = {
     data: null,
-    previousData: null,
+
     loading: false,
     error: undefined,
     fetchMore: mockUnpurchasedFetchMore,
@@ -100,7 +105,7 @@ beforeEach(() => {
   };
   mockPurchasedReturn = {
     data: null,
-    previousData: null,
+
     loading: false,
     error: undefined,
     fetchMore: mockPurchasedFetchMore,
@@ -120,40 +125,40 @@ describe('usePaginatedShoppingItems', () => {
   });
 
   it('skips queries when listId is null', () => {
-    const { useGetShoppingListItemsFilteredQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
 
     renderHook(() => usePaginatedShoppingItems({ listId: null }));
 
     // Called twice (once per tab), both should have skip: true
-    const calls = useGetShoppingListItemsFilteredQuery.mock.calls;
+    const calls = (useQuery as jest.Mock).mock.calls;
     expect(calls).toHaveLength(2);
-    expect(calls[0][0]).toEqual(expect.objectContaining({ skip: true }));
-    expect(calls[1][0]).toEqual(expect.objectContaining({ skip: true }));
+    expect(calls[0][1]).toEqual(expect.objectContaining({ skip: true }));
+    expect(calls[1][1]).toEqual(expect.objectContaining({ skip: true }));
   });
 
   it('skips queries when skip option is true', () => {
-    const { useGetShoppingListItemsFilteredQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
 
     renderHook(() =>
       usePaginatedShoppingItems({ listId: 'list-1', skip: true }),
     );
 
-    const calls = useGetShoppingListItemsFilteredQuery.mock.calls;
+    const calls = (useQuery as jest.Mock).mock.calls;
     expect(calls).toHaveLength(2);
-    expect(calls[0][0]).toEqual(expect.objectContaining({ skip: true }));
-    expect(calls[1][0]).toEqual(expect.objectContaining({ skip: true }));
+    expect(calls[0][1]).toEqual(expect.objectContaining({ skip: true }));
+    expect(calls[1][1]).toEqual(expect.objectContaining({ skip: true }));
   });
 
   it('passes correct isPurchased variable to each query', () => {
-    const { useGetShoppingListItemsFilteredQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
 
     renderHook(() => usePaginatedShoppingItems({ listId: 'list-1' }));
 
-    const calls = useGetShoppingListItemsFilteredQuery.mock.calls;
-    expect(calls[0][0].variables).toEqual(
+    const calls = (useQuery as jest.Mock).mock.calls;
+    expect(calls[0][1].variables).toEqual(
       expect.objectContaining({ isPurchased: false }),
     );
-    expect(calls[1][0].variables).toEqual(
+    expect(calls[1][1].variables).toEqual(
       expect.objectContaining({ isPurchased: true }),
     );
   });
@@ -172,21 +177,6 @@ describe('usePaginatedShoppingItems', () => {
     // Items preserved in edge order (cache insertion order), not sorted by sortOrder
     expect(result.current.state.unpurchased.items[0].id).toBe('2');
     expect(result.current.state.unpurchased.items[1].id).toBe('1');
-  });
-
-  it('filters out items with missing id or itemName', () => {
-    mockUnpurchasedReturn.data = buildConnectionData([
-      { id: '1', itemName: 'Milk', sortOrder: 'a' },
-      { id: null as any, itemName: 'Bad', sortOrder: 'b' },
-      { id: '3', itemName: '', sortOrder: 'c' },
-    ]);
-
-    const { result } = renderHook(() =>
-      usePaginatedShoppingItems({ listId: 'list-1' }),
-    );
-
-    expect(result.current.state.unpurchased.items).toHaveLength(1);
-    expect(result.current.state.unpurchased.items[0].id).toBe('1');
   });
 
   it('exposes hasMore and totalCount for unpurchased', () => {

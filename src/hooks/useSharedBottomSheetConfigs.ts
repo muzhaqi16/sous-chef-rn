@@ -6,8 +6,8 @@ import { useBottomSheetSpringConfigs } from '@gorhom/bottom-sheet';
  */
 export const useSharedBottomSheetConfigs = () => {
   return useBottomSheetSpringConfigs({
-    damping: 80,
+    damping: 20,
     overshootClamping: true,
-    stiffness: 500,
+    stiffness: 200,
   });
 };

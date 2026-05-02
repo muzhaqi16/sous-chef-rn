@@ -105,9 +105,7 @@ export class BiometricManager {
   /**
    * Get appropriate security level for Android
    */
-  static async getSecurityLevel(): Promise<
-    SECURITY_LEVEL | undefined
-  > {
+  static async getSecurityLevel(): Promise<SECURITY_LEVEL | undefined> {
     if (Platform.OS !== 'android') {
       return undefined;
     }
@@ -244,9 +242,7 @@ export class BiometricManager {
   /**
    * Load credentials with appropriate authentication prompt
    */
-  static async loadCredentialsWithFallback(
-    service: string,
-  ): Promise<{
+  static async loadCredentialsWithFallback(service: string): Promise<{
     success: boolean;
     credentials?: { username: string; password: string };
     method?: string;
@@ -346,9 +342,7 @@ export class BiometricManager {
   /**
    * Get user-friendly biometric type name
    */
-  static getBiometricTypeName(
-    biometryType: BIOMETRY_TYPE | null,
-  ): string {
+  static getBiometricTypeName(biometryType: BIOMETRY_TYPE | null): string {
     switch (biometryType) {
       case BIOMETRY_TYPE.TOUCH_ID:
         return 'Touch ID';

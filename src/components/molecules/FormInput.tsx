@@ -29,7 +29,8 @@ export const FormInput: React.FC<FormInputProps> = ({
   ...textInputProps
 }) => {
   const contextValue = useIsBottomSheetInput();
-  const InputComponent = (useBottomSheetInput || contextValue) ? BottomSheetTextInput : TextInput;
+  const InputComponent =
+    useBottomSheetInput || contextValue ? BottomSheetTextInput : TextInput;
   const { theme } = useUnistyles();
 
   // Generate accessibility label with required indicator if needed

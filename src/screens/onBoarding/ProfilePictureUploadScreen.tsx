@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Pressable,
   Text,
   Image,
   Dimensions,
-  ScrollView,
   ActivityIndicator,
   Platform,
+  ScrollView,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
+import { Link } from '#components/atoms/Link';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
@@ -32,7 +33,7 @@ import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigati
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
-import { ImageUploadPurpose } from '#generated';
+import { ImageUploadPurpose } from '../../graphql/generated/schemaTypes';
 import { useFocusEffect } from '@react-navigation/native';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useProfileData } from '#hooks/profile/useProfileData';
@@ -49,6 +50,26 @@ function syncExistingAvatar(
 ) {
   if (avatar) {
     setExistingAvatarUrl(avatar);
+  }
+}
+
+/** Module-level function for reading any cropped image left behind by ImageCropScreen.
+ *  Extracted to avoid try/catch inside useFocusEffect (React Compiler bailout). */
+function readPendingCroppedImage(): ImageFile | null {
+  try {
+    const storedCroppedImage = storage.getString('temp_cropped_image');
+    if (!storedCroppedImage) return null;
+    const croppedImageFile = JSON.parse(storedCroppedImage) as ImageFile;
+    storage.remove('temp_cropped_image');
+    return croppedImageFile;
+  } catch (error) {
+    console.error('Error reading cropped image from MMKV:', error);
+    try {
+      storage.remove('temp_cropped_image');
+    } catch {
+      // ignore
+    }
+    return null;
   }
 }
 
@@ -86,20 +107,9 @@ export const ProfilePictureUploadScreen = () => {
 
   // Check for cropped image from MMKV when screen comes into focus
   useFocusEffect(() => {
-    try {
-      const storedCroppedImage = storage.getString('temp_cropped_image');
-      if (storedCroppedImage) {
-        const croppedImageFile: ImageFile = JSON.parse(storedCroppedImage);
-
-        setCroppedImage(croppedImageFile);
-
-        // Clean up the temporary storage
-        storage.remove('temp_cropped_image');
-      }
-    } catch (error) {
-      console.error('Error reading cropped image from MMKV:', error);
-      // Clean up potentially corrupted data
-      storage.remove('temp_cropped_image');
+    const pending = readPendingCroppedImage();
+    if (pending) {
+      setCroppedImage(pending);
     }
   });
 
@@ -253,7 +263,11 @@ export const ProfilePictureUploadScreen = () => {
             </>
           ) : hasExistingAvatar ? (
             <>
-              <CachedImage uri={existingAvatarUrl} style={styles.avatarImage} />
+              <CachedImage
+                uri={existingAvatarUrl}
+                style={styles.avatarImage}
+                displaySize={200}
+              />
               <Pressable
                 onPress={handleRemoveImage}
                 style={({ pressed }) => [
@@ -401,24 +415,14 @@ export const ProfilePictureUploadScreen = () => {
           </Text>
 
           <View style={styles.formFooterLinks}>
-            <Pressable
+            <Link
               onPress={() => {
                 // handle onPress
               }}
-              style={({ pressed }) => [
-                styles.formFooterLink,
-                pressed && styles.pressed,
-              ]}
+              style={styles.formFooterLinkText}
             >
-              <Text
-                style={[
-                  styles.formFooterLinkText,
-                  { color: theme.colors.primary },
-                ]}
-              >
-                Terms of Service
-              </Text>
-            </Pressable>
+              Terms of Service
+            </Link>
 
             <Text
               style={[
@@ -431,24 +435,14 @@ export const ProfilePictureUploadScreen = () => {
               {'   '}
             </Text>
 
-            <Pressable
+            <Link
               onPress={() => {
                 // handle onPress
               }}
-              style={({ pressed }) => [
-                styles.formFooterLink,
-                pressed && styles.pressed,
-              ]}
+              style={styles.formFooterLinkText}
             >
-              <Text
-                style={[
-                  styles.formFooterLinkText,
-                  { color: theme.colors.primary },
-                ]}
-              >
-                Privacy Policy
-              </Text>
-            </Pressable>
+              Privacy Policy
+            </Link>
           </View>
         </View>
       </ScrollView>
@@ -589,14 +583,9 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
     gap: theme.spacing.xs,
   },
-  formFooterLink: {
-    // Empty style for Pressable wrapper
-  },
   formFooterLinkText: {
     fontSize: theme.typography.fontSize.sm - 1,
     lineHeight: theme.typography.lineHeight.tight,
-    textDecorationLine: 'underline',
-    textDecorationStyle: 'solid',
   },
   nextText: {
     fontSize: theme.typography.fontSize.md,

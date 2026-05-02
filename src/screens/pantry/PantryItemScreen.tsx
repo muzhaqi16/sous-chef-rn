@@ -7,7 +7,9 @@ type PantryItemScreenParams = {
   itemId?: string;
 };
 
-export const PantryItemScreen: React.FC<StaticScreenProps<PantryItemScreenParams | undefined>> = ({ route }) => {
+export const PantryItemScreen: React.FC<
+  StaticScreenProps<PantryItemScreenParams | undefined>
+> = ({ route }) => {
   const navigation = useNavigation();
   const params = route.params;
 

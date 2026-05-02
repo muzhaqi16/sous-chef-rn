@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  ActivityIndicator } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
+import { BottomSheetModal, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { StyleSheet } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
@@ -46,11 +41,14 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   onUpdateRating,
   onRemove,
   updating = false,
-  recipeName }) => {
-  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['85%', '95%'] });
+  recipeName,
+}) => {
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      visible,
+      onDismiss: onClose,
+      snapPoints: ['85%', '95%'],
+    });
 
   // Local state for editing
   const [selectedFolder, setSelectedFolder] = useState<string | null>(
@@ -93,18 +91,18 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   }
 
   const handleSelectFolder = async (folder: string | null) => {
-      setSelectedFolder(folder);
-      setShowNewFolder(false);
-      setNewFolderName('');
-      await onUpdateFolder(folder);
-    };
+    setSelectedFolder(folder);
+    setShowNewFolder(false);
+    setNewFolderName('');
+    await onUpdateFolder(folder);
+  };
 
   const handleCreateFolder = async () => {
     const trimmedName = newFolderName.trim();
     if (trimmedName) {
       // Add to local folders list so it appears in the UI
       setLocalFolders(prev =>
-        prev.includes(trimmedName) ? prev : [...prev, trimmedName]
+        prev.includes(trimmedName) ? prev : [...prev, trimmedName],
       );
       setSelectedFolder(trimmedName);
       setShowNewFolder(false);
@@ -114,9 +112,9 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   };
 
   const handleTagsChange = async (newTags: string[]) => {
-      setTags(newTags);
-      await onUpdateTags(newTags);
-    };
+    setTags(newTags);
+    await onUpdateTags(newTags);
+  };
 
   const handleNotesBlur = async () => {
     if (notes !== (currentNotes ?? '')) {
@@ -125,11 +123,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   };
 
   const handleRatingPress = async (star: number) => {
-      // Toggle off if pressing same rating, otherwise set new rating
-      const newRating = rating === star ? null : star;
-      setRating(newRating);
-      await onUpdateRating(newRating);
-    };
+    // Toggle off if pressing same rating, otherwise set new rating
+    const newRating = rating === star ? null : star;
+    setRating(newRating);
+    await onUpdateRating(newRating);
+  };
 
   const handleRemove = async () => {
     await onRemove();
@@ -138,16 +136,16 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
 
   // Dedupe folders with "Favorites" first, then existing folders, then locally created
   const allFolders = [...new Set([...folders, ...localFolders])];
-  const displayFolders = ['Favorites', ...allFolders.filter(f => f !== 'Favorites')];
+  const displayFolders = [
+    'Favorites',
+    ...allFolders.filter(f => f !== 'Favorites'),
+  ];
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetKeyboardAwareScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.contentContainer,
-          contentContainerStyle,
-        ]}
+        contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         bottomOffset={16}
@@ -167,7 +165,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               onPress={handleRemove}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               disabled={updating}
-              style={({pressed}) => pressed && styles.pressed}
+              style={({ pressed }) => pressed && styles.pressed}
             >
               <Ionicons
                 name="trash-outline"
@@ -178,7 +176,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
             <Pressable
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={({pressed}) => pressed && styles.pressed}
+              style={({ pressed }) => pressed && styles.pressed}
             >
               <Ionicons
                 name="close"
@@ -206,7 +204,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               onPress={() => handleRatingPress(star)}
               hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
               disabled={updating}
-              style={({pressed}) => pressed && styles.pressed}
+              style={({ pressed }) => pressed && styles.pressed}
             >
               <Ionicons
                 name={
@@ -234,7 +232,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
             return (
               <Pressable
                 key={folder ?? 'no-folder'}
-                style={({pressed}) => [
+                style={({ pressed }) => [
                   styles.folderOption,
                   isSelected && styles.folderOptionSelected,
                   pressed && styles.pressed,
@@ -285,7 +283,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               onSubmitEditing={handleCreateFolder}
             />
             <Pressable
-              style={({pressed}) => [
+              style={({ pressed }) => [
                 styles.createButton,
                 !newFolderName.trim() && styles.createButtonDisabled,
                 pressed && styles.pressed,
@@ -305,7 +303,10 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           </View>
         ) : (
           <Pressable
-            style={({pressed}) => [styles.newFolderButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.newFolderButton,
+              pressed && styles.pressed,
+            ]}
             onPress={() => setShowNewFolder(true)}
             disabled={updating}
           >
@@ -346,29 +347,36 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   contentContainer: {
-    padding: theme.spacing.lg },
+    padding: theme.spacing.lg,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   headerLeft: {
     flex: 1,
-    marginRight: theme.spacing.md },
+    marginRight: theme.spacing.md,
+  },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   title: {
     fontSize: theme.fonts.size.xl,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   recipeName: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs },
+    marginTop: theme.spacing.xs,
+  },
   updatingBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -378,25 +386,30 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   updatingText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   sectionLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
-    marginTop: theme.spacing.lg },
+    marginTop: theme.spacing.lg,
+  },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   ratingText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginLeft: theme.spacing.sm },
+    marginLeft: theme.spacing.sm,
+  },
   folderList: {},
   folderOption: {
     flexDirection: 'row',
@@ -405,32 +418,39 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.xs },
+    marginBottom: theme.spacing.xs,
+  },
   folderOptionSelected: {
-    backgroundColor: theme.colors.primaryLight },
+    backgroundColor: theme.colors.primaryLight,
+  },
   folderOptionText: {
     flex: 1,
     fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   folderOptionTextSelected: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   newFolderButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg },
+    marginTop: theme.spacing.lg,
+  },
   newFolderButtonText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium },
+    fontWeight: theme.fonts.weight.medium,
+  },
   newFolderContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg },
+    marginTop: theme.spacing.lg,
+  },
   newFolderInput: {
     flex: 1,
     borderWidth: 1,
@@ -440,20 +460,25 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface },
+    backgroundColor: theme.colors.surface,
+  },
   createButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md },
+    borderRadius: theme.radii.md,
+  },
   createButtonDisabled: {
-    backgroundColor: theme.colors.border },
+    backgroundColor: theme.colors.border,
+  },
   createButtonText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.white,
-    fontWeight: theme.fonts.weight.semibold },
+    fontWeight: theme.fonts.weight.semibold,
+  },
   createButtonTextDisabled: {
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   notesInput: {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -463,6 +488,9 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
-    minHeight: 80 },
+    minHeight: 80,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

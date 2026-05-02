@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -9,7 +10,8 @@ import { ShoppingListAvatar } from '#components/atoms/ShoppingListAvatar';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { IconLibrary } from '#/utils/iconUtils';
 import { useStore } from '#store';
-import { useDeleteShoppingListMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { DeleteShoppingListDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import { createRemoveFromQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useErrorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
@@ -94,8 +96,7 @@ export function useShoppingListSelectorModal({
   const longPressItemRef = useRef<string | null>(null);
   const { handleApolloError } = useErrorService();
 
-  const [deleteList] = useDeleteShoppingListMutation({
-    errorPolicy: 'all',
+  const [deleteList] = useMutation(DeleteShoppingListDocument, {
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Delete Shopping List',
@@ -184,15 +185,9 @@ export function useShoppingListSelectorModal({
 
             if (!result) return;
 
-            // If current list was deleted, fall back to another list
+            // Clear selection — useShoppingListSelection auto-selects the next list
             if (currentListId && idsToDelete.includes(currentListId)) {
-              const remaining = listDataWithOwnership.filter(
-                l => !idsToDelete.includes(l.id),
-              );
-              const defaultList = remaining.find(l => l.isDefault);
-              useStore
-                .getState()
-                .setSelectedShoppingListId(defaultList?.id || null);
+              useStore.getState().setSelectedShoppingListId(null);
             }
 
             toastService.success(

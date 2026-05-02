@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, Text, ActivityIndicator, Modal, StyleProp, ViewStyle } from 'react-native';
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  Modal,
+  StyleProp,
+  ViewStyle,
+} from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SousChefLoader } from './SousChefLoader';
 
@@ -57,11 +64,27 @@ export const Loading: React.FC<LoadingProps> = ({
   const spinnerColor = color || theme.colors.primary;
 
   const renderContent = () => (
-    <View style={[styles.container, variant === 'inline' && styles.containerInline, style]}>
-      <ActivityIndicator size={size} color={spinnerColor} style={styles.spinner} />
-      {!!message && <Text style={[styles.message, { color: theme.colors.textPrimary }]}>{message}</Text>}
+    <View
+      style={[
+        styles.container,
+        variant === 'inline' && styles.containerInline,
+        style,
+      ]}
+    >
+      <ActivityIndicator
+        size={size}
+        color={spinnerColor}
+        style={styles.spinner}
+      />
+      {!!message && (
+        <Text style={[styles.message, { color: theme.colors.textPrimary }]}>
+          {message}
+        </Text>
+      )}
       {!!submessage && (
-        <Text style={[styles.submessage, { color: theme.colors.textSecondary }]}>
+        <Text
+          style={[styles.submessage, { color: theme.colors.textSecondary }]}
+        >
           {submessage}
         </Text>
       )}
@@ -77,9 +100,15 @@ export const Loading: React.FC<LoadingProps> = ({
   if (variant === 'fullscreen') {
     return (
       <View style={styles.fullscreenContainer}>
-        <SousChefLoader size="small" showBrand={false} message={message || 'Loading'} />
+        <SousChefLoader
+          size="small"
+          showBrand={false}
+          message={message || 'Loading'}
+        />
         {!!submessage && (
-          <Text style={[styles.submessage, { color: theme.colors.textSecondary }]}>
+          <Text
+            style={[styles.submessage, { color: theme.colors.textSecondary }]}
+          >
             {submessage}
           </Text>
         )}
@@ -123,14 +152,20 @@ export const Loading: React.FC<LoadingProps> = ({
             },
           ]}
         >
-          <ActivityIndicator size={size} color={spinnerColor} style={styles.spinner} />
+          <ActivityIndicator
+            size={size}
+            color={spinnerColor}
+            style={styles.spinner}
+          />
           {!!message && (
             <Text style={[styles.message, { color: theme.colors.textPrimary }]}>
               {message}
             </Text>
           )}
           {!!submessage && (
-            <Text style={[styles.submessage, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[styles.submessage, { color: theme.colors.textSecondary }]}
+            >
               {submessage}
             </Text>
           )}
@@ -141,17 +176,20 @@ export const Loading: React.FC<LoadingProps> = ({
 };
 
 // Convenience exports for common loading patterns
-export const LoadingInline: React.FC<Pick<LoadingProps, 'message' | 'submessage' | 'size'>> = (props) => (
-  <Loading variant="inline" {...props} />
-);
+export const LoadingInline: React.FC<
+  Pick<LoadingProps, 'message' | 'submessage' | 'size'>
+> = props => <Loading variant="inline" {...props} />;
 
-export const LoadingOverlay: React.FC<Pick<LoadingProps, 'visible' | 'message' | 'overlayOpacity' | 'cancelable' | 'onCancel'>> = (props) => (
-  <Loading variant="overlay" size="large" {...props} />
-);
+export const LoadingOverlay: React.FC<
+  Pick<
+    LoadingProps,
+    'visible' | 'message' | 'overlayOpacity' | 'cancelable' | 'onCancel'
+  >
+> = props => <Loading variant="overlay" size="large" {...props} />;
 
-export const LoadingFullscreen: React.FC<Pick<LoadingProps, 'message' | 'submessage'>> = (props) => (
-  <Loading variant="fullscreen" size="large" {...props} />
-);
+export const LoadingFullscreen: React.FC<
+  Pick<LoadingProps, 'message' | 'submessage'>
+> = props => <Loading variant="fullscreen" size="large" {...props} />;
 
 const styles = StyleSheet.create(theme => ({
   // Inline variant styles

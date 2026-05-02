@@ -1,5 +1,9 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { useSettings, useShowTutorials, useShowNavigationLabels } from '../useSettings';
+import {
+  useSettings,
+  useShowTutorials,
+  useShowNavigationLabels,
+} from '../useSettings';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');

@@ -1,5 +1,6 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
   useBottomSheetScrollableCreator,
@@ -23,6 +24,7 @@ import type { useRecipeScreen } from '#/hooks/recipe/useRecipeScreen';
 
 export interface IngredientSelectorSheetRef {
   present: () => void;
+  dismiss: () => void;
 }
 
 interface IngredientSelectorSheetProps {
@@ -50,6 +52,7 @@ export const IngredientSelectorSheet = forwardRef<
 
   useImperativeHandle(ref, () => ({
     present: () => sheetRef.current?.present(),
+    dismiss: () => sheetRef.current?.dismiss(),
   }));
 
   const handleSheetChange = (index: number) => {

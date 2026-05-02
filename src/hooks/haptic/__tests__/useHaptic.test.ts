@@ -6,7 +6,10 @@ jest.mock('../../../apollo/links/refreshToken');
 
 import { renderHook } from '@testing-library/react-native';
 import { useHaptic } from '../useHaptic';
-import { HapticService, HapticFeedbackType } from '#services/haptic/HapticService';
+import {
+  HapticService,
+  HapticFeedbackType,
+} from '#services/haptic/HapticService';
 
 describe('useHaptic', () => {
   beforeEach(() => {

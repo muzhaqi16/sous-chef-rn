@@ -2,9 +2,9 @@ import React, { useDeferredValue, useEffect, useRef, useState } from 'react';
 import {
   View,
   RefreshControl,
-  ScrollView,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
+  ScrollView,
 } from 'react-native';
 import {
   FlashList,
@@ -17,7 +17,7 @@ import { ItemCard } from './ItemCard';
 import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { IconName } from '#/utils/iconUtils';
 import { getTabBarBottomPadding } from '#constants/layout';
-import { createPropsComparator } from '#utils/memoUtils';
+
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { CachedImage, preloadImages } from '#components/atoms/CachedImage';
 import { commonStyles } from '#/styles/commonStyles';
@@ -95,18 +95,7 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
   );
 };
 
-// PERFORMANCE: Custom comparator for React.memo — value-equality on nested item fields
-const arePropsEqual = createPropsComparator<ListRenderItemInfo<Item>>({
-  nestedComparisons: {
-    item: ['id', 'title', 'subtitle', 'imageUrl'],
-    'item.badge': ['text', 'variant'],
-  },
-});
-
-const ItemListRenderItem = React.memo(
-  ItemListRenderItemComponent,
-  arePropsEqual,
-);
+const ItemListRenderItem = ItemListRenderItemComponent;
 
 // Module-scope renderItem — zero runtime overhead (no compiler tracking/comparison)
 const renderItem = (info: ListRenderItemInfo<Item>) => (

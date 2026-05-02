@@ -6,7 +6,7 @@ import { useTabBarSetters } from '#/context/TabBarActionsContext';
  * Register a handler for the tab bar add button when the screen is focused.
  * Automatically cleans up when unfocused or unmounted.
  *
- * Uses useFocusEffect instead of useIsFocused to avoid breaking freezeOnBlur.
+ * Uses useFocusEffect instead of useIsFocused to avoid breaking screen pausing (inactiveBehavior).
  *
  * @param handler - Function to call when add button is pressed
  * @param disabled - Whether the button should be disabled (default: false)
@@ -99,6 +99,10 @@ export const useTabBarAddButton = (
       return;
     }
 
-    setAddPropsRef.current(stableHandler, disabledRef.current, tooltipRef.current);
+    setAddPropsRef.current(
+      stableHandler,
+      disabledRef.current,
+      tooltipRef.current,
+    );
   }, [hasHandler, disabled, disabledTooltip, stableHandler]);
 };

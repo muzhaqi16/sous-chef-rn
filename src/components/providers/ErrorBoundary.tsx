@@ -1,5 +1,6 @@
 import React, { Component, ReactNode } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Telemetry } from '#/services/telemetry';
 
@@ -25,7 +26,9 @@ const DefaultErrorFallback: React.FC<{
   const { theme } = useUnistyles();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.colors.error }]}>
           Something went wrong
@@ -39,7 +42,11 @@ const DefaultErrorFallback: React.FC<{
           </Text>
         )}
         <Pressable
-          style={({pressed}) => [styles.retryButton, { backgroundColor: theme.colors.primary }, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.retryButton,
+            { backgroundColor: theme.colors.primary },
+            pressed && styles.pressed,
+          ]}
           onPress={retry}
         >
           <Text style={[styles.retryText, { color: theme.colors.background }]}>
@@ -57,19 +64,22 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null};
+      errorInfo: null,
+    };
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return {
       hasError: true,
-      error};
+      error,
+    };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.setState({
       error,
-      errorInfo});
+      errorInfo,
+    });
 
     // Log error for debugging
     console.error('ErrorBoundary caught an error:', error);
@@ -91,20 +101,23 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       component_stack: errorInfo.componentStack,
       error_boundary_context: this.props.context,
       is_fatal: true,
-      error_source: 'react_error_boundary'});
+      error_source: 'react_error_boundary',
+    });
 
     console.log('Error reported to telemetry:', {
       error: error.message,
       stack: error.stack,
       context: this.props.context,
-      componentStack: errorInfo.componentStack});
+      componentStack: errorInfo.componentStack,
+    });
   };
 
   private retry = () => {
     this.setState({
       hasError: false,
       error: null,
-      errorInfo: null});
+      errorInfo: null,
+    });
   };
 
   render() {
@@ -128,10 +141,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
 // Specialized error boundaries for different contexts
 
-export const NavigationErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
+export const NavigationErrorBoundary: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => (
   <ErrorBoundary
     context="Navigation"
-    onError={(error) => {
+    onError={error => {
       console.error('Navigation error:', error);
       Telemetry.increment('navigation_errors_total', 1);
     }}
@@ -147,10 +162,12 @@ export const NavigationErrorBoundary: React.FC<{ children: ReactNode }> = ({ chi
   </ErrorBoundary>
 );
 
-export const AuthErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
+export const AuthErrorBoundary: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => (
   <ErrorBoundary
     context="Authentication"
-    onError={(error) => {
+    onError={error => {
       console.error('Auth error:', error);
       Telemetry.increment('auth_errors_total', 1);
     }}
@@ -166,10 +183,12 @@ export const AuthErrorBoundary: React.FC<{ children: ReactNode }> = ({ children 
   </ErrorBoundary>
 );
 
-export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
+export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => (
   <ErrorBoundary
     context="Application"
-    onError={(error) => {
+    onError={error => {
       console.error('App-level error:', error);
       Telemetry.increment('app_level_errors_total', 1);
     }}
@@ -186,7 +205,8 @@ export const useErrorHandler = () => {
     Telemetry.trackError(error, {
       error_handler_context: context,
       error_source: 'use_error_handler',
-      is_fatal: false});
+      is_fatal: false,
+    });
   };
 };
 
@@ -195,34 +215,43 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.lg},
+    padding: theme.spacing.lg,
+  },
   content: {
     alignItems: 'center',
-    maxWidth: 300},
+    maxWidth: 300,
+  },
   title: {
     fontSize: theme.typography.fontSize.xl,
     fontWeight: 'bold',
     marginBottom: theme.spacing['3'],
-    textAlign: 'center'},
+    textAlign: 'center',
+  },
   message: {
     fontSize: theme.typography.fontSize.md,
     textAlign: 'center',
     marginBottom: theme.spacing.sm,
-    lineHeight: theme.typography.lineHeight.relaxed},
+    lineHeight: theme.typography.lineHeight.relaxed,
+  },
   context: {
     fontSize: theme.typography.fontSize.xs,
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
-    fontStyle: 'italic'},
+    fontStyle: 'italic',
+  },
   retryButton: {
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing['3'],
     borderRadius: theme.radii.sm,
-    marginTop: theme.spacing.md},
+    marginTop: theme.spacing.md,
+  },
   retryText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold},
+    fontWeight: theme.fonts.weight.semibold,
+  },
   pressed: {
-    opacity: theme.opacity.pressed}}));
+    opacity: theme.opacity.pressed,
+  },
+}));
 
 export default ErrorBoundary;

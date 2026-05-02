@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { ScrollView } from 'react-native';
+import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { ItemCard } from './ItemCard';
 import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
+import { AddItemToShoppingListDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import {
-  useCreatePantryItemMutation,
-  useRestockPantryItemMutation,
-  useAddItemToShoppingListMutation,
-  type CreatePantryItemInput,
-  type PantryItemDisplayFragment,
-} from '#generated';
+  CreatePantryItemDocument,
+  RestockPantryItemDocument,
+} from '#operations/pantry/pantry.generated';
+import type { PantryItemDisplayFragment } from '#operations/pantry/pantryFragments.generated';
+import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import {
@@ -21,6 +21,7 @@ import { useAppStore } from '#store/useAppStore';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import type { ScannedItem } from '#/store/slices/barcodeScannerSlice';
 import type { BarcodeSource } from '#/types/navigation';
+import { ScrollView } from 'react-native';
 
 // Cache updater for Pantry.itemsConnection
 const addToPantryItemsConnection =
@@ -56,8 +57,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const setPendingPantryScrollToTop = useAppStore(
     s => s.setPendingPantryScrollToTop,
   );
-  const [addToPantry] = useCreatePantryItemMutation({
-    errorPolicy: 'all',
+  const [addToPantry] = useMutation(CreatePantryItemDocument, {
     update: (cache, { data }) => {
       const pantryItem = data?.createPantryItem?.pantryItem;
       if (pantryItem && pantryId) {
@@ -66,11 +66,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     },
   });
 
-  const [restockPantryItem] = useRestockPantryItemMutation({
-    errorPolicy: 'all',
-  });
+  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {});
 
-  const [addToShoppingList] = useAddItemToShoppingListMutation({
+  const [addToShoppingList] = useMutation(AddItemToShoppingListDocument, {
     update: (cache, { data }) => {
       const shoppingListItem = data?.addItemToShoppingList?.shoppingListItem;
       if (shoppingListItem && shoppingListId) {

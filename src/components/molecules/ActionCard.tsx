@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
 
@@ -30,7 +31,11 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 
   return (
     <Pressable
-      style={({pressed}) => [styles.container, disabled && styles.disabled, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.container,
+        disabled && styles.disabled,
+        pressed && styles.pressed,
+      ]}
       onPress={onPress}
       disabled={disabled}
       testID={testID}

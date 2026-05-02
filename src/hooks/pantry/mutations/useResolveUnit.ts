@@ -6,7 +6,8 @@
  * - Cache-first policy for efficient lookups
  */
 
-import { useGetUnitBySymbolLazyQuery } from '#generated';
+import { useLazyQuery } from '@apollo/client/react';
+import { GetUnitBySymbolDocument } from '../../../graphql/operations/item/unit.generated';
 
 /**
  * Hook for resolving unit symbols to unit IDs
@@ -18,23 +19,25 @@ import { useGetUnitBySymbolLazyQuery } from '#generated';
  * ```
  */
 export function useResolveUnit() {
-  const [unitQuery] = useGetUnitBySymbolLazyQuery({
-    fetchPolicy: 'cache-first' });
+  const [unitQuery] = useLazyQuery(GetUnitBySymbolDocument, {
+    fetchPolicy: 'cache-first',
+  });
 
   /**
    * Resolve unit ID from symbol if not already set
    */
   const resolveUnitId = async (
-      currentUnitId: string | null,
-      unitSymbol: string,
-    ): Promise<string | null> => {
-      if (currentUnitId) return currentUnitId;
-      if (!unitSymbol.trim()) return null;
+    currentUnitId: string | null,
+    unitSymbol: string,
+  ): Promise<string | null> => {
+    if (currentUnitId) return currentUnitId;
+    if (!unitSymbol.trim()) return null;
 
-      const result = await unitQuery({
-        variables: { symbol: unitSymbol.trim() } });
-      return result.data?.unitBySymbol?.id || null;
-    };
+    const result = await unitQuery({
+      variables: { symbol: unitSymbol.trim() },
+    });
+    return result.data?.unitBySymbol?.id || null;
+  };
 
   return { resolveUnitId };
 }

@@ -78,7 +78,13 @@ jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#components/settings/SettingSwitch', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
-    SettingSwitch: ({ title, description, value, onValueChange, testID }: any) => (
+    SettingSwitch: ({
+      title,
+      description,
+      value,
+      onValueChange,
+      testID,
+    }: any) => (
       <View testID={testID || `switch-${title}`}>
         <Text>{title}</Text>
         {description ? <Text>{description}</Text> : null}

@@ -1,9 +1,7 @@
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import {
-  ShoppingListItemDisplayFragmentDoc,
-  useUpdateShoppingListItemQuantityMutation,
-} from '#generated';
+import { ShoppingListItemDisplayFragmentDoc } from '#operations/shoppingList/shoppingListFragments.generated';
+import { UpdateShoppingListItemQuantityDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import { toastService } from '#/services/toastService';
 import {
   handleVersionConflict,
@@ -11,6 +9,7 @@ import {
 } from '#/utils/errors/versionConflict';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { setCachedFields } from '#/apollo/utils/cacheUpdaters';
 import { useHaptic } from '#hooks/haptic/useHaptic';
 import { Telemetry } from '#/services/telemetry';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
@@ -182,9 +181,10 @@ export function useShoppingListActions({
   const client = useApolloClient();
   const haptic = useHaptic();
 
-  const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
-    errorPolicy: 'all',
-  });
+  const [updateQuantity] = useMutation(
+    UpdateShoppingListItemQuantityDocument,
+    {},
+  );
 
   // Quantity increment handler - uses cache.modify for instant UI without warnings
   const handleIncrementQuantity = async (itemId: string) => {
@@ -211,13 +211,8 @@ export function useShoppingListActions({
 
     const newQuantity = (cachedItem.quantity || 0) + 1;
 
-    client.cache.modify({
-      id: cacheId,
-      fields: {
-        quantity() {
-          return newQuantity;
-        },
-      },
+    setCachedFields(client.cache, 'ShoppingListItem', itemId, {
+      quantity: newQuantity,
     });
 
     optimisticDataPersistence.save(
@@ -249,13 +244,8 @@ export function useShoppingListActions({
         });
       },
       () => {
-        client.cache.modify({
-          id: cacheId,
-          fields: {
-            quantity() {
-              return cachedItem.quantity;
-            },
-          },
+        setCachedFields(client.cache, 'ShoppingListItem', itemId, {
+          quantity: cachedItem.quantity,
         });
       },
       () =>
@@ -289,13 +279,8 @@ export function useShoppingListActions({
 
     const newQuantity = Math.max(1, (cachedItem.quantity ?? 1) - 1);
 
-    client.cache.modify({
-      id: cacheId,
-      fields: {
-        quantity() {
-          return newQuantity;
-        },
-      },
+    setCachedFields(client.cache, 'ShoppingListItem', itemId, {
+      quantity: newQuantity,
     });
 
     optimisticDataPersistence.save(
@@ -327,13 +312,8 @@ export function useShoppingListActions({
         });
       },
       () => {
-        client.cache.modify({
-          id: cacheId,
-          fields: {
-            quantity() {
-              return cachedItem.quantity;
-            },
-          },
+        setCachedFields(client.cache, 'ShoppingListItem', itemId, {
+          quantity: cachedItem.quantity,
         });
       },
       () =>

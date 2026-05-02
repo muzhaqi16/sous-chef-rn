@@ -47,7 +47,8 @@ jest.mock('#utils/iconUtils', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    Icon: ({ name }: { name: string }) => R.createElement(RN.Text, { testID: `icon-${name}` }, name),
+    Icon: ({ name }: { name: string }) =>
+      R.createElement(RN.Text, { testID: `icon-${name}` }, name),
   };
 });
 
@@ -56,7 +57,8 @@ jest.mock('#components/base/Skeleton/SkeletonBase', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    SkeletonBase: (props: any) => R.createElement(RN.View, { testID: 'skeleton', ...props }),
+    SkeletonBase: (props: any) =>
+      R.createElement(RN.View, { testID: 'skeleton', ...props }),
   };
 });
 
@@ -81,7 +83,9 @@ describe('CachedImage', () => {
   });
 
   it('renders image component when uri is provided', () => {
-    const { toJSON } = render(<CachedImage uri="https://example.com/image.jpg" />);
+    const { toJSON } = render(
+      <CachedImage uri="https://example.com/image.jpg" />,
+    );
     expect(toJSON()).toBeTruthy();
   });
 
@@ -107,10 +111,7 @@ describe('CachedImage', () => {
 
   it('passes displaySize as resize prop (2x)', () => {
     const { toJSON } = render(
-      <CachedImage
-        uri="https://example.com/image.jpg"
-        displaySize={48}
-      />,
+      <CachedImage uri="https://example.com/image.jpg" displaySize={48} />,
     );
     expect(toJSON()).toBeTruthy();
   });
@@ -181,10 +182,7 @@ describe('CachedImage', () => {
 
   it('renders with custom resizeMode', () => {
     const { toJSON } = render(
-      <CachedImage
-        uri="https://example.com/image.jpg"
-        resizeMode="contain"
-      />,
+      <CachedImage uri="https://example.com/image.jpg" resizeMode="contain" />,
     );
     expect(toJSON()).toBeTruthy();
   });
@@ -257,7 +255,11 @@ describe('preloadImages', () => {
   });
 
   it('calls TurboImage.prefetch with filtered sources', () => {
-    preloadImages(['https://example.com/a.jpg', '', 'https://example.com/b.jpg']);
+    preloadImages([
+      'https://example.com/a.jpg',
+      '',
+      'https://example.com/b.jpg',
+    ]);
 
     expect((TurboImage as any).prefetch).toHaveBeenCalledWith(
       [

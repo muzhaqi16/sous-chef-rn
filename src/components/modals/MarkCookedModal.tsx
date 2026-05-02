@@ -29,12 +29,15 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   defaultServings,
   onClose,
   onConfirm,
-  hasPantry = false }) => {
-  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['55%'],
-    keyboardAware: true });
+  hasPantry = false,
+}) => {
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      visible,
+      onDismiss: onClose,
+      snapPoints: ['55%'],
+      keyboardAware: true,
+    });
 
   // Form state
   const [servingsInput, setServingsInput] = useState('');
@@ -44,7 +47,8 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
 
   // Reset form when modal opens (render-time state update)
   const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevDefaultServings, setPrevDefaultServings] = useState(defaultServings);
+  const [prevDefaultServings, setPrevDefaultServings] =
+    useState(defaultServings);
   if (visible !== prevVisible || defaultServings !== prevDefaultServings) {
     setPrevVisible(visible);
     setPrevDefaultServings(defaultServings);
@@ -58,15 +62,18 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
 
   const handleConfirm = () => {
     const servingsValue = parseFractionalInput(servingsInput);
-    const finalServings = servingsValue && !isNaN(servingsValue) && servingsValue > 0
-      ? servingsValue
-      : defaultServings || 1;
+    const finalServings =
+      servingsValue && !isNaN(servingsValue) && servingsValue > 0
+        ? servingsValue
+        : defaultServings || 1;
 
     onConfirm({
       servings: finalServings,
       deductFromPantry,
-      useGranularDeduction: deductFromPantry && hasPantry && useGranularDeduction,
-      notes: notes || undefined });
+      useGranularDeduction:
+        deductFromPantry && hasPantry && useGranularDeduction,
+      notes: notes || undefined,
+    });
     onClose();
   };
 
@@ -74,10 +81,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetFormScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.contentContainer,
-          contentContainerStyle,
-        ]}
+        contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
         bottomOffset={16}
       >
@@ -117,7 +121,10 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
           <Switch
             value={deductFromPantry}
             onValueChange={setDeductFromPantry}
-            trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+            trackColor={{
+              false: theme.colors.border,
+              true: theme.colors.primary,
+            }}
             thumbColor={theme.colors.white}
           />
         </View>
@@ -134,7 +141,10 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
             <Switch
               value={useGranularDeduction}
               onValueChange={setUseGranularDeduction}
-              trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+              trackColor={{
+                false: theme.colors.border,
+                true: theme.colors.primary,
+              }}
               thumbColor={theme.colors.white}
             />
           </View>
@@ -158,22 +168,27 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   contentContainer: {
-    padding: theme.spacing.md },
+    padding: theme.spacing.md,
+  },
   recipeInfo: {
     marginBottom: theme.spacing.xl,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   recipeName: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    textAlign: 'center' },
+    textAlign: 'center',
+  },
   section: {
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   toggleSection: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -182,15 +197,20 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md },
+    borderRadius: theme.radii.md,
+  },
   toggleInfo: {
     flex: 1,
-    marginRight: theme.spacing.md },
+    marginRight: theme.spacing.md,
+  },
   toggleLabel: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   toggleDescription: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs } }));
+    marginTop: theme.spacing.xs,
+  },
+}));

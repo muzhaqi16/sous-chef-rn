@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleProp, ViewStyle } from 'react-native';
+import { StyleProp, ViewStyle, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 interface SkeletonListProps {

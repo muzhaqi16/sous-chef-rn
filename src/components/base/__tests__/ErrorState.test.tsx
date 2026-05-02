@@ -4,7 +4,9 @@ import { ErrorState } from '../ErrorState';
 
 describe('ErrorState', () => {
   it('renders title text', () => {
-    render(<ErrorState title="Something went wrong" message="An error occurred" />);
+    render(
+      <ErrorState title="Something went wrong" message="An error occurred" />,
+    );
     expect(screen.getByText('Something went wrong')).toBeTruthy();
   });
 
@@ -14,7 +16,9 @@ describe('ErrorState', () => {
   });
 
   it('renders details when provided', () => {
-    render(<ErrorState title="Error" message="Failed" details="Error code: 500" />);
+    render(
+      <ErrorState title="Error" message="Failed" details="Error code: 500" />,
+    );
     expect(screen.getByText('Error code: 500')).toBeTruthy();
   });
 
@@ -35,7 +39,12 @@ describe('ErrorState', () => {
   it('renders custom retry label', () => {
     const mockRetry = jest.fn();
     render(
-      <ErrorState title="Error" message="Failed" onRetry={mockRetry} retryLabel="Reload" />,
+      <ErrorState
+        title="Error"
+        message="Failed"
+        onRetry={mockRetry}
+        retryLabel="Reload"
+      />,
     );
     expect(screen.getByText('Reload')).toBeTruthy();
   });

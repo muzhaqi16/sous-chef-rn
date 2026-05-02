@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, TextStyle } from 'react-native';
+import { View, Text, TextStyle } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SwipeableItem } from './SwipeableItem/SwipeableItem';
@@ -8,7 +9,7 @@ import { SLIDE_PRESETS } from '#/constants/animations';
 import { Counter } from './Counter';
 import { QuantityDisplay } from './QuantityDisplay';
 import { Icon } from '#/utils/iconUtils';
-import { DisplayFormat } from '#/graphql/generated';
+import { DisplayFormat } from '../../graphql/generated/schemaTypes';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
 
@@ -43,7 +44,8 @@ export const ShoppingListItem = ({
   onUpdateQuantity,
   onDelete,
   onEdit,
-  screenWidth = 375 }: ShoppingListItemProps) => {
+  screenWidth = 375,
+}: ShoppingListItemProps) => {
   useRenderTime('ShoppingListItem');
   const { theme } = useUnistyles();
   const [isEditingQuantity, setIsEditingQuantity] = useState(false);
@@ -55,7 +57,8 @@ export const ShoppingListItem = ({
     slideDistance: screenWidth,
     duration: SLIDE_PRESETS.exitWithFade.duration,
     withOpacity: SLIDE_PRESETS.exitWithFade.withOpacity,
-    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget });
+    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
+  });
 
   // Wrap delete action with slide animation
   const handleDelete = () => {
@@ -88,7 +91,7 @@ export const ShoppingListItem = ({
             accessibilityRole="button"
             accessibilityLabel="Confirm quantity"
             accessibilityHint={`Save new quantity of ${localQuantity}`}
-            style={({pressed}) => pressed && styles.pressed}
+            style={({ pressed }) => pressed && styles.pressed}
           >
             <Icon name="checkmark" size={20} color={theme.colors.primary} />
           </Pressable>
@@ -113,7 +116,10 @@ export const ShoppingListItem = ({
 
     return (
       <Pressable
-        style={({pressed}) => [styles.quantityContainer, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.quantityContainer,
+          pressed && styles.pressed,
+        ]}
         onPress={() => setIsEditingQuantity(true)}
         accessibilityRole="button"
         accessibilityLabel={`Edit quantity: ${quantity} ${unit || ''}`}
@@ -127,7 +133,11 @@ export const ShoppingListItem = ({
           displayAsFraction={displayAsFraction}
           style={styles.quantityText}
         />
-        <Icon name="create-outline" size={14} color={theme.colors.textSecondary} />
+        <Icon
+          name="create-outline"
+          size={14}
+          color={theme.colors.textSecondary}
+        />
       </Pressable>
     );
   };
@@ -136,29 +146,44 @@ export const ShoppingListItem = ({
     <Animated.View style={animatedSlideStyle} testID={`shopping-item-${id}`}>
       <SwipeableItem onDelete={handleDelete} onEdit={() => onEdit(id)}>
         <View style={styles.container}>
-        <Pressable
-          style={({pressed}) => [styles.checkboxContainer, pressed && styles.pressed]}
-          onPress={() => onToggle(id)}
-          accessibilityRole="checkbox"
-          accessibilityLabel={`${name} ${isPurchased ? 'purchased' : 'not purchased'}`}
-          accessibilityHint={isPurchased ? 'Tap to mark as not purchased' : 'Tap to mark as purchased'}
-          accessibilityState={{ checked: isPurchased }}
-          testID={`shopping-item-checkbox-${id}`}
-        >
-          <View style={styles.checkbox}>
-            {!!isPurchased && <Icon name="checkmark" size={16} color="white" />}
+          <Pressable
+            style={({ pressed }) => [
+              styles.checkboxContainer,
+              pressed && styles.pressed,
+            ]}
+            onPress={() => onToggle(id)}
+            accessibilityRole="checkbox"
+            accessibilityLabel={`${name} ${
+              isPurchased ? 'purchased' : 'not purchased'
+            }`}
+            accessibilityHint={
+              isPurchased
+                ? 'Tap to mark as not purchased'
+                : 'Tap to mark as purchased'
+            }
+            accessibilityState={{ checked: isPurchased }}
+            testID={`shopping-item-checkbox-${id}`}
+          >
+            <View style={styles.checkbox}>
+              {!!isPurchased && (
+                <Icon name="checkmark" size={16} color="white" />
+              )}
+            </View>
+          </Pressable>
+
+          {!!imageUrl && (
+            <CachedImage
+              uri={imageUrl}
+              style={styles.itemImage}
+              displaySize={48}
+            />
+          )}
+
+          <View style={styles.contentContainer}>
+            <Text style={styles.itemName}>{name}</Text>
+
+            {renderQuantitySection()}
           </View>
-        </Pressable>
-
-        {!!imageUrl && <CachedImage uri={imageUrl} style={styles.itemImage} displaySize={48} />}
-
-        <View style={styles.contentContainer}>
-          <Text style={styles.itemName}>
-            {name}
-          </Text>
-
-          {renderQuantitySection()}
-        </View>
         </View>
       </SwipeableItem>
     </Animated.View>
@@ -176,9 +201,14 @@ const styles = StyleSheet.create(theme => ({
       purchased: {
         true: {
           opacity: theme.opacity.disabled,
-          backgroundColor: theme.colors.surfaceVariant } } } },
+          backgroundColor: theme.colors.surfaceVariant,
+        },
+      },
+    },
+  },
   checkboxContainer: {
-    marginRight: theme.spacing['3'] },
+    marginRight: theme.spacing['3'],
+  },
   checkbox: {
     width: theme.sizes.icon.md,
     height: theme.sizes.icon.md,
@@ -191,14 +221,20 @@ const styles = StyleSheet.create(theme => ({
       purchased: {
         true: {
           backgroundColor: theme.colors.primary,
-          borderColor: theme.colors.primary } } } },
+          borderColor: theme.colors.primary,
+        },
+      },
+    },
+  },
   itemImage: {
     width: theme.sizes.avatar.lg,
     height: theme.sizes.avatar.lg,
     borderRadius: theme.radii.md,
-    marginRight: theme.spacing['3'] },
+    marginRight: theme.spacing['3'],
+  },
   contentContainer: {
-    flex: 1 },
+    flex: 1,
+  },
   itemName: {
     fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.medium,
@@ -208,10 +244,15 @@ const styles = StyleSheet.create(theme => ({
       purchased: {
         true: {
           textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
-          color: theme.colors.textSecondary } } } },
+          color: theme.colors.textSecondary,
+        },
+      },
+    },
+  },
   quantityContainer: {
     flexDirection: 'row',
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   quantityText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
@@ -219,10 +260,17 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       purchased: {
         true: {
-          textDecorationLine: 'line-through' as TextStyle['textDecorationLine'] } } } },
+          textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
+        },
+      },
+    },
+  },
   editQuantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

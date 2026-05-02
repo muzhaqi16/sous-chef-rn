@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -8,6 +9,7 @@ import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 // Components
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import { ListTemplate } from '#components/templates/ListTemplate';
+import { TabMainScreen } from '#components/templates/TabMainScreen';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { ShoppingListTabs } from '#components/organisms/ShoppingListTabs/ShoppingListTabs';
@@ -28,7 +30,7 @@ import {
   useTabBarState,
 } from '#/context/TabBarActionsContext';
 import { useShoppingListModals } from '#/context/ShoppingListModalsContext';
-import { useAuthUser } from '#/hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import {
   useShoppingListTutorial,
   ShoppingListTutorialStep,
@@ -106,7 +108,7 @@ export const ShoppingListMainContent: React.FC<
   } = useCollapsibleScroll();
 
   useAnimatedReaction(
-    () => isScrolledDown.value,
+    () => isScrolledDown.get(),
     hidden => {
       scrollTabBarHidden.set(hidden);
     },
@@ -132,7 +134,7 @@ export const ShoppingListMainContent: React.FC<
   useFocusEffect(onScreenFocus);
 
   // Get current user for permission calculations
-  const user = useAuthUser();
+  const user = useUser();
 
   // --- Actions Hook ---
   const {
@@ -341,10 +343,10 @@ export const ShoppingListMainContent: React.FC<
     };
 
     return (
-      <View style={styles.container} testID="shopping-list-screen">
+      <TabMainScreen testID="shopping-list-screen">
         <TabScreenHeader label="Shopping list" title="Shopping List" />
         <ListTemplate items={[]} emptyState={noListsEmptyState} />
-      </View>
+      </TabMainScreen>
     );
   }
 
@@ -359,7 +361,7 @@ export const ShoppingListMainContent: React.FC<
   };
 
   return (
-    <View style={styles.container} testID="shopping-list-screen">
+    <TabMainScreen testID="shopping-list-screen">
       <TabScreenHeader
         label="Shopping list"
         title={currentList?.name || 'Shopping List'}
@@ -484,15 +486,11 @@ export const ShoppingListMainContent: React.FC<
       })()}
 
       {/* Modals are rendered inside ShoppingListModalsProvider */}
-    </View>
+    </TabMainScreen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   searchBarContainer: {
     paddingHorizontal: theme.spacing['3'],
   },

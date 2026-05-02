@@ -11,21 +11,23 @@ jest.mock('#/apollo/links/refreshToken');
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {
-  const selectSelectedHomeId = (s: any) => s.selectedHomeId;
-  const fn = (selector: any) =>
-    selector({
-      selectedHomeId: 'h1',
-      setSelectedPantryId: jest.fn(),
-    });
+  const mockState = {
+    selectedHomeId: 'h1',
+    setSelectedPantryId: jest.fn(),
+  };
+  const fn = (selector: any) => selector(mockState);
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn, selectSelectedHomeId };
+  return {
+    useAppStore: fn,
+    useSelectedHomeId: jest.fn(() => mockState.selectedHomeId),
+  };
 });
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetPantryQuery: jest.fn(() => ({
+jest.mock('@apollo/client/react', () => ({
+  __esModule: true,
+  useQuery: jest.fn(() => ({
     data: {
       pantry: {
         id: 'p1',
@@ -40,10 +42,10 @@ jest.mock('#generated', () => ({
     loading: false,
     error: null,
   })),
-  useUpdatePantryMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useDeletePantryMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useCreatePantryMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useSetDefaultPantryMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+  useMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+  useApolloClient: jest.fn(() => ({
+    cache: { modify: jest.fn(), identify: jest.fn(() => 'cache-id') },
+  })),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -121,7 +123,36 @@ describe('PantrySettings', () => {
   const editRoute = { params: { pantryId: 'p1' } };
   const createRoute = { params: undefined };
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    const apollo = jest.requireMock('@apollo/client/react') as {
+      useQuery: jest.Mock;
+      useMutation: jest.Mock;
+    };
+    apollo.useQuery.mockReset();
+    apollo.useQuery.mockImplementation((_doc: any, options: any) => {
+      if (options?.skip) {
+        return { data: undefined, loading: false, error: null };
+      }
+      return {
+        data: {
+          pantry: {
+            id: 'p1',
+            name: 'Kitchen Pantry',
+            description: 'Main pantry',
+            isDefault: true,
+            items: [{ id: 'i1' }, { id: 'i2' }],
+            createdAt: '2024-01-01T00:00:00Z',
+            itemsConnection: { edges: [], totalCount: 2 },
+          },
+        },
+        loading: false,
+        error: null,
+      };
+    });
+    apollo.useMutation.mockReset();
+    apollo.useMutation.mockReturnValue([jest.fn(), { loading: false }]);
+  });
 
   it('renders settings title when editing', () => {
     render(<PantrySettings route={editRoute} />);
@@ -177,8 +208,8 @@ describe('PantrySettings', () => {
   });
 
   it('shows loading state when pantryId is provided and data is loading', () => {
-    const { useGetPantryQuery } = require('#generated');
-    useGetPantryQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: null,
       loading: true,
       error: null,
@@ -189,8 +220,8 @@ describe('PantrySettings', () => {
   });
 
   it('shows error alert when pantry query has error', () => {
-    const { useGetPantryQuery } = require('#generated');
-    useGetPantryQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: null,
       loading: false,
       error: new Error('Network error'),
@@ -204,8 +235,8 @@ describe('PantrySettings', () => {
   });
 
   it('calls handleSave and shows error when name is empty', () => {
-    const { useGetPantryQuery } = require('#generated');
-    useGetPantryQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: {
         pantry: {
           id: 'p1',
@@ -249,8 +280,8 @@ describe('PantrySettings', () => {
   });
 
   it('syncs form state from loaded pantry data', () => {
-    const { useGetPantryQuery } = require('#generated');
-    useGetPantryQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: {
         pantry: {
           id: 'p1',
@@ -271,8 +302,8 @@ describe('PantrySettings', () => {
   });
 
   it('shows item count as 0 when pantry has no items', () => {
-    const { useGetPantryQuery } = require('#generated');
-    useGetPantryQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockImplementation(() => ({
       data: {
         pantry: {
           id: 'p1',
@@ -286,7 +317,7 @@ describe('PantrySettings', () => {
       },
       loading: false,
       error: null,
-    });
+    }));
 
     render(<PantrySettings route={editRoute} />);
     expect(screen.getByText('0 items')).toBeTruthy();
@@ -294,14 +325,14 @@ describe('PantrySettings', () => {
 
   it('shows no home selected error when saving without selectedHomeId', () => {
     // Override the store mock to return null for selectedHomeId
-    jest
-      .spyOn(require('#store/useAppStore'), 'useAppStore')
-      .mockImplementation((selector: any) =>
-        selector({
-          selectedHomeId: null,
-          setSelectedPantryId: jest.fn(),
-        }),
-      );
+    const storeModule = require('#store/useAppStore');
+    jest.spyOn(storeModule, 'useAppStore').mockImplementation((selector: any) =>
+      selector({
+        selectedHomeId: null,
+        setSelectedPantryId: jest.fn(),
+      }),
+    );
+    jest.spyOn(storeModule, 'useSelectedHomeId').mockReturnValue(null);
 
     render(<PantrySettings route={createRoute} />);
 

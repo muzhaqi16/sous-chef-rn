@@ -6,25 +6,30 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import type { MealPlanItemFragment } from '#generated';
+import { type EditCustomMealSheet_ItemFragment } from './EditCustomMealSheet.generated';
 
 interface EditCustomMealSheetProps {
   visible: boolean;
-  item: MealPlanItemFragment | null;
+  item: EditCustomMealSheet_ItemFragment | null;
   onClose: () => void;
-  onSave: (id: string, input: { customMealName?: string; notes?: string }) => void;
+  onSave: (
+    id: string,
+    input: { customMealName?: string; notes?: string },
+  ) => void;
 }
 
 export const EditCustomMealSheet: React.FC<EditCustomMealSheetProps> = ({
   visible,
   item,
   onClose,
-  onSave }) => {
+  onSave,
+}) => {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
     snapPoints: ['45%'],
-    keyboardAware: true });
+    keyboardAware: true,
+  });
 
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
@@ -47,7 +52,8 @@ export const EditCustomMealSheet: React.FC<EditCustomMealSheetProps> = ({
     if (!trimmedName) return;
     onSave(item.id, {
       customMealName: trimmedName,
-      notes: notes.trim() || undefined });
+      notes: notes.trim() || undefined,
+    });
     onClose();
   };
 
@@ -67,7 +73,8 @@ export const EditCustomMealSheet: React.FC<EditCustomMealSheetProps> = ({
 
         <View style={styles.previewSection}>
           <Text style={styles.mealTypeLabel}>
-            {item?.mealType?.charAt(0).toUpperCase()}{item?.mealType?.slice(1).toLowerCase()}
+            {item?.mealType?.charAt(0).toUpperCase()}
+            {item?.mealType?.slice(1).toLowerCase()}
           </Text>
         </View>
 
@@ -99,18 +106,24 @@ EditCustomMealSheet.displayName = 'EditCustomMealSheet';
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   contentContainer: {
-    padding: theme.spacing.md },
+    padding: theme.spacing.md,
+  },
   previewSection: {
     marginBottom: theme.spacing.lg,
     padding: theme.spacing.sm,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   mealTypeLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   section: {
-    marginBottom: theme.spacing.lg } }));
+    marginBottom: theme.spacing.lg,
+  },
+}));

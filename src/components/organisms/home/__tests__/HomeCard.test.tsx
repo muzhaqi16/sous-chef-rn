@@ -1,6 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { HomeCard } from '../HomeCard';
+import {
+  MembershipRole,
+  MembershipStatus,
+} from '../../../../graphql/generated/schemaTypes';
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: 'Icon',
@@ -13,10 +17,21 @@ jest.mock('#constants/animations', () => ({
 jest.mock('../HomeActions', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
-    HomeActions: ({ onSetDefault, onInvite, onDelete, homeId, isDefault, canInvite, canDelete }: any) => (
+    HomeActions: ({
+      onSetDefault,
+      onInvite,
+      onDelete,
+      homeId,
+      isDefault,
+      canInvite,
+      canDelete,
+    }: any) => (
       <View testID="home-actions">
         {!isDefault && (
-          <Pressable onPress={() => onSetDefault(homeId)} testID="set-default-btn">
+          <Pressable
+            onPress={() => onSetDefault(homeId)}
+            testID="set-default-btn"
+          >
             <Text>Set Default</Text>
           </Pressable>
         )}
@@ -53,8 +68,18 @@ describe('HomeCard', () => {
     id: 'home-1',
     name: 'My Kitchen',
     members: [
-      { id: 'm1', role: 'admin', status: 'active', displayName: 'Alice' },
-      { id: 'm2', role: 'member', status: 'active', displayName: 'Bob' },
+      {
+        id: 'm1',
+        role: MembershipRole.Admin,
+        status: MembershipStatus.Active,
+        displayName: 'Alice',
+      },
+      {
+        id: 'm2',
+        role: MembershipRole.Member,
+        status: MembershipStatus.Active,
+        displayName: 'Bob',
+      },
     ],
     pantries: [{ id: 'p1' }],
     invites: [],
@@ -116,7 +141,14 @@ describe('HomeCard', () => {
   it('uses singular "member" for single member', () => {
     const singleMemberHome = {
       ...mockHome,
-      members: [{ id: 'm1', role: 'admin', status: 'active', displayName: 'Alice' }],
+      members: [
+        {
+          id: 'm1',
+          role: MembershipRole.Admin,
+          status: MembershipStatus.Active,
+          displayName: 'Alice',
+        },
+      ],
     };
     render(<HomeCard {...defaultProps} home={singleMemberHome} />);
     expect(screen.getByText(/1 member/)).toBeTruthy();

@@ -1,20 +1,18 @@
-import {useNavigation, useRoute, StackActions, CommonActions} from '@react-navigation/native';
-import type { BarcodeSource } from '#/types/navigation';
+import { useNavigation, CommonActions } from '@react-navigation/native';
+import type { RootStackParamList } from '#navigation/RootNavigator';
+import type { PantryStackParams } from '#navigation/stacks/PantryStack';
+import type { BarcodeStackParams } from '#navigation/stacks/BarcodeStack';
 
 export function useAppNavigation() {
   const navigation = useNavigation();
-  const route = useRoute();
 
+  /**
+   * Navigate to any screen in the navigator tree via CommonActions (tree search).
+   * For full type safety, prefer the navigateTo shortcuts below.
+   */
   const navigate = (name: string, params?: object) => {
-      navigation.dispatch(CommonActions.navigate(name, params));
-    };
-
-  // Navigate to nested stack screens
-  const navigateToNested = (stackName: string, screenName: string, params?: object) => {
-      navigation.dispatch(CommonActions.navigate(stackName, {
-        screen: screenName,
-        params }));
-    };
+    navigation.dispatch(CommonActions.navigate(name, params));
+  };
 
   const goBack = () => {
     if (navigation.canGoBack()) {
@@ -22,114 +20,47 @@ export function useAppNavigation() {
     }
   };
 
-  const replace = (name: string, params?: object) => {
-      navigation.dispatch(StackActions.replace(name, params));
-    };
+  // Typed navigation shortcuts organized by domain.
+  // These use navigation.navigate() with nested params — fully typed by v8's
+  // RootNavigator augmentation. No manual param lists needed.
+  const navigateTo = {
+    // Cross-tab (nested nav structure, fully typed by v8)
+    pantryMain: () =>
+      navigation.navigate('Home', {
+        screen: 'Pantry',
+        params: { screen: 'PantryMain' },
+      }),
+    shoppingListMain: () =>
+      navigation.navigate('Home', {
+        screen: 'ShoppingList',
+        params: { screen: 'ShoppingListMain' },
+      }),
+    notifications: () => navigation.navigate('Notifications'),
 
-  const push = (name: string, params?: object) => {
-      navigation.dispatch(StackActions.push(name, params));
-    };
+    // Pantry screens (typed via PantryStackParams)
+    pantryItem: (params?: PantryStackParams['PantryItem']) =>
+      navigate('PantryItem', params),
+    pantryItemDetail: (params: PantryStackParams['PantryItemDetail']) =>
+      navigate('PantryItemDetail', params),
+    nutritionScreen: (params: PantryStackParams['NutritionScreen']) =>
+      navigate('NutritionScreen', params),
 
-  const popToTop = () => {
-    navigation.dispatch(StackActions.popToTop());
+    // Barcode modal (nested into BarcodeStack, fully typed by v8)
+    barcode: (params?: BarcodeStackParams['BarcodeScanner']) =>
+      navigation.navigate('Barcode', {
+        screen: 'BarcodeScanner',
+        params,
+      }),
+
+    // Media (root-level screen, fully typed by v8)
+    imageCrop: (params: RootStackParamList['ImageCrop']) =>
+      navigation.navigate('ImageCrop', params),
   };
 
-  // Feature-specific navigation shortcuts
-  const navigateTo = {
-      // Auth stack screens (when in Auth stack)
-      login: () => navigate('Login'),
-      signUp: () => navigate('SignUp'),
-      forgotPassword: () => navigate('ForgotPassword'),
-      codeVerification: (params?: { email?: string }) => navigate('CodeVerification', params),
-
-      // Onboarding stack screens (when in Onboarding stack)
-      createHome: () => navigate('CreateHome'),
-      createShoppingList: () => navigate('CreateShoppingList'),
-      selectPantryItems: () => navigate('SelectPantryItems'),
-      profilePictureUpload: () => navigate('ProfilePictureUpload'),
-      inviteMembers: () => navigate('InviteMembers'),
-      onboardingComplete: () => navigate('OnboardingComplete'),
-
-      // Main tab screens (nested navigation through HomeTabs)
-      pantryMain: () =>
-        navigate('Home', {
-          screen: 'Pantry',
-          params: {
-            screen: 'PantryMain' } }),
-      pantryItem: (params?: { itemId?: string }) => navigate('PantryItem', params),
-      pantryItemDetail: (params: { itemId: string }) => navigate('PantryItemDetail', params),
-      nutritionScreen: (params: {itemId: string; itemName: string; nutritions: unknown; actualServingGrams?: number}) =>
-        navigate('NutritionScreen', params),
-      shoppingListMain: () =>
-        navigate('Home', {
-          screen: 'ShoppingList',
-          params: {
-            screen: 'ShoppingListMain' } }),
-      profile: () => navigate('Profile'),
-      mealPlanMain: () =>
-        navigate('Home', {
-          screen: 'MealPlan',
-          params: {
-            screen: 'MealPlanMain' } }),
-      createMealPlan: () =>
-        navigate('Home', {
-          screen: 'MealPlan',
-          params: {
-            screen: 'CreateMealPlan' } }),
-      createRecipe: () =>
-        navigate('Home', {
-          screen: 'Recipe',
-          params: {
-            screen: 'RecipeCreate' } }),
-      editRecipe: (params: { recipeId: string }) =>
-        navigate('Home', {
-          screen: 'Recipe',
-          params: {
-            screen: 'RecipeEdit',
-            params } }),
-
-      // Root level screens
-      homeManagement: (params?: { homeId?: string }) => navigate('HomeManagement', params),
-      imageUpload: () => navigate('ProfilePhotoUpload'),
-      imageCrop: (params: { imageFile: { uri: string; fileName?: string; fileSize?: number; type?: string } }) => navigate('ImageCrop', params),
-
-      // Nested stack navigation (Notifications)
-      notificationList: () =>
-        navigateToNested('Notifications', 'NotificationList'),
-      notificationDetail: (notification: { id: string; title: string; body: string; [key: string]: unknown }) =>
-        navigateToNested('Notifications', 'NotificationDetail', {notification}),
-      notificationSettings: () =>
-        navigateToNested('Notifications', 'NotificationSettings'),
-
-      // Nested stack navigation (Barcode)
-      barcodeScanner: (params?: { source?: BarcodeSource; pantryId?: string; shoppingListId?: string }) =>
-        navigateToNested('Barcode', 'BarcodeScanner', params),
-      searchResults: (params: { barcode: string; format: string; source?: BarcodeSource; pantryId?: string; shoppingListId?: string }) =>
-        navigateToNested('Barcode', 'SearchResults', params),
-
-      // Alternative: Direct navigation to root stacks
-      notifications: () => navigate('Notifications'),
-      barcode: (params?: { source?: BarcodeSource; pantryId?: string; shoppingListId?: string }) => navigate('Barcode', {
-        screen: 'BarcodeScanner',
-        params: params }) };
-
   return {
-    // Navigation state
-    currentRoute: route.name,
-    params: route.params,
-    canGoBack: navigation.canGoBack(),
-
-    // Core navigation
     navigate,
-    navigateToNested,
     goBack,
-    replace,
-    push,
-    popToTop,
-
-    // Raw navigation object (for advanced use cases like parent navigation)
     navigation,
-
-    // Feature navigation
-    navigateTo };
+    navigateTo,
+  };
 }

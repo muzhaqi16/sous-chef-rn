@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -31,12 +32,11 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
       {/* Header with title and add button */}
       <View style={styles.header}>
         <Text style={commonStyles.subtitle}>{title}</Text>
-        <Pressable onPress={onAddPress} style={({pressed}) => [styles.addButton, pressed && styles.pressed]}>
-          <Icon
-            name="add"
-            size={18}
-            color={theme.colors.primary}
-          />
+        <Pressable
+          onPress={onAddPress}
+          style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
+        >
+          <Icon name="add" size={18} color={theme.colors.primary} />
         </Pressable>
       </View>
 
@@ -49,7 +49,10 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
                 <Text style={styles.displayChipText}>{item.label}</Text>
               </View>
               <Pressable
-                style={({pressed}) => [styles.removeButton, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.removeButton,
+                  pressed && styles.pressed,
+                ]}
                 onPress={() => onRemove(item.id)}
               >
                 <Icon

@@ -16,17 +16,17 @@ jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
 
 const mockClearRegistrationPassword = jest.fn();
 jest.mock('#store/useAppStore', () => {
-  const selectUser = (s: any) => s.user;
-  const fn = (selector: any) => selector({
+  const mockState = {
     user: { id: 'u1', email: 'test@test.com' },
     setUserNavigationState: jest.fn(),
     registrationPassword: 'password123',
     clearRegistrationPassword: mockClearRegistrationPassword,
-  });
-  fn.getState = () => ({});
-  fn.setState = jest.fn();
-  fn.subscribe = jest.fn();
-  return { useAppStore: fn, selectUser };
+  };
+  const fn = jest.fn((selector: any) => selector(mockState));
+  (fn as any).getState = jest.fn(() => ({}));
+  (fn as any).setState = jest.fn();
+  (fn as any).subscribe = jest.fn();
+  return { useAppStore: fn, useUser: jest.fn(() => mockState.user) };
 });
 
 let mockBiometricInfo = { isAvailable: true, biometryType: 'Face ID' };
@@ -78,6 +78,18 @@ describe('BiometricSetupScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockBiometricInfo = { isAvailable: true, biometryType: 'Face ID' };
+    // Restore mocks after clearAllMocks
+    const storeModule = require('#store/useAppStore');
+    const mockState = {
+      user: { id: 'u1', email: 'test@test.com' },
+      setUserNavigationState: jest.fn(),
+      registrationPassword: 'password123',
+      clearRegistrationPassword: mockClearRegistrationPassword,
+    };
+    storeModule.useAppStore.mockImplementation((selector: any) =>
+      selector(mockState),
+    );
+    storeModule.useUser.mockReturnValue(mockState.user);
   });
 
   it('renders biometric setup screen when available', async () => {

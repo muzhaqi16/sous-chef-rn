@@ -20,8 +20,12 @@ export const RecipeStepEditor = forwardRef<
   RecipeStepEditorRef,
   RecipeStepEditorProps
 >(({ onSave }, ref) => {
+  // Per CLAUDE.md: never call present()/dismiss() outside an effect.
+  // Drive sheet visibility from internal state, dispatched via effect.
+  const [visible, setVisible] = useState(false);
   const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
-    onDismiss: () => {},
+    visible,
+    onDismiss: () => setVisible(false),
     snapPoints: ['50%'],
     keyboardBehavior: 'interactive',
   });
@@ -37,9 +41,9 @@ export const RecipeStepEditor = forwardRef<
         setEditingId(null);
         setInstruction('');
       }
-      bottomSheetRef.current?.present();
+      setVisible(true);
     },
-    close: () => bottomSheetRef.current?.dismiss(),
+    close: () => setVisible(false),
   }));
 
   const handleSave = () => {
@@ -49,7 +53,7 @@ export const RecipeStepEditor = forwardRef<
       instruction: instruction.trim(),
       sortOrder: 0,
     });
-    bottomSheetRef.current?.dismiss();
+    setVisible(false);
   };
 
   return (
@@ -60,7 +64,7 @@ export const RecipeStepEditor = forwardRef<
         leftActions={[
           {
             icon: 'close',
-            onPress: () => bottomSheetRef.current?.dismiss(),
+            onPress: () => setVisible(false),
           },
         ]}
         rightActions={[

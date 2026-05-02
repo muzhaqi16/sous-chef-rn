@@ -4,7 +4,12 @@ import { StyleProp, ViewStyle } from 'react-native';
 /**
  * Visual variant for the card
  */
-export type CardVariant = 'normal' | 'warning' | 'expired' | 'success' | 'dimmed';
+export type CardVariant =
+  | 'normal'
+  | 'warning'
+  | 'expired'
+  | 'success'
+  | 'dimmed';
 
 /**
  * Props for the BaseItemCard component

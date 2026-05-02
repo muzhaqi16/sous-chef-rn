@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { CachedImage } from '#components/atoms/CachedImage';
-import type { RecipeReviewFragment } from '#generated';
+import { type RecipeReviewFragment } from '../../graphql/operations/recipe/recipeFragments.generated';
 
 interface ReviewCardProps {
   review: RecipeReviewFragment;
@@ -32,7 +33,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       {/* Header: avatar, name, date */}
       <View style={styles.header}>
         {avatar ? (
-          <CachedImage uri={avatar} style={styles.avatar} />
+          <CachedImage uri={avatar} style={styles.avatar} displaySize={36} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Ionicons

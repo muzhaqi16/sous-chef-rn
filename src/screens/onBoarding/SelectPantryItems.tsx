@@ -1,27 +1,29 @@
 import React, { useState } from 'react';
-import { Text, ScrollView, View } from 'react-native';
+import { Text, View, ScrollView } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { StyleSheet } from 'react-native-unistyles';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useSelectableItems } from '#hooks/useSelectableItems';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { GetOnboardingItemsDocument } from '../../graphql/operations/item/item.generated';
 import {
-  useGetOnboardingItemsQuery,
-  useGetPantryQuery,
-  useCreatePantryItemMutation,
-  useDeletePantryItemMutation,
+  GetPantryDocument,
+  CreatePantryItemDocument,
+  DeletePantryItemDocument,
+} from '#operations/pantry/pantry.generated';
+import {
   StorageState,
   ItemCondition,
   AcquisitionMethod,
   ItemSortField,
   SortOrder,
   ItemType,
-} from '#generated';
+} from '#/graphql/generated/schemaTypes';
 import { extractNodes } from '#/utils/connectionUtils';
 import { removeFromPantryItemsCache } from '#/hooks/home/pantry/utils';
 import { useAppStore } from '#store/useAppStore';
 import { Button } from '#components/base/Button';
 import { AnimatedChip } from '#components/atoms/AnimatedChip';
-import { AnimatedButton } from '#components/atoms/AnimatedButton';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
@@ -39,7 +41,7 @@ export const SelectPantryItems = () => {
     loading,
     error: queryError,
     refetch,
-  } = useGetOnboardingItemsQuery({
+  } = useQuery(GetOnboardingItemsDocument, {
     variables: {
       filters: {
         curation: { showInOnboarding: true },
@@ -51,17 +53,18 @@ export const SelectPantryItems = () => {
       },
       first: 50,
     },
-    fetchPolicy: 'cache-and-network',
   });
 
-  const { data: pantryData, loading: pantryLoading } = useGetPantryQuery({
-    variables: { id: selectedPantryId!, itemsFirst: 100 },
-    skip: !selectedPantryId,
-    fetchPolicy: 'cache-and-network',
-  });
+  const { data: pantryData, loading: pantryLoading } = useQuery(
+    GetPantryDocument,
+    {
+      variables: { id: selectedPantryId!, itemsFirst: 100 },
+      skip: !selectedPantryId,
+    },
+  );
 
-  const [addItemToPantry] = useCreatePantryItemMutation();
-  const [deletePantryItem] = useDeletePantryItemMutation();
+  const [addItemToPantry] = useMutation(CreatePantryItemDocument);
+  const [deletePantryItem] = useMutation(DeletePantryItemDocument);
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -76,13 +79,18 @@ export const SelectPantryItems = () => {
       ids.add(catalogId);
     }
   }
-  const { existingItemMap, existingCatalogIds } = { existingItemMap: map, existingCatalogIds: ids };
+  const { existingItemMap, existingCatalogIds } = {
+    existingItemMap: map,
+    existingCatalogIds: ids,
+  };
 
   // Transform onboarding items into selectable items, pre-selecting existing pantry items
-  const selectableItems = (data?.items?.edges?.map(edge => edge.node) || []).map((item: any) => ({
-        ...item,
-        selected: existingCatalogIds.has(item.id),
-      }))
+  const selectableItems = (
+    data?.items?.edges?.map(edge => edge.node) || []
+  ).map((item: any) => ({
+    ...item,
+    selected: existingCatalogIds.has(item.id),
+  }));
 
   // Use the custom hook for managing selection state
   const { items, selectedItems, toggleItem, isMaxReached } = useSelectableItems(
@@ -121,9 +129,9 @@ export const SelectPantryItems = () => {
           <Text style={styles.errorText}>
             Unable to load items. Please try again.
           </Text>
-          <AnimatedButton onPress={() => refetch()} variant="primary">
+          <Button onPress={() => refetch()} variant="primary">
             Try Again
-          </AnimatedButton>
+          </Button>
         </View>
       </OnBoardingWrapper>
     );
@@ -131,7 +139,9 @@ export const SelectPantryItems = () => {
 
   const selectedIds = new Set(selectedItems.map(i => i.id));
   const itemsToAdd = selectedItems.filter(i => !existingCatalogIds.has(i.id));
-  const itemsToRemove = [...existingCatalogIds].filter(id => !selectedIds.has(id));
+  const itemsToRemove = [...existingCatalogIds].filter(
+    id => !selectedIds.has(id),
+  );
   const hasChanges = itemsToAdd.length > 0 || itemsToRemove.length > 0;
   const isFirstVisit = existingCatalogIds.size === 0;
 
@@ -166,7 +176,11 @@ export const SelectPantryItems = () => {
               return deletePantryItem({
                 variables: { id: pantryItemId },
                 update: cache => {
-                  removeFromPantryItemsCache(cache, selectedPantryId, pantryItemId);
+                  removeFromPantryItemsCache(
+                    cache,
+                    selectedPantryId,
+                    pantryItemId,
+                  );
                 },
               });
             }),
@@ -174,8 +188,10 @@ export const SelectPantryItems = () => {
           navigateToNextStep('SelectPantryItems');
         },
         setIsSaving,
-        (error) => {
-          errorService.reportError(error, { operation: 'SelectPantryItems.updatePantryItems' });
+        error => {
+          errorService.reportError(error, {
+            operation: 'SelectPantryItems.updatePantryItems',
+          });
           navigateToNextStep('SelectPantryItems');
         },
       );
@@ -219,10 +235,12 @@ export const SelectPantryItems = () => {
           isSaving
             ? 'Saving...'
             : isFirstVisit
-              ? `Add ${selectedItems.length > 0 ? selectedItems.length : ''} Item${selectedItems.length === 1 ? '' : 's'}`
-              : hasChanges
-                ? 'Save Changes'
-                : 'Continue'
+            ? `Add ${
+                selectedItems.length > 0 ? selectedItems.length : ''
+              } Item${selectedItems.length === 1 ? '' : 's'}`
+            : hasChanges
+            ? 'Save Changes'
+            : 'Continue'
         }
         onPress={onNext}
         variant="primary"

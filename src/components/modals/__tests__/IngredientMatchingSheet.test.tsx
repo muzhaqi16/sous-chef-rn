@@ -24,10 +24,20 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
   BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel }: any) => {
     const RN = require('react-native');
     const R = require('react');
-    return R.createElement(RN.View, { testID: 'header' },
+    return R.createElement(
+      RN.View,
+      { testID: 'header' },
       R.createElement(RN.Text, null, title),
-      R.createElement(RN.Pressable, { onPress: onCancel, testID: 'cancel-btn' }, R.createElement(RN.Text, null, 'Cancel')),
-      R.createElement(RN.Pressable, { onPress: onConfirm, testID: 'confirm-btn' }, R.createElement(RN.Text, null, confirmLabel)),
+      R.createElement(
+        RN.Pressable,
+        { onPress: onCancel, testID: 'cancel-btn' },
+        R.createElement(RN.Text, null, 'Cancel'),
+      ),
+      R.createElement(
+        RN.Pressable,
+        { onPress: onConfirm, testID: 'confirm-btn' },
+        R.createElement(RN.Text, null, confirmLabel),
+      ),
     );
   },
 }));
@@ -35,7 +45,11 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
 jest.mock('#components/recipe/IngredientMatchRow', () => ({
   IngredientMatchRow: ({ editableMatch }: any) => {
     const { Text } = require('react-native');
-    return require('react').createElement(Text, null, editableMatch.match.ingredient.name);
+    return require('react').createElement(
+      Text,
+      null,
+      editableMatch.match.ingredient.name,
+    );
   },
 }));
 
@@ -53,7 +67,13 @@ describe('IngredientMatchingSheet', () => {
   const defaultProps: any = {
     visible: true,
     editableMatches: [makeMatch('Sugar', 'i1'), makeMatch('Flour', 'i2')],
-    matchSummary: { available: 1, partial: 0, missing: 1, included: 2, total: 2 },
+    matchSummary: {
+      available: 1,
+      partial: 0,
+      missing: 1,
+      included: 2,
+      total: 2,
+    },
     onUpdate: jest.fn(),
     onConfirm: jest.fn(),
     onSkip: jest.fn(),

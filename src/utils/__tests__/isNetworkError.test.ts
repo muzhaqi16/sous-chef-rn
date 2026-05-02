@@ -20,7 +20,7 @@ describe('isNetworkError', () => {
     'unable to reach server',
     'no internet connection',
     'Device is offline',
-  ])('detects "%s" as network error', (message) => {
+  ])('detects "%s" as network error', message => {
     expect(isNetworkError({ message })).toBe(true);
   });
 
@@ -29,7 +29,9 @@ describe('isNetworkError', () => {
   });
 
   it('detects networkError.message pattern', () => {
-    expect(isNetworkError({ networkError: { message: 'Network request failed' } })).toBe(true);
+    expect(
+      isNetworkError({ networkError: { message: 'Network request failed' } }),
+    ).toBe(true);
   });
 
   it('returns false for non-network errors', () => {

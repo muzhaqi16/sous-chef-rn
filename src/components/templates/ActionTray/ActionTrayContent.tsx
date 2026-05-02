@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
@@ -31,16 +32,19 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
           <View style={styles.fill} />
           {!!headerRight && headerRight}
           {!!showCloseButton && !!onClose && (
-            <Pressable onPress={onClose} style={({pressed}) => [styles.closeButton, pressed && styles.pressed]}>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.closeButton,
+                pressed && styles.pressed,
+              ]}
+            >
               <Icon name="close" size={16} color={theme.colors.textSecondary} />
             </Pressable>
           )}
         </View>
       )}
-      <Animated.View
-        layout={LinearTransition}
-        style={styles.childrenContainer}
-      >
+      <Animated.View layout={LinearTransition} style={styles.childrenContainer}>
         {children}
       </Animated.View>
     </Animated.View>

@@ -31,7 +31,7 @@ let refreshTimer: NodeJS.Timeout | null = null;
  */
 export function scheduleTokenRefresh(
   accessToken: string,
-  refreshCallback: () => Promise<void>
+  refreshCallback: () => Promise<void>,
 ) {
   // Clear any existing timer
   if (refreshTimer) {
@@ -64,8 +64,9 @@ export function scheduleTokenRefresh(
     // Only schedule if token has more than the buffer time left
     if (delay > 0) {
       console.log(
-        `[TokenScheduler] Scheduling proactive refresh in ${Math.round(delay / 1000)}s ` +
-        `(token expires in ${Math.round((expiresAt - now) / 1000)}s)`
+        `[TokenScheduler] Scheduling proactive refresh in ${Math.round(
+          delay / 1000,
+        )}s ` + `(token expires in ${Math.round((expiresAt - now) / 1000)}s)`,
       );
 
       refreshTimer = setTimeout(async () => {
@@ -80,7 +81,7 @@ export function scheduleTokenRefresh(
         if (!state.isOnline) {
           console.log(
             '[TokenScheduler] Skipping proactive refresh - device is offline. ' +
-            'Reactive refresh will handle token expiration when back online.'
+              'Reactive refresh will handle token expiration when back online.',
           );
           return;
         }
@@ -88,7 +89,9 @@ export function scheduleTokenRefresh(
         console.log('[TokenScheduler] Proactive token refresh triggered');
         try {
           await refreshCallback();
-          console.log('[TokenScheduler] Proactive token refresh completed successfully');
+          console.log(
+            '[TokenScheduler] Proactive token refresh completed successfully',
+          );
         } catch (error) {
           console.error('[TokenScheduler] Proactive refresh failed:', error);
           // Reactive refresh (errorLink) will handle it if this fails
@@ -97,12 +100,17 @@ export function scheduleTokenRefresh(
       }, delay);
     } else {
       console.warn(
-        `[TokenScheduler] Token expires too soon (in ${Math.round((expiresAt - now) / 1000)}s), ` +
-        'skipping proactive refresh. Reactive refresh will handle expiration.'
+        `[TokenScheduler] Token expires too soon (in ${Math.round(
+          (expiresAt - now) / 1000,
+        )}s), ` +
+          'skipping proactive refresh. Reactive refresh will handle expiration.',
       );
     }
   } catch (error) {
-    console.error('[TokenScheduler] Failed to decode token for scheduling:', error);
+    console.error(
+      '[TokenScheduler] Failed to decode token for scheduling:',
+      error,
+    );
     // Don't throw - reactive refresh will handle token expiration
   }
 }

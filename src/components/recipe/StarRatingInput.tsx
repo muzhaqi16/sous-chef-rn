@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Pressable } from 'react-native';
+import { View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -32,9 +33,7 @@ export const StarRatingInput: React.FC<StarRatingInputProps> = ({
             name={star <= value ? 'star' : 'star-outline'}
             size={size}
             color={
-              star <= value
-                ? theme.colors.rating
-                : theme.colors.textSecondary
+              star <= value ? theme.colors.rating : theme.colors.textSecondary
             }
           />
         </Pressable>

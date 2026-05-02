@@ -1,6 +1,6 @@
 import React from 'react';
-import {View, Text, ViewStyle} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { View, Text, ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 
 interface FormFieldWrapperProps {
   label: string;

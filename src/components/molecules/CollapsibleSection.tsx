@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, Pressable } from 'react-native';
+import { Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 
@@ -23,10 +24,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   return (
     <>
       <Pressable
-        style={({ pressed }) => [
-          styles.header,
-          pressed && styles.pressed,
-        ]}
+        style={({ pressed }) => [styles.header, pressed && styles.pressed]}
         onPress={onToggle}
       >
         <Text style={styles.title}>

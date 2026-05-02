@@ -8,7 +8,8 @@ mutation MarkNotificationAsRead($id: ID!) {
     message
     code
     notification {
-      ...NotificationFragment
+      id
+      status
     }
   }
 }
@@ -19,7 +20,8 @@ mutation MarkNotificationUnread($id: ID!) {
     message
     code
     notification {
-      ...NotificationFragment
+      id
+      status
     }
   }
 }

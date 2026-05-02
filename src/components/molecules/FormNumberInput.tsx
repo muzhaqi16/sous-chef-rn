@@ -1,7 +1,7 @@
 import React from 'react';
-import {TextInput, TextInputProps, ViewStyle} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {FormFieldWrapper} from '../atoms/FormFieldWrapper';
+import { TextInput, TextInputProps, ViewStyle } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
 
 interface FormNumberInputProps
   extends Omit<TextInputProps, 'style' | 'keyboardType'> {
@@ -23,7 +23,7 @@ export const FormNumberInput: React.FC<FormNumberInputProps> = ({
   onChangeText,
   ...textInputProps
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
 
   const handleChangeText = (text: string) => {
     // Allow only numbers and decimal point for decimal-pad
@@ -46,7 +46,8 @@ export const FormNumberInput: React.FC<FormNumberInputProps> = ({
       label={label}
       error={error}
       required={required}
-      containerStyle={containerStyle}>
+      containerStyle={containerStyle}
+    >
       <TextInput
         style={[styles.input, error && styles.inputError, inputStyle]}
         placeholderTextColor={theme.colors.textSecondary}

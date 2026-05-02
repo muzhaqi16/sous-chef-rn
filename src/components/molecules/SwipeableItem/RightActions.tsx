@@ -13,47 +13,19 @@ const getContainerWidth = (buttonCount: number): number => {
   return 180; // 3 buttons
 };
 
-const RightActionsComponent: React.FC<SwipeActionsProps> = ({ onEdit, onDelete, onActionPress, testIDPrefix, progress, swipeMode }) => {
-    const { theme } = useUnistyles();
+const RightActionsComponent: React.FC<SwipeActionsProps> = ({
+  onEdit,
+  onDelete,
+  onActionPress,
+  testIDPrefix,
+  progress,
+  swipeMode,
+}) => {
+  const { theme } = useUnistyles();
 
-    // Shopping mode: Only show delete on right (edit is on left swipe)
-    if (swipeMode === 'shopping') {
-      if (!onDelete) return null;
-
-      const handleDeletePress = () => {
-        HapticService.light();
-        onActionPress?.('delete');
-      };
-
-      return (
-        <Animated.View
-          style={[styles.actionsContainer, { width: getContainerWidth(1) }]}
-          pointerEvents="box-none"
-        >
-          <AnimatedActionButton
-            onPress={handleDeletePress}
-            icon="trash-outline"
-            backgroundColor={theme.colors.danger}
-            circular={true}
-            testID={testIDPrefix ? `${testIDPrefix}-delete` : undefined}
-            progress={progress}
-            index={0}
-          />
-        </Animated.View>
-      );
-    }
-
-    // Default mode: Show edit and/or delete
-    const hasEdit = !!onEdit;
-    const hasDelete = !!onDelete;
-    const buttonCount = (hasEdit ? 1 : 0) + (hasDelete ? 1 : 0);
-
-    if (buttonCount === 0) return null;
-
-    const handleEditPress = () => {
-      HapticService.light();
-      onActionPress?.('edit');
-    };
+  // Shopping mode: Only show delete on right (edit is on left swipe)
+  if (swipeMode === 'shopping') {
+    if (!onDelete) return null;
 
     const handleDeletePress = () => {
       HapticService.light();
@@ -62,33 +34,71 @@ const RightActionsComponent: React.FC<SwipeActionsProps> = ({ onEdit, onDelete, 
 
     return (
       <Animated.View
-        style={[styles.actionsContainer, { width: getContainerWidth(buttonCount) }]}
+        style={[styles.actionsContainer, { width: getContainerWidth(1) }]}
         pointerEvents="box-none"
       >
-        {!!onEdit && (
-          <AnimatedActionButton
-            onPress={handleEditPress}
-            icon="create-outline"
-            backgroundColor={theme.colors.info}
-            circular={true}
-            testID={testIDPrefix ? `${testIDPrefix}-edit` : undefined}
-            progress={progress}
-            index={0}
-          />
-        )}
-        {!!onDelete && (
-          <AnimatedActionButton
-            onPress={handleDeletePress}
-            icon="trash-outline"
-            backgroundColor={theme.colors.danger}
-            circular={true}
-            testID={testIDPrefix ? `${testIDPrefix}-delete` : undefined}
-            progress={progress}
-            index={hasEdit ? 1 : 0}
-          />
-        )}
+        <AnimatedActionButton
+          onPress={handleDeletePress}
+          icon="trash-outline"
+          backgroundColor={theme.colors.danger}
+          circular={true}
+          testID={testIDPrefix ? `${testIDPrefix}-delete` : undefined}
+          progress={progress}
+          index={0}
+        />
       </Animated.View>
     );
+  }
+
+  // Default mode: Show edit and/or delete
+  const hasEdit = !!onEdit;
+  const hasDelete = !!onDelete;
+  const buttonCount = (hasEdit ? 1 : 0) + (hasDelete ? 1 : 0);
+
+  if (buttonCount === 0) return null;
+
+  const handleEditPress = () => {
+    HapticService.light();
+    onActionPress?.('edit');
   };
+
+  const handleDeletePress = () => {
+    HapticService.light();
+    onActionPress?.('delete');
+  };
+
+  return (
+    <Animated.View
+      style={[
+        styles.actionsContainer,
+        { width: getContainerWidth(buttonCount) },
+      ]}
+      pointerEvents="box-none"
+    >
+      {!!onEdit && (
+        <AnimatedActionButton
+          onPress={handleEditPress}
+          icon="create-outline"
+          backgroundColor={theme.colors.info}
+          circular={true}
+          testID={testIDPrefix ? `${testIDPrefix}-edit` : undefined}
+          progress={progress}
+          index={0}
+        />
+      )}
+      {!!onDelete && (
+        <AnimatedActionButton
+          onPress={handleDeletePress}
+          icon="trash-outline"
+          backgroundColor={theme.colors.danger}
+          circular={true}
+          testID={testIDPrefix ? `${testIDPrefix}-delete` : undefined}
+          progress={progress}
+          index={hasEdit ? 1 : 0}
+        />
+      )}
+    </Animated.View>
+  );
+};
 
 export const RightActions = RightActionsComponent;

@@ -9,14 +9,17 @@
 
 import { useEffect, useRef } from 'react';
 import { alertService } from '#/services/alertService';
-import { useShallow } from 'zustand/shallow';
-import { useSetDefaultHomeMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import {
+  SetDefaultHomeDocument,
+  type SetDefaultHomeMutation,
+} from '../../../graphql/operations/home/userSettings.generated';
 import {
   useAppStore,
-  selectSelectedHomeId,
-  selectHomeState,
-  selectSetHomeAndPantry,
-  selectSetIsHomeSelectionReady,
+  useSelectedHomeId,
+  useHomeState,
+  useSetHomeAndPantry,
+  useSetIsHomeSelectionReady,
 } from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -49,26 +52,20 @@ export function useHomeSelection({
   remoteDefaultHomeId,
   loading,
 }: UseHomeSelectionOptions) {
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
-  const { setSelectedHomeId } = useAppStore(useShallow(selectHomeState));
-  const { selectedPantryId, setSelectedPantryId } = useAppStore(
-    useShallow(state => ({
-      selectedPantryId: state.selectedPantryId,
-      setSelectedPantryId: state.setSelectedPantryId,
-    })),
-  );
-  const setHomeAndPantry = useAppStore(selectSetHomeAndPantry);
-  const setIsHomeSelectionReady = useAppStore(selectSetIsHomeSelectionReady);
+  const selectedHomeId = useSelectedHomeId();
+  const { setSelectedHomeId } = useHomeState();
+  const selectedPantryId = useAppStore(state => state.selectedPantryId);
+  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
+  const setHomeAndPantry = useSetHomeAndPantry();
+  const setIsHomeSelectionReady = useSetIsHomeSelectionReady();
   const { handleApolloError } = useErrorService();
 
   // Ref to track if initial home auto-selection has been attempted
   const hasInitializedDefaultHome = useRef(false);
 
-  const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
-    errorPolicy: 'all',
-
+  const [setDefaultHomeMutation] = useMutation(SetDefaultHomeDocument, {
     // Optimistic response for instant UI updates (especially offline)
-    optimisticResponse: variables => ({
+    optimisticResponse: (variables): SetDefaultHomeMutation => ({
       __typename: 'Mutation',
       setDefaultHome: {
         __typename: 'SetDefaultHomePayload',

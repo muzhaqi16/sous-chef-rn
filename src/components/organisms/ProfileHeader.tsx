@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   interpolate,
@@ -42,7 +43,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const avatarScaleStyle = useAnimatedStyle(() => {
     if (!progress) return {};
     const scale = interpolate(
-      progress.value,
+      progress.get(),
       [0, 1],
       [1, AVATAR_SCALE_MIN],
       Extrapolation.CLAMP,
@@ -54,13 +55,13 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const badgeStyle = useAnimatedStyle(() => {
     if (!progress) return {};
     const opacity = interpolate(
-      progress.value,
+      progress.get(),
       [0, 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     );
     const scale = interpolate(
-      progress.value,
+      progress.get(),
       [0, 0.5],
       [1, 0],
       Extrapolation.CLAMP,
@@ -68,22 +69,32 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     return { opacity, transform: [{ scale }] };
   });
 
-  // User info: collapse height + fade
+  // User info: collapse via GPU-composited scaleY + translateY + opacity
+  // (avoids Yoga layout recalculation every scroll frame)
   const userInfoStyle = useAnimatedStyle(() => {
     if (!progress) return {};
-    const height = interpolate(
-      progress.value,
+    const scaleY = interpolate(
+      progress.get(),
       [0, 1],
-      [USER_INFO_HEIGHT, 0],
+      [1, 0],
+      Extrapolation.CLAMP,
+    );
+    const translateY = interpolate(
+      progress.get(),
+      [0, 1],
+      [0, -USER_INFO_HEIGHT / 2],
       Extrapolation.CLAMP,
     );
     const opacity = interpolate(
-      progress.value,
+      progress.get(),
       [0, 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     );
-    return { height, opacity };
+    return {
+      transform: [{ translateY }, { scaleY }],
+      opacity,
+    };
   });
 
   return (
@@ -199,8 +210,10 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   userInfo: {
+    height: USER_INFO_HEIGHT,
     alignItems: 'center',
     overflow: 'hidden',
+    transformOrigin: 'top',
   },
   nameText: {
     fontSize: theme.fonts.size.lg,

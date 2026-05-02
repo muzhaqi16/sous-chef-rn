@@ -55,8 +55,18 @@ describe('SortableList.utils', () => {
 
   describe('findMovedItem', () => {
     it('finds the item that moved the farthest', () => {
-      const original = [makeItem('a'), makeItem('b'), makeItem('c'), makeItem('d')];
-      const reordered = [makeItem('a'), makeItem('c'), makeItem('d'), makeItem('b')];
+      const original = [
+        makeItem('a'),
+        makeItem('b'),
+        makeItem('c'),
+        makeItem('d'),
+      ];
+      const reordered = [
+        makeItem('a'),
+        makeItem('c'),
+        makeItem('d'),
+        makeItem('b'),
+      ];
       const result = findMovedItem(original, reordered);
       expect(result).toEqual({ itemId: 'b', newIndex: 3 });
     });
@@ -79,7 +89,11 @@ describe('SortableList.utils', () => {
 
   describe('getNeighborIds', () => {
     it('returns both neighbors for middle position', () => {
-      const items = [makeItem('a', '1'), makeItem('b', '2'), makeItem('c', '3')];
+      const items = [
+        makeItem('a', '1'),
+        makeItem('b', '2'),
+        makeItem('c', '3'),
+      ];
       const result = getNeighborIds(items, 1);
       expect(result.afterId).toBe('a');
       expect(result.afterSortOrder).toBe('1');

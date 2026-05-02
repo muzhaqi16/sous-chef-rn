@@ -11,41 +11,87 @@ import { useStorageLocationManagement } from '../useStorageLocationManagement';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-const mockRefetch = jest.fn().mockResolvedValue({});
 const mockCreateMutation = jest.fn().mockResolvedValue({
-  data: { createStorageLocation: { storageLocation: { id: 'new-1', name: 'New Loc' } } },
+  data: {
+    createStorageLocation: {
+      storageLocation: { id: 'new-1', name: 'New Loc' },
+    },
+  },
 });
 const mockUpdateMutation = jest.fn().mockResolvedValue({
-  data: { updateStorageLocation: { storageLocation: { id: 'loc-1', name: 'Updated' } } },
+  data: {
+    updateStorageLocation: {
+      storageLocation: { id: 'loc-1', name: 'Updated' },
+    },
+  },
 });
 const mockDeleteMutation = jest.fn().mockResolvedValue({
   data: { deleteStorageLocation: { success: true } },
 });
 const mockSetDefaultMutation = jest.fn().mockResolvedValue({
-  data: { setDefaultStorageLocation: { storageLocation: { id: 'loc-1', isDefault: true } } },
+  data: {
+    setDefaultStorageLocation: {
+      storageLocation: { id: 'loc-1', isDefault: true },
+    },
+  },
 });
 const mockFetchTree = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetStorageLocationsQuery: jest.fn(() => ({
-    data: {
-      storageLocations: {
-        edges: [
-          { node: { id: 'loc-1', name: 'Fridge', sortOrder: 1, isDefault: true } },
-          { node: { id: 'loc-2', name: 'Pantry', sortOrder: 2, isDefault: false } },
-        ],
-      },
-    },
-    loading: false,
-    error: undefined,
-    refetch: mockRefetch,
-  })),
-  useGetStorageLocationTreeLazyQuery: jest.fn(() => [mockFetchTree, { data: null }]),
-  useCreateStorageLocationMutation: jest.fn(() => [mockCreateMutation, { loading: false }]),
-  useUpdateStorageLocationMutation: jest.fn(() => [mockUpdateMutation, { loading: false }]),
-  useDeleteStorageLocationMutation: jest.fn(() => [mockDeleteMutation]),
-  useSetDefaultStorageLocationMutation: jest.fn(() => [mockSetDefaultMutation]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetStorageLocations') {
+      return {
+        data: {
+          storageLocations: {
+            edges: [
+              {
+                node: {
+                  id: 'loc-1',
+                  name: 'Fridge',
+                  sortOrder: 1,
+                  isDefault: true,
+                  parentId: null,
+                },
+              },
+              {
+                node: {
+                  id: 'loc-2',
+                  name: 'Pantry',
+                  sortOrder: 2,
+                  isDefault: false,
+                  parentId: null,
+                },
+              },
+            ],
+          },
+        },
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useLazyQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetStorageLocationTree')
+      return [mockFetchTree, { loading: false }];
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateStorageLocation')
+      return [mockCreateMutation, { loading: false }];
+    if (opName === 'UpdateStorageLocation')
+      return [mockUpdateMutation, { loading: false }];
+    if (opName === 'DeleteStorageLocation')
+      return [mockDeleteMutation, { loading: false }];
+    if (opName === 'SetDefaultStorageLocation')
+      return [mockSetDefaultMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
@@ -56,7 +102,9 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: jest.fn(() => ({
     createAddOperation: jest.fn((config: any) => {
       return async (input: any) => {
-        const result = await config.mutation({ variables: { input: config.transformInput(input) } });
+        const result = await config.mutation({
+          variables: { input: config.transformInput(input) },
+        });
         return config.onSuccess(result.data);
       };
     }),
@@ -65,7 +113,6 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToQueryFieldUpdater: jest.fn(() => jest.fn()),
-  createRemoveFromQueryFieldUpdater: jest.fn(() => jest.fn()),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -102,19 +149,21 @@ describe('useStorageLocationManagement', () => {
   });
 
   it('skips query when homeId is undefined', () => {
-    const { useGetStorageLocationsQuery } = jest.requireMock('#generated');
+    const { useQuery } = jest.requireMock('@apollo/client/react');
     renderHook(() => useStorageLocationManagement(undefined));
 
-    expect(useGetStorageLocationsQuery).toHaveBeenCalledWith(
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ skip: true }),
     );
   });
 
   it('does not skip when homeId is provided', () => {
-    const { useGetStorageLocationsQuery } = jest.requireMock('#generated');
+    const { useQuery } = jest.requireMock('@apollo/client/react');
     renderHook(() => useStorageLocationManagement('home-1'));
 
-    expect(useGetStorageLocationsQuery).toHaveBeenCalledWith(
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ skip: false }),
     );
   });
@@ -167,7 +216,12 @@ describe('useStorageLocationManagement', () => {
 
   it('shows error toast when delete returns success: false', async () => {
     mockDeleteMutation.mockResolvedValueOnce({
-      data: { deleteStorageLocation: { success: false, message: 'Location has items' } },
+      data: {
+        deleteStorageLocation: {
+          success: false,
+          message: 'Location has items',
+        },
+      },
     });
 
     const { result } = renderHook(() => useStorageLocationManagement('home-1'));

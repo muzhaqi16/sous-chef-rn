@@ -26,7 +26,13 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
   containerStyle,
 }) => {
   return (
-    <View style={[styles.container, disabled && styles.containerDisabled, containerStyle]}>
+    <View
+      style={[
+        styles.container,
+        disabled && styles.containerDisabled,
+        containerStyle,
+      ]}
+    >
       <View style={styles.textContainer}>
         <Text style={[styles.title, disabled && styles.titleDisabled]}>
           {title}

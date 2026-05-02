@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatRole } from '#/utils/formatters/roleFormatters';
@@ -43,16 +44,30 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
             <Text style={styles.roleText}>{formatRole(member.role)}</Text>
           </View>
         </View>
-        {!!member.user?.email && !isCurrentUser && <Text style={styles.memberEmail}>{member.user.email}</Text>}
+        {!!member.user?.email && !isCurrentUser && (
+          <Text style={styles.memberEmail}>{member.user.email}</Text>
+        )}
       </View>
 
       {!!canManageMember && (
         <View style={styles.memberActions}>
-          <Pressable style={({pressed}) => [styles.actionButton, pressed && styles.pressed]} onPress={onChangeRole}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={onChangeRole}
+          >
             <Icon name="swap-horizontal" size={18} />
             <Text style={styles.actionButtonText}>Change Role</Text>
           </Pressable>
-          <Pressable style={({pressed}) => [styles.actionButton, pressed && styles.pressed]} onPress={onRemove}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={onRemove}
+          >
             <Icon name="person-remove" size={18} />
             <Text style={styles.removeButtonText}>Remove</Text>
           </Pressable>

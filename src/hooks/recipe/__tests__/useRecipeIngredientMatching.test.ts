@@ -8,21 +8,26 @@ import {
 const mockLoadMatchesQuery = jest.fn();
 const mockConfirmMutation = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useMatchRecipeIngredientsToPantryLazyQuery: jest.fn(() => [
-    mockLoadMatchesQuery,
-    { loading: false },
-  ]),
-  useConfirmRecipeConsumptionMutation: jest.fn(() => [
-    mockConfirmMutation,
-    { loading: false },
-  ]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useLazyQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'MatchRecipeIngredientsToPantry')
+      return [mockLoadMatchesQuery, { loading: false }];
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'ConfirmRecipeConsumption')
+      return [mockConfirmMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (s: any) => any) => selector({ selectedPantryId: 'pantry-1' }),
-  selectSelectedPantryId: (s: any) => s.selectedPantryId,
+  useAppStore: (selector: (s: any) => any) =>
+    selector({ selectedPantryId: 'pantry-1' }),
+  useSelectedPantryId: jest.fn(() => 'pantry-1'),
 }));
 
 const mockToastSuccess = jest.fn();
@@ -91,7 +96,9 @@ describe('getAvailabilityStatus', () => {
 
 describe('useRecipeIngredientMatching', () => {
   it('returns initial state with hasPantry true when pantryId exists', () => {
-    const { result } = renderHook(() => useRecipeIngredientMatching('recipe-1'));
+    const { result } = renderHook(() =>
+      useRecipeIngredientMatching('recipe-1'),
+    );
 
     expect(result.current.hasPantry).toBe(true);
     expect(result.current.editableMatches).toEqual([]);
@@ -114,7 +121,9 @@ describe('useRecipeIngredientMatching', () => {
     });
 
     expect(success).toBe(false);
-    expect(mockToastError).toHaveBeenCalledWith('Recipe or pantry not available');
+    expect(mockToastError).toHaveBeenCalledWith(
+      'Recipe or pantry not available',
+    );
   });
 
   it('loadMatches populates editableMatches on success', async () => {
@@ -134,7 +143,9 @@ describe('useRecipeIngredientMatching', () => {
       data: { matchRecipeIngredientsToPantry: matches },
     });
 
-    const { result } = renderHook(() => useRecipeIngredientMatching('recipe-1'));
+    const { result } = renderHook(() =>
+      useRecipeIngredientMatching('recipe-1'),
+    );
 
     let success: boolean | undefined;
     await act(async () => {
@@ -164,7 +175,9 @@ describe('useRecipeIngredientMatching', () => {
       data: { matchRecipeIngredientsToPantry: matches },
     });
 
-    const { result } = renderHook(() => useRecipeIngredientMatching('recipe-1'));
+    const { result } = renderHook(() =>
+      useRecipeIngredientMatching('recipe-1'),
+    );
 
     await act(async () => {
       await result.current.loadMatches(4);
@@ -194,7 +207,9 @@ describe('useRecipeIngredientMatching', () => {
       data: { matchRecipeIngredientsToPantry: matches },
     });
 
-    const { result } = renderHook(() => useRecipeIngredientMatching('recipe-1'));
+    const { result } = renderHook(() =>
+      useRecipeIngredientMatching('recipe-1'),
+    );
 
     await act(async () => {
       await result.current.loadMatches(4);
@@ -244,7 +259,9 @@ describe('useRecipeIngredientMatching', () => {
       data: { matchRecipeIngredientsToPantry: matches },
     });
 
-    const { result } = renderHook(() => useRecipeIngredientMatching('recipe-1'));
+    const { result } = renderHook(() =>
+      useRecipeIngredientMatching('recipe-1'),
+    );
 
     await act(async () => {
       await result.current.loadMatches(4);

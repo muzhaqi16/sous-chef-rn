@@ -2,6 +2,8 @@ node_modules/
 ios/
 android/
 src/graphql/generated/
+**/*.generated.ts
+**/*.generated.tsx
 coverage/
 *.env
 *.lock

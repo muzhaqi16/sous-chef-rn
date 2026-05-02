@@ -14,7 +14,7 @@ jest.mock('react-native-performance', () => {
       mark: jest.fn(),
       measure: jest.fn(),
     },
-    PerformanceObserver: jest.fn().mockImplementation((callback) => {
+    PerformanceObserver: jest.fn().mockImplementation(callback => {
       const observer = {
         observe: jest.fn(),
         disconnect: jest.fn(),
@@ -39,7 +39,9 @@ jest.mock('react-native-config', () => ({
 
 jest.mock('#/utils/environment', () => ({
   Environment: {
-    getApiConfig: jest.fn(() => ({ baseUrl: 'https://api.example.com/graphql' })),
+    getApiConfig: jest.fn(() => ({
+      baseUrl: 'https://api.example.com/graphql',
+    })),
   },
 }));
 
@@ -92,7 +94,7 @@ describe('NativePerformanceService', () => {
 
       NativePerformanceService.cleanup();
 
-      capturedObservers.forEach((obs) => {
+      capturedObservers.forEach(obs => {
         expect(obs.disconnect).toHaveBeenCalled();
       });
 
@@ -175,9 +177,7 @@ describe('NativePerformanceService', () => {
       const measObserver = observers[1];
 
       measObserver._callback({
-        getEntries: () => [
-          { name: 'screen:Home:mount', duration: 120 },
-        ],
+        getEntries: () => [{ name: 'screen:Home:mount', duration: 120 }],
       });
 
       expect(Telemetry.histogram).toHaveBeenCalledWith(
@@ -192,9 +192,7 @@ describe('NativePerformanceService', () => {
       const measObserver = observers[1];
 
       measObserver._callback({
-        getEntries: () => [
-          { name: 'component:MyList:render', duration: 15 },
-        ],
+        getEntries: () => [{ name: 'component:MyList:render', duration: 15 }],
       });
 
       expect(Telemetry.histogram).toHaveBeenCalledWith(

@@ -9,7 +9,9 @@ jest.mock('react-native-unistyles', () => {
     StyleSheet: {
       create: (styleFnOrObj: any) => {
         const result =
-          typeof styleFnOrObj === 'function' ? styleFnOrObj(lightTheme) : styleFnOrObj;
+          typeof styleFnOrObj === 'function'
+            ? styleFnOrObj(lightTheme)
+            : styleFnOrObj;
         result.useVariants = jest.fn();
         return result;
       },
@@ -17,7 +19,10 @@ jest.mock('react-native-unistyles', () => {
     },
     useUnistyles: jest.fn(() => ({ theme: lightTheme, styles: {} })),
     useStyles: jest.fn((stylesheet: any) => ({
-      styles: typeof stylesheet === 'function' ? stylesheet(lightTheme) : stylesheet || {},
+      styles:
+        typeof stylesheet === 'function'
+          ? stylesheet(lightTheme)
+          : stylesheet || {},
       theme: lightTheme,
     })),
     useInitialTheme: jest.fn(),
@@ -54,12 +59,7 @@ describe('ListItem', () => {
   });
 
   it('renders subtitle when provided as ReactNode', () => {
-    render(
-      <ListItem
-        title="Milk"
-        subtitle={<Text>Custom subtitle</Text>}
-      />,
-    );
+    render(<ListItem title="Milk" subtitle={<Text>Custom subtitle</Text>} />);
     expect(screen.getByText('Custom subtitle')).toBeTruthy();
   });
 
@@ -93,9 +93,7 @@ describe('ListItem', () => {
 
   it('has proper accessibility label', () => {
     const onPress = jest.fn();
-    render(
-      <ListItem title="Milk" subtitle="2 liters" onPress={onPress} />,
-    );
+    render(<ListItem title="Milk" subtitle="2 liters" onPress={onPress} />);
     const button = screen.getByRole('button');
     expect(button.props.accessibilityLabel).toContain('Milk');
     expect(button.props.accessibilityLabel).toContain('2 liters');
@@ -103,31 +101,18 @@ describe('ListItem', () => {
 
   it('renders badge when provided', () => {
     render(
-      <ListItem
-        title="Item"
-        badge={{ text: 'New', variant: 'primary' }}
-      />,
+      <ListItem title="Item" badge={{ text: 'New', variant: 'primary' }} />,
     );
     expect(screen.getByText('New')).toBeTruthy();
   });
 
   it('renders rightElement when provided', () => {
-    render(
-      <ListItem
-        title="Item"
-        rightElement={<Text>Right</Text>}
-      />,
-    );
+    render(<ListItem title="Item" rightElement={<Text>Right</Text>} />);
     expect(screen.getByText('Right')).toBeTruthy();
   });
 
   it('renders leftElement when provided', () => {
-    render(
-      <ListItem
-        title="Item"
-        leftElement={<Text>Left</Text>}
-      />,
-    );
+    render(<ListItem title="Item" leftElement={<Text>Left</Text>} />);
     expect(screen.getByText('Left')).toBeTruthy();
   });
 

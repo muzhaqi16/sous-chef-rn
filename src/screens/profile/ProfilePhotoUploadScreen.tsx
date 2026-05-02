@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Pressable,
-  Text,
-  Image,
-  Dimensions,
-  Platform,
-} from 'react-native';
+import { View, Text, Image, Dimensions, Platform } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, CommonActions } from '@react-navigation/native';
@@ -30,7 +24,7 @@ import {
 import { useImageUpload } from '#hooks/useImageUpload';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
-import { ImageUploadPurpose } from '#generated';
+import { ImageUploadPurpose } from '../../graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import {
   executeWithLoadingState,
@@ -47,6 +41,29 @@ const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
 
 const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.6, 250);
+
+/** Module-level function for reading any cropped image left behind by ImageCropScreen.
+ *  Extracted to avoid try/catch inside useFocusEffect (React Compiler bailout). */
+function readPendingCroppedImage(): ImageFile | null {
+  try {
+    const storedCroppedImage = storage.getString('temp_cropped_image');
+    if (!storedCroppedImage) return null;
+    const croppedImageFile = JSON.parse(storedCroppedImage) as ImageFile;
+    storage.remove('temp_cropped_image');
+    return croppedImageFile;
+  } catch (error) {
+    errorService.reportError(error, {
+      operation: 'ProfilePhotoUpload.readCroppedImage',
+    });
+    // Clean up potentially corrupted data
+    try {
+      storage.remove('temp_cropped_image');
+    } catch {
+      // ignore
+    }
+    return null;
+  }
+}
 
 /** Module-level function for camera permission request.
  *  Extracted to avoid try-catch with conditional inside component body (React Compiler bailout). */
@@ -87,22 +104,9 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
 
   // Check for cropped image from MMKV when screen comes into focus
   useFocusEffect(() => {
-    try {
-      const storedCroppedImage = storage.getString('temp_cropped_image');
-      if (storedCroppedImage) {
-        const croppedImageFile: ImageFile = JSON.parse(storedCroppedImage);
-
-        setCroppedImage(croppedImageFile);
-
-        // Clean up the temporary storage
-        storage.remove('temp_cropped_image');
-      }
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'ProfilePhotoUpload.readCroppedImage',
-      });
-      // Clean up potentially corrupted data
-      storage.remove('temp_cropped_image');
+    const pending = readPendingCroppedImage();
+    if (pending) {
+      setCroppedImage(pending);
     }
   });
 

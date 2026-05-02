@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, TextInput, Pressable } from 'react-native';
+import { View, TextInput } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Icon from '@react-native-vector-icons/ionicons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { parseFractionalInput } from '#/utils/fractionUtils';

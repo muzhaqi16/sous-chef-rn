@@ -1,11 +1,12 @@
 import React from 'react';
-import {TextInput, TextInputProps, ViewStyle} from 'react-native';
-import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {FormFieldWrapper} from '../atoms/FormFieldWrapper';
+import { TextInput, TextInputProps, ViewStyle } from 'react-native';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 
-interface FormTextAreaProps extends Omit<TextInputProps, 'style' | 'multiline'> {
+interface FormTextAreaProps
+  extends Omit<TextInputProps, 'style' | 'multiline'> {
   label: string;
   error?: string;
   required?: boolean;
@@ -27,8 +28,9 @@ export const FormTextArea: React.FC<FormTextAreaProps> = ({
   ...textInputProps
 }) => {
   const contextValue = useIsBottomSheetInput();
-  const InputComponent = (useBottomSheetInput || contextValue) ? BottomSheetTextInput : TextInput;
-  const {theme} = useUnistyles();
+  const InputComponent =
+    useBottomSheetInput || contextValue ? BottomSheetTextInput : TextInput;
+  const { theme } = useUnistyles();
 
   // Calculate height based on number of lines
   const inputHeight = numberOfLines * 24 + 24;
@@ -43,7 +45,7 @@ export const FormTextArea: React.FC<FormTextAreaProps> = ({
       <InputComponent
         style={[
           styles.input,
-          {height: inputHeight},
+          { height: inputHeight },
           error && styles.inputError,
           inputStyle,
         ]}

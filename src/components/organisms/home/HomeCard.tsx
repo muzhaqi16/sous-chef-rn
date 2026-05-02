@@ -1,5 +1,5 @@
 import React, { useLayoutEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -12,6 +12,9 @@ import { TIMING } from '#constants/animations';
 import { Icon } from '#utils/iconUtils';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
+import { Pressable } from 'react-native-gesture-handler';
+import type { Member } from '#/utils/formatters/memberFormatters';
+
 export type PartialHome = {
   id: string;
   name: string;
@@ -19,22 +22,7 @@ export type PartialHome = {
   allowJoinCode?: boolean;
   membersTotalCount?: number;
   pantriesTotalCount?: number;
-  members?: Array<{
-    id: string;
-    role: string;
-    status: string;
-    userId?: string;
-    displayName?: string;
-    user?: {
-      id: string;
-      email?: string;
-      profile?: {
-        firstName?: string;
-        lastName?: string;
-        displayName?: string;
-      };
-    };
-  }>;
+  members?: Member[];
   pantries?: Array<{ id: string }>;
   invites?: Array<{
     id: string;
@@ -42,13 +30,7 @@ export type PartialHome = {
     recipientName: string | null;
     status: string;
   }>;
-  myMembership?: {
-    id: string;
-    role: string;
-    status: string;
-    displayName?: string;
-    canManageHome?: boolean;
-  } | null;
+  myMembership?: Member | null;
 };
 
 interface HomeCardProps {
@@ -81,10 +63,12 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 
   // Trigger highlight animation when isHighlighted changes
   useLayoutEffect(() => {
-    highlightOpacity.set(withTiming(isHighlighted ? 1 : 0, {
-      duration: TIMING.FAST,
-      easing: Easing.out(Easing.ease),
-    }));
+    highlightOpacity.set(
+      withTiming(isHighlighted ? 1 : 0, {
+        duration: TIMING.FAST,
+        easing: Easing.out(Easing.ease),
+      }),
+    );
   }, [isHighlighted, highlightOpacity]);
 
   // Static card style - backgroundColor doesn't animate
@@ -97,7 +81,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 
   // Animated highlight overlay - only opacity animates
   const animatedHighlightStyle = useAnimatedStyle(() => ({
-    opacity: highlightOpacity.value,
+    opacity: highlightOpacity.get(),
   }));
 
   const handleDelete = () => {
@@ -115,13 +99,22 @@ export const HomeCard: React.FC<HomeCardProps> = ({
         />
 
         <Pressable
-          style={({pressed}) => [styles.homeHeader, pressed && onPress && styles.pressed]}
+          style={({ pressed }) => [
+            styles.homeHeader,
+            pressed && onPress && styles.pressed,
+          ]}
           onPress={() => onPress?.(home.id)}
           accessibilityRole="button"
-          accessibilityLabel={`${home.name}, ${home.membersTotalCount ?? home.members?.length ?? 0} ${
-            (home.membersTotalCount ?? home.members?.length ?? 0) === 1 ? 'member' : 'members'
+          accessibilityLabel={`${home.name}, ${
+            home.membersTotalCount ?? home.members?.length ?? 0
+          } ${
+            (home.membersTotalCount ?? home.members?.length ?? 0) === 1
+              ? 'member'
+              : 'members'
           }, ${home.pantriesTotalCount ?? home.pantries?.length ?? 0} ${
-            (home.pantriesTotalCount ?? home.pantries?.length ?? 0) === 1 ? 'pantry' : 'pantries'
+            (home.pantriesTotalCount ?? home.pantries?.length ?? 0) === 1
+              ? 'pantry'
+              : 'pantries'
           }${isDefault ? ', default home' : ''}`}
           accessibilityHint="Tap to view home details"
           disabled={!onPress}
@@ -131,9 +124,13 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 
             <Text style={styles.homeDetails}>
               {home.membersTotalCount ?? home.members?.length ?? 0}{' '}
-              {(home.membersTotalCount ?? home.members?.length ?? 0) === 1 ? 'member' : 'members'} •{' '}
-              {home.pantriesTotalCount ?? home.pantries?.length ?? 0}{' '}
-              {(home.pantriesTotalCount ?? home.pantries?.length ?? 0) === 1 ? 'pantry' : 'pantries'}
+              {(home.membersTotalCount ?? home.members?.length ?? 0) === 1
+                ? 'member'
+                : 'members'}{' '}
+              • {home.pantriesTotalCount ?? home.pantries?.length ?? 0}{' '}
+              {(home.pantriesTotalCount ?? home.pantries?.length ?? 0) === 1
+                ? 'pantry'
+                : 'pantries'}
             </Text>
           </View>
           {!!isDefault && (
@@ -146,7 +143,6 @@ export const HomeCard: React.FC<HomeCardProps> = ({
               name="chevron-forward"
               size={20}
               color={theme.colors.textSecondary}
-
             />
           )}
         </Pressable>

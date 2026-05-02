@@ -27,7 +27,9 @@ describe('NavigationRow', () => {
   });
 
   it('renders subtitle when provided', () => {
-    render(<NavigationRow {...defaultProps} subtitle="Manage your preferences" />);
+    render(
+      <NavigationRow {...defaultProps} subtitle="Manage your preferences" />,
+    );
     expect(screen.getByText('Manage your preferences')).toBeTruthy();
   });
 

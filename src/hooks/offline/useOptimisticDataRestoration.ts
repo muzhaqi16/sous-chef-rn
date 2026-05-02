@@ -2,7 +2,7 @@ import { useEffect, startTransition } from 'react';
 import { gql } from '@apollo/client';
 import { client } from '#/apollo/client';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { useAuthUser } from '#/hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 
 /** Minimal fragment for reading entity version from cache */
 const VERSION_FRAGMENT = gql`
@@ -41,9 +41,9 @@ const VERSION_FRAGMENT = gql`
  */
 export function useOptimisticDataRestoration(
   entityType: string,
-  enabled = true
+  enabled = true,
 ) {
-  const user = useAuthUser();
+  const user = useUser();
 
   useEffect(() => {
     if (!user?.id || !enabled) return;
@@ -62,7 +62,7 @@ export function useOptimisticDataRestoration(
       // Apply all updates to Apollo cache using cache.batch() for better performance
       // This broadcasts changes once instead of after each modify
       client.cache.batch({
-        update: (cache) => {
+        update: cache => {
           allUpdates.forEach((fields, entityId) => {
             // Build field update functions
             const fieldUpdates = Object.keys(fields).reduce((acc, field) => {
@@ -79,7 +79,7 @@ export function useOptimisticDataRestoration(
               fields: fieldUpdates,
             });
           });
-        }
+        },
       });
     });
   }, [user?.id, entityType, enabled]);
@@ -102,9 +102,9 @@ export function useOptimisticDataRestoration(
  */
 export function useOptimisticDataRestorationMultiple(
   entityTypes: string[],
-  enabled = true
+  enabled = true,
 ) {
-  const user = useAuthUser();
+  const user = useUser();
 
   // Serialize array for stable dependency comparison
   // This allows consumers to pass inline arrays without causing infinite loops
@@ -118,10 +118,11 @@ export function useOptimisticDataRestorationMultiple(
     startTransition(() => {
       // Batch all cache modifications for better performance
       client.cache.batch({
-        update: (cache) => {
+        update: cache => {
           // Process all entity types
           stableEntityTypes.forEach(entityType => {
-            const allUpdates = optimisticDataPersistence.getAllForType(entityType);
+            const allUpdates =
+              optimisticDataPersistence.getAllForType(entityType);
 
             if (allUpdates.size === 0) return;
 
@@ -140,14 +141,21 @@ export function useOptimisticDataRestorationMultiple(
                   id: cacheId,
                   fragment: VERSION_FRAGMENT,
                 });
-                const currentVersion = (cached as any)?.version as number | undefined;
+                const currentVersion = (cached as any)?.version as
+                  | number
+                  | undefined;
 
                 // If cache has newer or equal version, skip restoration
-                if (currentVersion !== undefined && currentVersion >= fields.version) {
+                if (
+                  currentVersion !== undefined &&
+                  currentVersion >= fields.version
+                ) {
                   // Cache has newer or equal version - skip restoration
                   // This means API data is more recent than our optimistic update
                   if (__DEV__) {
-                    console.log(`Skipping optimistic restoration for ${entityType}:${entityId} - cache version (${currentVersion}) >= persisted version (${fields.version})`);
+                    console.log(
+                      `Skipping optimistic restoration for ${entityType}:${entityId} - cache version (${currentVersion}) >= persisted version (${fields.version})`,
+                    );
                   }
                   return;
                 }
@@ -164,7 +172,7 @@ export function useOptimisticDataRestorationMultiple(
               });
             });
           });
-        }
+        },
       });
     });
   }, [user?.id, stableEntityTypes, enabled]);

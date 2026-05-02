@@ -9,12 +9,12 @@ const mockToastError = jest.fn();
 const mockToastInfo = jest.fn();
 let capturedMutationOptions: any;
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useMovePurchasedItemsToPantryMutation: (options: any) => {
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((_doc: any, options: any) => {
     capturedMutationOptions = options;
     return [mockMovePurchasedMutation, { loading: false }];
-  },
+  }),
 }));
 
 jest.mock('#/services/toastService', () => ({

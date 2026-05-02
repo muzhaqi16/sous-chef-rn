@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, Switch } from 'react-native';
+import { View, Text, Switch, ScrollView } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#/utils/iconUtils';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
@@ -8,14 +9,15 @@ import { commonStyles } from '#/styles/commonStyles';
 import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { LoadingInline } from '#components/base/Loading';
 import { InfoRow } from '#components/molecules/InfoRow';
+import { useQuery, useMutation } from '@apollo/client/react';
 import {
-  useGetPantryQuery,
-  useUpdatePantryMutation,
-  useDeletePantryMutation,
-  useCreatePantryMutation,
-  useSetDefaultPantryMutation,
-} from '#generated';
-import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
+  GetPantryDocument,
+  UpdatePantryDocument,
+  DeletePantryDocument,
+  CreatePantryDocument,
+  SetDefaultPantryDocument,
+} from '#operations/pantry/pantry.generated';
+import { useAppStore, useSelectedHomeId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useErrorService, errorService } from '#/services/errorService';
@@ -27,6 +29,131 @@ import {
   executeAsyncWithCleanup,
 } from '#/utils/compilerSafeWrappers';
 import { usePantryPermissions } from '#hooks/pantry/usePantryPermissions';
+
+/** Module-level cache update closure for `useDeletePantryMutation`.
+ *  Extracted from the component body so the surrounding try/catch does not
+ *  trigger a React Compiler bailout. */
+function buildDeletePantryUpdater(selectedHomeId: string | null | undefined) {
+  return function deletePantryUpdater(
+    cache: any,
+    { data }: any,
+    { variables }: any,
+  ) {
+    if (!data?.deletePantry?.pantry || !variables?.id || !selectedHomeId)
+      return;
+    try {
+      const deletedPantryId = variables.id;
+      const homeCacheId = cache.identify({
+        __typename: 'Home',
+        id: selectedHomeId,
+      });
+      if (!homeCacheId) return;
+
+      cache.modify({
+        id: homeCacheId,
+        fields: {
+          pantries(existingPantries: any[] = [], { readField }: any) {
+            return existingPantries.filter(
+              (pantryRef: any) =>
+                readField('id', pantryRef) !== deletedPantryId,
+            );
+          },
+          pantriesConnection(
+            existingConnection: any = null,
+            { readField }: any,
+          ) {
+            if (!existingConnection?.edges) return existingConnection;
+            const filteredEdges = existingConnection.edges.filter(
+              (edge: any) => readField('id', edge?.node) !== deletedPantryId,
+            );
+            return {
+              ...existingConnection,
+              edges: filteredEdges,
+              totalCount: Math.max(
+                0,
+                (existingConnection.totalCount ?? filteredEdges.length) -
+                  (filteredEdges.length < existingConnection.edges.length
+                    ? 1
+                    : 0),
+              ),
+            };
+          },
+        },
+      });
+
+      safeEvict(cache, 'Pantry', deletedPantryId);
+    } catch (error) {
+      console.warn('Cache update failed for deletePantry:', error);
+    }
+  };
+}
+
+/** Module-level cache update closure for `useCreatePantryMutation`.
+ *  Extracted from the component body so the surrounding try/catch does not
+ *  trigger a React Compiler bailout. */
+function buildCreatePantryUpdater(selectedHomeId: string | null | undefined) {
+  return function createPantryUpdater(cache: any, { data }: any) {
+    const newPantry = data?.createPantry?.pantry;
+    if (!newPantry || !selectedHomeId) return;
+    try {
+      const homeCacheId = cache.identify({
+        __typename: 'Home',
+        id: selectedHomeId,
+      });
+      if (!homeCacheId) return;
+
+      cache.modify({
+        id: homeCacheId,
+        fields: {
+          pantries(
+            existingPantries: any[] = [],
+            { readField, toReference }: any,
+          ) {
+            const newPantryRef = toReference(newPantry);
+            const exists = existingPantries.some(
+              (pantryRef: any) => readField('id', pantryRef) === newPantry.id,
+            );
+            if (exists) return existingPantries;
+            return [...existingPantries, newPantryRef];
+          },
+          pantriesConnection(existingConnection: any = null) {
+            if (!existingConnection) return existingConnection;
+            const newEdge = {
+              __typename: 'PantryEdge',
+              cursor: newPantry.id,
+              node: newPantry,
+            };
+            return {
+              ...existingConnection,
+              edges: [...(existingConnection.edges || []), newEdge],
+              totalCount:
+                (existingConnection.totalCount ??
+                  (existingConnection.edges?.length || 0)) + 1,
+            };
+          },
+        },
+      });
+    } catch (error) {
+      console.warn('Cache update failed for createPantry:', error);
+    }
+  };
+}
+
+/** Module-level wrapper for `setDefaultPantry` mutation that swallows
+ *  errors via errorService — extracted to keep try/catch out of the
+ *  component body (React Compiler bailout). */
+async function safeSetDefaultPantry(
+  setDefaultPantry: (opts: { variables: { id: string } }) => Promise<unknown>,
+  pantryId: string,
+): Promise<void> {
+  try {
+    await setDefaultPantry({ variables: { id: pantryId } });
+  } catch (error) {
+    errorService.reportError(error, {
+      operation: 'PantrySettings.setDefaultPantry',
+    });
+  }
+}
 
 /** Module-level helper to sync pantry form state from loaded data */
 function syncPantryFormState(
@@ -66,7 +193,7 @@ export const PantrySettings: React.FC<
   const { theme } = useUnistyles();
   const pantryId = route.params?.pantryId;
 
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const selectedHomeId = useSelectedHomeId();
   const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const { handleApolloError } = useErrorService();
   const permissions = usePantryPermissions();
@@ -84,7 +211,7 @@ export const PantrySettings: React.FC<
     data: pantryData,
     loading: loadingPantry,
     error: pantryError,
-  } = useGetPantryQuery({
+  } = useQuery(GetPantryDocument, {
     variables: {
       id: pantryId!,
       itemsFirst: 25,
@@ -96,13 +223,12 @@ export const PantrySettings: React.FC<
   // Memoize normalized pantry to prevent re-creating on every render
   const pantry = normalizePantry(pantryData?.pantry);
 
-  const [updatePantry] = useUpdatePantryMutation({
+  const [updatePantry] = useMutation(UpdatePantryDocument, {
     // Update cache directly - Apollo automatically merges the Pantry entity
     // No need to update home's pantries array since the pantry is just updated, not added/removed
   });
 
-  const [setDefaultPantry] = useSetDefaultPantryMutation({
-    errorPolicy: 'all',
+  const [setDefaultPantry] = useMutation(SetDefaultPantryDocument, {
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Set Default Pantry',
@@ -113,132 +239,22 @@ export const PantrySettings: React.FC<
     },
   });
 
-  const [deletePantry] = useDeletePantryMutation({
-    errorPolicy: 'all',
+  const [deletePantry] = useMutation(DeletePantryDocument, {
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Delete Pantry',
       });
       alertService.alert('Error', message);
     },
-    // Update cache directly instead of refetching
-    update: (cache, { data }, { variables }) => {
-      if (!data?.deletePantry?.pantry || !variables?.id || !selectedHomeId)
-        return;
-
-      try {
-        const deletedPantryId = variables.id;
-
-        // Remove pantry from home's pantries array
-        const homeCacheId = cache.identify({
-          __typename: 'Home',
-          id: selectedHomeId,
-        });
-
-        if (!homeCacheId) {
-          return;
-        }
-
-        cache.modify({
-          id: homeCacheId,
-          fields: {
-            pantries(existingPantries = [], { readField }) {
-              return existingPantries.filter(
-                (pantryRef: any) =>
-                  readField('id', pantryRef) !== deletedPantryId,
-              );
-            },
-            pantriesConnection(existingConnection = null, { readField }) {
-              if (!existingConnection?.edges) {
-                return existingConnection;
-              }
-
-              const filteredEdges = existingConnection.edges.filter(
-                (edge: any) => readField('id', edge?.node) !== deletedPantryId,
-              );
-
-              return {
-                ...existingConnection,
-                edges: filteredEdges,
-                totalCount: Math.max(
-                  0,
-                  (existingConnection.totalCount ?? filteredEdges.length) -
-                    (filteredEdges.length < existingConnection.edges.length
-                      ? 1
-                      : 0),
-                ),
-              };
-            },
-          },
-        });
-
-        // Evict the deleted pantry from cache
-        safeEvict(cache, 'Pantry', deletedPantryId);
-      } catch (error) {
-        console.warn('Cache update failed for deletePantry:', error);
-        // Fallback handled by UI refetch
-      }
-    },
+    // Update cache directly instead of refetching. Builder is module-scope to
+    // keep try/catch out of the component body (React Compiler bailout).
+    update: buildDeletePantryUpdater(selectedHomeId),
   });
 
-  const [createPantry] = useCreatePantryMutation({
-    // Update cache directly instead of refetching
-    update: (cache, { data }) => {
-      const newPantry = data?.createPantry?.pantry;
-      if (!newPantry || !selectedHomeId) return;
-
-      try {
-        // Add new pantry to home's pantries array
-        const homeCacheId = cache.identify({
-          __typename: 'Home',
-          id: selectedHomeId,
-        });
-
-        if (!homeCacheId) {
-          return;
-        }
-
-        cache.modify({
-          id: homeCacheId,
-          fields: {
-            pantries(existingPantries = [], { readField, toReference }) {
-              const newPantryRef = toReference(newPantry);
-              const exists = existingPantries.some(
-                (pantryRef: any) => readField('id', pantryRef) === newPantry.id,
-              );
-
-              if (exists) {
-                return existingPantries;
-              }
-
-              return [...existingPantries, newPantryRef];
-            },
-            pantriesConnection(existingConnection = null) {
-              if (!existingConnection) {
-                return existingConnection;
-              }
-
-              const newEdge = {
-                __typename: 'PantryEdge',
-                cursor: newPantry.id,
-                node: newPantry,
-              };
-
-              return {
-                ...existingConnection,
-                edges: [...(existingConnection.edges || []), newEdge],
-                totalCount:
-                  (existingConnection.totalCount ??
-                    (existingConnection.edges?.length || 0)) + 1,
-              };
-            },
-          },
-        });
-      } catch (error) {
-        console.warn('Cache update failed for createPantry:', error);
-        // Fallback handled by UI
-      }
-    },
+  const [createPantry] = useMutation(CreatePantryDocument, {
+    // Update cache directly instead of refetching. Builder is module-scope to
+    // keep try/catch out of the component body (React Compiler bailout).
+    update: buildCreatePantryUpdater(selectedHomeId),
     onCompleted: data => {
       const newPantryResult = data?.createPantry?.pantry;
       if (newPantryResult) {
@@ -283,17 +299,8 @@ export const PantrySettings: React.FC<
     // Optimistically update UI
     setIsDefault(newValue);
 
-    try {
-      await setDefaultPantry({
-        variables: {
-          id: pantryId,
-        },
-      });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'PantrySettings.setDefaultPantry',
-      });
-    }
+    // Module-level helper keeps try/catch out of the component body.
+    await safeSetDefaultPantry(setDefaultPantry, pantryId);
   };
 
   const handleSave = () => {

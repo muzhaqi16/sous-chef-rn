@@ -4,7 +4,8 @@ import React, {
   useRef,
   useImperativeHandle,
 } from 'react';
-import { View, Pressable, RefreshControl } from 'react-native';
+import { View, RefreshControl } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import {
   FlashList,
   type FlashListRef,
@@ -24,7 +25,7 @@ import {
   type PantryItemActions,
 } from './PantryActionsContext';
 import { usePantrySorting } from './hooks/usePantrySorting';
-import { PantryItem } from '#generated';
+import { PantryItem } from '../../graphql/generated/schemaTypes';
 import { PantryAlertBar } from '#components/pantry/PantryAlertBar';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';

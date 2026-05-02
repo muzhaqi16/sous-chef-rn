@@ -2,25 +2,28 @@ import { useState, useEffect, useRef } from 'react';
 import { useRoute } from '@react-navigation/native';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
+import { useMutation, useQuery } from '@apollo/client/react';
 import {
-  useGetRecipeQuery,
-  useCreateShoppingListItemsFromRecipeMutation,
-  useCreateShoppingListItemFromRecipeIngredientMutation,
-  useAddItemToShoppingListMutation,
-  useAddItemsToShoppingListMutation,
-  useGetShoppingListsLiteQuery,
-  useMyRecipesQuery,
-  useMarkRecipeAsCookedMutation,
-  useUpdateFavoriteRecipeMutation,
-  useUnfavoriteRecipeMutation,
-  useCreateShoppingListMutation,
+  GetRecipeDocument,
+  CreateShoppingListItemsFromRecipeDocument,
+  CreateShoppingListItemFromRecipeIngredientDocument,
+  MyRecipesDocument,
+  MarkRecipeAsCookedDocument,
+  UpdateFavoriteRecipeDocument,
+  UnfavoriteRecipeDocument,
   MySavedRecipesDocument,
   SavedRecipeFoldersDocument,
   type MySavedRecipesQuery,
   type SavedRecipeFoldersQuery,
-  type BatchAddShoppingListItemInput,
-} from '#generated';
-import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
+} from '../../../graphql/operations/recipe/recipe.generated';
+import {
+  AddItemToShoppingListDocument,
+  AddItemsToShoppingListDocument,
+  GetShoppingListsLiteDocument,
+  CreateShoppingListDocument,
+} from '../../../graphql/operations/shoppingList/shoppingList.generated';
+import { type BatchAddShoppingListItemInput } from '../../../graphql/generated/schemaTypes';
+import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { normalizeRecipes, extractNodes } from '#/utils/connectionUtils';
@@ -137,15 +140,15 @@ export function useRecipeDetail() {
   const externalId = params?.externalId;
 
   // Get shopping lists - uses lightweight query for list metadata only
-  const { data: shoppingListsData, loading: shoppingListsLoading } =
-    useGetShoppingListsLiteQuery({
-      fetchPolicy: 'cache-and-network',
-    });
+  const { data: shoppingListsData, loading: shoppingListsLoading } = useQuery(
+    GetShoppingListsLiteDocument,
+    {},
+  );
   // Extract nodes from connection type (shoppingLists returns ShoppingListConnection)
   const shoppingLists = extractNodes(shoppingListsData?.shoppingLists);
 
   // Get user's selected shopping list ID from app store
-  const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
+  const selectedShoppingListId = useSelectedShoppingListId();
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
@@ -183,7 +186,7 @@ export function useRecipeDetail() {
       return;
     }
     setPendingAction(action);
-    listPickerRef.current?.present();
+    setListPickerVisible(true);
   };
 
   // State for external recipes
@@ -241,6 +244,30 @@ export function useRecipeDetail() {
   const ingredientSelectorRef = useRef<BottomSheetModal>(null);
   const listPickerRef = useRef<BottomSheetModal>(null);
 
+  // Per CLAUDE.md: control sheet visibility via state + effect, never call
+  // present()/dismiss() directly from event handlers. The state below tracks
+  // desired visibility for each sheet; the effects below dispatch the
+  // imperative present/dismiss after render commits.
+  const [listPickerVisible, setListPickerVisible] = useState(false);
+  const [ingredientSelectorVisible, setIngredientSelectorVisible] =
+    useState(false);
+
+  useEffect(() => {
+    if (listPickerVisible) {
+      listPickerRef.current?.present();
+    } else {
+      listPickerRef.current?.dismiss();
+    }
+  }, [listPickerVisible]);
+
+  useEffect(() => {
+    if (ingredientSelectorVisible) {
+      ingredientSelectorRef.current?.present();
+    } else {
+      ingredientSelectorRef.current?.dismiss();
+    }
+  }, [ingredientSelectorVisible]);
+
   // Pending action to execute after a sheet dismisses (avoids setTimeout between sheets)
   const pendingDismissActionRef = useRef<(() => void) | null>(null);
 
@@ -252,8 +279,7 @@ export function useRecipeDetail() {
     'shoppingLists',
     'ShoppingList',
   );
-  const [createShoppingListMutation] = useCreateShoppingListMutation({
-    errorPolicy: 'all',
+  const [createShoppingListMutation] = useMutation(CreateShoppingListDocument, {
     update(cache, { data }) {
       const newList = data?.createShoppingList?.shoppingList;
       if (newList) {
@@ -266,8 +292,9 @@ export function useRecipeDetail() {
   });
 
   // Mutations
-  const [addRecipeToShoppingListMutation] =
-    useCreateShoppingListItemsFromRecipeMutation({
+  const [addRecipeToShoppingListMutation] = useMutation(
+    CreateShoppingListItemsFromRecipeDocument,
+    {
       update: (cache, { data }, { variables }) => {
         if (!data?.createShoppingListItemsFromRecipe || !variables) return;
         executeCacheUpdate(() => {
@@ -284,10 +311,12 @@ export function useRecipeDetail() {
           err.message || 'Failed to add ingredients to shopping list';
         toastService.error(`Could not add ingredients: ${errorMessage}`);
       },
-    });
+    },
+  );
 
-  const [addRecipeIngredientMutation] =
-    useCreateShoppingListItemFromRecipeIngredientMutation({
+  const [addRecipeIngredientMutation] = useMutation(
+    CreateShoppingListItemFromRecipeIngredientDocument,
+    {
       update: (cache, { data }, { variables }) => {
         if (!data?.createShoppingListItemFromRecipeIngredient || !variables)
           return;
@@ -303,101 +332,115 @@ export function useRecipeDetail() {
           }
         }, 'Cache update failed for addRecipeIngredient:');
       },
-    });
-
-  const [addItemToShoppingListMutation] = useAddItemToShoppingListMutation({
-    update: (cache, { data }, { variables }) => {
-      if (!data?.addItemToShoppingList?.shoppingListItem || !variables) return;
-      executeCacheUpdate(() => {
-        const item = data.addItemToShoppingList!.shoppingListItem!;
-        const shoppingListId = variables.input.shoppingListId;
-        addNewItemToShoppingListCache(cache, shoppingListId, item);
-      }, 'Cache update failed for addItemToShoppingList:');
     },
-  });
+  );
 
-  const [addItemsToShoppingListMutation] = useAddItemsToShoppingListMutation({
-    update: (cache, { data }, { variables }) => {
-      if (!data?.addItemsToShoppingList || !variables) return;
-      executeCacheUpdate(() => {
-        const { results } = data.addItemsToShoppingList!;
-        const shoppingListId = variables.shoppingListId;
-        // Add each successfully created item to the cache
-        results.forEach(result => {
-          if (result.success && result.item) {
-            addNewItemToShoppingListCache(cache, shoppingListId, result.item);
-          }
-        });
-      }, 'Cache update failed for addItemsToShoppingList:');
+  const [addItemToShoppingListMutation] = useMutation(
+    AddItemToShoppingListDocument,
+    {
+      update: (cache, { data }, { variables }) => {
+        if (!data?.addItemToShoppingList?.shoppingListItem || !variables)
+          return;
+        executeCacheUpdate(() => {
+          const item = data.addItemToShoppingList!.shoppingListItem!;
+          const shoppingListId = variables.input.shoppingListId;
+          addNewItemToShoppingListCache(cache, shoppingListId, item);
+        }, 'Cache update failed for addItemToShoppingList:');
+      },
     },
-    onError: err => {
-      console.error('Batch add items to shopping list error:', err);
-      const errorMessage =
-        err.message || 'Failed to add ingredients to shopping list';
-      toastService.error(`Could not add ingredients: ${errorMessage}`);
-    },
-  });
+  );
 
-  const [markRecipeAsCookedMutation] = useMarkRecipeAsCookedMutation({
+  const [addItemsToShoppingListMutation] = useMutation(
+    AddItemsToShoppingListDocument,
+    {
+      update: (cache, { data }, { variables }) => {
+        if (!data?.addItemsToShoppingList || !variables) return;
+        executeCacheUpdate(() => {
+          const { results } = data.addItemsToShoppingList!;
+          const shoppingListId = variables.shoppingListId;
+          // Add each successfully created item to the cache
+          results.forEach(result => {
+            if (result.success && result.item) {
+              addNewItemToShoppingListCache(cache, shoppingListId, result.item);
+            }
+          });
+        }, 'Cache update failed for addItemsToShoppingList:');
+      },
+      onError: err => {
+        console.error('Batch add items to shopping list error:', err);
+        const errorMessage =
+          err.message || 'Failed to add ingredients to shopping list';
+        toastService.error(`Could not add ingredients: ${errorMessage}`);
+      },
+    },
+  );
+
+  const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument, {
     onError: err => {
       console.error('Mark recipe as cooked error:', err);
       toastService.error(err.message || 'Failed to mark recipe as cooked');
     },
   });
 
-  const [updateFavoriteRecipeMutation] = useUpdateFavoriteRecipeMutation({
-    update: (cache, { data }) => {
-      if (!data?.updateFavoriteRecipe?.savedRecipe) return;
+  const [updateFavoriteRecipeMutation] = useMutation(
+    UpdateFavoriteRecipeDocument,
+    {
+      update: (cache, { data }) => {
+        if (!data?.updateFavoriteRecipe?.savedRecipe) return;
 
-      const updatedSavedRecipe = data.updateFavoriteRecipe.savedRecipe;
+        const updatedSavedRecipe = data.updateFavoriteRecipe.savedRecipe;
 
-      // Update SavedRecipeFolders cache if a folder was set
-      const folder = updatedSavedRecipe.folder;
-      if (folder) {
-        cache.updateQuery<SavedRecipeFoldersQuery>(
-          { query: SavedRecipeFoldersDocument },
+        // Update SavedRecipeFolders cache if a folder was set
+        const folder = updatedSavedRecipe.folder;
+        if (folder) {
+          cache.updateQuery<SavedRecipeFoldersQuery>(
+            { query: SavedRecipeFoldersDocument },
+            existing => {
+              if (!existing) return existing;
+              if (existing.savedRecipeFolders.includes(folder)) {
+                return existing;
+              }
+              return {
+                ...existing,
+                savedRecipeFolders: [...existing.savedRecipeFolders, folder],
+              };
+            },
+          );
+        }
+
+        // Update the saved recipe in MySavedRecipes cache
+        cache.updateQuery<MySavedRecipesQuery>(
+          { query: MySavedRecipesDocument },
           existing => {
-            if (!existing) return existing;
-            if (existing.savedRecipeFolders.includes(folder)) {
-              return existing;
-            }
+            if (!existing?.me) return existing;
             return {
               ...existing,
-              savedRecipeFolders: [...existing.savedRecipeFolders, folder],
+              me: {
+                ...existing.me,
+                savedRecipesConnection: {
+                  ...existing.me.savedRecipesConnection,
+                  edges: existing.me.savedRecipesConnection.edges.map(edge =>
+                    edge.node.id === updatedSavedRecipe.id
+                      ? {
+                          ...edge,
+                          node: { ...edge.node, ...updatedSavedRecipe },
+                        }
+                      : edge,
+                  ),
+                },
+              },
             };
           },
         );
-      }
-
-      // Update the saved recipe in MySavedRecipes cache
-      cache.updateQuery<MySavedRecipesQuery>(
-        { query: MySavedRecipesDocument },
-        existing => {
-          if (!existing?.me) return existing;
-          return {
-            ...existing,
-            me: {
-              ...existing.me,
-              savedRecipesConnection: {
-                ...existing.me.savedRecipesConnection,
-                edges: existing.me.savedRecipesConnection.edges.map(edge =>
-                  edge.node.id === updatedSavedRecipe.id
-                    ? { ...edge, node: { ...edge.node, ...updatedSavedRecipe } }
-                    : edge,
-                ),
-              },
-            },
-          };
-        },
-      );
+      },
+      onError: err => {
+        console.error('Update favorite recipe error:', err);
+        toastService.error(err.message || 'Failed to update recipe');
+      },
     },
-    onError: err => {
-      console.error('Update favorite recipe error:', err);
-      toastService.error(err.message || 'Failed to update recipe');
-    },
-  });
+  );
 
-  const [unfavoriteRecipeMutation] = useUnfavoriteRecipeMutation({
+  const [unfavoriteRecipeMutation] = useMutation(UnfavoriteRecipeDocument, {
     // Use cache updates instead of refetchQueries for better performance and offline support
     update: (cache, { data }, { variables }) => {
       if (!data?.unfavoriteRecipe?.success || !variables?.recipeId) return;
@@ -440,22 +483,23 @@ export function useRecipeDetail() {
     },
   });
 
-  // Fetch backend recipe if recipeId is provided
+  // Fetch backend recipe if recipeId is provided.
+  // cache-and-network paints instantly from persisted cache, then refreshes in the
+  // background so dynamic fields (savedDetails, cookedCount) stay current.
   const {
     data: backendRecipeData,
     loading: backendLoading,
     error: backendError,
-  } = useGetRecipeQuery({
+  } = useQuery(GetRecipeDocument, {
     variables: { id: recipeId ?? '' },
     skip: !recipeId,
-    fetchPolicy: 'network-only',
+    fetchPolicy: 'cache-and-network',
   });
 
   const backendRecipe = backendRecipeData?.recipe;
 
   // Fetch user's saved recipes to check if current recipe is already saved
-  const { data: myRecipesData } = useMyRecipesQuery({
-    fetchPolicy: 'cache-and-network',
+  const { data: myRecipesData } = useQuery(MyRecipesDocument, {
     skip: !externalSource || !externalId,
   });
 
@@ -740,7 +784,7 @@ export function useRecipeDetail() {
 
   // Handle list selection from picker
   const handleListSelected = (listId: string) => {
-    listPickerRef.current?.dismiss();
+    setListPickerVisible(false);
 
     if (pendingAction?.type === 'all') {
       executeAddAllIngredientsToList(listId);
@@ -781,7 +825,7 @@ export function useRecipeDetail() {
         }
 
         setSelectedShoppingListId(newList.id);
-        listPickerRef.current?.dismiss();
+        setListPickerVisible(false);
 
         if (currentPendingAction?.type === 'all') {
           executeAddAllIngredientsToList(newList.id, newList.name);
@@ -813,8 +857,10 @@ export function useRecipeDetail() {
   };
 
   const openIngredientSelector = () => {
-    pendingDismissActionRef.current = () =>
-      ingredientSelectorRef.current?.present();
+    // Queue the show — once the parent options sheet finishes dismissing,
+    // its onDismiss callback fires handleSheetDismiss which sets state →
+    // the effect-driven present() runs after that render commit.
+    pendingDismissActionRef.current = () => setIngredientSelectorVisible(true);
     shoppingListOptionsRef.current?.dismiss();
   };
 
@@ -841,7 +887,7 @@ export function useRecipeDetail() {
     // Set pending action, then dismiss — onDismiss will execute it
     pendingDismissActionRef.current = () =>
       openListPicker({ type: 'selected' });
-    ingredientSelectorRef.current?.dismiss();
+    setIngredientSelectorVisible(false);
   };
 
   // Executes any pending action after a bottom sheet dismisses

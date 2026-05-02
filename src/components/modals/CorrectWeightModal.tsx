@@ -8,7 +8,7 @@ import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/U
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { PantryItemFragment } from '#generated';
+import { type PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#hooks/pantry/usePantryItemTransformation';
 

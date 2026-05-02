@@ -1,12 +1,13 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import { CommonActions } from '@react-navigation/native';
 import { LandingAuthScreen } from '../LandingAuthScreen';
 
-const mockNavigate = jest.fn();
+const mockDispatch = jest.fn();
 
 jest.mock('#hooks/navigation/useSafeNavigation', () => ({
   useSafeNavigation: () => ({
-    navigation: { navigate: mockNavigate },
+    navigation: { dispatch: mockDispatch },
     canGoBack: true,
     goBack: jest.fn(),
   }),
@@ -75,13 +76,15 @@ describe('LandingAuthScreen', () => {
   it('navigates to Login when Log In button is pressed', () => {
     render(<LandingAuthScreen />);
     fireEvent.press(screen.getByTestId('landing-login-button'));
-    expect(mockNavigate).toHaveBeenCalledWith('Login');
+    expect(CommonActions.navigate).toHaveBeenCalledWith('Login');
+    expect(mockDispatch).toHaveBeenCalledTimes(1);
   });
 
   it('navigates to SignUp when Sign Up button is pressed', () => {
     render(<LandingAuthScreen />);
     fireEvent.press(screen.getByTestId('landing-signup-button'));
-    expect(mockNavigate).toHaveBeenCalledWith('SignUp');
+    expect(CommonActions.navigate).toHaveBeenCalledWith('SignUp');
+    expect(mockDispatch).toHaveBeenCalledTimes(1);
   });
 
   it('renders the footer legal text', () => {

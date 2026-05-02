@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { QuantityDisplay } from '#/components/molecules/QuantityDisplay';
-import { DisplayFormat } from '#/graphql/generated';
+import { DisplayFormat } from '../../graphql/generated/schemaTypes';
 
 interface FormattedItemSubtitleProps {
   quantity?: number | null;
@@ -51,21 +51,34 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
     // Skip "1 ×" when quantity is 1 - just show weight (industry standard)
     // Use tolerance for floating point comparison
     // This also applies to partial single items (initialQuantity=1, quantity<1)
-    const isQuantityOne = displayQuantity != null && Math.abs(displayQuantity - 1) < 0.001;
+    const isQuantityOne =
+      displayQuantity != null && Math.abs(displayQuantity - 1) < 0.001;
     if (isQuantityOne) {
       return (
         <View style={styles.container}>
           <Text style={[styles.weight, { color: theme.colors.textPrimary }]}>
             {displayWeight} {unitSymbol}
           </Text>
-          {!!additionalInfo && <>
-              <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+          {!!additionalInfo && (
+            <>
+              <Text
+                style={[
+                  styles.separator,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 {' • '}
               </Text>
-              <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.additionalInfo,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 {additionalInfo}
               </Text>
-            </>}
+            </>
+          )}
         </View>
       );
     }
@@ -85,16 +98,26 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           {' × '}
         </Text>
         <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
-          {displayWeight} {unitSymbol}{isPartialSingleItem ? ' remaining' : ''}
+          {displayWeight} {unitSymbol}
+          {isPartialSingleItem ? ' remaining' : ''}
         </Text>
-        {!!additionalInfo && <>
-            <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+        {!!additionalInfo && (
+          <>
+            <Text
+              style={[styles.separator, { color: theme.colors.textSecondary }]}
+            >
               {' • '}
             </Text>
-            <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.additionalInfo,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
               {additionalInfo}
             </Text>
-          </>}
+          </>
+        )}
       </View>
     );
   }
@@ -113,17 +136,27 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
         />
         {!!isPartialSingleItem && (
           <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
-            {' '}({Math.round(quantity! * 100)}% remaining)
+            {' '}
+            ({Math.round(quantity! * 100)}% remaining)
           </Text>
         )}
-        {!!additionalInfo && <>
-            <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+        {!!additionalInfo && (
+          <>
+            <Text
+              style={[styles.separator, { color: theme.colors.textSecondary }]}
+            >
               {' • '}
             </Text>
-            <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.additionalInfo,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
               {additionalInfo}
             </Text>
-          </>}
+          </>
+        )}
       </View>
     );
   }
@@ -135,14 +168,23 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
         <Text style={[styles.weight, { color: theme.colors.textPrimary }]}>
           {displayWeight} {unitSymbol}
         </Text>
-        {!!additionalInfo && <>
-            <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+        {!!additionalInfo && (
+          <>
+            <Text
+              style={[styles.separator, { color: theme.colors.textSecondary }]}
+            >
               {' • '}
             </Text>
-            <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.additionalInfo,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
               {additionalInfo}
             </Text>
-          </>}
+          </>
+        )}
       </View>
     );
   }
@@ -161,17 +203,27 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
         />
         {!!isPartialSingleItem && (
           <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
-            {' '}({Math.round(quantity! * 100)}% remaining)
+            {' '}
+            ({Math.round(quantity! * 100)}% remaining)
           </Text>
         )}
-        {!!additionalInfo && <>
-            <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+        {!!additionalInfo && (
+          <>
+            <Text
+              style={[styles.separator, { color: theme.colors.textSecondary }]}
+            >
               {' • '}
             </Text>
-            <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.additionalInfo,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
               {additionalInfo}
             </Text>
-          </>}
+          </>
+        )}
       </View>
     );
   }
@@ -180,7 +232,9 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   if (additionalInfo) {
     return (
       <View style={styles.container}>
-        <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+        <Text
+          style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}
+        >
           {additionalInfo}
         </Text>
       </View>

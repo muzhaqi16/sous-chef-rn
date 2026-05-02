@@ -21,9 +21,7 @@ describe('NavigationButton', () => {
 
   it('calls onPress when pressed', () => {
     const onPress = jest.fn();
-    render(
-      <NavigationButton action={{ ...defaultAction, onPress }} />,
-    );
+    render(<NavigationButton action={{ ...defaultAction, onPress }} />);
     fireEvent.press(screen.getByText('Continue'));
     expect(onPress).toHaveBeenCalled();
   });
@@ -31,11 +29,7 @@ describe('NavigationButton', () => {
   it('renders icon when iconVisible is true and icon is provided', () => {
     const R = require('react');
     const RN = require('react-native');
-    const icon = R.createElement(
-      RN.Text,
-      { testID: 'nav-icon' },
-      'Icon',
-    );
+    const icon = R.createElement(RN.Text, { testID: 'nav-icon' }, 'Icon');
     render(
       <NavigationButton
         action={{ ...defaultAction, icon, iconVisible: true }}
@@ -47,11 +41,7 @@ describe('NavigationButton', () => {
   it('does not render icon when iconVisible is false', () => {
     const R = require('react');
     const RN = require('react-native');
-    const icon = R.createElement(
-      RN.Text,
-      { testID: 'nav-icon' },
-      'Icon',
-    );
+    const icon = R.createElement(RN.Text, { testID: 'nav-icon' }, 'Icon');
     render(
       <NavigationButton
         action={{ ...defaultAction, icon, iconVisible: false }}

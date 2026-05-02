@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { alertService } from '#/services/alertService';
-import { useShallow } from 'zustand/shallow';
 import {
   useAppStore,
-  selectUser,
-  selectSetters,
-  selectNavigationUtils,
-  selectPreferences,
+  useUser,
+  useNavigationUtils,
+  usePreferences,
 } from '#store/useAppStore';
 import { useTheme } from '#hooks/useTheme';
 import { useCredentialStorage } from '#hooks/auth/useCredentialStorage';
+import { useMutation } from '@apollo/client/react';
 import {
-  useUpdateUserProfileMutation,
-  useUpdateUserPreferencesMutation,
-  ProfileVisibility,
-} from '#generated';
+  UpdateUserProfileDocument,
+  UpdateUserPreferencesDocument,
+  type UpdateUserProfileMutation,
+} from '../../graphql/operations/auth/user.generated';
+import { ProfileVisibility } from '../../graphql/generated/schemaTypes';
 import { ThemePreference } from '#store/slices/preferencesSlice';
 
 import { PROFILE_SETTINGS_CONFIG } from '#/config/settingsConfig';
@@ -24,26 +24,22 @@ import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 
 export const useConfigurableSettings = (profile: any) => {
-  const user = useAppStore(selectUser);
-  const { logout } = useAppStore(useShallow(selectSetters));
-  const { getUserNavigationState } = useAppStore(
-    useShallow(selectNavigationUtils),
-  );
-  const { language, setLanguage } = useAppStore(useShallow(selectPreferences));
+  const user = useUser();
+  const logout = useAppStore(state => state.logout);
+  const { getUserNavigationState } = useNavigationUtils();
+  const { language, setLanguage } = usePreferences();
   const { userThemePreference, setTheme } = useTheme();
   const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
     useCredentialStorage();
   const { resetBiometricDeclination, markBiometricEnabled } =
     useUserPreferences();
   // ===== MUTATION 1: Update User Profile =====
-  const [updateProfileMutation] = useUpdateUserProfileMutation({
-    errorPolicy: 'all',
+  const [updateProfileMutation] = useMutation(UpdateUserProfileDocument, {
     // Uses automatic normalization - mutation returns full UserProfile fragment
     // No manual cache update needed (Pattern 2)
     optimisticResponse: (variables, { IGNORE }) => {
       if (!profile) return IGNORE;
-
-      return {
+      const optimistic: UpdateUserProfileMutation = {
         __typename: 'Mutation',
         updateProfile: {
           ...profile,
@@ -51,6 +47,7 @@ export const useConfigurableSettings = (profile: any) => {
           __typename: 'UserProfile',
         },
       };
+      return optimistic;
     },
     onError: error => {
       console.error('Failed to update profile:', error);
@@ -62,8 +59,7 @@ export const useConfigurableSettings = (profile: any) => {
   });
 
   // ===== MUTATION 2: Update User Preferences =====
-  const [updateSettingsMutation] = useUpdateUserPreferencesMutation({
-    errorPolicy: 'all',
+  const [updateSettingsMutation] = useMutation(UpdateUserPreferencesDocument, {
     // Note: No optimistic response - UserSettings has many required fields that are difficult to predict
     // Automatic normalization handles UI updates when server responds (~100-200ms)
     // No manual cache update needed (Pattern 2)

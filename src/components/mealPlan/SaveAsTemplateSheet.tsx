@@ -5,10 +5,13 @@ import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScro
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import { ChipScrollRow, type ChipOption } from '#components/atoms/ChipScrollRow';
+import {
+  ChipScrollRow,
+  type ChipOption,
+} from '#components/atoms/ChipScrollRow';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormTextArea } from '#components/molecules/FormTextArea';
-import { TemplateCategory } from '#generated';
+import { TemplateCategory } from '../../graphql/generated/schemaTypes';
 
 const CATEGORY_OPTIONS: ChipOption<TemplateCategory>[] = [
   { key: TemplateCategory.Weekly, label: 'Weekly' },
@@ -44,16 +47,20 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
   homeName,
   onClose,
   onSave,
-  saving }) => {
+  saving,
+}) => {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
     snapPoints: ['70%'],
-    keyboardAware: true });
+    keyboardAware: true,
+  });
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<TemplateCategory>(TemplateCategory.Weekly);
+  const [category, setCategory] = useState<TemplateCategory>(
+    TemplateCategory.Weekly,
+  );
   const [tagsInput, setTagsInput] = useState('');
 
   // Reset state when sheet opens (render-time conditional state update)
@@ -81,17 +88,15 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
       name: name.trim(),
       description: description.trim() || undefined,
       category,
-      tags: tags.length > 0 ? tags : undefined });
+      tags: tags.length > 0 ? tags : undefined,
+    });
   };
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetFormScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.contentContainer,
-          contentContainerStyle,
-        ]}
+        contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
         bottomOffset={16}
       >
@@ -150,21 +155,28 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   contentContainer: {
     padding: theme.spacing.md,
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   section: {
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   label: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   infoNote: {
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.primaryLight,
-    borderRadius: theme.radii.md },
+    borderRadius: theme.radii.md,
+  },
   infoNoteText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.primary } }));
+    color: theme.colors.primary,
+  },
+}));

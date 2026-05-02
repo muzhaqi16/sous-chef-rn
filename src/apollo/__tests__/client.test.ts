@@ -86,7 +86,7 @@ describe('Apollo client', () => {
       let idleCallback: (() => void) | undefined;
       const mockRIC = jest
         .spyOn(global, 'requestIdleCallback')
-        .mockImplementation((cb) => {
+        .mockImplementation(cb => {
           idleCallback = cb as () => void;
           return 1;
         });
@@ -184,7 +184,9 @@ describe('Apollo client', () => {
     expect(client.defaultOptions.query?.fetchPolicy).toBe('network-only');
     expect(client.defaultOptions.query?.errorPolicy).toBe('all');
     expect(client.defaultOptions.mutate?.errorPolicy).toBe('all');
-    expect(client.defaultOptions.watchQuery?.fetchPolicy).toBe('cache-and-network');
+    expect(client.defaultOptions.watchQuery?.fetchPolicy).toBe(
+      'cache-and-network',
+    );
   });
 
   it('client has clientAwareness configured', () => {

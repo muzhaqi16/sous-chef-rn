@@ -10,9 +10,13 @@ const mockQueryResult = {
   refetch: mockRefetch,
 };
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetHomesQuery: jest.fn(() => mockQueryResult),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetHomes') return mockQueryResult;
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
@@ -48,8 +52,20 @@ describe('useHomeQuery', () => {
 
   it('returns homes from query data', () => {
     const homes = [
-      { id: 'home-1', name: 'Home 1', isDefault: true, pantries: [], members: [] },
-      { id: 'home-2', name: 'Home 2', isDefault: false, pantries: [], members: [] },
+      {
+        id: 'home-1',
+        name: 'Home 1',
+        isDefault: true,
+        pantries: [],
+        members: [],
+      },
+      {
+        id: 'home-2',
+        name: 'Home 2',
+        isDefault: false,
+        pantries: [],
+        members: [],
+      },
     ];
     mockQueryResult.data = {
       homes: { edges: homes.map(h => ({ node: h })) },
@@ -64,8 +80,22 @@ describe('useHomeQuery', () => {
     mockQueryResult.data = {
       homes: {
         edges: [
-          { node: { id: 'home-1', isDefault: false, pantries: null, members: [] } },
-          { node: { id: 'home-2', isDefault: true, pantries: null, members: [] } },
+          {
+            node: {
+              id: 'home-1',
+              isDefault: false,
+              pantries: null,
+              members: [],
+            },
+          },
+          {
+            node: {
+              id: 'home-2',
+              isDefault: true,
+              pantries: null,
+              members: [],
+            },
+          },
         ],
       },
     };
@@ -79,7 +109,14 @@ describe('useHomeQuery', () => {
     mockQueryResult.data = {
       homes: {
         edges: [
-          { node: { id: 'home-1', isDefault: false, pantries: null, members: [] } },
+          {
+            node: {
+              id: 'home-1',
+              isDefault: false,
+              pantries: null,
+              members: [],
+            },
+          },
         ],
       },
     };

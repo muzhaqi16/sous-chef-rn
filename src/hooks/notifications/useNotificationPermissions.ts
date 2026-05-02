@@ -27,5 +27,6 @@ export const useNotificationPermissions = () => {
   return {
     hasPermission,
     requestPermissions,
-    checkPermissions };
+    checkPermissions,
+  };
 };

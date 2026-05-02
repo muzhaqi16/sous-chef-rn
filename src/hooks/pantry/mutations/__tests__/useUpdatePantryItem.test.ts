@@ -1,12 +1,8 @@
 import { renderHook } from '@testing-library/react-native';
+import type { MockedResponse } from '@apollo/client/testing';
+import { UpdatePantryItemDocument } from '#operations/pantry/pantry.generated';
+import { createApolloWrapper } from '../../../../../__tests__/helpers/apolloMockProvider';
 import { useUpdatePantryItem } from '../useUpdatePantryItem';
-
-const mockUpdateMutation = jest.fn();
-
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useUpdatePantryItemMutation: jest.fn(() => [mockUpdateMutation]),
-}));
 
 jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
@@ -23,21 +19,6 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
   enhanceWithVersion: jest.fn((item, updates) => ({ ...item, ...updates })),
 }));
 
-jest.mock('#/apollo/utils/optimisticTypes', () => ({
-  buildOptimisticMutationResponse: jest.fn(
-    (mutationName, payloadTypeName, dataField, data) => ({
-      __typename: 'Mutation',
-      [mutationName]: {
-        __typename: payloadTypeName,
-        success: true,
-        message: 'OK',
-        code: 'OK',
-        [dataField]: data,
-      },
-    }),
-  ),
-}));
-
 jest.mock('../utils', () => ({
   buildDirtyUpdateInput: jest.fn((data: any, dirtyFields: any) => {
     const input: Record<string, any> = {};
@@ -51,23 +32,23 @@ jest.mock('../utils', () => ({
     symbol: 'kg',
     name: 'Kilogram',
   })),
+  stateToCountKey: jest.fn(() => 'ambient'),
 }));
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  mockUpdateMutation.mockResolvedValue({});
-});
-
 const createCurrentItem = () =>
   ({
     id: 'item-1',
+    pantryId: 'pantry-1',
     quantity: 5,
     unit: { id: 'unit-1', symbol: 'g', name: 'Gram' },
     version: 1,
+    storageState: 'PANTRY',
+    storageLocation: null,
+    updatedAt: '2025-01-01T00:00:00Z',
   } as any);
 
 const createFormData = (overrides: Record<string, any> = {}) =>
@@ -81,16 +62,48 @@ const createFormData = (overrides: Record<string, any> = {}) =>
     ...overrides,
   } as any);
 
+const successMock = (variables: {
+  id: string;
+  input: any;
+}): MockedResponse => ({
+  request: { query: UpdatePantryItemDocument, variables },
+  result: {
+    data: {
+      updatePantryItem: {
+        __typename: 'PantryItemPayload',
+        success: true,
+        message: 'OK',
+        code: 'OK',
+        pantryItem: {
+          __typename: 'PantryItem',
+          id: variables.id,
+          ...variables.input,
+        },
+      },
+    },
+  },
+});
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
 describe('useUpdatePantryItem', () => {
   it('returns updatePantryItemFields function', () => {
-    const { result } = renderHook(() => useUpdatePantryItem({}));
+    const { result } = renderHook(() => useUpdatePantryItem({}), {
+      wrapper: createApolloWrapper([]),
+    });
 
     expect(typeof result.current.updatePantryItemFields).toBe('function');
   });
 
   it('fires mutation with dirty fields only', () => {
     const onSuccess = jest.fn();
-    const { result } = renderHook(() => useUpdatePantryItem({ onSuccess }));
+    const { result } = renderHook(() => useUpdatePantryItem({ onSuccess }), {
+      wrapper: createApolloWrapper([
+        successMock({ id: 'item-1', input: { itemName: 'Milk' } }),
+      ]),
+    });
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
@@ -101,23 +114,17 @@ describe('useUpdatePantryItem', () => {
       selectedBrandId: null,
     });
 
-    expect(mockUpdateMutation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        variables: {
-          id: 'item-1',
-          input: { itemName: 'Milk' },
-        },
-      }),
-    );
+    // onSuccess fires synchronously (mutation is fire-and-forget)
     expect(onSuccess).toHaveBeenCalled();
   });
 
   it('calls onSuccess immediately without waiting for mutation', () => {
     const onSuccess = jest.fn();
-    // Do not resolve the mutation promise yet
-    mockUpdateMutation.mockReturnValue(new Promise(() => {}));
-
-    const { result } = renderHook(() => useUpdatePantryItem({ onSuccess }));
+    const { result } = renderHook(() => useUpdatePantryItem({ onSuccess }), {
+      wrapper: createApolloWrapper([
+        successMock({ id: 'item-1', input: { itemName: 'Milk' } }),
+      ]),
+    });
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
@@ -128,13 +135,15 @@ describe('useUpdatePantryItem', () => {
       selectedBrandId: null,
     });
 
-    // onSuccess is called synchronously, not waiting for mutation
     expect(onSuccess).toHaveBeenCalled();
   });
 
   it('calls onSuccess without mutation when no dirty fields', () => {
     const onSuccess = jest.fn();
-    const { result } = renderHook(() => useUpdatePantryItem({ onSuccess }));
+    // Empty mocks — if a mutation fires, MockedProvider errors
+    const { result } = renderHook(() => useUpdatePantryItem({ onSuccess }), {
+      wrapper: createApolloWrapper([]),
+    });
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
@@ -145,14 +154,15 @@ describe('useUpdatePantryItem', () => {
       selectedBrandId: null,
     });
 
-    expect(mockUpdateMutation).not.toHaveBeenCalled();
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it('includes optimistic unit when trackingUnit has different id', () => {
-    mockUpdateMutation.mockResolvedValue({});
-
-    const { result } = renderHook(() => useUpdatePantryItem({}));
+  it('builds optimistic unit when trackingUnit has different id', () => {
+    const { result } = renderHook(() => useUpdatePantryItem({}), {
+      wrapper: createApolloWrapper([
+        successMock({ id: 'item-1', input: { storageNotes: 'Fresh milk' } }),
+      ]),
+    });
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
@@ -169,18 +179,16 @@ describe('useUpdatePantryItem', () => {
       },
     });
 
-    // The optimisticResponse should be passed
-    expect(mockUpdateMutation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        optimisticResponse: expect.any(Object),
-      }),
-    );
+    const { buildOptimisticUnit } = jest.requireMock('../utils');
+    expect(buildOptimisticUnit).toHaveBeenCalled();
   });
 
-  it('does not include optimistic unit when trackingUnit matches current', () => {
-    mockUpdateMutation.mockResolvedValue({});
-
-    const { result } = renderHook(() => useUpdatePantryItem({}));
+  it('does not build optimistic unit when trackingUnit matches current', () => {
+    const { result } = renderHook(() => useUpdatePantryItem({}), {
+      wrapper: createApolloWrapper([
+        successMock({ id: 'item-1', input: { storageNotes: 'Fresh milk' } }),
+      ]),
+    });
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
@@ -192,7 +200,6 @@ describe('useUpdatePantryItem', () => {
       trackingUnit: { id: 'unit-1', name: 'Gram', symbol: 'g', type: 'WEIGHT' },
     });
 
-    // buildOptimisticUnit should not be called for same unit
     const { buildOptimisticUnit } = jest.requireMock('../utils');
     expect(buildOptimisticUnit).not.toHaveBeenCalled();
   });

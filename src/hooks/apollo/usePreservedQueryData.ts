@@ -25,12 +25,13 @@ import { useState } from 'react';
  */
 export function usePreservedQueryData<T>(
   currentData: T | undefined,
-  initialValue: T
+  initialValue: T,
 ): T {
   // Store the last successful (non-undefined) value using conditional state update during render.
   // This is the React-recommended pattern for syncing state with props
   // (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
-  const [lastSuccessfulValue, setLastSuccessfulValue] = useState<T>(initialValue);
+  const [lastSuccessfulValue, setLastSuccessfulValue] =
+    useState<T>(initialValue);
   const [prevData, setPrevData] = useState<T | undefined>(currentData);
 
   if (currentData !== prevData) {
@@ -70,10 +71,7 @@ export function usePreservedQueryData<T>(
  * ```
  */
 export function usePreservedArrayData<T>(
-  currentData: T[] | undefined | null
+  currentData: T[] | undefined | null,
 ): T[] {
-  return usePreservedQueryData(
-    currentData ?? undefined,
-    [] as T[]
-  );
+  return usePreservedQueryData(currentData ?? undefined, [] as T[]);
 }

@@ -60,17 +60,17 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   }, [isHighlighted, scale, rotation]);
 
   const animatedStyle = useAnimatedStyle(() => {
-    const rotate = interpolate(rotation.value, [0, 1], [0, 90]);
+    const rotate = interpolate(rotation.get(), [0, 1], [0, 90]);
 
     return {
       backgroundColor: withTiming(
-        backgroundColor || animatedTheme.value.colors.surface,
+        backgroundColor || animatedTheme.get().colors.surface,
         {
           duration: TIMING.FAST,
           easing: standardEasing,
         },
       ),
-      transform: [{ scale: scale.value }, { rotate: `${rotate}deg` }],
+      transform: [{ scale: scale.get() }, { rotate: `${rotate}deg` }],
     };
   });
 

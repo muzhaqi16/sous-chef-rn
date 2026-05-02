@@ -1,10 +1,10 @@
-import {useState} from 'react';
-import {ViewStyle} from 'react-native';
-import {Picker} from '@react-native-picker/picker';
-import {StyleSheet} from 'react-native-unistyles';
+import { useState } from 'react';
+import { ViewStyle } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { StyleSheet } from 'react-native-unistyles';
 
 type PickerSelectProps = {
-  items: {label: string; value: string; id: string}[];
+  items: { label: string; value: string; id: string }[];
   initialValue: string;
   onValueChange: (itemValue: string) => void;
   style: ViewStyle;
@@ -24,7 +24,8 @@ export const PickerSelect = ({
     <Picker
       selectedValue={selectedValue}
       onValueChange={onValueChange}
-      style={[styles.picker, style]}>
+      style={[styles.picker, style]}
+    >
       {items?.map(item => (
         <Item
           key={item.id}

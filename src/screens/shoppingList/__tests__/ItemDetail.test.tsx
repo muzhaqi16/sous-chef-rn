@@ -11,9 +11,15 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockUseGetShoppingListItemQuery = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetShoppingListItemQuery: (...args: any[]) => mockUseGetShoppingListItemQuery(...args),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((...args: any[]) => {
+    const [doc] = args;
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetShoppingListItem')
+      return mockUseGetShoppingListItemQuery(doc, ...args);
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#utils/imageUtils', () => ({
@@ -49,11 +55,20 @@ jest.mock('#components/templates/DetailTemplate', () => ({
 jest.mock('#components/molecules/ClickableInfoPanel', () => ({
   ClickableInfoPanel: ({ title, emptyMessage }: any) => {
     const { View, Text } = require('react-native');
-    return <View><Text>{title}</Text>{emptyMessage ? <Text>{emptyMessage}</Text> : null}</View>;
+    return (
+      <View>
+        <Text>{title}</Text>
+        {emptyMessage ? <Text>{emptyMessage}</Text> : null}
+      </View>
+    );
   },
 }));
-jest.mock('#components/molecules/NutritionSummary', () => ({ NutritionSummary: () => null }));
-jest.mock('#components/molecules/ImageGalleryTabs', () => ({ ImageGalleryTabs: () => null }));
+jest.mock('#components/molecules/NutritionSummary', () => ({
+  NutritionSummary: () => null,
+}));
+jest.mock('#components/molecules/ImageGalleryTabs', () => ({
+  ImageGalleryTabs: () => null,
+}));
 jest.mock('#components/atoms/FormattedItemSubtitle', () => ({
   FormattedItemSubtitle: () => {
     const { Text } = require('react-native');

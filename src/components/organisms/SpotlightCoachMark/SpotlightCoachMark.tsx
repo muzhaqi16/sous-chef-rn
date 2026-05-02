@@ -1,25 +1,29 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  Pressable,
-  useWindowDimensions,
-} from 'react-native';
+import { View, Text, Modal, useWindowDimensions } from 'react-native';
 import Animated, {
   useSharedValue,
+  useDerivedValue,
   useAnimatedStyle,
   withRepeat,
   withSequence,
   withTiming,
   withSpring,
   withDelay,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import {
   Gesture,
   GestureDetector,
   GestureHandlerRootView,
+  Pressable,
 } from 'react-native-gesture-handler';
+import {
+  Canvas,
+  Group,
+  Rect as SkRect,
+  RoundedRect as SkRoundedRect,
+  Skia,
+} from '@shopify/react-native-skia';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SPRING, TIMING, standardEasing } from '#constants/animations';
@@ -198,54 +202,41 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
       withDelay(100, withTiming(1, { duration: TIMING.STANDARD })),
     );
     tooltipTranslateY.set(withDelay(100, withSpring(0, SPRING.GENTLE)));
+
+    return () => {
+      cancelAnimation(pulseOpacity);
+    };
   }, [pulseOpacity, tooltipTranslateY, tooltipOpacity, showAbove]);
 
   // ── Animated styles ──
 
-  const pulseAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: pulseOpacity.value,
-  }));
-
   const tooltipAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: tooltipOpacity.value,
-    transform: [{ translateY: tooltipTranslateY.value }],
+    opacity: tooltipOpacity.get(),
+    transform: [{ translateY: tooltipTranslateY.get() }],
   }));
 
-  // 4-strip dim overlay: top, bottom, left, right around the hole
-  const topStripStyle = useAnimatedStyle(() => ({
-    top: 0,
-    left: 0,
-    right: 0,
-    height: Math.max(0, animHoleTop.value),
-  }));
+  // Skia clip path for the hole cutout — replaces 4 dim strip views that
+  // animated layout properties (top/left/width/height) with a single Canvas
+  // draw call, eliminating per-frame layout passes.
+  const overlayColor = theme.colors.overlays.heavy;
+  const primaryColor = theme.colors.primary;
 
-  const bottomStripStyle = useAnimatedStyle(() => ({
-    top: animHoleTop.value + animHoleHeight.value,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  }));
-
-  const leftStripStyle = useAnimatedStyle(() => ({
-    top: animHoleTop.value,
-    left: 0,
-    width: Math.max(0, animHoleLeft.value),
-    height: animHoleHeight.value,
-  }));
-
-  const rightStripStyle = useAnimatedStyle(() => ({
-    top: animHoleTop.value,
-    left: animHoleLeft.value + animHoleWidth.value,
-    right: 0,
-    height: animHoleHeight.value,
-  }));
-
-  const pulsePositionStyle = useAnimatedStyle(() => ({
-    top: animHoleTop.value,
-    left: animHoleLeft.value,
-    width: animHoleWidth.value,
-    height: animHoleHeight.value,
-  }));
+  const holePath = useDerivedValue(() => {
+    const path = Skia.Path.Make();
+    path.addRRect(
+      Skia.RRectXY(
+        Skia.XYWHRect(
+          animHoleLeft.get(),
+          animHoleTop.get(),
+          animHoleWidth.get(),
+          animHoleHeight.get(),
+        ),
+        borderRadius,
+        borderRadius,
+      ),
+    );
+    return path;
+  });
 
   // Swipe-to-advance gesture (left swipe → next step)
   // Pre-defined RN-scope callback for scheduleOnRN (CLAUDE.md convention)
@@ -256,7 +247,6 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const swipeGesture = Gesture.Pan()
     .activeOffsetX([-20, 20])
     .onEnd(event => {
-      'worklet';
       if (event.translationX < -SWIPE_THRESHOLD) {
         scheduleOnRN(handleSwipeAdvance);
       }
@@ -297,23 +287,33 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           <Pressable style={styles.dismissArea} onPress={onDismiss} />
         )}
 
-        {/* Dim overlay — 4 strips around the hole */}
-        <Animated.View
-          style={[styles.dimStrip, topStripStyle]}
-          pointerEvents="none"
-        />
-        <Animated.View
-          style={[styles.dimStrip, bottomStripStyle]}
-          pointerEvents="none"
-        />
-        <Animated.View
-          style={[styles.dimStrip, leftStripStyle]}
-          pointerEvents="none"
-        />
-        <Animated.View
-          style={[styles.dimStrip, rightStripStyle]}
-          pointerEvents="none"
-        />
+        {/* Dim overlay with cutout + pulse ring — single Skia Canvas replaces
+           4 Animated.View dim strips and 1 pulse ring that animated layout
+           properties (top/left/width/height). Canvas draws to one surface,
+           avoiding per-view layout passes on every frame. */}
+        <Canvas style={styles.fullScreen} pointerEvents="none">
+          <Group clip={holePath} invertClip>
+            <SkRect
+              x={0}
+              y={0}
+              width={screenWidth}
+              height={screenHeight}
+              color={overlayColor}
+            />
+          </Group>
+          <SkRoundedRect
+            x={animHoleLeft}
+            y={animHoleTop}
+            width={animHoleWidth}
+            height={animHoleHeight}
+            r={borderRadius}
+            style="stroke"
+            strokeWidth={2}
+            color={primaryColor}
+            opacity={pulseOpacity}
+          />
+        </Canvas>
+
         {/* Transparent hole tap target — omitted in passthrough mode so
           gestures reach the underlying content (e.g. swipeable items) */}
         {!allowGesturePassthrough && (
@@ -332,17 +332,6 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
             testID="spotlight-target"
           />
         )}
-
-        {/* Pulsing ring */}
-        <Animated.View
-          style={[
-            styles.pulseRing,
-            { borderRadius, borderColor: theme.colors.primary },
-            pulsePositionStyle,
-            pulseAnimatedStyle,
-          ]}
-          pointerEvents="none"
-        />
 
         {/* Tooltip card */}
         <Animated.View
@@ -485,16 +474,8 @@ const styles = StyleSheet.create(theme => ({
   dismissArea: {
     ...StyleSheet.absoluteFillObject,
   },
-  dimStrip: {
-    position: 'absolute',
-    backgroundColor: theme.colors.overlays.heavy,
-  },
   holeTap: {
     position: 'absolute',
-  },
-  pulseRing: {
-    position: 'absolute',
-    borderWidth: 2,
   },
   tooltip: {
     position: 'absolute',

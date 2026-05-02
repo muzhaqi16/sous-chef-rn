@@ -7,7 +7,9 @@ import {
 import { logger } from '#/utils/environment';
 import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { useErrorService } from '#/services/errorService';
-import { useRegisterDeviceMutation, DeviceRegistrationInput } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { RegisterDeviceDocument } from '../graphql/operations/auth/device.generated';
+import { type DeviceRegistrationInput } from '../graphql/generated/schemaTypes';
 
 interface DeviceRegistrationState {
   isRegistering: boolean;
@@ -169,7 +171,7 @@ export const useDeviceRegistration = () => {
   });
 
   const { handleApolloError } = useErrorService();
-  const [registerDeviceMutation] = useRegisterDeviceMutation();
+  const [registerDeviceMutation] = useMutation(RegisterDeviceDocument);
 
   /**
    * Registers the current device with the backend

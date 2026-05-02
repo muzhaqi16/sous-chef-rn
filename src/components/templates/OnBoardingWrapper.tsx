@@ -3,10 +3,9 @@ import React, { ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   View,
-  Pressable,
   Text,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -14,6 +13,7 @@ import { OnboardingSteps } from '#components/navigation/OnboardingSteps/Onboardi
 import { OnboardingNavigation } from '#components/navigation/OnboardingNavigation/OnboardingNavigation';
 import { useOnboardingContextSafe } from '#/context/OnboardingContext';
 import type { NavigationAction } from '#components/navigation/OnboardingNavigation/types';
+import { Pressable } from 'react-native-gesture-handler';
 
 interface OnboardingWrapperProps {
   children: ReactNode;
@@ -72,9 +72,7 @@ export const OnBoardingWrapper = ({
           <View style={styles.iconButton} />
         )}
         {!!displayTitle && (
-          <Text style={styles.headerTitle}>
-            {displayTitle}
-          </Text>
+          <Text style={styles.headerTitle}>{displayTitle}</Text>
         )}
         <View style={styles.iconButton} />
       </View>
@@ -102,7 +100,9 @@ export const OnBoardingWrapper = ({
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
         >
-          {!!displaySubtitle && <Text style={styles.subtitle}>{displaySubtitle}</Text>}
+          {!!displaySubtitle && (
+            <Text style={styles.subtitle}>{displaySubtitle}</Text>
+          )}
           <View style={styles.content}>{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -136,7 +136,10 @@ export const OnBoardingWrapper = ({
           {!!onSkip && (
             <Pressable
               onPress={onSkip}
-              style={({pressed}) => [styles.skipButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.skipButton,
+                pressed && styles.pressed,
+              ]}
               testID={testID ? `${testID}-skip-button` : undefined}
             >
               <Text style={styles.skipText}>Skip</Text>

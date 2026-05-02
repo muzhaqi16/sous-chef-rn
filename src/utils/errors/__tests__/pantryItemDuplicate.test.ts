@@ -16,7 +16,9 @@ const makeLegacyError = (
   code: string,
   extensions: Record<string, unknown> = {},
 ) => ({
-  graphQLErrors: [{ extensions: { code, ...extensions }, message: 'Duplicate' }],
+  graphQLErrors: [
+    { extensions: { code, ...extensions }, message: 'Duplicate' },
+  ],
 });
 
 const makeSingleError = (
@@ -41,7 +43,9 @@ describe('pantryItemDuplicate', () => {
     });
 
     it('returns false for other error codes', () => {
-      expect(isPantryItemDuplicateError(makeCombinedError('NOT_FOUND'))).toBe(false);
+      expect(isPantryItemDuplicateError(makeCombinedError('NOT_FOUND'))).toBe(
+        false,
+      );
     });
 
     it('returns false for null', () => {
@@ -94,7 +98,9 @@ describe('pantryItemDuplicate', () => {
     });
 
     it('returns null for non-duplicate error', () => {
-      expect(getPantryItemDuplicateInfo(makeCombinedError('NOT_FOUND'))).toBeNull();
+      expect(
+        getPantryItemDuplicateInfo(makeCombinedError('NOT_FOUND')),
+      ).toBeNull();
     });
 
     it('returns null when existingPantryItemId is missing', () => {

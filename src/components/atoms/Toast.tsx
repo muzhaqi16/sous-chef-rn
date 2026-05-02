@@ -1,12 +1,16 @@
 import React, { useState, useRef, ReactNode, useEffect } from 'react';
-import { Pressable, Text } from 'react-native';
+import { Text } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import {
+  Gesture,
+  GestureDetector,
+  Pressable,
+} from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -185,7 +189,6 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
 
   const panGesture = Gesture.Pan()
     .onUpdate(event => {
-      'worklet';
       // Allow upward swipe (negative Y) for top-positioned toast
       if (event.translationY < 0) {
         translateY.set(insets.top + 16 + event.translationY);
@@ -194,7 +197,6 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
       translateX.set(event.translationX);
     })
     .onEnd(event => {
-      'worklet';
       const shouldDismiss =
         event.translationY < -TOAST.SWIPE_THRESHOLD ||
         Math.abs(event.translationX) > TOAST.SWIPE_THRESHOLD;

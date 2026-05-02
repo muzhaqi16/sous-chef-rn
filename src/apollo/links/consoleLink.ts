@@ -1,6 +1,10 @@
-import {ApolloLink, Observable} from '@apollo/client';
+import { ApolloLink, Observable } from '@apollo/client';
 import performance from 'react-native-performance';
-import {serializeError, safeStringifyError, isTimerCircularStructureError} from '#/utils/errorSerialization';
+import {
+  serializeError,
+  safeStringifyError,
+  isTimerCircularStructureError,
+} from '#/utils/errorSerialization';
 
 // Enable detailed logging only in development
 const isDevelopment = __DEV__;
@@ -52,7 +56,7 @@ export const createConsoleLink = (
           if (hasErrors) {
             const safeErrors = result.errors?.map(serializeError);
             const isTimerError = safeErrors?.some((err: any) =>
-              isTimerCircularStructureError(err)
+              isTimerCircularStructureError(err),
             );
             if (isTimerError) {
               observer.next(result);
@@ -80,14 +84,15 @@ export const createConsoleLink = (
             if (isSubscription) {
               console.log(
                 `%c🚀 ${emoji} ${operationType} ${operationName}`,
-                style
+                style,
               );
             } else {
               const duration = Math.round(performance.now() - startTime);
-              const coldTag = operationIndex < COLD_START_THRESHOLD ? ' [cold]' : '';
+              const coldTag =
+                operationIndex < COLD_START_THRESHOLD ? ' [cold]' : '';
               console.log(
                 `%c🚀 ${emoji} ${operationType} ${operationName} ${duration}ms${coldTag}`,
-                style
+                style,
               );
             }
           }
@@ -104,15 +109,15 @@ export const createConsoleLink = (
           // Log errors as JSON strings to prevent React Native console serialization issues
           if (hasErrors) {
             const safeErrors = result.errors?.map(serializeError);
-            const {stringified, isCircular} = safeStringifyError(safeErrors);
+            const { stringified, isCircular } = safeStringifyError(safeErrors);
 
             if (isCircular) {
               // Log actual error details for non-timer circular errors
-              console.warn(
-                '   ⚠️ GraphQL errors (may have circular refs):',
-              );
+              console.warn('   ⚠️ GraphQL errors (may have circular refs):');
               safeErrors?.forEach((err: any, i: number) => {
-                console.warn(`      [${i}] message: ${err?.message || 'No message'}`);
+                console.warn(
+                  `      [${i}] message: ${err?.message || 'No message'}`,
+                );
                 if (err?.path) {
                   console.warn(`          path: ${JSON.stringify(err.path)}`);
                 }
@@ -142,7 +147,7 @@ export const createConsoleLink = (
 
           observer.next(result);
         },
-        error: (error) => {
+        error: error => {
           observer.error(error);
         },
         complete: () => {

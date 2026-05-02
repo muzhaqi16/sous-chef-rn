@@ -14,8 +14,10 @@ const displayNameRule = string()
 const bioRule = string().max(500, 'Bio must be less than 500 characters');
 
 // phone rule - flexible format allowing spaces, dashes, parentheses
-const phoneRule = string()
-  .test('valid-phone', 'Please enter a valid phone number', value => {
+const phoneRule = string().test(
+  'valid-phone',
+  'Please enter a valid phone number',
+  value => {
     if (!value) return true; // Allow empty (optional field)
     // Strip all non-digit characters except leading +
     const hasPlus = value.startsWith('+');
@@ -27,7 +29,8 @@ const phoneRule = string()
     // Plus sign only allowed at the start
     if (!hasPlus && value.includes('+')) return false;
     return true;
-  });
+  },
+);
 
 // website/URL rule
 const urlRule = string()
@@ -66,18 +69,16 @@ const dateOfBirthRule = string()
   });
 
 // gender rule
-const genderRule = string()
-  .oneOf(
-    ['male', 'female', 'non-binary', 'other', 'prefer-not-to-say'],
-    'Please select a valid gender',
-  );
+const genderRule = string().oneOf(
+  ['male', 'female', 'non-binary', 'other', 'prefer-not-to-say'],
+  'Please select a valid gender',
+);
 
 // profile visibility rule
-const profileVisibilityRule = string()
-  .oneOf(
-    ['PUBLIC', 'FRIENDS_ONLY', 'PRIVATE'],
-    'Please select a valid visibility option',
-  );
+const profileVisibilityRule = string().oneOf(
+  ['PUBLIC', 'FRIENDS_ONLY', 'PRIVATE'],
+  'Please select a valid visibility option',
+);
 
 // ----------------------------------------------------------------------------
 

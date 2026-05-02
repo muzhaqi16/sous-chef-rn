@@ -1,10 +1,12 @@
-;
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import {
   getMealPlanPermissions,
   type MealPlanPermissions,
 } from '#utils/permissions/mealPlanPermissions';
-import type { MealPlanDisplayFragment, MealPlanFullFragment } from '#generated';
+import {
+  type MealPlanDisplayFragment,
+  type MealPlanFullFragment,
+} from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 
 type MealPlanLike = MealPlanDisplayFragment | MealPlanFullFragment;
 
@@ -15,7 +17,7 @@ type MealPlanLike = MealPlanDisplayFragment | MealPlanFullFragment;
 export function useMealPlanPermissions(
   mealPlan: MealPlanLike | null | undefined,
 ): MealPlanPermissions {
-  const user = useAuthUser();
+  const user = useUser();
 
   return (() => {
     if (!mealPlan) {

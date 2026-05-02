@@ -1,6 +1,15 @@
-import React, { useState, useRef, useLayoutEffect, ComponentRef } from 'react';
-import { View, Text, Modal, Pressable } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useLayoutEffect,
+  ComponentRef,
+} from 'react';
+import { View, Text, Modal } from 'react-native';
+import {
+  GestureHandlerRootView,
+  Pressable,
+} from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { type SharedValue } from 'react-native-reanimated';
 import Animated, {
@@ -77,6 +86,26 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
   const [completed, setCompleted] = useState(false);
   const swipeableRef = useRef<ComponentRef<typeof Swipeable>>(null);
 
+  // Track all in-flight setTimeout handles so they can be cleared on unmount.
+  // The hint schedules timers to advance steps and dismiss; if the user
+  // navigates away mid-step, those timers must not fire on a stale instance.
+  const pendingTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const scheduleTimer = (cb: () => void, delayMs: number): void => {
+    const id = setTimeout(() => {
+      pendingTimersRef.current = pendingTimersRef.current.filter(t => t !== id);
+      cb();
+    }, delayMs);
+    pendingTimersRef.current.push(id);
+  };
+  useEffect(() => {
+    return () => {
+      for (const id of pendingTimersRef.current) {
+        clearTimeout(id);
+      }
+      pendingTimersRef.current = [];
+    };
+  }, []);
+
   const steps = mode === 'pantry' ? PANTRY_STEPS : SHOPPING_STEPS;
   const totalSteps = steps.length;
   const swipeMode: 'shopping' | undefined =
@@ -92,7 +121,7 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
       setCurrentStep(stepIndex + 1);
     } else {
       setCompleted(true);
-      setTimeout(onDismiss, 700);
+      scheduleTimer(onDismiss, 700);
     }
   };
 
@@ -102,14 +131,14 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
     handVisible.set(withTiming(0, { duration: TIMING.FAST }));
     // Let user see the open state, then advance
     // key={currentStep} on Swipeable forces remount → resets to closed
-    setTimeout(() => handleStepComplete(currentStep), 1000);
+    scheduleTimer(() => handleStepComplete(currentStep), 1000);
   };
 
   // Checkbox tapped — user completed the tap step
   const handleCheckboxTap = () => {
     HapticService.success();
     handVisible.set(withTiming(0, { duration: TIMING.FAST }));
-    setTimeout(() => handleStepComplete(currentStep), 600);
+    scheduleTimer(() => handleStepComplete(currentStep), 600);
   };
 
   // Show checkmark when completed
@@ -158,8 +187,8 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
 
   // Checkmark animation
   const checkAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: checkScale.value }],
-    opacity: checkScale.value,
+    transform: [{ scale: checkScale.get() }],
+    opacity: checkScale.get(),
   }));
 
   if (completed) {

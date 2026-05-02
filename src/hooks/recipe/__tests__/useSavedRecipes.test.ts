@@ -4,76 +4,52 @@ import { useSavedRecipes } from '../useSavedRecipes';
 const mockRefetch = jest.fn();
 const mockFetchMore = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useMySavedRecipesQuery: jest.fn(() => ({
-    data: {
-      me: {
-        savedRecipesConnection: {
-          edges: [
-            {
-              node: {
-                id: 'sr-1',
-                recipe: {
-                  id: 'r-1',
-                  name: 'Pasta',
-                  imageUrl: 'img.jpg',
-                  servings: 4,
-                  prepTimeMinutes: 10,
-                  cookTimeMinutes: 20,
-                  totalTimeMinutes: 30,
-                  description: 'Good',
-                  category: 'MAIN_COURSE',
-                  difficulty: 'EASY',
-                  cuisine: 'Italian',
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'MySavedRecipes') {
+      return {
+        data: {
+          me: {
+            savedRecipesConnection: {
+              edges: [
+                {
+                  node: {
+                    id: 'sr-1',
+                    folder: 'Weeknight',
+                    tags: ['Quick'],
+                    cookedCount: 3,
+                    createdAt: '2024-01-01',
+                    updatedAt: '2024-01-01',
+                    recipe: { id: 'r-1', name: 'Pasta' },
+                  },
                 },
-                folder: 'Weeknight',
-                tags: ['Quick'],
-                notes: 'my note',
-                personalRating: 5,
-                cookedCount: 3,
-                lastCookedAt: '2025-01-01',
-                createdAt: '2024-06-01',
-                updatedAt: '2025-01-01',
-              },
-            },
-            {
-              node: {
-                id: 'sr-2',
-                recipe: {
-                  id: 'r-2',
-                  name: 'Salad',
-                  imageUrl: null,
-                  servings: 2,
-                  prepTimeMinutes: null,
-                  cookTimeMinutes: null,
-                  totalTimeMinutes: null,
-                  description: null,
-                  category: null,
-                  difficulty: null,
-                  cuisine: null,
+                {
+                  node: {
+                    id: 'sr-2',
+                    folder: null,
+                    tags: null,
+                    cookedCount: null,
+                    createdAt: '2024-01-01',
+                    updatedAt: '2024-01-01',
+                    recipe: { id: 'r-2', name: 'Salad' },
+                  },
                 },
-                folder: null,
-                tags: null,
-                notes: null,
-                personalRating: null,
-                cookedCount: null,
-                lastCookedAt: null,
-                createdAt: '2024-05-01',
-                updatedAt: '2024-05-01',
-              },
+              ],
+              pageInfo: { hasNextPage: true, endCursor: 'cursor' },
+              totalCount: 10,
             },
-          ],
-          pageInfo: { hasNextPage: true, endCursor: 'cursor-2' },
-          totalCount: 10,
+          },
         },
-      },
-    },
-    loading: false,
-    error: undefined,
-    refetch: mockRefetch,
-    fetchMore: mockFetchMore,
-  })),
+        loading: false,
+        error: undefined,
+        refetch: mockRefetch,
+        fetchMore: mockFetchMore,
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#hooks/auth/useAuth', () => ({
@@ -119,7 +95,7 @@ describe('useSavedRecipes', () => {
     const { result } = renderHook(() => useSavedRecipes());
 
     expect(result.current.state.totalCount).toBe(10);
-    expect(result.current.state.hasNextPage).toBe(true);
+    expect(result.current.state.hasMore).toBe(true);
   });
 
   it('getRecipeById finds by recipeId', () => {
@@ -146,8 +122,8 @@ describe('useSavedRecipes', () => {
   });
 
   it('returns empty recipes when data is undefined', () => {
-    const { useMySavedRecipesQuery } = require('#generated');
-    useMySavedRecipesQuery.mockReturnValueOnce({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: undefined,
       loading: true,
       error: undefined,

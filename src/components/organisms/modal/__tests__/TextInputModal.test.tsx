@@ -35,7 +35,13 @@ describe('TextInputModal', () => {
   });
 
   it('renders custom button labels', () => {
-    render(<TextInputModal {...defaultProps} submitText="Save" cancelText="Dismiss" />);
+    render(
+      <TextInputModal
+        {...defaultProps}
+        submitText="Save"
+        cancelText="Dismiss"
+      />,
+    );
     expect(screen.getByText('Save')).toBeTruthy();
     expect(screen.getByText('Dismiss')).toBeTruthy();
   });

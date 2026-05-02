@@ -13,7 +13,8 @@ import {
   isSameDay,
   isBefore,
   isAfter,
-  startOfDay } from 'date-fns';
+  startOfDay,
+} from 'date-fns';
 
 export type CalendarView = 'week' | 'month';
 
@@ -67,23 +68,29 @@ export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
     if (viewMode === 'week') {
       return {
         startDate: startOfWeek(referenceDate, { weekStartsOn: 1 }),
-        endDate: endOfWeek(referenceDate, { weekStartsOn: 1 }) };
+        endDate: endOfWeek(referenceDate, { weekStartsOn: 1 }),
+      };
     }
     return {
       startDate: startOfMonth(referenceDate),
-      endDate: endOfMonth(referenceDate) };
+      endDate: endOfMonth(referenceDate),
+    };
   })();
 
   // Compute navigation boundary flags
   const canGoPrevWeek = (() => {
     if (!minDate) return true;
-    const prevWeekEnd = endOfWeek(subWeeks(referenceDate, 1), { weekStartsOn: 1 });
+    const prevWeekEnd = endOfWeek(subWeeks(referenceDate, 1), {
+      weekStartsOn: 1,
+    });
     return !isBefore(startOfDay(prevWeekEnd), startOfDay(minDate));
   })();
 
   const canGoNextWeek = (() => {
     if (!maxDate) return true;
-    const nextWeekStart = startOfWeek(addWeeks(referenceDate, 1), { weekStartsOn: 1 });
+    const nextWeekStart = startOfWeek(addWeeks(referenceDate, 1), {
+      weekStartsOn: 1,
+    });
     return !isAfter(startOfDay(nextWeekStart), startOfDay(maxDate));
   })();
 
@@ -112,11 +119,11 @@ export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
   };
 
   const selectDate = (date: Date) => {
-      if (minDate && isBefore(startOfDay(date), startOfDay(minDate))) return;
-      if (maxDate && isAfter(startOfDay(date), startOfDay(maxDate))) return;
-      setSelectedDate(date);
-      setReferenceDate(date);
-    };
+    if (minDate && isBefore(startOfDay(date), startOfDay(minDate))) return;
+    if (maxDate && isAfter(startOfDay(date), startOfDay(maxDate))) return;
+    setSelectedDate(date);
+    setReferenceDate(date);
+  };
 
   const formattedMonth = format(referenceDate, 'MMMM yyyy');
   const isToday = isSameDay(selectedDate, new Date());
@@ -139,5 +146,6 @@ export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
     canGoPrevWeek,
     canGoNextWeek,
     minDate,
-    maxDate };
+    maxDate,
+  };
 }

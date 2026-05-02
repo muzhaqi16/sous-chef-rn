@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, Switch } from 'react-native';
+import { View, Text, Switch, ScrollView } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
@@ -10,21 +11,21 @@ import { InfoRow } from '#components/molecules/InfoRow';
 import { useShoppingListDetails } from '#hooks/shoppingList/useShoppingListDetails';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useLazyHomeData } from '#/hooks/home/useLazyHomeData';
-import { useShoppingListsQuery } from '#hooks/shoppingList/useShoppingListsQuery';
 import { ModalPicker } from '#components/molecules/ModalPicker';
+import { useMutation } from '@apollo/client/react';
 import {
-  useUpdateShoppingListMutation,
-  useDeleteShoppingListMutation,
-  useCreateShoppingListMutation,
-  useRemoveCollaboratorMutation,
-} from '#generated';
+  UpdateShoppingListDocument,
+  DeleteShoppingListDocument,
+  CreateShoppingListDocument,
+  RemoveCollaboratorDocument,
+} from '../../graphql/operations/shoppingList/shoppingList.generated';
 import {
   createRemoveFromQueryConnectionUpdater,
   createAddToQueryConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { useAppStore } from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
-import { useAuthUser } from '#/hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import {
   executeWithLoadingState,
@@ -81,13 +82,10 @@ export const ListSettings: React.FC<
 
   const { shoppingList, isShared, collaborators } =
     useShoppingListDetails(listId);
-  const user = useAuthUser();
+  const user = useUser();
   // Use lazy loading for homes data to avoid triggering Zustand store updates
   // that would cause ShoppingListMain to re-render
   const { homes, fetchHomeData, isLoaded: homesLoaded } = useLazyHomeData();
-
-  // Get lists for finding default list after delete
-  const { lists } = useShoppingListsQuery();
 
   // Check if current user is the owner
   const isOwner =
@@ -110,10 +108,9 @@ export const ListSettings: React.FC<
   );
   const isHomeLinked = !!shoppingList?.homeId;
 
-  const [removeMember] = useRemoveCollaboratorMutation();
-  const [updateList] = useUpdateShoppingListMutation();
-  const [deleteList] = useDeleteShoppingListMutation({
-    errorPolicy: 'all',
+  const [removeMember] = useMutation(RemoveCollaboratorDocument);
+  const [updateList] = useMutation(UpdateShoppingListDocument);
+  const [deleteList] = useMutation(DeleteShoppingListDocument, {
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Delete Shopping List',
@@ -140,8 +137,7 @@ export const ListSettings: React.FC<
     'ShoppingList',
   );
 
-  const [createList] = useCreateShoppingListMutation({
-    errorPolicy: 'all',
+  const [createList] = useMutation(CreateShoppingListDocument, {
     update(cache, { data }) {
       const newList = data?.createShoppingList?.shoppingList;
       if (newList) {
@@ -223,13 +219,8 @@ export const ListSettings: React.FC<
               async () => {
                 await deleteList({ variables: { id: listId! } });
 
-                // Find next list to select (default list from remaining lists)
-                const remainingLists = lists.filter(l => l.id !== listId);
-                const defaultList = remainingLists.find(l => l.isDefault);
-
-                // Set default list if found, otherwise null to trigger auto-select
-                const nextListId = defaultList?.id || null;
-                setSelectedShoppingListId(nextListId);
+                // Clear selection — useShoppingListSelection auto-selects the next list
+                setSelectedShoppingListId(null);
                 // Use goBack() to pop ListSettings off the stack, unmounting its
                 // query watcher so late subscription updates can't trigger a refetch
                 goBack();

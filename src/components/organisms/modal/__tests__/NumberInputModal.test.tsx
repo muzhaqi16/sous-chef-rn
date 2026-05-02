@@ -49,13 +49,25 @@ describe('NumberInputModal', () => {
   });
 
   it('renders custom save and cancel button labels', () => {
-    render(<NumberInputModal {...defaultProps} saveButtonLabel="Update" cancelButtonLabel="Dismiss" />);
+    render(
+      <NumberInputModal
+        {...defaultProps}
+        saveButtonLabel="Update"
+        cancelButtonLabel="Dismiss"
+      />,
+    );
     expect(screen.getByText('Update')).toBeTruthy();
     expect(screen.getByText('Dismiss')).toBeTruthy();
   });
 
   it('renders label and helper text when provided', () => {
-    render(<NumberInputModal {...defaultProps} label="Max prep time" helperText="How much time" />);
+    render(
+      <NumberInputModal
+        {...defaultProps}
+        label="Max prep time"
+        helperText="How much time"
+      />,
+    );
     expect(screen.getByText(/Max prep time/)).toBeTruthy();
     expect(screen.getByText('How much time')).toBeTruthy();
   });

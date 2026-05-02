@@ -9,14 +9,15 @@ jest.mock('../../../../apollo/links/refreshToken');
 const mockRefetch = jest.fn().mockResolvedValue({});
 const mockFetchMore = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetPantryQuery: jest.fn(() => ({
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn(() => ({
     data: null,
     loading: false,
     error: undefined,
     refetch: mockRefetch,
     fetchMore: mockFetchMore,
+    networkStatus: 7,
   })),
 }));
 
@@ -45,10 +46,11 @@ jest.mock('#/hooks/utils/usePagination', () => ({
   })),
 }));
 
+// The pantry query no longer touches subscriptionService — pending-delete
+// echoes are filtered at the subscription-handler layer instead. Mock is
+// still registered so any accidental call fails loudly.
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
-  subscriptionService: {
-    filterPendingDeletes: jest.fn((items: any[]) => items),
-  },
+  subscriptionService: {},
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
@@ -65,8 +67,8 @@ jest.mock('#store/useAppStore', () => ({
       setIsPantryQueryComplete: mockSetIsPantryQueryComplete,
     }),
   ),
-  selectIsHomeSelectionReady: (s: any) => s.isHomeSelectionReady,
-  selectSetIsPantryQueryComplete: (s: any) => s.setIsPantryQueryComplete,
+  useIsHomeSelectionReady: jest.fn(() => true),
+  useSetIsPantryQueryComplete: jest.fn(() => mockSetIsPantryQueryComplete),
 }));
 
 (global as any).requestIdleCallback = jest.fn((cb: any) => {
@@ -88,21 +90,23 @@ describe('usePantryQuery', () => {
   });
 
   it('skips query when pantryId is empty string', () => {
-    const { useGetPantryQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
 
     renderHook(() => usePantryQuery(''));
 
-    expect(useGetPantryQuery).toHaveBeenCalledWith(
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ skip: true }),
     );
   });
 
   it('executes query when pantryId is valid', () => {
-    const { useGetPantryQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
 
     renderHook(() => usePantryQuery('pantry-1'));
 
-    expect(useGetPantryQuery).toHaveBeenCalledWith(
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         skip: false,
         variables: expect.objectContaining({ id: 'pantry-1' }),
@@ -111,7 +115,7 @@ describe('usePantryQuery', () => {
   });
 
   it('returns normalized pantry items from query data', () => {
-    const { useGetPantryQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
     const { normalizePantry } = require('#/utils/connectionUtils');
 
     normalizePantry.mockReturnValue({
@@ -121,7 +125,7 @@ describe('usePantryQuery', () => {
       itemsTotalCount: 1,
     });
 
-    useGetPantryQuery.mockReturnValue({
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: { pantry: { id: 'pantry-1' } },
       loading: false,
       error: undefined,
@@ -138,12 +142,14 @@ describe('usePantryQuery', () => {
   });
 
   it('passes itemsOrderBy to query variables', () => {
-    const { useGetPantryQuery, SortOrder } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
+    const { SortOrder } = require('#/graphql/generated/schemaTypes');
     const orderBy = { itemName: SortOrder.Asc };
 
     renderHook(() => usePantryQuery('pantry-1', null, orderBy));
 
-    expect(useGetPantryQuery).toHaveBeenCalledWith(
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         variables: expect.objectContaining({ itemsOrderBy: orderBy }),
       }),
@@ -151,11 +157,12 @@ describe('usePantryQuery', () => {
   });
 
   it('passes itemsFirst as 20 (PAGE_SIZE.DEFAULT)', () => {
-    const { useGetPantryQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
 
     renderHook(() => usePantryQuery('pantry-1'));
 
-    expect(useGetPantryQuery).toHaveBeenCalledWith(
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         variables: expect.objectContaining({ itemsFirst: 20 }),
       }),
@@ -173,8 +180,8 @@ describe('usePantryQuery', () => {
   });
 
   it('signals pantry query complete when not loading and valid pantryId', () => {
-    const { useGetPantryQuery } = require('#generated');
-    useGetPantryQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: { pantry: { id: 'pantry-1' } },
       loading: false,
       error: undefined,
@@ -201,14 +208,13 @@ describe('usePantryQuery', () => {
     expect(result.current.state.isLoadingMore).toBe(false);
   });
 
-  it('filters pending deletes from items', () => {
-    const {
-      subscriptionService,
-    } = require('#/services/subscriptions/SubscriptionService');
-    subscriptionService.filterPendingDeletes.mockReturnValue([]);
+  it('returns items directly from the cache (pending-delete filtering now happens in subscription handlers)', () => {
+    const { result } = renderHook(() => usePantryQuery('pantry-1'));
 
-    renderHook(() => usePantryQuery('pantry-1'));
-
-    expect(subscriptionService.filterPendingDeletes).toHaveBeenCalled();
+    // Items come straight from normalizePantry → usePreservedArrayData with
+    // no intermediate JS-layer filtering. The Apollo cache is the single
+    // source of truth; pending-delete echoes are skipped at the subscription
+    // handler level in `usePantrySubscriptions.ts`.
+    expect(Array.isArray(result.current.state.pantryItems)).toBe(true);
   });
 });

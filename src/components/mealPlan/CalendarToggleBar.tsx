@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
@@ -19,7 +20,9 @@ export const CalendarToggleBar: React.FC<CalendarToggleBarProps> = ({
       onPress={onToggle}
       hitSlop={{ top: 8, bottom: 8 }}
       style={styles.container}
-      accessibilityLabel={isExpanded ? 'Collapse to week view' : 'Expand to month view'}
+      accessibilityLabel={
+        isExpanded ? 'Collapse to week view' : 'Expand to month view'
+      }
       accessibilityRole="button"
     >
       <View style={styles.line} />

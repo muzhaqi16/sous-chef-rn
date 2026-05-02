@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { View, Pressable, Text, Image, Dimensions } from 'react-native';
+import { View, Text, Image, Dimensions } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import {
+  Gesture,
+  GestureDetector,
+  Pressable,
+} from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -32,6 +36,7 @@ export const ImageCropScreen: React.FC<
   const { theme } = useUnistyles();
 
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [originalSize, setOriginalSize] = useState({ width: 0, height: 0 });
   const [isCropping, setIsCropping] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -53,6 +58,7 @@ export const ImageCropScreen: React.FC<
           uri: imageFile.uri,
         });
       }
+      setOriginalSize({ width, height });
       const aspectRatio = width / height;
 
       // Make sure the image fills the crop area
@@ -88,11 +94,9 @@ export const ImageCropScreen: React.FC<
   // Create pinch gesture
   const pinch = Gesture.Pinch()
     .onStart(() => {
-      'worklet';
       startScale.set(scale.get());
     })
     .onUpdate(e => {
-      'worklet';
       scale.set(clamp(startScale.get() * e.scale, 0.5, 3));
     });
 
@@ -100,12 +104,10 @@ export const ImageCropScreen: React.FC<
   const pan = Gesture.Pan()
     .averageTouches(true)
     .onStart(() => {
-      'worklet';
       const currentOffset = offset.get();
       startOffset.set({ x: currentOffset.x, y: currentOffset.y });
     })
     .onUpdate(e => {
-      'worklet';
       // Calculate bounds based on current scale and image size
       const scaledWidth = (imageSize.width || CROP_SIZE) * scale.get();
       const scaledHeight = (imageSize.height || CROP_SIZE) * scale.get();
@@ -136,7 +138,12 @@ export const ImageCropScreen: React.FC<
   });
 
   const handleCrop = () => {
-    if (!imageSize.width || !imageSize.height) {
+    if (
+      !imageSize.width ||
+      !imageSize.height ||
+      !originalSize.width ||
+      !originalSize.height
+    ) {
       alertService.alert('Error', 'Image not loaded properly');
       return;
     }
@@ -154,17 +161,10 @@ export const ImageCropScreen: React.FC<
 
     executeWithLoadingState(
       async () => {
-        // Get the original image dimensions
-        const originalImageSize = await new Promise<{
-          width: number;
-          height: number;
-        }>((resolve, reject) => {
-          Image.getSize(
-            imageFile.uri,
-            (width, height) => resolve({ width, height }),
-            error => reject(error),
-          );
-        });
+        // Use dimensions captured during handleImageLoad — avoids a redundant
+        // Image.getSize() call that can fail on Android when the content:// URI
+        // loses temporary read permissions between load and crop.
+        const originalImageSize = originalSize;
 
         if (__DEV__) {
           console.log('[ImageCrop] Original image size:', originalImageSize);
@@ -243,7 +243,7 @@ export const ImageCropScreen: React.FC<
               minDimension - finalCropX,
               minDimension - finalCropY,
             ),
-          ),
+          ) - 1, // Safety margin: prevent off-by-one from BitmapRegionDecoder inSampleSize rounding
         );
 
         const cropOffset = { x: finalCropX, y: finalCropY };
@@ -302,7 +302,12 @@ export const ImageCropScreen: React.FC<
         if (__DEV__) {
           console.error('[ImageCrop] cropImage failed:', error);
         }
-        errorService.reportError(error, { operation: 'ImageCrop.cropImage' });
+        errorService.reportError(error, {
+          operation: 'ImageCrop.cropImage',
+          imageUri: imageFile.uri,
+          originalSize,
+          displaySize: imageSize,
+        });
         alertService.alert('Error', 'Failed to crop image. Please try again.');
       },
     );

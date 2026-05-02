@@ -2,17 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  Pressable,
   ActivityIndicator,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import { Pressable, ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
-import { MealType } from '#generated';
+import { MealType } from '../../graphql/generated/schemaTypes';
 import { useSavedRecipes } from '#hooks/recipe/useSavedRecipes';
 import { CachedImage } from '#components/atoms/CachedImage';
 import {
@@ -147,7 +146,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   );
   const [searchQuery, setSearchQuery] = useState('');
   const {
-    state: { recipes, hasNextPage },
+    state: { recipes, hasMore },
     actions: { loadMore },
   } = useSavedRecipes();
 
@@ -263,7 +262,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
       layoutMeasurement.height + contentOffset.y >=
       contentSize.height - paddingToBottom
     ) {
-      if (hasNextPage && !searchQuery.trim()) {
+      if (hasMore && !searchQuery.trim()) {
         loadMore();
       }
     }

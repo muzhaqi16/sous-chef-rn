@@ -17,33 +17,48 @@ jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
 }));
 
 jest.mock('#store/useAppStore', () => {
-  const selectUser = (s: any) => s.user;
-  const selectSelectedHomeId = (s: any) => s.selectedHomeId;
-  const fn = (selector: any) => selector({
+  const mockState = {
     user: { id: 'u1' },
     selectedHomeId: 'h1',
     setSelectedShoppingListId: jest.fn(),
-  });
+  };
+  const fn = (selector: any) => selector(mockState);
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn, selectUser, selectSelectedHomeId };
+  return {
+    useAppStore: fn,
+    useUser: jest.fn(() => mockState.user),
+    useSelectedHomeId: jest.fn(() => mockState.selectedHomeId),
+  };
 });
 
 let mockListsData: any = { shoppingLists: { edges: [] } };
 let mockListsLoading = false;
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreateShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useGetShoppingListsLiteQuery: jest.fn(() => ({
-    data: mockListsData,
-    loading: mockListsLoading,
-  })),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateShoppingList') return [jest.fn(), { loading: false }];
+    return [jest.fn(), {}];
+  }),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetShoppingListsLite') {
+      return {
+        data: mockListsData,
+        loading: mockListsLoading,
+        error: undefined,
+        refetch: jest.fn(),
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
-  extractNodes: jest.fn((c) => c?.edges?.map((e: any) => e.node) || []),
+  extractNodes: jest.fn(c => c?.edges?.map((e: any) => e.node) || []),
 }));
 jest.mock('#utils/validation/onboarding', () => ({
   createShoppingListSchema: {
@@ -73,7 +88,11 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
 jest.mock('#components/molecules/DynamicFormFields', () => ({
   DynamicFormFields: () => {
     const { View, Text } = require('react-native');
-    return <View testID="form-fields"><Text>Shopping List Name</Text></View>;
+    return (
+      <View testID="form-fields">
+        <Text>Shopping List Name</Text>
+      </View>
+    );
   },
 }));
 jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
@@ -82,7 +101,11 @@ jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
 jest.mock('#components/base/Button', () => ({
   Button: ({ title, onPress, disabled }: any) => {
     const { Pressable, Text } = require('react-native');
-    return <Pressable onPress={onPress} disabled={disabled} testID="action-button"><Text>{title}</Text></Pressable>;
+    return (
+      <Pressable onPress={onPress} disabled={disabled} testID="action-button">
+        <Text>{title}</Text>
+      </Pressable>
+    );
   },
 }));
 jest.mock('#/components/base/SousChefLoader', () => ({
@@ -122,7 +145,9 @@ describe('CreateShoppingListScreen', () => {
   it('shows existing list view when list exists', () => {
     mockListsData = {
       shoppingLists: {
-        edges: [{ node: { id: 'sl1', name: 'Weekly Groceries', isDefault: true } }],
+        edges: [
+          { node: { id: 'sl1', name: 'Weekly Groceries', isDefault: true } },
+        ],
       },
     };
     render(<CreateShoppingListScreen />);
@@ -133,7 +158,9 @@ describe('CreateShoppingListScreen', () => {
   it('shows continue button when list exists', () => {
     mockListsData = {
       shoppingLists: {
-        edges: [{ node: { id: 'sl1', name: 'Weekly Groceries', isDefault: true } }],
+        edges: [
+          { node: { id: 'sl1', name: 'Weekly Groceries', isDefault: true } },
+        ],
       },
     };
     render(<CreateShoppingListScreen />);

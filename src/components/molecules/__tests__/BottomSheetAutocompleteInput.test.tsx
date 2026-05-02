@@ -51,6 +51,11 @@ jest.mock('@gorhom/bottom-sheet', () => {
       dismiss: jest.fn(),
       dismissAll: jest.fn(),
     })),
+    useBottomSheetScrollableCreator: jest.fn(() => {
+      const ScrollableMock = (props: any) =>
+        R.createElement(RN.ScrollView, props);
+      return ScrollableMock;
+    }),
   };
 });
 
@@ -169,23 +174,22 @@ describe('BottomSheetAutocompleteInput', () => {
 
   it('renders with testID', () => {
     render(
-      <BottomSheetAutocompleteInput {...defaultProps} testID="ingredient-input" />,
+      <BottomSheetAutocompleteInput
+        {...defaultProps}
+        testID="ingredient-input"
+      />,
     );
     expect(screen.getByTestId('ingredient-input')).toBeTruthy();
   });
 
   it('renders with required prop', () => {
-    render(
-      <BottomSheetAutocompleteInput {...defaultProps} required={true} />,
-    );
+    render(<BottomSheetAutocompleteInput {...defaultProps} required={true} />);
     // FormFieldWrapper receives required, just verify it renders
     expect(screen.getByTestId('form-field-wrapper')).toBeTruthy();
   });
 
   it('renders the bottom sheet modal title', () => {
-    render(
-      <BottomSheetAutocompleteInput {...defaultProps} data={testItems} />,
-    );
+    render(<BottomSheetAutocompleteInput {...defaultProps} data={testItems} />);
     // The title is inside BottomSheetModal which renders via @gorhom mock as View
     expect(screen.getByText('Search Ingredients')).toBeTruthy();
   });
@@ -208,7 +212,11 @@ describe('BottomSheetAutocompleteInput', () => {
 
   it('renders loading state', () => {
     render(
-      <BottomSheetAutocompleteInput {...defaultProps} data={[]} loading={true} />,
+      <BottomSheetAutocompleteInput
+        {...defaultProps}
+        data={[]}
+        loading={true}
+      />,
     );
     expect(screen.getByText('Loading...')).toBeTruthy();
   });
@@ -216,7 +224,11 @@ describe('BottomSheetAutocompleteInput', () => {
   it('renders custom loading component', () => {
     const CustomLoading = () => (
       <React.Fragment>
-        {React.createElement('Text', { testID: 'custom-loading' }, 'Custom loading...')}
+        {React.createElement(
+          'Text',
+          { testID: 'custom-loading' },
+          'Custom loading...',
+        )}
       </React.Fragment>
     );
     render(
@@ -233,7 +245,11 @@ describe('BottomSheetAutocompleteInput', () => {
   it('renders custom empty component', () => {
     const CustomEmpty = () => (
       <React.Fragment>
-        {React.createElement('Text', { testID: 'custom-empty' }, 'Custom empty')}
+        {React.createElement(
+          'Text',
+          { testID: 'custom-empty' },
+          'Custom empty',
+        )}
       </React.Fragment>
     );
     render(
@@ -252,7 +268,9 @@ describe('BottomSheetAutocompleteInput', () => {
 
     render(<BottomSheetAutocompleteInput {...defaultProps} data={[]} />);
     expect(screen.getByText('Search unavailable offline')).toBeTruthy();
-    expect(screen.getByText('You can still type a custom value and press done')).toBeTruthy();
+    expect(
+      screen.getByText('You can still type a custom value and press done'),
+    ).toBeTruthy();
   });
 
   it('syncs searchTerm with external value when modal is closed', () => {
@@ -270,30 +288,21 @@ describe('BottomSheetAutocompleteInput', () => {
 
   it('renders with custom snapPoint', () => {
     const { toJSON } = render(
-      <BottomSheetAutocompleteInput
-        {...defaultProps}
-        snapPoint="50%"
-      />,
+      <BottomSheetAutocompleteInput {...defaultProps} snapPoint="50%" />,
     );
     expect(toJSON()).toBeTruthy();
   });
 
   it('renders with custom minSearchLength', () => {
     const { toJSON } = render(
-      <BottomSheetAutocompleteInput
-        {...defaultProps}
-        minSearchLength={3}
-      />,
+      <BottomSheetAutocompleteInput {...defaultProps} minSearchLength={3} />,
     );
     expect(toJSON()).toBeTruthy();
   });
 
   it('renders with autoCapitalize', () => {
     render(
-      <BottomSheetAutocompleteInput
-        {...defaultProps}
-        autoCapitalize="none"
-      />,
+      <BottomSheetAutocompleteInput {...defaultProps} autoCapitalize="none" />,
     );
     expect(screen.getByPlaceholderText('Type ingredient name...')).toBeTruthy();
   });

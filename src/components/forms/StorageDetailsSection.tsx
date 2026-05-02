@@ -1,15 +1,18 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {Control, FieldErrors} from 'react-hook-form';
-import {StyleSheet} from 'react-native-unistyles';
+import { View, Text } from 'react-native';
+import { Control, FieldErrors } from 'react-hook-form';
+import { StyleSheet } from 'react-native-unistyles';
 import {
   DynamicFormFields,
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
-import {FormTextArea} from '#components/molecules/FormTextArea';
+import { FormTextArea } from '#components/molecules/FormTextArea';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { DatePickerField } from '#components/molecules/DatePickerField';
-import {StorageState, StorageLocation} from '#generated';
+import {
+  StorageState,
+  StorageLocation,
+} from '../../graphql/generated/schemaTypes';
 
 const STORAGE_STATES = Object.values(StorageState);
 
@@ -22,7 +25,10 @@ interface StorageDetailsSectionProps {
   onStorageStateChange: (state: StorageState) => void;
   onDateChange: (date: Date | null) => void;
   storageLocations?: StorageLocation[];
-  onStorageLocationSelected?: (locationId: string | null, location: StorageLocation | null) => void;
+  onStorageLocationSelected?: (
+    locationId: string | null,
+    location: StorageLocation | null,
+  ) => void;
   onAddNewLocation?: (name: string) => void;
 }
 
@@ -56,7 +62,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
       label: mode === 'edit' ? 'Storage Notes' : 'Notes',
       placeholder: 'Any additional notes...',
       component: FormTextArea,
-      props: {numberOfLines: 3},
+      props: { numberOfLines: 3 },
     },
   ];
 

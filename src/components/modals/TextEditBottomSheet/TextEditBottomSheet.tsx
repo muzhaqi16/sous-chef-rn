@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -10,6 +10,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type AnyObjectSchema } from 'yup';
+import { Button } from '#components/base/Button';
 
 interface TextEditBottomSheetProps {
   visible: boolean;
@@ -92,39 +93,27 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
       <BottomSheetView style={[styles.content, contentContainerStyle]}>
         {/* Header with Cancel/Save at TOP */}
         <View style={styles.header}>
-          <Pressable
+          <Button
+            variant="ghost"
+            size="small"
             onPress={handleCancel}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.pressed,
-            ]}
-            accessibilityRole="button"
             accessibilityLabel="Cancel"
           >
-            <Text
-              style={[styles.cancelText, { color: theme.colors.textSecondary }]}
-            >
-              Cancel
-            </Text>
-          </Pressable>
+            Cancel
+          </Button>
 
           <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
             {title}
           </Text>
 
-          <Pressable
+          <Button
+            variant="ghost"
+            size="small"
             onPress={form.handleSubmit(handleSave)}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.pressed,
-            ]}
-            accessibilityRole="button"
             accessibilityLabel="Save"
           >
-            <Text style={[styles.saveText, { color: theme.colors.primary }]}>
-              Save
-            </Text>
-          </Pressable>
+            Save
+          </Button>
         </View>
 
         {/* Divider */}
@@ -194,24 +183,11 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
   },
-  headerButton: {
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.xs,
-    minWidth: 60,
-  },
   title: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
     flex: 1,
-  },
-  cancelText: {
-    fontSize: theme.typography.fontSize.md,
-  },
-  saveText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'right',
   },
   divider: {
     height: 1,
@@ -239,9 +215,6 @@ const styles = StyleSheet.create(theme => ({
   errorText: {
     fontSize: theme.typography.fontSize.sm,
     marginTop: theme.spacing.xs,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));
 

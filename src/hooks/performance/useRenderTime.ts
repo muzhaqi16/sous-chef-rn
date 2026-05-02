@@ -40,15 +40,9 @@ export function _simulateBackground(timestamp: number) {
 /**
  * Hook to track component render time and count
  *
- * Uses `Date.now()` during render to capture a start timestamp (the React
- * Compiler recognises `Date.now()` as impure so it won't be memoised),
- * then computes the render-to-commit duration in `useLayoutEffect`.
- *
- * Includes batched-render detection: if the render function ran before
- * the previous commit's layout effects finished (common during app startup
- * when the entire tree renders simultaneously), the hook uses the
- * commit-to-commit gap as a proxy duration instead of the inflated
- * render-to-commit measurement.
+ * Measures commit-to-commit duration via `useLayoutEffect`. Each layout effect
+ * captures `Date.now()` and compares to the previous commit's timestamp.
+ * The first render establishes a baseline; subsequent renders report the gap.
  *
  * Gated behind __DEV__ so it's completely inert in production builds.
  *
@@ -84,20 +78,8 @@ export function useRenderTime(
   const slowThreshold =
     options?.slowThreshold ?? DEFAULT_PERFORMANCE_CONFIG.slowRenderThreshold;
 
-  // Capture render start time during render phase.
-  // Date.now() is intentionally impure — the React Compiler won't memoise it,
-  // ensuring a fresh timestamp on every render. The imported performance.now()
-  // was incorrectly memoised by the compiler (treated as pure), causing stale
-  // renderStart values and inflated render-to-commit measurements.
-  // eslint-disable-next-line react-hooks/purity
-  const renderStart = __DEV__ ? Date.now() : 0;
-
-  // Compute render-to-commit duration synchronously after commit.
-  //
-  // Batched-render detection: if renderStart < prevCommitTime, this render's
-  // function ran before the previous cycle's effects finished — the duration
-  // spans external work (other components, JS thread congestion).
-  // Use the commit-to-commit gap as a more accurate proxy in that case.
+  // Measure commit-to-commit duration synchronously after commit.
+  // All timing captured inside useLayoutEffect — no impure calls during render.
   useLayoutEffect(() => {
     if (!__DEV__) return;
 
@@ -105,24 +87,28 @@ export function useRenderTime(
     const prevCommitTime = lastCommitTimeRef.current;
     lastCommitTimeRef.current = commitTime;
 
-    const duration = commitTime - renderStart;
-    const wasBatched = prevCommitTime > 0 && renderStart < prevCommitTime;
-    const finalDuration = wasBatched ? commitTime - prevCommitTime : duration;
+    // First commit — establish baseline, no duration to measure yet
+    if (prevCommitTime === 0) {
+      renderDurationRef.current = -1;
+      return;
+    }
 
-    // Discard if app went to background during this render cycle or duration
+    const duration = commitTime - prevCommitTime;
+
+    // Discard if app went to background between commits or duration
     // exceeds the safety cap (likely includes background/idle time).
-    const wasBackgrounded = lastBackgroundedAt >= renderStart;
-    if (wasBackgrounded || finalDuration > MAX_VALID_RENDER_MS) {
+    const wasBackgrounded = lastBackgroundedAt >= prevCommitTime;
+    if (wasBackgrounded || duration > MAX_VALID_RENDER_MS) {
       renderDurationRef.current = -1;
       console.debug(
         `[Performance] ${componentName} render discarded: ${
           wasBackgrounded
             ? 'app backgrounded'
-            : `exceeded ${MAX_VALID_RENDER_MS}ms cap (${finalDuration}ms)`
+            : `exceeded ${MAX_VALID_RENDER_MS}ms cap (${duration}ms)`
         }`,
       );
     } else {
-      renderDurationRef.current = finalDuration;
+      renderDurationRef.current = duration;
       renderCount.current += 1;
     }
   });
@@ -132,7 +118,7 @@ export function useRenderTime(
   useEffect(() => {
     if (!__DEV__) return;
 
-    // Skip discarded renders (backgrounded or exceeded max duration cap)
+    // Skip discarded renders (first render, backgrounded, or exceeded max duration cap)
     if (renderDurationRef.current < 0) return;
 
     // Skip if disabled
@@ -143,7 +129,7 @@ export function useRenderTime(
     // Apply sampling decision inside effect to avoid impure Math.random() during render
     const shouldTrack = Math.random() < sampleRate;
 
-    // Skip if not tracking this render (except first render)
+    // Skip if not tracking this render (except first measured render)
     if (!shouldTrack && renderCount.current > 1) {
       return;
     }

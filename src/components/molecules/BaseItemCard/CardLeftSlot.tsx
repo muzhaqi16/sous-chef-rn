@@ -9,7 +9,10 @@ import type { CardLeftSlotProps } from './types';
 /**
  * Lightweight image slot — no useUnistyles, all styles from stylesheet
  */
-const ImageSlot: React.FC<{ imageUrl: string; dimmed: boolean }> = ({ imageUrl, dimmed }) => (
+const ImageSlot: React.FC<{ imageUrl: string; dimmed: boolean }> = ({
+  imageUrl,
+  dimmed,
+}) => (
   <View
     style={[
       commonStyles.listItemImageContainerCompact,
@@ -98,10 +101,12 @@ const ThemedSlot: React.FC<CardLeftSlotProps> = ({
  * Left slot component for BaseItemCard
  * Renders emoji, image, icon, or custom content
  */
-export const CardLeftSlot: React.FC<CardLeftSlotProps> = (props) => {
+export const CardLeftSlot: React.FC<CardLeftSlotProps> = props => {
   // Image path is lightweight — no useUnistyles needed
   if (props.type === 'image' && props.imageUrl) {
-    return <ImageSlot imageUrl={props.imageUrl} dimmed={props.dimmed ?? false} />;
+    return (
+      <ImageSlot imageUrl={props.imageUrl} dimmed={props.dimmed ?? false} />
+    );
   }
 
   // All other types need theme access

@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   useSharedValue,
@@ -97,8 +98,8 @@ export const SuggestionListItem = ({
   }, [isExiting, translateX, opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-    opacity: opacity.value,
+    transform: [{ translateX: translateX.get() }],
+    opacity: opacity.get(),
   }));
 
   const disabled = quickAddDisabled || isExiting;

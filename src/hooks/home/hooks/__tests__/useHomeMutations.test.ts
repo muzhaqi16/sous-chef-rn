@@ -5,26 +5,19 @@ import { useHomeMutations } from '../useHomeMutations';
 const mockCreateHomeMutation = jest.fn();
 const mockUpdateHomeMutation = jest.fn();
 const mockDeleteHomeMutation = jest.fn();
-const mockApolloClient = {
-  cache: {
-    readQuery: jest.fn(() => null),
-  },
-};
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreateHomeMutation: jest.fn(() => [
-    mockCreateHomeMutation,
-    { loading: false, client: mockApolloClient },
-  ]),
-  useUpdateHomeMutation: jest.fn(() => [
-    mockUpdateHomeMutation,
-    { loading: false },
-  ]),
-  useDeleteHomeMutation: jest.fn(() => [
-    mockDeleteHomeMutation,
-    { loading: false, client: mockApolloClient },
-  ]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateHome')
+      return [mockCreateHomeMutation, { loading: false }];
+    if (opName === 'UpdateHome')
+      return [mockUpdateHomeMutation, { loading: false }];
+    if (opName === 'DeleteHome')
+      return [mockDeleteHomeMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 const mockStoreState = {
@@ -34,11 +27,11 @@ const mockStoreState = {
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
-  selectSelectedHomeId: (state: any) => state.selectedHomeId,
-  selectHomeState: (state: any) => ({
-    selectedHomeId: state.selectedHomeId,
-    setSelectedHomeId: state.setSelectedHomeId,
-  }),
+  useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
+  useHomeState: jest.fn(() => ({
+    selectedHomeId: mockStoreState.selectedHomeId,
+    setSelectedHomeId: mockStoreState.setSelectedHomeId,
+  })),
 }));
 
 jest.mock('#/services/errorService', () => ({

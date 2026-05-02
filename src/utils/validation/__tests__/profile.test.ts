@@ -139,7 +139,7 @@ describe('profile validation', () => {
 
     it.each(['male', 'female', 'non-binary', 'other', 'prefer-not-to-say'])(
       'accepts "%s"',
-      async (gender) => {
+      async gender => {
         expect(await validate(schema, { gender })).toBeNull();
       },
     );
@@ -155,8 +155,10 @@ describe('profile validation', () => {
 
     it.each(['PUBLIC', 'FRIENDS_ONLY', 'PRIVATE'])(
       'accepts "%s"',
-      async (visibility) => {
-        expect(await validate(schema, { profileVisibility: visibility })).toBeNull();
+      async visibility => {
+        expect(
+          await validate(schema, { profileVisibility: visibility }),
+        ).toBeNull();
       },
     );
 

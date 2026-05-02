@@ -75,7 +75,11 @@ describe('usePantryItemTransformation', () => {
   });
 
   it('filters out items with missing IDs', () => {
-    const items = [makeItem(), makeItem({ id: '' }), makeItem({ id: 'item-3' })];
+    const items = [
+      makeItem(),
+      makeItem({ id: '' }),
+      makeItem({ id: 'item-3' }),
+    ];
     const { result } = renderHook(() =>
       usePantryItemTransformation({ items, theme: mockTheme }),
     );
@@ -210,22 +214,37 @@ describe('getLocation', () => {
 
 describe('getExpirationStatus', () => {
   it('returns normal for null expiresIn', () => {
-    expect(getExpirationStatus(null)).toEqual({ text: 'No expiry date', type: 'normal' });
+    expect(getExpirationStatus(null)).toEqual({
+      text: 'No expiry date',
+      type: 'normal',
+    });
   });
   it('returns expired for negative days', () => {
-    expect(getExpirationStatus(-3)).toEqual({ text: 'Expired 3 days ago', type: 'expired' });
+    expect(getExpirationStatus(-3)).toEqual({
+      text: 'Expired 3 days ago',
+      type: 'expired',
+    });
   });
   it('returns critical for today', () => {
-    expect(getExpirationStatus(0)).toEqual({ text: 'Expires today!', type: 'critical' });
+    expect(getExpirationStatus(0)).toEqual({
+      text: 'Expires today!',
+      type: 'critical',
+    });
   });
   it('returns warning for tomorrow', () => {
-    expect(getExpirationStatus(1)).toEqual({ text: 'Expires tomorrow!', type: 'warning' });
+    expect(getExpirationStatus(1)).toEqual({
+      text: 'Expires tomorrow!',
+      type: 'warning',
+    });
   });
   it('returns warning for 2-3 days', () => {
     expect(getExpirationStatus(2).type).toBe('warning');
   });
   it('returns normal for > 3 days', () => {
-    expect(getExpirationStatus(10)).toEqual({ text: '10 days left', type: 'normal' });
+    expect(getExpirationStatus(10)).toEqual({
+      text: '10 days left',
+      type: 'normal',
+    });
   });
 });
 
@@ -319,7 +338,9 @@ describe('formatRemainingNetWeight', () => {
     expect(formatRemainingNetWeight(null)).toBeNull();
   });
   it('formats remaining weight', () => {
-    expect(formatRemainingNetWeight(25, { symbol: 'oz' })).toBe('25 oz remaining');
+    expect(formatRemainingNetWeight(25, { symbol: 'oz' })).toBe(
+      '25 oz remaining',
+    );
   });
 });
 

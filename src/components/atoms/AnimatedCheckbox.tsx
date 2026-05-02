@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import Animated, {
@@ -11,6 +10,7 @@ import { useRecyclingState } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import { standardEasing, TIMING } from '#/constants/animations';
+import { Pressable } from 'react-native-gesture-handler';
 
 type AnimatedCheckboxProps = {
   checked: boolean;
@@ -59,16 +59,16 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   // Combined color + scale animation
   const animatedStyle = useAnimatedStyle(() => {
     const baseScale = visuallyChecked ? 1.05 : 1;
-    const pressScale = isPressed.value ? 0.9 : 1;
+    const pressScale = isPressed.get() ? 0.9 : 1;
     return {
       backgroundColor: withTiming(
-        visuallyChecked ? animatedTheme.value.colors.primary : 'transparent',
+        visuallyChecked ? animatedTheme.get().colors.primary : 'transparent',
         { duration: TIMING.INSTANT, easing: standardEasing },
       ),
       borderColor: withTiming(
         visuallyChecked
-          ? animatedTheme.value.colors.primary
-          : animatedTheme.value.colors.border,
+          ? animatedTheme.get().colors.primary
+          : animatedTheme.get().colors.border,
         { duration: TIMING.INSTANT, easing: standardEasing },
       ),
       transform: [

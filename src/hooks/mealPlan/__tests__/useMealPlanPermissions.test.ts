@@ -10,9 +10,46 @@ jest.mock('#hooks/auth/useAuth', () => ({
 }));
 
 jest.mock('#utils/permissions/mealPlanPermissions', () => ({
-  getMealPlanPermissions: jest.fn((mealPlan: any, userId: string | undefined) => {
-    // Simplified permission logic for testing
-    if (!mealPlan.homeId) {
+  getMealPlanPermissions: jest.fn(
+    (mealPlan: any, userId: string | undefined) => {
+      // Simplified permission logic for testing
+      if (!mealPlan.homeId) {
+        return {
+          canEdit: true,
+          canDelete: true,
+          canDuplicate: true,
+          canGenerateShoppingList: true,
+          canSaveAsTemplate: true,
+        };
+      }
+      if (mealPlan.createdBy?.id === userId) {
+        return {
+          canEdit: true,
+          canDelete: true,
+          canDuplicate: true,
+          canGenerateShoppingList: true,
+          canSaveAsTemplate: true,
+        };
+      }
+      const role = mealPlan.home?.myMembership?.role;
+      if (role === 'GUEST') {
+        return {
+          canEdit: false,
+          canDelete: false,
+          canDuplicate: false,
+          canGenerateShoppingList: true,
+          canSaveAsTemplate: false,
+        };
+      }
+      if (!role) {
+        return {
+          canEdit: false,
+          canDelete: false,
+          canDuplicate: false,
+          canGenerateShoppingList: false,
+          canSaveAsTemplate: false,
+        };
+      }
       return {
         canEdit: true,
         canDelete: true,
@@ -20,43 +57,8 @@ jest.mock('#utils/permissions/mealPlanPermissions', () => ({
         canGenerateShoppingList: true,
         canSaveAsTemplate: true,
       };
-    }
-    if (mealPlan.createdBy?.id === userId) {
-      return {
-        canEdit: true,
-        canDelete: true,
-        canDuplicate: true,
-        canGenerateShoppingList: true,
-        canSaveAsTemplate: true,
-      };
-    }
-    const role = mealPlan.home?.myMembership?.role;
-    if (role === 'GUEST') {
-      return {
-        canEdit: false,
-        canDelete: false,
-        canDuplicate: false,
-        canGenerateShoppingList: true,
-        canSaveAsTemplate: false,
-      };
-    }
-    if (!role) {
-      return {
-        canEdit: false,
-        canDelete: false,
-        canDuplicate: false,
-        canGenerateShoppingList: false,
-        canSaveAsTemplate: false,
-      };
-    }
-    return {
-      canEdit: true,
-      canDelete: true,
-      canDuplicate: true,
-      canGenerateShoppingList: true,
-      canSaveAsTemplate: true,
-    };
-  }),
+    },
+  ),
 }));
 
 // Break circular dependency

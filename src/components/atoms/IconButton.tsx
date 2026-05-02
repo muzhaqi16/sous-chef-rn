@@ -1,8 +1,9 @@
 import React from 'react';
-import {Pressable, StyleProp, ViewStyle} from 'react-native';
-import {StyleSheet, withUnistyles} from 'react-native-unistyles';
-import {IconLibrary, Icon} from '#/utils/iconUtils';
-import {HapticService} from '#services/haptic/HapticService';
+import { StyleProp, ViewStyle } from 'react-native';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { IconLibrary, Icon } from '#/utils/iconUtils';
+import { HapticService } from '#services/haptic/HapticService';
+import { Pressable } from 'react-native-gesture-handler';
 
 const UniIcon = withUnistyles(Icon);
 
@@ -43,7 +44,8 @@ export const IconButton: React.FC<IconButtonProps> = ({
   style,
   library,
   disabled = false,
-  testID }) => {
+  testID,
+}) => {
   const handlePress = () => {
     HapticService.selection();
     onPress();
@@ -51,7 +53,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
 
   return (
     <Pressable
-      style={({pressed}) => [
+      style={({ pressed }) => [
         styles.button,
         pressed && !disabled && styles.pressed,
         style,
@@ -62,8 +64,9 @@ export const IconButton: React.FC<IconButtonProps> = ({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{disabled}}
-      testID={testID}>
+      accessibilityState={{ disabled }}
+      testID={testID}
+    >
       <UniIcon
         library={library}
         name={name}
@@ -71,7 +74,8 @@ export const IconButton: React.FC<IconButtonProps> = ({
           size: theme.sizes.icon[size],
           color: disabled
             ? theme.colors.iconDisabled
-            : color ?? theme.colors.iconPrimary })}
+            : color ?? theme.colors.iconPrimary,
+        })}
       />
     </Pressable>
   );
@@ -82,8 +86,11 @@ const styles = StyleSheet.create(theme => ({
     minWidth: theme.sizes.touchTarget.min,
     minHeight: theme.sizes.touchTarget.min,
     justifyContent: 'center',
-    alignItems: 'center' },
+    alignItems: 'center',
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));
 
 export default IconButton;

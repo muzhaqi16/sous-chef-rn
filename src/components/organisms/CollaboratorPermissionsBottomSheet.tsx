@@ -1,63 +1,63 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  ActivityIndicator,
-  Dimensions,
-} from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
+import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
-import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
-import { Button } from '../base/Button';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Icon } from '#utils/iconUtils';
-import {
-  CollaboratorRole,
-  useUpdateCollaboratorRoleMutation,
-} from '#generated';
+import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { useMutation } from '@apollo/client/react';
+import { CollaboratorRole } from '../../graphql/generated/schemaTypes';
+import { type ShoppingListCollaboratorFragment } from '#operations/shoppingList/shoppingListFragments.generated';
+import { UpdateCollaboratorRoleDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { ROLE_PERMISSIONS } from '#/constants/collaboratorRoles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
 
 interface CollaboratorPermissionsBottomSheetProps {
   shoppingListId: string;
-  collaborator: {
-    id: string;
-    collaboratorId?: string;
-    email: string;
-    role: CollaboratorRole;
-    status: string;
-  } | null;
   onSuccess?: () => void;
 }
 
 export interface CollaboratorPermissionsBottomSheetRef {
-  open: (collaborator: any) => void;
+  open: (collaborator: ShoppingListCollaboratorFragment) => void;
   close: () => void;
 }
 
 const CollaboratorPermissionsBottomSheet = forwardRef<
   CollaboratorPermissionsBottomSheetRef,
-  Omit<CollaboratorPermissionsBottomSheetProps, 'collaborator'>
+  CollaboratorPermissionsBottomSheetProps
 >(({ shoppingListId, onSuccess }, ref) => {
-  const { theme } = useUnistyles();
-  const bottomSheetRef = React.useRef<BottomSheet>(null);
-  const [collaborator, setCollaborator] = useState<any>(null);
+  const [collaborator, setCollaborator] =
+    useState<ShoppingListCollaboratorFragment | null>(null);
   const [selectedRole, setSelectedRole] = useState<CollaboratorRole | null>(
     null,
   );
+  const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [updateRole] = useUpdateCollaboratorRoleMutation();
+  const {
+    ref: bottomSheetRef,
+    modalProps,
+    contentContainerStyle,
+    theme,
+  } = useStandardBottomSheet({
+    visible: isVisible,
+    onDismiss: () => setIsVisible(false),
+    snapPoints: ['75%', '90%'],
+  });
+
+  const [updateRole] = useMutation(UpdateCollaboratorRoleDocument);
 
   useImperativeHandle(ref, () => ({
-    open: (collab: any) => {
+    open: (collab: ShoppingListCollaboratorFragment) => {
       setCollaborator(collab);
       setSelectedRole(collab.role);
-      bottomSheetRef.current?.expand();
+      setIsVisible(true);
     },
     close: () => {
-      bottomSheetRef.current?.close();
+      setIsVisible(false);
     },
   }));
 
@@ -69,9 +69,13 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
     if (selectedRole === collaborator.role) {
       // No change, just close
-      bottomSheetRef.current?.close();
+      setIsVisible(false);
       return;
     }
+
+    // Capture narrowed values so the closure below doesn't lose nullability narrowing.
+    const collaboratorId = collaborator.collaboratorId;
+    const role = selectedRole;
 
     executeWithLoadingState(
       async () => {
@@ -79,13 +83,13 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
           variables: {
             input: {
               shoppingListId,
-              collaboratorId: collaborator.collaboratorId,
-              role: selectedRole,
+              collaboratorId,
+              role,
             },
           },
         });
 
-        bottomSheetRef.current?.close();
+        setIsVisible(false);
         onSuccess?.();
       },
       setIsSubmitting,
@@ -96,11 +100,6 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
         );
       },
     );
-  };
-
-  const handleClose = () => {
-    // Don't clear state here - open() always sets fresh data
-    // Clearing here causes race conditions when user quickly reopens the sheet
   };
 
   // Available roles (excluding OWNER - that's only for list owners)
@@ -115,25 +114,28 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   if (!collaborator) return null;
 
   return (
-    <BottomSheet
-      ref={bottomSheetRef}
-      snapPoints={['75%', '90%']}
-      enableDynamicSizing={false}
-      maxDynamicContentSize={Dimensions.get('window').height * 0.85}
-      onClose={handleClose}
-      enablePanDownToClose
-      animateOnMount={true}
-      backdropComponent={DismissBackdrop}
-      backgroundStyle={{ backgroundColor: theme.colors.surface }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-    >
+    <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
+      <BottomSheetHeader
+        title="Edit Permissions"
+        onCancel={() => setIsVisible(false)}
+        onConfirm={handleSubmit}
+        confirmLabel="Update"
+        confirmDisabled={isSubmitting || !selectedRole}
+      />
       <BottomSheetScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Edit Permissions</Text>
-        <Text style={styles.subtitle}>{collaborator.email}</Text>
+        <View style={styles.headerBlock}>
+          <Text style={styles.subtitle}>
+            {getCollaboratorDisplayName(collaborator)}
+          </Text>
+          {!!collaborator.email &&
+            collaborator.email !== getCollaboratorDisplayName(collaborator) && (
+              <Text style={styles.emailCaption}>{collaborator.email}</Text>
+            )}
+        </View>
 
         <View style={styles.rolesContainer}>
           {availableRoles.map(role => {
@@ -216,30 +218,8 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
             );
           })}
         </View>
-
-        <View style={styles.actions}>
-          <Button
-            onPress={handleSubmit}
-            disabled={isSubmitting || !selectedRole}
-            style={styles.submitButton}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color="white" size="small" />
-            ) : (
-              'Update Role'
-            )}
-          </Button>
-          <Button
-            onPress={() => bottomSheetRef.current?.close()}
-            variant="secondary"
-            disabled={isSubmitting}
-            style={styles.cancelButton}
-          >
-            Cancel
-          </Button>
-        </View>
       </BottomSheetScrollView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 });
 
@@ -250,16 +230,18 @@ const styles = StyleSheet.create(theme => ({
   scrollContent: {
     padding: theme.spacing.lg,
   },
-  title: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
+  headerBlock: {
+    marginBottom: theme.spacing.lg,
   },
   subtitle: {
     fontSize: theme.fonts.size.md,
+    color: theme.colors.textPrimary,
+    fontWeight: theme.fonts.weight.semibold,
+  },
+  emailCaption: {
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.lg,
+    marginTop: 2,
   },
   rolesContainer: {
     gap: theme.spacing.md,
@@ -337,17 +319,6 @@ const styles = StyleSheet.create(theme => ({
   permissionDenied: {
     color: theme.colors.textSecondary,
     textDecorationLine: 'line-through',
-  },
-  actions: {
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-  },
-  submitButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
   },
   pressed: {
     opacity: theme.opacity.pressed,

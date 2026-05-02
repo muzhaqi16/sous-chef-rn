@@ -1,8 +1,9 @@
 import React from 'react';
-import {View, Text, Pressable, Image} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#utils/iconUtils';
-import {ImagePicker, ImageFile} from './ImagePicker';
+import { View, Text, Image } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
+import { ImagePicker, ImageFile } from './ImagePicker';
 
 // ImageFile type should be imported from ImagePicker.tsx directly
 
@@ -23,7 +24,7 @@ export const ProductImagePicker: React.FC<ProductImagePickerProps> = ({
   disabled = false,
   label = 'Product Image',
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
 
   return (
     <View style={styles.container}>
@@ -32,13 +33,17 @@ export const ProductImagePicker: React.FC<ProductImagePickerProps> = ({
         {selectedImage ? (
           <View style={styles.imagePreview}>
             <Pressable
-              style={({pressed}) => [styles.removeButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.removeButton,
+                pressed && styles.pressed,
+              ]}
               onPress={onImageRemoved}
-              disabled={disabled}>
+              disabled={disabled}
+            >
               <Icon name="close" size={16} color={theme.colors.white} />
             </Pressable>
             <Image
-              source={{uri: selectedImage.uri}}
+              source={{ uri: selectedImage.uri }}
               style={styles.image}
               resizeMode="cover"
             />
@@ -48,7 +53,8 @@ export const ProductImagePicker: React.FC<ProductImagePickerProps> = ({
             onImageSelected={onImageSelected}
             onError={onError}
             disabled={disabled}
-            isProfile={false}>
+            isProfile={false}
+          >
             <View style={styles.placeholderContainer}>
               <Icon
                 name="camera-outline"

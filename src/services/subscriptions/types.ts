@@ -6,7 +6,18 @@
  * all domains (shopping lists, pantry, home, notifications).
  */
 
-import { type MutationType } from '#generated';
+import type { ApolloClient } from '@apollo/client';
+import { type MutationType } from '../../graphql/generated/schemaTypes';
+
+/**
+ * Apollo client passed to subscription customOnData handlers.
+ * Typed so cache reads/writes get full IntelliSense and compile-time
+ * checking instead of being lost in `any`.
+ *
+ * Apollo Client 4 dropped the cache-shape generic; the cache type is
+ * inferred from the client instance.
+ */
+export type SubscriptionApolloClient = ApolloClient;
 
 /**
  * Cache update strategies for handling subscription data
@@ -104,10 +115,14 @@ export interface SubscriptionConfig<TData = any> {
   cacheFieldName?: string;
 
   /**
-   * Custom onData handler for additional logic
-   * Called after standard processing (deduplication, cache update, logging)
+   * Custom onData handler for additional logic.
+   * Called after standard processing (deduplication, cache update, logging).
+   *
+   * Pass a concrete `TData` (typically a generated subscription payload type
+   * like `PantryChangesSubscription['pantryChanges']`) at the call site to
+   * eliminate the `any` shape and get type checking inside the handler.
    */
-  customOnData?: (data: TData, client?: any) => void;
+  customOnData?: (data: TData, client: SubscriptionApolloClient) => void;
 
   /**
    * Custom onError handler

@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
-import { View, useWindowDimensions, ActivityIndicator, Text } from 'react-native';
+import {
+  View,
+  useWindowDimensions,
+  ActivityIndicator,
+  Text,
+} from 'react-native';
 import {
   TabView as RNTabView,
   TabBar,
   SceneRendererProps,
   NavigationState,
-  Route } from 'react-native-tab-view';
+  Route,
+} from 'react-native-tab-view';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export interface TabRoute extends Route {
@@ -50,54 +56,60 @@ export const TabView: React.FC<TabViewProps> = ({
   lazyPreloadDistance = 0,
   onIndexChange,
   renderLazyPlaceholder,
-  swipeEnabled = true }) => {
+  swipeEnabled = true,
+}) => {
   const { theme } = useUnistyles();
   const layout = useWindowDimensions();
   const [index, setIndex] = useState(initialTabIndex);
 
   const handleIndexChange = (newIndex: number) => {
-      setIndex(newIndex);
-      onIndexChange?.(newIndex);
-    };
+    setIndex(newIndex);
+    onIndexChange?.(newIndex);
+  };
 
   const renderTabBar = (
-      props: SceneRendererProps & {
-        navigationState: NavigationState<TabRoute>;
-      },
-    ) => {
-      // Format labels with badge counts
-      const routesWithLabels = props.navigationState.routes.map(route => ({
-        ...route,
-        title:
-          route.badge !== undefined && route.badge > 0
-            ? `${route.title} (${route.badge})`
-            : route.title }));
+    props: SceneRendererProps & {
+      navigationState: NavigationState<TabRoute>;
+    },
+  ) => {
+    // Format labels with badge counts
+    const routesWithLabels = props.navigationState.routes.map(route => ({
+      ...route,
+      title:
+        route.badge !== undefined && route.badge > 0
+          ? `${route.title} (${route.badge})`
+          : route.title,
+    }));
 
-      return (
-        <View style={styles.tabBarContainer}>
-          <TabBar
-            {...props}
-            navigationState={{
-              ...props.navigationState,
-              routes: routesWithLabels }}
-            indicatorStyle={{
-              backgroundColor: theme.colors.primary,
-              height: 3 }}
-            scrollEnabled={false}
-            tabStyle={{
-              flex: 1 }}
-            style={{
-              backgroundColor: theme.colors.surface,
-              elevation: 0,
-              boxShadow: [],
-              borderBottomWidth: 1,
-              borderBottomColor: theme.colors.border }}
-            activeColor={theme.colors.primary}
-            inactiveColor={theme.colors.textSecondary}
-          />
-        </View>
-      );
-    };
+    return (
+      <View style={styles.tabBarContainer}>
+        <TabBar
+          {...props}
+          navigationState={{
+            ...props.navigationState,
+            routes: routesWithLabels,
+          }}
+          indicatorStyle={{
+            backgroundColor: theme.colors.primary,
+            height: 3,
+          }}
+          scrollEnabled={false}
+          tabStyle={{
+            flex: 1,
+          }}
+          style={{
+            backgroundColor: theme.colors.surface,
+            elevation: 0,
+            boxShadow: [],
+            borderBottomWidth: 1,
+            borderBottomColor: theme.colors.border,
+          }}
+          activeColor={theme.colors.primary}
+          inactiveColor={theme.colors.textSecondary}
+        />
+      </View>
+    );
+  };
 
   return (
     <RNTabView
@@ -126,9 +138,13 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   placeholderText: {
-    fontSize: theme.typography.fontSize.md },
+    fontSize: theme.typography.fontSize.md,
+  },
   tabBarContainer: {
     paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.background } }));
+    backgroundColor: theme.colors.background,
+  },
+}));

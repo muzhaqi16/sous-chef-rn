@@ -22,7 +22,10 @@ jest.mock('../refreshToken', () => ({
   getRefreshState: jest.fn(() => ({ isRefreshing: false })),
 }));
 
-import { CombinedGraphQLErrors, CombinedProtocolErrors } from '@apollo/client/errors';
+import {
+  CombinedGraphQLErrors,
+  CombinedProtocolErrors,
+} from '@apollo/client/errors';
 import { errorLink } from '../errorLink';
 import { LogoutCleanup } from '../../logoutCleanup';
 import { attemptTokenRefresh, getRefreshState } from '../refreshToken';
@@ -173,9 +176,7 @@ describe('errorLink helpers', () => {
     it('returns false for query operations', () => {
       const op = {
         query: {
-          definitions: [
-            { kind: 'OperationDefinition', operation: 'query' },
-          ],
+          definitions: [{ kind: 'OperationDefinition', operation: 'query' }],
         },
       };
       expect(isSubscription(op)).toBe(false);
@@ -184,9 +185,7 @@ describe('errorLink helpers', () => {
     it('returns false for mutation operations', () => {
       const op = {
         query: {
-          definitions: [
-            { kind: 'OperationDefinition', operation: 'mutation' },
-          ],
+          definitions: [{ kind: 'OperationDefinition', operation: 'mutation' }],
         },
       };
       expect(isSubscription(op)).toBe(false);
@@ -239,7 +238,9 @@ describe('errorLink middleware', () => {
     // The errorLink checks operation.getContext().skipErrorLink
     // This verifies the mock setup is correct
     expect(LogoutCleanup.isInLogoutProcess).toBeDefined();
-    expect(typeof (LogoutCleanup.isInLogoutProcess as jest.Mock)).toBe('function');
+    expect(typeof (LogoutCleanup.isInLogoutProcess as jest.Mock)).toBe(
+      'function',
+    );
   });
 
   it('getRefreshState returns current state', () => {

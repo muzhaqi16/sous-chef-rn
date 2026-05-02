@@ -2,22 +2,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   RefreshControl,
-  Pressable,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { AddItemToShoppingListDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import {
-  useGetPantryItemQuery,
-  useDeletePantryItemMutation,
-  useAddItemToShoppingListMutation,
-} from '#generated';
+  GetPantryItemDocument,
+  DeletePantryItemDocument,
+} from '#operations/pantry/pantry.generated';
 import {
-  useAppStore,
-  selectSelectedShoppingListId,
-  selectSelectedPantryId,
+  useSelectedShoppingListId,
+  useSelectedPantryId,
 } from '#store/useAppStore';
 import { removeFromPantryItemsCache } from '#hooks/home/pantry/utils';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
@@ -81,8 +81,8 @@ export const PantryItemDetail: React.FC<
   const { goBack, navigateTo, navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
-  const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
-  const selectedPantryId = useAppStore(selectSelectedPantryId);
+  const selectedShoppingListId = useSelectedShoppingListId();
+  const selectedPantryId = useSelectedPantryId();
   const { getCachedSuggestions, setCachedSuggestions } =
     useRecipeSuggestionsStore();
 
@@ -110,16 +110,15 @@ export const PantryItemDetail: React.FC<
   const [loadingRecipes, setLoadingRecipes] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data, refetch } = useGetPantryItemQuery({
+  const { data, refetch } = useQuery(GetPantryItemDocument, {
     variables: { id: itemId },
-    fetchPolicy: 'cache-and-network',
   });
 
   const handleRefresh = () => {
     executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
-  const [deleteItem] = useDeletePantryItemMutation({
+  const [deleteItem] = useMutation(DeletePantryItemDocument, {
     update: (cache, { data: mutationData }, { variables }) => {
       if (
         !mutationData?.deletePantryItem?.pantryItem ||
@@ -145,7 +144,7 @@ export const PantryItemDetail: React.FC<
       });
     },
   });
-  const [addToShoppingList] = useAddItemToShoppingListMutation({
+  const [addToShoppingList] = useMutation(AddItemToShoppingListDocument, {
     update: (cache, { data: mutationData }) => {
       const shoppingListItem =
         mutationData?.addItemToShoppingList?.shoppingListItem;

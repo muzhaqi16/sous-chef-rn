@@ -15,10 +15,6 @@ jest.mock('#hooks/navigation/useOnboardingNavigation', () => ({
   }),
 }));
 
-jest.mock('#hooks/auth/useAuthUser', () => ({
-  useAuthUser: () => ({ id: 'u1', email: 'me@test.com' }),
-}));
-
 let mockSelectedHomeId: string | null = 'h1';
 let mockSelectedShoppingListId: string | null = 'sl1';
 
@@ -31,19 +27,24 @@ jest.mock('#store/useAppStore', () => {
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
-  return { useAppStore: fn };
+  return {
+    useAppStore: fn,
+    useUser: jest.fn(() => ({ id: 'u1', email: 'me@test.com' })),
+  };
 });
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useInviteToHomeMutation: jest.fn(() => [
-    jest.fn(() => Promise.resolve()),
-    { loading: false },
-  ]),
-  useAddCollaboratorMutation: jest.fn(() => [
-    jest.fn(() => Promise.resolve()),
-    { loading: false },
-  ]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'InviteToHome') {
+      return [jest.fn(() => Promise.resolve()), { loading: false }];
+    }
+    if (opName === 'AddCollaborator') {
+      return [jest.fn(() => Promise.resolve()), { loading: false }];
+    }
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');
@@ -280,8 +281,8 @@ describe('InviteMemberScreen', () => {
 
   it('sends home invite for home-type invites', async () => {
     const mockInviteToHome = jest.fn().mockResolvedValue({});
-    const { useInviteToHomeMutation } = require('#generated');
-    useInviteToHomeMutation.mockReturnValue([
+    const { useMutation } = require('@apollo/client/react');
+    (useMutation as jest.Mock).mockReturnValueOnce([
       mockInviteToHome,
       { loading: false },
     ]);

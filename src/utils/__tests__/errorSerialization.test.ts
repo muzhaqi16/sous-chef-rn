@@ -14,7 +14,9 @@ describe('errorSerialization', () => {
     });
 
     it('handles string input', () => {
-      expect(serializeError('Something failed')).toEqual({ message: 'Something failed' });
+      expect(serializeError('Something failed')).toEqual({
+        message: 'Something failed',
+      });
     });
 
     it('serializes a basic Error', () => {
@@ -124,11 +126,15 @@ describe('errorSerialization', () => {
     });
 
     it('detects from string', () => {
-      expect(isCircularStructureError('Converting circular structure to JSON')).toBe(true);
+      expect(
+        isCircularStructureError('Converting circular structure to JSON'),
+      ).toBe(true);
     });
 
     it('detects partial match', () => {
-      expect(isCircularStructureError('circular structure detected')).toBe(true);
+      expect(isCircularStructureError('circular structure detected')).toBe(
+        true,
+      );
     });
 
     it('returns false for non-circular errors', () => {
@@ -201,7 +207,9 @@ describe('errorSerialization', () => {
     });
 
     it('handles circular structure string', () => {
-      const result = safeStringifyError('Converting circular structure to JSON');
+      const result = safeStringifyError(
+        'Converting circular structure to JSON',
+      );
       expect(result.isCircular).toBe(true);
     });
 

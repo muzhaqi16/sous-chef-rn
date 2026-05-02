@@ -46,16 +46,15 @@ export const ShoppingListTabsActionsProvider: React.FC<ProviderProps> = ({
     onItemPress: (id: string) => actionsRef.current.onItemPress(id),
     onItemEdit: (id: string) => actionsRef.current.onItemEdit?.(id),
     onItemDelete: (id: string) => actionsRef.current.onItemDelete?.(id),
-    onTogglePurchase: (id: string) =>
-      actionsRef.current.onTogglePurchase?.(id),
+    onTogglePurchase: (id: string) => actionsRef.current.onTogglePurchase?.(id),
     onMoveToPantry: (id: string) => actionsRef.current.onMoveToPantry?.(id),
-    onQuantityPress: (id: string) =>
-      actionsRef.current.onQuantityPress?.(id),
+    onQuantityPress: (id: string) => actionsRef.current.onQuantityPress?.(id),
     onSortOrderUpdate: (
       itemId: string,
       afterItemId: string | null,
       beforeItemId: string | null,
-    ) => actionsRef.current.onSortOrderUpdate?.(itemId, afterItemId, beforeItemId),
+    ) =>
+      actionsRef.current.onSortOrderUpdate?.(itemId, afterItemId, beforeItemId),
     onSwipeableWillOpen: (ref: any) =>
       actionsRef.current.onSwipeableWillOpen?.(ref),
     onSwipeableClose: () => actionsRef.current.onSwipeableClose?.(),

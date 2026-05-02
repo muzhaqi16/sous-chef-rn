@@ -22,18 +22,25 @@ jest.mock('#components/navigation/OnboardingSteps/OnboardingSteps', () => ({
     return <RNText>StepIndicator</RNText>;
   },
 }));
-jest.mock('#components/navigation/OnboardingNavigation/OnboardingNavigation', () => ({
-  OnboardingNavigation: ({ showBackButton, showContinueButton, showSkipButton }: any) => {
-    const { Text: RNText } = require('react-native');
-    return (
-      <>
-        {showBackButton ? <RNText>NavBack</RNText> : null}
-        {showContinueButton ? <RNText>NavContinue</RNText> : null}
-        {showSkipButton ? <RNText>NavSkip</RNText> : null}
-      </>
-    );
-  },
-}));
+jest.mock(
+  '#components/navigation/OnboardingNavigation/OnboardingNavigation',
+  () => ({
+    OnboardingNavigation: ({
+      showBackButton,
+      showContinueButton,
+      showSkipButton,
+    }: any) => {
+      const { Text: RNText } = require('react-native');
+      return (
+        <>
+          {showBackButton ? <RNText>NavBack</RNText> : null}
+          {showContinueButton ? <RNText>NavContinue</RNText> : null}
+          {showSkipButton ? <RNText>NavSkip</RNText> : null}
+        </>
+      );
+    },
+  }),
+);
 
 const mockOnboardingContext = jest.fn<any, []>(() => null);
 jest.mock('#/context/OnboardingContext', () => ({

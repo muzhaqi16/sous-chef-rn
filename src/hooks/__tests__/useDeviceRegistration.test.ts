@@ -2,13 +2,20 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useDeviceRegistration } from '../useDeviceRegistration';
 
 const mockRegisterDeviceMutation = jest.fn();
-const mockHandleApolloError = jest.fn(() => ({ message: 'Registration failed' }));
+const mockHandleApolloError = jest.fn(() => ({
+  message: 'Registration failed',
+}));
 const mockCollectDeviceInformation = jest.fn();
 const mockValidateDeviceInformation = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useRegisterDeviceMutation: jest.fn(() => [mockRegisterDeviceMutation]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'RegisterDevice')
+      return [mockRegisterDeviceMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -18,8 +25,10 @@ jest.mock('#/services/errorService', () => ({
 }));
 
 jest.mock('#/utils/deviceInfo', () => ({
-  collectDeviceInformation: (...args: any[]) => mockCollectDeviceInformation(...args),
-  validateDeviceInformation: (...args: any[]) => mockValidateDeviceInformation(...args),
+  collectDeviceInformation: (...args: any[]) =>
+    mockCollectDeviceInformation(...args),
+  validateDeviceInformation: (...args: any[]) =>
+    mockValidateDeviceInformation(...args),
 }));
 
 jest.mock('#/utils/environment', () => ({

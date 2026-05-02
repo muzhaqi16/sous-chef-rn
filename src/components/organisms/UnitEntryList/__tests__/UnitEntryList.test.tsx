@@ -23,27 +23,35 @@ jest.mock('#/components/molecules/FormInput', () => {
   };
 });
 
-jest.mock('#/components/molecules/AutocompleteField/UnitAutocompleteField', () => {
-  const { View, Text, TextInput } = require('react-native');
-  return {
-    UnitAutocompleteField: ({ label, value, onChangeText, placeholder }: any) => (
-      <View>
-        <Text>{label}</Text>
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          testID={`autocomplete-${label}`}
-        />
-      </View>
-    ),
-  };
-});
+jest.mock(
+  '#/components/molecules/AutocompleteField/UnitAutocompleteField',
+  () => {
+    const { View, Text, TextInput } = require('react-native');
+    return {
+      UnitAutocompleteField: ({
+        label,
+        value,
+        onChangeText,
+        placeholder,
+      }: any) => (
+        <View>
+          <Text>{label}</Text>
+          <TextInput
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={placeholder}
+            testID={`autocomplete-${label}`}
+          />
+        </View>
+      ),
+    };
+  },
+);
 
-jest.mock('#/components/atoms/AnimatedButton', () => {
+jest.mock('#/components/base/Button', () => {
   const { Pressable, Text } = require('react-native');
   return {
-    AnimatedButton: ({ children, onPress, disabled }: any) => (
+    Button: ({ children, onPress, disabled }: any) => (
       <Pressable onPress={onPress} disabled={disabled} testID="add-unit-btn">
         <Text>{children}</Text>
       </Pressable>

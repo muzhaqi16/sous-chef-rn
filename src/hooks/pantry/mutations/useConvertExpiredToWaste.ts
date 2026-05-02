@@ -7,8 +7,9 @@
  * - Sets quantity to 0
  */
 
+import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import { useConvertExpiredToWasteMutation } from '#generated';
+import { ConvertExpiredToWasteDocument } from '#operations/pantry/pantry.generated';
 import { useErrorService } from '#/services/errorService';
 
 interface UseConvertExpiredToWasteOptions {
@@ -20,9 +21,10 @@ export function useConvertExpiredToWaste({
 }: UseConvertExpiredToWasteOptions = {}) {
   const { handleApolloError } = useErrorService();
 
-  const [convertMutation, { loading }] = useConvertExpiredToWasteMutation({
-    errorPolicy: 'all',
-  });
+  const [convertMutation, { loading }] = useMutation(
+    ConvertExpiredToWasteDocument,
+    { errorPolicy: 'all' },
+  );
 
   const convertExpiredToWaste = async (
     pantryItemId: string,

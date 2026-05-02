@@ -5,11 +5,18 @@ const mockCreateMutation = jest.fn();
 const mockUpdateMutation = jest.fn();
 const mockDeleteMutation = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreateMealPlanMutation: jest.fn(() => [mockCreateMutation, { loading: false }]),
-  useUpdateMealPlanMutation: jest.fn(() => [mockUpdateMutation, { loading: false }]),
-  useDeleteMealPlanMutation: jest.fn(() => [mockDeleteMutation, { loading: false }]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateMealPlan')
+      return [mockCreateMutation, { loading: false }];
+    if (opName === 'UpdateMealPlan')
+      return [mockUpdateMutation, { loading: false }];
+    if (opName === 'DeleteMealPlan')
+      return [mockDeleteMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 // Break circular dependency
@@ -86,7 +93,9 @@ describe('useMealPlanActions', () => {
 
     let updated: any;
     await act(async () => {
-      updated = await result.current.updateMealPlan('plan-1', { name: 'Updated' } as any);
+      updated = await result.current.updateMealPlan('plan-1', {
+        name: 'Updated',
+      } as any);
     });
 
     expect(updated).toEqual({ id: 'plan-1', name: 'Updated' });

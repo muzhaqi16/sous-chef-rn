@@ -1,10 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
-import {
-  createPerformanceSlice,
-  PerformanceState,
-} from '../performanceSlice';
+import { createPerformanceSlice, PerformanceState } from '../performanceSlice';
 
 enableMapSet();
 
@@ -207,10 +204,17 @@ describe('performanceSlice', () => {
 
   describe('clearPerformanceData', () => {
     it('clears all metrics', () => {
-      const store = createPerfStore({ isEnabled: true, trackRenders: true, trackScreens: true, trackMemory: true });
+      const store = createPerfStore({
+        isEnabled: true,
+        trackRenders: true,
+        trackScreens: true,
+        trackMemory: true,
+      });
       store.getState().recordComponentRender('Button', 5);
       store.getState().recordScreenTransition('Home', 100, 200);
-      store.getState().addMemorySnapshot({ timestamp: 1, usedBytes: 1, usagePercent: 1 });
+      store
+        .getState()
+        .addMemorySnapshot({ timestamp: 1, usedBytes: 1, usagePercent: 1 });
       store.getState().clearPerformanceData();
       expect(store.getState().componentMetrics.size).toBe(0);
       expect(store.getState().screenMetrics.size).toBe(0);

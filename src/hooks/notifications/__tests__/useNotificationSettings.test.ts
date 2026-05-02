@@ -36,14 +36,34 @@ const mockPreferencesData = {
   quietHoursTimezone: 'America/New_York',
 };
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetNotificationPreferencesQuery: jest.fn(() => ({
-    data: { me: { notificationPreferences: mockPreferencesData } },
-    loading: false,
-    error: undefined,
-  })),
-  useUpdateNotificationPreferencesMutation: () => [mockUpdatePreferences, {}],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetNotificationPreferences') {
+      return {
+        data: {
+          me: {
+            notificationPreferences: {
+              __typename: 'NotificationPreferences',
+              id: 'pref-1',
+              ...mockPreferencesData,
+            },
+          },
+        },
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'UpdateNotificationPreferences')
+      return [mockUpdatePreferences, {}];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -77,8 +97,8 @@ describe('useNotificationSettings', () => {
   });
 
   it('returns defaults when no preferences data', () => {
-    const { useGetNotificationPreferencesQuery } = require('#generated');
-    useGetNotificationPreferencesQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: null,
       loading: false,
       error: undefined,
@@ -198,8 +218,8 @@ describe('useNotificationSettings', () => {
   });
 
   it('isQuietTime evaluates correctly when enabled', () => {
-    const { useGetNotificationPreferencesQuery } = require('#generated');
-    useGetNotificationPreferencesQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: {
         me: {
           notificationPreferences: {

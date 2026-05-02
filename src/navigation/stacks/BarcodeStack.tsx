@@ -1,5 +1,9 @@
 import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { StaticParamList } from '@react-navigation/native';
+import {
+  createNativeStackNavigator,
+  createNativeStackScreen,
+} from '@react-navigation/native-stack';
 import { SearchResultsScreen } from '#screens/barcode/SearchResultsScreen';
 
 // Lazy-load BarcodeScannerScreen to defer vision-camera JS loading
@@ -16,13 +20,15 @@ export const BarcodeStack = createNativeStackNavigator({
     contentStyle: { backgroundColor: theme.colors.background },
   }),
   screens: {
-    BarcodeScanner: {
+    BarcodeScanner: createNativeStackScreen({
       screen: BarcodeScannerScreen,
       linking: 'scan',
-    },
-    SearchResults: {
+    }),
+    SearchResults: createNativeStackScreen({
       screen: SearchResultsScreen,
       linking: 'scan/result',
-    },
+    }),
   },
 });
+
+export type BarcodeStackParams = StaticParamList<typeof BarcodeStack>;

@@ -3,13 +3,13 @@ import {
   View,
   Text,
   Image,
-  Pressable,
   StyleProp,
   ViewStyle,
   ImageStyle,
   TextStyle,
   ImageSourcePropType,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Badge } from './Badge';
 

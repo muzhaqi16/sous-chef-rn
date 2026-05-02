@@ -34,9 +34,7 @@ export function hasOrderChanged(
 ): boolean {
   if (originalItems.length !== newItems.length) return true;
 
-  return originalItems.some(
-    (item, index) => item.id !== newItems[index].id,
-  );
+  return originalItems.some((item, index) => item.id !== newItems[index].id);
 }
 
 /**

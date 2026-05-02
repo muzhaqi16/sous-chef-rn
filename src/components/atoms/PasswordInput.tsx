@@ -1,8 +1,9 @@
-import React, {useState} from 'react';
-import {Pressable} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {Ionicons} from '@react-native-vector-icons/ionicons';
-import {BaseInput, BaseInputProps} from './BaseInput/BaseInput';
+import React, { useState } from 'react';
+
+import { StyleSheet } from 'react-native-unistyles';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { BaseInput, BaseInputProps } from './BaseInput/BaseInput';
+import { Pressable } from 'react-native-gesture-handler';
 
 export interface PasswordInputProps
   extends Omit<BaseInputProps, 'secureTextEntry'> {
@@ -35,7 +36,12 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
       rightIcon={
         <Pressable
           onPress={() => setVisible(v => !v)}
-          style={({pressed}) => pressed && pressedStyles.pressed}>
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={({ pressed }) => [
+            pressedStyles.toggle,
+            pressed && pressedStyles.pressed,
+          ]}
+        >
           <Ionicons
             name={visible ? 'eye-outline' : 'eye-off-outline'}
             size={20}
@@ -49,6 +55,11 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
 };
 
 const pressedStyles = StyleSheet.create(theme => ({
+  toggle: {
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   pressed: {
     opacity: theme.opacity.pressed,
   },

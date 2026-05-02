@@ -1,25 +1,28 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { alertService } from '#/services/alertService';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useHomeInvitations } from '../useHomeInvitations';
 
 const mockInviteUserMutation = jest.fn();
 const mockJoinHomeByCodeMutation = jest.fn();
 const mockGetHomeByJoinCode = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useInviteToHomeMutation: jest.fn(() => [
-    mockInviteUserMutation,
-    { loading: false },
-  ]),
-  useJoinHomeByCodeMutation: jest.fn(() => [
-    mockJoinHomeByCodeMutation,
-    { loading: false },
-  ]),
-  useGetHomeByJoinCodeLazyQuery: jest.fn(() => [
-    mockGetHomeByJoinCode,
-    { loading: false, data: undefined },
-  ]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'InviteToHome')
+      return [mockInviteUserMutation, { loading: false }];
+    if (opName === 'JoinHomeByCode')
+      return [mockJoinHomeByCodeMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
+  useLazyQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetHomeByJoinCode')
+      return [mockGetHomeByJoinCode, { loading: false }];
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -94,7 +97,6 @@ describe('useHomeInvitations', () => {
         data: { inviteToHome: { homeInvite: { id: 'invite-1' } } },
       });
 
-      const { MembershipRole } = jest.requireMock('#generated');
       const { result } = renderHook(() => useHomeInvitations(createOptions()));
 
       await act(async () => {

@@ -1,0 +1,7 @@
+fragment MealPlanItemActions_item on MealPlanItem {
+  id
+  isCompleted
+  recipe {
+    id
+  }
+}

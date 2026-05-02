@@ -1,5 +1,8 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { useHybridSearch, type UseHybridSearchConfig } from '../useHybridSearch';
+import {
+  useHybridSearch,
+  type UseHybridSearchConfig,
+} from '../useHybridSearch';
 
 // --- Apollo client mock (stable reference prevents infinite effect loop) ---
 const mockQuery = jest.fn();
@@ -29,8 +32,11 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
   },
 }));
 jest.mock('#/utils/hybridSort', () => ({
-  shouldUseServerSort: (totalCount: number, pageSize: number, isOnline: boolean) =>
-    isOnline && totalCount > pageSize,
+  shouldUseServerSort: (
+    totalCount: number,
+    pageSize: number,
+    isOnline: boolean,
+  ) => isOnline && totalCount > pageSize,
 }));
 
 // --- Fake document ---
@@ -48,20 +54,21 @@ const makeItems = (count: number): TestItem[] =>
     itemName: `Item ${i + 1}`,
   }));
 
-const defaultConfig: UseHybridSearchConfig<{ results: TestItem[] }, TestItem> = {
-  items: [],
-  totalCount: 0,
-  hasMore: false,
-  loading: false,
-  pageSize: 50,
-  isOnline: true,
-  searchDocument: FAKE_DOCUMENT,
-  buildSearchVariables: (search) => ({ search }),
-  extractItems: (data) => data.results,
-  searchPredicate: (item, query) =>
-    (item.itemName ?? '').toLowerCase().includes(query.toLowerCase()),
-  debounceMs: 300,
-};
+const defaultConfig: UseHybridSearchConfig<{ results: TestItem[] }, TestItem> =
+  {
+    items: [],
+    totalCount: 0,
+    hasMore: false,
+    loading: false,
+    pageSize: 50,
+    isOnline: true,
+    searchDocument: FAKE_DOCUMENT,
+    buildSearchVariables: search => ({ search }),
+    extractItems: data => data.results,
+    searchPredicate: (item, query) =>
+      (item.itemName ?? '').toLowerCase().includes(query.toLowerCase()),
+    debounceMs: 300,
+  };
 
 /** Flush the async effect chain (queryFn → executeSearchQuery → setServerState). */
 const flushEffects = async () => {
@@ -219,7 +226,7 @@ describe('useHybridSearch', () => {
     it('does not show stale results when search is cleared during in-flight request', async () => {
       let resolveQuery: (value: any) => void;
       mockQuery.mockReturnValue(
-        new Promise((resolve) => {
+        new Promise(resolve => {
           resolveQuery = resolve;
         }),
       );
@@ -246,13 +253,17 @@ describe('useHybridSearch', () => {
 
       // Resolve the stale query
       await act(async () => {
-        resolveQuery!({ data: { results: [{ id: 'stale', itemName: 'Stale' }] } });
+        resolveQuery!({
+          data: { results: [{ id: 'stale', itemName: 'Stale' }] },
+        });
         await Promise.resolve();
       });
 
       // Should NOT show stale results — should show main items
       expect(result.current.activeItems).toBe(items);
-      expect(result.current.activeItems.find(i => i.id === 'stale')).toBeUndefined();
+      expect(
+        result.current.activeItems.find(i => i.id === 'stale'),
+      ).toBeUndefined();
     });
   });
 
@@ -283,7 +294,9 @@ describe('useHybridSearch', () => {
         (props: Partial<typeof defaultConfig>) =>
           useHybridSearch({ ...defaultConfig, ...props }),
         {
-          initialProps: { items, totalCount: 55, hasMore: false } as Partial<typeof defaultConfig>,
+          initialProps: { items, totalCount: 55, hasMore: false } as Partial<
+            typeof defaultConfig
+          >,
         },
       );
 

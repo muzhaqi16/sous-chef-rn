@@ -5,9 +5,14 @@ import { useQuantityEditModal } from '../useQuantityEditModal';
 
 const mockUpdateQuantity = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useUpdateShoppingListItemQuantityMutation: () => [mockUpdateQuantity],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'UpdateShoppingListItemQuantity')
+      return [mockUpdateQuantity, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/services/telemetry', () => ({
@@ -57,9 +62,7 @@ describe('useQuantityEditModal', () => {
   it('opens modal for an item', () => {
     const items = [createItem()];
 
-    const { result } = renderHook(() =>
-      useQuantityEditModal({ items }),
-    );
+    const { result } = renderHook(() => useQuantityEditModal({ items }));
 
     act(() => {
       result.current.openForItem('item-1');
@@ -74,9 +77,7 @@ describe('useQuantityEditModal', () => {
   it('does not open modal when item not found', () => {
     const items = [createItem()];
 
-    const { result } = renderHook(() =>
-      useQuantityEditModal({ items }),
-    );
+    const { result } = renderHook(() => useQuantityEditModal({ items }));
 
     act(() => {
       result.current.openForItem('non-existent');
@@ -89,9 +90,7 @@ describe('useQuantityEditModal', () => {
   it('transforms item to QuantityEditItem format', () => {
     const items = [createItem()];
 
-    const { result } = renderHook(() =>
-      useQuantityEditModal({ items }),
-    );
+    const { result } = renderHook(() => useQuantityEditModal({ items }));
 
     act(() => {
       result.current.openForItem('item-1');
@@ -110,9 +109,7 @@ describe('useQuantityEditModal', () => {
   it('includes itemUnits when unit exists', () => {
     const items = [createItem()];
 
-    const { result } = renderHook(() =>
-      useQuantityEditModal({ items }),
-    );
+    const { result } = renderHook(() => useQuantityEditModal({ items }));
 
     act(() => {
       result.current.openForItem('item-1');
@@ -133,9 +130,7 @@ describe('useQuantityEditModal', () => {
   it('returns empty itemUnits when item has no unit', () => {
     const items = [createItem({ unit: null })];
 
-    const { result } = renderHook(() =>
-      useQuantityEditModal({ items }),
-    );
+    const { result } = renderHook(() => useQuantityEditModal({ items }));
 
     act(() => {
       result.current.openForItem('item-1');
@@ -147,9 +142,7 @@ describe('useQuantityEditModal', () => {
   it('closes the modal', () => {
     const items = [createItem()];
 
-    const { result } = renderHook(() =>
-      useQuantityEditModal({ items }),
-    );
+    const { result } = renderHook(() => useQuantityEditModal({ items }));
 
     act(() => {
       result.current.openForItem('item-1');
@@ -176,9 +169,7 @@ describe('useQuantityEditModal', () => {
 
     const items = [createItem()];
 
-    const { result } = renderHook(() =>
-      useQuantityEditModal({ items }),
-    );
+    const { result } = renderHook(() => useQuantityEditModal({ items }));
 
     act(() => {
       result.current.openForItem('item-1');
@@ -209,9 +200,7 @@ describe('useQuantityEditModal', () => {
 
     const items = [createItem()];
 
-    const { result } = renderHook(() =>
-      useQuantityEditModal({ items }),
-    );
+    const { result } = renderHook(() => useQuantityEditModal({ items }));
 
     act(() => {
       result.current.openForItem('item-1');
@@ -228,9 +217,7 @@ describe('useQuantityEditModal', () => {
   it('does nothing when save called without selected item', async () => {
     const items = [createItem()];
 
-    const { result } = renderHook(() =>
-      useQuantityEditModal({ items }),
-    );
+    const { result } = renderHook(() => useQuantityEditModal({ items }));
 
     await act(async () => {
       await result.current.save('5', null, null);
@@ -242,9 +229,7 @@ describe('useQuantityEditModal', () => {
   it('defaults quantity to 0 when item.quantity is null', () => {
     const items = [createItem({ quantity: null })];
 
-    const { result } = renderHook(() =>
-      useQuantityEditModal({ items }),
-    );
+    const { result } = renderHook(() => useQuantityEditModal({ items }));
 
     act(() => {
       result.current.openForItem('item-1');
@@ -256,9 +241,7 @@ describe('useQuantityEditModal', () => {
   it('defaults itemName to "Item" when missing', () => {
     const items = [createItem({ itemName: '' })];
 
-    const { result } = renderHook(() =>
-      useQuantityEditModal({ items }),
-    );
+    const { result } = renderHook(() => useQuantityEditModal({ items }));
 
     act(() => {
       result.current.openForItem('item-1');
@@ -270,9 +253,7 @@ describe('useQuantityEditModal', () => {
   it('uses unitName when unit.symbol is not available', () => {
     const items = [createItem({ unit: null, unitName: 'kilogram' })];
 
-    const { result } = renderHook(() =>
-      useQuantityEditModal({ items }),
-    );
+    const { result } = renderHook(() => useQuantityEditModal({ items }));
 
     act(() => {
       result.current.openForItem('item-1');

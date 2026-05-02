@@ -11,7 +11,19 @@ const mockApolloClient = {
 };
 
 jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
   useApolloClient: jest.fn(() => mockApolloClient),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'SetDefaultHome')
+      return [mockSetDefaultHomeMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
+  useLazyQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetHomes') return [mockGetHomes, mockHomesQueryResult];
+    return [jest.fn(), { data: undefined, loading: false, error: undefined }];
+  }),
 }));
 
 const mockSetDefaultHomeMutation = jest.fn().mockResolvedValue({
@@ -25,12 +37,6 @@ const mockHomesQueryResult = {
   error: undefined,
   called: false,
 };
-
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useSetDefaultHomeMutation: jest.fn(() => [mockSetDefaultHomeMutation]),
-  useGetHomesLazyQuery: jest.fn(() => [mockGetHomes, mockHomesQueryResult]),
-}));
 
 // Store mock state
 const mockStoreState = {
@@ -49,16 +55,17 @@ const mockStoreState = {
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: any) => any) => selector(mockStoreState),
-  selectPantryState: (state: any) => ({
-    selectedPantryId: state.selectedPantryId,
-    setSelectedPantryId: state.setSelectedPantryId,
-    selectedHomeId: state.selectedHomeId,
-    setSelectedHomeId: state.setSelectedHomeId,
-  }),
-  selectSelectedHomeId: (state: any) => state.selectedHomeId,
-  selectIsHomeSelectionReady: (state: any) => state.isHomeSelectionReady,
-  selectSetIsHomeSelectionReady: (state: any) => state.setIsHomeSelectionReady,
-  selectIsLoggingOut: (state: any) => state.isLoggingOut,
+  usePantryState: jest.fn(() => ({
+    selectedPantryId: mockStoreState.selectedPantryId,
+    setSelectedPantryId: mockStoreState.setSelectedPantryId,
+    selectedHomeId: mockStoreState.selectedHomeId,
+    setSelectedHomeId: mockStoreState.setSelectedHomeId,
+  })),
+  useIsHomeSelectionReady: jest.fn(() => mockStoreState.isHomeSelectionReady),
+  useSetIsHomeSelectionReady: jest.fn(
+    () => mockStoreState.setIsHomeSelectionReady,
+  ),
+  useIsLoggingOut: jest.fn(() => mockStoreState.isLoggingOut),
 }));
 
 jest.mock('#store', () => ({
@@ -266,7 +273,9 @@ describe('useDefaultHome', () => {
     renderHook(() => useDefaultHome());
 
     // Should not set ready without pantry
-    expect(mockStoreState.setIsHomeSelectionReady).not.toHaveBeenCalledWith(true);
+    expect(mockStoreState.setIsHomeSelectionReady).not.toHaveBeenCalledWith(
+      true,
+    );
   });
 
   describe('getDefaultPantry - additional', () => {
@@ -302,9 +311,7 @@ describe('useDefaultHome', () => {
       mockHomesQueryResult.loading = false;
       mockHomesQueryResult.data = {
         homes: {
-          edges: [
-            { node: { id: 'home-1', isDefault: true, pantries: [] } },
-          ],
+          edges: [{ node: { id: 'home-1', isDefault: true, pantries: [] } }],
         },
       };
 
@@ -356,9 +363,7 @@ describe('useDefaultHome', () => {
               node: {
                 id: 'home-1',
                 isDefault: true,
-                pantries: [
-                  { id: 'pantry-1', isDefault: false },
-                ],
+                pantries: [{ id: 'pantry-1', isDefault: false }],
               },
             },
           ],

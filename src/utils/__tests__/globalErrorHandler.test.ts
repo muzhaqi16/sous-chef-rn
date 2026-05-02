@@ -25,7 +25,9 @@ describe('globalErrorHandler', () => {
 
   it('installs a global error handler', () => {
     setupGlobalErrorHandler();
-    expect(ErrorUtils.setGlobalHandler).toHaveBeenCalledWith(expect.any(Function));
+    expect(ErrorUtils.setGlobalHandler).toHaveBeenCalledWith(
+      expect.any(Function),
+    );
   });
 
   it('calls Telemetry.trackError when handler is invoked', () => {

@@ -21,7 +21,13 @@ jest.mock('../../molecules/BaseItemCard/BaseItemCard', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    BaseItemCard: ({ children, testID, itemId, leftElement, rightElement }: any) =>
+    BaseItemCard: ({
+      children,
+      testID,
+      itemId,
+      leftElement,
+      rightElement,
+    }: any) =>
       R.createElement(
         RN.View,
         { testID: testID || `base-item-card-${itemId}` },
@@ -79,7 +85,9 @@ const defaultActions = {
 
 const renderWithProvider = (ui: React.ReactElement) =>
   render(
-    <PantryActionsProvider actions={defaultActions}>{ui}</PantryActionsProvider>,
+    <PantryActionsProvider actions={defaultActions}>
+      {ui}
+    </PantryActionsProvider>,
   );
 
 describe('PantryItemCard', () => {
@@ -143,7 +151,10 @@ describe('PantryItemCard', () => {
 
   it('renders image left slot when imageUrl is provided', () => {
     renderWithProvider(
-      <PantryItemCard {...defaultProps} imageUrl="https://example.com/milk.jpg" />,
+      <PantryItemCard
+        {...defaultProps}
+        imageUrl="https://example.com/milk.jpg"
+      />,
     );
     expect(screen.getByTestId('card-left-image')).toBeTruthy();
   });
@@ -155,20 +166,14 @@ describe('PantryItemCard', () => {
 
   it('renders quantityBreakdownText in right slot secondary when provided', () => {
     renderWithProvider(
-      <PantryItemCard
-        {...defaultProps}
-        quantityBreakdownText="2 x 1 gal"
-      />,
+      <PantryItemCard {...defaultProps} quantityBreakdownText="2 x 1 gal" />,
     );
     expect(screen.getByText('2 x 1 gal')).toBeTruthy();
   });
 
   it('renders packageBreakdownText in right slot secondary when provided', () => {
     renderWithProvider(
-      <PantryItemCard
-        {...defaultProps}
-        packageBreakdownText="3 packages"
-      />,
+      <PantryItemCard {...defaultProps} packageBreakdownText="3 packages" />,
     );
     expect(screen.getByText('3 packages')).toBeTruthy();
   });

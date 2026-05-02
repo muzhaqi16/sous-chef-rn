@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -19,7 +20,8 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
 
   const ingredientName = ingredient.name || 'Unknown';
   const quantity = ingredient.quantity || ingredient.amount || '';
-  const unit = ingredient.unit?.symbol || ingredient.measures?.us?.unitShort || '';
+  const unit =
+    ingredient.unit?.symbol || ingredient.measures?.us?.unitShort || '';
   const imageUrl = ingredient.image
     ? ingredient.image.startsWith('http')
       ? ingredient.image // Already full URL from backend
@@ -28,7 +30,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
 
   return (
     <Pressable
-      style={({pressed}) => [styles.card, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       onPress={onPress}
       disabled={isAdded}
     >
@@ -36,7 +38,11 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
         <CachedImage uri={imageUrl} style={styles.image} displaySize={64} />
       ) : (
         <View style={styles.imagePlaceholder}>
-          <Ionicons name="leaf-outline" size={32} color={theme.colors.textSecondary} />
+          <Ionicons
+            name="leaf-outline"
+            size={32}
+            color={theme.colors.textSecondary}
+          />
         </View>
       )}
       <Text style={styles.quantity} numberOfLines={1}>
@@ -65,7 +71,15 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
     padding: theme.spacing.sm,
-    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 2, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.1)' }],
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 1,
+        blurRadius: 2,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.1)',
+      },
+    ],
   },
   image: {
     width: 64,

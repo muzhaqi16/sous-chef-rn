@@ -29,9 +29,10 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: any) => selector({
-    clearAuth: mockClearAuth,
-  }),
+  useAppStore: (selector: any) =>
+    selector({
+      clearAuth: mockClearAuth,
+    }),
 }));
 
 jest.mock('#hooks/navigation/useAuthNavigation', () => ({
@@ -40,9 +41,14 @@ jest.mock('#hooks/navigation/useAuthNavigation', () => ({
   }),
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useResetPasswordMutation: () => [mockResetPassword],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'ResetPassword')
+      return [mockResetPassword, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/hooks/useToast', () => ({
@@ -82,7 +88,12 @@ jest.mock('#components/molecules/Header', () => {
 jest.mock('#components/atoms/PasswordInput', () => {
   const { TextInput } = require('react-native');
   return {
-    PasswordInput: ({ value, onChangeText, placeholder, errorMessage }: any) => (
+    PasswordInput: ({
+      value,
+      onChangeText,
+      placeholder,
+      errorMessage,
+    }: any) => (
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -90,6 +101,21 @@ jest.mock('#components/atoms/PasswordInput', () => {
         testID={`password-input-${placeholder}`}
         accessibilityHint={errorMessage}
       />
+    ),
+  };
+});
+
+jest.mock('#components/base/Button', () => {
+  const { Pressable, Text } = require('react-native');
+  return {
+    Button: ({ children, onPress, disabled, loading }: any) => (
+      <Pressable
+        onPress={onPress}
+        disabled={disabled || loading}
+        testID={`button-${children}`}
+      >
+        <Text>{loading ? 'Loading...' : children}</Text>
+      </Pressable>
     ),
   };
 });
@@ -117,9 +143,7 @@ describe('ResetPasswordScreen', () => {
 
   it('renders description text', () => {
     render(<ResetPasswordScreen />);
-    expect(
-      screen.getByText(/Enter your new password below/),
-    ).toBeTruthy();
+    expect(screen.getByText(/Enter your new password below/)).toBeTruthy();
   });
 
   it('calls clearAuth on mount', () => {

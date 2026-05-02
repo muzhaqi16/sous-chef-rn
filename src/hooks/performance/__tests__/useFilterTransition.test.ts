@@ -72,10 +72,7 @@ describe('useFilterTransition', () => {
       { id: 2, name: 'Banana', category: 'fruit' },
     ]);
 
-    const newItems = [
-      ...items,
-      { id: 5, name: 'Mango', category: 'fruit' },
-    ];
+    const newItems = [...items, { id: 5, name: 'Mango', category: 'fruit' }];
 
     rerender({ itemsList: newItems });
 

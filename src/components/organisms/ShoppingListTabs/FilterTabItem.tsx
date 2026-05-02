@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { HapticService } from '#services/haptic/HapticService';
 

@@ -1,6 +1,11 @@
-import { useGetHomesLazyQuery } from '#generated';
-import { useAppStore, selectSelectedHomeId, selectSelectedPantryId } from '#store/useAppStore';
-import { normalizeHome, normalizeHomes, extractNodes } from '#/utils/connectionUtils';
+import { useLazyQuery } from '@apollo/client/react';
+import { GetHomesDocument } from '../../graphql/operations/home/home.generated';
+import { useSelectedHomeId, useSelectedPantryId } from '#store/useAppStore';
+import {
+  normalizeHome,
+  normalizeHomes,
+  extractNodes,
+} from '#/utils/connectionUtils';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 
 /**
@@ -15,12 +20,16 @@ import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
  * - Uses cache-first to avoid redundant fetches
  */
 export function useLazyHomeData() {
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
-  const selectedPantryId = useAppStore(selectSelectedPantryId);
+  const selectedHomeId = useSelectedHomeId();
+  const selectedPantryId = useSelectedPantryId();
 
-  const [getHomes, { data: homesData, loading }] = useGetHomesLazyQuery({
-    fetchPolicy: 'cache-first', // Use cache if available
-    errorPolicy: 'ignore' });
+  const [getHomes, { data: homesData, loading }] = useLazyQuery(
+    GetHomesDocument,
+    {
+      fetchPolicy: 'cache-first', // Use cache if available
+      errorPolicy: 'ignore',
+    },
+  );
 
   // Normalize homes data (extract nodes from connection type)
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
@@ -33,7 +42,11 @@ export function useLazyHomeData() {
     const currentHome = homes.find(h => h.id === selectedHomeId);
     if (currentHome) {
       const normalized = normalizeHome(currentHome);
-      pantries = (normalized?.pantries || []) as Array<{ id: string; name: string; isDefault: boolean }>;
+      pantries = (normalized?.pantries || []) as Array<{
+        id: string;
+        name: string;
+        isDefault: boolean;
+      }>;
     }
   }
 
@@ -52,5 +65,6 @@ export function useLazyHomeData() {
     selectedPantryId,
     loading,
     isLoaded: !!homesData,
-    fetchHomeData };
+    fetchHomeData,
+  };
 }

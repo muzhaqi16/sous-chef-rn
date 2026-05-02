@@ -8,15 +8,12 @@ import {
   StaticParamList,
   Theme,
 } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useUnistyles } from 'react-native-unistyles';
-import { useShallow } from 'zustand/shallow';
 import {
-  useAppStore,
-  selectHydrated,
-  selectUser,
-  selectPostLoginState,
-} from '#store/useAppStore';
+  createNativeStackNavigator,
+  createNativeStackScreen,
+} from '@react-navigation/native-stack';
+import { useUnistyles } from 'react-native-unistyles';
+import { useIsHydrated, useUser, usePostLoginState } from '#store/useAppStore';
 import { useBiometricPrompting } from '#hooks/auth/useBiometricPrompting';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 import { SplashScreen } from '#screens/SplashScreen';
@@ -100,7 +97,7 @@ const RootStack = createNativeStackNavigator({
         <AuthErrorBoundary>{children}</AuthErrorBoundary>
       ),
       screens: {
-        Auth: { screen: AuthStack },
+        Auth: createNativeStackScreen({ screen: AuthStack }),
       },
     },
     Verification: {
@@ -109,10 +106,10 @@ const RootStack = createNativeStackNavigator({
         <AuthErrorBoundary>{children}</AuthErrorBoundary>
       ),
       screens: {
-        Verification: {
+        Verification: createNativeStackScreen({
           screen: CodeVerificationScreen,
           linking: 'verify/:email?',
-        },
+        }),
       },
     },
     Onboarding: {
@@ -121,108 +118,108 @@ const RootStack = createNativeStackNavigator({
         <NavigationErrorBoundary>{children}</NavigationErrorBoundary>
       ),
       screens: {
-        Onboarding: { screen: OnboardingStack },
+        Onboarding: createNativeStackScreen({ screen: OnboardingStack }),
       },
     },
     MainApp: {
       if: useIsMainApp,
       screens: {
-        Home: { screen: HomeTabs },
-        Profile: {
+        Home: createNativeStackScreen({ screen: HomeTabs }),
+        Profile: createNativeStackScreen({
           screen: ProfileScreen,
           options: { animation: 'slide_from_right', animationDuration: 200 },
-        },
-        HomeManagement: {
+        }),
+        HomeManagement: createNativeStackScreen({
           screen: HomeManagement,
           linking: 'home-management/:selectedHomeId?',
-        },
-        HomeDetail: {
+        }),
+        HomeDetail: createNativeStackScreen({
           screen: HomeDetailScreen,
           options: {
             presentation: 'card',
             animation: 'slide_from_right',
           },
-        },
-        StorageLocations: {
+        }),
+        StorageLocations: createNativeStackScreen({
           screen: StorageLocationsScreen,
           options: { presentation: 'card', animation: 'slide_from_right' },
-        },
-        Barcode: { screen: BarcodeStack },
-        Notifications: { screen: NotificationStack },
-        ProfilePhotoUpload: {
+        }),
+        Barcode: createNativeStackScreen({ screen: BarcodeStack }),
+        Notifications: createNativeStackScreen({ screen: NotificationStack }),
+        ProfilePhotoUpload: createNativeStackScreen({
           screen: ProfilePhotoUploadScreen,
           options: {
             presentation: 'card',
             animation: 'slide_from_bottom',
           },
           linking: 'upload-photo',
-        },
-        ImageCrop: {
+        }),
+        ImageCrop: createNativeStackScreen({
           screen: ImageCropScreen,
           options: {
             presentation: 'modal',
             animation: 'slide_from_bottom',
           },
           linking: 'crop-image',
-        },
-        DeleteAccount: {
+        }),
+        DeleteAccount: createNativeStackScreen({
           screen: DeleteAccountScreen,
           linking: 'delete-account',
-        },
-        NotificationSettings: {
+        }),
+        NotificationSettings: createNativeStackScreen({
           screen: NotificationSettingsScreen,
           options: { animation: 'fade', animationDuration: 150 },
-        },
-        DietaryProfile: {
+        }),
+        DietaryProfile: createNativeStackScreen({
           screen: DietaryProfileScreen,
           options: { animation: 'fade', animationDuration: 150 },
-        },
-        PersonalInformation: {
+        }),
+        PersonalInformation: createNativeStackScreen({
           screen: PersonalInformationScreen,
           options: { animation: 'fade', animationDuration: 150 },
-        },
-        AppSettings: {
+        }),
+        AppSettings: createNativeStackScreen({
           screen: AppSettingsScreen,
           options: { animation: 'fade', animationDuration: 150 },
-        },
-        PerformanceDashboard: {
+        }),
+        PerformanceDashboard: createNativeStackScreen({
           screen: PerformanceDashboard,
           options: { animation: 'fade', animationDuration: 150 },
-        },
-        DebugInfo: {
+        }),
+        DebugInfo: createNativeStackScreen({
           screen: DebugInfo,
           options: { animation: 'fade', animationDuration: 150 },
-        },
-        ChangePassword: {
+        }),
+        ChangePassword: createNativeStackScreen({
           screen: ChangePasswordScreen,
           options: { animation: 'fade', animationDuration: 150 },
-        },
+        }),
       },
     },
     // Always-available deep link screens — placed last so the active
     // conditional group's first screen is the initial route.
     DeepLinks: {
       screens: {
-        EmailVerification: {
+        EmailVerification: createNativeStackScreen({
           screen: EmailVerificationDeepLinkScreen,
           linking: 'verify-email',
-        },
-        ResetPassword: {
+        }),
+        ResetPassword: createNativeStackScreen({
           screen: ResetPasswordScreen,
           linking: 'reset-password',
-        },
-        AcceptInvitation: {
+        }),
+        AcceptInvitation: createNativeStackScreen({
           screen: AcceptInvite,
           linking: 'accept-invitation',
-        },
-        JoinByShareCode: {
+        }),
+        JoinByShareCode: createNativeStackScreen({
           screen: JoinByShareCodeScreen,
           linking: 'join-list/:shareCode',
-        },
-        NotFound: {
+        }),
+        NotFound: createNativeStackScreen({
           screen: NotFoundScreen,
           linking: '*',
-        },
+        }),
       },
     },
   },
@@ -239,8 +236,8 @@ const StaticNavigation = createStaticNavigation(RootStack);
 
 export function Navigation() {
   const { theme } = useUnistyles();
-  const isHydrated = useAppStore(selectHydrated);
-  const user = useAppStore(selectUser);
+  const isHydrated = useIsHydrated();
+  const user = useUser();
   const {
     navigationState,
     showBiometricSetup,
@@ -248,7 +245,7 @@ export function Navigation() {
     setNavigationState,
     setShowBiometricSetup,
     setPostLoginCredentials,
-  } = useAppStore(useShallow(selectPostLoginState));
+  } = usePostLoginState();
   const { recordBiometricPromptResponse } = useBiometricPrompting();
   const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
 
@@ -356,7 +353,6 @@ export function Navigation() {
           ref={navigationRef}
           theme={navigationTheme}
           linking={{
-            enabled: 'auto',
             prefixes: ['souschef://', 'https://app.souschef.dev'],
           }}
         />

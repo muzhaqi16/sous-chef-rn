@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "3.2.21",
+  "version": "3.3.4",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -79,7 +79,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"./*.{json,js}\""
   },
   "dependencies": {
-    "@apollo/client": "^4.1.5",
+    "@apollo/client": "~4.1.7",
     "@callstack/liquid-glass": "^0.7.0",
     "@gorhom/bottom-sheet": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
@@ -110,7 +110,7 @@
     "react-native": "^0.83.4",
     "react-native-calendars": "^1.1314.0",
     "react-native-config": "^1.6.1",
-    "react-native-device-info": "^15.0.1",
+    "react-native-device-info": "^15.0.2",
     "react-native-edge-to-edge": "^1.8.1",
     "react-native-gesture-handler": "^2.30.0",
     "react-native-get-random-values": "^2.0.0",
@@ -118,8 +118,8 @@
     "react-native-keyboard-controller": "^1.20.7",
     "react-native-keychain": "^10.0.0",
     "react-native-launch-arguments": "^4.1.1",
-    "react-native-mmkv": "^4.3.0",
-    "react-native-nitro-modules": "^0.35.2",
+    "react-native-mmkv": "^4.3.1",
+    "react-native-nitro-modules": "^0.35.3",
     "react-native-pager-view": "^7.0.2",
     "react-native-performance": "^6.0.0",
     "react-native-permissions": "^5.5.1",
@@ -129,7 +129,7 @@
     "react-native-svg": "^15.15.4",
     "react-native-tab-view": "^4.2.1",
     "react-native-turbo-image": "^1.24.1",
-    "react-native-unistyles": "^3.1.1",
+    "react-native-unistyles": "^3.2.3",
     "react-native-vision-camera": "^4.7.2",
     "react-native-worklets": "^0.8.1",
     "uuid": "^13.0.0",
@@ -147,10 +147,12 @@
     "@graphql-codegen/cli": "^6.0.0",
     "@graphql-codegen/fragment-matcher": "^6.0.0",
     "@graphql-codegen/introspection": "^5.0.0",
+    "@graphql-codegen/near-operation-file-preset": "^5.1.0",
     "@graphql-codegen/schema-ast": "^5.0.0",
+    "@graphql-codegen/typed-document-node": "^7.0.0",
     "@graphql-codegen/typescript": "^5.0.0",
     "@graphql-codegen/typescript-operations": "^5.0.0",
-    "@graphql-codegen/typescript-react-apollo": "^4.3.3",
+    "@graphql-tools/mock": "^9.1.7",
     "@react-native-community/cli": "^20.1.1",
     "@react-native/babel-preset": "0.83.4",
     "@react-native/eslint-config": "0.83.4",
@@ -182,7 +184,7 @@
     "typescript": "^5.8.3"
   },
   "lint-staged": {
-    "src/**/*.{ts,tsx}": [
+    "src/**/!(*.generated).{ts,tsx}": [
       "eslint --fix",
       "prettier --write",
       "jest --bail --findRelatedTests --passWithNoTests"

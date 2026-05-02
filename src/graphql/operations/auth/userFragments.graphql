@@ -1,0 +1,74 @@
+# Lightweight user reference for nested display (addedBy, purchasedBy, etc.)
+# Used by RecipeReview, ShoppingListItem, Membership.
+fragment UserSummary on User {
+  id
+  email
+  profile {
+    id
+    displayName
+    avatar
+  }
+}
+
+# Bootstrap fragment for login/register responses.
+fragment LoginUser on User {
+  id
+  email
+  emailVerified
+  role
+  canAccessDevTools
+  onBoarded
+  createdAt
+  updatedAt
+  timezone
+  defaultHomeId
+  defaultShoppingListId
+  defaultHome {
+    id
+    name
+    isDefault
+    pantriesConnection {
+      edges {
+        node {
+          id
+          isDefault
+        }
+      }
+    }
+  }
+  profile {
+    id
+    displayName
+    avatar
+  }
+  settings {
+    id
+    theme
+  }
+}
+
+# Returned by GetMe query.
+fragment PartialUser on User {
+  id
+  email
+  emailVerified
+  role
+  canAccessDevTools
+  onBoarded
+  timezone
+  defaultShoppingListId
+  defaultHomeId
+  createdAt
+  updatedAt
+  profile {
+    id
+    firstName
+    lastName
+    displayName
+    avatar
+  }
+  settings {
+    id
+    theme
+  }
+}

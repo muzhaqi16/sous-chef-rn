@@ -4,13 +4,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TextInput, ActivityIndicator } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -18,10 +12,10 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
-import { ScrollView } from 'react-native-gesture-handler';
+import { Pressable, ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
-import { StorageState } from '#generated';
+import { StorageState } from '../../../graphql/generated/schemaTypes';
 import { FormTextArea } from '#components/molecules/FormTextArea';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { FormNumberInput } from '#components/molecules/FormNumberInput';
@@ -149,7 +143,7 @@ export const StorageLocationForm = forwardRef<
     }, [advancedExpanded, chevronRotation]);
 
     const animatedChevronStyle = useAnimatedStyle(() => ({
-      transform: [{ rotate: `${chevronRotation.value}deg` }],
+      transform: [{ rotate: `${chevronRotation.get()}deg` }],
     }));
 
     // Filter out current location from parent options (can't be its own parent)

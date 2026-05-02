@@ -18,9 +18,7 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
 
 // Mock createRemoveFromParentConnectionUpdater used by removeFromShoppingListItemsCache
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  createRemoveFromParentConnectionUpdater: jest.fn(
-    () => jest.fn(),
-  ),
+  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
 /** Cast entity to any so we can access mocked fields */

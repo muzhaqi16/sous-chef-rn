@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { IngredientFormState } from '../useRecipeForm';
@@ -27,7 +28,10 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
         <Pressable
           key={ingredient.id}
           onPress={() => onEditIngredient(ingredient)}
-          style={({ pressed }) => [styles.ingredientRow, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.ingredientRow,
+            pressed && styles.pressed,
+          ]}
         >
           <View style={styles.ingredientInfo}>
             <Text style={styles.ingredientName}>
@@ -35,7 +39,9 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
             </Text>
             <Text style={styles.ingredientMeta}>
               {ingredient.quantity}
-              {ingredient.preparation ? ` \u00B7 ${ingredient.preparation}` : ''}
+              {ingredient.preparation
+                ? ` \u00B7 ${ingredient.preparation}`
+                : ''}
               {ingredient.isOptional ? ' (optional)' : ''}
             </Text>
           </View>
@@ -44,7 +50,11 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
             hitSlop={8}
             style={styles.removeButton}
           >
-            <Icon name="close-circle" size={20} color={styles.removeIcon.color} />
+            <Icon
+              name="close-circle"
+              size={20}
+              color={styles.removeIcon.color}
+            />
           </Pressable>
         </Pressable>
       ))}
@@ -53,7 +63,11 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
         onPress={onAddIngredient}
         style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
       >
-        <Icon name="add-circle-outline" size={20} color={styles.addIcon.color} />
+        <Icon
+          name="add-circle-outline"
+          size={20}
+          color={styles.addIcon.color}
+        />
         <Text style={styles.addText}>Add Ingredient</Text>
       </Pressable>
     </View>

@@ -1,58 +1,64 @@
 import React, { useLayoutEffect } from 'react';
 import Icon from '@react-native-vector-icons/ionicons';
-import {Text, View, Pressable} from 'react-native';
+import { Text, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSequence,
-  withSpring } from 'react-native-reanimated';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {HapticService} from '#services/haptic/HapticService';
-import {SPRING} from '#/constants/animations';
+  withSpring,
+} from 'react-native-reanimated';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { HapticService } from '#services/haptic/HapticService';
+import { SPRING } from '#/constants/animations';
+import { Pressable } from 'react-native-gesture-handler';
 
 export const Counter = ({
   count,
   onIncrement,
   onDecrement,
   disabled = false,
-  label = 'quantity' }: {
+  label = 'quantity',
+}: {
   count: number;
   onIncrement: () => void;
   onDecrement: () => void;
   disabled?: boolean;
   label?: string;
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
   const countScale = useSharedValue(1);
 
   // Bounce animation when count changes
   useLayoutEffect(() => {
-    countScale.set(withSequence(
-      withSpring(1.15, SPRING.SNAPPY),
-      withSpring(1, SPRING.SNAPPY),
-    ));
+    countScale.set(
+      withSequence(
+        withSpring(1.15, SPRING.SNAPPY),
+        withSpring(1, SPRING.SNAPPY),
+      ),
+    );
   }, [count, countScale]);
 
   const countAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{scale: countScale.value}] }));
+    transform: [{ scale: countScale.get() }],
+  }));
 
-  const handleDecrement = (e: any) => {
-      e.stopPropagation();
-      if (!disabled) {
-        HapticService.selection();
-        onDecrement();
-      }
-    };
+  const handleDecrement = () => {
+    if (!disabled) {
+      HapticService.selection();
+      onDecrement();
+    }
+  };
 
-  const handleIncrement = (e: any) => {
-      e.stopPropagation();
-      if (!disabled) {
-        HapticService.selection();
-        onIncrement();
-      }
-    };
+  const handleIncrement = () => {
+    if (!disabled) {
+      HapticService.selection();
+      onIncrement();
+    }
+  };
 
-  const iconColor = disabled ? theme.colors.textTertiary : theme.colors.textPrimary;
+  const iconColor = disabled
+    ? theme.colors.textTertiary
+    : theme.colors.textPrimary;
 
   return (
     <View
@@ -63,10 +69,11 @@ export const Counter = ({
       accessibilityValue={{
         min: 0,
         now: count,
-        text: String(count) }}
+        text: String(count),
+      }}
       accessibilityActions={[
-        {name: 'increment', label: `Increase ${label}`},
-        {name: 'decrement', label: `Decrease ${label}`},
+        { name: 'increment', label: `Increase ${label}` },
+        { name: 'decrement', label: `Decrease ${label}` },
       ]}
       onAccessibilityAction={event => {
         switch (event.nativeEvent.actionName) {
@@ -77,11 +84,12 @@ export const Counter = ({
             if (!disabled) onDecrement();
             break;
         }
-      }}>
+      }}
+    >
       <Pressable
         onPress={handleDecrement}
         disabled={disabled}
-        style={({pressed}) => [
+        style={({ pressed }) => [
           styles.counterButton,
           pressed && !disabled && styles.pressed,
         ]}
@@ -89,21 +97,23 @@ export const Counter = ({
         accessibilityRole="button"
         accessibilityLabel={`Decrease ${label}`}
         accessibilityHint={`Current ${label} is ${count}`}
-        accessibilityState={{disabled}}>
+        accessibilityState={{ disabled }}
+      >
         <Icon color={iconColor} name="remove-outline" size={11} />
       </Pressable>
       <Animated.View style={countAnimatedStyle}>
         <Text
           maxFontSizeMultiplier={1.5}
           style={[styles.counterActionText, disabled && styles.textDisabled]}
-          accessibilityLabel={`${label} count: ${count}`}>
+          accessibilityLabel={`${label} count: ${count}`}
+        >
           {count}
         </Text>
       </Animated.View>
       <Pressable
         onPress={handleIncrement}
         disabled={disabled}
-        style={({pressed}) => [
+        style={({ pressed }) => [
           styles.counterButton,
           pressed && !disabled && styles.pressed,
         ]}
@@ -111,7 +121,8 @@ export const Counter = ({
         accessibilityRole="button"
         accessibilityLabel={`Increase ${label}`}
         accessibilityHint={`Current ${label} is ${count}`}
-        accessibilityState={{disabled}}>
+        accessibilityState={{ disabled }}
+      >
         <Icon color={iconColor} name="add" size={11} />
       </Pressable>
     </View>
@@ -128,7 +139,8 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderColor: theme.colors.borderLight,
     borderStyle: 'solid',
-    borderRadius: theme.radii.full },
+    borderRadius: theme.radii.full,
+  },
   counterButton: {
     zIndex: theme.zIndex.base,
     backgroundColor: theme.colors.surface,
@@ -137,17 +149,23 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radii.full,
-    ...theme.shadows.sm },
+    ...theme.shadows.sm,
+  },
   counterActionText: {
     fontSize: theme.typography.fontSize.xl,
     paddingHorizontal: theme.spacing['2.5'],
     lineHeight: 20,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   pressed: {
     opacity: theme.opacity.pressed,
-    transform: [{scale: 0.92}] },
+    transform: [{ scale: 0.92 }],
+  },
   containerDisabled: {
-    borderColor: theme.colors.border },
+    borderColor: theme.colors.border,
+  },
   textDisabled: {
-    color: theme.colors.textTertiary } }));
+    color: theme.colors.textTertiary,
+  },
+}));

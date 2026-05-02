@@ -1,5 +1,4 @@
 import React from 'react';
-import { Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,6 +9,7 @@ import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import { SPRING } from '#/constants/animations';
 import type { AddButtonProps } from './types';
+import { Pressable } from 'react-native-gesture-handler';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -23,7 +23,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scale.get() }],
   }));
 
   const handlePressIn = () => {

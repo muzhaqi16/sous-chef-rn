@@ -9,14 +9,23 @@ jest.mock('@react-navigation/native', () => {
   return {
     createNavigationContainerRef: () => ref,
     CommonActions: {
-      navigate: jest.fn((...args: any[]) => ({ type: 'NAVIGATE', payload: args })),
+      navigate: jest.fn((...args: any[]) => ({
+        type: 'NAVIGATE',
+        payload: args,
+      })),
       reset: jest.fn((...args: any[]) => ({ type: 'RESET', payload: args })),
       goBack: jest.fn(() => ({ type: 'GO_BACK' })),
-      preload: jest.fn((...args: any[]) => ({ type: 'PRELOAD', payload: args })),
+      preload: jest.fn((...args: any[]) => ({
+        type: 'PRELOAD',
+        payload: args,
+      })),
     },
     StackActions: {
       push: jest.fn((...args: any[]) => ({ type: 'PUSH', payload: args })),
-      replace: jest.fn((...args: any[]) => ({ type: 'REPLACE', payload: args })),
+      replace: jest.fn((...args: any[]) => ({
+        type: 'REPLACE',
+        payload: args,
+      })),
       popToTop: jest.fn(() => ({ type: 'POP_TO_TOP' })),
     },
     useNavigation: jest.fn(),

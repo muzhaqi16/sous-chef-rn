@@ -31,7 +31,13 @@ module.exports = {
     '^#types(.*)$': '<rootDir>/src/types$1',
     '^#utils(.*)$': '<rootDir>/src/utils$1',
   },
-  testPathIgnorePatterns: ['/node_modules/', '/e2e/', '/__tests__/helpers/', '/__tests__/__mocks__/'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/e2e/',
+    '/__tests__/helpers/',
+    '/__tests__/__mocks__/',
+    '/__tests__/setup/',
+  ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/graphql/generated/**',
@@ -64,7 +70,6 @@ module.exports = {
       'react-native-image-picker|' +
       'react-native-keychain|' +
       'react-native-mmkv|' +
-      'react-native-get-random-values|' +
       'react-native-device-info|' +
       'react-native-config|' +
       '@react-native-clipboard/clipboard|' +

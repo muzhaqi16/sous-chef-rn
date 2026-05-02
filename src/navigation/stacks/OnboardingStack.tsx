@@ -1,4 +1,8 @@
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import type { StaticParamList } from '@react-navigation/native';
+import {
+  createNativeStackNavigator,
+  createNativeStackScreen,
+} from '@react-navigation/native-stack';
 import { CreateHomeScreen } from '#screens/onBoarding/createHome/CreateHomeScreen';
 import { CreateShoppingListScreen } from '#screens/onBoarding/CreateShoppingListScreen';
 import { SelectPantryItems } from '#screens/onBoarding/SelectPantryItems';
@@ -17,31 +21,33 @@ export const OnboardingStack = createNativeStackNavigator({
     contentStyle: { backgroundColor: theme.colors.background },
   }),
   screens: {
-    CreateHome: {
+    CreateHome: createNativeStackScreen({
       screen: CreateHomeScreen,
       linking: 'onboarding/home',
-    },
-    CreateShoppingList: {
+    }),
+    CreateShoppingList: createNativeStackScreen({
       screen: CreateShoppingListScreen,
       linking: 'onboarding/shopping-list',
-    },
-    SelectPantryItems: {
+    }),
+    SelectPantryItems: createNativeStackScreen({
       screen: SelectPantryItems,
       linking: 'onboarding/pantry-items',
-    },
-    ProfilePictureUpload: {
+    }),
+    ProfilePictureUpload: createNativeStackScreen({
       screen: ProfilePictureUploadScreen,
       linking: 'onboarding/profile-picture',
-    },
+    }),
     ImageCrop: ImageCropScreen,
-    InviteMembers: {
+    InviteMembers: createNativeStackScreen({
       screen: InviteMemberScreen,
       linking: 'onboarding/invite',
-    },
-    OnboardingComplete: {
+    }),
+    OnboardingComplete: createNativeStackScreen({
       screen: OnboardingCompleteScreen,
       linking: 'onboarding/complete',
-    },
+    }),
     BiometricSetup: BiometricSetupScreen,
   },
 });
+
+export type OnboardingStackParams = StaticParamList<typeof OnboardingStack>;

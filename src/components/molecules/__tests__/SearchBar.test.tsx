@@ -8,7 +8,9 @@ jest.mock('react-native-unistyles', () => {
     StyleSheet: {
       create: (styleFnOrObj: any) => {
         const result =
-          typeof styleFnOrObj === 'function' ? styleFnOrObj(lightTheme) : styleFnOrObj;
+          typeof styleFnOrObj === 'function'
+            ? styleFnOrObj(lightTheme)
+            : styleFnOrObj;
         result.useVariants = jest.fn();
         return result;
       },
@@ -16,7 +18,10 @@ jest.mock('react-native-unistyles', () => {
     },
     useUnistyles: jest.fn(() => ({ theme: lightTheme, styles: {} })),
     useStyles: jest.fn((stylesheet: any) => ({
-      styles: typeof stylesheet === 'function' ? stylesheet(lightTheme) : stylesheet || {},
+      styles:
+        typeof stylesheet === 'function'
+          ? stylesheet(lightTheme)
+          : stylesheet || {},
       theme: lightTheme,
     })),
     useInitialTheme: jest.fn(),

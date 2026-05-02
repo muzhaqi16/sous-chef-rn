@@ -1,8 +1,11 @@
 import React from 'react';
-import { View, Image, Text, Pressable, Linking } from 'react-native';
+import { View, Image, Text, Linking } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
+import { CommonActions } from '@react-navigation/native';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
 import { Button } from '#components/base/Button';
+import { Link } from '#components/atoms/Link';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { getWebAppUrl } from '#utils/environment';
 
@@ -34,7 +37,7 @@ export function LandingAuthScreen() {
           <Button
             testID="landing-login-button"
             title="Log In"
-            onPress={() => navigation.navigate('Login')}
+            onPress={() => navigation.dispatch(CommonActions.navigate('Login'))}
             variant="secondary"
             fullWidth
             txtStyle={styles.txt}
@@ -42,14 +45,16 @@ export function LandingAuthScreen() {
           <Button
             testID="landing-signup-button"
             title="Sign Up"
-            onPress={() => navigation.navigate('SignUp')}
+            onPress={() =>
+              navigation.dispatch(CommonActions.navigate('SignUp'))
+            }
             fullWidth
             txtStyle={styles.txt}
           />
         </View>
 
         <Pressable
-          style={({pressed}) => pressed && styles.pressed}
+          style={({ pressed }) => pressed && styles.pressed}
           onPress={() => {
             Linking.openURL(getWebAppUrl('/privacy-policy')).catch(err =>
               console.error('Failed to open URL:', err),
@@ -58,8 +63,8 @@ export function LandingAuthScreen() {
         >
           <Text style={styles.footerText}>
             By continuing, you agree to our{'\n'}
-            <Text style={styles.link}>Terms & Conditions</Text> and{' '}
-            <Text style={styles.link}>Privacy Policy</Text>.
+            <Link variant="subtle">Terms & Conditions</Link> and{' '}
+            <Link variant="subtle">Privacy Policy</Link>.
           </Text>
         </Pressable>
       </View>
@@ -124,12 +129,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: theme.spacing.lg,
-  },
-  link: {
-    color: theme.colors.textOnSurfaceVariant,
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    textDecorationLine: 'underline',
   },
   pressed: {
     opacity: theme.opacity.pressed,

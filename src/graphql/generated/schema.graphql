@@ -5,15 +5,27 @@ schema {
 }
 
 """
-Require user authentication for this field or type
-Returns UNAUTHENTICATED error if user is not logged in
+Require user authentication for this field or type.
 
-Example:
-type Query {
-  myProfile: User @auth
-}
+When applied to a FIELD_DEFINITION, the auth check runs for that single
+field. When applied to an OBJECT, the auth check is wrapped around every
+field of that type — useful for types where every field is sensitive
+(admin-only payloads, user-private records).
+
+Returns UNAUTHENTICATED error if user is not logged in.
+
+Example (field):
+  type Query {
+    myProfile: User @auth
+  }
+
+Example (type):
+  type AdminStats @auth {
+    totalUsers: Int!
+    revenue: Float!
+  }
 """
-directive @auth on FIELD_DEFINITION
+directive @auth on FIELD_DEFINITION | OBJECT
 
 """
 Cache control directive for GraphQL fields and types
@@ -31,6 +43,31 @@ directive @cacheControl(
   """Scope of the cache (PUBLIC or PRIVATE)"""
   scope: CacheControlScope
 ) on FIELD_DEFINITION | INTERFACE | OBJECT | UNION
+
+"""
+Mark a field as supporting OPTIONAL authentication.
+
+- If the caller provides a valid JWT, the resolver sees a populated
+  context.user (just like with @auth).
+- If the caller provides NO token, the resolver runs anyway with
+  context.user undefined — the field is treated as public.
+- If the caller provides an INVALID/expired token, the auth pipeline
+  swallows the error instead of throwing UNAUTHENTICATED. The resolver
+  sees context.user undefined and serves public data.
+
+Use this on read-only queries that personalize their result for
+logged-in callers but should still be reachable anonymously, e.g.
+recipe browsing where authenticated users also see their private
+recipes.
+
+Do NOT use this on mutations — there is no public-side analogue.
+
+Example:
+  type Query {
+    recipe(id: ID!): Recipe @optionalAuth
+  }
+"""
+directive @optionalAuth on FIELD_DEFINITION
 
 """
 Require that the current user is the owner of the parent resource
@@ -54,6 +91,26 @@ type Recipe {
 }
 """
 directive @ownerOnly on FIELD_DEFINITION
+
+"""
+Mark a Query/Mutation field as INTENTIONALLY PUBLIC — reachable without
+authentication. Use this only for the auth-bootstrap surface (login,
+register, password reset, etc.) where there is no token yet.
+
+Why this exists: schema startup performs a default-deny audit and refuses
+to boot if any root-level field is missing one of @auth, @optionalAuth,
+@requireRole, @requireAccess, @requireSystemRole, @ownerOnly, or @public.
+Marking a field @public is the explicit way to say "yes, this is meant to
+be unauthenticated" — so a forgotten directive on a new mutation is a
+loud failure instead of a silent security hole.
+
+Example:
+  type Mutation {
+    login(input: LoginInput!): AuthPayload! @public
+    register(input: RegisterInput!): AuthPayload! @public
+  }
+"""
+directive @public on FIELD_DEFINITION
 
 """
 Require specific access level to a resource
@@ -392,6 +449,18 @@ enum AutomatedFlag {
   PROMOTIONAL_CONTENT
   SPAM_DETECTED
   SUSPICIOUS_BEHAVIOR
+}
+
+"""Result of a backfill run — what would/did get queued."""
+type BackfillEmbeddingsResult {
+  """Whether dryRun was set."""
+  dryRun: Boolean!
+  """How many were enqueued this call (0 if dryRun)."""
+  enqueued: Int!
+  """The limit applied to this run."""
+  limit: Int!
+  """Number of items remaining without embeddings (after this run)."""
+  remaining: Int!
 }
 
 input BanUserInput {
@@ -4265,6 +4334,12 @@ type Mutation {
   approveItem(itemId: ID!): ItemPayload!
   """Archive a shopping list."""
   archiveShoppingList(id: ID!): ShoppingListPayload!
+  """
+  Admin: enqueue embedding computation for items that don't yet have one.
+  Returns the number of jobs queued. Use dryRun to estimate backlog without
+  enqueueing. Throttled server-side to protect the embedding provider.
+  """
+  backfillItemEmbeddings(dryRun: Boolean = false, limit: Int = 1000): BackfillEmbeddingsResult!
   """Create multiple items at once"""
   bulkCreateItems(input: BulkCreateItemInput!): BulkCreateItemsResponse!
   """Create multiple purchase records at once."""
@@ -6301,6 +6376,16 @@ type Query {
   savedRecipeFolders: [String!]!
   """Search items with cursor-based pagination (Relay spec)."""
   searchItems(after: String, before: String, filters: ItemFilters, first: Int, last: Int, query: String!, sort: ItemSortInput): ItemConnection!
+  """
+  Semantic (vector) search over the catalog. The prompt is embedded
+  server-side and compared against Item.embedding via pgvector cosine
+  distance. Intended as an augmentation to exact-match paths (UPC, tsvector)
+  — use when text search fails or OCR is noisy.
+  
+  Items without a cached embedding are excluded until the enrichment
+  pipeline populates them. Auth-gated to bound embedding-service spend.
+  """
+  searchItemsSemantic(after: String, before: String, filters: ItemFilters, first: Int, last: Int, maxDistance: Float, prompt: String!): ItemConnection!
   searchRecipes(after: String, before: String, first: Int, last: Int, query: String!): RecipeConnection!
   """
   Search units by name or symbol.

@@ -1,4 +1,4 @@
-import {TextInputProps} from 'react-native';
+import { TextInputProps } from 'react-native';
 
 export interface ValidationRule {
   test: (value: string) => boolean;

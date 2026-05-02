@@ -1,10 +1,12 @@
 import React, {
+  useEffect,
   useState,
   useRef,
   useImperativeHandle,
   forwardRef,
 } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -19,6 +21,7 @@ import {
   type SearchBarAction,
 } from '#components/molecules/SearchBar';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import { TabMainScreen } from '#components/templates/TabMainScreen';
 import { Icon } from '#/utils/iconUtils';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
@@ -135,7 +138,7 @@ const RecipeMainInner: React.FC = () => {
   } = useCollapsibleScroll();
 
   useAnimatedReaction(
-    () => isScrolledDown.value,
+    () => isScrolledDown.get(),
     hidden => {
       scrollTabBarHidden.set(hidden);
     },
@@ -173,6 +176,28 @@ const RecipeMainInner: React.FC = () => {
   const ingredientSheetRef = useRef<IngredientSelectorSheetRef>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
+  // Per CLAUDE.md: never call present()/dismiss() directly outside of an
+  // effect. We track desired sheet visibility in state and let an effect
+  // imperatively present/dismiss the underlying ref-based sheets.
+  const [ingredientSheetVisible, setIngredientSheetVisible] = useState(false);
+  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
+
+  useEffect(() => {
+    if (ingredientSheetVisible) {
+      ingredientSheetRef.current?.present();
+    } else {
+      ingredientSheetRef.current?.dismiss();
+    }
+  }, [ingredientSheetVisible]);
+
+  useEffect(() => {
+    if (filterSheetVisible) {
+      filterSheetRef.current?.present();
+    } else {
+      filterSheetRef.current?.dismiss();
+    }
+  }, [filterSheetVisible]);
+
   const tutorial = useTutorialSequence({
     steps: RECIPE_TUTORIAL_STEPS,
     targetRects: {
@@ -197,17 +222,21 @@ const RecipeMainInner: React.FC = () => {
   useTabBarAddButton(() => navigate('RecipeCreate'));
 
   const openIngredientSelector = () => {
-    ingredientSheetRef.current?.present();
+    setIngredientSheetVisible(true);
   };
 
   const openFilterSheet = () => {
-    filterSheetRef.current?.present();
+    setFilterSheetVisible(true);
   };
 
   // Track sheet open/close — filters are saved on close but search is NOT
   // auto-triggered; the user presses the search button to apply new filters.
+  // Also keep our visibility state in sync when the user dismisses via swipe.
   const handleSheetChange = (index: number) => {
     setIsSheetOpen(index >= 0);
+    if (index < 0) {
+      setFilterSheetVisible(false);
+    }
   };
 
   const handleItemPress = (id: string | number) => {
@@ -425,7 +454,7 @@ const RecipeMainInner: React.FC = () => {
   );
 
   return (
-    <View key={themeKey} style={styles.container} testID="recipes-screen">
+    <TabMainScreen key={themeKey} testID="recipes-screen">
       {(screen.discovery.loading || screen.searchLoading) &&
       !screen.showSearchResults ? (
         <>
@@ -465,7 +494,12 @@ const RecipeMainInner: React.FC = () => {
       <IngredientSelectorSheet
         ref={ingredientSheetRef}
         screen={screen}
-        onSheetChange={open => setIsSheetOpen(open)}
+        onSheetChange={open => {
+          setIsSheetOpen(open);
+          if (!open) {
+            setIngredientSheetVisible(false);
+          }
+        }}
       />
 
       {/* Filter Bottom Sheet — lazy-mounted for performance */}
@@ -501,7 +535,7 @@ const RecipeMainInner: React.FC = () => {
           }}
         />
       ) : null}
-    </View>
+    </TabMainScreen>
   );
 };
 
@@ -510,7 +544,7 @@ const noop = () => {};
 export const RecipeMain: React.FC = () => (
   <DeferredScreen
     fallback={
-      <View style={styles.container} testID="recipes-screen">
+      <TabMainScreen testID="recipes-screen">
         <TabScreenHeader label="What to cook?" title="Recipes" />
         <View style={styles.searchBarContainer}>
           <SearchBar
@@ -522,14 +556,13 @@ export const RecipeMain: React.FC = () => (
           />
         </View>
         <RecipeSkeleton />
-      </View>
+      </TabMainScreen>
     }
     component={RecipeMainInner}
   />
 );
 
 const styles = StyleSheet.create(theme => ({
-  container: { flex: 1, backgroundColor: theme.colors.background },
   searchBarContainer: { paddingHorizontal: theme.spacing['3'] },
   headerActions: {
     flexDirection: 'row',
@@ -541,10 +574,10 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
     marginHorizontal: theme.spacing['3'],
-    marginTop: theme.spacing.sm,
+    marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
   },
   suggestedTextContainer: { flex: 1 },

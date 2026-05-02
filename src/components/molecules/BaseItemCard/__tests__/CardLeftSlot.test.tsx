@@ -37,7 +37,9 @@ describe('CardLeftSlot', () => {
   });
 
   it('renders image when type is image with URL', () => {
-    render(<CardLeftSlot type="image" imageUrl="https://example.com/img.jpg" />);
+    render(
+      <CardLeftSlot type="image" imageUrl="https://example.com/img.jpg" />,
+    );
     expect(screen.getByText('image-https://example.com/img.jpg')).toBeTruthy();
   });
 

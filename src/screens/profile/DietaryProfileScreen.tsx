@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
@@ -12,7 +13,7 @@ import {
   HealthGoal,
   Cuisine,
   RestrictionSeverity,
-} from '#generated';
+} from '../../graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#/utils/iconUtils';
 import { StringArrayManager } from '#/components/organisms/StringArrayManager/StringArrayManager';

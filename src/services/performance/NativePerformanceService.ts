@@ -60,7 +60,6 @@ function handleNativeMarks(entries: PerformanceEntry[]) {
       );
     }
   }
-
 }
 
 function handleMeasure(entry: PerformanceEntry) {

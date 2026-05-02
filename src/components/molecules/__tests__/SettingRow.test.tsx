@@ -12,9 +12,12 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
   })),
 }));
 
-jest.mock('#/components/modals/TextEditBottomSheet/TextEditBottomSheet', () => ({
-  TextEditBottomSheet: () => null,
-}));
+jest.mock(
+  '#/components/modals/TextEditBottomSheet/TextEditBottomSheet',
+  () => ({
+    TextEditBottomSheet: () => null,
+  }),
+);
 
 describe('SettingRow', () => {
   beforeEach(() => {

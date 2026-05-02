@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { AnimatedChip } from '#/components/atoms/AnimatedChip';
 import { POPULAR_CUISINES, getAllCuisineOptions } from '#/constants/cuisines';
-import { Cuisine } from '#generated';
+import { Cuisine } from '../../graphql/generated/schemaTypes';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 

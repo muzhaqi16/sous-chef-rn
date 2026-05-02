@@ -1,5 +1,6 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import Animated, {
   useSharedValue,
@@ -94,7 +95,7 @@ export const CollapsiblePurchasedSection: React.FC<
 
   const animatedChevronStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ rotate: `${chevronRotation.value}deg` }],
+      transform: [{ rotate: `${chevronRotation.get()}deg` }],
     };
   });
 
@@ -159,8 +160,7 @@ export const CollapsiblePurchasedSection: React.FC<
                 { backgroundColor: theme.colors.error + '20' },
                 pressed && styles.pressed,
               ]}
-              onPress={e => {
-                e.stopPropagation();
+              onPress={() => {
                 handleClearAll();
               }}
             >

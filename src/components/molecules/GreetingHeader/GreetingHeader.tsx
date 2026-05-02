@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, Text, TextInput } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -39,7 +40,8 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
   onSettingsPress,
   rightActions,
   variant = 'default',
-  testIDPrefix = 'greeting-header' }) => {
+  testIDPrefix = 'greeting-header',
+}) => {
   const { theme } = useUnistyles();
 
   const handleClearSearch = () => {
@@ -64,7 +66,11 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
     if (rightActions) return rightActions;
     if (onSettingsPress) {
       return (
-        <Pressable onPress={onSettingsPress} hitSlop={8} testID={`${testIDPrefix}-settings`}>
+        <Pressable
+          onPress={onSettingsPress}
+          hitSlop={8}
+          testID={`${testIDPrefix}-settings`}
+        >
           <Text style={styles.settingsIcon}>{settingsIcon}</Text>
         </Pressable>
       );
@@ -74,10 +80,7 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
 
   return (
     <View
-      style={[
-        styles.container,
-        { paddingTop: isCompact ? 4 : 8 },
-      ]}
+      style={[styles.container, { paddingTop: isCompact ? 4 : 8 }]}
       testID={testIDPrefix}
     >
       {/* Greeting Row */}
@@ -96,7 +99,13 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
             >
               <Text style={styles.homeEmoji}>{household.icon || '🏠'}</Text>
               <Text style={styles.householdName}>{household.name}</Text>
-              {!!household.onPress && <Icon name="chevron-forward" size={14} color={theme.colors.textTertiary} />}
+              {!!household.onPress && (
+                <Icon
+                  name="chevron-forward"
+                  size={14}
+                  color={theme.colors.textTertiary}
+                />
+              )}
             </Pressable>
           )}
         </View>
@@ -108,7 +117,11 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
           testID={`${testIDPrefix}-avatar`}
         >
           {avatarUrl ? (
-            <CachedImage uri={avatarUrl} style={styles.avatarImage} displaySize={48} />
+            <CachedImage
+              uri={avatarUrl}
+              style={styles.avatarImage}
+              displaySize={48}
+            />
           ) : (
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{displayInitial}</Text>
@@ -149,34 +162,44 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border },
+    borderBottomColor: theme.colors.border,
+  },
   greetingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.lg },
+    marginBottom: theme.spacing.lg,
+  },
   greetingContent: {
-    flex: 1 },
+    flex: 1,
+  },
   greeting: {
     fontSize: theme.typography.fontSize['2xl'] + 2,
     fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   greetingCompact: {
-    fontSize: theme.typography.fontSize.xl + 2 },
+    fontSize: theme.typography.fontSize.xl + 2,
+  },
   userName: {
-    color: theme.colors.primary },
+    color: theme.colors.primary,
+  },
   householdBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: theme.spacing.xs,
-    gap: theme.spacing.xs + 2 },
+    gap: theme.spacing.xs + 2,
+  },
   homeEmoji: {
-    fontSize: theme.typography.fontSize.xs },
+    fontSize: theme.typography.fontSize.xs,
+  },
   householdName: {
     fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   avatarContainer: {
-    position: 'relative' },
+    position: 'relative',
+  },
   avatar: {
     width: theme.sizes.avatar.lg,
     height: theme.sizes.avatar.lg,
@@ -184,16 +207,19 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    ...theme.shadows.md },
+    ...theme.shadows.md,
+  },
   avatarImage: {
     width: theme.sizes.avatar.lg,
     height: theme.sizes.avatar.lg,
     borderRadius: theme.radii.lg,
-    ...theme.shadows.md },
+    ...theme.shadows.md,
+  },
   avatarText: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.white },
+    color: theme.colors.white,
+  },
   notificationBadge: {
     position: 'absolute',
     top: -theme.spacing.xs,
@@ -205,26 +231,33 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: theme.colors.white },
+    borderColor: theme.colors.white,
+  },
   notificationCount: {
     fontSize: theme.typography.fontSize.xs - 1,
     fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.white },
+    color: theme.colors.white,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.inputBackground,
     borderRadius: theme.radii.md,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'] },
+    paddingVertical: theme.spacing['3'],
+  },
   searchIcon: {
     fontSize: theme.typography.fontSize.md,
-    marginRight: theme.spacing.sm + 2 },
+    marginRight: theme.spacing.sm + 2,
+  },
   searchInput: {
     flex: 1,
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
-    padding: 0 },
+    padding: 0,
+  },
   settingsIcon: {
     fontSize: theme.typography.fontSize.lg,
-    marginLeft: theme.spacing.sm + 2 } }));
+    marginLeft: theme.spacing.sm + 2,
+  },
+}));

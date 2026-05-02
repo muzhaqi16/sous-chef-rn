@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -7,7 +8,8 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
-import { useGetShoppingListsLiteQuery } from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { GetShoppingListsLiteDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import { Icon } from '#utils/iconUtils';
 
 interface GenerateShoppingListSheetProps {
@@ -22,18 +24,16 @@ interface GenerateShoppingListSheetProps {
   homeName?: string | null;
 }
 
-export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps> = ({
-  visible,
-  onClose,
-  onGenerate,
-  loading,
-  homeName }) => {
+export const GenerateShoppingListSheet: React.FC<
+  GenerateShoppingListSheetProps
+> = ({ visible, onClose, onGenerate, loading, homeName }) => {
   const { theme } = useUnistyles();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
     snapPoints: ['65%'],
-    keyboardAware: true });
+    keyboardAware: true,
+  });
 
   const [checkPantry, setCheckPantry] = useState(true);
   const [mode, setMode] = useState<'new' | 'existing'>('new');
@@ -52,9 +52,10 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
     }
   }
 
-  const { data: listsData } = useGetShoppingListsLiteQuery({
+  const { data: listsData } = useQuery(GetShoppingListsLiteDocument, {
     variables: { first: 20 },
-    skip: !visible });
+    skip: !visible,
+  });
 
   const shoppingLists = listsData?.shoppingLists?.edges?.map(e => e.node) ?? [];
 
@@ -62,7 +63,9 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
     onGenerate({
       checkPantry,
       name: mode === 'new' && customName.trim() ? customName.trim() : undefined,
-      shoppingListId: mode === 'existing' ? (selectedListId ?? undefined) : undefined });
+      shoppingListId:
+        mode === 'existing' ? selectedListId ?? undefined : undefined,
+    });
   };
 
   const canGenerate = mode === 'new' || (mode === 'existing' && selectedListId);
@@ -86,7 +89,11 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
         {/* Home sharing info */}
         {!!homeName && (
           <View style={styles.infoNote}>
-            <Icon name="information-circle-outline" size={18} color={theme.colors.primary} />
+            <Icon
+              name="information-circle-outline"
+              size={18}
+              color={theme.colors.primary}
+            />
             <Text style={styles.infoNoteText}>
               The shopping list will be shared with {homeName}
             </Text>
@@ -101,10 +108,7 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
               Deduct items you already have in your pantry
             </Text>
           </View>
-          <BaseSwitch
-            value={checkPantry}
-            onValueChange={setCheckPantry}
-          />
+          <BaseSwitch value={checkPantry} onValueChange={setCheckPantry} />
         </View>
 
         {/* Mode selector */}
@@ -113,27 +117,51 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
           <View style={styles.modeRow}>
             <Pressable
               onPress={() => setMode('new')}
-              style={[styles.modeOption, mode === 'new' && styles.modeOptionActive]}
+              style={[
+                styles.modeOption,
+                mode === 'new' && styles.modeOptionActive,
+              ]}
             >
               <Icon
                 name="add-circle-outline"
                 size={20}
-                color={mode === 'new' ? theme.colors.white : theme.colors.textSecondary}
+                color={
+                  mode === 'new'
+                    ? theme.colors.white
+                    : theme.colors.textSecondary
+                }
               />
-              <Text style={[styles.modeText, mode === 'new' && styles.modeTextActive]}>
+              <Text
+                style={[
+                  styles.modeText,
+                  mode === 'new' && styles.modeTextActive,
+                ]}
+              >
                 New List
               </Text>
             </Pressable>
             <Pressable
               onPress={() => setMode('existing')}
-              style={[styles.modeOption, mode === 'existing' && styles.modeOptionActive]}
+              style={[
+                styles.modeOption,
+                mode === 'existing' && styles.modeOptionActive,
+              ]}
             >
               <Icon
                 name="list-outline"
                 size={20}
-                color={mode === 'existing' ? theme.colors.white : theme.colors.textSecondary}
+                color={
+                  mode === 'existing'
+                    ? theme.colors.white
+                    : theme.colors.textSecondary
+                }
               />
-              <Text style={[styles.modeText, mode === 'existing' && styles.modeTextActive]}>
+              <Text
+                style={[
+                  styles.modeText,
+                  mode === 'existing' && styles.modeTextActive,
+                ]}
+              >
                 Existing List
               </Text>
             </Pressable>
@@ -167,9 +195,17 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
                   ]}
                 >
                   <Icon
-                    name={selectedListId === list.id ? 'radio-button-on' : 'radio-button-off'}
+                    name={
+                      selectedListId === list.id
+                        ? 'radio-button-on'
+                        : 'radio-button-off'
+                    }
                     size={20}
-                    color={selectedListId === list.id ? theme.colors.primary : theme.colors.textTertiary}
+                    color={
+                      selectedListId === list.id
+                        ? theme.colors.primary
+                        : theme.colors.textTertiary
+                    }
                   />
                   <View style={styles.listItemContent}>
                     <Text style={styles.listItemName}>{list.name}</Text>
@@ -196,10 +232,12 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   contentContainer: {
     padding: theme.spacing.md,
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   infoNote: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -207,11 +245,13 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.primaryLight,
-    borderRadius: theme.radii.md },
+    borderRadius: theme.radii.md,
+  },
   infoNoteText: {
     flex: 1,
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.primary },
+    color: theme.colors.primary,
+  },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -219,27 +259,34 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md },
+    borderRadius: theme.radii.md,
+  },
   toggleInfo: {
     flex: 1,
-    marginRight: theme.spacing.md },
+    marginRight: theme.spacing.md,
+  },
   toggleLabel: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   toggleDescription: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2 },
+    marginTop: 2,
+  },
   section: {
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   sectionLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   modeRow: {
     flexDirection: 'row',
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   modeOption: {
     flex: 1,
     flexDirection: 'row',
@@ -250,16 +297,20 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border },
+    borderColor: theme.colors.border,
+  },
   modeOptionActive: {
     backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary },
+    borderColor: theme.colors.primary,
+  },
   modeText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   modeTextActive: {
-    color: theme.colors.white },
+    color: theme.colors.white,
+  },
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -267,30 +318,39 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   listItemSelected: {
     borderWidth: 1,
-    borderColor: theme.colors.primary },
+    borderColor: theme.colors.primary,
+  },
   listItemContent: {
-    flex: 1 },
+    flex: 1,
+  },
   listItemName: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   listItemMeta: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   emptyText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textTertiary,
     textAlign: 'center',
-    paddingVertical: theme.spacing.md },
+    paddingVertical: theme.spacing.md,
+  },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.md },
+    paddingVertical: theme.spacing.md,
+  },
   loadingText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary } }));
+    color: theme.colors.textSecondary,
+  },
+}));

@@ -68,9 +68,9 @@ const AlertCard: React.FC<AlertCardProps> = ({
   const depthOpacity = isTop ? 1 : ALERT.DEPTH_OPACITY;
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value * depthOpacity,
+    opacity: opacity.get() * depthOpacity,
     transform: [
-      { scale: scale.value * depthScale },
+      { scale: scale.get() * depthScale },
       { translateY: depthTranslateY },
     ],
   }));
@@ -167,7 +167,7 @@ const AlertStack: React.FC<AlertStackProps> = ({ alerts, onDismiss }) => {
   }, [alerts.length, backdropOpacity]);
 
   const backdropStyle = useAnimatedStyle(() => ({
-    opacity: backdropOpacity.value,
+    opacity: backdropOpacity.get(),
   }));
 
   // Show only the top MAX_VISIBLE alerts

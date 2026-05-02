@@ -2,7 +2,11 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
-import { buildOptimisticUnit, buildDirtyUpdateInput, addToPantryItemsCache } from '../utils';
+import {
+  buildOptimisticUnit,
+  buildDirtyUpdateInput,
+  addToPantryItemsCache,
+} from '../utils';
 import type { UnitSelection, FormDataInput } from '../types';
 
 const { createAddToParentConnectionUpdater } = jest.requireMock(
@@ -26,7 +30,12 @@ describe('pantry mutations utils', () => {
 
   describe('buildOptimisticUnit', () => {
     it('returns null when newUnit has no id', () => {
-      const newUnit: UnitSelection = { id: null, name: null, symbol: null, type: null };
+      const newUnit: UnitSelection = {
+        id: null,
+        name: null,
+        symbol: null,
+        type: null,
+      };
       const result = buildOptimisticUnit(newUnit);
       expect(result).toBeNull();
     });
@@ -59,7 +68,20 @@ describe('pantry mutations utils', () => {
         symbol: null,
         type: null,
       };
-      const currentUnit: { __typename: 'Unit'; id: string; name: string; symbol: string; type: any; isMetric: boolean; baseUnitId: string; conversionFactor: number; isCommon: boolean; displayAsFraction: boolean; minPrecision: number; autoConvertThreshold: number } = {
+      const currentUnit: {
+        __typename: 'Unit';
+        id: string;
+        name: string;
+        symbol: string;
+        type: any;
+        isMetric: boolean;
+        baseUnitId: string;
+        conversionFactor: number;
+        isCommon: boolean;
+        displayAsFraction: boolean;
+        minPrecision: number;
+        autoConvertThreshold: number;
+      } = {
         __typename: 'Unit',
         id: 'unit-1',
         name: 'Gram',
@@ -162,110 +184,210 @@ describe('pantry mutations utils', () => {
     });
 
     it('includes itemName when dirty', () => {
-      const result = buildDirtyUpdateInput(baseFormData, { itemName: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        baseFormData,
+        { itemName: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ itemName: 'Milk' });
     });
 
     it('includes storageState when dirty', () => {
-      const result = buildDirtyUpdateInput(baseFormData, { storageState: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        baseFormData,
+        { storageState: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ storage: { storageState: 'PANTRY' } });
     });
 
     it('includes storageLocationId when location is dirty and locationId provided', () => {
-      const result = buildDirtyUpdateInput(baseFormData, { location: true }, 'loc-1', null);
+      const result = buildDirtyUpdateInput(
+        baseFormData,
+        { location: true },
+        'loc-1',
+        null,
+      );
       expect(result).toEqual({ storage: { storageLocationId: 'loc-1' } });
     });
 
     it('does not include location when dirty but no locationId', () => {
-      const result = buildDirtyUpdateInput(baseFormData, { location: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        baseFormData,
+        { location: true },
+        null,
+        null,
+      );
       expect(result).toEqual({});
     });
 
     it('includes expiresAt as ISO string when dirty', () => {
-      const result = buildDirtyUpdateInput(baseFormData, { expirationDate: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        baseFormData,
+        { expirationDate: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ expiresAt: '2026-06-01T00:00:00.000Z' });
     });
 
     it('includes null expiresAt when date is undefined', () => {
       const formData = { ...baseFormData, expirationDate: undefined };
-      const result = buildDirtyUpdateInput(formData, { expirationDate: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        formData,
+        { expirationDate: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ expiresAt: null });
     });
 
     it('includes notes when dirty', () => {
-      const result = buildDirtyUpdateInput(baseFormData, { notes: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        baseFormData,
+        { notes: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ storage: { storageNotes: 'Whole milk' } });
     });
 
     it('includes tags when dirty', () => {
-      const result = buildDirtyUpdateInput(baseFormData, { tags: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        baseFormData,
+        { tags: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ tags: ['organic'] });
     });
 
     it('defaults tags to empty array when undefined', () => {
       const formData = { ...baseFormData, tags: undefined };
-      const result = buildDirtyUpdateInput(formData, { tags: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        formData,
+        { tags: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ tags: [] });
     });
 
     it('includes minQuantity as float when dirty', () => {
-      const result = buildDirtyUpdateInput(baseFormData, { minQuantity: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        baseFormData,
+        { minQuantity: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ thresholds: { minQuantity: 2 } });
     });
 
     it('sets minQuantity to null when empty string', () => {
       const formData = { ...baseFormData, minQuantity: '' };
-      const result = buildDirtyUpdateInput(formData, { minQuantity: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        formData,
+        { minQuantity: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ thresholds: { minQuantity: null } });
     });
 
     it('includes restockQuantity as float when dirty', () => {
-      const result = buildDirtyUpdateInput(baseFormData, { restockQuantity: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        baseFormData,
+        { restockQuantity: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ thresholds: { restockQuantity: 5 } });
     });
 
     it('sets restockQuantity to null when empty string', () => {
       const formData = { ...baseFormData, restockQuantity: '' };
-      const result = buildDirtyUpdateInput(formData, { restockQuantity: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        formData,
+        { restockQuantity: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ thresholds: { restockQuantity: null } });
     });
 
     it('includes netWeight as float when dirty', () => {
-      const result = buildDirtyUpdateInput(baseFormData, { netWeight: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        baseFormData,
+        { netWeight: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ netWeight: { netWeight: 1.5 } });
     });
 
     it('sets netWeight to null when empty string', () => {
       const formData = { ...baseFormData, netWeight: '' };
-      const result = buildDirtyUpdateInput(formData, { netWeight: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        formData,
+        { netWeight: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ netWeight: { netWeight: null } });
     });
 
     it('includes netWeightUnitId when dirty', () => {
-      const result = buildDirtyUpdateInput(baseFormData, { netWeightUnitId: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        baseFormData,
+        { netWeightUnitId: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ netWeight: { netWeightUnitId: 'nw-unit-1' } });
     });
 
     it('sets netWeightUnitId to null when empty', () => {
       const formData = { ...baseFormData, netWeightUnitId: '' };
-      const result = buildDirtyUpdateInput(formData, { netWeightUnitId: true }, null, null);
+      const result = buildDirtyUpdateInput(
+        formData,
+        { netWeightUnitId: true },
+        null,
+        null,
+      );
       expect(result).toEqual({ netWeight: { netWeightUnitId: null } });
     });
 
     describe('brand handling', () => {
       it('uses brandId when brand is dirty and brandId provided', () => {
-        const result = buildDirtyUpdateInput(baseFormData, { brand: true }, null, 'brand-1');
+        const result = buildDirtyUpdateInput(
+          baseFormData,
+          { brand: true },
+          null,
+          'brand-1',
+        );
         expect(result).toEqual({ brand: { brandId: 'brand-1' } });
       });
 
       it('uses brandName when brand is dirty, no brandId, but brand text exists', () => {
-        const result = buildDirtyUpdateInput(baseFormData, { brand: true }, null, null);
+        const result = buildDirtyUpdateInput(
+          baseFormData,
+          { brand: true },
+          null,
+          null,
+        );
         expect(result).toEqual({ brand: { brandName: 'Organic Valley' } });
       });
 
       it('sets brandId to null when brand is dirty with no brandId and empty brand text', () => {
         const formData = { ...baseFormData, brand: '' };
-        const result = buildDirtyUpdateInput(formData, { brand: true }, null, null);
+        const result = buildDirtyUpdateInput(
+          formData,
+          { brand: true },
+          null,
+          null,
+        );
         expect(result).toEqual({ brand: { brandId: null } });
       });
     });

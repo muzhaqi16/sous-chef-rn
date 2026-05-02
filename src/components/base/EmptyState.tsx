@@ -92,7 +92,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   };
 
   return (
-    <View testID={testID} accessibilityRole="summary" style={[styles.container, { justifyContent: alignment }, style]}>
+    <View
+      testID={testID}
+      accessibilityRole="summary"
+      style={[styles.container, { justifyContent: alignment }, style]}
+    >
       {renderIcon()}
       <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
         {title}

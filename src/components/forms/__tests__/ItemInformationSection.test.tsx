@@ -23,7 +23,10 @@ jest.mock('#components/molecules/FormInput', () => ({
 
 // Helper wrapper to provide react-hook-form control
 function Wrapper(overrides: any) {
-  const { control, formState: { errors } } = useForm({
+  const {
+    control,
+    formState: { errors },
+  } = useForm({
     defaultValues: {
       itemName: '',
       category: '',

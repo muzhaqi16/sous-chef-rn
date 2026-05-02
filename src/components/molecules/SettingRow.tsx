@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Pressable, Text } from 'react-native';
+import { View, Text } from 'react-native';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import Ionicons from '@react-native-vector-icons/ionicons';
@@ -7,11 +7,13 @@ import { StyleSheet } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
 import {
   getInputLabelForField,
-  getPlaceholderForField } from '#utils/inputMapping';
+  getPlaceholderForField,
+} from '#utils/inputMapping';
 import { getValidationSchemaForField } from '#/utils/validation/profile';
 import { Icon } from '#/utils/iconUtils';
 import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet/TextEditBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { Pressable } from 'react-native-gesture-handler';
 
 export interface SettingRowProps {
   item: any;
@@ -22,7 +24,8 @@ export interface SettingRowProps {
 export const SettingRow: React.FC<SettingRowProps> = ({
   item,
   isFirst,
-  isLast }) => {
+  isLast,
+}) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [textEditVisible, setTextEditVisible] = useState(false);
 
@@ -30,7 +33,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     useStandardBottomSheet({
       onDismiss: () => setModalVisible(false),
       snapPoints: [],
-      enableDynamicSizing: true });
+      enableDynamicSizing: true,
+    });
 
   // Sync bottom sheet visibility with state (complex: checks item.type)
   useEffect(() => {
@@ -65,17 +69,17 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   };
 
   const handleModalOptionPress = (optionValue: string) => () => {
-      if (item.onSave) {
-        item.onSave(optionValue);
-      }
-      setModalVisible(false);
-    };
+    if (item.onSave) {
+      item.onSave(optionValue);
+    }
+    setModalVisible(false);
+  };
 
   const handleTextSave = (value: string) => {
-      if (item.onSave) {
-        item.onSave(value);
-      }
-    };
+    if (item.onSave) {
+      item.onSave(value);
+    }
+  };
 
   const handleTextEditClose = () => {
     setTextEditVisible(false);
@@ -270,48 +274,61 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderColor: theme.colors.divider,
-    backgroundColor: theme.colors.surfaceVariant },
+    backgroundColor: theme.colors.surfaceVariant,
+  },
   rowFirst: {
     borderTopLeftRadius: theme.radii.lg,
-    borderTopRightRadius: theme.radii.lg },
+    borderTopRightRadius: theme.radii.lg,
+  },
   rowLast: {
     borderBottomLeftRadius: theme.radii.lg,
     borderBottomRightRadius: theme.radii.lg,
-    borderBottomWidth: 0 },
+    borderBottomWidth: 0,
+  },
   row: { flexDirection: 'row', alignItems: 'center' },
   rowLabel: {
     marginLeft: theme.spacing.sm,
     fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   rowSpacer: { flex: 1 },
   modalValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: theme.spacing.xs },
+    gap: theme.spacing.xs,
+  },
   modalValueText: {
     fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   sheetContent: {
-    paddingHorizontal: theme.spacing.lg },
+    paddingHorizontal: theme.spacing.lg,
+  },
   sheetTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    paddingVertical: theme.spacing.sm },
+    paddingVertical: theme.spacing.sm,
+  },
   sheetDivider: {
     height: 1,
     backgroundColor: theme.colors.divider,
-    marginBottom: theme.spacing.sm },
+    marginBottom: theme.spacing.sm,
+  },
   sheetOption: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.sm },
+    paddingHorizontal: theme.spacing.sm,
+  },
   sheetOptionText: {
     fontSize: theme.typography.fontSize.md,
     flex: 1,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

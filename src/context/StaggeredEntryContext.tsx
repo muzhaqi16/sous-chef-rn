@@ -1,9 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useRef,
-  ReactNode,
-} from 'react';
+import React, { createContext, useContext, useRef, ReactNode } from 'react';
 import { staggeredEntryAnimation } from '#constants/animations';
 
 interface StaggeredEntryContextType {

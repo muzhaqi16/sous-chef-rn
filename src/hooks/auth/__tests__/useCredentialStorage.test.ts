@@ -20,13 +20,16 @@ const mockGetBiometricCapability = jest.fn();
 
 jest.mock('#/storage/keychain', () => ({
   loadCredentials: (...args: any[]) => mockLoadCredentials(...args),
-  loadCredentialsForAccount: (...args: any[]) => mockLoadCredentialsForAccount(...args),
+  loadCredentialsForAccount: (...args: any[]) =>
+    mockLoadCredentialsForAccount(...args),
   saveCredentials: (...args: any[]) => mockSaveCredentials(...args),
   hasCredentials: (...args: any[]) => mockHasCredentials(...args),
-  hasCredentialsForAccount: (...args: any[]) => mockHasCredentialsForAccount(...args),
+  hasCredentialsForAccount: (...args: any[]) =>
+    mockHasCredentialsForAccount(...args),
   clearCredentials: (...args: any[]) => mockClearCredentials(...args),
   getStoredAccounts: (...args: any[]) => mockGetStoredAccounts(...args),
-  getBiometricCapability: (...args: any[]) => mockGetBiometricCapability(...args),
+  getBiometricCapability: (...args: any[]) =>
+    mockGetBiometricCapability(...args),
 }));
 
 // Mock environment logger
@@ -47,7 +50,10 @@ beforeEach(() => {
   mockSaveCredentials.mockResolvedValue(undefined);
   mockClearCredentials.mockResolvedValue(undefined);
   mockGetStoredAccounts.mockResolvedValue([]);
-  mockGetBiometricCapability.mockResolvedValue({ isAvailable: false, biometryType: null });
+  mockGetBiometricCapability.mockResolvedValue({
+    isAvailable: false,
+    biometryType: null,
+  });
 });
 
 describe('useCredentialStorage', () => {
@@ -82,7 +88,9 @@ describe('useCredentialStorage', () => {
     mockHasCredentialsForAccount.mockResolvedValue(true);
     const { result } = renderHook(() => useCredentialStorage());
 
-    const hasCreds = await result.current.checkStoredCredentials('test@test.com');
+    const hasCreds = await result.current.checkStoredCredentials(
+      'test@test.com',
+    );
 
     expect(hasCreds).toBe(true);
     expect(mockHasCredentialsForAccount).toHaveBeenCalledWith();
@@ -98,7 +106,10 @@ describe('useCredentialStorage', () => {
   });
 
   it('loadStoredCredentials returns mapped credentials on success', async () => {
-    mockLoadCredentials.mockResolvedValue({ username: 'user@test.com', password: 'pass123' });
+    mockLoadCredentials.mockResolvedValue({
+      username: 'user@test.com',
+      password: 'pass123',
+    });
     const { result } = renderHook(() => useCredentialStorage());
 
     let credentials: any;
@@ -106,7 +117,10 @@ describe('useCredentialStorage', () => {
       credentials = await result.current.loadStoredCredentials();
     });
 
-    expect(credentials).toEqual({ email: 'user@test.com', password: 'pass123' });
+    expect(credentials).toEqual({
+      email: 'user@test.com',
+      password: 'pass123',
+    });
   });
 
   it('loadStoredCredentials returns null when no credentials found', async () => {
@@ -122,12 +136,17 @@ describe('useCredentialStorage', () => {
   });
 
   it('loadStoredCredentials calls loadCredentialsForAccount when email is provided', async () => {
-    mockLoadCredentialsForAccount.mockResolvedValue({ username: 'specific@test.com', password: 'pw' });
+    mockLoadCredentialsForAccount.mockResolvedValue({
+      username: 'specific@test.com',
+      password: 'pw',
+    });
     const { result } = renderHook(() => useCredentialStorage());
 
     let credentials: any;
     await act(async () => {
-      credentials = await result.current.loadStoredCredentials('specific@test.com');
+      credentials = await result.current.loadStoredCredentials(
+        'specific@test.com',
+      );
     });
 
     expect(credentials).toEqual({ email: 'specific@test.com', password: 'pw' });
@@ -138,17 +157,26 @@ describe('useCredentialStorage', () => {
     mockSaveCredentials.mockResolvedValue(undefined);
     const { result } = renderHook(() => useCredentialStorage());
 
-    const success = await result.current.storeCredentials('user@test.com', 'password123');
+    const success = await result.current.storeCredentials(
+      'user@test.com',
+      'password123',
+    );
 
     expect(success).toBe(true);
-    expect(mockSaveCredentials).toHaveBeenCalledWith('user@test.com', 'password123');
+    expect(mockSaveCredentials).toHaveBeenCalledWith(
+      'user@test.com',
+      'password123',
+    );
   });
 
   it('storeCredentials returns false on error', async () => {
     mockSaveCredentials.mockRejectedValue(new Error('Save failed'));
     const { result } = renderHook(() => useCredentialStorage());
 
-    const success = await result.current.storeCredentials('user@test.com', 'password123');
+    const success = await result.current.storeCredentials(
+      'user@test.com',
+      'password123',
+    );
 
     expect(success).toBe(false);
   });
@@ -173,7 +201,10 @@ describe('useCredentialStorage', () => {
   });
 
   it('getBiometricInfo returns biometric capability info', async () => {
-    mockGetBiometricCapability.mockResolvedValue({ isAvailable: true, biometryType: 'FaceID' });
+    mockGetBiometricCapability.mockResolvedValue({
+      isAvailable: true,
+      biometryType: 'FaceID',
+    });
     const { result } = renderHook(() => useCredentialStorage());
 
     const info = await result.current.getBiometricInfo();

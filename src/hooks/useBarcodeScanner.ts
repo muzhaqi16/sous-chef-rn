@@ -1,4 +1,4 @@
-import {useStore} from '../store';
+import { useStore } from '../store';
 
 export const useBarcodeScanner = () => {
   const scannedBarcode = useStore(s => s.scannedBarcode);

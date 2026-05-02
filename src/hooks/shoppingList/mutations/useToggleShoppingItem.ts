@@ -7,13 +7,19 @@
  * - Persist optimistic state for offline support
  */
 
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import {
-  useToggleShoppingListItemPurchasedMutation,
+  ToggleShoppingListItemPurchasedDocument,
+  GetShoppingListItemsFilteredDocument,
+  type ToggleShoppingListItemPurchasedMutation,
+  type GetShoppingListItemsFilteredQuery,
+  type GetShoppingListItemsFilteredQueryVariables,
+} from '../../../graphql/operations/shoppingList/shoppingList.generated';
+import {
   ShoppingListItemDisplayFragmentDoc,
-} from '#generated';
-import type { ShoppingListItemDisplayFragment } from '#generated';
+  type ShoppingListItemDisplayFragment,
+} from '#operations/shoppingList/shoppingListFragments.generated';
 import { useErrorService } from '#/services/errorService';
 import {
   moveShoppingListItemToPurchased,
@@ -22,6 +28,7 @@ import {
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { PAGINATION } from '#/constants/shoppingList';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
@@ -50,103 +57,130 @@ export function useToggleShoppingItem({
   const { handleApolloError } = useErrorService();
   const client = useApolloClient();
 
-  const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
-    errorPolicy: 'all',
-    // Optimistic response ensures update() runs immediately (not after network response)
-    optimisticResponse: (variables, { IGNORE }) => {
-      const item = client.cache.readFragment<ShoppingListItemDisplayFragment>({
-        id: client.cache.identify({
-          __typename: 'ShoppingListItem',
-          id: variables.input.id,
-        }),
-        fragment: ShoppingListItemDisplayFragmentDoc,
-        fragmentName: 'ShoppingListItemDisplayFragment',
-      });
-      if (!item) return IGNORE;
-      return {
-        __typename: 'Mutation',
-        toggleShoppingListItemPurchased: {
-          __typename: 'ShoppingListItemPayload',
-          success: true,
-          message: '',
-          code: 'SUCCESS',
-          shoppingListItem: {
-            ...item,
-            purchaseInfo: {
-              __typename: 'ShoppingListItemPurchaseInfo',
-              isPurchased: variables.input.purchased,
-            },
-            updatedAt: new Date().toISOString(),
+  const [togglePurchasedMutation] = useMutation(
+    ToggleShoppingListItemPurchasedDocument,
+    {
+      // Optimistic response ensures update() runs immediately (not after network response)
+      optimisticResponse: (variables, { IGNORE }) => {
+        const item = client.cache.readFragment<ShoppingListItemDisplayFragment>(
+          {
+            id: client.cache.identify({
+              __typename: 'ShoppingListItem',
+              id: variables.input.id,
+            }),
+            fragment: ShoppingListItemDisplayFragmentDoc,
+            fragmentName: 'ShoppingListItemDisplayFragment',
           },
-        },
-      };
-    },
-    update(cache, _result, { variables }) {
-      if (!variables || !listId) return;
-
-      const itemId = variables.input.id;
-      const newStatus = variables.input.purchased; // true = marking purchased, false = marking unpurchased
-
-      // 1. Update the item's purchaseInfo field directly
-      cache.modify({
-        id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-        fields: {
-          purchaseInfo(existingPurchaseInfo = {}) {
-            return {
-              ...existingPurchaseInfo,
-              isPurchased: newStatus,
-            };
-          },
-          updatedAt() {
-            return new Date().toISOString();
-          },
-        },
-      });
-
-      // 2. Move item between purchased/unpurchased connections
-      // moveShoppingListItem* handles BOTH itemsConnection filtered variants
-      // AND aliased fields (unpurchasedItems/purchasedItems) in one call
-      if (newStatus) {
-        moveShoppingListItemToPurchased(cache, listId, { id: itemId });
-      } else {
-        moveShoppingListItemToUnpurchased(cache, listId, { id: itemId });
-      }
-
-      // 3. Persist optimistic isPurchased to survive app restarts while offline
-      optimisticDataPersistence.save(
-        'ShoppingListItem',
-        itemId,
-        'isPurchased',
-        newStatus,
-      );
-    },
-    onCompleted: data => {
-      // Clear persisted optimistic data on successful server sync
-      const item = data?.toggleShoppingListItemPurchased?.shoppingListItem;
-      if (item?.id) {
-        optimisticDataPersistence.clear(
-          'ShoppingListItem',
-          item.id,
-          'isPurchased',
         );
-      }
-    },
-    onError: error => {
-      // For network errors, don't show alert or refetch - queue will handle retry
-      // This keeps the optimistic UI intact while offline
-      if (isNetworkError(error)) {
-        console.log('Toggle purchase queued for retry (network error)');
-        return;
-      }
+        if (!item) return IGNORE;
+        const optimistic: ToggleShoppingListItemPurchasedMutation = {
+          __typename: 'Mutation',
+          toggleShoppingListItemPurchased: {
+            __typename: 'ShoppingListItemPayload',
+            success: true,
+            message: '',
+            code: 'SUCCESS',
+            shoppingListItem: {
+              ...item,
+              purchaseInfo: {
+                __typename: 'ShoppingListItemPurchaseInfo',
+                isPurchased: variables.input.purchased,
+              },
+              updatedAt: new Date().toISOString(),
+            },
+          },
+        };
+        return optimistic;
+      },
+      update(cache, _result, { variables }) {
+        if (!variables || !listId) return;
 
-      // For server/validation errors, show alert and refetch to restore correct state
-      const { message } = handleApolloError(error, {
-        operation: 'Toggle Item Purchased',
-      });
-      alertService.alert('Error', message);
-      refetch();
+        const itemId = variables.input.id;
+        const newStatus = variables.input.purchased; // true = marking purchased, false = marking unpurchased
+
+        // 1. Update the item's purchaseInfo field directly
+        cache.modify<ShoppingListItemDisplayFragment>({
+          id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+          fields: {
+            purchaseInfo(existingPurchaseInfo) {
+              return {
+                ...existingPurchaseInfo,
+                isPurchased: newStatus,
+              };
+            },
+            updatedAt() {
+              return new Date().toISOString();
+            },
+          },
+        });
+
+        // 2. Move item between purchased/unpurchased connections
+        // moveShoppingListItem* handles BOTH itemsConnection filtered variants
+        // AND aliased fields (unpurchasedItems/purchasedItems) in one call
+        if (newStatus) {
+          moveShoppingListItemToPurchased(cache, listId, { id: itemId });
+        } else {
+          moveShoppingListItemToUnpurchased(cache, listId, { id: itemId });
+        }
+
+        // 3. Persist optimistic isPurchased to survive app restarts while offline
+        optimisticDataPersistence.save(
+          'ShoppingListItem',
+          itemId,
+          'isPurchased',
+          newStatus,
+        );
+      },
+      onCompleted: data => {
+        // Clear persisted optimistic data on successful server sync
+        const item = data?.toggleShoppingListItemPurchased?.shoppingListItem;
+        if (item?.id) {
+          optimisticDataPersistence.clear(
+            'ShoppingListItem',
+            item.id,
+            'isPurchased',
+          );
+        }
+
+        // Depletion recovery: if the source connection (the tab we toggled FROM)
+        // is now empty but totalCount > 0, server has unfetched items — refetch.
+        // Only fires when online (server responded), safe for offline-first.
+        if (listId && item) {
+          const sourceIsPurchased = !item.purchaseInfo?.isPurchased;
+          const sourceQuery = client.cache.readQuery<
+            GetShoppingListItemsFilteredQuery,
+            GetShoppingListItemsFilteredQueryVariables
+          >({
+            query: GetShoppingListItemsFilteredDocument,
+            variables: {
+              id: listId,
+              first: PAGINATION.ITEMS_PAGE_SIZE,
+              isPurchased: sourceIsPurchased,
+            },
+          });
+          const conn = sourceQuery?.shoppingList?.itemsConnection;
+          if (conn && conn.edges.length === 0 && (conn.totalCount ?? 0) > 0) {
+            refetch();
+          }
+        }
+      },
+      onError: error => {
+        // For network errors, don't show alert or refetch - queue will handle retry
+        // This keeps the optimistic UI intact while offline
+        if (isNetworkError(error)) {
+          console.log('Toggle purchase queued for retry (network error)');
+          return;
+        }
+
+        // For server/validation errors, show alert and refetch to restore correct state
+        const { message } = handleApolloError(error, {
+          operation: 'Toggle Item Purchased',
+        });
+        alertService.alert('Error', message);
+        refetch();
+      },
     },
-  });
+  );
 
   const toggleItem = async (itemId: string) => {
     if (!listId) return false;

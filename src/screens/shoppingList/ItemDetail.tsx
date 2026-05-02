@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useGetShoppingListItemQuery } from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { GetShoppingListItemDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
@@ -20,16 +22,16 @@ type RouteParams = {
   itemId: string;
 };
 
-export const ShoppingListItemDetail: React.FC<{
-  route: { params: RouteParams };
-}> = ({ route }) => {
+export const ShoppingListItemDetail: React.FC<
+  StaticScreenProps<RouteParams>
+> = ({ route }) => {
   useScreenTransition('ShoppingListItemDetail');
   const { theme } = useUnistyles();
   const { navigate, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
 
   // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
-  const { data } = useGetShoppingListItemQuery({
+  const { data } = useQuery(GetShoppingListItemDocument, {
     variables: { id: itemId },
     fetchPolicy: 'cache-first',
   });
@@ -90,7 +92,11 @@ export const ShoppingListItemDetail: React.FC<{
                 imageHeight={160}
               />
             ) : imageUrl ? (
-              <CachedImage uri={imageUrl} style={styles.itemImage} />
+              <CachedImage
+                uri={imageUrl}
+                style={styles.itemImage}
+                displaySize={120}
+              />
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Icon

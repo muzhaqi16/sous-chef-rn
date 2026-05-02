@@ -12,6 +12,7 @@ const mockCacheIdentify = jest.fn(
 );
 
 jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
   useApolloClient: () => ({
     cache: {
       identify: mockCacheIdentify,
@@ -19,11 +20,12 @@ jest.mock('@apollo/client/react', () => ({
     },
     readFragment: mockReadFragment,
   }),
-}));
-
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useUpdateShoppingListItemQuantityMutation: () => [mockUpdateQuantity],
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'UpdateShoppingListItemQuantity')
+      return [mockUpdateQuantity, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/services/toastService', () => ({
@@ -745,7 +747,9 @@ describe('useShoppingListActions', () => {
       const { result } = renderHook(() =>
         useShoppingListActions({
           ...defaultProps,
-          unpurchasedItems: [createItem({ purchaseInfo: { isPurchased: false } })],
+          unpurchasedItems: [
+            createItem({ purchaseInfo: { isPurchased: false } }),
+          ],
         }),
       );
 

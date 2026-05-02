@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { formatRole } from '#utils/formatters/roleFormatters';
-import type { HomeInviteFragment } from '#generated';
+import { type InviteCard_InviteFragment } from './CreateHomeScreen.generated';
 import {
   InviteActionsProvider,
   useInviteActions,
@@ -20,22 +21,19 @@ import { ErrorMessage } from './ErrorMessage';
 import { Button } from '#components/base/Button';
 
 // GraphQL
+import { useMutation, useQuery } from '@apollo/client/react';
+import { HomeType } from '../../../graphql/generated/schemaTypes';
 import {
-  HomeType,
-  useCreateHomeMutation,
-  useCreatePantryMutation,
-  useGetHomesQuery,
-  useGetMyPendingInvitesQuery,
-  useAcceptHomeInviteMutation,
-  useDeclineHomeInviteMutation,
-} from '#generated';
+  CreateHomeDocument,
+  GetHomesDocument,
+  GetMyPendingInvitesDocument,
+  AcceptHomeInviteDocument,
+  DeclineHomeInviteDocument,
+} from '../../../graphql/operations/home/home.generated';
+import { CreatePantryDocument } from '#operations/pantry/pantry.generated';
 
 // Store & Navigation
-import {
-  useAppStore,
-  selectUser,
-  selectSelectedHomeId,
-} from '#store/useAppStore';
+import { useAppStore, useUser, useSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 
 // Validation & Helpers
@@ -48,6 +46,43 @@ import {
   executeWithLoadingState,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
+
+/** Module-level cache update closure for `useAcceptHomeInviteMutation`.
+ *  Extracted from the component body to keep the surrounding try/catch outside
+ *  hook call sites (React Compiler bailout). */
+function buildAcceptHomeInviteUpdater(userId: string | undefined) {
+  return function acceptHomeInviteUpdater(cache: any, { data }: any) {
+    if (!data?.acceptHomeInvite?.membership?.homeId || !userId) return;
+    try {
+      const homeId = data.acceptHomeInvite.membership.homeId;
+      const userCacheId = cache.identify({
+        __typename: 'User',
+        id: userId,
+      });
+      if (!userCacheId) return;
+
+      cache.modify({
+        id: userCacheId,
+        fields: {
+          homes(existingHomes: any[] = [], { readField, toReference }: any) {
+            const homeRef = toReference({
+              __typename: 'Home',
+              id: homeId,
+            });
+            const exists = existingHomes.some(
+              (ref: any) => readField('id', ref) === homeId,
+            );
+            if (exists) return existingHomes;
+            return [...existingHomes, homeRef];
+          },
+        },
+      });
+    } catch (error) {
+      console.warn('Cache update failed for acceptHomeInvite:', error);
+      // UI will still work via optimistic/onCompleted handlers
+    }
+  };
+}
 
 /** Module-level async function for home/pantry creation.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
@@ -150,7 +185,9 @@ function syncExistingResources(
 
 // --- Invite card component ---
 
-const InviteCard: React.FC<{ invite: HomeInviteFragment }> = ({ invite }) => {
+const InviteCard: React.FC<{ invite: InviteCard_InviteFragment }> = ({
+  invite,
+}) => {
   const { theme } = useUnistyles();
   const { handleAcceptInvite, handleDeclineInvite, accepting } =
     useInviteActions();
@@ -210,8 +247,8 @@ const CreateHomeScreenComponent = () => {
   const { navigateToNextStep, setUserNavigationState, skipToStep } =
     useOnboardingNavigation();
 
-  const user = useAppStore(selectUser);
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const user = useUser();
+  const selectedHomeId = useSelectedHomeId();
   const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
   const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
 
@@ -238,16 +275,16 @@ const CreateHomeScreenComponent = () => {
     data: homesData,
     loading: homesLoading,
     refetch: refetchHomes,
-  } = useGetHomesQuery({
+  } = useQuery(GetHomesDocument, {
     skip: !user?.id,
-    fetchPolicy: 'cache-and-network',
   });
 
-  const { data: pendingInvitesData, loading: invitesLoading } =
-    useGetMyPendingInvitesQuery({
+  const { data: pendingInvitesData, loading: invitesLoading } = useQuery(
+    GetMyPendingInvitesDocument,
+    {
       skip: !user?.id,
-      fetchPolicy: 'cache-and-network',
-    });
+    },
+  );
 
   // Extract nodes from connection types (homes and pantries return Connection types)
   const homes = normalizeHomes(extractNodes(homesData?.homes));
@@ -261,8 +298,8 @@ const CreateHomeScreenComponent = () => {
   const hasPendingInvites = pendingInvites.length > 0;
 
   // GraphQL Mutations
-  const [createHome] = useCreateHomeMutation();
-  const [createPantry] = useCreatePantryMutation({
+  const [createHome] = useMutation(CreateHomeDocument);
+  const [createPantry] = useMutation(CreatePantryDocument, {
     update: (cache, { data }) => {
       const newPantry = data?.createPantry?.pantry;
       if (!newPantry?.homeId) {
@@ -318,54 +355,13 @@ const CreateHomeScreenComponent = () => {
     },
   });
 
-  const [acceptHomeInvite, { loading: accepting }] =
-    useAcceptHomeInviteMutation({
-      // Manual cache update instead of refetchQueries for better performance
-      // The mutation returns a Membership object with homeId; the Home entity
-      // should already exist in cache from the invite query
-      update: (cache, { data }) => {
-        if (!data?.acceptHomeInvite?.membership?.homeId || !user?.id) return;
-
-        try {
-          const homeId = data.acceptHomeInvite.membership.homeId;
-
-          // The Home entity should already be cached from the invite query
-          // We just need to ensure it's in the GetHomes query result
-          const userCacheId = cache.identify({
-            __typename: 'User',
-            id: user.id,
-          });
-
-          if (!userCacheId) return;
-
-          // Update the user's homes field to include the new home
-          cache.modify({
-            id: userCacheId,
-            fields: {
-              homes(existingHomes = [], { readField, toReference }) {
-                const homeRef = toReference({
-                  __typename: 'Home',
-                  id: homeId,
-                });
-
-                // Check if home already exists in the list
-                const exists = existingHomes.some(
-                  (ref: any) => readField('id', ref) === homeId,
-                );
-
-                if (exists) {
-                  return existingHomes;
-                }
-
-                return [...existingHomes, homeRef];
-              },
-            },
-          });
-        } catch (error) {
-          console.warn('Cache update failed for acceptHomeInvite:', error);
-          // UI will still work via optimistic/onCompleted handlers
-        }
-      },
+  const [acceptHomeInvite, { loading: accepting }] = useMutation(
+    AcceptHomeInviteDocument,
+    {
+      // Manual cache update instead of refetchQueries for better performance.
+      // Builder is module-scope so the inner try/catch is not inside the
+      // component body (React Compiler bailout).
+      update: buildAcceptHomeInviteUpdater(user?.id),
       onCompleted: data => {
         if (data.acceptHomeInvite?.membership?.homeId) {
           setSelectedHomeId(data.acceptHomeInvite.membership.homeId);
@@ -378,9 +374,10 @@ const CreateHomeScreenComponent = () => {
           error.message || 'Failed to accept invitation',
         );
       },
-    });
+    },
+  );
 
-  const [declineHomeInvite] = useDeclineHomeInviteMutation({
+  const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
     // Note: Declining an invite doesn't add or remove homes from the list,
     // it just changes the invite status. No cache update needed.
     onError: error => {

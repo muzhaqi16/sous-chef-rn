@@ -5,11 +5,10 @@
  * Creates a WEIGHT_CORRECTED audit record with mandatory reason.
  */
 
+import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import {
-  useCorrectPantryItemWeightMutation,
-  PantryItemDisplayFragmentDoc,
-} from '#generated';
+import { CorrectPantryItemWeightDocument } from '#operations/pantry/pantry.generated';
+import { PantryItemDisplayFragmentDoc } from '#operations/pantry/pantryFragments.generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
@@ -29,23 +28,25 @@ export function useCorrectPantryItemWeight({
 }: UseCorrectPantryItemWeightOptions = {}) {
   const { handleApolloError } = useErrorService();
 
-  const [correctMutation, { loading }] = useCorrectPantryItemWeightMutation({
-    errorPolicy: 'all',
-    update: (cache, { data }) => {
-      const pantryItem = data?.correctPantryItemWeight?.pantryItem;
-      if (!pantryItem) return;
+  const [correctMutation, { loading }] = useMutation(
+    CorrectPantryItemWeightDocument,
+    {
+      update: (cache, { data }) => {
+        const pantryItem = data?.correctPantryItemWeight?.pantryItem;
+        if (!pantryItem) return;
 
-      cache.writeFragment({
-        id: cache.identify({
-          __typename: 'PantryItem',
-          id: pantryItem.id,
-        }),
-        fragment: PantryItemDisplayFragmentDoc,
-        fragmentName: 'PantryItemDisplay',
-        data: pantryItem,
-      });
+        cache.writeFragment({
+          id: cache.identify({
+            __typename: 'PantryItem',
+            id: pantryItem.id,
+          }),
+          fragment: PantryItemDisplayFragmentDoc,
+          fragmentName: 'PantryItemDisplay',
+          data: pantryItem,
+        });
+      },
     },
-  });
+  );
 
   const correctWeight = async (
     pantryItemId: string,

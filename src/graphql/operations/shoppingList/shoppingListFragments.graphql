@@ -1,0 +1,124 @@
+fragment ShoppingListItemCore on ShoppingListItem {
+  id
+  itemName
+  quantity
+  quantityInput
+  displayFormat
+  purchaseInfo {
+    isPurchased
+  }
+  version
+  updatedAt
+  category
+  notes
+  unitName
+  unit {
+    id
+    name
+    symbol
+  }
+}
+
+fragment ShoppingListItemDisplayFragment on ShoppingListItem {
+  ...ShoppingListItemCore
+  sortOrder
+  item {
+    id
+    imageUrl
+    images { url kind }
+  }
+}
+
+fragment ShoppingListItemFragment on ShoppingListItem {
+  ...ShoppingListItemDisplayFragment
+  item {
+    id
+    name
+    description
+    imageUrl
+    netWeight
+    nutritions
+    displayUnit {
+      id
+      name
+      symbol
+    }
+    categories {
+      id
+      isPrimary
+      confidence
+      source
+      assignedAt
+      category {
+        id
+        name
+      }
+    }
+  }
+  priceEstimate {
+    estimated
+    lastKnown
+  }
+  source {
+    isAutoAdded
+    autoAddReason
+    isFromMealPlan
+  }
+  priority
+  sortOrder
+  createdAt
+  addedBy {
+    ...UserSummary
+  }
+  purchasesConnection(first: 10) {
+    edges {
+      node {
+        ...PurchaseFragment
+      }
+    }
+    totalCount
+  }
+}
+
+fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
+  id
+  userId
+  user {
+    id
+    email
+    profile {
+      id
+      displayName
+      avatar
+    }
+  }
+}
+
+fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
+  id
+  email
+  role
+  status
+  collaboratorId
+  canAddItems
+  canRemoveItems
+  canEditItems
+  canMarkPurchased
+  collaborator {
+    id
+    email
+    profile {
+      id
+      displayName
+      avatar
+    }
+  }
+}
+
+fragment PurchaseFragment on Purchase {
+  id
+  purchaseDate
+  quantity
+  unitPrice
+  unitSymbol
+}

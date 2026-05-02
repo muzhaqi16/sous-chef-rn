@@ -1,27 +1,26 @@
 import React from 'react';
-import { View, Text, Pressable, RefreshControl } from 'react-native';
+import { Text, RefreshControl } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   type useAnimatedScrollHandler,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { format } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { MealTypeSection } from './MealTypeSection';
 import { EmptyDayState } from './EmptyDayState';
 import type { MealTypeGroup } from '#hooks/mealPlan/useDailyMeals';
-import type { MealType, MealPlanItemFragment } from '#generated';
+import { type MealType } from '../../graphql/generated/schemaTypes';
 
 interface DayMealListProps {
   selectedDate: Date;
   dailyMeals: MealTypeGroup[];
-  totalCalories: number;
   isEmpty: boolean;
   onToggleCompleted?: (
     id: string,
     isCompleted: boolean,
     hasRecipe: boolean,
   ) => void;
-  onItemPress?: (item: MealPlanItemFragment) => void;
+  onItemPress?: (id: string) => void;
   onDeleteItem?: (id: string) => void;
   onAddMeal?: (mealType?: MealType) => void;
   onScroll?: ReturnType<typeof useAnimatedScrollHandler>;
@@ -33,7 +32,6 @@ interface DayMealListProps {
 export const DayMealList: React.FC<DayMealListProps> = ({
   selectedDate,
   dailyMeals,
-  totalCalories,
   isEmpty,
   onToggleCompleted,
   onItemPress,
@@ -70,18 +68,6 @@ export const DayMealList: React.FC<DayMealListProps> = ({
         <EmptyDayState selectedDate={selectedDate} onAddMeal={onAddMeal} />
       ) : (
         <>
-          {/* Day summary */}
-          <View style={styles.daySummary}>
-            <Text style={styles.dateLabel}>
-              {format(selectedDate, 'EEEE, MMMM d')}
-            </Text>
-            {totalCalories > 0 && (
-              <Text style={styles.calorieLabel}>
-                {Math.round(totalCalories)} cal
-              </Text>
-            )}
-          </View>
-
           {/* Meal sections grouped by type */}
           {dailyMeals.map(group => (
             <MealTypeSection
@@ -133,22 +119,6 @@ const styles = StyleSheet.create(theme => ({
   },
   contentEmpty: {
     flexGrow: 1,
-  },
-  daySummary: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-  },
-  dateLabel: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
-  calorieLabel: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
   },
   addMealButton: {
     flexDirection: 'row',

@@ -77,9 +77,7 @@ describe('BarcodeScannerScreen', () => {
   });
 
   it('shows permission request when camera not granted', () => {
-    const { getByText } = render(
-      <BarcodeScannerScreen route={defaultRoute} />,
-    );
+    const { getByText } = render(<BarcodeScannerScreen route={defaultRoute} />);
     expect(
       getByText('Camera access is required to scan barcodes.'),
     ).toBeTruthy();
@@ -87,7 +85,9 @@ describe('BarcodeScannerScreen', () => {
   });
 
   it('shows Open Settings when permission is blocked', () => {
-    const { usePermission } = jest.requireMock('#hooks/permissions/usePermission');
+    const { usePermission } = jest.requireMock(
+      '#hooks/permissions/usePermission',
+    );
     usePermission.mockReturnValue({
       isGranted: false,
       isBlocked: true,
@@ -95,14 +95,14 @@ describe('BarcodeScannerScreen', () => {
       openSettings: mockOpenSettings,
     });
 
-    const { getByText } = render(
-      <BarcodeScannerScreen route={defaultRoute} />,
-    );
+    const { getByText } = render(<BarcodeScannerScreen route={defaultRoute} />);
     expect(getByText('Open Settings')).toBeTruthy();
   });
 
   it('shows no camera device message when no device found', () => {
-    const { usePermission } = jest.requireMock('#hooks/permissions/usePermission');
+    const { usePermission } = jest.requireMock(
+      '#hooks/permissions/usePermission',
+    );
     usePermission.mockReturnValue({
       isGranted: true,
       isBlocked: false,
@@ -113,14 +113,14 @@ describe('BarcodeScannerScreen', () => {
     const { useCameraDevices } = jest.requireMock('react-native-vision-camera');
     useCameraDevices.mockReturnValue([]);
 
-    const { getByText } = render(
-      <BarcodeScannerScreen route={defaultRoute} />,
-    );
+    const { getByText } = render(<BarcodeScannerScreen route={defaultRoute} />);
     expect(getByText('No camera device found')).toBeTruthy();
   });
 
   it('renders camera scanner when permission granted and device found', () => {
-    const { usePermission } = jest.requireMock('#hooks/permissions/usePermission');
+    const { usePermission } = jest.requireMock(
+      '#hooks/permissions/usePermission',
+    );
     usePermission.mockReturnValue({
       isGranted: true,
       isBlocked: false,
@@ -131,14 +131,14 @@ describe('BarcodeScannerScreen', () => {
     const { useCameraDevices } = jest.requireMock('react-native-vision-camera');
     useCameraDevices.mockReturnValue([{ position: 'back', id: 'back-cam' }]);
 
-    const { getByText } = render(
-      <BarcodeScannerScreen route={defaultRoute} />,
-    );
+    const { getByText } = render(<BarcodeScannerScreen route={defaultRoute} />);
     expect(getByText('Point your camera at a barcode')).toBeTruthy();
   });
 
   it('shows Cancel button on permission screen', () => {
-    const { usePermission } = jest.requireMock('#hooks/permissions/usePermission');
+    const { usePermission } = jest.requireMock(
+      '#hooks/permissions/usePermission',
+    );
     usePermission.mockReturnValue({
       isGranted: false,
       isBlocked: false,
@@ -146,14 +146,14 @@ describe('BarcodeScannerScreen', () => {
       openSettings: mockOpenSettings,
     });
 
-    const { getByText } = render(
-      <BarcodeScannerScreen route={defaultRoute} />,
-    );
+    const { getByText } = render(<BarcodeScannerScreen route={defaultRoute} />);
     expect(getByText('Cancel')).toBeTruthy();
   });
 
   it('renders with undefined route params', () => {
-    const { usePermission } = jest.requireMock('#hooks/permissions/usePermission');
+    const { usePermission } = jest.requireMock(
+      '#hooks/permissions/usePermission',
+    );
     usePermission.mockReturnValue({
       isGranted: false,
       isBlocked: false,
@@ -161,9 +161,7 @@ describe('BarcodeScannerScreen', () => {
       openSettings: mockOpenSettings,
     });
 
-    const tree = render(
-      <BarcodeScannerScreen route={{ params: undefined }} />,
-    );
+    const tree = render(<BarcodeScannerScreen route={{ params: undefined }} />);
     expect(tree.toJSON()).toBeTruthy();
   });
 });

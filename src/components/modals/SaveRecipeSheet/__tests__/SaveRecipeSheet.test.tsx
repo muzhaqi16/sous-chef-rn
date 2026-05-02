@@ -115,9 +115,7 @@ describe('SaveRecipeSheet', () => {
   it('shows new folder input when Create New Folder is pressed', () => {
     render(<SaveRecipeSheet {...defaultProps} />);
     fireEvent.press(screen.getByText('Create New Folder'));
-    expect(
-      screen.getByPlaceholderText('Enter folder name...'),
-    ).toBeTruthy();
+    expect(screen.getByPlaceholderText('Enter folder name...')).toBeTruthy();
     expect(screen.getByText('Create')).toBeTruthy();
   });
 

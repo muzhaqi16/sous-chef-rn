@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 
-import { useAuthUser } from '#/hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { useCurrentPantry } from '#/hooks/pantry/useCurrentPantry';
 import { usePantryManagement } from '#/hooks/home/pantry/usePantryManagement';
 import { useHybridSearch } from '#/hooks/search/useHybridSearch';
 import { useCreateStorageLocation } from '#/hooks/storageLocation/useCreateStorageLocation';
-import { useAppStore, selectIsOnline } from '#/store/useAppStore';
+import { useAppStore, useIsOnline } from '#/store/useAppStore';
 import { useShallow } from 'zustand/shallow';
-import { GetPantryDocument, type GetPantryQuery } from '#generated';
+import {
+  GetPantryDocument,
+  type GetPantryQuery,
+} from '../../graphql/operations/pantry/pantry.generated';
 import { normalizePantry } from '#/utils/connectionUtils';
 import {
   type LocationFilter,
@@ -47,7 +50,7 @@ export function usePantryScreen() {
   // -------------------------------------------------------------------------
   // 1. User info
   // -------------------------------------------------------------------------
-  const authUser = useAuthUser();
+  const authUser = useUser();
 
   // -------------------------------------------------------------------------
   // 2. Home/pantry resolution
@@ -91,7 +94,7 @@ export function usePantryScreen() {
   // 4. Location filter + pantry management + hybrid search
   // -------------------------------------------------------------------------
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
-  const isOnline = useAppStore(selectIsOnline);
+  const isOnline = useIsOnline();
 
   const locationQueryFilter = locationFilterToQueryFilter(locationFilter);
   const queryFilter = locationQueryFilter;
@@ -260,8 +263,10 @@ export function usePantryScreen() {
   };
 
   // -------------------------------------------------------------------------
-  // Refetch pantry items when switching between pantries
+  // Reset UI state when switching between pantries
   // Uses "adjusting state during render" pattern (no ref.current read during render)
+  // NOTE: No explicit refetch() needed — Apollo re-executes the query automatically
+  // when variables.id changes (via cache-and-network fetch policy).
   // -------------------------------------------------------------------------
   const [prevPantryId, setPrevPantryId] = useState<string | undefined>(
     pantry?.id,
@@ -270,9 +275,6 @@ export function usePantryScreen() {
     setPrevPantryId(pantry?.id);
     setLocationFilter('all');
     setSearchQuery('');
-    if (prevPantryId && pantry?.id) {
-      refetch();
-    }
   }
 
   // -------------------------------------------------------------------------

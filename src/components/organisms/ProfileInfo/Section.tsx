@@ -1,7 +1,7 @@
-import React, {ReactNode} from 'react';
-import {View, Text} from 'react-native';
-import {Row, RowProps} from './Row';
-import {StyleSheet} from 'react-native-unistyles';
+import React, { ReactNode } from 'react';
+import { View, Text } from 'react-native';
+import { Row, RowProps } from './Row';
+import { StyleSheet } from 'react-native-unistyles';
 
 export interface SectionProps {
   title: string;
@@ -34,7 +34,7 @@ export const Section: React.FC<SectionProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  section: {marginBottom: theme.spacing.lg},
+  section: { marginBottom: theme.spacing.lg },
   sectionTitle: {
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.semibold,

@@ -1,7 +1,17 @@
-import React, {useState, useEffect} from 'react';
-import {View, Text, Animated, Pressable} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {TIMING} from '#constants/animations';
+import React, { useState, useEffect } from 'react';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { TIMING } from '#constants/animations';
+import { Pressable } from 'react-native-gesture-handler';
+import Animated, {
+  cancelAnimation,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  withSequence,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 interface NotificationBannerProps {
   title?: string;
@@ -17,50 +27,65 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
   onClose,
 }) => {
   const [show, setShow] = useState(true);
-  const [slide] = useState(() => new Animated.Value(-100));
+  const slide = useSharedValue(-100);
 
+  // Auto-dismiss: entire animation sequence on UI thread (no setTimeout needed).
+  // The dismiss callback is defined inside the effect so it captures the latest
+  // onClose without needing a ref, and satisfies exhaustive-deps naturally.
   useEffect(() => {
-    // slide down
-    Animated.timing(slide, {
-      toValue: 0,
-      duration: TIMING.SLOW,
-      useNativeDriver: true,
-    }).start();
+    const handleAutoDismiss = () => {
+      setShow(false);
+      onClose?.();
+    };
 
-    const timer = setTimeout(() => {
-      Animated.timing(slide, {
-        toValue: -100,
-        duration: TIMING.SLOW,
-        useNativeDriver: true,
-      }).start(() => {
-        setShow(false);
-        onClose?.();
-      });
-    }, duration);
+    slide.set(
+      withSequence(
+        withTiming(0, { duration: TIMING.SLOW }),
+        withDelay(
+          duration,
+          withTiming(-100, { duration: TIMING.SLOW }, finished => {
+            if (finished) {
+              scheduleOnRN(handleAutoDismiss);
+            }
+          }),
+        ),
+      ),
+    );
+    return () => cancelAnimation(slide);
+  }, [duration, slide, onClose]);
 
-    return () => clearTimeout(timer);
-  }, [duration, onClose, slide]);
+  // Manual dismiss (close button) — pre-defined RN-scope callback for scheduleOnRN
+  const handleManualDismiss = () => {
+    setShow(false);
+    onClose?.();
+  };
+
+  const slideOut = () => {
+    cancelAnimation(slide);
+    slide.set(
+      withTiming(-100, { duration: TIMING.SLOW }, finished => {
+        if (finished) {
+          scheduleOnRN(handleManualDismiss);
+        }
+      }),
+    );
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: slide.get() }],
+  }));
 
   if (!show) return null;
 
   return (
-    <Animated.View
-      style={[styles.bannerContainer, {transform: [{translateY: slide}]}]}>
+    <Animated.View style={[styles.bannerContainer, animatedStyle]}>
       <View style={styles.bannerInner}>
         {title ? <Text style={styles.bannerTitle}>{title}</Text> : null}
         <Text style={styles.bannerMessage}>{message}</Text>
         <Pressable
-          onPress={() => {
-            Animated.timing(slide, {
-              toValue: -100,
-              duration: TIMING.STANDARD,
-              useNativeDriver: true,
-            }).start(() => {
-              setShow(false);
-              onClose?.();
-            });
-          }}
-          style={({pressed}) => pressed && styles.pressed}>
+          onPress={slideOut}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
           <Text style={styles.bannerClose}>×</Text>
         </Pressable>
       </View>

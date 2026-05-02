@@ -38,11 +38,15 @@ jest.mock('react-native-device-info', () => ({
   getIpAddress: jest.fn(() => Promise.resolve('192.168.1.1')),
   isAirplaneMode: jest.fn(() => Promise.resolve(false)),
   isLocationEnabled: jest.fn(() => Promise.resolve(true)),
-  getAvailableLocationProviders: jest.fn(() => Promise.resolve({ gps: true, network: true })),
+  getAvailableLocationProviders: jest.fn(() =>
+    Promise.resolve({ gps: true, network: true }),
+  ),
   getHostNames: jest.fn(() => Promise.resolve(['localhost'])),
   getBatteryLevel: jest.fn(() => Promise.resolve(0.85)),
   isBatteryCharging: jest.fn(() => Promise.resolve(true)),
-  getPowerState: jest.fn(() => Promise.resolve({ batteryLevel: 0.85, lowPowerMode: false })),
+  getPowerState: jest.fn(() =>
+    Promise.resolve({ batteryLevel: 0.85, lowPowerMode: false }),
+  ),
   isHeadphonesConnected: jest.fn(() => Promise.resolve(false)),
   isKeyboardConnected: jest.fn(() => Promise.resolve(false)),
   isMouseConnected: jest.fn(() => Promise.resolve(false)),
@@ -75,7 +79,10 @@ describe('deviceInfo', () => {
   beforeEach(() => {
     jest.restoreAllMocks();
     Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true });
-    Object.defineProperty(Platform, 'Version', { value: '17.0', configurable: true });
+    Object.defineProperty(Platform, 'Version', {
+      value: '17.0',
+      configurable: true,
+    });
 
     // Reset all DeviceInfo mocks to their default implementations
     (DeviceInfo.getVersion as jest.Mock).mockReturnValue('1.0.0');
@@ -96,11 +103,17 @@ describe('deviceInfo', () => {
     (DeviceInfo.getSerialNumber as jest.Mock).mockResolvedValue('serial-123');
     (DeviceInfo.getAndroidId as jest.Mock).mockResolvedValue('android-id');
     (DeviceInfo.getInstanceId as jest.Mock).mockResolvedValue('instance-id');
-    (DeviceInfo.getFingerprint as jest.Mock).mockReturnValue('android-fingerprint');
+    (DeviceInfo.getFingerprint as jest.Mock).mockReturnValue(
+      'android-fingerprint',
+    );
     (DeviceInfo.getSecurityPatch as jest.Mock).mockResolvedValue('2024-01-01');
     (DeviceInfo.getApiLevel as jest.Mock).mockResolvedValue(34);
-    (DeviceInfo.getFirstInstallTime as jest.Mock).mockResolvedValue(1700000000000);
-    (DeviceInfo.getLastUpdateTime as jest.Mock).mockResolvedValue(1700100000000);
+    (DeviceInfo.getFirstInstallTime as jest.Mock).mockResolvedValue(
+      1700000000000,
+    );
+    (DeviceInfo.getLastUpdateTime as jest.Mock).mockResolvedValue(
+      1700100000000,
+    );
     (DeviceInfo.getTotalMemory as jest.Mock).mockResolvedValue(8000000);
     (DeviceInfo.getUsedMemory as jest.Mock).mockResolvedValue(4000000);
     (DeviceInfo.getMaxMemory as jest.Mock).mockResolvedValue(8000000);
@@ -111,15 +124,23 @@ describe('deviceInfo', () => {
     (DeviceInfo.getIpAddress as jest.Mock).mockResolvedValue('192.168.1.1');
     (DeviceInfo.isAirplaneMode as jest.Mock).mockResolvedValue(false);
     (DeviceInfo.isLocationEnabled as jest.Mock).mockResolvedValue(true);
-    (DeviceInfo.getAvailableLocationProviders as jest.Mock).mockResolvedValue({ gps: true, network: true });
+    (DeviceInfo.getAvailableLocationProviders as jest.Mock).mockResolvedValue({
+      gps: true,
+      network: true,
+    });
     (DeviceInfo.getHostNames as jest.Mock).mockResolvedValue(['localhost']);
     (DeviceInfo.getBatteryLevel as jest.Mock).mockResolvedValue(0.85);
     (DeviceInfo.isBatteryCharging as jest.Mock).mockResolvedValue(true);
-    (DeviceInfo.getPowerState as jest.Mock).mockResolvedValue({ batteryLevel: 0.85, lowPowerMode: false });
+    (DeviceInfo.getPowerState as jest.Mock).mockResolvedValue({
+      batteryLevel: 0.85,
+      lowPowerMode: false,
+    });
     (DeviceInfo.isHeadphonesConnected as jest.Mock).mockResolvedValue(false);
     (DeviceInfo.isKeyboardConnected as jest.Mock).mockResolvedValue(false);
     (DeviceInfo.isMouseConnected as jest.Mock).mockResolvedValue(false);
-    (DeviceInfo.getSupportedMediaTypeList as jest.Mock).mockResolvedValue(['audio/mp3']);
+    (DeviceInfo.getSupportedMediaTypeList as jest.Mock).mockResolvedValue([
+      'audio/mp3',
+    ]);
     (DeviceInfo.getFontScale as jest.Mock).mockResolvedValue(1.0);
     (DeviceInfo.hasNotch as jest.Mock).mockReturnValue(true);
     (DeviceInfo.hasDynamicIsland as jest.Mock).mockReturnValue(true);
@@ -127,7 +148,10 @@ describe('deviceInfo', () => {
   });
 
   afterEach(() => {
-    Object.defineProperty(Platform, 'OS', { value: originalPlatformOS, configurable: true });
+    Object.defineProperty(Platform, 'OS', {
+      value: originalPlatformOS,
+      configurable: true,
+    });
   });
 
   // ==========================================================================
@@ -205,7 +229,14 @@ describe('deviceInfo', () => {
     });
 
     it('checks all required fields', () => {
-      const requiredFields = ['deviceId', 'deviceType', 'platform', 'osName', 'osVersion', 'appVersion'];
+      const requiredFields = [
+        'deviceId',
+        'deviceType',
+        'platform',
+        'osName',
+        'osVersion',
+        'appVersion',
+      ];
       for (const field of requiredFields) {
         const info: any = {
           deviceId: 'ios-abc123def456-xyz',
@@ -240,7 +271,10 @@ describe('deviceInfo', () => {
     });
 
     it('generates fingerprint for android platform', async () => {
-      Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        configurable: true,
+      });
       const fingerprint = await generateDeviceFingerprint();
       expect(fingerprint).toContain('android-');
     });
@@ -254,21 +288,40 @@ describe('deviceInfo', () => {
       (DeviceInfo.getSystemVersion as jest.Mock).mockReturnValue(null);
       (DeviceInfo.getBuildNumber as jest.Mock).mockReturnValue(null);
       (DeviceInfo.getSerialNumber as jest.Mock).mockResolvedValue(null);
-      Object.defineProperty(Platform, 'Version', { value: null, configurable: true });
+      Object.defineProperty(Platform, 'Version', {
+        value: null,
+        configurable: true,
+      });
 
       const fingerprint = await generateDeviceFingerprint();
       expect(fingerprint).toContain('ios-');
     });
 
     it('returns emergency fallback on complete error', async () => {
-      (DeviceInfo.getUniqueId as jest.Mock).mockImplementation(() => { throw new Error('fail'); });
-      (DeviceInfo.getDeviceId as jest.Mock).mockImplementation(() => { throw new Error('fail'); });
-      (DeviceInfo.getBrand as jest.Mock).mockImplementation(() => { throw new Error('fail'); });
-      (DeviceInfo.getModel as jest.Mock).mockImplementation(() => { throw new Error('fail'); });
-      (DeviceInfo.getSystemName as jest.Mock).mockImplementation(() => { throw new Error('fail'); });
-      (DeviceInfo.getSystemVersion as jest.Mock).mockImplementation(() => { throw new Error('fail'); });
-      (DeviceInfo.getBuildNumber as jest.Mock).mockImplementation(() => { throw new Error('fail'); });
-      (DeviceInfo.getSerialNumber as jest.Mock).mockImplementation(() => { throw new Error('fail'); });
+      (DeviceInfo.getUniqueId as jest.Mock).mockImplementation(() => {
+        throw new Error('fail');
+      });
+      (DeviceInfo.getDeviceId as jest.Mock).mockImplementation(() => {
+        throw new Error('fail');
+      });
+      (DeviceInfo.getBrand as jest.Mock).mockImplementation(() => {
+        throw new Error('fail');
+      });
+      (DeviceInfo.getModel as jest.Mock).mockImplementation(() => {
+        throw new Error('fail');
+      });
+      (DeviceInfo.getSystemName as jest.Mock).mockImplementation(() => {
+        throw new Error('fail');
+      });
+      (DeviceInfo.getSystemVersion as jest.Mock).mockImplementation(() => {
+        throw new Error('fail');
+      });
+      (DeviceInfo.getBuildNumber as jest.Mock).mockImplementation(() => {
+        throw new Error('fail');
+      });
+      (DeviceInfo.getSerialNumber as jest.Mock).mockImplementation(() => {
+        throw new Error('fail');
+      });
 
       const fingerprint = await generateDeviceFingerprint();
       expect(fingerprint).toContain('ios-emergency-');
@@ -328,20 +381,30 @@ describe('deviceInfo', () => {
     });
 
     it('maps unknown device type to Mobile on iOS', async () => {
-      (DeviceInfo.getDeviceType as jest.Mock).mockReturnValue('SomeUnknownType');
+      (DeviceInfo.getDeviceType as jest.Mock).mockReturnValue(
+        'SomeUnknownType',
+      );
       const info = await collectDeviceInformation();
       expect(info.deviceType).toBe('MOBILE');
     });
 
     it('maps unknown device type to Unknown on non-mobile platform', async () => {
-      Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
-      (DeviceInfo.getDeviceType as jest.Mock).mockReturnValue('SomeUnknownType');
+      Object.defineProperty(Platform, 'OS', {
+        value: 'web',
+        configurable: true,
+      });
+      (DeviceInfo.getDeviceType as jest.Mock).mockReturnValue(
+        'SomeUnknownType',
+      );
       const info = await collectDeviceInformation();
       expect(info.deviceType).toBe('UNKNOWN');
     });
 
     it('collects android-specific info', async () => {
-      Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        configurable: true,
+      });
       const info = await collectDeviceInformation();
       expect(info.platform).toBe('ANDROID');
     });
@@ -352,25 +415,37 @@ describe('deviceInfo', () => {
     });
 
     it('maps platform correctly for windows', async () => {
-      Object.defineProperty(Platform, 'OS', { value: 'windows', configurable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'windows',
+        configurable: true,
+      });
       const info = await collectDeviceInformation();
       expect(info.platform).toBe('WINDOWS');
     });
 
     it('maps platform correctly for macos', async () => {
-      Object.defineProperty(Platform, 'OS', { value: 'macos', configurable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'macos',
+        configurable: true,
+      });
       const info = await collectDeviceInformation();
       expect(info.platform).toBe('MACOS');
     });
 
     it('maps platform correctly for web', async () => {
-      Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'web',
+        configurable: true,
+      });
       const info = await collectDeviceInformation();
       expect(info.platform).toBe('LINUX');
     });
 
     it('maps platform correctly for unknown OS', async () => {
-      Object.defineProperty(Platform, 'OS', { value: 'fuchsia', configurable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'fuchsia',
+        configurable: true,
+      });
       const info = await collectDeviceInformation();
       expect(info.platform).toBe('OTHER');
     });
@@ -411,7 +486,9 @@ describe('deviceInfo', () => {
     });
 
     it('handles getDeviceName failure gracefully', async () => {
-      (DeviceInfo.getDeviceName as jest.Mock).mockRejectedValue(new Error('fail'));
+      (DeviceInfo.getDeviceName as jest.Mock).mockRejectedValue(
+        new Error('fail'),
+      );
       const info = await collectDeviceInformation();
       expect(info.deviceName).toBe('ios Device');
     });
@@ -422,7 +499,9 @@ describe('deviceInfo', () => {
     });
 
     it('returns fallback device info on complete failure', async () => {
-      (DeviceInfo.getDeviceType as jest.Mock).mockImplementation(() => { throw new Error('total failure'); });
+      (DeviceInfo.getDeviceType as jest.Mock).mockImplementation(() => {
+        throw new Error('total failure');
+      });
 
       const info = await collectDeviceInformation();
       expect(info.deviceId).toBeTruthy();
@@ -432,9 +511,14 @@ describe('deviceInfo', () => {
     });
 
     it('collects android security info (androidId, instanceId, securityPatch, etc.)', async () => {
-      Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        configurable: true,
+      });
       // getFingerprint returns sync value so .catch() will fail, make it a promise
-      (DeviceInfo.getFingerprint as jest.Mock).mockReturnValue(Promise.resolve('android-fingerprint'));
+      (DeviceInfo.getFingerprint as jest.Mock).mockReturnValue(
+        Promise.resolve('android-fingerprint'),
+      );
       const info = await collectDeviceInformation();
       expect(info.androidId).toBe('android-id');
       expect(info.instanceId).toBe('instance-id');
@@ -471,13 +555,19 @@ describe('deviceInfo', () => {
     });
 
     it('collects supportedAbis on android', async () => {
-      Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        configurable: true,
+      });
       const info = await collectDeviceInformation();
       expect(info.supportedAbis).toEqual(['arm64']);
     });
 
     it('collects supportedAbis on ios', async () => {
-      Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true });
+      Object.defineProperty(Platform, 'OS', {
+        value: 'ios',
+        configurable: true,
+      });
       const info = await collectDeviceInformation();
       expect(info.supportedAbis).toEqual(['arm64']);
     });
@@ -496,7 +586,10 @@ describe('deviceInfo', () => {
     it('collects battery power state as JSON string', async () => {
       const info = await collectDeviceInformation();
       expect(info.powerState).toBeTruthy();
-      expect(JSON.parse(info.powerState!)).toEqual({ batteryLevel: 0.85, lowPowerMode: false });
+      expect(JSON.parse(info.powerState!)).toEqual({
+        batteryLevel: 0.85,
+        lowPowerMode: false,
+      });
     });
 
     it('collects peripheral info: keyboard and mouse', async () => {

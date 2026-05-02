@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { createPerformanceSlice, PerformanceState } from './slices/performanceSlice';
+import {
+  createPerformanceSlice,
+  PerformanceState,
+} from './slices/performanceSlice';
 
 // enableMapSet() is already called in src/store/index.ts — no need to call it again
 

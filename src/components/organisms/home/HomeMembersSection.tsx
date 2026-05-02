@@ -2,11 +2,14 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { getMemberDisplayName, type Member } from '#/utils/formatters/memberFormatters';
+import {
+  getMemberDisplayName,
+  type Member,
+} from '#/utils/formatters/memberFormatters';
 import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
 import { HomeMemberCard } from './HomeMemberCard';
 import { HomeInviteCard } from './HomeInviteCard';
-import { InviteStatus } from '#/graphql/generated';
+import { InviteStatus } from '../../../graphql/generated/schemaTypes';
 
 interface Invite {
   id: string;
@@ -40,7 +43,9 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
   const { theme } = useUnistyles();
 
   // Filter pending invites
-  const pendingInvites = invites.filter(inv => inv.status !== InviteStatus.Accepted);
+  const pendingInvites = invites.filter(
+    inv => inv.status !== InviteStatus.Accepted,
+  );
 
   return (
     <View>
@@ -66,7 +71,11 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
         })
       ) : (
         <View style={styles.emptyContainer}>
-          <Icon name="people-outline" size={48} color={theme.colors.textSecondary} />
+          <Icon
+            name="people-outline"
+            size={48}
+            color={theme.colors.textSecondary}
+          />
           <Text style={styles.emptyText}>No members</Text>
         </View>
       )}

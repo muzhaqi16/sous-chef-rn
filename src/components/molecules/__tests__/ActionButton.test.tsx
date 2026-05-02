@@ -32,10 +32,7 @@ describe('ActionButton', () => {
 
   it('renders with custom accessibility label', () => {
     render(
-      <ActionButton
-        {...defaultProps}
-        accessibilityLabel="Create new item"
-      />,
+      <ActionButton {...defaultProps} accessibilityLabel="Create new item" />,
     );
     expect(screen.getByLabelText('Create new item')).toBeTruthy();
   });

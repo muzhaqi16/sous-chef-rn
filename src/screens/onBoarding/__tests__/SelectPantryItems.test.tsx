@@ -25,36 +25,62 @@ jest.mock('#store/useAppStore', () => {
 });
 
 const mockItems = [
-  { id: 'i1', name: 'Eggs', imageUrl: null, displayUnit: { id: 'u1' }, selected: false },
-  { id: 'i2', name: 'Milk', imageUrl: null, displayUnit: { id: 'u2' }, selected: false },
-  { id: 'i3', name: 'Bread', imageUrl: null, displayUnit: { id: 'u3' }, selected: false },
+  {
+    id: 'i1',
+    name: 'Eggs',
+    imageUrl: null,
+    displayUnit: { id: 'u1' },
+    selected: false,
+  },
+  {
+    id: 'i2',
+    name: 'Milk',
+    imageUrl: null,
+    displayUnit: { id: 'u2' },
+    selected: false,
+  },
+  {
+    id: 'i3',
+    name: 'Bread',
+    imageUrl: null,
+    displayUnit: { id: 'u3' },
+    selected: false,
+  },
 ];
 
 let mockLoading = false;
 let mockQueryError: any = null;
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetOnboardingItemsQuery: jest.fn(() => ({
-    data: {
-      items: {
-        edges: mockItems.map(item => ({ node: item })),
-      },
-    },
-    loading: mockLoading,
-    error: mockQueryError,
-    refetch: jest.fn(),
-  })),
-  useGetPantryQuery: jest.fn(() => ({
-    data: { pantry: { itemsConnection: { edges: [] } } },
-    loading: false,
-  })),
-  useCreatePantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useDeletePantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetOnboardingItems') {
+      return {
+        data: {
+          items: {
+            edges: mockItems.map(item => ({ node: item })),
+          },
+        },
+        loading: mockLoading,
+        error: mockQueryError,
+        refetch: jest.fn(),
+      };
+    }
+    if (opName === 'GetPantry') {
+      return {
+        data: { pantry: { itemsConnection: { edges: [] } } },
+        loading: false,
+        error: undefined,
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useMutation: jest.fn(() => [jest.fn(), { loading: false }]),
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
-  extractNodes: jest.fn((c) => c?.edges?.map((e: any) => e.node) || []),
+  extractNodes: jest.fn(c => c?.edges?.map((e: any) => e.node) || []),
 }));
 jest.mock('#/hooks/home/pantry/utils', () => ({
   removeFromPantryItemsCache: jest.fn(),
@@ -86,21 +112,24 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
   },
 }));
 jest.mock('#components/base/Button', () => ({
-  Button: ({ title, onPress, disabled }: any) => {
+  Button: ({ title, children, onPress, disabled }: any) => {
     const { Pressable, Text } = require('react-native');
-    return <Pressable onPress={onPress} disabled={disabled} testID="action-button"><Text>{title}</Text></Pressable>;
+    return (
+      <Pressable onPress={onPress} disabled={disabled} testID="action-button">
+        <Text>{title || children}</Text>
+      </Pressable>
+    );
   },
 }));
 jest.mock('#components/atoms/AnimatedChip', () => ({
   AnimatedChip: ({ label, selected }: any) => {
     const { Text } = require('react-native');
-    return <Text>{label}{selected ? ' (selected)' : ''}</Text>;
-  },
-}));
-jest.mock('#components/atoms/AnimatedButton', () => ({
-  AnimatedButton: ({ children, onPress }: any) => {
-    const { Pressable, Text } = require('react-native');
-    return <Pressable onPress={onPress}><Text>{children}</Text></Pressable>;
+    return (
+      <Text>
+        {label}
+        {selected ? ' (selected)' : ''}
+      </Text>
+    );
   },
 }));
 jest.mock('#/components/base/SousChefLoader', () => ({
@@ -124,7 +153,9 @@ describe('SelectPantryItems', () => {
 
   it('shows subtitle', () => {
     render(<SelectPantryItems />);
-    expect(screen.getByText(/Select items you already have at home/)).toBeTruthy();
+    expect(
+      screen.getByText(/Select items you already have at home/),
+    ).toBeTruthy();
   });
 
   it('renders item chips', () => {
@@ -147,12 +178,16 @@ describe('SelectPantryItems', () => {
   it('shows error state when query fails', () => {
     mockQueryError = { message: 'Network error' };
     render(<SelectPantryItems />);
-    expect(screen.getByText('Unable to load items. Please try again.')).toBeTruthy();
+    expect(
+      screen.getByText('Unable to load items. Please try again.'),
+    ).toBeTruthy();
     expect(screen.getByText('Try Again')).toBeTruthy();
   });
 
   it('renders the testID', () => {
     render(<SelectPantryItems />);
-    expect(screen.getByTestId('onboarding-select-pantry-items-screen')).toBeTruthy();
+    expect(
+      screen.getByTestId('onboarding-select-pantry-items-screen'),
+    ).toBeTruthy();
   });
 });

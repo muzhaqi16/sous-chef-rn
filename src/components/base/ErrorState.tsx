@@ -65,7 +65,8 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
 
   const renderIcon = () => {
     // Check if icon is an emoji (single character or emoji sequence)
-    const isEmoji = typeof icon === 'string' && icon.length <= 4 && !/^[a-z-]+$/.test(icon);
+    const isEmoji =
+      typeof icon === 'string' && icon.length <= 4 && !/^[a-z-]+$/.test(icon);
 
     if (isEmoji) {
       return <Text style={[styles.emoji, { fontSize: iconSize }]}>{icon}</Text>;
@@ -83,7 +84,9 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   return (
     <View style={[styles.container, { justifyContent: alignment }, style]}>
       {renderIcon()}
-      <Text style={[styles.title, { color: severityColors[severity] }]}>{title}</Text>
+      <Text style={[styles.title, { color: severityColors[severity] }]}>
+        {title}
+      </Text>
       <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
         {message}
       </Text>

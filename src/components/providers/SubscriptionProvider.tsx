@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useAuthUser } from '#/hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { useAppStore } from '#store/useAppStore';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
@@ -51,7 +51,7 @@ interface SubscriptionProviderProps {
 export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   children,
 }) => {
-  const user = useAuthUser();
+  const user = useUser();
   const isAuthenticated = useAppStore(
     state => !!(state.user && state.accessToken),
   );

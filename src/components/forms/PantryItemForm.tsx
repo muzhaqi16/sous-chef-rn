@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
   View,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Text,
+  ScrollView,
 } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { useForm, useWatch, Controller, type Resolver } from 'react-hook-form';
@@ -13,21 +13,19 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string } from 'yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useNavigation } from '@react-navigation/native';
-
 import { commonStyles } from '#/styles/commonStyles';
-import {
-  useAppStore,
-  selectSelectedPantryId,
-  selectSelectedHomeId,
-} from '#store/useAppStore';
+import { useSelectedPantryId, useSelectedHomeId } from '#store/useAppStore';
 import { normalizeHome } from '#/utils/connectionUtils';
+import { useQuery } from '@apollo/client/react';
+import { GetHomeDocument } from '../../graphql/operations/home/home.generated';
+import {
+  GetPantryDocument,
+  GetPantryItemDocument,
+} from '#operations/pantry/pantry.generated';
 import {
   StorageState,
-  useGetPantryItemQuery,
-  useGetHomeQuery,
-  useGetPantryQuery,
-  ItemSuggestion,
-} from '#generated';
+  type ItemSuggestion,
+} from '#/graphql/generated/schemaTypes';
 import { useCreatePantryItem } from '#hooks/pantry/mutations/useCreatePantryItem';
 import { useUpdatePantryItem } from '#hooks/pantry/mutations/useUpdatePantryItem';
 import { useUpdatePantryItemQuantity } from '#hooks/pantry/mutations/useUpdatePantryItemQuantity';
@@ -150,9 +148,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
   const [netWeightUnitId, setNetWeightUnitId] = useState<string | null>(null);
 
-  const selectedPantryId = useAppStore(selectSelectedPantryId);
+  const selectedPantryId = useSelectedPantryId();
   // Get selectedHomeId from Zustand (no GraphQL query triggered)
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const selectedHomeId = useSelectedHomeId();
 
   // Helper to get default pantry (inline to avoid useDefaultHome dependency)
   const getDefaultPantry = (data: any) => {
@@ -165,7 +163,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     );
   };
 
-  const { data: homeData } = useGetHomeQuery({
+  const { data: homeData } = useQuery(GetHomeDocument, {
     variables: { homeId: selectedHomeId ?? '' },
     skip: !selectedHomeId,
   });
@@ -175,7 +173,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     data: existingItemData,
     loading: itemLoading,
     refetch: refetchItem,
-  } = useGetPantryItemQuery({
+  } = useQuery(GetPantryItemDocument, {
     variables: { id: itemId ?? '' },
     skip: mode !== 'edit' || !itemId,
   });
@@ -185,7 +183,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     selectedPantryId || pantry?.id || existingItemData?.pantryItem?.pantryId;
 
   // Fetch pantry details to get storage locations
-  const { data: pantryData } = useGetPantryQuery({
+  const { data: pantryData } = useQuery(GetPantryDocument, {
     variables: { id: currentPantryId ?? '' },
     skip: !currentPantryId,
     fetchPolicy: 'cache-first',

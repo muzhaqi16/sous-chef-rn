@@ -1,9 +1,10 @@
+import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import {
-  StorageState,
-  useCreatePantryItemMutation,
-  useRestockPantryItemMutation,
-} from '#generated';
+  CreatePantryItemDocument,
+  RestockPantryItemDocument,
+} from '#operations/pantry/pantry.generated';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
@@ -71,27 +72,27 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
   } = params;
 
   // Create mutation
-  const [createPantryItem, { loading }] = useCreatePantryItemMutation({
-    errorPolicy: 'all',
-    update: (cache, { data }) => {
-      const pantryItem = data?.createPantryItem?.pantryItem;
-      if (!pantryItem || !pantryId) return;
+  const [createPantryItem, { loading }] = useMutation(
+    CreatePantryItemDocument,
+    {
+      update: (cache, { data }) => {
+        const pantryItem = data?.createPantryItem?.pantryItem;
+        if (!pantryItem || !pantryId) return;
 
-      executeCacheUpdate(() => {
-        const addToPantryCache = createAddToParentConnectionUpdater(
-          'Pantry',
-          'itemsConnection',
-          'PantryItem',
-        );
-        addToPantryCache(cache, pantryId, pantryItem);
-      }, 'Cache update failed for createPantryItem:');
+        executeCacheUpdate(() => {
+          const addToPantryCache = createAddToParentConnectionUpdater(
+            'Pantry',
+            'itemsConnection',
+            'PantryItem',
+          );
+          addToPantryCache(cache, pantryId, pantryItem);
+        }, 'Cache update failed for createPantryItem:');
+      },
     },
-  });
+  );
 
   // Restock mutation
-  const [restockPantryItem] = useRestockPantryItemMutation({
-    errorPolicy: 'all',
-  });
+  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {});
 
   const handleConfirm = async () => {
     if (!pantryId) return;

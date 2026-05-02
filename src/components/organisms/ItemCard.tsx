@@ -116,7 +116,9 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
   );
 };
 
-export const ItemCard = React.memo(ItemCardComponent);
+// React Compiler memoizes JSX at the parent call site, so React.memo is
+// redundant on non-FlashList components. Per CLAUDE.md / project memory.
+export const ItemCard = ItemCardComponent;
 
 const styles = StyleSheet.create(theme => ({
   container: {

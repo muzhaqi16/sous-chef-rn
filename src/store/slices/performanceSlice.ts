@@ -25,10 +25,7 @@ export interface PerformanceState {
   setTrackScreens: (enabled: boolean) => void;
 
   // Record metrics
-  recordComponentRender: (
-    componentName: string,
-    renderTime: number,
-  ) => void;
+  recordComponentRender: (componentName: string, renderTime: number) => void;
   recordScreenTransition: (
     screenName: string,
     mountTime: number,
@@ -109,7 +106,8 @@ export const createPerformanceSlice: StateCreator<
         existing.renderCount += 1;
         existing.lastRenderTime = renderTime;
         existing.totalRenderTime += renderTime;
-        existing.avgRenderTime = existing.totalRenderTime / existing.renderCount;
+        existing.avgRenderTime =
+          existing.totalRenderTime / existing.renderCount;
         existing.maxRenderTime = Math.max(existing.maxRenderTime, renderTime);
         existing.lastRenderTimestamp = now;
       } else {
@@ -165,7 +163,8 @@ export const createPerformanceSlice: StateCreator<
         existing.lastInteractiveTime = interactiveTime;
         existing.totalMountTime += mountTime;
         existing.totalInteractiveTime += interactiveTime;
-        existing.avgMountTime = existing.totalMountTime / existing.transitionCount;
+        existing.avgMountTime =
+          existing.totalMountTime / existing.transitionCount;
         existing.avgInteractiveTime =
           existing.totalInteractiveTime / existing.transitionCount;
         existing.maxMountTime = Math.max(existing.maxMountTime, mountTime);
@@ -221,7 +220,9 @@ export const createPerformanceSlice: StateCreator<
 
       // Trim if too many snapshots
       if (state.memorySnapshots.length > MAX_MEMORY_SNAPSHOTS) {
-        state.memorySnapshots = state.memorySnapshots.slice(-MAX_MEMORY_SNAPSHOTS);
+        state.memorySnapshots = state.memorySnapshots.slice(
+          -MAX_MEMORY_SNAPSHOTS,
+        );
       }
     }),
 

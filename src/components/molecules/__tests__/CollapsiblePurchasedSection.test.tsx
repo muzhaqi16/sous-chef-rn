@@ -16,17 +16,22 @@ jest.mock('../../organisms/SortableShoppingList/SortableList', () => ({
   SortableShoppingList: ({ items }: any) => {
     const { View, Text } = require('react-native');
     const R = require('react');
-    return R.createElement(View, { testID: 'sortable-list' },
-      items.map((item: any) => R.createElement(Text, { key: item.id }, item.name || item.id)),
+    return R.createElement(
+      View,
+      { testID: 'sortable-list' },
+      items.map((item: any) =>
+        R.createElement(Text, { key: item.id }, item.name || item.id),
+      ),
     );
   },
 }));
 
-const makeItem = (id: string, name = id) => ({
-  id,
-  name,
-  isPurchased: true,
-} as any);
+const makeItem = (id: string, name = id) =>
+  ({
+    id,
+    name,
+    isPurchased: true,
+  } as any);
 
 describe('CollapsiblePurchasedSection', () => {
   const defaultProps = {
@@ -59,7 +64,9 @@ describe('CollapsiblePurchasedSection', () => {
   });
 
   it('shows Clear All button when onClearAll is provided', () => {
-    render(<CollapsiblePurchasedSection {...defaultProps} onClearAll={jest.fn()} />);
+    render(
+      <CollapsiblePurchasedSection {...defaultProps} onClearAll={jest.fn()} />,
+    );
     expect(screen.getByText('Clear All')).toBeTruthy();
   });
 
@@ -69,7 +76,9 @@ describe('CollapsiblePurchasedSection', () => {
   });
 
   it('auto-expands when unpurchasedCount is 0', () => {
-    render(<CollapsiblePurchasedSection {...defaultProps} unpurchasedCount={0} />);
+    render(
+      <CollapsiblePurchasedSection {...defaultProps} unpurchasedCount={0} />,
+    );
     expect(screen.getByTestId('sortable-list')).toBeTruthy();
   });
 

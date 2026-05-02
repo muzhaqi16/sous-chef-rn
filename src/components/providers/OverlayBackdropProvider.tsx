@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useRef, useState } from 'react';
-import { Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,6 +8,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import { SHEET } from '#constants/animations';
+import { Pressable } from 'react-native-gesture-handler';
 
 interface ShowBackdropOptions {
   opacity?: number;
@@ -128,7 +128,7 @@ export const GlobalBackdrop: React.FC = () => {
   };
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity?.value ?? 0,
+    opacity: opacity?.get() ?? 0,
   }));
 
   // If used outside provider, render nothing

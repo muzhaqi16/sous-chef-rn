@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -7,7 +8,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { StarRatingInput } from './StarRatingInput';
-import type { RecipeReviewFragment } from '#generated';
+import { type RecipeReviewFragment } from '../../graphql/operations/recipe/recipeFragments.generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 interface WriteReviewSheetProps {

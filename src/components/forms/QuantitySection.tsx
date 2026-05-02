@@ -11,7 +11,12 @@ interface QuantitySectionProps {
   control: Control<any>;
   errors: FieldErrors<any>;
   mode: 'add' | 'edit';
-  onUnitSelected?: (unitId: string | null, unitName: string | null, unitType?: string | null, unitSymbol?: string | null) => void;
+  onUnitSelected?: (
+    unitId: string | null,
+    unitName: string | null,
+    unitType?: string | null,
+    unitSymbol?: string | null,
+  ) => void;
   testID?: string;
   unitTestID?: string;
   unitSymbol?: string | null;

@@ -1,9 +1,8 @@
 import React from 'react';
-import { Text, Pressable } from 'react-native';
+import { Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import Animated, {
-  LinearTransition,
-} from 'react-native-reanimated';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
 import type { NavigationButtonProps } from './types';
 
@@ -23,7 +22,7 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
     <AnimatedPressable
       onPress={action.onPress}
       disabled={action.disabled}
-      style={({pressed}) => [
+      style={({ pressed }) => [
         styles.button,
         {
           backgroundColor: action.backgroundColor,

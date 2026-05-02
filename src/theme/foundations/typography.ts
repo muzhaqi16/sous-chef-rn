@@ -20,10 +20,10 @@ export const typography = {
     '5xl': 40,
   },
   lineHeight: {
-    tight: 20,    // For sm/base text
-    normal: 24,   // For md/lg text
-    relaxed: 28,  // For xl text
-    loose: 32,    // For 2xl text
+    tight: 20, // For sm/base text
+    normal: 24, // For md/lg text
+    relaxed: 28, // For xl text
+    loose: 32, // For 2xl text
   },
   letterSpacing: {
     tight: -0.5,

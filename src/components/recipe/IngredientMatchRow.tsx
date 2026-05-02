@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Switch, TextInput } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { createPropsComparator } from '#utils/memoUtils';
+
 import {
   type EditableMatch,
   getAvailabilityStatus,
@@ -16,7 +16,10 @@ interface IngredientMatchRowProps {
   ) => void;
 }
 
-const BADGE_CONFIG: Record<string, { label: string; color: 'success' | 'warning' | 'error' }> = {
+const BADGE_CONFIG: Record<
+  string,
+  { label: string; color: 'success' | 'warning' | 'error' }
+> = {
   available: { label: 'Available', color: 'success' },
   partial: { label: 'Partial', color: 'warning' },
   missing: { label: 'Missing', color: 'error' },
@@ -102,21 +105,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   );
 };
 
-IngredientMatchRowComponent.displayName = 'IngredientMatchRow';
-
-const areIngredientMatchRowPropsEqual =
-  createPropsComparator<IngredientMatchRowProps>({
-    referenceKeys: ['index'],
-    nestedComparisons: {
-      editableMatch: ['adjustedQuantity', 'isIncluded'],
-      'editableMatch.match.ingredient': ['id'],
-    },
-  });
-
-export const IngredientMatchRow = React.memo(
-  IngredientMatchRowComponent,
-  areIngredientMatchRowPropsEqual,
-);
+export const IngredientMatchRow = IngredientMatchRowComponent;
 
 const styles = StyleSheet.create(theme => ({
   row: {

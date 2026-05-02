@@ -11,11 +11,20 @@ const mockChangePassword = jest.fn().mockResolvedValue({
 const mockToast = jest.fn();
 
 jest.mock('#hooks/navigation/useAppNavigation');
-const mockNav = (jest.requireMock('#hooks/navigation/useAppNavigation') as { useAppNavigation: jest.Mock }).useAppNavigation();
+const mockNav = (
+  jest.requireMock('#hooks/navigation/useAppNavigation') as {
+    useAppNavigation: jest.Mock;
+  }
+).useAppNavigation();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useChangePasswordMutation: () => [mockChangePassword],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'ChangePassword')
+      return [mockChangePassword, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#hooks/useToast', () => ({
@@ -81,13 +90,17 @@ describe('ChangePasswordScreen', () => {
     render(<ChangePasswordScreen />);
     expect(screen.getByTestId('header')).toBeTruthy();
     // Both header and button contain "Change Password" text
-    expect(screen.getAllByText('Change Password').length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText('Change Password').length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it('renders the description text', () => {
     render(<ChangePasswordScreen />);
     expect(
-      screen.getByText(/Enter your current password and choose a new secure password/),
+      screen.getByText(
+        /Enter your current password and choose a new secure password/,
+      ),
     ).toBeTruthy();
   });
 
@@ -121,8 +134,12 @@ describe('ChangePasswordScreen', () => {
 
   it('renders password input placeholders', () => {
     render(<ChangePasswordScreen />);
-    expect(screen.getByPlaceholderText('Enter your current password')).toBeTruthy();
+    expect(
+      screen.getByPlaceholderText('Enter your current password'),
+    ).toBeTruthy();
     expect(screen.getByPlaceholderText('Enter your new password')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Confirm your new password')).toBeTruthy();
+    expect(
+      screen.getByPlaceholderText('Confirm your new password'),
+    ).toBeTruthy();
   });
 });

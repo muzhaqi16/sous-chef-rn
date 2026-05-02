@@ -19,6 +19,16 @@ export function useDataReferenceTracker<T>(
   onChange?: () => void,
 ): void {
   const isFirstRender = useRef(true);
+  const labelRef = useRef(label);
+  const onChangeRef = useRef(onChange);
+
+  // Sync refs after render — never assign ref.current during render (compiler safe)
+  useEffect(() => {
+    labelRef.current = label;
+  });
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -27,8 +37,8 @@ export function useDataReferenceTracker<T>(
     }
 
     if (__DEV__) {
-      console.log(`📊 [${label}] data reference changed`);
+      console.log(`📊 [${labelRef.current}] data reference changed`);
     }
-    onChange?.();
-  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+    onChangeRef.current?.();
+  }, [value]);
 }

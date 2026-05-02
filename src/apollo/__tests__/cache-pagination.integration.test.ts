@@ -689,39 +689,39 @@ describe('cache pagination integration', () => {
     it('evicts oldest edges when exceeding window limit', () => {
       const cache = makeCache();
 
-      // Write 100 edges as page 1
-      const page1 = Array.from({ length: 100 }, (_, i) =>
+      // Write 80 edges as page 1
+      const page1 = Array.from({ length: 80 }, (_, i) =>
         itemEdge(`si-${i}`, `Item ${i}`),
       );
       writeConn(
         cache,
         page1,
-        { hasNextPage: true, endCursor: 'c100' },
+        { hasNextPage: true, endCursor: 'c80' },
         undefined,
         300,
       );
 
-      // Write 60 more edges as page 2 (total would be 160, exceeding 150)
-      const page2 = Array.from({ length: 60 }, (_, i) =>
-        itemEdge(`si-${100 + i}`, `Item ${100 + i}`),
+      // Write 40 more edges as page 2 (total would be 120, exceeding 100)
+      const page2 = Array.from({ length: 40 }, (_, i) =>
+        itemEdge(`si-${80 + i}`, `Item ${80 + i}`),
       );
       writeConn(
         cache,
         page2,
-        { hasNextPage: true, endCursor: 'c160' },
-        { after: 'c100' },
+        { hasNextPage: true, endCursor: 'c120' },
+        { after: 'c80' },
         300,
       );
 
       const edges = readEdges(cache);
-      // Should be capped at 150
-      expect(edges).toHaveLength(150);
-      // Oldest 10 edges (si-0 through si-9) should be evicted
+      // Should be capped at 100 (MAX_WINDOW_EDGES)
+      expect(edges).toHaveLength(100);
+      // Oldest 20 edges (si-0 through si-19) should be evicted
       const ids = edges.map((e: any) => e.node.id);
       expect(ids).not.toContain('si-0');
-      expect(ids).not.toContain('si-9');
-      expect(ids).toContain('si-10');
-      expect(ids).toContain('si-159');
+      expect(ids).not.toContain('si-19');
+      expect(ids).toContain('si-20');
+      expect(ids).toContain('si-119');
     });
 
     it('background refetch within window limit does not evict', () => {

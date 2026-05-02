@@ -1,12 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
   ActivityIndicator,
   RefreshControl,
-  Pressable,
   ScrollView,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   LinearTransition,
   FadeInDown,
@@ -19,7 +19,6 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useHomeManagement } from '#hooks/home/hooks/useHomeManagement';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
-import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
 import { Button } from '#/components/base/Button';
 import { toastService } from '#/services/toastService';
@@ -55,6 +54,18 @@ export const HomeManagement: React.FC = () => {
     null,
   );
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clear any in-flight highlight timer on unmount to prevent setState on
+  // an unmounted component if the user navigates away within 2s of setting
+  // a default home.
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+        highlightTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const {
     homes,
@@ -327,7 +338,7 @@ export const HomeManagement: React.FC = () => {
                   >
                     Cancel
                   </Button>
-                  <AnimatedButton
+                  <Button
                     loading={joiningByCode}
                     disabled={!joinCode.trim()}
                     onPress={handleJoinHome}
@@ -335,7 +346,7 @@ export const HomeManagement: React.FC = () => {
                     style={styles.actionButton}
                   >
                     Join
-                  </AnimatedButton>
+                  </Button>
                 </View>
               </View>
             )}
@@ -360,6 +371,12 @@ export const HomeManagement: React.FC = () => {
               />
             }
           >
+            {/* NOTE: Per-item entering + LinearTransition layout animations on
+                a `.map()`-rendered list are acceptable here because the home
+                list is bounded (typically <10 items). For longer lists, prefer
+                a single FlashList `itemLayoutAnimation` or stagger-gate the
+                entering animations after the first render — see
+                js-animations-reanimated.md for the long-list pattern. */}
             {sortedHomes.map((home, index) => {
               const userCanInvite = home.myMembership
                 ? canInviteToHome(

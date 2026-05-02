@@ -3,12 +3,37 @@
  * Verifies they export expected values and structures.
  */
 
-import { SPRING, SHEET, TIMING, SLIDE_PRESETS, staggeredEntryAnimation, screenEntryAnimation, listItemExitAnimation, listItemFastExitAnimation, listItemEntryAnimation } from '../animations';
-import { DRAG_ITEM_HEIGHT, DRAG_SCALE, DRAG_SHADOW_OPACITY, ITEM_VERTICAL_MARGIN, LONG_PRESS_DURATION, EDGE_THRESHOLD, MAX_SCROLL_SPEED } from '../drag';
+import {
+  SPRING,
+  SHEET,
+  TIMING,
+  SLIDE_PRESETS,
+  staggeredEntryAnimation,
+  screenEntryAnimation,
+  listItemExitAnimation,
+  listItemFastExitAnimation,
+  listItemEntryAnimation,
+} from '../animations';
+import {
+  DRAG_ITEM_HEIGHT,
+  DRAG_SCALE,
+  DRAG_SHADOW_OPACITY,
+  ITEM_VERTICAL_MARGIN,
+  LONG_PRESS_DURATION,
+  EDGE_THRESHOLD,
+  MAX_SCROLL_SPEED,
+} from '../drag';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '../dietary';
 import { LANGUAGE_OPTIONS } from '../languages';
 import { MESSAGES } from '../messages';
-import { FRAGMENT_NAMES, ICONS, LABELS, EMPTY_STATE_MESSAGES, PAGINATION, DEFAULTS } from '../shoppingList';
+import {
+  FRAGMENT_NAMES,
+  ICONS,
+  LABELS,
+  EMPTY_STATE_MESSAGES,
+  PAGINATION,
+  DEFAULTS,
+} from '../shoppingList';
 import { HIT_SLOP, HIT_SLOP_SM, HIT_SLOP_LG } from '../touch';
 import { getTabBarBottomPadding } from '../layout';
 
@@ -82,7 +107,12 @@ describe('drag constants', () => {
 
 describe('dietary constants', () => {
   it('exports SKILL_LEVELS', () => {
-    expect(SKILL_LEVELS).toEqual(['Beginner', 'Intermediate', 'Advanced', 'Expert']);
+    expect(SKILL_LEVELS).toEqual([
+      'Beginner',
+      'Intermediate',
+      'Advanced',
+      'Expert',
+    ]);
   });
 
   it('exports DIETARY_LIMITS with expected ranges', () => {
@@ -111,7 +141,9 @@ describe('messages constants', () => {
   });
 
   it('has expected error messages', () => {
-    expect(MESSAGES.errors.networkError).toBe('Network error. Please check your connection.');
+    expect(MESSAGES.errors.networkError).toBe(
+      'Network error. Please check your connection.',
+    );
     expect(MESSAGES.errors.loginFailed).toContain('Login failed');
   });
 

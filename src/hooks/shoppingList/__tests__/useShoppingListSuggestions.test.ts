@@ -11,20 +11,23 @@ let mockQueryResult: any = {
   refetch: jest.fn(),
 };
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetShoppingListSuggestionsQuery: (options: any) => {
-    // Store the skip state for test assertions
-    if (options.skip) {
-      return {
-        data: null,
-        loading: false,
-        error: undefined,
-        refetch: jest.fn(),
-      };
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any, options: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetShoppingListSuggestions') {
+      if (options?.skip) {
+        return {
+          data: null,
+          loading: false,
+          error: undefined,
+          refetch: jest.fn(),
+        };
+      }
+      return mockQueryResult;
     }
-    return mockQueryResult;
-  },
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#hooks/settings/useOfflineMode', () => ({

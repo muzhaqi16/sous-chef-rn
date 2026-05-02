@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 
 interface TabScreenHeaderProps {
@@ -19,7 +20,12 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
 }) => {
   const titleContent = (
     <View style={styles.titleRow}>
-      <Text maxFontSizeMultiplier={1.5} style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+      <Text
+        maxFontSizeMultiplier={1.5}
+        style={styles.title}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
         {title}
       </Text>
       {!!titleAccessory && titleAccessory}
@@ -29,7 +35,9 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
   return (
     <View style={styles.header}>
       <View style={styles.leftContent}>
-        <Text maxFontSizeMultiplier={1.5} style={styles.label}>{label}</Text>
+        <Text maxFontSizeMultiplier={1.5} style={styles.label}>
+          {label}
+        </Text>
         {onTitlePress ? (
           <Pressable onPress={onTitlePress} accessibilityRole="button">
             {titleContent}
@@ -39,9 +47,7 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
         )}
       </View>
 
-      {!!headerRight && (
-        <View style={styles.headerActions}>{headerRight}</View>
-      )}
+      {!!headerRight && <View style={styles.headerActions}>{headerRight}</View>}
     </View>
   );
 };
@@ -52,7 +58,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
   leftContent: {

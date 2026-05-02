@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
-import { Text, View, Pressable } from 'react-native';
+import { Text, View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { EmailInput } from '#components/atoms/EmailInput';
 import { StyleSheet } from 'react-native-unistyles';
+import { useMutation } from '@apollo/client/react';
+import { InviteToHomeDocument } from '../../graphql/operations/home/home.generated';
+import { AddCollaboratorDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import {
-  useInviteToHomeMutation,
-  useAddCollaboratorMutation,
   CollaboratorRole,
   MembershipRole,
-} from '#generated';
+} from '../../graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 
@@ -25,7 +27,7 @@ type InviteEntry = {
 export const InviteMemberScreen = () => {
   useScreenTransition('InviteMemberScreen');
   const { navigateToNextStep } = useOnboardingNavigation();
-  const user = useAuthUser();
+  const user = useUser();
 
   const selectedHomeId = useAppStore(state => state.selectedHomeId);
   const selectedShoppingListId = useAppStore(
@@ -42,13 +44,13 @@ export const InviteMemberScreen = () => {
   const [currentEmail, setCurrentEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
 
-  const [inviteToHome] = useInviteToHomeMutation({
+  const [inviteToHome] = useMutation(InviteToHomeDocument, {
     onError: error => {
       console.error('Failed to invite to home:', error);
     },
   });
 
-  const [addCollaborator] = useAddCollaboratorMutation({
+  const [addCollaborator] = useMutation(AddCollaboratorDocument, {
     onError: error => {
       console.error('Failed to add collaborator:', error);
     },

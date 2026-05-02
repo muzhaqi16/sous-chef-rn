@@ -37,13 +37,19 @@ export class Environment {
       return Environment._config;
     }
 
-    const nodeEnv = getConfigValue('NODE_ENV', __DEV__ ? 'development' : 'production');
+    const nodeEnv = getConfigValue(
+      'NODE_ENV',
+      __DEV__ ? 'development' : 'production',
+    );
 
     const config: EnvironmentConfig = {
       isDevelopment: nodeEnv === 'development' || __DEV__,
       isProduction: nodeEnv === 'production',
       isStaging: nodeEnv === 'staging',
-      isTesting: nodeEnv === 'testing' || nodeEnv === 'test' || process.env.NODE_ENV === 'test',
+      isTesting:
+        nodeEnv === 'testing' ||
+        nodeEnv === 'test' ||
+        process.env.NODE_ENV === 'test',
       platform: Platform.OS as 'ios' | 'android' | 'web',
       buildMode: __DEV__ ? 'debug' : 'release',
     };
@@ -157,8 +163,14 @@ export class Environment {
 
     if (config.isStaging) {
       return {
-        baseUrl: getConfigValue('STAGING_API_URL', 'https://staging-api.souschef.dev/graphql'),
-        wsUrl: getConfigValue('STAGING_WS_URL', 'wss://staging-api.souschef.dev/graphql'),
+        baseUrl: getConfigValue(
+          'STAGING_API_URL',
+          'https://staging-api.souschef.dev/graphql',
+        ),
+        wsUrl: getConfigValue(
+          'STAGING_WS_URL',
+          'wss://staging-api.souschef.dev/graphql',
+        ),
         timeout: 10000,
         retries: 2,
       };
@@ -166,7 +178,10 @@ export class Environment {
 
     // Production
     return {
-      baseUrl: getConfigValue('PROD_API_URL', 'https://api.souschef.dev/graphql'),
+      baseUrl: getConfigValue(
+        'PROD_API_URL',
+        'https://api.souschef.dev/graphql',
+      ),
       wsUrl: getConfigValue('PROD_WS_URL', 'wss://api.souschef.dev/graphql'),
       timeout: 10000,
       retries: 1,
@@ -217,10 +232,12 @@ export const logger = {
  * Feature flags based on environment
  */
 export const FeatureFlags = {
-  enableBiometrics: Environment.shouldEnableDebugFeatures() || Environment.isProduction(),
+  enableBiometrics:
+    Environment.shouldEnableDebugFeatures() || Environment.isProduction(),
   enableCrashReporting: Environment.shouldEnableCrashReporting(),
   enableAnalytics: Environment.shouldEnableAnalytics(),
-  enablePerformanceMonitoring: Environment.isProduction() || Environment.isStaging(),
+  enablePerformanceMonitoring:
+    Environment.isProduction() || Environment.isStaging(),
   enableDetailedLogging: Environment.isDevelopment(),
   enableDevTools: Environment.isDevelopment(),
   enableTestMode: Environment.isTesting(),

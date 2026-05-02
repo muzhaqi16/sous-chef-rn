@@ -2,15 +2,15 @@
  * Shared utilities for pantry item mutations
  */
 
+import { type PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
 import {
-  PantryItemFragment,
   StorageState,
   UnitType,
-  UpdatePantryItemInput,
-  StorageDetailsInput,
-  InventoryThresholdsInput,
-  NetWeightInput,
-} from '#generated';
+  type UpdatePantryItemInput,
+  type StorageDetailsInput,
+  type InventoryThresholdsInput,
+  type NetWeightInput,
+} from '../../../graphql/generated/schemaTypes';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import type { UnitSelection, FormDataInput } from './types';
 

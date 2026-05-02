@@ -1,6 +1,6 @@
 import { useEffect, useDeferredValue, useState } from 'react';
 
-import { useAuthUser } from '#/hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -23,7 +23,7 @@ import { useShoppingListManagement } from './useShoppingListManagement';
  * easier to understand, test, and maintain.
  */
 export function useShoppingListScreen() {
-  const user = useAuthUser();
+  const user = useUser();
 
   // 1. Query: Fetch all user's shopping lists (independent of home)
   const { lists, loading: listsLoading } = useShoppingListsQuery();

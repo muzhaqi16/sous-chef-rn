@@ -5,11 +5,18 @@ const mockCreateItemMutation = jest.fn();
 const mockUpdateItemMutation = jest.fn();
 const mockDeleteItemMutation = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreateMealPlanItemMutation: jest.fn(() => [mockCreateItemMutation, { loading: false }]),
-  useUpdateMealPlanItemMutation: jest.fn(() => [mockUpdateItemMutation, { loading: false }]),
-  useDeleteMealPlanItemMutation: jest.fn(() => [mockDeleteItemMutation, { loading: false }]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateMealPlanItem')
+      return [mockCreateItemMutation, { loading: false }];
+    if (opName === 'UpdateMealPlanItem')
+      return [mockUpdateItemMutation, { loading: false }];
+    if (opName === 'DeleteMealPlanItem')
+      return [mockDeleteItemMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 const mockToastSuccess = jest.fn();
@@ -164,7 +171,9 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderHook(() => useMealPlanItemActions('plan-1'));
 
       await act(async () => {
-        await result.current.toggleCompleted(mockItem as any, { deductFromPantry: true });
+        await result.current.toggleCompleted(mockItem as any, {
+          deductFromPantry: true,
+        });
       });
 
       expect(mockToastSuccess).toHaveBeenCalledWith(

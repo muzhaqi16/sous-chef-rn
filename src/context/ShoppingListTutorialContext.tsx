@@ -160,6 +160,18 @@ export function ShoppingListTutorialProvider({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [rects, setRects] = useState<Record<string, TargetRect | null>>({});
 
+  // Track the in-flight transition timer so it can be cleared on unmount
+  // (advanceTo schedules a setTimeout to clear isTransitioning after 800ms).
+  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (transitionTimerRef.current !== null) {
+        clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current = null;
+      }
+    };
+  }, []);
+
   // React to external resets (centralized signal hook)
   const wasReset = useTutorialResetSignal();
   if (wasReset) {
@@ -198,7 +210,13 @@ export function ShoppingListTutorialProvider({
   const advanceTo = (nextStep: ShoppingListTutorialStep) => {
     setIsTransitioning(true);
     setCurrentStep(nextStep);
-    setTimeout(() => setIsTransitioning(false), 800);
+    if (transitionTimerRef.current !== null) {
+      clearTimeout(transitionTimerRef.current);
+    }
+    transitionTimerRef.current = setTimeout(() => {
+      transitionTimerRef.current = null;
+      setIsTransitioning(false);
+    }, 800);
   };
 
   const markComplete = () => {

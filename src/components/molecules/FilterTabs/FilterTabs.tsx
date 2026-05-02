@@ -1,11 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  type LayoutChangeEvent,
-} from 'react-native';
+import { View, Text, type LayoutChangeEvent, ScrollView } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FilterTabsItem } from './FilterTabsItem';

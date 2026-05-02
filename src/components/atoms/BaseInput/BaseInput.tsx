@@ -6,8 +6,8 @@ import {
   TextInputProps,
   StyleProp,
   ViewStyle,
-  Pressable,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { useUnistyles } from 'react-native-unistyles';
 import styles from './BaseInput.styles';
 import { Icon } from '#/utils/iconUtils';

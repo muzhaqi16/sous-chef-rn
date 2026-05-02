@@ -7,9 +7,9 @@ import { Telemetry } from '#/services/telemetry';
 /**
  * Maximum number of edges to retain in an itemsConnection cache entry.
  * When a merge would exceed this limit, the oldest edges are evicted.
- * 150 = 3 pages of 50 (pantry) or ~7 pages of 20 (shopping list).
+ * 100 = 2 pages of 50 (pantry) or 5 pages of 20 (shopping list).
  */
-const MAX_WINDOW_EDGES = 150;
+const MAX_WINDOW_EDGES = 100;
 
 /**
  * Version-aware merge function that handles optimistic updates and conflict resolution
@@ -130,12 +130,51 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
 }
 
 /**
- * Generic merge function for cursor-based connection pagination.
+ * Reads the `node.id` from a connection edge via Apollo's `readField` helper.
+ * Returns undefined when the edge or its node is missing — callers should skip
+ * those edges rather than treat them as deduplication keys.
+ */
+function readEdgeNodeId(
+  edge: any,
+  readField: (field: string, ref: any) => any,
+): string | undefined {
+  const node = readField('node', edge);
+  if (!node) return undefined;
+  return readField('id', node) as string | undefined;
+}
+
+/**
+ * Decides whether to preserve `existing.pageInfo` instead of overwriting it
+ * with `incoming.pageInfo`. Existing wins on a background refetch (no cursor)
+ * when the server returned fewer edges than the cache already has — a common
+ * pattern when only page 1 refreshes while cache holds pages 1+2.
+ */
+function shouldPreservePageInfo(
+  existing: any,
+  incoming: any,
+  args: any,
+): boolean {
+  const isBackgroundRefetch = !args?.after;
+  const existingEdgeCount = (existing.edges || []).length;
+  const incomingEdgeCount = (incoming.edges || []).length;
+  return (
+    isBackgroundRefetch &&
+    existingEdgeCount > incomingEdgeCount &&
+    !!existing.pageInfo
+  );
+}
+
+/**
+ * Connection merge for non-paginated-window lists where fresh server data
+ * should win on duplicate node IDs.
  *
- * Deduplicates edges by node ID, with incoming edges taking precedence
- * over existing ones (fresh data wins). When no cursor is provided
- * (initial load), incoming data replaces existing data entirely.
+ * Used for membership/invites/saved-recipes-style connections where the
+ * server's representation of a node is always authoritative. Incoming edges
+ * overwrite existing ones at the same id (last-write-wins).
  *
+ * For append-only paginated lists with cursor windows, use
+ * {@link itemsConnectionFieldPolicy} instead — its dedup strategy preserves
+ * existing edge positions and bounds the window via MAX_WINDOW_EDGES.
  */
 function mergeConnectionByNodeId() {
   return {
@@ -143,30 +182,28 @@ function mergeConnectionByNodeId() {
     merge(existing: any, incoming: any, { args, readField }: any) {
       if (!incoming) return existing;
       if (!existing) return incoming;
-      if (!args?.after && !incoming.pageInfo?.hasNextPage)
-        return incoming;
+      if (!args?.after && !incoming.pageInfo?.hasNextPage) return incoming;
 
       const edgeMap = new Map();
       const existingEdges = existing.edges || [];
       existingEdges.forEach((edge: any) => {
-        const id = readField('id', edge?.node);
+        const id = readEdgeNodeId(edge, readField);
         if (id) edgeMap.set(id, edge);
       });
       const existingCount = edgeMap.size;
       (incoming.edges || []).forEach((edge: any) => {
-        const id = readField('id', edge?.node);
+        const id = readEdgeNodeId(edge, readField);
         if (id) edgeMap.set(id, edge);
       });
 
-      // Preserve existing pageInfo when a background refetch (no cursor) returns
-      // fewer edges than already accumulated (e.g., page-1-only refetch when
-      // cache has pages 1+2 with hasNextPage:false)
-      const isBackgroundRefetch = !args?.after;
-      const existingHasMoreData = existingEdges.length > (incoming.edges || []).length;
-      const preservePageInfo = isBackgroundRefetch && existingHasMoreData && !!existing.pageInfo;
+      const preservePageInfo = shouldPreservePageInfo(existing, incoming, args);
 
       if (__DEV__ && preservePageInfo) {
-        console.log(`📊 [Cache] preserved existing pageInfo (existing=${existingEdges.length} incoming=${(incoming.edges || []).length})`);
+        console.log(
+          `📊 [Cache] preserved existing pageInfo (existing=${
+            existingEdges.length
+          } incoming=${(incoming.edges || []).length})`,
+        );
       }
 
       // If no new edges were added, return stable reference when possible
@@ -174,7 +211,7 @@ function mergeConnectionByNodeId() {
         const pageInfoUnchanged =
           preservePageInfo ||
           (incoming.pageInfo?.hasNextPage === existing.pageInfo?.hasNextPage &&
-           incoming.pageInfo?.endCursor === existing.pageInfo?.endCursor);
+            incoming.pageInfo?.endCursor === existing.pageInfo?.endCursor);
         const totalCountUnchanged =
           incoming.totalCount === undefined ||
           incoming.totalCount === existing.totalCount;
@@ -182,7 +219,11 @@ function mergeConnectionByNodeId() {
         if (pageInfoUnchanged && totalCountUnchanged) {
           return existing;
         }
-        return { ...incoming, ...(preservePageInfo ? { pageInfo: existing.pageInfo } : {}), edges: existingEdges };
+        return {
+          ...incoming,
+          ...(preservePageInfo ? { pageInfo: existing.pageInfo } : {}),
+          edges: existingEdges,
+        };
       }
 
       return {
@@ -195,12 +236,16 @@ function mergeConnectionByNodeId() {
 }
 
 /**
- * Shared field policy for paginated itemsConnection fields.
+ * Connection merge for paginated, append-only lists with a bounded edge window.
  *
- * Used by both ShoppingList.itemsConnection and Pantry.itemsConnection
- * to avoid duplicating the same merge logic. Deduplicates edges by node ID,
- * uses 'filters' as keyArgs for separate cache entries, and handles
- * initial load vs. pagination (cursor-based) correctly.
+ * Used by ShoppingList.itemsConnection and Pantry.itemsConnection. Existing
+ * edges keep their positions; only incoming edges with new node IDs are
+ * appended. The result is capped at MAX_WINDOW_EDGES — the oldest edges are
+ * evicted when the window overflows, which keeps memory bounded for users
+ * with thousands of historical items.
+ *
+ * For non-paginated connections where fresh data should overwrite duplicates,
+ * use {@link mergeConnectionByNodeId} instead.
  */
 function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
   return {
@@ -213,14 +258,12 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
       // Append-only: keep existing edges in place, add only new incoming edges
       const existingIds = new Set<string>();
       for (const edge of existing.edges || []) {
-        const node = readField('node', edge);
-        const id = node ? readField('id', node) as string | undefined : undefined;
+        const id = readEdgeNodeId(edge, readField);
         if (id) existingIds.add(id);
       }
 
       const newEdges = (incoming.edges || []).filter((edge: any) => {
-        const node = readField('node', edge);
-        const id = node ? readField('id', node) as string | undefined : undefined;
+        const id = readEdgeNodeId(edge, readField);
         return id && !existingIds.has(id);
       });
 
@@ -228,15 +271,19 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
       // Existing pageInfo wins when:
       //   1. Background refetch (no cursor) returned fewer edges than cache has
       //   2. Cursor-based request returned all duplicates — we already advanced past that cursor
-      const isBackgroundRefetch = !args?.after;
-      const existingHasMoreData = (existing.edges || []).length > (incoming.edges || []).length;
       const keepExistingPageInfo =
-        (isBackgroundRefetch && existingHasMoreData && !!existing.pageInfo) ||
+        shouldPreservePageInfo(existing, incoming, args) ||
         (!!args?.after && newEdges.length === 0);
-      const pageInfo = keepExistingPageInfo ? existing.pageInfo : incoming.pageInfo;
+      const pageInfo = keepExistingPageInfo
+        ? existing.pageInfo
+        : incoming.pageInfo;
 
       if (__DEV__ && keepExistingPageInfo) {
-        console.log(`📊 [Cache] preserved existing pageInfo (existing=${(existing.edges || []).length} incoming=${(incoming.edges || []).length})`);
+        console.log(
+          `📊 [Cache] preserved existing pageInfo (existing=${
+            (existing.edges || []).length
+          } incoming=${(incoming.edges || []).length})`,
+        );
       }
 
       // When no new edges, return stable reference when possible
@@ -249,7 +296,10 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
           incoming.totalCount === undefined ||
           incoming.totalCount === existing.totalCount;
 
-        if ((keepExistingPageInfo || pageInfoUnchanged) && totalCountUnchanged) {
+        if (
+          (keepExistingPageInfo || pageInfoUnchanged) &&
+          totalCountUnchanged
+        ) {
           return existing;
         }
 
@@ -258,7 +308,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
           const incomingCount = incoming?.edges?.length ?? 0;
           const hasCursor = !!args?.after;
           console.log(
-            `📊 [Cache] itemsConnection merge (stable): existing=${existingCount} incoming=${incomingCount} merged=${existingCount} cursor=${hasCursor}`
+            `📊 [Cache] itemsConnection merge (stable): existing=${existingCount} incoming=${incomingCount} merged=${existingCount} cursor=${hasCursor}`,
           );
         }
         return { ...incoming, pageInfo, edges: existing.edges };
@@ -273,7 +323,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
 
         if (__DEV__) {
           console.log(
-            `📊 [Cache] itemsConnection evicted ${evictCount} oldest edges, remaining=${mergedEdges.length}`
+            `📊 [Cache] itemsConnection evicted ${evictCount} oldest edges, remaining=${mergedEdges.length}`,
           );
         }
       }
@@ -283,9 +333,11 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         const incomingCount = incoming?.edges?.length ?? 0;
         const hasCursor = !!args?.after;
         console.log(
-          `📊 [Cache] itemsConnection merge: existing=${existingCount} incoming=${incomingCount} merged=${mergedEdges.length} cursor=${hasCursor}`
+          `📊 [Cache] itemsConnection merge: existing=${existingCount} incoming=${incomingCount} merged=${mergedEdges.length} cursor=${hasCursor}`,
         );
-        Telemetry.gauge('apollo_cache_edge_count', mergedEdges.length, { field: 'itemsConnection' });
+        Telemetry.gauge('apollo_cache_edge_count', mergedEdges.length, {
+          field: 'itemsConnection',
+        });
       }
 
       return { ...incoming, pageInfo, edges: mergedEdges };
@@ -340,15 +392,6 @@ export function makeCache(): InMemoryCache {
         keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
         fields: {
-          items: {
-            // Merge shopping list items intelligently to prevent cache data loss
-            // Uses same version-based conflict resolution as Query.shoppingListItems
-            merge(existing, incoming, { readField }) {
-              return mergeArrayByIdIntelligent(existing, incoming, {
-                readField,
-              });
-            },
-          },
           itemsConnection: itemsConnectionFieldPolicy(),
           suggestions: {
             merge(existing = [], incoming) {
@@ -372,15 +415,6 @@ export function makeCache(): InMemoryCache {
       Pantry: {
         keyFields: ['id'],
         fields: {
-          items: {
-            // Merge pantry items intelligently to prevent cache data loss
-            // Uses same version-based conflict resolution as Query.pantryItems
-            merge(existing, incoming, { readField }) {
-              return mergeArrayByIdIntelligent(existing, incoming, {
-                readField,
-              });
-            },
-          },
           itemsConnection: itemsConnectionFieldPolicy(['filters', 'orderBy']),
           storageLocationsConnection: mergeConnectionByNodeId(),
           suggestions: {
@@ -487,6 +521,7 @@ export function makeCache(): InMemoryCache {
               return mergeObjects(existing, incoming);
             },
           },
+          savedRecipesConnection: mergeConnectionByNodeId(),
         },
       },
       Query: {
@@ -556,27 +591,6 @@ export function makeCache(): InMemoryCache {
               return incoming;
             },
           },
-          // Item-level queries (return items within a list/pantry)
-          pantryItems: {
-            keyArgs: ['pantryId'],
-            // Intelligent merge to properly update cache when mutations return
-            merge(existing, incoming, options) {
-              const { readField } = options;
-
-              return mergeArrayByIdIntelligent(existing, incoming, {
-                readField,
-              });
-            },
-          },
-          shoppingListItems: {
-            keyArgs: ['shoppingListId'],
-            // Intelligent merge to properly update cache when mutations return
-            merge(existing, incoming, { readField }) {
-              return mergeArrayByIdIntelligent(existing, incoming, {
-                readField,
-              });
-            },
-          },
           // Item lookups by filters (barcode/UPC, etc.) - cache separately per filter
           items: {
             keyArgs: ['filters'],
@@ -589,12 +603,16 @@ export function makeCache(): InMemoryCache {
             ...mergeConnectionByNodeId(),
             keyArgs: ['filters'],
           },
+          mealTemplates: {
+            ...mergeConnectionByNodeId(),
+            keyArgs: ['filters'],
+          },
         },
       },
     },
   });
 
-  const MAX_CACHE_SIZE_MB = 100;
+  const MAX_CACHE_SIZE_MB = 50;
   const GC_THRESHOLD = 0.8; // Trigger GC at 80% capacity
   const SAMPLE_SIZE = 100; // Sample first 100 top-level keys for estimation
 
@@ -639,36 +657,52 @@ export function makeCache(): InMemoryCache {
       if (usageRatio > GC_THRESHOLD) {
         if (__DEV__) {
           console.warn(
-            `⚠️ Apollo Cache at ${(usageRatio * 100).toFixed(1)}% capacity (~${(estimatedSize / 1024 / 1024).toFixed(2)}MB). Running garbage collection...`
+            `⚠️ Apollo Cache at ${(usageRatio * 100).toFixed(1)}% capacity (~${(
+              estimatedSize /
+              1024 /
+              1024
+            ).toFixed(2)}MB). Running garbage collection...`,
           );
         }
 
         const removedIds = cache.gc({ resetResultCache: true });
 
         if (__DEV__) {
-          console.log(`🗑️ Garbage collected ${removedIds.length} unreachable cache objects`);
+          console.log(
+            `🗑️ Garbage collected ${removedIds.length} unreachable cache objects`,
+          );
 
           const newSize = estimateCacheSizeSampled(cache.extract());
           const newRatio = newSize / maxSizeBytes;
 
           if (newRatio > GC_THRESHOLD) {
             console.error(
-              `❌ Cache still at ${(newRatio * 100).toFixed(1)}% after GC. Consider increasing MAX_CACHE_SIZE_MB or reviewing data retention policies.`
+              `❌ Cache still at ${(newRatio * 100).toFixed(
+                1,
+              )}% after GC. Consider increasing MAX_CACHE_SIZE_MB or reviewing data retention policies.`,
             );
           }
         }
       } else if (__DEV__) {
         console.log(
-          `📊 Apollo Cache: ${(usageRatio * 100).toFixed(1)}% used (~${(estimatedSize / 1024 / 1024).toFixed(2)}MB / ${MAX_CACHE_SIZE_MB}MB)`
+          `📊 Apollo Cache: ${(usageRatio * 100).toFixed(1)}% used (~${(
+            estimatedSize /
+            1024 /
+            1024
+          ).toFixed(2)}MB / ${MAX_CACHE_SIZE_MB}MB)`,
         );
       }
 
       if (__DEV__) {
         const allKeys = Object.keys(cacheData);
-        const shoppingItemCount = allKeys.filter(k => k.startsWith('ShoppingListItem:')).length;
-        const pantryItemCount = allKeys.filter(k => k.startsWith('PantryItem:')).length;
+        const shoppingItemCount = allKeys.filter(k =>
+          k.startsWith('ShoppingListItem:'),
+        ).length;
+        const pantryItemCount = allKeys.filter(k =>
+          k.startsWith('PantryItem:'),
+        ).length;
         console.log(
-          `📊 [Cache] Entities: total=${allKeys.length} ShoppingListItem=${shoppingItemCount} PantryItem=${pantryItemCount}`
+          `📊 [Cache] Entities: total=${allKeys.length} ShoppingListItem=${shoppingItemCount} PantryItem=${pantryItemCount}`,
         );
       }
     } catch (_error) {
@@ -682,8 +716,8 @@ export function makeCache(): InMemoryCache {
   stopCacheMonitoring();
 
   // Dev: monitor every 5 minutes with logging
-  // Production: GC check every 10 minutes (sampling takes <5ms, safe for prod)
-  const interval = __DEV__ ? 5 * 60 * 1000 : 10 * 60 * 1000;
+  // Production: GC check every 5 minutes (sampling takes <5ms, safe for prod)
+  const interval = 5 * 60 * 1000;
   cacheMonitoringInterval = setInterval(runCacheGC, interval);
 
   return cache;

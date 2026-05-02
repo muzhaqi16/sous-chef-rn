@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { logger } from './environment';
-import { DeviceType, MobilePlatform } from '#generated';
+import { DeviceType, MobilePlatform } from '../graphql/generated/schemaTypes';
 
 export interface DeviceInformation {
   // Basic device info

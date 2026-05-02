@@ -1,4 +1,5 @@
-import { useMovePurchasedItemsToPantryMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { MovePurchasedItemsToPantryDocument } from '#operations/pantry/pantry.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import {
@@ -6,6 +7,7 @@ import {
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
+import { isPurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
 
 interface UseBatchMoveToPantryOptions {
   currentListId: string | undefined;
@@ -21,8 +23,9 @@ export function useBatchMoveToPantry({
   currentListId,
   onSuccess,
 }: UseBatchMoveToPantryOptions): UseBatchMoveToPantryReturn {
-  const [movePurchasedMutation, { loading }] =
-    useMovePurchasedItemsToPantryMutation({
+  const [movePurchasedMutation, { loading }] = useMutation(
+    MovePurchasedItemsToPantryDocument,
+    {
       update: (cache, { data }) => {
         const result = data?.movePurchasedItemsToPantry;
         if (!result || !currentListId) return;
@@ -42,7 +45,6 @@ export function useBatchMoveToPantry({
           if (!parentCacheId) return;
 
           // Single cache.modify: remove from purchased variant only + update counters
-          const purchasedFilterKey = 'isPurchased":true';
           cache.modify({
             id: parentCacheId,
             fields: {
@@ -50,10 +52,7 @@ export function useBatchMoveToPantry({
                 existing: any,
                 { readField, storeFieldName }: any,
               ) {
-                if (
-                  !storeFieldName.includes(purchasedFilterKey) ||
-                  !existing?.edges
-                )
+                if (!isPurchasedVariant(storeFieldName) || !existing?.edges)
                   return existing;
 
                 return {
@@ -90,7 +89,8 @@ export function useBatchMoveToPantry({
       onError: error => {
         toastService.error(error.message || 'Failed to move items to pantry');
       },
-    });
+    },
+  );
 
   const batchMoveToPantry = async () => {
     if (!currentListId) {

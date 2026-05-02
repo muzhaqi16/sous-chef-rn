@@ -1,13 +1,13 @@
 import React from 'react';
-import {Text, TextStyle} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { Text, TextStyle } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 
 interface TitleProps {
   children: React.ReactNode;
   style?: TextStyle;
 }
 
-export const Title: React.FC<TitleProps> = ({children, style}) => {
+export const Title: React.FC<TitleProps> = ({ children, style }) => {
   return <Text style={[styles.title, style]}>{children}</Text>;
 };
 const styles = StyleSheet.create(theme => ({

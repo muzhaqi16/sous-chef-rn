@@ -159,7 +159,9 @@ jest.mock('react-native-turbo-image', () => 'TurboImage');
 
 jest.mock('@gorhom/bottom-sheet', () => ({
   BottomSheetFlatList: () => null,
+  BottomSheetTextInput: () => null,
   BottomSheetModal: 'BottomSheetModal',
+  useBottomSheetScrollableCreator: jest.fn(() => () => null),
 }));
 
 describe('RecipeDetail', () => {

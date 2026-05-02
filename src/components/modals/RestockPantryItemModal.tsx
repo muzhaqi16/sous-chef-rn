@@ -10,7 +10,7 @@ import { FractionQuickSelect } from '#components/atoms/FractionQuickSelect';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
-import type { PantryItemFragment } from '#generated';
+import { type PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { PantryOperation } from '#hooks/pantry/useOperationUnits';
 import {

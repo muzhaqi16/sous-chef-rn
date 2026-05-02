@@ -50,10 +50,14 @@ describe('pantryItemSearch', () => {
 
 describe('shoppingListItemSearch', () => {
   it('matches by itemName', () => {
-    expect(shoppingListItemSearch({ itemName: 'Milk', category: 'Dairy' }, 'milk')).toBe(true);
+    expect(
+      shoppingListItemSearch({ itemName: 'Milk', category: 'Dairy' }, 'milk'),
+    ).toBe(true);
   });
 
   it('matches by category', () => {
-    expect(shoppingListItemSearch({ itemName: 'Milk', category: 'Dairy' }, 'dairy')).toBe(true);
+    expect(
+      shoppingListItemSearch({ itemName: 'Milk', category: 'Dairy' }, 'dairy'),
+    ).toBe(true);
   });
 });

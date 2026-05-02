@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
-  Pressable,
   ActivityIndicator,
   Linking,
+  ScrollView,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import Animated, {
   useAnimatedScrollHandler,
@@ -21,8 +21,8 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { BackButton } from '#components/atoms/BackButton';
 
 import {
-  BottomSheetFlatList,
   BottomSheetTextInput,
+  useBottomSheetScrollableCreator,
 } from '@gorhom/bottom-sheet';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { FolderPicker } from '#components/molecules/FolderPicker';
@@ -36,7 +36,7 @@ import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
 import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
 import { useRecipeReviews } from '#/hooks/recipe/useRecipeReviews';
 import { ReviewSection } from '#/components/recipe/ReviewSection';
-import { createPropsComparator } from '#utils/memoUtils';
+
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { useRecipeDetail } from './useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
@@ -46,7 +46,7 @@ import {
 } from './SelectableIngredientContext';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
@@ -67,13 +67,11 @@ interface SelectableIngredientItemProps {
 // Module-scope keyExtractor — zero runtime overhead
 const ingredientKeyExtractor = (item: { id: string }) => item.id;
 
-// Bridge component — reads selection state from context, receives theme colors via props
-const SelectableIngredientItemComponent: React.FC<
-  ListRenderItemInfo<SelectableIngredientItemProps['item']> & {
-    primaryColor: string;
-    textSecondary: string;
-  }
-> = ({ item, primaryColor, textSecondary }) => {
+// Bridge component — reads selection state from context and theme colors internally
+const SelectableIngredientItem: React.FC<
+  ListRenderItemInfo<SelectableIngredientItemProps['item']>
+> = ({ item }) => {
+  const { theme } = useUnistyles();
   const { selectedIngredients, toggleIngredient } = useSelectableIngredients();
   const isSelected = selectedIngredients.has(item.id);
 
@@ -88,7 +86,7 @@ const SelectableIngredientItemComponent: React.FC<
       <Ionicons
         name={isSelected ? 'checkbox' : 'square-outline'}
         size={24}
-        color={isSelected ? primaryColor : textSecondary}
+        color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
       />
       <View style={styles.ingredientInfo}>
         <Text style={styles.ingredientName}>{item.name}</Text>
@@ -100,29 +98,12 @@ const SelectableIngredientItemComponent: React.FC<
   );
 };
 
-// PERFORMANCE: Custom comparator for React.memo — value-equality on nested item fields
-type SelectableItemRenderInfo = ListRenderItemInfo<
-  SelectableIngredientItemProps['item']
-> & {
-  primaryColor: string;
-  textSecondary: string;
-};
-
-const areIngredientPropsEqual = createPropsComparator<SelectableItemRenderInfo>(
-  {
-    referenceKeys: ['primaryColor', 'textSecondary'],
-    nestedComparisons: {
-      item: ['id', 'name', 'quantity'],
-    },
-  },
-);
-
-const SelectableIngredientItem = React.memo(
-  SelectableIngredientItemComponent,
-  areIngredientPropsEqual,
-);
-
 const getSelectableIngredientItemType = () => 'item';
+
+// Module-scope renderItem — avoids inline function allocation on every render
+const renderSelectableIngredientItem = (
+  info: ListRenderItemInfo<SelectableIngredientItemProps['item']>,
+) => <SelectableIngredientItem {...info} />;
 
 // --- End module-scope FlashList infrastructure ---
 
@@ -131,7 +112,7 @@ const RecipeDetailScreen: React.FC = () => {
   const { theme } = useUnistyles();
 
   const { navigate } = useAppNavigation();
-  const user = useAuthUser();
+  const user = useUser();
   const {
     goBack,
     recipeId,
@@ -182,6 +163,9 @@ const RecipeDetailScreen: React.FC = () => {
     cookedCount,
     handleUnfavoriteRecipe,
   } = useRecipeDetail();
+
+  // Scroll component for FlashList instances rendered inside bottom sheets.
+  const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   // Get available folders and tags for picker and autocomplete
   const { folders } = useRecipeFolders();
@@ -311,7 +295,7 @@ const RecipeDetailScreen: React.FC = () => {
 
   const imageAnimatedStyle = useAnimatedStyle(() => {
     const scale = interpolate(
-      scrollY.value,
+      scrollY.get(),
       [0, 300],
       [1, 0.95],
       Extrapolation.CLAMP,
@@ -927,17 +911,10 @@ const RecipeDetailScreen: React.FC = () => {
           toggleIngredient={toggleIngredient}
         >
           <FlashList
+            renderScrollComponent={BottomSheetScrollable}
             data={backendRecipe?.ingredients || []}
             keyExtractor={ingredientKeyExtractor}
-            renderItem={(
-              info: ListRenderItemInfo<SelectableIngredientItemProps['item']>,
-            ) => (
-              <SelectableIngredientItem
-                {...info}
-                primaryColor={theme.colors.primary}
-                textSecondary={theme.colors.textSecondary}
-              />
-            )}
+            renderItem={renderSelectableIngredientItem}
             getItemType={getSelectableIngredientItemType}
             extraData={selectedIngredients.size}
             {...FLASHLIST_DEFAULTS.fullScreen}
@@ -977,7 +954,8 @@ const RecipeDetailScreen: React.FC = () => {
           handleSheetDismiss();
         }}
       >
-        <BottomSheetFlatList
+        <FlashList
+          renderScrollComponent={BottomSheetScrollable}
           data={shoppingLists}
           keyExtractor={(item: (typeof shoppingLists)[number]) => item.id}
           style={{ flex: 1 }}

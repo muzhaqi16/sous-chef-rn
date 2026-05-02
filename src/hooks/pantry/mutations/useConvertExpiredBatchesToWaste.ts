@@ -5,8 +5,9 @@
  * No optimistic update — relies on server response for complex recalculation.
  */
 
+import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import { useConvertExpiredBatchesToWasteMutation } from '#generated';
+import { ConvertExpiredBatchesToWasteDocument } from '#operations/pantry/pantry.generated';
 import { useErrorService } from '#/services/errorService';
 
 interface UseConvertExpiredBatchesToWasteOptions {
@@ -18,10 +19,10 @@ export function useConvertExpiredBatchesToWaste({
 }: UseConvertExpiredBatchesToWasteOptions = {}) {
   const { handleApolloError } = useErrorService();
 
-  const [convertMutation, { loading }] =
-    useConvertExpiredBatchesToWasteMutation({
-      errorPolicy: 'all',
-    });
+  const [convertMutation, { loading }] = useMutation(
+    ConvertExpiredBatchesToWasteDocument,
+    { errorPolicy: 'all' },
+  );
 
   const convertExpiredBatches = async (
     pantryItemId: string,

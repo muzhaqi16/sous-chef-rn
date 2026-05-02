@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
-import { AnimatedButton } from '#/components/atoms/AnimatedButton';
+import { Button } from '#/components/base/Button';
 
 export interface UnitEntry {
   id: string;
@@ -27,12 +28,14 @@ const generateEntryId = () => `unit-entry-${++entryCounter}-${Date.now()}`;
 
 const createDefaultEntry = (isDefault: boolean): UnitEntry => ({
   id: generateEntryId(),
-  isDefault });
+  isDefault,
+});
 
 export const UnitEntryList: React.FC<UnitEntryListProps> = ({
   entries,
   onEntriesChanged,
-  disabled = false }) => {
+  disabled = false,
+}) => {
   const { theme } = useUnistyles();
 
   const handleAddEntry = () => {
@@ -41,38 +44,58 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
   };
 
   const handleRemoveEntry = (index: number) => {
-      const updated = entries.filter((_, i) => i !== index);
-      // If we removed the default entry, make the first one default
-      if (updated.length > 0 && !updated.some(e => e.isDefault)) {
-        updated[0] = { ...updated[0], isDefault: true };
-      }
-      onEntriesChanged(updated);
-    };
+    const updated = entries.filter((_, i) => i !== index);
+    // If we removed the default entry, make the first one default
+    if (updated.length > 0 && !updated.some(e => e.isDefault)) {
+      updated[0] = { ...updated[0], isDefault: true };
+    }
+    onEntriesChanged(updated);
+  };
 
-  const handleEntryChange = (index: number, field: keyof UnitEntry, value: any) => {
-      const updated = entries.map((entry, i) =>
-        i === index ? { ...entry, [field]: value } : entry,
-      );
-      onEntriesChanged(updated);
-    };
+  const handleEntryChange = (
+    index: number,
+    field: keyof UnitEntry,
+    value: any,
+  ) => {
+    const updated = entries.map((entry, i) =>
+      i === index ? { ...entry, [field]: value } : entry,
+    );
+    onEntriesChanged(updated);
+  };
 
-  const handleUnitSelected = (index: number, unitId: string | null, unitName: string | null) => {
-      const updated = entries.map((entry, i) =>
-        i === index
-          ? { ...entry, unitId: unitId ?? undefined, unitName: unitName ?? undefined }
-          : entry,
-      );
-      onEntriesChanged(updated);
-    };
+  const handleUnitSelected = (
+    index: number,
+    unitId: string | null,
+    unitName: string | null,
+  ) => {
+    const updated = entries.map((entry, i) =>
+      i === index
+        ? {
+            ...entry,
+            unitId: unitId ?? undefined,
+            unitName: unitName ?? undefined,
+          }
+        : entry,
+    );
+    onEntriesChanged(updated);
+  };
 
-  const handleContentUnitSelected = (index: number, unitId: string | null, unitName: string | null) => {
-      const updated = entries.map((entry, i) =>
-        i === index
-          ? { ...entry, contentUnitId: unitId ?? undefined, contentUnitName: unitName ?? undefined }
-          : entry,
-      );
-      onEntriesChanged(updated);
-    };
+  const handleContentUnitSelected = (
+    index: number,
+    unitId: string | null,
+    unitName: string | null,
+  ) => {
+    const updated = entries.map((entry, i) =>
+      i === index
+        ? {
+            ...entry,
+            contentUnitId: unitId ?? undefined,
+            contentUnitName: unitName ?? undefined,
+          }
+        : entry,
+    );
+    onEntriesChanged(updated);
+  };
 
   return (
     <View style={styles.container}>
@@ -109,7 +132,10 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
             <Pressable
               onPress={() => handleRemoveEntry(index)}
               disabled={disabled}
-              style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.deleteButton,
+                pressed && styles.pressed,
+              ]}
             >
               <Icon name="trash-outline" size={20} color={theme.colors.error} />
             </Pressable>
@@ -133,20 +159,17 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
         </View>
       ))}
 
-      <AnimatedButton
-        variant="secondary"
-        onPress={handleAddEntry}
-        disabled={disabled}
-      >
+      <Button variant="secondary" onPress={handleAddEntry} disabled={disabled}>
         Add Unit
-      </AnimatedButton>
+      </Button>
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   sectionTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
@@ -154,26 +177,34 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight },
+    borderBottomColor: theme.colors.borderLight,
+  },
   entryRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md },
+    marginBottom: theme.spacing.md,
+  },
   packageSizeField: {
-    flex: 0.35 },
+    flex: 0.35,
+  },
   unitField: {
-    flex: 0.55 },
+    flex: 0.55,
+  },
   deleteButton: {
     flex: 0.1,
     alignItems: 'center',
-    paddingTop: theme.spacing.xl },
+    paddingTop: theme.spacing.xl,
+  },
   contentUnitRow: {
     marginTop: -theme.spacing.sm,
     marginBottom: theme.spacing.md,
     marginLeft: theme.spacing.sm,
     paddingLeft: theme.spacing.md,
     borderLeftWidth: 2,
-    borderLeftColor: theme.colors.borderLight },
+    borderLeftColor: theme.colors.borderLight,
+  },
   pressed: {
-    opacity: theme.opacity.pressed } }));
+    opacity: theme.opacity.pressed,
+  },
+}));

@@ -1,16 +1,28 @@
 import React, { forwardRef, useImperativeHandle } from 'react';
-import { useWindowDimensions, type ViewStyle, type StyleProp } from 'react-native';
+import {
+  useWindowDimensions,
+  type ViewStyle,
+  type StyleProp,
+} from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
-import type { SlideAnimationConfig, SlideDirection } from '#hooks/animations/types';
+import type {
+  SlideAnimationConfig,
+  SlideDirection,
+} from '#hooks/animations/types';
 
 export interface AnimatedListItemRef {
   /** Trigger the slide animation. direction: 1 = right, -1 = left */
   triggerSlide: (direction: SlideDirection, onComplete?: () => void) => void;
   /** Reset slide position to origin */
   resetSlide: () => void;
-  /** Whether animation is currently in progress */
-  isAnimating: boolean;
+  /** Returns whether animation is currently in progress. Implemented as a
+   *  function (rather than a property) so each call reads the live
+   *  `SharedValue` — reading `.value` once during `useImperativeHandle` would
+   *  snapshot a stale boolean and never update. A property getter would also
+   *  work but causes a React Compiler bailout (getters in ObjectExpression
+   *  are not yet supported). */
+  isAnimating: () => boolean;
 }
 
 export interface AnimatedListItemProps {
@@ -56,19 +68,22 @@ export interface AnimatedListItemProps {
  * };
  * ```
  */
-export const AnimatedListItem = forwardRef<AnimatedListItemRef, AnimatedListItemProps>(
-  ({ itemId, children, slideConfig, style, disabled = false }, ref) => {
-    const { width: screenWidth } = useWindowDimensions();
+export const AnimatedListItem = forwardRef<
+  AnimatedListItemRef,
+  AnimatedListItemProps
+>(({ itemId, children, slideConfig, style, disabled = false }, ref) => {
+  const { width: screenWidth } = useWindowDimensions();
 
-    // Resolve slideDistance - handle 'screenWidth' special value
-    const resolvedSlideDistance =
-      slideConfig?.slideDistance === 'screenWidth'
-        ? screenWidth
-        : typeof slideConfig?.slideDistance === 'number'
-          ? slideConfig.slideDistance
-          : 50;
+  // Resolve slideDistance - handle 'screenWidth' special value
+  const resolvedSlideDistance =
+    slideConfig?.slideDistance === 'screenWidth'
+      ? screenWidth
+      : typeof slideConfig?.slideDistance === 'number'
+      ? slideConfig.slideDistance
+      : 50;
 
-    const { animatedSlideStyle, triggerSlide, resetSlide, isAnimating } = useSlideAnimation({
+  const { animatedSlideStyle, triggerSlide, resetSlide, isAnimating } =
+    useSlideAnimation({
       itemId,
       slideDistance: resolvedSlideDistance,
       duration: slideConfig?.duration,
@@ -79,23 +94,24 @@ export const AnimatedListItem = forwardRef<AnimatedListItemRef, AnimatedListItem
       disabled,
     });
 
-    // Expose imperative API via ref
-    useImperativeHandle(
-      ref,
-      () => ({
-        triggerSlide,
-        resetSlide,
-        isAnimating: isAnimating.value,
-      }),
-      [triggerSlide, resetSlide, isAnimating],
-    );
+  // Expose imperative API via ref. `isAnimating` is a function (not a
+  // property) so each call reads the live SharedValue. A property getter
+  // would also work conceptually but causes a React Compiler bailout.
+  useImperativeHandle(
+    ref,
+    () => ({
+      triggerSlide,
+      resetSlide,
+      isAnimating: () => isAnimating.get(),
+    }),
+    [triggerSlide, resetSlide, isAnimating],
+  );
 
-    return (
-      <Animated.View style={[style, animatedSlideStyle]}>
-        {children}
-      </Animated.View>
-    );
-  },
-);
+  return (
+    <Animated.View style={[style, animatedSlideStyle]}>
+      {children}
+    </Animated.View>
+  );
+});
 
 AnimatedListItem.displayName = 'AnimatedListItem';

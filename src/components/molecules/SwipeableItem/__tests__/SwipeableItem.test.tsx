@@ -15,7 +15,11 @@ jest.mock('../LeftActions', () => ({
 jest.mock('../SwipeableContent', () => ({
   SwipeableContent: ({ children }: any) => {
     const { View } = require('react-native');
-    return require('react').createElement(View, { testID: 'swipeable-content' }, children);
+    return require('react').createElement(
+      View,
+      { testID: 'swipeable-content' },
+      children,
+    );
   },
 }));
 
@@ -85,7 +89,11 @@ describe('SwipeableItem', () => {
 
   it('renders with pantry callbacks', () => {
     render(
-      <SwipeableItem onConsume={jest.fn()} onWaste={jest.fn()} onRestock={jest.fn()}>
+      <SwipeableItem
+        onConsume={jest.fn()}
+        onWaste={jest.fn()}
+        onRestock={jest.fn()}
+      >
         <Text>Pantry item</Text>
       </SwipeableItem>,
     );

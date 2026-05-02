@@ -9,8 +9,12 @@ jest.mock('victory-native', () => ({
     const R = require('react');
     const mockPoints = { y: [{ x: 0, y: 10 }] };
     const mockBounds = { bottom: 200 };
-    return R.createElement(View, { testID: 'cartesian-chart' },
-      typeof children === 'function' ? children({ points: mockPoints, chartBounds: mockBounds }) : children,
+    return R.createElement(
+      View,
+      { testID: 'cartesian-chart' },
+      typeof children === 'function'
+        ? children({ points: mockPoints, chartBounds: mockBounds })
+        : children,
     );
   },
   Line: () => null,
@@ -45,7 +49,13 @@ describe('TrendLineChart', () => {
   });
 
   it('renders subtitle when provided', () => {
-    render(<TrendLineChart data={sampleData as any} title="Trends" subtitle="Last 7 days" />);
+    render(
+      <TrendLineChart
+        data={sampleData as any}
+        title="Trends"
+        subtitle="Last 7 days"
+      />,
+    );
     expect(screen.getByText('Last 7 days')).toBeTruthy();
   });
 
@@ -56,7 +66,9 @@ describe('TrendLineChart', () => {
   });
 
   it('renders with custom height', () => {
-    const { toJSON } = render(<TrendLineChart data={sampleData as any} height={300} />);
+    const { toJSON } = render(
+      <TrendLineChart data={sampleData as any} height={300} />,
+    );
     expect(toJSON()).toBeTruthy();
   });
 });

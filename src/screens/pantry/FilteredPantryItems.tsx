@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, RefreshControl } from 'react-native';
+import { View, Text, RefreshControl } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
@@ -14,7 +15,8 @@ import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useAddItemToShoppingListMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { AddItemToShoppingListDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#hooks/pantry/useAddLowStockToShoppingList';
 import {
@@ -22,7 +24,7 @@ import {
   type TutorialStep,
 } from '#hooks/ui/useTutorialSequence';
 import { commonStyles } from '#/styles/commonStyles';
-import { createPropsComparator } from '#utils/memoUtils';
+
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import {
   FilteredItemsActionsProvider,
@@ -191,18 +193,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
   );
 };
 
-const arePropsEqual = createPropsComparator<FilteredRenderItemProps>({
-  referenceKeys: ['primaryColor', 'onCartMeasure', 'subtitleFn', 'showCart'],
-  nestedComparisons: {
-    item: ['id', 'itemName', 'quantity', 'expiresAt'],
-    'item.unit': ['symbol'],
-  },
-});
-
-const FilteredRenderItem = React.memo(
-  FilteredRenderItemComponent,
-  arePropsEqual,
-);
+const FilteredRenderItem = FilteredRenderItemComponent;
 
 // ── Empty state ──
 
@@ -272,7 +263,7 @@ export const FilteredPantryItems: React.FC<
     state: { items: allItems, loading, hasMore, isLoadingMore },
     actions: { refetch, loadMore },
   } = usePantryManagement(pantry?.id);
-  const [addToShoppingList] = useAddItemToShoppingListMutation();
+  const [addToShoppingList] = useMutation(AddItemToShoppingListDocument);
 
   // Progressively load all pages so the filter sees every item
   useEffect(() => {

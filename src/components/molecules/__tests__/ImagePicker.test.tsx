@@ -58,8 +58,12 @@ describe('ImagePicker', () => {
 
   it('does not trigger picker when disabled', () => {
     const openMock = jest.fn();
-    const useBottomSheetModal = require('#hooks/useBottomSheetModal').useBottomSheetModal;
-    useBottomSheetModal.mockReturnValue({ ref: { current: null }, open: openMock });
+    const useBottomSheetModal =
+      require('#hooks/useBottomSheetModal').useBottomSheetModal;
+    useBottomSheetModal.mockReturnValue({
+      ref: { current: null },
+      open: openMock,
+    });
 
     render(<ImagePicker {...defaultProps} disabled />);
     fireEvent.press(screen.getByText('Add Photo'));
@@ -67,7 +71,13 @@ describe('ImagePicker', () => {
   });
 
   it('renders without error when multiSelect is true', () => {
-    render(<ImagePicker {...defaultProps} multiSelect onMultiImageSelected={jest.fn()} />);
+    render(
+      <ImagePicker
+        {...defaultProps}
+        multiSelect
+        onMultiImageSelected={jest.fn()}
+      />,
+    );
     expect(screen.getByText('Add Photo')).toBeTruthy();
   });
 

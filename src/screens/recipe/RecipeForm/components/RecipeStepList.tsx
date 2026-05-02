@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { StepFormState } from '../useRecipeForm';
@@ -19,9 +20,7 @@ export const RecipeStepList: React.FC<RecipeStepListProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>
-        Instructions ({steps.length})
-      </Text>
+      <Text style={styles.sectionTitle}>Instructions ({steps.length})</Text>
 
       {steps.map((step, index) => (
         <Pressable
@@ -40,7 +39,11 @@ export const RecipeStepList: React.FC<RecipeStepListProps> = ({
             hitSlop={8}
             style={styles.removeButton}
           >
-            <Icon name="close-circle" size={20} color={styles.removeIcon.color} />
+            <Icon
+              name="close-circle"
+              size={20}
+              color={styles.removeIcon.color}
+            />
           </Pressable>
         </Pressable>
       ))}
@@ -49,7 +52,11 @@ export const RecipeStepList: React.FC<RecipeStepListProps> = ({
         onPress={onAddStep}
         style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
       >
-        <Icon name="add-circle-outline" size={20} color={styles.addIcon.color} />
+        <Icon
+          name="add-circle-outline"
+          size={20}
+          color={styles.addIcon.color}
+        />
         <Text style={styles.addText}>Add Step</Text>
       </Pressable>
     </View>

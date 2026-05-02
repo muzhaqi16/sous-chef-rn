@@ -1,6 +1,13 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useMealPlanCalendar } from '../useMealPlanCalendar';
-import { startOfWeek, endOfWeek, isSameDay, format, addWeeks, subWeeks } from 'date-fns';
+import {
+  startOfWeek,
+  endOfWeek,
+  isSameDay,
+  format,
+  addWeeks,
+  subWeeks,
+} from 'date-fns';
 
 // No external mocks needed — this hook is pure date logic
 
@@ -34,7 +41,9 @@ describe('useMealPlanCalendar', () => {
     const expectedStart = startOfWeek(today, { weekStartsOn: 1 });
     const expectedEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-    expect(isSameDay(result.current.dateRange.startDate, expectedStart)).toBe(true);
+    expect(isSameDay(result.current.dateRange.startDate, expectedStart)).toBe(
+      true,
+    );
     expect(isSameDay(result.current.dateRange.endDate, expectedEnd)).toBe(true);
   });
 
@@ -127,9 +136,7 @@ describe('useMealPlanCalendar', () => {
 
     it('selectDate refuses dates before minDate', () => {
       const minDate = new Date(2025, 5, 1);
-      const { result } = renderHook(() =>
-        useMealPlanCalendar({ minDate }),
-      );
+      const { result } = renderHook(() => useMealPlanCalendar({ minDate }));
 
       const beforeMin = new Date(2025, 4, 1);
       act(() => {
@@ -142,9 +149,7 @@ describe('useMealPlanCalendar', () => {
 
     it('selectDate refuses dates after maxDate', () => {
       const maxDate = new Date(2025, 5, 30);
-      const { result } = renderHook(() =>
-        useMealPlanCalendar({ maxDate }),
-      );
+      const { result } = renderHook(() => useMealPlanCalendar({ maxDate }));
 
       const afterMax = new Date(2026, 0, 1);
       act(() => {

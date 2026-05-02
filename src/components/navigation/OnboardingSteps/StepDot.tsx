@@ -1,5 +1,4 @@
 import React from 'react';
-import { Pressable } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -10,6 +9,7 @@ import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import { TIMING } from '#constants/animations';
 import { Icon } from '#/utils/iconUtils';
 import type { StepDotProps } from './types';
+import { Pressable } from 'react-native-gesture-handler';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -26,28 +26,28 @@ export const StepDot: React.FC<StepDotProps> = ({
   // Animated style for color transitions, scale, and opacity
   // Static layout properties are in StyleSheet to avoid 'as const' casts
   const animatedStyle = useAnimatedStyle(() => {
-    const isActive = activeIndex.value === index;
-    const isCompleted = activeIndex.value > index;
-    const isPending = activeIndex.value < index;
+    const isActive = activeIndex.get() === index;
+    const isCompleted = activeIndex.get() > index;
+    const isPending = activeIndex.get() < index;
 
     // Color transitions - using animated theme colors
     const backgroundColor = interpolateColor(
-      activeIndex.value,
+      activeIndex.get(),
       [index - 1, index, index + 1],
       [
-        animatedTheme.value.colors.border,
-        animatedTheme.value.colors.primary,
-        animatedTheme.value.colors.border,
+        animatedTheme.get().colors.border,
+        animatedTheme.get().colors.primary,
+        animatedTheme.get().colors.border,
       ],
     );
 
     const borderColor = interpolateColor(
-      activeIndex.value,
+      activeIndex.get(),
       [index - 1, index, index + 1],
       [
-        animatedTheme.value.colors.border,
-        animatedTheme.value.colors.primary,
-        animatedTheme.value.colors.border,
+        animatedTheme.get().colors.border,
+        animatedTheme.get().colors.primary,
+        animatedTheme.get().colors.border,
       ],
     );
 
@@ -66,11 +66,11 @@ export const StepDot: React.FC<StepDotProps> = ({
       borderRadius: stepSize / 2,
       // Animated properties
       backgroundColor: withTiming(
-        isCompleted ? animatedTheme.value.colors.success : backgroundColor,
+        isCompleted ? animatedTheme.get().colors.success : backgroundColor,
         { duration: TIMING.SLOW },
       ),
       borderColor: withTiming(
-        isCompleted ? animatedTheme.value.colors.success : borderColor,
+        isCompleted ? animatedTheme.get().colors.success : borderColor,
         { duration: TIMING.SLOW },
       ),
       transform: [{ scale }],
@@ -79,7 +79,7 @@ export const StepDot: React.FC<StepDotProps> = ({
   }, [index, stepSize]);
 
   const iconAnimatedStyle = useAnimatedStyle(() => {
-    const isCompleted = activeIndex.value > index;
+    const isCompleted = activeIndex.get() > index;
     const opacity = withTiming(isCompleted ? 1 : 0, {
       duration: TIMING.STANDARD,
     });

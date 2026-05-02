@@ -54,21 +54,44 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
     <View style={[commonStyles.shadow, styles.card]}>
       <View style={styles.header}>
         {!!icon && (
-          <View style={[styles.iconContainer, { backgroundColor: cardColor + '20' }]}>
-            <Icon name={icon} size={20} color={cardColor} library={iconLibrary} />
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: cardColor + '20' },
+            ]}
+          >
+            <Icon
+              name={icon}
+              size={20}
+              color={cardColor}
+              library={iconLibrary}
+            />
           </View>
         )}
-        <Text style={[styles.title, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+        <Text
+          style={[styles.title, { color: theme.colors.textSecondary }]}
+          numberOfLines={1}
+        >
           {title}
         </Text>
       </View>
-      <Text style={[styles.value, { color: theme.colors.textPrimary }]}>{value}</Text>
+      <Text style={[styles.value, { color: theme.colors.textPrimary }]}>
+        {value}
+      </Text>
       <View style={styles.footer}>
-        {!!subtitle && <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{subtitle}</Text>}
+        {!!subtitle && (
+          <Text
+            style={[styles.subtitle, { color: theme.colors.textSecondary }]}
+          >
+            {subtitle}
+          </Text>
+        )}
         {!!trend && !!trendValue && (
           <View style={styles.trendContainer}>
             <Icon name={getTrendIcon()} size={14} color={getTrendColor()} />
-            <Text style={[styles.trendText, { color: getTrendColor() }]}>{trendValue}</Text>
+            <Text style={[styles.trendText, { color: getTrendColor() }]}>
+              {trendValue}
+            </Text>
           </View>
         )}
       </View>

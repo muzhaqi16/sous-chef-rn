@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useGetShoppingListDetailsQuery, GetShoppingListDetailsQuery } from '#generated';
+import { useQuery } from '@apollo/client/react';
+import {
+  GetShoppingListDetailsDocument,
+  type GetShoppingListDetailsQuery,
+} from '../../graphql/operations/shoppingList/shoppingList.generated';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 // Export the shopping list detail type
-export type ShoppingListDetail = NonNullable<GetShoppingListDetailsQuery['shoppingList']>;
+export type ShoppingListDetail = NonNullable<
+  GetShoppingListDetailsQuery['shoppingList']
+>;
 
 /**
  * useShoppingListItemsQuery - Query shopping list details (permissions, collaborators)
@@ -27,22 +33,23 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
   // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders (fixes infinite loop)
   // - errorPolicy: 'all' returns cached data when network fails (offline graceful degradation)
   // - skip controls execution - when skip is false, listId is guaranteed valid
-  const { data, previousData, loading, error, refetch } =
-    useGetShoppingListDetailsQuery({
+  const { data, previousData, loading, error, refetch } = useQuery(
+    GetShoppingListDetailsDocument,
+    {
       variables: {
         id: listId!,
       },
       skip: !hasValidListId,
-      fetchPolicy: 'cache-and-network',
-      nextFetchPolicy: 'cache-first',
-      errorPolicy: 'all',
-    });
+    },
+  );
 
   useApolloErrorLogger('GetShoppingListDetails', error);
 
   // Track previous listId to detect list switches
   // When switching lists, we should NOT fall back to previousData (it's from old list)
-  const [previousListId, setPreviousListId] = useState<string | null | undefined>(listId);
+  const [previousListId, setPreviousListId] = useState<
+    string | null | undefined
+  >(listId);
   const listIdChanged = previousListId !== listId;
 
   // Update state after comparison

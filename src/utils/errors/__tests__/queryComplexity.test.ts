@@ -19,7 +19,11 @@ describe('isQueryComplexityError', () => {
   it('returns true for graphQLErrors with PAGINATION_LIMIT_EXCEEDED code', () => {
     const error = {
       graphQLErrors: [
-        { extensions: { code: QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED } },
+        {
+          extensions: {
+            code: QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
+          },
+        },
       ],
     };
     expect(isQueryComplexityError(error)).toBe(true);
@@ -34,9 +38,7 @@ describe('isQueryComplexityError', () => {
 
   it('returns false for unrelated error', () => {
     const error = {
-      graphQLErrors: [
-        { extensions: { code: 'UNAUTHENTICATED' } },
-      ],
+      graphQLErrors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
     };
     expect(isQueryComplexityError(error)).toBe(false);
   });
@@ -80,7 +82,9 @@ describe('getQueryComplexityDetails', () => {
     };
     const details = getQueryComplexityDetails(error);
     expect(details).not.toBeNull();
-    expect(details!.errorType).toBe(QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED);
+    expect(details!.errorType).toBe(
+      QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
+    );
   });
 
   it('returns null for non-complexity error', () => {
@@ -197,4 +201,3 @@ describe('handleQueryComplexityError', () => {
     expect(retry).not.toHaveBeenCalled();
   });
 });
-

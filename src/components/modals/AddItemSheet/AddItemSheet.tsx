@@ -1,12 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { ItemSuggestion } from '#generated';
+import { ItemSuggestion } from '../../../graphql/generated/schemaTypes';
 import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
 import {
   BottomSheetSearchBar,
@@ -54,10 +52,17 @@ export function AddItemSheet({
 }: AddItemSheetProps) {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
   const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
+
+  // useStandardBottomSheet handles ref, modalProps (backdrop, animations,
+  // insets, back handler), present/dismiss effect, and contentContainerStyle.
+  // Visibility is auto-managed via the `visible && !!contextId` boolean.
+  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
+    visible: visible && !!contextId,
+    onDismiss: onClose,
+    snapPoints: ['70%', '95%'],
+    keyboardBehavior: 'extend',
+  });
 
   // Shared state management
   const state = useAddItemSheetState({
@@ -90,17 +95,17 @@ export function AddItemSheet({
     handleSearchTermChange(text);
   };
 
-  // Control bottom sheet visibility
+  // useStandardBottomSheet handles present/dismiss. Effect-driven side
+  // tasks: clear the search bar when the sheet opens, reset autocomplete on
+  // close. Effect runs after commit so ref access is safe.
+  const isOpen = visible && !!contextId;
   useEffect(() => {
-    if (visible && contextId) {
-      bottomSheetRef.current?.present();
-      // Clear search bar
+    if (isOpen) {
       searchBarRef.current?.clear();
     } else {
-      bottomSheetRef.current?.dismiss();
       resetAutocomplete();
     }
-  }, [visible, contextId, resetAutocomplete]);
+  }, [isOpen, resetAutocomplete]);
 
   // Wrap onAddManually to provide search value
   const handleAddManually = () => {
@@ -166,18 +171,7 @@ export function AddItemSheet({
     <>
       <BottomSheetModal
         ref={bottomSheetRef}
-        snapPoints={['70%', '95%']}
-        enablePanDownToClose
-        enableDynamicSizing={false}
-        topInset={insets.top}
-        onDismiss={onClose}
-        animationConfigs={animationConfigs}
-        backgroundStyle={{ backgroundColor: theme.colors.surface }}
-        handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-        keyboardBehavior="extend"
-        keyboardBlurBehavior="restore"
-        android_keyboardInputMode="adjustResize"
-        backdropComponent={DismissBackdrop}
+        {...modalProps}
         // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
         testID={`${config.testIDPrefix}-modal`}
       >

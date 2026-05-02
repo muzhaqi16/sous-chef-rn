@@ -18,8 +18,19 @@ jest.mock('../../molecules/SettingRow', () => {
 describe('SettingsSection', () => {
   const defaultItems = [
     { key: 'theme', label: 'Theme', type: 'navigation', onPress: jest.fn() },
-    { key: 'language', label: 'Language', type: 'navigation', onPress: jest.fn() },
-    { key: 'notifications', label: 'Notifications', type: 'toggle', value: true, onToggle: jest.fn() },
+    {
+      key: 'language',
+      label: 'Language',
+      type: 'navigation',
+      onPress: jest.fn(),
+    },
+    {
+      key: 'notifications',
+      label: 'Notifications',
+      type: 'toggle',
+      value: true,
+      onToggle: jest.fn(),
+    },
   ];
 
   it('renders section title', () => {
@@ -45,7 +56,9 @@ describe('SettingsSection', () => {
   });
 
   it('renders a single item as both first and last', () => {
-    const singleItem = [{ key: 'about', label: 'About', type: 'navigation', onPress: jest.fn() }];
+    const singleItem = [
+      { key: 'about', label: 'About', type: 'navigation', onPress: jest.fn() },
+    ];
     render(<SettingsSection title="Info" items={singleItem} />);
     expect(screen.getByText('About')).toBeTruthy();
     // Single item should have both first and last markers

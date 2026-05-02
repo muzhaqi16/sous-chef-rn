@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
@@ -75,15 +76,15 @@ export function ItemRecentCard<T extends RecentItem>({
 
       {/* Quick Add Button */}
       <Pressable
-        style={({pressed}) => [styles.addButton, disabled && styles.addButtonDisabled, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.addButton,
+          disabled && styles.addButtonDisabled,
+          pressed && styles.pressed,
+        ]}
         onPress={() => onQuickAdd(item)}
         disabled={disabled}
       >
-        <Icon
-          name="add"
-          size={20}
-          color={theme.colors.primary}
-        />
+        <Icon name="add" size={20} color={theme.colors.primary} />
       </Pressable>
     </View>
   );

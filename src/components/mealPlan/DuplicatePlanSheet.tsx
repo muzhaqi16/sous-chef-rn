@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { StyleSheet } from 'react-native-unistyles';
@@ -8,7 +9,7 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
 import { Icon } from '#utils/iconUtils';
-import type { MealPlanDisplayFragment } from '#generated';
+import { type MealPlanDisplayFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 
 interface DuplicatePlanSheetProps {
   visible: boolean;
@@ -28,12 +29,14 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
   mealPlan,
   onClose,
   onDuplicate,
-  loading }) => {
+  loading,
+}) => {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
     snapPoints: ['55%'],
-    keyboardAware: true });
+    keyboardAware: true,
+  });
 
   const [name, setName] = useState('');
   const [startDateOffset, setStartDateOffset] = useState(0);
@@ -52,7 +55,10 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
 
   const duration = (() => {
     if (!mealPlan?.startDate || !mealPlan?.endDate) return 7;
-    return differenceInDays(parseISO(mealPlan.endDate), parseISO(mealPlan.startDate));
+    return differenceInDays(
+      parseISO(mealPlan.endDate),
+      parseISO(mealPlan.startDate),
+    );
   })();
 
   const newStartDate = (() => {
@@ -70,7 +76,8 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
       mealPlanId: mealPlan.id,
       newName: name.trim(),
       newStartDate: newStartDate.toISOString(),
-      newEndDate: newEndDate.toISOString() });
+      newEndDate: newEndDate.toISOString(),
+    });
   };
 
   return (
@@ -93,7 +100,8 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
           <View style={styles.currentInfo}>
             <Text style={styles.currentLabel}>Current Plan</Text>
             <Text style={styles.currentValue}>
-              {format(parseISO(mealPlan.startDate), 'MMM d')} - {format(parseISO(mealPlan.endDate), 'MMM d, yyyy')}
+              {format(parseISO(mealPlan.startDate), 'MMM d')} -{' '}
+              {format(parseISO(mealPlan.endDate), 'MMM d, yyyy')}
             </Text>
           </View>
         )}
@@ -115,7 +123,11 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
               style={styles.dateButton}
               hitSlop={8}
             >
-              <Icon name="chevron-back" size={20} color={styles.dateButtonIcon.color} />
+              <Icon
+                name="chevron-back"
+                size={20}
+                color={styles.dateButtonIcon.color}
+              />
             </Pressable>
             <View style={styles.dateDisplay}>
               <Text style={styles.dateText}>
@@ -130,15 +142,24 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
               style={styles.dateButton}
               hitSlop={8}
             >
-              <Icon name="chevron-forward" size={20} color={styles.dateButtonIcon.color} />
+              <Icon
+                name="chevron-forward"
+                size={20}
+                color={styles.dateButtonIcon.color}
+              />
             </Pressable>
           </View>
         </View>
 
         <View style={styles.infoCard}>
-          <Icon name="information-circle-outline" size={18} color={styles.infoText.color} />
+          <Icon
+            name="information-circle-outline"
+            size={18}
+            color={styles.infoText.color}
+          />
           <Text style={styles.infoText}>
-            All meals will be copied to the new date range with the same structure.
+            All meals will be copied to the new date range with the same
+            structure.
           </Text>
         </View>
       </BottomSheetFormScrollView>
@@ -148,60 +169,76 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   contentContainer: {
     padding: theme.spacing.md,
-    gap: theme.spacing.md },
+    gap: theme.spacing.md,
+  },
   currentInfo: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
-    padding: theme.spacing.md },
+    padding: theme.spacing.md,
+  },
   currentLabel: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginBottom: 4 },
+    marginBottom: 4,
+  },
   currentValue: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   section: {
-    gap: theme.spacing.sm },
+    gap: theme.spacing.sm,
+  },
   label: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary },
+    color: theme.colors.textSecondary,
+  },
   dateAdjust: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
-    padding: theme.spacing.sm },
+    padding: theme.spacing.sm,
+  },
   dateButton: {
     padding: theme.spacing.sm,
     borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.background },
+    backgroundColor: theme.colors.background,
+  },
   dateButtonIcon: {
-    color: theme.colors.primary },
+    color: theme.colors.primary,
+  },
   dateDisplay: {
     alignItems: 'center',
-    flex: 1 },
+    flex: 1,
+  },
   dateText: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary },
+    color: theme.colors.textPrimary,
+  },
   dateSubtext: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2 },
+    marginTop: 2,
+  },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md },
+    borderRadius: theme.radii.md,
+  },
   infoText: {
     flex: 1,
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary } }));
+    color: theme.colors.textSecondary,
+  },
+}));

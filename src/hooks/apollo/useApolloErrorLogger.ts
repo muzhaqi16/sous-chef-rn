@@ -30,11 +30,14 @@ export function useApolloErrorLogger(
   useEffect(() => {
     if (!error) return;
     const cacheError = isCacheError(error.message);
-    Telemetry.error(`Apollo ${cacheError ? 'cache' : 'query'} error: ${operationName}`, {
-      operation_name: operationName,
-      error_message: error.message,
-      error_type: cacheError ? 'cache_normalization' : 'graphql',
-    });
+    Telemetry.error(
+      `Apollo ${cacheError ? 'cache' : 'query'} error: ${operationName}`,
+      {
+        operation_name: operationName,
+        error_message: error.message,
+        error_type: cacheError ? 'cache_normalization' : 'graphql',
+      },
+    );
     Telemetry.increment('apollo_client_errors_total', 1, {
       operation: operationName,
       type: cacheError ? 'cache' : 'graphql',

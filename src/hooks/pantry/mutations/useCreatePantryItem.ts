@@ -9,12 +9,13 @@
  * - Handles PANTRY_ITEM_ALREADY_EXISTS with restock/force-add options
  */
 
+import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import {
-  useCreatePantryItemMutation,
-  useRestockPantryItemMutation,
-  CreatePantryItemInput,
-} from '#generated';
+  CreatePantryItemDocument,
+  RestockPantryItemDocument,
+} from '#operations/pantry/pantry.generated';
+import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 import { useErrorService } from '#/services/errorService';
 import {
   isPantryItemDuplicateError,
@@ -54,8 +55,7 @@ export function useCreatePantryItem({
 }: UseCreatePantryItemOptions) {
   const { handleApolloError } = useErrorService();
 
-  const [createMutation] = useCreatePantryItemMutation({
-    errorPolicy: 'all',
+  const [createMutation] = useMutation(CreatePantryItemDocument, {
     update: (cache, { data: mutationData }) => {
       const pantryItem = mutationData?.createPantryItem?.pantryItem;
       if (!pantryItem || !pantryId) return;
@@ -67,9 +67,7 @@ export function useCreatePantryItem({
     },
   });
 
-  const [restockMutation] = useRestockPantryItemMutation({
-    errorPolicy: 'all',
-  });
+  const [restockMutation] = useMutation(RestockPantryItemDocument, {});
 
   const createPantryItem = async ({
     input,

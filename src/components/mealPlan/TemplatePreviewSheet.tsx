@@ -1,16 +1,16 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { DismissBackdrop } from '#components/atoms/DismissBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#components/molecules/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { useMealTemplate } from '#hooks/mealPlan/useMealTemplate';
-import type { MealTemplateDisplayFragment } from '#generated';
+import { type MealTemplateDisplayFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 
 interface TemplatePreviewSheetProps {
   visible: boolean;
@@ -34,8 +34,13 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
 }) => {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
+
+  // Standard bottom-sheet boilerplate handled by useStandardBottomSheet.
+  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
+    visible: visible && !!template,
+    onDismiss: onClose,
+    snapPoints: ['85%'],
+  });
 
   const { groupedByDay, loading } = useMealTemplate(template?.id);
 
@@ -56,14 +61,6 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
     }
   }
 
-  useEffect(() => {
-    if (visible && template) {
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
-    }
-  }, [visible, template]);
-
   const handleConfirm = () => {
     if (!template || !startDate) return;
     const servingsNum = parseInt(servings);
@@ -79,18 +76,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
   if (!template) return null;
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['85%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.surface }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      backdropComponent={DismissBackdrop}
-    >
+    <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
       <BottomSheetScrollView
         style={styles.scrollView}
         contentContainerStyle={[

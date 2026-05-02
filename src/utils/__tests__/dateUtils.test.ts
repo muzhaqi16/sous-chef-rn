@@ -7,7 +7,9 @@ import {
 
 describe('extractDateString', () => {
   it('extracts from ISO string with timezone offset', () => {
-    expect(extractDateString('1992-04-18T00:00:00.000+00:00')).toBe('1992-04-18');
+    expect(extractDateString('1992-04-18T00:00:00.000+00:00')).toBe(
+      '1992-04-18',
+    );
   });
 
   it('extracts from ISO string with Z', () => {

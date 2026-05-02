@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, TextStyle } from 'react-native';
+import { View, Text, TextStyle } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Badge } from '../base/Badge';
@@ -130,7 +131,9 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   );
 };
 
-export const ListItem = React.memo(ListItemComponent);
+// React Compiler memoizes JSX at the parent call site, so React.memo is
+// redundant on non-FlashList components. Per CLAUDE.md / project memory.
+export const ListItem = ListItemComponent;
 
 const styles = StyleSheet.create(theme => ({
   container: {

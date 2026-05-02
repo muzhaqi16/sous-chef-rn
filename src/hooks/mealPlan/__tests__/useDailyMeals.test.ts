@@ -40,9 +40,24 @@ describe('useDailyMeals', () => {
 
   it('groups items by meal type in correct order', () => {
     const items = [
-      makeItem({ id: 'i1', mealType: 'DINNER', recipe: { name: 'Steak' }, calories: 600 }),
-      makeItem({ id: 'i2', mealType: 'BREAKFAST', recipe: { name: 'Omelette' }, calories: 300 }),
-      makeItem({ id: 'i3', mealType: 'LUNCH', recipe: { name: 'Salad' }, calories: 200 }),
+      makeItem({
+        id: 'i1',
+        mealType: 'DINNER',
+        recipe: { name: 'Steak' },
+        calories: 600,
+      }),
+      makeItem({
+        id: 'i2',
+        mealType: 'BREAKFAST',
+        recipe: { name: 'Omelette' },
+        calories: 300,
+      }),
+      makeItem({
+        id: 'i3',
+        mealType: 'LUNCH',
+        recipe: { name: 'Salad' },
+        calories: 200,
+      }),
     ];
 
     const { result } = renderHook(() => useDailyMeals(items as any, today));
@@ -68,7 +83,11 @@ describe('useDailyMeals', () => {
 
   it('sorts items within a group by recipe name', () => {
     const items = [
-      makeItem({ id: 'i1', mealType: 'BREAKFAST', recipe: { name: 'Waffles' } }),
+      makeItem({
+        id: 'i1',
+        mealType: 'BREAKFAST',
+        recipe: { name: 'Waffles' },
+      }),
       makeItem({ id: 'i2', mealType: 'BREAKFAST', recipe: { name: 'Eggs' } }),
     ];
 
@@ -81,8 +100,18 @@ describe('useDailyMeals', () => {
   it('computes totalMeals and totalCalories', () => {
     const items = [
       makeItem({ id: 'i1', mealType: 'BREAKFAST', calories: 300 }),
-      makeItem({ id: 'i2', mealType: 'LUNCH', recipe: { name: 'Salad' }, calories: 200 }),
-      makeItem({ id: 'i3', mealType: 'DINNER', recipe: { name: 'Steak' }, calories: null }),
+      makeItem({
+        id: 'i2',
+        mealType: 'LUNCH',
+        recipe: { name: 'Salad' },
+        calories: 200,
+      }),
+      makeItem({
+        id: 'i3',
+        mealType: 'DINNER',
+        recipe: { name: 'Steak' },
+        calories: null,
+      }),
     ];
 
     const { result } = renderHook(() => useDailyMeals(items as any, today));

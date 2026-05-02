@@ -44,17 +44,30 @@ const mockProfileData = {
   budgetPerMeal: 15,
 };
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetDietaryProfileQuery: jest.fn(() => ({
-    data: { me: { dietaryProfile: mockProfileData } },
-    loading: false,
-    networkStatus: 7,
-  })),
-  useUpdateDietaryProfileMutation: () => [mockUpdateProfile, {}],
-  useAddDietaryRestrictionMutation: () => [mockAddRestriction, {}],
-  useUpdateDietaryRestrictionMutation: () => [mockUpdateRestriction, {}],
-  useRemoveDietaryRestrictionMutation: () => [mockRemoveRestriction, {}],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetDietaryProfile') {
+      return {
+        data: { me: { dietaryProfile: mockProfileData } },
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'UpdateDietaryProfile') return [mockUpdateProfile, {}];
+    if (opName === 'AddDietaryRestriction') return [mockAddRestriction, {}];
+    if (opName === 'UpdateDietaryRestriction')
+      return [mockUpdateRestriction, {}];
+    if (opName === 'RemoveDietaryRestriction')
+      return [mockRemoveRestriction, {}];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
@@ -101,8 +114,8 @@ describe('useDietaryProfile', () => {
   });
 
   it('returns null profile when no data', () => {
-    const { useGetDietaryProfileQuery } = require('#generated');
-    useGetDietaryProfileQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: null,
       loading: false,
       networkStatus: 7,
@@ -113,8 +126,8 @@ describe('useDietaryProfile', () => {
   });
 
   it('maps restriction fields correctly', () => {
-    const { useGetDietaryProfileQuery } = require('#generated');
-    useGetDietaryProfileQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: { me: { dietaryProfile: mockProfileData } },
       loading: false,
       networkStatus: 7,
@@ -216,8 +229,8 @@ describe('useDietaryProfile', () => {
   });
 
   it('provides defaults for missing profile fields', () => {
-    const { useGetDietaryProfileQuery } = require('#generated');
-    useGetDietaryProfileQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: {
         me: {
           dietaryProfile: {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  RecipeStatus,
   type CreateRecipeInput,
   type UpdateRecipeInput,
   type RecipeIngredientInput,
@@ -8,9 +9,8 @@ import {
   type Diet,
   type HealthGoal,
   type Intolerance,
-  type RecipeFragment,
-  RecipeStatus,
-} from '#generated';
+} from '../../../graphql/generated/schemaTypes';
+import { type RecipeFragment } from '../../../graphql/operations/recipe/recipeFragments.generated';
 
 export interface IngredientFormState {
   id: string; // local temp id

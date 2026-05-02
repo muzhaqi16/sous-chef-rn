@@ -8,17 +8,31 @@ const mockToggleHelpful = jest.fn();
 
 const mockUseGetRecipeReviewsQuery = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreateRecipeReviewMutation: jest.fn(() => [mockCreateReview, { loading: false }]),
-  useUpdateRecipeReviewMutation: jest.fn(() => [mockUpdateReview, { loading: false }]),
-  useDeleteRecipeReviewMutation: jest.fn(() => [mockDeleteReview, { loading: false }]),
-  useToggleReviewHelpfulMutation: jest.fn(() => [mockToggleHelpful, { loading: false }]),
-  useGetRecipeReviewsQuery: (...args: any[]) => mockUseGetRecipeReviewsQuery(...args),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateRecipeReview')
+      return [mockCreateReview, { loading: false }];
+    if (opName === 'UpdateRecipeReview')
+      return [mockUpdateReview, { loading: false }];
+    if (opName === 'DeleteRecipeReview')
+      return [mockDeleteReview, { loading: false }];
+    if (opName === 'ToggleReviewHelpful')
+      return [mockToggleHelpful, { loading: false }];
+    return [jest.fn(), {}];
+  }),
+  useQuery: jest.fn((...args: any[]) => {
+    const doc = args[0];
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetRecipeReviews')
+      return mockUseGetRecipeReviewsQuery(...args);
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
-jest.mock('#hooks/auth/useAuthUser', () => ({
-  useAuthUser: jest.fn(() => ({ id: 'user-1' })),
+jest.mock('#store/useAppStore', () => ({
+  useUser: jest.fn(() => ({ id: 'user-1' })),
 }));
 
 const mockToastSuccess = jest.fn();
@@ -128,7 +142,9 @@ describe('useRecipeReviews', () => {
     const { result } = renderHook(() =>
       useRecipeReviews({
         recipeId: 'recipe-1',
-        backendRecipe: makeBackendRecipe({ createdBy: { id: 'user-1' } }) as any,
+        backendRecipe: makeBackendRecipe({
+          createdBy: { id: 'user-1' },
+        }) as any,
       }),
     );
 
@@ -155,9 +171,13 @@ describe('useRecipeReviews', () => {
     );
 
     // rev-1 has helpfulVotes containing user-1
-    expect(result.current.actions.hasVotedHelpful(result.current.state.reviews[0])).toBe(true);
+    expect(
+      result.current.actions.hasVotedHelpful(result.current.state.reviews[0]),
+    ).toBe(true);
     // rev-2 has no helpful votes
-    expect(result.current.actions.hasVotedHelpful(result.current.state.reviews[1])).toBe(false);
+    expect(
+      result.current.actions.hasVotedHelpful(result.current.state.reviews[1]),
+    ).toBe(false);
   });
 
   it('createReview calls mutation and shows toast', async () => {
@@ -196,7 +216,9 @@ describe('useRecipeReviews', () => {
       await result.current.actions.deleteReview('rev-2');
     });
 
-    expect(mockDeleteReview).toHaveBeenCalledWith({ variables: { id: 'rev-2' } });
+    expect(mockDeleteReview).toHaveBeenCalledWith({
+      variables: { id: 'rev-2' },
+    });
     expect(mockToastSuccess).toHaveBeenCalledWith('Review deleted');
   });
 

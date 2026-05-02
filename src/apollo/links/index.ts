@@ -5,6 +5,7 @@ import { createConsoleLink } from './consoleLink';
 import { createTelemetryLink } from './telemetryLink';
 import { createOfflineModeLink } from './offlineModeLink';
 import { errorLink } from './errorLink';
+import { retryLink } from './retryLink';
 import { httpLink } from './httpLink';
 import { wsLink } from './wsLink';
 import { createQueueLink } from '../offlineQueue/queueLink';
@@ -53,13 +54,15 @@ export function createLink() {
   // Link chain - ordered by priority
   // Offline support is handled by:
   // 1. offlineModeLink - blocks queries when user-enabled offline mode is active
-  // 2. errorLink - catches network failures, returns cached data
-  // 3. fetch policies (cache-and-network → cache-first) - immediate cache, then network
-  // 4. queueLink - queues mutations when offline
+  // 2. retryLink - retries transient network failures for queries (mutations are skipped)
+  // 3. errorLink - catches non-retryable failures, returns cached data
+  // 4. fetch policies (cache-and-network → cache-first) - immediate cache, then network
+  // 5. queueLink - queues mutations when offline
   // Note: Query deduplication is handled by Apollo Client's built-in queryDeduplication: true
   return ApolloLink.from([
     offlineModeLink, // Block queries when offline mode enabled (before telemetry to skip tracking)
     telemetryLink, // Track operations for monitoring
+    retryLink, // Retry transient network failures (queries only)
     errorLink, // Handle/log errors + return cached data on network failures
     authLink, // Authentication headers
     queueLink, // Queue mutations when offline

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   usePantryItemSuggestions,
@@ -7,14 +7,17 @@ import {
 } from '#hooks/pantry/usePantryItemSuggestions';
 import { toastService } from '#/services/toastService';
 import {
-  useCreatePantryItemMutation,
-  useRestockPantryItemMutation,
+  CreatePantryItemDocument,
+  RestockPantryItemDocument,
   GetPantryDocument,
   type GetPantryQuery,
   GetPantryItemSuggestionsDocument,
   type GetPantryItemSuggestionsQuery,
+} from '#operations/pantry/pantry.generated';
+import type {
   ItemSuggestion,
-} from '#generated';
+  StorageLocation,
+} from '#/graphql/generated/schemaTypes';
 import { normalizePantry } from '#/utils/connectionUtils';
 import {
   isPantryItemDuplicateError,
@@ -22,7 +25,7 @@ import {
 } from '#/utils/errors/pantryItemDuplicate';
 import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
-import type { StorageLocation } from '#generated';
+import { incrementNestedCounter } from '#/apollo/utils/cacheUpdaters';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type {
@@ -82,33 +85,27 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   );
 
   // Create pantry item mutation — synchronous cache update prevents flickering
-  const [createPantryItem] = useCreatePantryItemMutation({
-    errorPolicy: 'all',
+  const [createPantryItem] = useMutation(CreatePantryItemDocument, {
     update: (cache, { data }) => {
       const pantryItem = data?.createPantryItem?.pantryItem;
       if (!pantryItem || !pantryId) return;
 
       executeCacheUpdate(() => {
         addToPantryItemsCache(cache, pantryId, pantryItem);
-        cache.modify({
-          id: cache.identify({ __typename: 'Pantry', id: pantryId }),
-          fields: {
-            stats(existingStats: any) {
-              if (!existingStats) return existingStats;
-              return {
-                ...existingStats,
-                totalItems: (existingStats.totalItems || 0) + 1,
-              };
-            },
-          },
-        });
+        incrementNestedCounter(
+          cache,
+          'Pantry',
+          pantryId,
+          'stats',
+          'totalItems',
+          1,
+        );
       }, 'Cache update failed for createPantryItem:');
     },
   });
 
   // Restock pantry item mutation
-  const [restockPantryItem] = useRestockPantryItemMutation({
-    errorPolicy: 'all',
+  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
     update: (cache, { data }) => {
       const pantryItem = data?.restockPantryItem?.pantryItemUsage?.pantryItem;
       if (!pantryItem || !pantryId) return;

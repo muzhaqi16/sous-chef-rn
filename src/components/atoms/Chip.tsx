@@ -1,6 +1,7 @@
 import React from 'react';
-import {Pressable, Text, StyleProp, ViewStyle} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { Text, StyleProp, ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { Pressable } from 'react-native-gesture-handler';
 
 type ChipProps = {
   label: string;
@@ -9,10 +10,10 @@ type ChipProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-const Chip: React.FC<ChipProps> = ({label, selected, onPress, style}) => {
+const Chip: React.FC<ChipProps> = ({ label, selected, onPress, style }) => {
   return (
     <Pressable
-      style={({pressed}) => [
+      style={({ pressed }) => [
         styles.chip,
         selected ? styles.selected : styles.unselected,
         pressed && styles.pressed,
@@ -21,13 +22,19 @@ const Chip: React.FC<ChipProps> = ({label, selected, onPress, style}) => {
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityHint={selected ? `${label} filter selected, tap to deselect` : `${label} filter not selected, tap to select`}
-      accessibilityState={{selected}}>
+      accessibilityHint={
+        selected
+          ? `${label} filter selected, tap to deselect`
+          : `${label} filter not selected, tap to select`
+      }
+      accessibilityState={{ selected }}
+    >
       <Text
         style={[
           styles.chipText,
           selected ? styles.selectedText : styles.unselectedText,
-        ]}>
+        ]}
+      >
         {label}
       </Text>
     </Pressable>

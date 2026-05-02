@@ -1,19 +1,29 @@
 import { useState } from 'react';
+import { useQuery } from '@apollo/client/react';
 import {
-  useGetPantryUsageAnalyticsQuery,
-  useGetPantryWasteAnalyticsQuery,
-  useGetPantryLedgerAnalyticsQuery,
+  GetPantryUsageAnalyticsDocument,
+  GetPantryWasteAnalyticsDocument,
+  GetPantryLedgerAnalyticsDocument,
+  type GetPantryUsageAnalyticsQuery,
+  type GetPantryWasteAnalyticsQuery,
+  type GetPantryLedgerAnalyticsQuery,
+} from '#operations/pantry/pantry.generated';
+import {
   PeriodGranularity,
   DateRange,
   type AnalyticsFilters,
-  type GetPantryUsageAnalyticsQuery,
-  type GetPantryWasteAnalyticsQuery,
-  type GetPantryLedgerAnalyticsQuery } from '#generated';
+} from '#/graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
-type UsageAnalytics = NonNullable<GetPantryUsageAnalyticsQuery['pantry']>['usageAnalytics'];
-type WasteAnalytics = NonNullable<GetPantryWasteAnalyticsQuery['pantry']>['wasteAnalytics'];
-type LedgerAnalytics = NonNullable<GetPantryLedgerAnalyticsQuery['pantry']>['ledgerAnalytics'];
+type UsageAnalytics = NonNullable<
+  GetPantryUsageAnalyticsQuery['pantry']
+>['usageAnalytics'];
+type WasteAnalytics = NonNullable<
+  GetPantryWasteAnalyticsQuery['pantry']
+>['wasteAnalytics'];
+type LedgerAnalytics = NonNullable<
+  GetPantryLedgerAnalyticsQuery['pantry']
+>['ledgerAnalytics'];
 
 interface UsePantryAnalyticsOptions {
   pantryId: string | undefined;
@@ -42,7 +52,8 @@ interface UsePantryAnalyticsReturn {
 export function usePantryAnalytics({
   pantryId,
   initialDateRange = DateRange.LastMonth,
-  ledgerGranularity: initialLedgerGranularity = PeriodGranularity.Weekly }: UsePantryAnalyticsOptions): UsePantryAnalyticsReturn {
+  ledgerGranularity: initialLedgerGranularity = PeriodGranularity.Weekly,
+}: UsePantryAnalyticsOptions): UsePantryAnalyticsReturn {
   const [dateRange, setDateRange] = useState<DateRange>(initialDateRange);
   const [ledgerGranularity, setLedgerGranularity] = useState<PeriodGranularity>(
     initialLedgerGranularity,
@@ -52,51 +63,49 @@ export function usePantryAnalytics({
 
   const filter: AnalyticsFilters = {
     dateRange,
-    topItemsLimit: 10 };
+    topItemsLimit: 10,
+  };
 
   const {
     data: usageQueryData,
     loading: usageLoading,
     error: usageError,
-    refetch: refetchUsage } = useGetPantryUsageAnalyticsQuery({
+    refetch: refetchUsage,
+  } = useQuery(GetPantryUsageAnalyticsDocument, {
     variables: { pantryId: pantryId ?? '', filter },
     skip: !hasValidPantryId,
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all' });
+  });
 
   const {
     data: wasteQueryData,
     loading: wasteLoading,
     error: wasteError,
-    refetch: refetchWaste } = useGetPantryWasteAnalyticsQuery({
+    refetch: refetchWaste,
+  } = useQuery(GetPantryWasteAnalyticsDocument, {
     variables: { pantryId: pantryId ?? '', filter },
     skip: !hasValidPantryId,
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all' });
+  });
 
   const {
     data: ledgerQueryData,
     loading: ledgerLoading,
     error: ledgerError,
-    refetch: refetchLedger } = useGetPantryLedgerAnalyticsQuery({
+    refetch: refetchLedger,
+  } = useQuery(GetPantryLedgerAnalyticsDocument, {
     variables: {
       pantryId: pantryId ?? '',
       filter,
-      granularity: ledgerGranularity },
+      granularity: ledgerGranularity,
+    },
     skip: !hasValidPantryId,
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all' });
+  });
 
   useApolloErrorLogger('GetPantryUsageAnalytics', usageError);
   useApolloErrorLogger('GetPantryWasteAnalytics', wasteError);
   useApolloErrorLogger('GetPantryLedgerAnalytics', ledgerError);
 
   const refetch = async () => {
-    await Promise.all([
-      refetchUsage(),
-      refetchWaste(),
-      refetchLedger(),
-    ]);
+    await Promise.all([refetchUsage(), refetchWaste(), refetchLedger()]);
   };
 
   return {
@@ -114,5 +123,6 @@ export function usePantryAnalytics({
     setDateRange,
     ledgerGranularity,
     setLedgerGranularity,
-    refetch };
+    refetch,
+  };
 }

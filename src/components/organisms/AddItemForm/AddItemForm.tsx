@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { AnimatedButton } from '#/components/atoms/AnimatedButton';
+import { Button } from '#/components/base/Button';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { createItemSchema, CreateItemFormData } from '#utils/validation/item';
@@ -10,7 +10,7 @@ import {
   ItemType,
   BaseDimension,
   type ItemUnitInput,
-} from '#generated';
+} from '../../../graphql/generated/schemaTypes';
 import { FormInput } from '#/components/molecules/FormInput';
 import { FormTextArea } from '#/components/molecules/FormTextArea';
 import { FormNumberInput } from '#/components/molecules/FormNumberInput';
@@ -565,7 +565,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       </View>
 
       <View style={styles.buttonContainer}>
-        <AnimatedButton
+        <Button
           variant="primary"
           fullWidth
           loading={loading}
@@ -573,16 +573,16 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           onPress={handleSubmit(handleFormSubmit)}
         >
           {modeConfig.buttonLabel}
-        </AnimatedButton>
+        </Button>
 
-        <AnimatedButton
+        <Button
           variant="secondary"
           fullWidth
           disabled={loading}
           onPress={onClose}
         >
           Cancel
-        </AnimatedButton>
+        </Button>
       </View>
     </>
   );

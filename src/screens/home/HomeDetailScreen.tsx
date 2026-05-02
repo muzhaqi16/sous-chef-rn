@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -15,7 +16,7 @@ import { EditableField } from '#components/molecules/EditableField';
 import { NavigationRow } from '#components/molecules/NavigationRow';
 import { HomeMembersSection } from '#components/organisms/home/HomeMembersSection';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
-import { useAppStore, selectUser } from '#store/useAppStore';
+import { useUser } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
 import { Button } from '#components/base/Button';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -26,14 +27,14 @@ type RouteParams = {
   homeId: string;
 };
 
-export const HomeDetailScreen: React.FC<{
-  route: { params: RouteParams };
-}> = ({ route }) => {
+export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
+  route,
+}) => {
   useScreenTransition('HomeDetailScreen');
   const { goBack, navigate } = useAppNavigation();
   const { homeId } = route.params;
   // PERFORMANCE: Use selective selector instead of full store subscription
-  const currentUser = useAppStore(selectUser);
+  const currentUser = useUser();
   const { theme } = useUnistyles();
 
   const [copied, setCopied] = useState(false);

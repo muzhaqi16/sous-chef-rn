@@ -7,6 +7,8 @@ import Animated, {
   withSequence,
   withTiming,
   withDelay,
+  cancelAnimation,
+  useReducedMotion,
   Easing,
   type SharedValue,
 } from 'react-native-reanimated';
@@ -27,8 +29,10 @@ export const SwipeHandIndicator: React.FC<SwipeHandIndicatorProps> = ({
   visible,
 }) => {
   const translateX = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
 
   useLayoutEffect(() => {
+    if (reducedMotion) return;
     const distance = direction === 'left' ? -30 : 30;
     translateX.set(
       withDelay(
@@ -46,11 +50,15 @@ export const SwipeHandIndicator: React.FC<SwipeHandIndicatorProps> = ({
         ),
       ),
     );
-  }, [translateX, direction]);
+
+    return () => {
+      cancelAnimation(translateX);
+    };
+  }, [translateX, direction, reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-    opacity: visible.value,
+    transform: [{ translateX: translateX.get() }],
+    opacity: visible.get(),
   }));
 
   // Use finger emoji — more intuitive for "swipe here" than Ionicons hand icons

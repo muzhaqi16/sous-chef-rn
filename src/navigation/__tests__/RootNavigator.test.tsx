@@ -39,6 +39,7 @@ jest.mock('@react-navigation/native-stack', () => ({
     Screen: ({ children }: any) => children,
     Group: ({ children }: any) => children,
   })),
+  createNativeStackScreen: jest.fn((config: any) => config),
 }));
 
 // Mock createStaticNavigation
@@ -53,8 +54,26 @@ jest.mock('@react-navigation/native', () => {
         ReactMock.createElement(View, { testID: 'static-navigation', ref }),
       ),
     ),
-    DefaultTheme: { colors: { primary: '#000', background: '#fff', card: '#fff', text: '#000', border: '#ccc', notification: '#f00' } },
-    DarkTheme: { colors: { primary: '#fff', background: '#000', card: '#000', text: '#fff', border: '#333', notification: '#f00' } },
+    DefaultTheme: {
+      colors: {
+        primary: '#000',
+        background: '#fff',
+        card: '#fff',
+        text: '#000',
+        border: '#ccc',
+        notification: '#f00',
+      },
+    },
+    DarkTheme: {
+      colors: {
+        primary: '#fff',
+        background: '#000',
+        card: '#000',
+        text: '#fff',
+        border: '#333',
+        notification: '#f00',
+      },
+    },
   };
 });
 
@@ -63,7 +82,9 @@ jest.mock('#screens/SplashScreen', () => ({
   SplashScreen: () => {
     const ReactMock = require('react');
     const { View, Text } = require('react-native');
-    return ReactMock.createElement(View, { testID: 'splash-screen' },
+    return ReactMock.createElement(
+      View,
+      { testID: 'splash-screen' },
       ReactMock.createElement(Text, null, 'Splash'),
     );
   },
@@ -99,7 +120,9 @@ let mockUser: any = null;
 let mockNavigationState = 'loading';
 let mockShowBiometricSetup = false;
 let mockPostLoginCredentials: any = null;
-const mockSetNavigationState = jest.fn((state: string) => { mockNavigationState = state; });
+const mockSetNavigationState = jest.fn((state: string) => {
+  mockNavigationState = state;
+});
 
 // Mock useAppStore
 jest.mock('#store/useAppStore', () => ({
@@ -116,15 +139,16 @@ jest.mock('#store/useAppStore', () => ({
     };
     return selector(state);
   }),
-  selectHydrated: (s: any) => s.isHydrated,
-  selectUser: (s: any) => s.user,
-  selectPostLoginState: (s: any) => ({
-    navigationState: s.navigationState,
-    showBiometricSetup: s.showBiometricSetup,
-    postLoginCredentials: s.postLoginCredentials,
-    setNavigationState: s.setNavigationState,
-    setShowBiometricSetup: s.setShowBiometricSetup,
-  }),
+  useIsHydrated: jest.fn(() => mockIsHydrated),
+  useUser: jest.fn(() => mockUser),
+  usePostLoginState: jest.fn(() => ({
+    navigationState: mockNavigationState,
+    showBiometricSetup: mockShowBiometricSetup,
+    postLoginCredentials: mockPostLoginCredentials,
+    setNavigationState: mockSetNavigationState,
+    setShowBiometricSetup: jest.fn(),
+    setPostLoginCredentials: jest.fn(),
+  })),
 }));
 
 // Mock all navigation stacks
@@ -132,17 +156,35 @@ jest.mock('../stacks/AuthStack', () => ({ AuthStack: () => null }));
 jest.mock('../stacks/OnboardingStack', () => ({ OnboardingStack: () => null }));
 jest.mock('../stacks/HomeTabs', () => ({ HomeTabs: () => null }));
 jest.mock('../stacks/BarcodeStack', () => ({ BarcodeStack: () => null }));
-jest.mock('../stacks/NotificationStack', () => ({ NotificationStack: () => null }));
+jest.mock('../stacks/NotificationStack', () => ({
+  NotificationStack: () => null,
+}));
 
 // Mock screen imports
-jest.mock('#screens/profile/ProfileScreen', () => ({ ProfileScreen: () => null }));
-jest.mock('#screens/home/HomeManagement', () => ({ HomeManagement: () => null }));
-jest.mock('#screens/home/HomeDetailScreen', () => ({ HomeDetailScreen: () => null }));
-jest.mock('#screens/home/StorageLocationsScreen', () => ({ StorageLocationsScreen: () => null }));
-jest.mock('#screens/auth/CodeVerificationScreen', () => ({ CodeVerificationScreen: () => null }));
-jest.mock('#screens/auth/EmailVerificationDeepLinkScreen', () => ({ EmailVerificationDeepLinkScreen: () => null }));
-jest.mock('#screens/auth/ResetPasswordScreen', () => ({ ResetPasswordScreen: () => null }));
-jest.mock('#screens/shoppingList/AcceptInvite', () => ({ AcceptInvite: () => null }));
+jest.mock('#screens/profile/ProfileScreen', () => ({
+  ProfileScreen: () => null,
+}));
+jest.mock('#screens/home/HomeManagement', () => ({
+  HomeManagement: () => null,
+}));
+jest.mock('#screens/home/HomeDetailScreen', () => ({
+  HomeDetailScreen: () => null,
+}));
+jest.mock('#screens/home/StorageLocationsScreen', () => ({
+  StorageLocationsScreen: () => null,
+}));
+jest.mock('#screens/auth/CodeVerificationScreen', () => ({
+  CodeVerificationScreen: () => null,
+}));
+jest.mock('#screens/auth/EmailVerificationDeepLinkScreen', () => ({
+  EmailVerificationDeepLinkScreen: () => null,
+}));
+jest.mock('#screens/auth/ResetPasswordScreen', () => ({
+  ResetPasswordScreen: () => null,
+}));
+jest.mock('#screens/shoppingList/AcceptInvite', () => ({
+  AcceptInvite: () => null,
+}));
 
 import { Navigation } from '../RootNavigator';
 

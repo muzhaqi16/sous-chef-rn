@@ -1,9 +1,11 @@
 import React, { useRef, useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
+import { TabMainScreen } from '#components/templates/TabMainScreen';
 import { WeekStrip } from '#components/mealPlan/WeekStrip';
 import { MonthCalendar } from '#components/mealPlan/MonthCalendar';
 import { DayMealList } from '#components/mealPlan/DayMealList';
@@ -38,16 +40,22 @@ import { useMealPlanPermissions } from '#hooks/mealPlan/useMealPlanPermissions';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { MealPlanSkeleton } from '#components/base/Skeleton/MealPlanSkeleton';
 import { useAppStore } from '#store/useAppStore';
-import {
-  useDeleteMealPlanMutation,
-  GetMealPlansDocument,
-  SortOrder,
-  MealType,
-  type MealPlanItemFragment,
-  type MealTemplateDisplayFragment,
-} from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { DeleteMealPlanDocument } from '../../graphql/operations/mealPlan/mealPlan.generated';
+import { MealType } from '../../graphql/generated/schemaTypes';
+import { createRemoveFromQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+
+const removeFromMealPlansForMain = createRemoveFromQueryConnectionUpdater(
+  'mealPlans',
+  'MealPlan',
+);
+import { type MealTemplateDisplayFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
+import { type MealPlanMain_ItemFragment } from './MealPlanMain.generated';
+import { type EditCustomMealSheet_ItemFragment } from '#components/mealPlan/EditCustomMealSheet.generated';
+import { type MealPlanItemActionsItem } from '#hooks/mealPlan/useMealPlanItemActions';
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 async function executeMealPlanRefresh(
   refetchFn: () => Promise<unknown>,
@@ -70,10 +78,10 @@ async function executeMealPlanRefresh(
 export const MealPlanMain: React.FC = () => (
   <DeferredScreen
     fallback={
-      <View style={styles.container} testID="meal-plan-screen">
+      <TabMainScreen testID="meal-plan-screen">
         <TabScreenHeader label="Plan your meals" title="Meal Plan" />
         <MealPlanSkeleton />
-      </View>
+      </TabMainScreen>
     }
     component={MealPlanMainInner}
   />
@@ -111,15 +119,17 @@ const MealPlanMainInner: React.FC = () => {
   const [shoppingListSheetVisible, setShoppingListSheetVisible] =
     useState(false);
 
-  // Mark cooked modal state
+  // Mark cooked modal state.
+  // pendingCookItem is forwarded to `toggleCompleted` (needs the action's full item shape)
+  // and read by MarkCookedModal (needs recipe.name + servings).
   const [markCookedVisible, setMarkCookedVisible] = useState(false);
   const [pendingCookItem, setPendingCookItem] =
-    useState<MealPlanItemFragment | null>(null);
+    useState<MealPlanItemActionsItem | null>(null);
 
-  // Edit custom meal state
+  // Edit custom meal state — only the EditCustomMealSheet's narrow shape is needed.
   const [editCustomMealVisible, setEditCustomMealVisible] = useState(false);
   const [editingCustomItem, setEditingCustomItem] =
-    useState<MealPlanItemFragment | null>(null);
+    useState<EditCustomMealSheet_ItemFragment | null>(null);
 
   // Settings and duplicate state
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -133,7 +143,9 @@ const MealPlanMainInner: React.FC = () => {
   } = useMealTemplateActions();
 
   // Fetch meal plans and resolve active plan
-  const { currentPlan, mealPlans, loading: plansLoading } = useMealPlans();
+  const {
+    state: { currentPlan, mealPlans, loading: plansLoading },
+  } = useMealPlans();
   const activePlanId =
     selectedMealPlanId ?? currentPlan?.id ?? mealPlans[0]?.id ?? null;
 
@@ -178,10 +190,7 @@ const MealPlanMainInner: React.FC = () => {
   });
 
   // Daily meals for selected date
-  const { dailyMeals, totalCalories, isEmpty } = useDailyMeals(
-    items,
-    calendar.selectedDate,
-  );
+  const { dailyMeals, isEmpty } = useDailyMeals(items, calendar.selectedDate);
 
   // Meal plan item actions
   const { createItem, updateItem, toggleCompleted, deleteItem } =
@@ -195,19 +204,18 @@ const MealPlanMainInner: React.FC = () => {
   const { duplicatePlan, loading: duplicatingPlan } = useDuplicateMealPlan();
 
   // Delete meal plan
-  const [deletePlanMutation, { loading: deletingPlan }] =
-    useDeleteMealPlanMutation({
-      refetchQueries: [
-        {
-          query: GetMealPlansDocument,
-          variables: { first: 20, orderBy: { startDate: SortOrder.Desc } },
-        },
-      ],
-      awaitRefetchQueries: true,
+  const [deletePlanMutation, { loading: deletingPlan }] = useMutation(
+    DeleteMealPlanDocument,
+    {
+      update(cache, { data }, { variables }) {
+        const id = data?.deleteMealPlan?.mealPlan?.id ?? variables?.id;
+        if (id) removeFromMealPlansForMain(cache, id, { evictItem: true });
+      },
       onError: error => {
         toastService.error(error.message || 'Failed to delete meal plan');
       },
-    });
+    },
+  );
 
   // Compute days with meals for calendar indicators
   const daysWithMeals = (() => {
@@ -306,7 +314,11 @@ const MealPlanMainInner: React.FC = () => {
     setAddMealVisible(true);
   };
 
-  const handleItemPress = (item: MealPlanItemFragment) => {
+  const handleItemPress = (id: string) => {
+    const item = items.find(i => i.id === id) as
+      | (MealPlanMain_ItemFragment & EditCustomMealSheet_ItemFragment)
+      | undefined;
+    if (!item) return;
     if (item.recipe?.id) {
       navigate('RecipeDetail', { recipeId: item.recipe.id });
     } else if (item.customMealName && permissions.canEdit) {
@@ -390,14 +402,12 @@ const MealPlanMainInner: React.FC = () => {
   };
 
   const handleDeletePlan = async (id: string) => {
-    let result;
-    try {
-      result = await deletePlanMutation({ variables: { id } });
-    } catch {
-      // Error handled by onError callback
-      return;
-    }
-    if (result.data?.deleteMealPlan?.success) {
+    const result = await executeMutation(
+      () => deletePlanMutation({ variables: { id } }),
+      // Error handled by onError callback on the mutation hook
+      () => {},
+    );
+    if (result && result.data?.deleteMealPlan?.success) {
       toastService.success('Meal plan deleted');
       // If we deleted the active plan, clear the selection so the UI falls back
       // to the next available plan (or the empty state if none remain).
@@ -422,7 +432,7 @@ const MealPlanMainInner: React.FC = () => {
   // Show empty state if no plans exist and not loading
   if (!plansLoading && mealPlans.length === 0) {
     return (
-      <View style={styles.container} testID="meal-plan-screen">
+      <TabMainScreen testID="meal-plan-screen">
         <TabScreenHeader label="Plan your meals" title="Meal Plan" />
         <MealPlanEmptyState
           onCreatePlan={handleCreatePlan}
@@ -447,12 +457,12 @@ const MealPlanMainInner: React.FC = () => {
           onConfirm={handleCreateFromTemplate}
           confirmLoading={creatingFromTemplate}
         />
-      </View>
+      </TabMainScreen>
     );
   }
 
   return (
-    <View key={themeKey} style={styles.container} testID="meal-plan-screen">
+    <TabMainScreen key={themeKey} testID="meal-plan-screen">
       <View style={styles.headerRow}>
         <View style={styles.headerContent}>
           <TabScreenHeader
@@ -548,7 +558,6 @@ const MealPlanMainInner: React.FC = () => {
       <DayMealList
         selectedDate={calendar.selectedDate}
         dailyMeals={dailyMeals}
-        totalCalories={totalCalories}
         isEmpty={isEmpty}
         onToggleCompleted={
           permissions.canEdit ? handleToggleCompleted : undefined
@@ -671,15 +680,11 @@ const MealPlanMainInner: React.FC = () => {
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       />
-    </View>
+    </TabMainScreen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

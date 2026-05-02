@@ -38,7 +38,9 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
           </Text>
         )}
         <View style={styles.emptyState}>
-          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+          <Text
+            style={[styles.emptyText, { color: theme.colors.textSecondary }]}
+          >
             No data available
           </Text>
         </View>
@@ -77,13 +79,21 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
                     ]}
                   />
                 </View>
-                <Text style={[styles.barValue, { color: theme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.barValue,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
                   {item.value}
-                  {!!showSecondaryValue && item.secondaryValue !== undefined && (
-                    <Text style={styles.secondaryValue}>
-                      {` (${secondaryValuePrefix}${item.secondaryValue.toFixed(2)})`}
-                    </Text>
-                  )}
+                  {!!showSecondaryValue &&
+                    item.secondaryValue !== undefined && (
+                      <Text style={styles.secondaryValue}>
+                        {` (${secondaryValuePrefix}${item.secondaryValue.toFixed(
+                          2,
+                        )})`}
+                      </Text>
+                    )}
                 </Text>
               </View>
             </View>

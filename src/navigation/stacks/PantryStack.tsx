@@ -1,5 +1,9 @@
 import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { StaticParamList } from '@react-navigation/native';
+import {
+  createNativeStackNavigator,
+  createNativeStackScreen,
+} from '@react-navigation/native-stack';
 import { PantryMain } from '#screens/pantry/PantryMain';
 import { PantryItemScreen } from '#screens/pantry/PantryItemScreen';
 import { PantryItemDetail } from '#screens/pantry/PantryItemDetail';
@@ -24,18 +28,18 @@ export const PantryStack = createNativeStackNavigator({
     contentStyle: { backgroundColor: theme.colors.background },
   }),
   screens: {
-    PantryMain: {
+    PantryMain: createNativeStackScreen({
       screen: PantryMain,
       linking: 'pantry',
-    },
-    PantryItem: {
+    }),
+    PantryItem: createNativeStackScreen({
       screen: PantryItemScreen,
       linking: 'pantry/item/:itemId?',
-    },
-    PantryItemDetail: {
+    }),
+    PantryItemDetail: createNativeStackScreen({
       screen: PantryItemDetail,
       linking: 'pantry/detail/:itemId',
-    },
+    }),
     FilteredPantryItems: FilteredPantryItems,
     PantrySettings: PantrySettings,
     PantryAnalytics: PantryAnalytics,
@@ -43,3 +47,5 @@ export const PantryStack = createNativeStackNavigator({
     RecipeDetail: RecipeDetail,
   },
 });
+
+export type PantryStackParams = StaticParamList<typeof PantryStack>;

@@ -43,11 +43,17 @@ describe('useRememberMe', () => {
     );
 
     act(() => {
-      result.current.showRememberMePrompt({ email: 'test@test.com', password: 'pw' });
+      result.current.showRememberMePrompt({
+        email: 'test@test.com',
+        password: 'pw',
+      });
     });
 
     expect(result.current.showRememberMeModal).toBe(true);
-    expect(result.current.pendingCredentials).toEqual({ email: 'test@test.com', password: 'pw' });
+    expect(result.current.pendingCredentials).toEqual({
+      email: 'test@test.com',
+      password: 'pw',
+    });
   });
 
   it('handleRememberMeAccept calls onAccept with pending credentials', async () => {
@@ -56,14 +62,20 @@ describe('useRememberMe', () => {
     );
 
     act(() => {
-      result.current.showRememberMePrompt({ email: 'test@test.com', password: 'pw' });
+      result.current.showRememberMePrompt({
+        email: 'test@test.com',
+        password: 'pw',
+      });
     });
 
     await act(async () => {
       await result.current.handleRememberMeAccept();
     });
 
-    expect(mockOnAccept).toHaveBeenCalledWith({ email: 'test@test.com', password: 'pw' });
+    expect(mockOnAccept).toHaveBeenCalledWith({
+      email: 'test@test.com',
+      password: 'pw',
+    });
     expect(result.current.showRememberMeModal).toBe(false);
     expect(result.current.pendingCredentials).toBeNull();
   });
@@ -88,7 +100,10 @@ describe('useRememberMe', () => {
     );
 
     act(() => {
-      result.current.showRememberMePrompt({ email: 'test@test.com', password: 'pw' });
+      result.current.showRememberMePrompt({
+        email: 'test@test.com',
+        password: 'pw',
+      });
     });
 
     await act(async () => {
@@ -109,7 +124,10 @@ describe('useRememberMe', () => {
     );
 
     act(() => {
-      result.current.showRememberMePrompt({ email: 'test@test.com', password: 'pw' });
+      result.current.showRememberMePrompt({
+        email: 'test@test.com',
+        password: 'pw',
+      });
     });
 
     act(() => {
@@ -155,10 +173,16 @@ describe('useRememberMe', () => {
     );
 
     act(() => {
-      result.current.setPendingCredentials({ email: 'direct@test.com', password: 'directpw' });
+      result.current.setPendingCredentials({
+        email: 'direct@test.com',
+        password: 'directpw',
+      });
     });
 
-    expect(result.current.pendingCredentials).toEqual({ email: 'direct@test.com', password: 'directpw' });
+    expect(result.current.pendingCredentials).toEqual({
+      email: 'direct@test.com',
+      password: 'directpw',
+    });
   });
 
   it('clearing pending credentials sets them to null', () => {

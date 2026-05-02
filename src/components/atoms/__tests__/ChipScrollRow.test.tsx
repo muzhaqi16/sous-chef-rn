@@ -15,26 +15,46 @@ describe('ChipScrollRow', () => {
   });
 
   it('renders all option labels', () => {
-    render(<ChipScrollRow options={options} selected="all" onSelect={mockOnSelect} />);
+    render(
+      <ChipScrollRow
+        options={options}
+        selected="all"
+        onSelect={mockOnSelect}
+      />,
+    );
     expect(screen.getByText('All')).toBeTruthy();
     expect(screen.getByText('Active')).toBeTruthy();
     expect(screen.getByText('Expired')).toBeTruthy();
   });
 
   it('calls onSelect with the correct key when pressed', () => {
-    render(<ChipScrollRow options={options} selected="all" onSelect={mockOnSelect} />);
+    render(
+      <ChipScrollRow
+        options={options}
+        selected="all"
+        onSelect={mockOnSelect}
+      />,
+    );
     fireEvent.press(screen.getByText('Active'));
     expect(mockOnSelect).toHaveBeenCalledWith('active');
   });
 
   it('calls onSelect with a different key', () => {
-    render(<ChipScrollRow options={options} selected="all" onSelect={mockOnSelect} />);
+    render(
+      <ChipScrollRow
+        options={options}
+        selected="all"
+        onSelect={mockOnSelect}
+      />,
+    );
     fireEvent.press(screen.getByText('Expired'));
     expect(mockOnSelect).toHaveBeenCalledWith('expired');
   });
 
   it('renders without crashing with empty options', () => {
-    const { toJSON } = render(<ChipScrollRow options={[]} selected="" onSelect={mockOnSelect} />);
+    const { toJSON } = render(
+      <ChipScrollRow options={[]} selected="" onSelect={mockOnSelect} />,
+    );
     expect(toJSON()).toBeTruthy();
   });
 

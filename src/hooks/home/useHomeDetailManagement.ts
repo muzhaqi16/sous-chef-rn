@@ -1,23 +1,24 @@
 import { useState } from 'react';
 import { alertService } from '#/services/alertService';
-import { useShallow } from 'zustand/shallow';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+import { useMutation, useQuery } from '@apollo/client/react';
 import {
-  useGetHomeQuery,
-  useUpdateHomeMutation,
-  useUpdateMembershipMutation,
-  useRemoveMemberMutation,
-  useRevokeHomeInviteMutation,
-  useLeaveHomeMutation,
-  useSetDefaultHomeMutation,
+  GetHomeDocument,
+  UpdateHomeDocument,
+  UpdateMembershipDocument,
+  RemoveMemberDocument,
+  RevokeHomeInviteDocument,
+  LeaveHomeDocument,
   GetHomesDocument,
-  MembershipRole,
-} from '#generated';
+} from '../../graphql/operations/home/home.generated';
+import { SetDefaultHomeDocument } from '../../graphql/operations/home/userSettings.generated';
+import { MembershipRole } from '../../graphql/generated/schemaTypes';
 import { MESSAGES } from '#/constants/messages';
 import { normalizeHome } from '#/utils/connectionUtils';
 import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
+  setCachedFields,
 } from '#/apollo/utils/cacheUpdaters';
 import {
   executeCacheUpdate,
@@ -30,8 +31,8 @@ import {
 } from '#/utils/errors/versionConflict';
 import {
   useAppStore,
-  selectSelectedHomeId,
-  selectHomeState,
+  useSelectedHomeId,
+  useHomeState,
 } from '#store/useAppStore';
 
 export interface RolePickerState {
@@ -61,8 +62,8 @@ const INITIAL_ROLE_PICKER_STATE: RolePickerState = {
  */
 export function useHomeDetailManagement(homeId: string) {
   // Store state and actions for managing selections after leaving
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
-  const { setSelectedHomeId } = useAppStore(useShallow(selectHomeState));
+  const selectedHomeId = useSelectedHomeId();
+  const { setSelectedHomeId } = useHomeState();
   const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
@@ -73,26 +74,25 @@ export function useHomeDetailManagement(homeId: string) {
   // - errorPolicy: 'all' returns cached data AND errors (needed to distinguish "not found" from "failed to load")
 
   // Query
-  const { data, loading, error, refetch } = useGetHomeQuery({
+  const { data, loading, error, refetch } = useQuery(GetHomeDocument, {
     variables: { homeId },
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
   });
 
   // Mutations
-  const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
-    // Mutation returns updated scalar fields; Apollo auto-merges by __typename + id
-    errorPolicy: 'all',
-    onError: error => {
-      alertService.alert(
-        'Error',
-        error.message || MESSAGES.errors.updateHomeNameFailed,
-      );
+  const [updateHomeMutation, { loading: updating }] = useMutation(
+    UpdateHomeDocument,
+    {
+      // Mutation returns updated scalar fields; Apollo auto-merges by __typename + id
+      onError: error => {
+        alertService.alert(
+          'Error',
+          error.message || MESSAGES.errors.updateHomeNameFailed,
+        );
+      },
     },
-  });
+  );
 
-  const [updateMembershipMutation] = useUpdateMembershipMutation({
-    errorPolicy: 'all',
+  const [updateMembershipMutation] = useMutation(UpdateMembershipDocument, {
     // Use cache.modify to update the membership role field
     update(cache, { data }, { variables }) {
       if (!data?.updateMembership?.success || !variables) return;
@@ -100,17 +100,9 @@ export function useHomeDetailManagement(homeId: string) {
       const membershipId = variables.id;
       const newRole = variables.input.role;
 
-      // Directly modify the cached membership's role field
-      cache.modify({
-        id: cache.identify({ __typename: 'Membership', id: membershipId }),
-        fields: {
-          role() {
-            return newRole;
-          },
-          updatedAt() {
-            return new Date().toISOString();
-          },
-        },
+      setCachedFields(cache, 'Membership', membershipId, {
+        role: newRole,
+        updatedAt: new Date().toISOString(),
       });
     },
     onError: error => {
@@ -121,8 +113,7 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
-  const [removeMemberMutation] = useRemoveMemberMutation({
-    errorPolicy: 'all',
+  const [removeMemberMutation] = useMutation(RemoveMemberDocument, {
     update(cache, { data }, { variables }) {
       if (!data?.removeMember?.success || !variables) return;
 
@@ -154,8 +145,7 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
-  const [revokeInviteMutation] = useRevokeHomeInviteMutation({
-    errorPolicy: 'all',
+  const [revokeInviteMutation] = useMutation(RevokeHomeInviteDocument, {
     update(cache, { data }, { variables }) {
       if (!data?.revokeHomeInvite?.success || !variables) return;
 
@@ -187,11 +177,10 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
-  const [setDefaultHomeMutation] = useSetDefaultHomeMutation();
+  const [setDefaultHomeMutation] = useMutation(SetDefaultHomeDocument);
 
   const [leaveHomeMutation, { loading: leaving, client: leaveClient }] =
-    useLeaveHomeMutation({
-      errorPolicy: 'all',
+    useMutation(LeaveHomeDocument, {
       update(cache, { data }) {
         if (!data?.leaveHome?.success) return;
 

@@ -85,19 +85,34 @@ describe('useAuthState (navigation)', () => {
   });
 
   it('computes baseIsFullyAuthenticated when hydrated, user exists, emailVerified, and onBoarded', () => {
-    mockUser = { id: 'u1', email: 'a@b.com', emailVerified: true, onBoarded: true };
+    mockUser = {
+      id: 'u1',
+      email: 'a@b.com',
+      emailVerified: true,
+      onBoarded: true,
+    };
     const { result } = renderHook(() => useAuthState());
     expect(result.current.baseIsFullyAuthenticated).toBe(true);
   });
 
   it('computes baseIsFullyAuthenticated as false when emailVerified is false', () => {
-    mockUser = { id: 'u1', email: 'a@b.com', emailVerified: false, onBoarded: true };
+    mockUser = {
+      id: 'u1',
+      email: 'a@b.com',
+      emailVerified: false,
+      onBoarded: true,
+    };
     const { result } = renderHook(() => useAuthState());
     expect(result.current.baseIsFullyAuthenticated).toBe(false);
   });
 
   it('computes baseIsFullyAuthenticated as false when onBoarded is false', () => {
-    mockUser = { id: 'u1', email: 'a@b.com', emailVerified: true, onBoarded: false };
+    mockUser = {
+      id: 'u1',
+      email: 'a@b.com',
+      emailVerified: true,
+      onBoarded: false,
+    };
     const { result } = renderHook(() => useAuthState());
     expect(result.current.baseIsFullyAuthenticated).toBe(false);
   });

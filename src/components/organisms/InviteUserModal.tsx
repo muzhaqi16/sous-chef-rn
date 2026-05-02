@@ -4,12 +4,12 @@ import {
   View,
   Text,
   TextInput,
-  Pressable,
   ActivityIndicator,
   ScrollView,
+  Pressable,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { MembershipRole } from '#generated';
+import { MembershipRole } from '../../graphql/generated/schemaTypes';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 

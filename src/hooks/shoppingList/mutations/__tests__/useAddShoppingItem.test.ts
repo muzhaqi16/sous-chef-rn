@@ -4,13 +4,20 @@ import { useAddShoppingItem } from '../useAddShoppingItem';
 // --- Mocks ---
 
 const mockAddItemMutation = jest.fn();
-const mockHandleApolloError = jest.fn(() => ({ message: 'Something went wrong' }));
+const mockHandleApolloError = jest.fn(() => ({
+  message: 'Something went wrong',
+}));
 const mockCreateAddOperation = jest.fn();
 
 // Mock generated Apollo hook
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useAddItemToShoppingListMutation: () => [mockAddItemMutation],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'AddItemToShoppingList')
+      return [mockAddItemMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 // Mock errorService
@@ -18,20 +25,6 @@ jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
     handleApolloError: mockHandleApolloError,
   }),
-}));
-
-// Mock optimisticTypes
-jest.mock('#/apollo/utils/optimisticTypes', () => ({
-  buildOptimisticMutationResponse: jest.fn(() => ({
-    __typename: 'Mutation',
-    addItemToShoppingList: {
-      __typename: 'ShoppingListItemPayload',
-      success: true,
-      message: '',
-      code: 'SUCCESS',
-      shoppingListItem: { id: 'temp-123', itemName: 'Milk' },
-    },
-  })),
 }));
 
 // Mock useCrudOperations
@@ -53,7 +46,11 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
 jest.mock('../utils', () => ({
   createOptimisticShoppingListItem: jest.fn(() => ({
     tempId: 'temp-123',
-    entity: { id: 'temp-123', itemName: 'Milk', __typename: 'ShoppingListItem' },
+    entity: {
+      id: 'temp-123',
+      itemName: 'Milk',
+      __typename: 'ShoppingListItem',
+    },
   })),
 }));
 

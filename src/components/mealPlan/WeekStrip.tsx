@@ -1,7 +1,15 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
-import { format, isSameDay, isToday, isBefore, isAfter, startOfDay } from 'date-fns';
+import {
+  format,
+  isSameDay,
+  isToday,
+  isBefore,
+  isAfter,
+  startOfDay,
+} from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 
 interface WeekStripProps {
@@ -46,7 +54,9 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
         <Icon
           name="chevron-back"
           size={20}
-          color={canGoPrev ? styles.arrowIcon.color : styles.arrowIconDisabled.color}
+          color={
+            canGoPrev ? styles.arrowIcon.color : styles.arrowIconDisabled.color
+          }
         />
       </Pressable>
 
@@ -90,10 +100,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
               </Text>
               {!!hasMeals && (
                 <View
-                  style={[
-                    styles.mealDot,
-                    isSelected && styles.mealDotSelected,
-                  ]}
+                  style={[styles.mealDot, isSelected && styles.mealDotSelected]}
                 />
               )}
             </Pressable>
@@ -109,7 +116,9 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
         <Icon
           name="chevron-forward"
           size={20}
-          color={canGoNext ? styles.arrowIcon.color : styles.arrowIconDisabled.color}
+          color={
+            canGoNext ? styles.arrowIcon.color : styles.arrowIconDisabled.color
+          }
         />
       </Pressable>
     </View>

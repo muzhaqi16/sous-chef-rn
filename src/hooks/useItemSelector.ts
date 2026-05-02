@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import {
-  useGetShoppingListsLiteQuery,
-  useGetPantriesQuery,
-  useGetHomesQuery } from '../graphql/generated';
+import { useQuery } from '@apollo/client/react';
+import { GetShoppingListsLiteDocument } from '../graphql/operations/shoppingList/shoppingList.generated';
+import { GetHomesDocument } from '../graphql/operations/home/home.generated';
+import { GetPantriesDocument } from '../graphql/operations/pantry/pantry.generated';
 import { usePreservedArrayData } from './apollo/usePreservedQueryData';
-import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
+import { useSelectedHomeId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
 
 interface UseItemSelectorConfig {
@@ -20,7 +20,8 @@ export const useItemSelector = ({
   customData,
   customLoading = false,
   onSelect,
-  initialSelected }: UseItemSelectorConfig) => {
+  initialSelected,
+}: UseItemSelectorConfig) => {
   const [selectedId, setSelectedId] = useState<string | undefined>(
     initialSelected,
   );
@@ -32,34 +33,40 @@ export const useItemSelector = ({
 
   // Get selectedHomeId from Zustand store directly (without triggering GraphQL queries)
   // This prevents cascade: useDefaultHome uses cache-and-network which always fires network requests
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const selectedHomeId = useSelectedHomeId();
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
   // - cache-and-network: Shows cached data immediately, fetches fresh in background
   // - errorPolicy: 'ignore' returns cached data when network fails (offline graceful degradation)
 
   // Query data based on type
-  const { data: shoppingListData, loading: shoppingListLoading } =
-    useGetShoppingListsLiteQuery({
-      fetchPolicy: 'cache-and-network',
+  const { data: shoppingListData, loading: shoppingListLoading } = useQuery(
+    GetShoppingListsLiteDocument,
+    {
       errorPolicy: 'ignore', // Return cached data on network errors
-      skip: type !== 'shoppingList' });
+      skip: type !== 'shoppingList',
+    },
+  );
 
-  const { data: pantryData, loading: pantryLoading } = useGetPantriesQuery({
-    variables: { homeId: selectedHomeId || '' },
-    fetchPolicy: 'cache-and-network',
-    skip: type !== 'pantry' || !selectedHomeId,
-    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
-  });
+  const { data: pantryData, loading: pantryLoading } = useQuery(
+    GetPantriesDocument,
+    {
+      variables: { homeId: selectedHomeId || '' },
+      skip: type !== 'pantry' || !selectedHomeId,
+      errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
+    },
+  );
 
-  const { data: homeData, loading: homeLoading } = useGetHomesQuery({
-    fetchPolicy: 'cache-and-network',
+  const { data: homeData, loading: homeLoading } = useQuery(GetHomesDocument, {
     errorPolicy: 'ignore', // Return cached data on network errors
-    skip: type !== 'home' });
+    skip: type !== 'home',
+  });
 
   // Preserve data even when queries fail
   // Extract nodes from connection types (all return Connection types)
-  const shoppingLists = usePreservedArrayData(extractNodes(shoppingListData?.shoppingLists));
+  const shoppingLists = usePreservedArrayData(
+    extractNodes(shoppingListData?.shoppingLists),
+  );
   const pantries = usePreservedArrayData(extractNodes(pantryData?.pantries));
   const homes = usePreservedArrayData(extractNodes(homeData?.homes));
 
@@ -115,15 +122,15 @@ export const useItemSelector = ({
   };
 
   const handleSelect = (id: string, item: any) => {
-      if (__DEV__) {
-        console.log(
-          `[useItemSelector:${type}] User selected: ${id}`,
-          item?.name || item?.title || item,
-        );
-      }
-      setSelectedId(id);
-      onSelect?.(id, item);
-    };
+    if (__DEV__) {
+      console.log(
+        `[useItemSelector:${type}] User selected: ${id}`,
+        item?.name || item?.title || item,
+      );
+    }
+    setSelectedId(id);
+    onSelect?.(id, item);
+  };
 
   const reset = () => {
     setSelectedId(undefined);
@@ -136,7 +143,8 @@ export const useItemSelector = ({
     emptyMessage: getEmptyMessage(),
     handleSelect,
     reset,
-    setSelectedId };
+    setSelectedId,
+  };
 };
 
 // Convenience hooks for specific types

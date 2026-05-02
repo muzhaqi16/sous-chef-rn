@@ -1,9 +1,9 @@
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+import { useUser } from '#store/useAppStore';
 import {
   getMealTemplatePermissions,
   type MealTemplatePermissions,
 } from '#utils/permissions/mealTemplatePermissions';
-import type { MealTemplateDisplayFragment } from '#generated';
+import { type MealTemplateDisplayFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 
 const NO_PERMISSIONS: MealTemplatePermissions = {
   canEdit: false,
@@ -18,7 +18,7 @@ const NO_PERMISSIONS: MealTemplatePermissions = {
 export function useMealTemplatePermissions(
   template: MealTemplateDisplayFragment | null | undefined,
 ): MealTemplatePermissions {
-  const user = useAuthUser();
+  const user = useUser();
 
   if (!template) {
     return NO_PERMISSIONS;

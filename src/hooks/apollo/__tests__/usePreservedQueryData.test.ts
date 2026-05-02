@@ -1,7 +1,10 @@
 'use no memo';
 
 import { renderHook } from '@testing-library/react-native';
-import { usePreservedQueryData, usePreservedArrayData } from '../usePreservedQueryData';
+import {
+  usePreservedQueryData,
+  usePreservedArrayData,
+} from '../usePreservedQueryData';
 
 describe('usePreservedQueryData', () => {
   it('returns initial value when current data is undefined', () => {
@@ -117,7 +120,11 @@ describe('usePreservedArrayData', () => {
     const items = [{ id: '1' }, { id: '2' }];
     const { result, rerender } = renderHook(
       ({ data }: any) => usePreservedArrayData(data),
-      { initialProps: { data: undefined as { id: string }[] | undefined | null } },
+      {
+        initialProps: {
+          data: undefined as { id: string }[] | undefined | null,
+        },
+      },
     );
 
     expect(result.current).toEqual([]);
@@ -133,7 +140,11 @@ describe('usePreservedArrayData', () => {
     const items = [{ id: '1' }];
     const { result, rerender } = renderHook(
       ({ data }: any) => usePreservedArrayData(data),
-      { initialProps: { data: undefined as { id: string }[] | null | undefined } },
+      {
+        initialProps: {
+          data: undefined as { id: string }[] | null | undefined,
+        },
+      },
     );
 
     rerender({ data: items });

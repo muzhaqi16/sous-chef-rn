@@ -16,9 +16,8 @@ import AddItemForm, {
   type AddItemFormInitialData,
 } from '#components/organisms/AddItemForm/AddItemForm';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useAppStore, selectBottomSheetState } from '#store/useAppStore';
+import { useBottomSheetState } from '#store/useAppStore';
 import { useSearchResults } from '#hooks/useSearchResults';
-import { useShallow } from 'zustand/react/shallow';
 import type { BarcodeSource } from '#/types/navigation';
 import type { ScannedItem } from '#/store/slices/barcodeScannerSlice';
 
@@ -63,7 +62,7 @@ export const SearchResultsScreen: React.FC<
     isSearching,
     hideBottomSheet,
     showBottomSheet,
-  } = useAppStore(useShallow(selectBottomSheetState));
+  } = useBottomSheetState();
 
   const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
     onDismiss: hideBottomSheet,
@@ -109,9 +108,8 @@ export const SearchResultsScreen: React.FC<
   };
 
   const handleBackPress = () => {
-    // Simply pop the Barcode stack to reveal Home
-    // This preserves Home's state without triggering remounts
-    const rootNavigator = navigation.getParent()?.getParent();
+    // Dismiss the Barcode modal stack to reveal Home
+    const rootNavigator = navigation.getParent();
     if (rootNavigator?.canGoBack()) {
       rootNavigator.goBack();
     } else {

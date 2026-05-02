@@ -53,10 +53,7 @@ describe('BottomSheetAction', () => {
 
   it('renders headerRight when provided', () => {
     render(
-      <BottomSheetAction
-        sheetTitle="Edit"
-        headerRight={<Text>Done</Text>}
-      >
+      <BottomSheetAction sheetTitle="Edit" headerRight={<Text>Done</Text>}>
         <Text>Content</Text>
       </BottomSheetAction>,
     );

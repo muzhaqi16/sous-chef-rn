@@ -7,7 +7,8 @@ import notifee, { AuthorizationStatus } from '@notifee/react-native';
 
 const mockCheck = check as jest.Mock;
 const mockRequest = request as jest.Mock;
-const mockGetNotificationSettings = notifee.getNotificationSettings as jest.Mock;
+const mockGetNotificationSettings =
+  notifee.getNotificationSettings as jest.Mock;
 const mockRequestPermission = notifee.requestPermission as jest.Mock;
 
 describe('PermissionService', () => {

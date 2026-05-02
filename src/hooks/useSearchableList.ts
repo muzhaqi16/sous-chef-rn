@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import { useState, useEffect } from 'react';
 
 const EMPTY_LIST: never[] = [];
 
@@ -23,7 +23,7 @@ export function useSearchableList<T>(
   filterFn: (item: T, query: string) => boolean,
   options: SearchableListOptions = {},
 ) {
-  const {debounceMs = 0, minQueryLength = 0, caseSensitive = false} = options;
+  const { debounceMs = 0, minQueryLength = 0, caseSensitive = false } = options;
 
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -73,5 +73,6 @@ export function useSearchableList<T>(
     clearQuery,
     isFiltering,
     resultCount: filtered.length,
-    totalCount: Array.isArray(items) ? items.length : 0 };
+    totalCount: Array.isArray(items) ? items.length : 0,
+  };
 }

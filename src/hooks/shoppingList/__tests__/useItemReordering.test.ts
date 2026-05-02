@@ -40,6 +40,7 @@ const mockCacheModify = jest.fn();
 const mockCacheIdentify = jest.fn((obj: any) => `ShoppingListItem:${obj.id}`);
 
 jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
   useApolloClient: () => ({
     cache: {
       batch: mockCacheBatch,
@@ -47,11 +48,12 @@ jest.mock('@apollo/client/react', () => ({
       identify: mockCacheIdentify,
     },
   }),
-}));
-
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useMoveShoppingListItemMutation: () => [mockMoveItem],
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'MoveShoppingListItem')
+      return [mockMoveItem, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 beforeEach(() => {

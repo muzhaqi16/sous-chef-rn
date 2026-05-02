@@ -16,8 +16,7 @@ module.exports = {
   apps: {
     'ios.debug': {
       type: 'ios.app',
-      binaryPath:
-        'ios/build/Build/Products/Debug-iphonesimulator/SousChef.app',
+      binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/SousChef.app',
       build:
         'xcodebuild -workspace ios/SousChefRN.xcworkspace -scheme SousChefRN -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build',
     },

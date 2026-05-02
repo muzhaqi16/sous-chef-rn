@@ -1,0 +1,10 @@
+fragment MealPlanMain_item on MealPlanItem {
+  id
+  servings
+  customMealName
+  recipe {
+    id
+    name
+    servings
+  }
+}

@@ -42,6 +42,7 @@ import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkel
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
+import { TabMainScreen } from '#components/templates/TabMainScreen';
 import { usePantryPermissions } from '#hooks/pantry/usePantryPermissions';
 
 // ── Pantry tutorial steps (data-driven, add entries to extend) ──
@@ -84,7 +85,7 @@ const PantryMainInner: React.FC = () => {
 
   // Sync scroll direction → tab bar visibility (UI thread only)
   useAnimatedReaction(
-    () => isScrolledDown.value,
+    () => isScrolledDown.get(),
     hidden => {
       scrollTabBarHidden.set(hidden);
     },
@@ -334,7 +335,7 @@ function PantryMainContent({
   };
 
   return (
-    <View style={styles.container} testID="pantry-screen">
+    <TabMainScreen testID="pantry-screen">
       <PantryContent
         ref={pantryContentRef}
         userName={screen.userName}
@@ -373,7 +374,11 @@ function PantryMainContent({
         onSelectHome={onSelectHome}
         onAddItem={handleAddItem}
         onRefresh={screen.handleRefresh}
-        onEndReached={screen.loadMore}
+        onEndReached={
+          screen.hasMore && screen.pantryItems.length > 0
+            ? screen.loadMore
+            : undefined
+        }
         isLoadingMore={screen.searchActive ? false : screen.isLoadingMore}
         hasMore={screen.searchActive ? false : screen.hasMore}
         refreshing={screen.isRefreshing}
@@ -408,7 +413,7 @@ function PantryMainContent({
           }}
         />
       ) : null}
-    </View>
+    </TabMainScreen>
   );
 }
 
@@ -428,7 +433,7 @@ export const PantryMain: React.FC = () => (
   <PantryErrorBoundary>
     <DeferredScreen
       fallback={
-        <View style={styles.container} testID="pantry-screen">
+        <TabMainScreen testID="pantry-screen">
           <TabScreenHeader label="Good morning" title="Pantry" />
           <View style={styles.searchContainer}>
             <SearchBar
@@ -445,17 +450,13 @@ export const PantryMain: React.FC = () => (
             onTabChange={noop}
           />
           <PantryScreenSkeleton />
-        </View>
+        </TabMainScreen>
       }
       component={PantryMainInner}
     />
   </PantryErrorBoundary>
 );
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   searchContainer: {
     paddingHorizontal: theme.spacing['3'],
   },

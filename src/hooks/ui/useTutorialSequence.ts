@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
 import { useAppStore } from '#store/useAppStore';
@@ -108,6 +108,16 @@ export const useTutorialSequence = ({
     return () => clearTimeout(timer);
   }, [canStart, allComplete, hasStarted, startDelay, tutorialsEnabled]);
 
+  // Timer ref for advance transition cleanup
+  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear transition timer on unmount
+  useLayoutEffect(() => {
+    return () => {
+      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    };
+  }, []);
+
   // Stable refs for callbacks
   const stepsRef = useRef(steps);
   const userIdRef = useRef(userId);
@@ -125,7 +135,9 @@ export const useTutorialSequence = ({
     storage.set(key, true);
     setGeneration(g => g + 1);
     setIsTransitioning(true);
-    setTimeout(() => {
+    if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    transitionTimerRef.current = setTimeout(() => {
+      transitionTimerRef.current = null;
       setIsTransitioning(false);
     }, 400);
   };

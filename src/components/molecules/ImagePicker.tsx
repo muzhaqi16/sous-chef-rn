@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, Pressable } from 'react-native';
+import { Text } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import {
   launchCamera,
@@ -34,6 +35,19 @@ interface ImagePickerProps {
   disabled?: boolean;
   isProfile?: boolean; // For different validation rules
   children?: React.ReactNode;
+}
+
+/** Module-level validation wrapper to keep try-catch out of the component body (React Compiler). */
+function tryValidateImage(
+  imageFile: ImageFile,
+  isProfile: boolean,
+): { valid: true } | { valid: false; error: ImageValidationError } {
+  try {
+    validateImageFile(imageFile, isProfile);
+    return { valid: true };
+  } catch (error) {
+    return { valid: false, error: error as ImageValidationError };
+  }
 }
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
@@ -77,12 +91,11 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
           fileSize: asset.fileSize,
           type: asset.type,
         };
-        try {
-          validateImageFile(imageFile, isProfile);
+        const result = tryValidateImage(imageFile, isProfile);
+        if (result.valid) {
           validImages.push(imageFile);
-        } catch (error) {
-          const validationError = error as ImageValidationError;
-          onError?.(validationError);
+        } else {
+          onError?.(result.error);
         }
       }
       if (validImages.length > 0) {
@@ -99,13 +112,12 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
         type: asset.type,
       };
 
-      try {
-        validateImageFile(imageFile, isProfile);
+      const result = tryValidateImage(imageFile, isProfile);
+      if (result.valid) {
         onImageSelected(imageFile);
-      } catch (error) {
-        const validationError = error as ImageValidationError;
-        onError?.(validationError);
-        alertService.alert('Invalid Image', validationError.message);
+      } else {
+        onError?.(result.error);
+        alertService.alert('Invalid Image', result.error.message);
       }
     }
   };

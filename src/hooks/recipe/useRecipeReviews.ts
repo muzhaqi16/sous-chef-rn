@@ -1,15 +1,19 @@
+import { useMutation, useQuery } from '@apollo/client/react';
 import {
-  useCreateRecipeReviewMutation,
-  useUpdateRecipeReviewMutation,
-  useDeleteRecipeReviewMutation,
-  useToggleReviewHelpfulMutation,
-  useGetRecipeReviewsQuery,
-  GetRecipeDocument,
+  CreateRecipeReviewDocument,
+  UpdateRecipeReviewDocument,
+  DeleteRecipeReviewDocument,
+  ToggleReviewHelpfulDocument,
+} from '../../graphql/operations/recipe/recipeReview.generated';
+import {
   GetRecipeReviewsDocument,
+  GetRecipeDocument,
+} from '../../graphql/operations/recipe/recipe.generated';
+import {
   type RecipeFragment,
   type RecipeReviewFragment,
-} from '#generated';
-import { useAuthUser } from '#hooks/auth/useAuthUser';
+} from '../../graphql/operations/recipe/recipeFragments.generated';
+import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 
@@ -29,11 +33,11 @@ export function useRecipeReviews({
   recipeId,
   backendRecipe,
 }: UseRecipeReviewsOptions) {
-  const user = useAuthUser();
+  const user = useUser();
   const userId = user?.id;
 
   // Fetch reviews separately to avoid exceeding query depth limit
-  const { data: reviewsData } = useGetRecipeReviewsQuery({
+  const { data: reviewsData } = useQuery(GetRecipeReviewsDocument, {
     variables: { id: recipeId },
     skip: !recipeId,
   });
@@ -72,24 +76,29 @@ export function useRecipeReviews({
   ];
 
   // Mutations
-  const [createReviewMutation, { loading: createLoading }] =
-    useCreateRecipeReviewMutation({
+  const [createReviewMutation, { loading: createLoading }] = useMutation(
+    CreateRecipeReviewDocument,
+    {
       refetchQueries: refetchQueries,
       onError: err => {
         toastService.error(err.message || 'Failed to submit review');
       },
-    });
+    },
+  );
 
-  const [updateReviewMutation, { loading: updateLoading }] =
-    useUpdateRecipeReviewMutation({
+  const [updateReviewMutation, { loading: updateLoading }] = useMutation(
+    UpdateRecipeReviewDocument,
+    {
       refetchQueries: refetchQueries,
       onError: err => {
         toastService.error(err.message || 'Failed to update review');
       },
-    });
+    },
+  );
 
-  const [deleteReviewMutation, { loading: deleteLoading }] =
-    useDeleteRecipeReviewMutation({
+  const [deleteReviewMutation, { loading: deleteLoading }] = useMutation(
+    DeleteRecipeReviewDocument,
+    {
       refetchQueries: refetchQueries,
       update: (cache, { data }, { variables }) => {
         if (!data?.deleteRecipeReview?.success || !variables?.id) return;
@@ -98,9 +107,10 @@ export function useRecipeReviews({
       onError: err => {
         toastService.error(err.message || 'Failed to delete review');
       },
-    });
+    },
+  );
 
-  const [toggleHelpfulMutation] = useToggleReviewHelpfulMutation({
+  const [toggleHelpfulMutation] = useMutation(ToggleReviewHelpfulDocument, {
     update: (cache, { data }, { variables }) => {
       if (!data?.toggleReviewHelpful?.success || !variables?.input) return;
       const { reviewId, isHelpful } = variables.input;

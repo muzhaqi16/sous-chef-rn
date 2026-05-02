@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useOverlayBackdrop } from '../providers/OverlayBackdropProvider';
+import { Pressable } from 'react-native-gesture-handler';
 
 interface GlobalBottomSheetBackdropProps extends BottomSheetBackdropProps {
   /** Index at which backdrop appears (default: 0) */
@@ -19,12 +19,15 @@ interface GlobalBottomSheetBackdropProps extends BottomSheetBackdropProps {
   onClose?: () => void;
 }
 
-export const GlobalBottomSheetBackdrop: React.FC<GlobalBottomSheetBackdropProps> = ({
+export const GlobalBottomSheetBackdrop: React.FC<
+  GlobalBottomSheetBackdropProps
+> = ({
   animatedIndex,
   disappearsOnIndex = -1,
   opacity = 0.5,
   pressBehavior = 'close',
-  onClose }) => {
+  onClose,
+}) => {
   const { showBackdrop, hideBackdrop } = useOverlayBackdrop();
 
   // Store onClose in a ref to avoid stale closures in worklet callbacks
@@ -44,7 +47,10 @@ export const GlobalBottomSheetBackdrop: React.FC<GlobalBottomSheetBackdropProps>
   const handleShow = () => {
     if (!isActiveRef.current) {
       isActiveRef.current = true;
-      showBackdrop({ opacity, onPress: pressBehavior !== 'none' ? handlePress : undefined });
+      showBackdrop({
+        opacity,
+        onPress: pressBehavior !== 'none' ? handlePress : undefined,
+      });
     }
   };
 
@@ -57,14 +63,21 @@ export const GlobalBottomSheetBackdrop: React.FC<GlobalBottomSheetBackdropProps>
 
   // React to animated index changes to show/hide global backdrop
   useAnimatedReaction(
-    () => animatedIndex.value,
+    () => animatedIndex.get(),
     (currentIndex, previousIndex) => {
       // Show backdrop when index rises above disappearsOnIndex
-      if (currentIndex > disappearsOnIndex && (previousIndex === null || previousIndex <= disappearsOnIndex)) {
+      if (
+        currentIndex > disappearsOnIndex &&
+        (previousIndex === null || previousIndex <= disappearsOnIndex)
+      ) {
         scheduleOnRN(handleShow);
       }
       // Hide backdrop when index falls to or below disappearsOnIndex
-      else if (currentIndex <= disappearsOnIndex && previousIndex !== null && previousIndex > disappearsOnIndex) {
+      else if (
+        currentIndex <= disappearsOnIndex &&
+        previousIndex !== null &&
+        previousIndex > disappearsOnIndex
+      ) {
         scheduleOnRN(handleHide);
       }
     },
@@ -83,12 +96,7 @@ export const GlobalBottomSheetBackdrop: React.FC<GlobalBottomSheetBackdropProps>
 
   // Return transparent view - press handling is done by global backdrop
   // This allows the sheet to still receive gestures for swipe-to-close
-  return (
-    <Pressable
-      style={styles.backdrop}
-      pointerEvents="none"
-    />
-  );
+  return <Pressable style={styles.backdrop} pointerEvents="none" />;
 };
 
 const styles = StyleSheet.create({
@@ -98,4 +106,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'transparent' } });
+    backgroundColor: 'transparent',
+  },
+});

@@ -1,7 +1,7 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {Button} from '#components/base/Button';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { Button } from '#components/base/Button';
 
 interface ErrorStateProps {
   title: string;
