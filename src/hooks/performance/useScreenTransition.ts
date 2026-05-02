@@ -75,26 +75,24 @@ export function useScreenTransition(
   const trackInteractive = options?.trackInteractive ?? true;
 
   // Track focus event (navigation to this screen)
-  useFocusEffect(
-    () => {
-      if (!enabled) {
-        return;
-      }
+  useFocusEffect(() => {
+    if (!enabled) {
+      return;
+    }
 
-      const focusMarkName = `screen:${screenName}:focus`;
-      performance.mark(focusMarkName);
-      focusMarkRef.current = focusMarkName;
+    const focusMarkName = `screen:${screenName}:focus`;
+    performance.mark(focusMarkName);
+    focusMarkRef.current = focusMarkName;
 
-      return () => {
-        // Clean up marks on blur to prevent memory accumulation
-        performance.clearMarks(`screen:${screenName}:focus`);
-        performance.clearMarks(`screen:${screenName}:mounted`);
-        performance.clearMarks(`screen:${screenName}:interactiveEnd`);
-        focusMarkRef.current = null;
-        mountMarkRef.current = null;
-      };
-    },
-  );
+    return () => {
+      // Clean up marks on blur to prevent memory accumulation
+      performance.clearMarks(`screen:${screenName}:focus`);
+      performance.clearMarks(`screen:${screenName}:mounted`);
+      performance.clearMarks(`screen:${screenName}:interactiveEnd`);
+      focusMarkRef.current = null;
+      mountMarkRef.current = null;
+    };
+  });
 
   // Track mount time
   useEffect(() => {
@@ -141,21 +139,26 @@ export function useScreenTransition(
         );
 
         // Record metrics in performance store for dashboard (isolated from main store)
-        usePerformanceStore.getState().recordScreenTransition(
-          screenName,
-          mountDurationRef.current,
-          interactiveDuration,
-        );
+        usePerformanceStore
+          .getState()
+          .recordScreenTransition(
+            screenName,
+            mountDurationRef.current,
+            interactiveDuration,
+          );
 
         // Warn if slow transition
         if (interactiveDuration > 500) {
           console.warn(
-            `[ScreenTransition] Slow screen transition: ${screenName} took ${interactiveDuration.toFixed(2)}ms`,
+            `[ScreenTransition] Slow screen transition: ${screenName} took ${interactiveDuration.toFixed(
+              2,
+            )}ms`,
           );
 
           Telemetry.increment('slow_screen_transitions_total', 1, {
             screen: screenName,
-            duration: interactiveDuration.toFixed(2) });
+            duration: interactiveDuration.toFixed(2),
+          });
         }
       });
     }

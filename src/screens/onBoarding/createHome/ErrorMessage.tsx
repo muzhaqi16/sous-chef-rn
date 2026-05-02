@@ -1,8 +1,8 @@
 import React from 'react';
-import {Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 
-export const ErrorMessage = ({message}: {message: string}) => (
+export const ErrorMessage = ({ message }: { message: string }) => (
   <Text style={styles.errorText}>{message}</Text>
 );
 

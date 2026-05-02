@@ -171,9 +171,9 @@ describe('isVersionedEntity', () => {
 
   it('returns true when updatedAt is null', () => {
     // 'updatedAt' key is present even though value is null
-    expect(
-      isVersionedEntity({ id: '1', version: 1, updatedAt: null }),
-    ).toBe(true);
+    expect(isVersionedEntity({ id: '1', version: 1, updatedAt: null })).toBe(
+      true,
+    );
   });
 
   it('returns false when id is missing', () => {
@@ -183,9 +183,7 @@ describe('isVersionedEntity', () => {
   });
 
   it('returns false when version is missing', () => {
-    expect(isVersionedEntity({ id: '1', updatedAt: '2024-01-01' })).toBe(
-      false,
-    );
+    expect(isVersionedEntity({ id: '1', updatedAt: '2024-01-01' })).toBe(false);
   });
 
   it('returns false when updatedAt is missing', () => {

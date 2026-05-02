@@ -186,9 +186,9 @@ describe('QueueStore', () => {
     });
 
     it('returns false when mutation does not exist', () => {
-      expect(
-        store.updateMutation('nope', { status: QueueStatus.FAILED }),
-      ).toBe(false);
+      expect(store.updateMutation('nope', { status: QueueStatus.FAILED })).toBe(
+        false,
+      );
     });
 
     it('does not overwrite id, userId, or mutation fields', () => {
@@ -222,17 +222,12 @@ describe('QueueStore', () => {
       store.addMutation(
         makeMutation({ id: 's1', status: QueueStatus.PENDING }),
       );
-      store.addMutation(
-        makeMutation({ id: 's2', status: QueueStatus.FAILED }),
-      );
+      store.addMutation(makeMutation({ id: 's2', status: QueueStatus.FAILED }));
       store.addMutation(
         makeMutation({ id: 's3', status: QueueStatus.PENDING }),
       );
 
-      const pending = store.getMutationsForUser(
-        'user-1',
-        QueueStatus.PENDING,
-      );
+      const pending = store.getMutationsForUser('user-1', QueueStatus.PENDING);
       expect(pending).toHaveLength(2);
     });
 

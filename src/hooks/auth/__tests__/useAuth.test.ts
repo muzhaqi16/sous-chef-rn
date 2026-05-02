@@ -59,7 +59,9 @@ const mockLoadStoredCredentials = jest.fn().mockResolvedValue(null);
 const mockStoreCredentials = jest.fn().mockResolvedValue(true);
 const mockRemoveCredentials = jest.fn().mockResolvedValue(true);
 const mockGetAvailableAccounts = jest.fn().mockResolvedValue([]);
-const mockGetBiometricInfo = jest.fn().mockResolvedValue({ isAvailable: false, biometryType: null });
+const mockGetBiometricInfo = jest
+  .fn()
+  .mockResolvedValue({ isAvailable: false, biometryType: null });
 
 jest.mock('../useCredentialStorage', () => ({
   useCredentialStorage: () => ({
@@ -74,7 +76,9 @@ jest.mock('../useCredentialStorage', () => ({
 }));
 
 // --- Mock useBiometricPrompting ---
-const mockShouldShowPostLoginBiometricPrompt = jest.fn().mockResolvedValue({ shouldShow: false });
+const mockShouldShowPostLoginBiometricPrompt = jest
+  .fn()
+  .mockResolvedValue({ shouldShow: false });
 const mockRecordBiometricPromptResponse = jest.fn();
 
 jest.mock('../useBiometricPrompting', () => ({

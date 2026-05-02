@@ -14,7 +14,8 @@ export interface SortableListThemeColors {
   screenWidth: number;
 }
 
-export const SortableListThemeContext = createContext<SortableListThemeColors | null>(null);
+export const SortableListThemeContext =
+  createContext<SortableListThemeColors | null>(null);
 
 /**
  * Hook to get theme colors from context

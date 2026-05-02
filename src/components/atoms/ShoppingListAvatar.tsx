@@ -7,8 +7,8 @@
  */
 
 import React from 'react';
-import {Avatar} from './Avatar';
-import {getShoppingListDisplayAvatarInfo} from '#utils/ownershipHelpers';
+import { Avatar } from './Avatar';
+import { getShoppingListDisplayAvatarInfo } from '#utils/ownershipHelpers';
 
 interface ShoppingListAvatarProps {
   /** Shopping list with ownerships and optional home data */

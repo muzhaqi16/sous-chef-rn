@@ -77,7 +77,9 @@ export const OfflineGate: React.FC<OfflineGateProps> = ({
     <View style={[styles.container, style]}>
       <Icon name="cloud-offline-outline" size={48} />
       <Text style={styles.message}>{message}</Text>
-      {description ? <Text style={styles.description}>{description}</Text> : null}
+      {description ? (
+        <Text style={styles.description}>{description}</Text>
+      ) : null}
     </View>
   );
 };

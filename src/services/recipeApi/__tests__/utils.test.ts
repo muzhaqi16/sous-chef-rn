@@ -34,12 +34,14 @@ const mockRecipe = {
   cuisines: ['Italian'],
   dishTypes: ['dinner'],
   creditsText: 'Chef Test',
-  analyzedInstructions: [{
-    steps: [
-      { number: 1, step: 'Boil water' },
-      { number: 2, step: 'Cook pasta' },
-    ],
-  }],
+  analyzedInstructions: [
+    {
+      steps: [
+        { number: 1, step: 'Boil water' },
+        { number: 2, step: 'Cook pasta' },
+      ],
+    },
+  ],
   nutrition: {
     nutrients: [
       { name: 'Calories', amount: 350.5 },
@@ -141,7 +143,9 @@ describe('recipeApi utils', () => {
     });
 
     it('uses index as sortOrder', () => {
-      expect(transformSpoonacularIngredient(mockIngredient, 5).sortOrder).toBe(5);
+      expect(transformSpoonacularIngredient(mockIngredient, 5).sortOrder).toBe(
+        5,
+      );
     });
   });
 
@@ -264,9 +268,19 @@ describe('recipeApi utils', () => {
     });
 
     it('maps all known restrictions', () => {
-      const all = ['VEGETARIAN', 'VEGAN', 'GLUTEN_FREE', 'DAIRY_FREE', 'KETO', 'PALEO', 'WHOLE30'];
+      const all = [
+        'VEGETARIAN',
+        'VEGAN',
+        'GLUTEN_FREE',
+        'DAIRY_FREE',
+        'KETO',
+        'PALEO',
+        'WHOLE30',
+      ];
       const result = parseDietaryRestrictions(all);
-      expect(result).toBe('vegetarian,vegan,gluten free,dairy free,ketogenic,paleo,whole30');
+      expect(result).toBe(
+        'vegetarian,vegan,gluten free,dairy free,ketogenic,paleo,whole30',
+      );
     });
   });
 
@@ -284,7 +298,20 @@ describe('recipeApi utils', () => {
     });
 
     it('maps all known intolerances', () => {
-      const all = ['DAIRY', 'EGG', 'GLUTEN', 'GRAIN', 'PEANUT', 'SEAFOOD', 'SESAME', 'SHELLFISH', 'SOY', 'SULFITE', 'TREE_NUT', 'WHEAT'];
+      const all = [
+        'DAIRY',
+        'EGG',
+        'GLUTEN',
+        'GRAIN',
+        'PEANUT',
+        'SEAFOOD',
+        'SESAME',
+        'SHELLFISH',
+        'SOY',
+        'SULFITE',
+        'TREE_NUT',
+        'WHEAT',
+      ];
       const result = parseIntolerances(all);
       expect(result).toContain('dairy');
       expect(result).toContain('tree nut');

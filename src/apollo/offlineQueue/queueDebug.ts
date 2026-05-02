@@ -58,8 +58,12 @@ const queueDebug: QueueDebugTools = {
       console.log(`   [${index + 1}] ${mutation.operationName}`);
       console.log(`       ID: ${mutation.id}`);
       console.log(`       Status: ${mutation.status}`);
-      console.log(`       Created: ${new Date(mutation.createdAt).toLocaleString()}`);
-      console.log(`       Retries: ${mutation.retryCount}/${mutation.maxRetries}`);
+      console.log(
+        `       Created: ${new Date(mutation.createdAt).toLocaleString()}`,
+      );
+      console.log(
+        `       Retries: ${mutation.retryCount}/${mutation.maxRetries}`,
+      );
       if (mutation.lastError) {
         console.log(`       Error: ${mutation.lastError.message}`);
       }
@@ -76,7 +80,9 @@ const queueDebug: QueueDebugTools = {
     console.log(`   Total: ${mutations.length}`);
 
     mutations.forEach((mutation, index) => {
-      console.log(`   [${index + 1}] ${mutation.operationName} - ${mutation.status}`);
+      console.log(
+        `   [${index + 1}] ${mutation.operationName} - ${mutation.status}`,
+      );
     });
   },
 
@@ -137,7 +143,10 @@ const queueDebug: QueueDebugTools = {
    * Retry all failed mutations for a user
    */
   retryFailedMutations: (userId: string) => {
-    const mutations = queueStore.getMutationsForUser(userId, QueueStatus.FAILED);
+    const mutations = queueStore.getMutationsForUser(
+      userId,
+      QueueStatus.FAILED,
+    );
 
     console.log(`🔄 Retrying ${mutations.length} failed mutations...`);
 

@@ -1,21 +1,28 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#utils/iconUtils';
-import {Button} from '#components/base/Button';
+import { View, Text } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
+import { Button } from '#components/base/Button';
 
 interface ItemNotFoundProps {
   barcode: string;
   onAddItem?: () => void;
 }
 
-export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode, onAddItem}) => {
+export const ItemNotFound: React.FC<ItemNotFoundProps> = ({
+  barcode,
+  onAddItem,
+}) => {
   const { theme } = useUnistyles();
 
   return (
     <View style={styles.container}>
       <Text style={styles.notFoundIcon}>
-        <Icon name="qr-code-outline" size={48} color={theme.colors.textSecondary} />
+        <Icon
+          name="qr-code-outline"
+          size={48}
+          color={theme.colors.textSecondary}
+        />
       </Text>
       <Text style={styles.notFoundText}>Item Not Found</Text>
       <Text style={styles.notFoundMessage}>
@@ -25,10 +32,7 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode, onAddItem}) 
         You can add this item to the database by tapping the button below.
       </Text>
       {!!onAddItem && (
-        <Button
-          onPress={onAddItem}
-          variant="primary"
-          size="medium">
+        <Button onPress={onAddItem} variant="primary" size="medium">
           Add Item
         </Button>
       )}

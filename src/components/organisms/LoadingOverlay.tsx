@@ -34,24 +34,29 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
         }
       }}
     >
-      <View style={[
-        styles.overlay,
-        { backgroundColor: transparent ? theme.colors.overlays.light : theme.colors.overlays.medium }
-      ]}>
-        <View style={[
-          styles.container,
-          { backgroundColor: theme.colors.background }
-        ]}>
+      <View
+        style={[
+          styles.overlay,
+          {
+            backgroundColor: transparent
+              ? theme.colors.overlays.light
+              : theme.colors.overlays.medium,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.container,
+            { backgroundColor: theme.colors.background },
+          ]}
+        >
           <ActivityIndicator
             size="large"
             color={theme.colors.primary}
             style={styles.spinner}
           />
           {!!message && (
-            <Text style={[
-              styles.message,
-              { color: theme.colors.textPrimary }
-            ]}>
+            <Text style={[styles.message, { color: theme.colors.textPrimary }]}>
               {message}
             </Text>
           )}
@@ -62,7 +67,9 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
 };
 
 // Specialized loading overlays for different contexts
-export const AuthLoadingOverlay: React.FC<{ visible: boolean }> = ({ visible }) => (
+export const AuthLoadingOverlay: React.FC<{ visible: boolean }> = ({
+  visible,
+}) => (
   <LoadingOverlay
     visible={visible}
     message="Authenticating..."
@@ -70,15 +77,15 @@ export const AuthLoadingOverlay: React.FC<{ visible: boolean }> = ({ visible }) 
   />
 );
 
-export const NavigationLoadingOverlay: React.FC<{ visible: boolean }> = ({ visible }) => (
-  <LoadingOverlay
-    visible={visible}
-    message="Loading..."
-    transparent={true}
-  />
+export const NavigationLoadingOverlay: React.FC<{ visible: boolean }> = ({
+  visible,
+}) => (
+  <LoadingOverlay visible={visible} message="Loading..." transparent={true} />
 );
 
-export const BiometricLoadingOverlay: React.FC<{ visible: boolean }> = ({ visible }) => (
+export const BiometricLoadingOverlay: React.FC<{ visible: boolean }> = ({
+  visible,
+}) => (
   <LoadingOverlay
     visible={visible}
     message="Waiting for authentication..."

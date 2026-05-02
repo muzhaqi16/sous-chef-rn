@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from 'react';
 import type { EditableMatch } from '#hooks/recipe/useRecipeIngredientMatching';
 
 interface IngredientMatchingContextValue {
@@ -8,14 +14,17 @@ interface IngredientMatchingContextValue {
   ) => void;
 }
 
-const IngredientMatchingContext = createContext<IngredientMatchingContextValue | null>(null);
+const IngredientMatchingContext =
+  createContext<IngredientMatchingContextValue | null>(null);
 
 export const IngredientMatchingProvider: React.FC<{
   children: ReactNode;
   onUpdate: IngredientMatchingContextValue['onUpdate'];
 }> = ({ children, onUpdate }) => {
   const ref = useRef(onUpdate);
-  useEffect(() => { ref.current = onUpdate; });
+  useEffect(() => {
+    ref.current = onUpdate;
+  });
 
   const stable: IngredientMatchingContextValue = {
     onUpdate: (index, updates) => ref.current(index, updates),
@@ -28,8 +37,12 @@ export const IngredientMatchingProvider: React.FC<{
   );
 };
 
-export const useIngredientMatchingActions = (): IngredientMatchingContextValue => {
-  const ctx = useContext(IngredientMatchingContext);
-  if (!ctx) throw new Error('useIngredientMatchingActions must be used within IngredientMatchingProvider');
-  return ctx;
-};
+export const useIngredientMatchingActions =
+  (): IngredientMatchingContextValue => {
+    const ctx = useContext(IngredientMatchingContext);
+    if (!ctx)
+      throw new Error(
+        'useIngredientMatchingActions must be used within IngredientMatchingProvider',
+      );
+    return ctx;
+  };

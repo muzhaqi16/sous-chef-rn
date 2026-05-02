@@ -332,7 +332,10 @@ export async function hasCredentialsForAccount(): Promise<boolean> {
   return hasCredentials();
 }
 
-export async function loadCredentialsForAccount(): Promise<{ username: string; password: string } | null> {
+export async function loadCredentialsForAccount(): Promise<{
+  username: string;
+  password: string;
+} | null> {
   // For the new simplified implementation, we just load the default credentials
   return loadCredentials();
 }

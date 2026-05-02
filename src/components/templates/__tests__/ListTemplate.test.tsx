@@ -6,26 +6,39 @@ import { ListTemplate } from '../ListTemplate';
 jest.mock('../../organisms/ItemList', () => {
   const { View, Text: RNText } = require('react-native');
   return {
-    ItemList: ({ items, emptyState, testIDPrefix, ListHeaderComponent, ListFooterComponent }: any) => (
+    ItemList: ({
+      items,
+      emptyState,
+      testIDPrefix,
+      ListHeaderComponent,
+      ListFooterComponent,
+    }: any) => (
       <View testID="item-list">
         {ListHeaderComponent ? (
-          typeof ListHeaderComponent === 'function'
-            ? <ListHeaderComponent />
-            : ListHeaderComponent
+          typeof ListHeaderComponent === 'function' ? (
+            <ListHeaderComponent />
+          ) : (
+            ListHeaderComponent
+          )
         ) : null}
         {items.length === 0 && emptyState ? (
           <RNText testID="empty-state">{emptyState.title}</RNText>
         ) : (
           items.map((item: any, index: number) => (
-            <RNText key={item.id} testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}>
+            <RNText
+              key={item.id}
+              testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
+            >
               {item.title || item.id}
             </RNText>
           ))
         )}
         {ListFooterComponent ? (
-          typeof ListFooterComponent === 'function'
-            ? <ListFooterComponent />
-            : ListFooterComponent
+          typeof ListFooterComponent === 'function' ? (
+            <ListFooterComponent />
+          ) : (
+            ListFooterComponent
+          )
         ) : null}
       </View>
     ),
@@ -50,7 +63,11 @@ describe('ListTemplate', () => {
       <ListTemplate
         items={[]}
         loading={true}
-        emptyState={{ title: 'Pantry Items', icon: 'cube-outline', loadingDescription: 'Loading pantry' }}
+        emptyState={{
+          title: 'Pantry Items',
+          icon: 'cube-outline',
+          loadingDescription: 'Loading pantry',
+        }}
       />,
     );
     // Loading state shows "Loading..." title
@@ -82,9 +99,7 @@ describe('ListTemplate', () => {
         ))}
       </>
     );
-    render(
-      <ListTemplate items={items} customListComponent={CustomList} />,
-    );
+    render(<ListTemplate items={items} customListComponent={CustomList} />);
     expect(screen.getByText('custom-Item 1')).toBeTruthy();
     expect(screen.getByText('custom-Item 2')).toBeTruthy();
   });
@@ -98,7 +113,11 @@ describe('ListTemplate', () => {
         items={[]}
         loading={true}
         customListComponent={CustomList}
-        emptyState={{ title: 'No items', icon: 'cube-outline', loadingDescription: 'Loading...' }}
+        emptyState={{
+          title: 'No items',
+          icon: 'cube-outline',
+          loadingDescription: 'Loading...',
+        }}
       />,
     );
     // Custom component handles its own loading, so emptyState passes through as-is
@@ -107,10 +126,7 @@ describe('ListTemplate', () => {
 
   it('renders ListHeaderComponent', () => {
     render(
-      <ListTemplate
-        items={items}
-        ListHeaderComponent={<Text>Header</Text>}
-      />,
+      <ListTemplate items={items} ListHeaderComponent={<Text>Header</Text>} />,
     );
     expect(screen.getByText('Header')).toBeTruthy();
   });

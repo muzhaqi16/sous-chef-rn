@@ -1,6 +1,6 @@
 import React from 'react';
-import type {StyleProp, ViewStyle} from 'react-native';
-import {IconButton} from './IconButton';
+import type { StyleProp, ViewStyle } from 'react-native';
+import { IconButton } from './IconButton';
 
 export interface BackButtonProps {
   onPress: () => void;

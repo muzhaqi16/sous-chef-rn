@@ -107,7 +107,9 @@ describe('preferencesSlice', () => {
 
     it('sets user preferences', () => {
       const store = createTestStore();
-      store.getState().setUserPreference('user-1', { showShoppingListImages: false });
+      store
+        .getState()
+        .setUserPreference('user-1', { showShoppingListImages: false });
       expect(store.getState().getUserPreferences('user-1')).toEqual({
         showShoppingListImages: false,
       });
@@ -115,15 +117,23 @@ describe('preferencesSlice', () => {
 
     it('merges user preferences', () => {
       const store = createTestStore();
-      store.getState().setUserPreference('user-1', { showShoppingListImages: false });
+      store
+        .getState()
+        .setUserPreference('user-1', { showShoppingListImages: false });
       // Re-set with same key to test merge
-      store.getState().setUserPreference('user-1', { showShoppingListImages: true });
-      expect(store.getState().getUserPreferences('user-1').showShoppingListImages).toBe(true);
+      store
+        .getState()
+        .setUserPreference('user-1', { showShoppingListImages: true });
+      expect(
+        store.getState().getUserPreferences('user-1').showShoppingListImages,
+      ).toBe(true);
     });
 
     it('resets user preferences to defaults', () => {
       const store = createTestStore();
-      store.getState().setUserPreference('user-1', { showShoppingListImages: false });
+      store
+        .getState()
+        .setUserPreference('user-1', { showShoppingListImages: false });
       store.getState().resetUserPreferences('user-1');
       expect(store.getState().getUserPreferences('user-1')).toEqual(
         defaultUserPreferences,

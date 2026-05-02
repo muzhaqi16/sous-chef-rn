@@ -48,7 +48,9 @@ describe('FilterTabBar', () => {
   });
 
   it('renders action buttons when provided', () => {
-    const actionButtons = [{ icon: 'filter', onPress: jest.fn(), testID: 'filter-btn' }];
+    const actionButtons = [
+      { icon: 'filter', onPress: jest.fn(), testID: 'filter-btn' },
+    ];
     render(
       <FilterTabBar
         navigationState={navigationState}

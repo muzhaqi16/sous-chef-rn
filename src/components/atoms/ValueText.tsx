@@ -1,8 +1,8 @@
 import React from 'react';
-import {Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 
-export const ValueText: React.FC<{children: React.ReactNode}> = ({
+export const ValueText: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   return <Text style={styles.text}>{children}</Text>;

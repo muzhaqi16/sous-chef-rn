@@ -46,7 +46,10 @@ export const createQueueLink = () => {
     }
 
     // Skip operations that should never be queued
-    if (operation.operationName && NEVER_QUEUE_OPERATIONS.includes(operation.operationName)) {
+    if (
+      operation.operationName &&
+      NEVER_QUEUE_OPERATIONS.includes(operation.operationName)
+    ) {
       return forward(operation);
     }
 
@@ -58,14 +61,18 @@ export const createQueueLink = () => {
     }
 
     // Offline - queue the mutation
-    logger.info(`Queue Link: Offline, queuing mutation ${operation.operationName}`);
+    logger.info(
+      `Queue Link: Offline, queuing mutation ${operation.operationName}`,
+    );
 
-    return new Observable((observer) => {
+    return new Observable(observer => {
       try {
         // Get current user
         const user = state.user;
         if (!user) {
-          observer.error(new Error('Cannot queue mutation: No authenticated user'));
+          observer.error(
+            new Error('Cannot queue mutation: No authenticated user'),
+          );
           return;
         }
 
@@ -105,7 +112,11 @@ export const createQueueLink = () => {
         observer.complete();
 
         logger.info(
-          `Queue Link: Queued ${operationName}, ${optimisticResponse ? 'with optimistic response' : 'without optimistic response'}`
+          `Queue Link: Queued ${operationName}, ${
+            optimisticResponse
+              ? 'with optimistic response'
+              : 'without optimistic response'
+          }`,
         );
       } catch (error) {
         observer.error(error);

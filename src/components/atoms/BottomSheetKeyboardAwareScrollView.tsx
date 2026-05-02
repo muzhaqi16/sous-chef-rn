@@ -8,8 +8,9 @@ import {
 } from '@gorhom/bottom-sheet';
 import Reanimated from 'react-native-reanimated';
 
-const AnimatedScrollView =
-  Reanimated.createAnimatedComponent(KeyboardAwareScrollView);
+const AnimatedScrollView = Reanimated.createAnimatedComponent(
+  KeyboardAwareScrollView,
+);
 
 export const BottomSheetKeyboardAwareScrollView =
   createBottomSheetScrollableComponent(

@@ -23,7 +23,13 @@ jest.mock('#components/atoms/BottomSheetHeader', () => {
   const RN = require('react-native');
   const R = require('react');
   return {
-    BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel, confirmDisabled }: any) =>
+    BottomSheetHeader: ({
+      title,
+      onCancel,
+      onConfirm,
+      confirmLabel,
+      confirmDisabled,
+    }: any) =>
       R.createElement(
         RN.View,
         { testID: 'bottom-sheet-header' },
@@ -35,7 +41,11 @@ jest.mock('#components/atoms/BottomSheetHeader', () => {
         ),
         R.createElement(
           RN.Pressable,
-          { onPress: onConfirm, testID: 'confirm-button', disabled: confirmDisabled },
+          {
+            onPress: onConfirm,
+            testID: 'confirm-button',
+            disabled: confirmDisabled,
+          },
           R.createElement(RN.Text, null, confirmLabel),
         ),
       ),
@@ -64,7 +74,11 @@ jest.mock('#components/molecules/FormInput', () => {
 jest.mock('#utils/iconUtils', () => ({
   Icon: (props: any) => {
     const RN = require('react-native');
-    return require('react').createElement(RN.Text, { testID: `icon-${props.name}` }, props.name);
+    return require('react').createElement(
+      RN.Text,
+      { testID: `icon-${props.name}` },
+      props.name,
+    );
   },
 }));
 
@@ -107,7 +121,9 @@ describe('DuplicatePlanSheet', () => {
   it('renders info card text about meal copying', () => {
     render(<DuplicatePlanSheet {...defaultProps} />);
     expect(
-      screen.getByText('All meals will be copied to the new date range with the same structure.'),
+      screen.getByText(
+        'All meals will be copied to the new date range with the same structure.',
+      ),
     ).toBeTruthy();
   });
 

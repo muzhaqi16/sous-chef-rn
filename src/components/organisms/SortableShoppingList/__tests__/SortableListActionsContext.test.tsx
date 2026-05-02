@@ -32,16 +32,22 @@ describe('SortableListActionsContext', () => {
 
   const wrapper =
     (actions = defaultActions, permissions = defaultPermissions) =>
-    ({ children }: { children: React.ReactNode }) => (
-      <SortableListActionsProvider actions={actions} permissions={permissions}>
-        {children}
-      </SortableListActionsProvider>
-    );
+    ({ children }: { children: React.ReactNode }) =>
+      (
+        <SortableListActionsProvider
+          actions={actions}
+          permissions={permissions}
+        >
+          {children}
+        </SortableListActionsProvider>
+      );
 
   it('throws error when used outside provider', () => {
     expect(() => {
       renderHook(() => useSortableListActions());
-    }).toThrow('useSortableListActions must be used within SortableListActionsProvider');
+    }).toThrow(
+      'useSortableListActions must be used within SortableListActionsProvider',
+    );
   });
 
   it('provides actions through context', () => {
@@ -135,7 +141,10 @@ describe('SortableListActionsContext', () => {
 
     const { result, rerender } = renderHook(() => useSortableListActions(), {
       wrapper: ({ children }: { children: React.ReactNode }) => (
-        <SortableListActionsProvider actions={defaultActions} permissions={{ ...permissions }}>
+        <SortableListActionsProvider
+          actions={defaultActions}
+          permissions={{ ...permissions }}
+        >
           {children}
         </SortableListActionsProvider>
       ),

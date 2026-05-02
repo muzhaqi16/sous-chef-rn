@@ -11,7 +11,9 @@ interface TestItem {
   createdAt?: string;
 }
 
-const makeItem = (overrides: Partial<TestItem> & { id: string; quantity: number }): TestItem => ({
+const makeItem = (
+  overrides: Partial<TestItem> & { id: string; quantity: number },
+): TestItem => ({
   itemName: null,
   expiresAt: null,
   createdAt: undefined,

@@ -1,5 +1,8 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { useUserPreferences, useShowShoppingListImages } from '../useUserPreferences';
+import {
+  useUserPreferences,
+  useShowShoppingListImages,
+} from '../useUserPreferences';
 import { defaultUserPreferences } from '#/store/slices/preferencesSlice';
 
 // Break circular dependency chain
@@ -39,7 +42,9 @@ describe('useUserPreferences (settings)', () => {
       u1: { showShoppingListImages: false },
     };
     const { result } = renderHook(() => useUserPreferences());
-    expect(result.current.preferences).toEqual({ showShoppingListImages: false });
+    expect(result.current.preferences).toEqual({
+      showShoppingListImages: false,
+    });
   });
 
   it('returns default preferences when no user is logged in', () => {

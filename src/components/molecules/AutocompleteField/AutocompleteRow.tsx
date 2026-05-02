@@ -34,11 +34,7 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
     ) : null}
     {image !== undefined &&
       (image ? (
-        <CachedImage
-          uri={image}
-          style={styles.image}
-          displaySize={44}
-        />
+        <CachedImage uri={image} style={styles.image} displaySize={44} />
       ) : (
         <View style={styles.imagePlaceholder} />
       ))}
@@ -54,7 +50,9 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
       </View>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
-    {trailingText ? <Text style={styles.trailingText}>{trailingText}</Text> : null}
+    {trailingText ? (
+      <Text style={styles.trailingText}>{trailingText}</Text>
+    ) : null}
   </View>
 );
 

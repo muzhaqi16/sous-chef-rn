@@ -14,7 +14,9 @@ describe('Skeleton smoke tests', () => {
     });
 
     it('renders with custom dimensions', () => {
-      const { toJSON } = render(<SkeletonBase width={200} height={40} borderRadius={8} />);
+      const { toJSON } = render(
+        <SkeletonBase width={200} height={40} borderRadius={8} />,
+      );
       expect(toJSON()).toBeTruthy();
     });
 
@@ -55,7 +57,9 @@ describe('Skeleton smoke tests', () => {
     });
 
     it('renders with custom dimensions', () => {
-      const { toJSON } = render(<SkeletonRectangle width={300} height={200} borderRadius={12} />);
+      const { toJSON } = render(
+        <SkeletonRectangle width={300} height={200} borderRadius={12} />,
+      );
       expect(toJSON()).toBeTruthy();
     });
   });
@@ -63,13 +67,17 @@ describe('Skeleton smoke tests', () => {
   describe('SkeletonList', () => {
     it('renders without crashing', () => {
       const MockSkeleton = () => <SkeletonLine />;
-      const { toJSON } = render(<SkeletonList SkeletonComponent={MockSkeleton} />);
+      const { toJSON } = render(
+        <SkeletonList SkeletonComponent={MockSkeleton} />,
+      );
       expect(toJSON()).toBeTruthy();
     });
 
     it('renders specified count of items', () => {
       const MockSkeleton = () => <SkeletonLine />;
-      const { toJSON } = render(<SkeletonList SkeletonComponent={MockSkeleton} count={3} />);
+      const { toJSON } = render(
+        <SkeletonList SkeletonComponent={MockSkeleton} count={3} />,
+      );
       expect(toJSON()).toBeTruthy();
     });
   });

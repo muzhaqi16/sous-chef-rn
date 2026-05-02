@@ -83,11 +83,12 @@ function makeOperation(options: {
 
 /** Forward function that returns a simple observable */
 function makeForward(data: any = { testData: true }) {
-  return jest.fn(() =>
-    new Observable(observer => {
-      observer.next({ data });
-      observer.complete();
-    }),
+  return jest.fn(
+    () =>
+      new Observable(observer => {
+        observer.next({ data });
+        observer.complete();
+      }),
   );
 }
 
@@ -106,7 +107,10 @@ describe('createQueueLink', () => {
   describe('query pass-through', () => {
     it('forwards queries directly regardless of online status', done => {
       mockedGetState.mockReturnValue({ isOnline: false });
-      const operation = makeOperation({ query: MOCK_QUERY, operationName: 'GetItems' });
+      const operation = makeOperation({
+        query: MOCK_QUERY,
+        operationName: 'GetItems',
+      });
       const forward = makeForward();
 
       const observable = link.request(operation as any, forward as any);

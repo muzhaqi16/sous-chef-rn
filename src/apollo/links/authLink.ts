@@ -75,12 +75,16 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
       const state = useStore.getState();
       if (state.isOnline) {
         // Online + both tokens expired → genuine logout
-        console.warn('[AuthLink] Both tokens expired while online, redirecting to login');
+        console.warn(
+          '[AuthLink] Both tokens expired while online, redirecting to login',
+        );
         state.tokenRefreshFailed('auth_rejected');
         throw new Error('Session expired - please log in again');
       } else {
         // Offline + expired refresh token → defer, let request hit cache or fail at network layer
-        console.warn('[AuthLink] Both tokens expired while offline, deferring refresh');
+        console.warn(
+          '[AuthLink] Both tokens expired while offline, deferring refresh',
+        );
         state.setNeedsTokenRefresh(true);
       }
     } else {
@@ -99,7 +103,8 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
       '[AuthLink] No access token available for operation:',
       operation.operationName,
       'isPublic:',
-      operation.operationName && publicOperations.includes(operation.operationName)
+      operation.operationName &&
+        publicOperations.includes(operation.operationName),
     );
   }
 

@@ -46,7 +46,10 @@ jest.mock('#components/molecules/DatePickerField', () => {
 });
 
 function Wrapper(overrides: any) {
-  const { control, formState: { errors } } = useForm({
+  const {
+    control,
+    formState: { errors },
+  } = useForm({
     defaultValues: {
       location: '',
       notes: '',

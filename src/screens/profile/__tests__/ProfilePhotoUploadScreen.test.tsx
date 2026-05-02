@@ -17,7 +17,9 @@ jest.mock('#hooks/navigation/useSafeNavigation', () => ({
   })),
 }));
 
-const mockUploadProfileImage = jest.fn().mockResolvedValue('https://example.com/photo.jpg');
+const mockUploadProfileImage = jest
+  .fn()
+  .mockResolvedValue('https://example.com/photo.jpg');
 const mockUpdateProfileAvatarUrl = jest.fn().mockResolvedValue(true);
 jest.mock('#hooks/useImageUpload', () => ({
   useImageUpload: jest.fn(() => ({

@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from 'react';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 /**
@@ -28,7 +34,9 @@ interface PantryActionsContextValue {
   swipeable: SwipeableCoordination;
 }
 
-const PantryActionsContext = createContext<PantryActionsContextValue | null>(null);
+const PantryActionsContext = createContext<PantryActionsContextValue | null>(
+  null,
+);
 
 interface PantryActionsProviderProps {
   children: ReactNode;
@@ -56,7 +64,9 @@ export const PantryActionsProvider: React.FC<PantryActionsProviderProps> = ({
 
   // Store latest actions in ref (effect updates — no re-renders)
   const actionsRef = useRef(actions);
-  useEffect(() => { actionsRef.current = actions; });
+  useEffect(() => {
+    actionsRef.current = actions;
+  });
 
   // Stable delegating callbacks — compiler sees only ref captures (not reactive),
   // so it auto-memoizes these with empty reactive deps. Context value stays stable.
@@ -72,7 +82,10 @@ export const PantryActionsProvider: React.FC<PantryActionsProviderProps> = ({
   // swipeable only captures openSwipeableRef (a ref) — compiler auto-memoizes
   const swipeable: SwipeableCoordination = {
     onSwipeableWillOpen: (ref: React.RefObject<SwipeableMethods>) => {
-      if (openSwipeableRef.current && openSwipeableRef.current !== ref.current) {
+      if (
+        openSwipeableRef.current &&
+        openSwipeableRef.current !== ref.current
+      ) {
         openSwipeableRef.current?.close();
       }
       openSwipeableRef.current = ref.current;
@@ -80,7 +93,10 @@ export const PantryActionsProvider: React.FC<PantryActionsProviderProps> = ({
   };
 
   // value only captures stableActions + swipeable (both auto-memoized) — stable
-  const value: PantryActionsContextValue = { actions: stableActions, swipeable };
+  const value: PantryActionsContextValue = {
+    actions: stableActions,
+    swipeable,
+  };
 
   return (
     <PantryActionsContext.Provider value={value}>
@@ -97,7 +113,9 @@ export const PantryActionsProvider: React.FC<PantryActionsProviderProps> = ({
 export const usePantryActions = (): PantryActionsContextValue => {
   const context = useContext(PantryActionsContext);
   if (!context) {
-    throw new Error('usePantryActions must be used within a PantryActionsProvider');
+    throw new Error(
+      'usePantryActions must be used within a PantryActionsProvider',
+    );
   }
   return context;
 };
@@ -105,6 +123,7 @@ export const usePantryActions = (): PantryActionsContextValue => {
 /**
  * Optional hook that returns null if outside provider
  */
-export const usePantryActionsOptional = (): PantryActionsContextValue | null => {
-  return useContext(PantryActionsContext);
-};
+export const usePantryActionsOptional =
+  (): PantryActionsContextValue | null => {
+    return useContext(PantryActionsContext);
+  };

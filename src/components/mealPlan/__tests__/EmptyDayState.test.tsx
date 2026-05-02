@@ -26,13 +26,23 @@ describe('EmptyDayState', () => {
 
   it('renders add meal button when onAddMeal provided', () => {
     const onAddMeal = jest.fn();
-    render(<EmptyDayState selectedDate={new Date('2026-03-02')} onAddMeal={onAddMeal} />);
+    render(
+      <EmptyDayState
+        selectedDate={new Date('2026-03-02')}
+        onAddMeal={onAddMeal}
+      />,
+    );
     expect(screen.getByText('Add a meal')).toBeTruthy();
   });
 
   it('calls onAddMeal when button pressed', () => {
     const onAddMeal = jest.fn();
-    render(<EmptyDayState selectedDate={new Date('2026-03-02')} onAddMeal={onAddMeal} />);
+    render(
+      <EmptyDayState
+        selectedDate={new Date('2026-03-02')}
+        onAddMeal={onAddMeal}
+      />,
+    );
     fireEvent.press(screen.getByText('Add a meal'));
     expect(onAddMeal).toHaveBeenCalled();
   });

@@ -22,10 +22,20 @@ jest.mock('#/components/atoms/BottomSheetHeader', () => ({
   BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel }: any) => {
     const RN = require('react-native');
     const R = require('react');
-    return R.createElement(RN.View, { testID: 'header' },
+    return R.createElement(
+      RN.View,
+      { testID: 'header' },
       R.createElement(RN.Text, null, title),
-      R.createElement(RN.Pressable, { onPress: onCancel, testID: 'cancel-btn' }, R.createElement(RN.Text, null, 'Cancel')),
-      R.createElement(RN.Pressable, { onPress: onConfirm, testID: 'done-btn' }, R.createElement(RN.Text, null, confirmLabel)),
+      R.createElement(
+        RN.Pressable,
+        { onPress: onCancel, testID: 'cancel-btn' },
+        R.createElement(RN.Text, null, 'Cancel'),
+      ),
+      R.createElement(
+        RN.Pressable,
+        { onPress: onConfirm, testID: 'done-btn' },
+        R.createElement(RN.Text, null, confirmLabel),
+      ),
     );
   },
 }));
@@ -34,7 +44,9 @@ jest.mock('#/components/atoms/AnimatedChip', () => ({
   AnimatedChip: ({ label, onPress }: any) => {
     const RN = require('react-native');
     const R = require('react');
-    return R.createElement(RN.Pressable, { onPress, testID: `chip-${label}` },
+    return R.createElement(
+      RN.Pressable,
+      { onPress, testID: `chip-${label}` },
       R.createElement(RN.Text, null, label),
     );
   },
@@ -83,7 +95,9 @@ describe('MultiSelectChipSheet', () => {
   });
 
   it('shows selected count', () => {
-    render(<MultiSelectChipSheet {...defaultProps} selectedItems={['a', 'b']} />);
+    render(
+      <MultiSelectChipSheet {...defaultProps} selectedItems={['a', 'b']} />,
+    );
     expect(screen.getByText('2 selected')).toBeTruthy();
   });
 

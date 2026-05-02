@@ -1,7 +1,4 @@
-import {
-  getPlaceholderForField,
-  getInputLabelForField,
-} from '../inputMapping';
+import { getPlaceholderForField, getInputLabelForField } from '../inputMapping';
 
 // Note: getInputComponentForField returns React components — we don't test
 // component identity here to avoid importing all input components. The

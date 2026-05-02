@@ -8,7 +8,10 @@ import type { RecipeFormState } from '../useRecipeForm';
 
 interface RecipeBasicFieldsProps {
   state: RecipeFormState;
-  updateField: <K extends keyof RecipeFormState>(field: K, value: RecipeFormState[K]) => void;
+  updateField: <K extends keyof RecipeFormState>(
+    field: K,
+    value: RecipeFormState[K],
+  ) => void;
 }
 
 export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({

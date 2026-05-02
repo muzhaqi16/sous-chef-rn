@@ -55,7 +55,9 @@ describe('AddStorageLocationSheet', () => {
 
   it('renders placeholder text', () => {
     render(<AddStorageLocationSheet {...defaultProps} />);
-    expect(screen.getByPlaceholderText('e.g., Kitchen Cabinet, Garage Shelf')).toBeTruthy();
+    expect(
+      screen.getByPlaceholderText('e.g., Kitchen Cabinet, Garage Shelf'),
+    ).toBeTruthy();
   });
 
   it('renders hint text', () => {
@@ -71,14 +73,18 @@ describe('AddStorageLocationSheet', () => {
 
   it('shows error when trying to create with empty name via onSubmitEditing', async () => {
     render(<AddStorageLocationSheet {...defaultProps} />);
-    const input = screen.getByPlaceholderText('e.g., Kitchen Cabinet, Garage Shelf');
+    const input = screen.getByPlaceholderText(
+      'e.g., Kitchen Cabinet, Garage Shelf',
+    );
     fireEvent(input, 'submitEditing');
     expect(screen.getByText('Location name is required')).toBeTruthy();
   });
 
   it('calls onCreateLocation with valid name', async () => {
     render(<AddStorageLocationSheet {...defaultProps} />);
-    const input = screen.getByPlaceholderText('e.g., Kitchen Cabinet, Garage Shelf');
+    const input = screen.getByPlaceholderText(
+      'e.g., Kitchen Cabinet, Garage Shelf',
+    );
     fireEvent.changeText(input, 'Kitchen');
     fireEvent.press(screen.getByText('Create'));
     expect(defaultProps.onCreateLocation).toHaveBeenCalledWith({

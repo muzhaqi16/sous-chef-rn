@@ -1,5 +1,8 @@
 import React from 'react';
-import { useBrandAutocomplete, type BrandItem } from '#hooks/autocomplete/useBrandAutocomplete';
+import {
+  useBrandAutocomplete,
+  type BrandItem,
+} from '#hooks/autocomplete/useBrandAutocomplete';
 import { AutocompleteField } from './AutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
 
@@ -26,28 +29,29 @@ export const BrandAutocompleteField: React.FC<BrandAutocompleteFieldProps> = ({
   error,
   testID,
   suggestedBrands = [],
-  onBrandSelected }) => {
+  onBrandSelected,
+}) => {
   const brand = useBrandAutocomplete({ suggestedBrands });
 
   const handleTextChange = (text: string) => {
-      onChangeText(text);
-      brand.handleSearchTermChange(text);
-      onBrandSelected?.(null, null);
-    };
+    onChangeText(text);
+    brand.handleSearchTermChange(text);
+    onBrandSelected?.(null, null);
+  };
 
   const handleSelect = (item: BrandItem) => {
-      onChangeText(item.name);
-      onBrandSelected?.(item.id, item.name);
-      brand.setSearchTerm('');
-    };
+    onChangeText(item.name);
+    onBrandSelected?.(item.id, item.name);
+    brand.setSearchTerm('');
+  };
 
   const renderItem = (item: BrandItem) => (
-      <AutocompleteRow
-        title={item.name}
-        badge={item.isSuggested ? 'Suggested' : undefined}
-        highlighted={item.isSuggested}
-      />
-    );
+    <AutocompleteRow
+      title={item.name}
+      badge={item.isSuggested ? 'Suggested' : undefined}
+      highlighted={item.isSuggested}
+    />
+  );
 
   const keyExtractor = (item: BrandItem) => item.id;
 
@@ -91,7 +95,9 @@ export const BrandAutocompleteField: React.FC<BrandAutocompleteFieldProps> = ({
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       onSelect={handleSelect}
-      emptyText={suggestedBrands.length > 0 ? 'No matching brands' : 'No brands found'}
+      emptyText={
+        suggestedBrands.length > 0 ? 'No matching brands' : 'No brands found'
+      }
       emptySubtext={
         brand.shouldSearch
           ? `Continue typing to add "${brand.searchTerm}" as a custom brand`

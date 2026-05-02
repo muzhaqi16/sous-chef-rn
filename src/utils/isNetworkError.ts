@@ -27,6 +27,13 @@ const NETWORK_ERROR_PATTERNS = [
 ];
 
 export function isNetworkError(error: any): boolean {
-  const message = (error?.message || error?.networkError?.message || '').toLowerCase();
-  return NETWORK_ERROR_PATTERNS.some(p => message.includes(p)) || !!error?.networkError;
+  const message = (
+    error?.message ||
+    error?.networkError?.message ||
+    ''
+  ).toLowerCase();
+  return (
+    NETWORK_ERROR_PATTERNS.some(p => message.includes(p)) ||
+    !!error?.networkError
+  );
 }

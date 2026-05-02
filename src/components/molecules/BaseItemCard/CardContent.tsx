@@ -22,11 +22,9 @@ export const CardContent: React.FC<CardContentProps> = ({
       >
         {title}
       </Text>
-      {!!subtitle && (typeof subtitle === 'string' ? (
-          <Text
-            style={styles.subtitle}
-            numberOfLines={1}
-          >
+      {!!subtitle &&
+        (typeof subtitle === 'string' ? (
+          <Text style={styles.subtitle} numberOfLines={1}>
             {subtitle}
           </Text>
         ) : (

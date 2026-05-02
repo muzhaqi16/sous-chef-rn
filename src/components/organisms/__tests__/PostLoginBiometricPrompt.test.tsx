@@ -9,7 +9,9 @@ jest.mock('#utils/iconUtils', () => ({
 
 jest.mock('#hooks/auth/useAuth', () => ({
   useAuth: jest.fn(() => ({
-    getBiometricInfo: jest.fn(() => Promise.resolve({ isAvailable: true, biometryType: 'Face ID' })),
+    getBiometricInfo: jest.fn(() =>
+      Promise.resolve({ isAvailable: true, biometryType: 'Face ID' }),
+    ),
     storeCredentials: jest.fn(() => Promise.resolve(true)),
   })),
 }));

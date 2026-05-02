@@ -53,7 +53,12 @@ describe('ItemRecentCard', () => {
   });
 
   it('shows Unknown Item for null itemName', () => {
-    render(<ItemRecentCard item={{ ...item, itemName: null }} onQuickAdd={onQuickAdd} />);
+    render(
+      <ItemRecentCard
+        item={{ ...item, itemName: null }}
+        onQuickAdd={onQuickAdd}
+      />,
+    );
     expect(screen.getByText('Unknown Item')).toBeTruthy();
   });
 });

@@ -35,7 +35,9 @@ describe('imageUtils', () => {
         { url: 'https://cdn.example.com/thumb.jpg', kind: 'THUMBNAIL' },
         { url: 'https://cdn.example.com/main.jpg', kind: 'MAIN' },
       ];
-      expect(pickImageUrl(images, 'THUMBNAIL')).toBe('https://cdn.example.com/thumb.jpg');
+      expect(pickImageUrl(images, 'THUMBNAIL')).toBe(
+        'https://cdn.example.com/thumb.jpg',
+      );
     });
 
     it('falls back to MAIN kind when preferred kind is missing', () => {
@@ -43,7 +45,9 @@ describe('imageUtils', () => {
         { url: 'https://cdn.example.com/main.jpg', kind: 'MAIN' },
         { url: 'https://cdn.example.com/other.jpg', kind: 'OTHER' },
       ];
-      expect(pickImageUrl(images, 'THUMBNAIL')).toBe('https://cdn.example.com/main.jpg');
+      expect(pickImageUrl(images, 'THUMBNAIL')).toBe(
+        'https://cdn.example.com/main.jpg',
+      );
     });
 
     it('returns null when neither preferred kind nor MAIN exists', () => {
@@ -54,9 +58,7 @@ describe('imageUtils', () => {
     });
 
     it('handles images with null kind', () => {
-      const images = [
-        { url: 'https://cdn.example.com/a.jpg', kind: null },
-      ];
+      const images = [{ url: 'https://cdn.example.com/a.jpg', kind: null }];
       expect(pickImageUrl(images, 'THUMBNAIL')).toBeNull();
     });
   });
@@ -82,7 +84,12 @@ describe('imageUtils', () => {
     it('filters out invalid items without perspective', () => {
       const input = [
         { sizes: [{ size: 'small', url: 'http://a.com/a.jpg' }] },
-        { perspective: 'front', sizes: [{ size: 'small', url: 'http://a.com/b.jpg' }], featured: false, sourcePriority: 1 },
+        {
+          perspective: 'front',
+          sizes: [{ size: 'small', url: 'http://a.com/b.jpg' }],
+          featured: false,
+          sourcePriority: 1,
+        },
       ];
       expect(parseImages(input)).toHaveLength(1);
     });
@@ -90,20 +97,39 @@ describe('imageUtils', () => {
     it('filters out items without sizes array', () => {
       const input = [
         { perspective: 'front', sizes: 'not-array' },
-        { perspective: 'back', sizes: [{ size: 'small', url: 'http://a.com/b.jpg' }], featured: false, sourcePriority: 1 },
+        {
+          perspective: 'back',
+          sizes: [{ size: 'small', url: 'http://a.com/b.jpg' }],
+          featured: false,
+          sourcePriority: 1,
+        },
       ];
       expect(parseImages(input)).toHaveLength(1);
     });
 
     it('filters out null items', () => {
-      const input = [null, undefined, { perspective: 'front', sizes: [], featured: false, sourcePriority: 0 }];
+      const input = [
+        null,
+        undefined,
+        { perspective: 'front', sizes: [], featured: false, sourcePriority: 0 },
+      ];
       expect(parseImages(input)).toHaveLength(1);
     });
 
     it('parses valid ItemImage array', () => {
       const input = [
-        { perspective: 'front', sizes: [{ size: 'small', url: 'http://a.com/s.jpg' }], featured: true, sourcePriority: 1 },
-        { perspective: 'back', sizes: [{ size: 'large', url: 'http://a.com/l.jpg' }], featured: false, sourcePriority: 2 },
+        {
+          perspective: 'front',
+          sizes: [{ size: 'small', url: 'http://a.com/s.jpg' }],
+          featured: true,
+          sourcePriority: 1,
+        },
+        {
+          perspective: 'back',
+          sizes: [{ size: 'large', url: 'http://a.com/l.jpg' }],
+          featured: false,
+          sourcePriority: 2,
+        },
       ];
       const result = parseImages(input);
       expect(result).toHaveLength(2);
@@ -129,7 +155,12 @@ describe('imageUtils', () => {
     it('returns true when at least one image has sizes', () => {
       const images: ItemImage[] = [
         { perspective: 'front', sizes: [], featured: false, sourcePriority: 0 },
-        { perspective: 'back', sizes: [{ size: 'small', url: 'http://a.com/b.jpg' }], featured: false, sourcePriority: 1 },
+        {
+          perspective: 'back',
+          sizes: [{ size: 'small', url: 'http://a.com/b.jpg' }],
+          featured: false,
+          sourcePriority: 1,
+        },
       ];
       expect(hasImages(images)).toBe(true);
     });
@@ -140,7 +171,12 @@ describe('imageUtils', () => {
   // ==========================================================================
   describe('getBestImageUrl', () => {
     it('returns null for empty sizes', () => {
-      const image: ItemImage = { perspective: 'front', sizes: [], featured: false, sourcePriority: 0 };
+      const image: ItemImage = {
+        perspective: 'front',
+        sizes: [],
+        featured: false,
+        sourcePriority: 0,
+      };
       expect(getBestImageUrl(image)).toBeNull();
     });
 
@@ -175,9 +211,7 @@ describe('imageUtils', () => {
         perspective: 'front',
         featured: false,
         sourcePriority: 0,
-        sizes: [
-          { size: 'medium', url: 'http://a.com/medium.jpg' },
-        ],
+        sizes: [{ size: 'medium', url: 'http://a.com/medium.jpg' }],
       };
       // preferred 'xlarge' not found, falls through to 'small' (not found), then 'medium'
       expect(getBestImageUrl(image, 'xlarge')).toBe('http://a.com/medium.jpg');
@@ -188,9 +222,7 @@ describe('imageUtils', () => {
         perspective: 'front',
         featured: false,
         sourcePriority: 0,
-        sizes: [
-          { size: 'thumbnail' as any, url: 'http://a.com/thumb.jpg' },
-        ],
+        sizes: [{ size: 'thumbnail' as any, url: 'http://a.com/thumb.jpg' }],
       };
       // 'thumbnail' is in SIZE_PRIORITY so it should be found
       expect(getBestImageUrl(image, 'xlarge')).toBe('http://a.com/thumb.jpg');
@@ -273,17 +305,31 @@ describe('imageUtils', () => {
 
     it('sorts by perspective order', () => {
       const images: ItemImage[] = [
-        { perspective: 'nutrition_label', sizes: [], featured: false, sourcePriority: 0 },
+        {
+          perspective: 'nutrition_label',
+          sizes: [],
+          featured: false,
+          sourcePriority: 0,
+        },
         { perspective: 'front', sizes: [], featured: false, sourcePriority: 0 },
         { perspective: 'back', sizes: [], featured: false, sourcePriority: 0 },
       ];
       const result = groupImagesByPerspective(images);
-      expect(result.map(t => t.key)).toEqual(['front', 'back', 'nutrition_label']);
+      expect(result.map(t => t.key)).toEqual([
+        'front',
+        'back',
+        'nutrition_label',
+      ]);
     });
 
     it('places unknown perspectives at the end', () => {
       const images: ItemImage[] = [
-        { perspective: 'custom', sizes: [], featured: false, sourcePriority: 0 },
+        {
+          perspective: 'custom',
+          sizes: [],
+          featured: false,
+          sourcePriority: 0,
+        },
         { perspective: 'front', sizes: [], featured: false, sourcePriority: 0 },
       ];
       const result = groupImagesByPerspective(images);
@@ -293,7 +339,12 @@ describe('imageUtils', () => {
 
     it('includes correct labels', () => {
       const images: ItemImage[] = [
-        { perspective: 'ingredient_list', sizes: [], featured: false, sourcePriority: 0 },
+        {
+          perspective: 'ingredient_list',
+          sizes: [],
+          featured: false,
+          sourcePriority: 0,
+        },
       ];
       const result = groupImagesByPerspective(images);
       expect(result[0].label).toBe('Ingredients');
@@ -336,7 +387,9 @@ describe('imageUtils', () => {
         ],
       };
       // 'small' maps to kind 'THUMBNAIL'
-      expect(getItemImageUrl(item, 'small')).toBe('https://cdn.example.com/thumb.jpg');
+      expect(getItemImageUrl(item, 'small')).toBe(
+        'https://cdn.example.com/thumb.jpg',
+      );
     });
 
     it('falls back to legacy images parsing', () => {
@@ -346,13 +399,17 @@ describe('imageUtils', () => {
             perspective: 'front',
             featured: true,
             sourcePriority: 1,
-            sizes: [{ size: 'small', url: 'https://cdn.example.com/front-small.jpg' }],
+            sizes: [
+              { size: 'small', url: 'https://cdn.example.com/front-small.jpg' },
+            ],
           },
         ],
       };
       // When kind lookup fails (images are ItemImage[], not ImageVariant[]),
       // it falls through to the legacy path
-      expect(getItemImageUrl(item, 'small')).toBe('https://cdn.example.com/front-small.jpg');
+      expect(getItemImageUrl(item, 'small')).toBe(
+        'https://cdn.example.com/front-small.jpg',
+      );
     });
 
     it('returns null when no valid source exists', () => {
@@ -362,11 +419,11 @@ describe('imageUtils', () => {
 
     it('uses medium kind for large preferred size', () => {
       const item = {
-        images: [
-          { url: 'https://cdn.example.com/512.jpg', kind: 'SIZE_512' },
-        ],
+        images: [{ url: 'https://cdn.example.com/512.jpg', kind: 'SIZE_512' }],
       };
-      expect(getItemImageUrl(item, 'large')).toBe('https://cdn.example.com/512.jpg');
+      expect(getItemImageUrl(item, 'large')).toBe(
+        'https://cdn.example.com/512.jpg',
+      );
     });
   });
 
@@ -390,16 +447,18 @@ describe('imageUtils', () => {
           ],
         },
       };
-      expect(resolveImageUrl(source, 'small')).toBe('https://cdn.example.com/thumb.jpg');
+      expect(resolveImageUrl(source, 'small')).toBe(
+        'https://cdn.example.com/thumb.jpg',
+      );
     });
 
     it('resolves from own images variants second', () => {
       const source = {
-        images: [
-          { url: 'https://cdn.example.com/512.jpg', kind: 'SIZE_512' },
-        ],
+        images: [{ url: 'https://cdn.example.com/512.jpg', kind: 'SIZE_512' }],
       };
-      expect(resolveImageUrl(source, 'medium')).toBe('https://cdn.example.com/512.jpg');
+      expect(resolveImageUrl(source, 'medium')).toBe(
+        'https://cdn.example.com/512.jpg',
+      );
     });
 
     it('resolves from own imageUrl third', () => {
@@ -414,7 +473,9 @@ describe('imageUtils', () => {
         imageUrl: 'just-a-filename.jpg',
         item: { imageUrl: 'https://cdn.example.com/nested.jpg' },
       };
-      expect(resolveImageUrl(source)).toBe('https://cdn.example.com/nested.jpg');
+      expect(resolveImageUrl(source)).toBe(
+        'https://cdn.example.com/nested.jpg',
+      );
     });
 
     it('resolves from nested item as fallback', () => {
@@ -433,12 +494,16 @@ describe('imageUtils', () => {
             perspective: 'front',
             featured: true,
             sourcePriority: 1,
-            sizes: [{ size: 'small', url: 'https://cdn.example.com/legacy.jpg' }],
+            sizes: [
+              { size: 'small', url: 'https://cdn.example.com/legacy.jpg' },
+            ],
           },
         ],
       };
       // No kind match for xlarge in PREFERRED_SIZE_TO_KIND
-      expect(resolveImageUrl(source, 'xlarge')).toBe('https://cdn.example.com/legacy.jpg');
+      expect(resolveImageUrl(source, 'xlarge')).toBe(
+        'https://cdn.example.com/legacy.jpg',
+      );
     });
 
     it('returns null when nothing matches', () => {

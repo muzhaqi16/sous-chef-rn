@@ -134,8 +134,7 @@ describe('useDeferredSearch', () => {
 
 describe('useDeferredSearchWithSort', () => {
   it('sorts results when sortFn is provided', () => {
-    const sortFn = (a: TestItem, b: TestItem) =>
-      b.name.localeCompare(a.name); // reverse alphabetical
+    const sortFn = (a: TestItem, b: TestItem) => b.name.localeCompare(a.name); // reverse alphabetical
 
     const { result } = renderHook(() =>
       useDeferredSearchWithSort({
@@ -170,8 +169,7 @@ describe('useDeferredSearchWithSort', () => {
   });
 
   it('returns all items sorted when query is empty and sortFn is provided', () => {
-    const sortFn = (a: TestItem, b: TestItem) =>
-      a.name.localeCompare(b.name); // alphabetical
+    const sortFn = (a: TestItem, b: TestItem) => a.name.localeCompare(b.name); // alphabetical
 
     const { result } = renderHook(() =>
       useDeferredSearchWithSort({

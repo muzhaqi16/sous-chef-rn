@@ -35,9 +35,10 @@ describe('ConsoleTransport', () => {
   });
 
   describe('sendLogs()', () => {
-    const makeLogs = (level: LogEntry['level'], message = 'test message'): LogEntry[] => [
-      { level, message, timestamp: new Date().toISOString() },
-    ];
+    const makeLogs = (
+      level: LogEntry['level'],
+      message = 'test message',
+    ): LogEntry[] => [{ level, message, timestamp: new Date().toISOString() }];
 
     it('does nothing when not available', async () => {
       mockIsDevelopment.mockReturnValue(false);
@@ -138,7 +139,9 @@ describe('ConsoleTransport', () => {
       await transport.sendMetrics(makeMetrics());
 
       expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('[TELEMETRY-METRIC] http_requests_total{method="GET", path="/api"} = 42'),
+        expect.stringContaining(
+          '[TELEMETRY-METRIC] http_requests_total{method="GET", path="/api"} = 42',
+        ),
       );
     });
 

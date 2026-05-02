@@ -15,7 +15,16 @@ jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
 jest.mock('#components/molecules/FormTextArea', () => ({
   FormTextArea: (props: any) => {
     const { View, TextInput } = require('react-native');
-    return <View><TextInput testID="instruction-input" value={props.value} onChangeText={props.onChangeText} placeholder={props.placeholder} /></View>;
+    return (
+      <View>
+        <TextInput
+          testID="instruction-input"
+          value={props.value}
+          onChangeText={props.onChangeText}
+          placeholder={props.placeholder}
+        />
+      </View>
+    );
   },
 }));
 jest.mock('#components/molecules/Header', () => ({

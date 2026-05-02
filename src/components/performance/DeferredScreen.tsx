@@ -12,7 +12,10 @@ interface DeferredScreenProps {
  * `useDeferredRender()` returns true — structurally preventing heavy hooks
  * from running before the skeleton paints.
  */
-export function DeferredScreen({ fallback, component: Component }: DeferredScreenProps) {
+export function DeferredScreen({
+  fallback,
+  component: Component,
+}: DeferredScreenProps) {
   const isReady = useDeferredRender();
   if (!isReady) return <>{fallback}</>;
   return <Component />;

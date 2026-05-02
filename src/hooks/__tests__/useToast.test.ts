@@ -15,7 +15,11 @@ describe('useToast', () => {
     const mockToastFn = jest.fn();
 
     const wrapper = ({ children }: { children: React.ReactNode }) =>
-      React.createElement(ToastContext.Provider, { value: mockToastFn }, children);
+      React.createElement(
+        ToastContext.Provider,
+        { value: mockToastFn },
+        children,
+      );
 
     const { result } = renderHook(() => useToast(), { wrapper });
 

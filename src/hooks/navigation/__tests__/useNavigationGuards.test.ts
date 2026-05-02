@@ -1,5 +1,10 @@
 import { renderHook } from '@testing-library/react-native';
-import { useIsAuth, useIsVerification, useIsOnboarding, useIsMainApp } from '../useNavigationGuards';
+import {
+  useIsAuth,
+  useIsVerification,
+  useIsOnboarding,
+  useIsMainApp,
+} from '../useNavigationGuards';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');

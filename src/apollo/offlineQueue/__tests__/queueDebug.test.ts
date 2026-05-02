@@ -129,7 +129,9 @@ describe('queueDebug', () => {
 
       queueDebug.viewQueue();
 
-      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('empty'));
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('empty'),
+      );
     });
   });
 

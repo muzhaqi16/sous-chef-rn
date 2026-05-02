@@ -71,7 +71,9 @@ describe('subscriptionErrorHandler', () => {
     });
 
     it('stops retrying after MAX_RETRIES (3)', () => {
-      const error = { message: 'subscription field must return async iterable' };
+      const error = {
+        message: 'subscription field must return async iterable',
+      };
 
       // First 3 retries should succeed
       expect(handleSubscriptionError('TestSub', error)).toBe(true);
@@ -86,7 +88,9 @@ describe('subscriptionErrorHandler', () => {
     });
 
     it('respects backoff period', () => {
-      const error = { message: 'subscription field must return async iterable' };
+      const error = {
+        message: 'subscription field must return async iterable',
+      };
 
       handleSubscriptionError('TestSub', error);
       // Immediate second call should be rejected (in backoff)
@@ -95,7 +99,9 @@ describe('subscriptionErrorHandler', () => {
     });
 
     it('uses separate retry state per operation', () => {
-      const error = { message: 'subscription field must return async iterable' };
+      const error = {
+        message: 'subscription field must return async iterable',
+      };
 
       handleSubscriptionError('Sub1', error);
       const result = handleSubscriptionError('Sub2', error);
@@ -105,7 +111,9 @@ describe('subscriptionErrorHandler', () => {
 
   describe('clearRetryState', () => {
     it('clears retry state for a specific operation', () => {
-      const error = { message: 'subscription field must return async iterable' };
+      const error = {
+        message: 'subscription field must return async iterable',
+      };
       handleSubscriptionError('TestSub', error);
       clearRetryState('TestSub');
       // After clearing, it should be able to retry again
@@ -116,7 +124,9 @@ describe('subscriptionErrorHandler', () => {
 
   describe('clearAllRetryStates', () => {
     it('clears all retry states', () => {
-      const error = { message: 'subscription field must return async iterable' };
+      const error = {
+        message: 'subscription field must return async iterable',
+      };
       handleSubscriptionError('Sub1', error);
       handleSubscriptionError('Sub2', error);
       clearAllRetryStates();

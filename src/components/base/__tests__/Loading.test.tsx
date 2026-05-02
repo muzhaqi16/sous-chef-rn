@@ -29,7 +29,9 @@ describe('Loading', () => {
   });
 
   it('renders overlay variant when visible', () => {
-    const { toJSON } = render(<Loading variant="overlay" visible message="Saving..." />);
+    const { toJSON } = render(
+      <Loading variant="overlay" visible message="Saving..." />,
+    );
     expect(toJSON()).toBeTruthy();
   });
 

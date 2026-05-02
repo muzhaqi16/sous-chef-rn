@@ -9,10 +9,12 @@ jest.mock('#/services/telemetry', () => ({
 }));
 
 // Mock requestIdleCallback / cancelIdleCallback for the test environment
-const mockRequestIdleCallback = jest.fn((cb: (deadline: IdleDeadline) => void) => {
-  cb({ didTimeout: false, timeRemaining: () => 50 });
-  return 1;
-});
+const mockRequestIdleCallback = jest.fn(
+  (cb: (deadline: IdleDeadline) => void) => {
+    cb({ didTimeout: false, timeRemaining: () => 50 });
+    return 1;
+  },
+);
 const mockCancelIdleCallback = jest.fn();
 
 beforeAll(() => {
@@ -45,9 +47,7 @@ describe('useScreenTelemetry', () => {
   it('does not track screen view when isReady is false', () => {
     const getProperties = () => ({ home_id: '123' });
 
-    renderHook(() =>
-      useScreenTelemetry('PantryMain', getProperties, false),
-    );
+    renderHook(() => useScreenTelemetry('PantryMain', getProperties, false));
 
     expect(Telemetry.trackScreen).not.toHaveBeenCalled();
   });

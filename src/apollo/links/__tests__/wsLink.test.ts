@@ -113,7 +113,9 @@ describe('wsLink', () => {
       const { createClient } = require('graphql-ws');
       const mockClient = createClient.mock.results[0]?.value;
       if (mockClient) {
-        mockClient.dispose.mockImplementation(() => { throw new Error('dispose error'); });
+        mockClient.dispose.mockImplementation(() => {
+          throw new Error('dispose error');
+        });
       }
       // Should not throw
       expect(() => disposeWebSocket()).not.toThrow();
@@ -136,7 +138,9 @@ describe('wsLink', () => {
       const { createClient } = require('graphql-ws');
       const mockClient = createClient.mock.results[0]?.value;
       if (mockClient) {
-        mockClient.terminate.mockImplementation(() => { throw new Error('terminate error'); });
+        mockClient.terminate.mockImplementation(() => {
+          throw new Error('terminate error');
+        });
       }
       // Should not throw
       expect(() => reconnectWebSocket()).not.toThrow();

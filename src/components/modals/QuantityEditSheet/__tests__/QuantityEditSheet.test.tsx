@@ -50,27 +50,33 @@ jest.mock('#/components/molecules/Header', () => ({
   },
 }));
 
-jest.mock('#/components/molecules/AutocompleteField/UnitAutocompleteField', () => ({
-  UnitAutocompleteField: ({ value, onChangeText, placeholder }: any) => {
-    const { TextInput, View } = require('react-native');
-    return (
-      <View testID="unit-autocomplete">
-        <TextInput
-          testID="unit-input"
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-        />
-      </View>
-    );
-  },
-}));
+jest.mock(
+  '#/components/molecules/AutocompleteField/UnitAutocompleteField',
+  () => ({
+    UnitAutocompleteField: ({ value, onChangeText, placeholder }: any) => {
+      const { TextInput, View } = require('react-native');
+      return (
+        <View testID="unit-autocomplete">
+          <TextInput
+            testID="unit-input"
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={placeholder}
+          />
+        </View>
+      );
+    },
+  }),
+);
 
 jest.mock('#/components/atoms/Chip', () => {
   const { Text, Pressable } = require('react-native');
   return ({ label, selected, onPress }: any) => (
     <Pressable testID={`chip-${label}`} onPress={onPress}>
-      <Text>{label}{selected ? ' (selected)' : ''}</Text>
+      <Text>
+        {label}
+        {selected ? ' (selected)' : ''}
+      </Text>
     </Pressable>
   );
 });
@@ -161,8 +167,20 @@ describe('QuantityEditSheet', () => {
   it('renders with item that has itemUnits for chip display', () => {
     const item = makeItem({
       itemUnits: [
-        { id: 'u1', symbol: 'cups', name: 'Cup', isDefault: true, isPreferred: false },
-        { id: 'u2', symbol: 'tbsp', name: 'Tablespoon', isDefault: false, isPreferred: true },
+        {
+          id: 'u1',
+          symbol: 'cups',
+          name: 'Cup',
+          isDefault: true,
+          isPreferred: false,
+        },
+        {
+          id: 'u2',
+          symbol: 'tbsp',
+          name: 'Tablespoon',
+          isDefault: false,
+          isPreferred: true,
+        },
       ],
     });
     render(<QuantityEditSheet {...defaultProps} item={item} />);
@@ -174,9 +192,27 @@ describe('QuantityEditSheet', () => {
     const item = makeItem({
       unitName: 'cups',
       itemUnits: [
-        { id: 'u1', symbol: 'cups', name: 'Cup', isDefault: true, isPreferred: false },
-        { id: 'u2', symbol: 'tbsp', name: 'Tablespoon', isDefault: false, isPreferred: true },
-        { id: 'u3', symbol: 'ml', name: 'Milliliter', isDefault: false, isPreferred: false },
+        {
+          id: 'u1',
+          symbol: 'cups',
+          name: 'Cup',
+          isDefault: true,
+          isPreferred: false,
+        },
+        {
+          id: 'u2',
+          symbol: 'tbsp',
+          name: 'Tablespoon',
+          isDefault: false,
+          isPreferred: true,
+        },
+        {
+          id: 'u3',
+          symbol: 'ml',
+          name: 'Milliliter',
+          isDefault: false,
+          isPreferred: false,
+        },
       ],
     });
     renderWithInit({ ...defaultProps, item });
@@ -203,7 +239,12 @@ describe('QuantityEditSheet', () => {
     const item = makeItem({
       unitName: 'count',
       itemUnits: [
-        { id: 'u1', symbol: 'count', name: 'Count', displayNamePlural: 'pieces' },
+        {
+          id: 'u1',
+          symbol: 'count',
+          name: 'Count',
+          displayNamePlural: 'pieces',
+        },
       ],
     });
     renderWithInit({ ...defaultProps, item });
@@ -230,9 +271,7 @@ describe('QuantityEditSheet', () => {
   it('matches unitName case-insensitively with itemUnits', () => {
     const item = makeItem({
       unitName: 'CUPS',
-      itemUnits: [
-        { id: 'u1', symbol: 'cups', name: 'Cup', isDefault: true },
-      ],
+      itemUnits: [{ id: 'u1', symbol: 'cups', name: 'Cup', isDefault: true }],
     });
     renderWithInit({ ...defaultProps, item });
     expect(screen.getByText('cups (selected)')).toBeTruthy();
@@ -241,9 +280,7 @@ describe('QuantityEditSheet', () => {
   it('matches unitName by name field when symbol does not match', () => {
     const item = makeItem({
       unitName: 'Cup',
-      itemUnits: [
-        { id: 'u1', symbol: 'cups', name: 'Cup', isDefault: true },
-      ],
+      itemUnits: [{ id: 'u1', symbol: 'cups', name: 'Cup', isDefault: true }],
     });
     renderWithInit({ ...defaultProps, item });
     expect(screen.getByText('cups (selected)')).toBeTruthy();
@@ -252,9 +289,7 @@ describe('QuantityEditSheet', () => {
   it('uses lowercase stored value when no matching chip', () => {
     const item = makeItem({
       unitName: 'OUNCES',
-      itemUnits: [
-        { id: 'u1', symbol: 'cups', name: 'Cup', isDefault: true },
-      ],
+      itemUnits: [{ id: 'u1', symbol: 'cups', name: 'Cup', isDefault: true }],
     });
     renderWithInit({ ...defaultProps, item });
     // unitName should be lowercase 'ounces' in the autocomplete
@@ -278,9 +313,7 @@ describe('QuantityEditSheet', () => {
 
   it('renders placeholder "Or type to search..." when itemUnits exist', () => {
     const item = makeItem({
-      itemUnits: [
-        { id: 'u1', symbol: 'cups', name: 'Cup' },
-      ],
+      itemUnits: [{ id: 'u1', symbol: 'cups', name: 'Cup' }],
     });
     render(<QuantityEditSheet {...defaultProps} item={item} />);
     expect(screen.getByPlaceholderText('Or type to search...')).toBeTruthy();

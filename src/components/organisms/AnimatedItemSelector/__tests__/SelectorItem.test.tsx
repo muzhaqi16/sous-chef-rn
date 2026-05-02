@@ -20,21 +20,36 @@ describe('SelectorItem', () => {
 
   it('renders item display property', () => {
     render(
-      <SelectorItem item={item} isSelected={false} onSelect={onSelect} displayProperty="name" />,
+      <SelectorItem
+        item={item}
+        isSelected={false}
+        onSelect={onSelect}
+        displayProperty="name"
+      />,
     );
     expect(screen.getByText('Pantry A')).toBeTruthy();
   });
 
   it('shows checkmark when selected', () => {
     render(
-      <SelectorItem item={item} isSelected={true} onSelect={onSelect} displayProperty="name" />,
+      <SelectorItem
+        item={item}
+        isSelected={true}
+        onSelect={onSelect}
+        displayProperty="name"
+      />,
     );
     expect(screen.getByText('checkmark')).toBeTruthy();
   });
 
   it('calls onSelect with item id and item on press', () => {
     render(
-      <SelectorItem item={item} isSelected={false} onSelect={onSelect} displayProperty="name" />,
+      <SelectorItem
+        item={item}
+        isSelected={false}
+        onSelect={onSelect}
+        displayProperty="name"
+      />,
     );
     fireEvent.press(screen.getByText('Pantry A'));
     expect(onSelect).toHaveBeenCalledWith('1', item);

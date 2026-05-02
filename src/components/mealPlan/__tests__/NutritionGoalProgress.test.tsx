@@ -3,7 +3,12 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { NutritionGoalProgress } from '../NutritionGoalProgress';
 
-const makeProgress = (current: number, target: number, percentage: number, status: string) => ({
+const makeProgress = (
+  current: number,
+  target: number,
+  percentage: number,
+  status: string,
+) => ({
   current,
   target,
   percentage,

@@ -177,23 +177,13 @@ describe('FolderPicker', () => {
   });
 
   it('renders Rename section when onRenameFolder is provided', () => {
-    render(
-      <FolderPicker
-        {...defaultProps}
-        onRenameFolder={jest.fn()}
-      />,
-    );
+    render(<FolderPicker {...defaultProps} onRenameFolder={jest.fn()} />);
     // "Rename" appears as both section label and button text
     expect(screen.getAllByText('Rename').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders Delete Folder button when onDeleteFolder is provided', () => {
-    render(
-      <FolderPicker
-        {...defaultProps}
-        onDeleteFolder={jest.fn()}
-      />,
-    );
+    render(<FolderPicker {...defaultProps} onDeleteFolder={jest.fn()} />);
     expect(screen.getByText('Delete Folder')).toBeTruthy();
     expect(screen.getByText('Recipes will be moved to No Folder')).toBeTruthy();
   });
@@ -210,7 +200,9 @@ describe('FolderPicker', () => {
 
   it('does not show folder management hint when no actions', () => {
     render(<FolderPicker {...defaultProps} />);
-    expect(screen.queryByText('Long press a folder to edit or delete')).toBeNull();
+    expect(
+      screen.queryByText('Long press a folder to edit or delete'),
+    ).toBeNull();
   });
 
   it('shows loading overlay when folderActionLoading is true and sheet is visible', () => {
@@ -281,10 +273,17 @@ describe('FolderPicker', () => {
       contentContainerStyle: {},
       theme: {
         colors: {
-          textPrimary: '#000', textSecondary: '#666', textTertiary: '#999',
-          primary: '#007AFF', primaryLight: '#E3F2FD', error: '#FF0000',
-          surface: '#FFF', border: '#CCC', white: '#FFF',
-          background: '#FFF', divider: '#EEE',
+          textPrimary: '#000',
+          textSecondary: '#666',
+          textTertiary: '#999',
+          primary: '#007AFF',
+          primaryLight: '#E3F2FD',
+          error: '#FF0000',
+          surface: '#FFF',
+          border: '#CCC',
+          white: '#FFF',
+          background: '#FFF',
+          divider: '#EEE',
         },
         typography: { fontSize: { sm: 12, base: 14, lg: 18 } },
       },
@@ -296,7 +295,14 @@ describe('FolderPicker', () => {
   });
 
   it('shows search results matching query', () => {
-    const manyFolders = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'AlphaTwo'];
+    const manyFolders = [
+      'Alpha',
+      'Beta',
+      'Gamma',
+      'Delta',
+      'Epsilon',
+      'AlphaTwo',
+    ];
     render(<FolderPicker {...defaultProps} folders={manyFolders} />);
     const searchInput = screen.getByPlaceholderText('Search folders...');
     fireEvent.changeText(searchInput, 'Alpha');
@@ -325,23 +331,13 @@ describe('FolderPicker', () => {
   });
 
   it('renders only rename section when only onRenameFolder is provided', () => {
-    render(
-      <FolderPicker
-        {...defaultProps}
-        onRenameFolder={jest.fn()}
-      />,
-    );
+    render(<FolderPicker {...defaultProps} onRenameFolder={jest.fn()} />);
     expect(screen.getAllByText('Rename').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Delete Folder')).toBeNull();
   });
 
   it('renders only delete section when only onDeleteFolder is provided', () => {
-    render(
-      <FolderPicker
-        {...defaultProps}
-        onDeleteFolder={jest.fn()}
-      />,
-    );
+    render(<FolderPicker {...defaultProps} onDeleteFolder={jest.fn()} />);
     expect(screen.queryByText('Rename')).toBeNull();
     expect(screen.getByText('Delete Folder')).toBeTruthy();
   });
@@ -362,17 +358,16 @@ describe('FolderPicker', () => {
 
   it('does not show hint when hasFolderActions is false and folders exist', () => {
     render(<FolderPicker {...defaultProps} />);
-    expect(screen.queryByText('Long press a folder to edit or delete')).toBeNull();
+    expect(
+      screen.queryByText('Long press a folder to edit or delete'),
+    ).toBeNull();
   });
 
   it('shows hint when hasFolderActions is true and filteredFolders exist', () => {
-    render(
-      <FolderPicker
-        {...defaultProps}
-        onRenameFolder={jest.fn()}
-      />,
-    );
-    expect(screen.getByText('Long press a folder to edit or delete')).toBeTruthy();
+    render(<FolderPicker {...defaultProps} onRenameFolder={jest.fn()} />);
+    expect(
+      screen.getByText('Long press a folder to edit or delete'),
+    ).toBeTruthy();
   });
 
   it('does not show hint when no folders exist even with actions', () => {
@@ -383,7 +378,9 @@ describe('FolderPicker', () => {
         onRenameFolder={jest.fn()}
       />,
     );
-    expect(screen.queryByText('Long press a folder to edit or delete')).toBeNull();
+    expect(
+      screen.queryByText('Long press a folder to edit or delete'),
+    ).toBeNull();
   });
 
   it('does not show loading overlay when folderActionLoading is false', () => {
@@ -404,32 +401,19 @@ describe('FolderPicker', () => {
   });
 
   it('renders the rename input with placeholder', () => {
-    render(
-      <FolderPicker
-        {...defaultProps}
-        onRenameFolder={jest.fn()}
-      />,
-    );
-    expect(screen.getByPlaceholderText('Enter new folder name...')).toBeTruthy();
+    render(<FolderPicker {...defaultProps} onRenameFolder={jest.fn()} />);
+    expect(
+      screen.getByPlaceholderText('Enter new folder name...'),
+    ).toBeTruthy();
   });
 
   it('renders delete description text', () => {
-    render(
-      <FolderPicker
-        {...defaultProps}
-        onDeleteFolder={jest.fn()}
-      />,
-    );
+    render(<FolderPicker {...defaultProps} onDeleteFolder={jest.fn()} />);
     expect(screen.getByText('Recipes will be moved to No Folder')).toBeTruthy();
   });
 
   it('renders with both visible true and folders but selectedFolder is set', () => {
-    render(
-      <FolderPicker
-        {...defaultProps}
-        selectedFolder="Lunch"
-      />,
-    );
+    render(<FolderPicker {...defaultProps} selectedFolder="Lunch" />);
     expect(screen.getByText('No Folder')).toBeTruthy();
     expect(screen.getByText('Select Folder')).toBeTruthy();
   });

@@ -6,7 +6,10 @@ jest.mock('#components/molecules/SwipeableItem/SwipeableItem', () => {
   const { View } = require('react-native');
   return {
     SwipeableItem: ({ children, onPress, testIDPrefix }: any) => (
-      <View testID={testIDPrefix ? `${testIDPrefix}-swipeable` : 'swipeable'} onTouchEnd={onPress}>
+      <View
+        testID={testIDPrefix ? `${testIDPrefix}-swipeable` : 'swipeable'}
+        onTouchEnd={onPress}
+      >
         {children}
       </View>
     ),
@@ -67,24 +70,12 @@ describe('ItemCard', () => {
   });
 
   it('renders SwipeableItem when edit action is provided', () => {
-    render(
-      <ItemCard
-        {...defaultProps}
-        onEdit={jest.fn()}
-        testID="item"
-      />,
-    );
+    render(<ItemCard {...defaultProps} onEdit={jest.fn()} testID="item" />);
     expect(screen.getByTestId('item-swipeable')).toBeTruthy();
   });
 
   it('renders SwipeableItem when delete action is provided', () => {
-    render(
-      <ItemCard
-        {...defaultProps}
-        onDelete={jest.fn()}
-        testID="item"
-      />,
-    );
+    render(<ItemCard {...defaultProps} onDelete={jest.fn()} testID="item" />);
     expect(screen.getByTestId('item-swipeable')).toBeTruthy();
   });
 
@@ -95,12 +86,7 @@ describe('ItemCard', () => {
 
   it('renders right element when provided', () => {
     const { Text } = require('react-native');
-    render(
-      <ItemCard
-        {...defaultProps}
-        rightElement={<Text>Right</Text>}
-      />,
-    );
+    render(<ItemCard {...defaultProps} rightElement={<Text>Right</Text>} />);
     expect(screen.getByText('Milk')).toBeTruthy();
   });
 });

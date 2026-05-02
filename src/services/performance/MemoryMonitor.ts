@@ -18,8 +18,10 @@ class MemoryMonitorService {
   private intervalId: NodeJS.Timeout | null = null;
   private enabled: boolean = false;
   private snapshots: MemorySnapshot[] = [];
-  private readonly maxSnapshots: number = DEFAULT_PERFORMANCE_CONFIG.maxMemorySnapshots;
-  private readonly warningThreshold: number = DEFAULT_PERFORMANCE_CONFIG.memoryWarningThreshold;
+  private readonly maxSnapshots: number =
+    DEFAULT_PERFORMANCE_CONFIG.maxMemorySnapshots;
+  private readonly warningThreshold: number =
+    DEFAULT_PERFORMANCE_CONFIG.memoryWarningThreshold;
   private lastWarningTime: number = 0;
   private readonly warningCooldown: number = 30000; // 30 seconds between warnings
 
@@ -188,7 +190,10 @@ class MemoryMonitorService {
 
     // Log in dev
     if (__DEV__) {
-      const logFn = warning.level === MemoryWarningLevel.CRITICAL ? console.error : console.warn;
+      const logFn =
+        warning.level === MemoryWarningLevel.CRITICAL
+          ? console.error
+          : console.warn;
       logFn(`[MemoryMonitor] ${warning.message}`);
     }
   }
@@ -208,7 +213,9 @@ class MemoryMonitorService {
    * @returns Latest memory snapshot or null
    */
   getLatestSnapshot(): MemorySnapshot | null {
-    return this.snapshots.length > 0 ? this.snapshots[this.snapshots.length - 1] : null;
+    return this.snapshots.length > 0
+      ? this.snapshots[this.snapshots.length - 1]
+      : null;
   }
 
   /**

@@ -79,7 +79,10 @@ describe('useHomeManagement', () => {
 
     // Data from useHomeSelection
     expect(result.current.defaultHomeId).toBe('home-1');
-    expect(result.current.defaultHome).toEqual({ id: 'home-1', name: 'Home 1' });
+    expect(result.current.defaultHome).toEqual({
+      id: 'home-1',
+      name: 'Home 1',
+    });
     expect(result.current.isSynced).toBe(true);
 
     // Functions from useHomeMutations
@@ -96,13 +99,21 @@ describe('useHomeManagement', () => {
     expect(result.current.loadingPreview).toBe(false);
 
     // Functions from useHomeInvitations
-    expect(result.current.inviteUserToHome).toBe(mockHomeInvitations.inviteUserToHome);
-    expect(result.current.joinHomeByCode).toBe(mockHomeInvitations.joinHomeByCode);
-    expect(result.current.previewHomeByCode).toBe(mockHomeInvitations.previewHomeByCode);
+    expect(result.current.inviteUserToHome).toBe(
+      mockHomeInvitations.inviteUserToHome,
+    );
+    expect(result.current.joinHomeByCode).toBe(
+      mockHomeInvitations.joinHomeByCode,
+    );
+    expect(result.current.previewHomeByCode).toBe(
+      mockHomeInvitations.previewHomeByCode,
+    );
     expect(result.current.previewHome).toBeNull();
 
     // Other
-    expect(result.current.setDefaultHome).toBe(mockHomeSelection.setDefaultHome);
+    expect(result.current.setDefaultHome).toBe(
+      mockHomeSelection.setDefaultHome,
+    );
     expect(result.current.refetch).toBe(mockHomeQuery.refetch);
   });
 

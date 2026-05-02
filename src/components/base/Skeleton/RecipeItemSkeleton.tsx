@@ -23,7 +23,12 @@ export const RecipeItemSkeleton: React.FC<RecipeItemSkeletonProps> = ({
   return (
     <View style={[styles.wrapper, commonStyles.shadow]}>
       <ListItem>
-        <SkeletonRectangle width={48} height={48} borderRadius={8} animated={animated} />
+        <SkeletonRectangle
+          width={48}
+          height={48}
+          borderRadius={8}
+          animated={animated}
+        />
         <View style={styles.content}>
           <SkeletonLine width="70%" height={16} animated={animated} />
           <SkeletonLine width="50%" height={14} animated={animated} />

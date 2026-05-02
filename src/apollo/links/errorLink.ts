@@ -1,5 +1,8 @@
 import { ErrorLink } from '@apollo/client/link/error';
-import { CombinedGraphQLErrors, CombinedProtocolErrors } from '@apollo/client/errors';
+import {
+  CombinedGraphQLErrors,
+  CombinedProtocolErrors,
+} from '@apollo/client/errors';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { LogoutCleanup } from '../logoutCleanup';
@@ -10,7 +13,9 @@ import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 // Treating FORBIDDEN as auth error causes unnecessary token refresh cycles
 const isAuthError = (code: string, msg: string) =>
   code === 'UNAUTHENTICATED' ||
-  ['expired', 'unauthorized', 'invalid token', 'jwt'].some(term => msg.toLowerCase().includes(term));
+  ['expired', 'unauthorized', 'invalid token', 'jwt'].some(term =>
+    msg.toLowerCase().includes(term),
+  );
 
 // FORBIDDEN means user doesn't have access to the resource - not an auth issue
 const isResourceAccessError = (code: string) => code === 'FORBIDDEN';
@@ -20,10 +25,14 @@ const isApiKeyError = (code: string, msg: string) =>
   msg.toLowerCase().includes('api key');
 
 const isSubscription = (op: any) =>
-  op.query.definitions.some((def: any) => def.kind === 'OperationDefinition' && def.operation === 'subscription');
+  op.query.definitions.some(
+    (def: any) =>
+      def.kind === 'OperationDefinition' && def.operation === 'subscription',
+  );
 
 export const errorLink = new ErrorLink(({ error, operation, forward }) => {
-  if (operation.getContext().skipErrorLink || LogoutCleanup.isInLogoutProcess()) return;
+  if (operation.getContext().skipErrorLink || LogoutCleanup.isInLogoutProcess())
+    return;
 
   // Check if token refresh is in progress to suppress cascade of auth errors
   const { isRefreshing } = getRefreshState();
@@ -41,22 +50,35 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       // Handle FORBIDDEN separately - it's a resource access issue, not an auth problem
       // This prevents unnecessary token refresh cycles when accessing deleted/unauthorized resources
       if (isResourceAccessError(code)) {
-        console.warn(`Access denied for ${operation.operationName}: ${message}`);
+        console.warn(
+          `Access denied for ${operation.operationName}: ${message}`,
+        );
         continue;
       }
 
-      if (isAuthError(code, message) && operation.operationName !== 'RefreshToken') {
+      if (
+        isAuthError(code, message) &&
+        operation.operationName !== 'RefreshToken'
+      ) {
         // Suppress logging if refresh already in progress to avoid cascade
         if (!isRefreshing) {
-          console.warn(`Auth error detected for ${operation.operationName}, initiating token refresh`);
+          console.warn(
+            `Auth error detected for ${operation.operationName}, initiating token refresh`,
+          );
         }
         return attemptTokenRefresh(operation, forward);
       }
     }
   } else if (!CombinedProtocolErrors.is(error)) {
     // Check for known server errors first
-    if (isSubscription(operation) && isKnownServerError({ message: error.message })) {
-      console.warn(`Known server error for ${operation.operationName}:`, error.message);
+    if (
+      isSubscription(operation) &&
+      isKnownServerError({ message: error.message })
+    ) {
+      console.warn(
+        `Known server error for ${operation.operationName}:`,
+        error.message,
+      );
       return;
     }
 
@@ -65,12 +87,15 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
     if (isNetworkError(error)) {
       console.warn(
         `Network error for ${operation.operationName}:`,
-        error.message
+        error.message,
       );
       return forward(operation);
     }
 
     // Only log non-network errors as these are unexpected
-    console.error(`Unexpected error [${operation.operationName}]:`, error.message);
+    console.error(
+      `Unexpected error [${operation.operationName}]:`,
+      error.message,
+    );
   }
 });

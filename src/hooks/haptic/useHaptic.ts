@@ -1,4 +1,7 @@
-import { HapticService, HapticFeedbackType } from '#services/haptic/HapticService';
+import {
+  HapticService,
+  HapticFeedbackType,
+} from '#services/haptic/HapticService';
 
 /**
  * Custom hook for haptic feedback
@@ -82,5 +85,6 @@ export function useHaptic() {
     longPress,
     cancel,
     isEnabled: HapticService.isEnabled(),
-    isSupported: HapticService.isSupported() };
+    isSupported: HapticService.isSupported(),
+  };
 }

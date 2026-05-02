@@ -35,22 +35,30 @@ jest.mock('#/components/molecules/Header', () => {
   const R = require('react');
   return {
     Header: ({ title, rightActions }: any) =>
-      R.createElement(RN.View, { testID: 'header' },
+      R.createElement(
+        RN.View,
+        { testID: 'header' },
         R.createElement(RN.Text, null, title),
         rightActions?.map((action: any, i: number) =>
-          R.createElement(RN.View, { key: i, testID: `header-action-${i}` })
-        )
+          R.createElement(RN.View, { key: i, testID: `header-action-${i}` }),
+        ),
       ),
   };
 });
 
-jest.mock('#/components/molecules/AutocompleteField/UnitAutocompleteField', () => {
-  const RN = require('react-native');
-  return {
-    UnitAutocompleteField: (props: any) =>
-      require('react').createElement(RN.View, { testID: 'unit-autocomplete', ...props }),
-  };
-});
+jest.mock(
+  '#/components/molecules/AutocompleteField/UnitAutocompleteField',
+  () => {
+    const RN = require('react-native');
+    return {
+      UnitAutocompleteField: (props: any) =>
+        require('react').createElement(RN.View, {
+          testID: 'unit-autocomplete',
+          ...props,
+        }),
+    };
+  },
+);
 
 jest.mock('#/components/atoms/Chip', () => {
   const RN = require('react-native');
@@ -85,8 +93,24 @@ const mockItem = {
   imageUrl: null,
   version: 1,
   itemUnits: [
-    { id: 'unit-1', symbol: 'lbs', name: 'Pounds', isDefault: true, isPreferred: false, displayNameSingular: 'pound', displayNamePlural: 'pounds' },
-    { id: 'unit-2', symbol: 'oz', name: 'Ounces', isDefault: false, isPreferred: false, displayNameSingular: 'ounce', displayNamePlural: 'ounces' },
+    {
+      id: 'unit-1',
+      symbol: 'lbs',
+      name: 'Pounds',
+      isDefault: true,
+      isPreferred: false,
+      displayNameSingular: 'pound',
+      displayNamePlural: 'pounds',
+    },
+    {
+      id: 'unit-2',
+      symbol: 'oz',
+      name: 'Ounces',
+      isDefault: false,
+      isPreferred: false,
+      displayNameSingular: 'ounce',
+      displayNamePlural: 'ounces',
+    },
   ],
 };
 
@@ -133,7 +157,9 @@ describe('QuantityEditSheet', () => {
   });
 
   it('initializes quantity when visibility changes', () => {
-    const { rerender } = render(<QuantityEditSheet {...defaultProps} visible={false} />);
+    const { rerender } = render(
+      <QuantityEditSheet {...defaultProps} visible={false} />,
+    );
     // Re-render with visible=true triggers the state initialization
     rerender(<QuantityEditSheet {...defaultProps} visible={true} />);
     expect(screen.getByText('2')).toBeTruthy();
@@ -153,7 +179,9 @@ describe('QuantityEditSheet', () => {
   });
 
   it('handles visible=false', () => {
-    const { toJSON } = render(<QuantityEditSheet {...defaultProps} visible={false} />);
+    const { toJSON } = render(
+      <QuantityEditSheet {...defaultProps} visible={false} />,
+    );
     expect(toJSON()).toBeTruthy();
   });
 });

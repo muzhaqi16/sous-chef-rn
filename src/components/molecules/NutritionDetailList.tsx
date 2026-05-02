@@ -26,9 +26,10 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
   actualServingGrams,
   style,
 }) => {
-  const nutritions = typeof nutritionsRaw === 'object' && nutritionsRaw !== null
-        ? (nutritionsRaw as NutritionsData)
-        : parseNutritions(nutritionsRaw);
+  const nutritions =
+    typeof nutritionsRaw === 'object' && nutritionsRaw !== null
+      ? (nutritionsRaw as NutritionsData)
+      : parseNutritions(nutritionsRaw);
 
   const entries = getNutrientEntries(nutritions, actualServingGrams);
 
@@ -74,7 +75,9 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
 
         return (
           <View key={category} style={styles.section}>
-            <Text style={styles.sectionTitle}>{getCategoryLabel(category)}</Text>
+            <Text style={styles.sectionTitle}>
+              {getCategoryLabel(category)}
+            </Text>
 
             {categoryEntries.map((entry, index) => (
               <View

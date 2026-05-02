@@ -1,10 +1,6 @@
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  createAddToQueryConnectionUpdater: jest.fn(
-    () => jest.fn(),
-  ),
-  createRemoveFromQueryConnectionUpdater: jest.fn(
-    () => jest.fn(),
-  ),
+  createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
 import { addToHomesCache, removeFromHomesCache } from '../utils';
@@ -21,7 +17,10 @@ const {
 describe('home hooks utils', () => {
   describe('addToHomesCache', () => {
     it('is created via createAddToQueryConnectionUpdater with homes and Home', () => {
-      expect(createAddToQueryConnectionUpdater).toHaveBeenCalledWith('homes', 'Home');
+      expect(createAddToQueryConnectionUpdater).toHaveBeenCalledWith(
+        'homes',
+        'Home',
+      );
     });
 
     it('is a callable function', () => {
@@ -43,7 +42,10 @@ describe('home hooks utils', () => {
 
   describe('removeFromHomesCache', () => {
     it('is created via createRemoveFromQueryConnectionUpdater with homes and Home', () => {
-      expect(createRemoveFromQueryConnectionUpdater).toHaveBeenCalledWith('homes', 'Home');
+      expect(createRemoveFromQueryConnectionUpdater).toHaveBeenCalledWith(
+        'homes',
+        'Home',
+      );
     });
 
     it('is a callable function', () => {

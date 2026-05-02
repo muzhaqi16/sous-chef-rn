@@ -15,7 +15,9 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   return (
     <View style={styles.container}>
       <SousChefLoader size="small" showBrand={false} message={message} />
-      {barcode ? <Text style={styles.barcodeText}>Barcode: {barcode}</Text> : null}
+      {barcode ? (
+        <Text style={styles.barcodeText}>Barcode: {barcode}</Text>
+      ) : null}
     </View>
   );
 };

@@ -104,18 +104,22 @@ export function extractMacroSummary(
     : nutritions.servingSize ?? null;
 
   return {
-    calories: nutritions.calories?.amount != null
-      ? nutritions.calories.amount * scale
-      : null,
-    protein: nutritions.protein?.amount != null
-      ? nutritions.protein.amount * scale
-      : null,
-    carbs: nutritions.carbohydrates?.amount != null
-      ? nutritions.carbohydrates.amount * scale
-      : null,
-    fat: nutritions.totalFat?.amount != null
-      ? nutritions.totalFat.amount * scale
-      : null,
+    calories:
+      nutritions.calories?.amount != null
+        ? nutritions.calories.amount * scale
+        : null,
+    protein:
+      nutritions.protein?.amount != null
+        ? nutritions.protein.amount * scale
+        : null,
+    carbs:
+      nutritions.carbohydrates?.amount != null
+        ? nutritions.carbohydrates.amount * scale
+        : null,
+    fat:
+      nutritions.totalFat?.amount != null
+        ? nutritions.totalFat.amount * scale
+        : null,
     servingSize,
   };
 }
@@ -355,16 +359,13 @@ export function getNutrientEntries(
 export function groupNutrientsByCategory(
   entries: NutrientEntry[],
 ): Record<NutrientCategory, NutrientEntry[]> {
-  return entries.reduce(
-    (acc, entry) => {
-      if (!acc[entry.category]) {
-        acc[entry.category] = [];
-      }
-      acc[entry.category].push(entry);
-      return acc;
-    },
-    {} as Record<NutrientCategory, NutrientEntry[]>,
-  );
+  return entries.reduce((acc, entry) => {
+    if (!acc[entry.category]) {
+      acc[entry.category] = [];
+    }
+    acc[entry.category].push(entry);
+    return acc;
+  }, {} as Record<NutrientCategory, NutrientEntry[]>);
 }
 
 /**

@@ -15,7 +15,9 @@ type NutritionScreenParams = {
   actualServingGrams?: number;
 };
 
-export const NutritionScreen: React.FC<StaticScreenProps<NutritionScreenParams>> = ({ route }) => {
+export const NutritionScreen: React.FC<
+  StaticScreenProps<NutritionScreenParams>
+> = ({ route }) => {
   const { goBack } = useAppNavigation();
   const { itemName, nutritions, actualServingGrams } = route.params;
 

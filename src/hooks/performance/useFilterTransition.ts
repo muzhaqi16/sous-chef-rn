@@ -71,7 +71,8 @@ export function useFilterTransition<T>(
   return {
     filteredItems,
     isPending,
-    applyFilter };
+    applyFilter,
+  };
 }
 
 /**
@@ -116,5 +117,6 @@ export function useFilterTransitionWithDeps<T>(
   return {
     filteredItems,
     isPending,
-    applyFilter };
+    applyFilter,
+  };
 }

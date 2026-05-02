@@ -136,7 +136,8 @@ export const InfoRow: React.FC<InfoRowProps> = ({
       ]}
     >
       <Text style={[commonStyles.body, styles.label, labelStyle]}>
-        {label}{showColon ? ':' : ''}
+        {label}
+        {showColon ? ':' : ''}
       </Text>
       {icon ? (
         <View style={styles.valueWithIcon}>

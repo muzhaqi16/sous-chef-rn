@@ -52,9 +52,7 @@ describe('NutritionSummary', () => {
   });
 
   it('renders highlight badges when showHighlights is true', () => {
-    render(
-      <NutritionSummary nutritions={mockNutritionData} showHighlights />,
-    );
+    render(<NutritionSummary nutritions={mockNutritionData} showHighlights />);
     expect(screen.getByText('High Protein')).toBeTruthy();
   });
 
@@ -88,9 +86,7 @@ describe('NutritionSummary', () => {
     const { hasNutritionData } = require('#utils/nutritionUtils');
     (hasNutritionData as jest.Mock).mockReturnValue(false);
 
-    const { toJSON } = render(
-      <NutritionSummary nutritions={null} />,
-    );
+    const { toJSON } = render(<NutritionSummary nutritions={null} />);
     expect(toJSON()).toBeNull();
   });
 });

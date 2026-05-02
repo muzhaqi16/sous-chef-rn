@@ -4,11 +4,11 @@ import { DocumentNode } from 'graphql';
  * Status of a queued mutation
  */
 export enum QueueStatus {
-  PENDING = 'pending',           // Waiting to be processed
-  PROCESSING = 'processing',     // Currently being sent to server
-  FAILED = 'failed',             // Failed after retries (network/server error)
-  AUTH_ERROR = 'auth_error',     // Failed due to authentication issues
-  SUCCESS = 'success',           // Successfully processed (kept briefly for reconciliation)
+  PENDING = 'pending', // Waiting to be processed
+  PROCESSING = 'processing', // Currently being sent to server
+  FAILED = 'failed', // Failed after retries (network/server error)
+  AUTH_ERROR = 'auth_error', // Failed due to authentication issues
+  SUCCESS = 'success', // Successfully processed (kept briefly for reconciliation)
 }
 
 /**
@@ -27,29 +27,29 @@ export interface QueueError {
  */
 export interface QueuedMutation {
   // Identification
-  id: string;                    // UUID for tracking
-  userId: string;                // User who created the mutation (critical for auth)
-  operationName: string;         // GraphQL operation name for debugging
+  id: string; // UUID for tracking
+  userId: string; // User who created the mutation (critical for auth)
+  operationName: string; // GraphQL operation name for debugging
 
   // Mutation details
-  mutation: DocumentNode;        // GraphQL mutation document
+  mutation: DocumentNode; // GraphQL mutation document
   variables: Record<string, any>; // Mutation variables
-  optimisticResponse?: any;      // Optimistic response for cache updates
+  optimisticResponse?: any; // Optimistic response for cache updates
   context?: Record<string, any>; // Additional context (e.g., headers)
 
   // Status tracking
   status: QueueStatus;
-  createdAt: number;             // Timestamp when added to queue
-  updatedAt: number;             // Last status update timestamp
-  processedAt?: number;          // When successfully processed
+  createdAt: number; // Timestamp when added to queue
+  updatedAt: number; // Last status update timestamp
+  processedAt?: number; // When successfully processed
 
   // Retry logic
-  retryCount: number;            // Number of retry attempts
-  maxRetries: number;            // Maximum retries before marking as failed
-  lastError?: QueueError;        // Last error encountered
+  retryCount: number; // Number of retry attempts
+  maxRetries: number; // Maximum retries before marking as failed
+  lastError?: QueueError; // Last error encountered
 
   // Auth
-  requiresAuth: boolean;         // Whether mutation requires authentication
+  requiresAuth: boolean; // Whether mutation requires authentication
 }
 
 /**
@@ -61,19 +61,19 @@ export interface QueueStats {
   processing: number;
   failed: number;
   authErrors: number;
-  oldestMutationAge?: number;    // Age of oldest pending mutation in ms
+  oldestMutationAge?: number; // Age of oldest pending mutation in ms
 }
 
 /**
  * Configuration for the queue manager
  */
 export interface QueueConfig {
-  maxQueueSize: number;          // Maximum mutations to queue (prevent unbounded growth)
-  maxRetries: number;            // Default max retries per mutation
-  retryDelayMs: number;          // Delay between retries (with exponential backoff)
-  processingTimeoutMs: number;   // Timeout for individual mutation processing
-  batchSize: number;             // Number of mutations to process concurrently
-  enablePersistence: boolean;    // Whether to persist queue to storage
+  maxQueueSize: number; // Maximum mutations to queue (prevent unbounded growth)
+  maxRetries: number; // Default max retries per mutation
+  retryDelayMs: number; // Delay between retries (with exponential backoff)
+  processingTimeoutMs: number; // Timeout for individual mutation processing
+  batchSize: number; // Number of mutations to process concurrently
+  enablePersistence: boolean; // Whether to persist queue to storage
 }
 
 /**

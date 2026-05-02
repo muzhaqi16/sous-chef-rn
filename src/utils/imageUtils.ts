@@ -33,9 +33,9 @@ export function pickImageUrl(
 ): string | null {
   if (!images || images.length === 0) return null;
   return (
-    images.find(img => img.kind === preferredKind)?.url
-    ?? images.find(img => img.kind === 'MAIN')?.url
-    ?? null
+    images.find(img => img.kind === preferredKind)?.url ??
+    images.find(img => img.kind === 'MAIN')?.url ??
+    null
   );
 }
 
@@ -48,7 +48,14 @@ export function pickImageUrl(
  *   contexts. Pass 'large' for detail/gallery screens.
  */
 export function resolveImageUrl(
-  source: { imageUrl?: string | null; images?: unknown; item?: { imageUrl?: string | null; images?: unknown } | null } | null | undefined,
+  source:
+    | {
+        imageUrl?: string | null;
+        images?: unknown;
+        item?: { imageUrl?: string | null; images?: unknown } | null;
+      }
+    | null
+    | undefined,
   preferredSize: PreferredSize = 'small',
 ): string | null {
   if (!source) return null;
@@ -69,7 +76,10 @@ export function resolveImageUrl(
 
   // 3. Try own imageUrl (validates it's a full URL)
   const ownUrl = source.imageUrl;
-  if (ownUrl && (ownUrl.startsWith('http://') || ownUrl.startsWith('https://'))) {
+  if (
+    ownUrl &&
+    (ownUrl.startsWith('http://') || ownUrl.startsWith('https://'))
+  ) {
     return ownUrl;
   }
 
@@ -104,7 +114,10 @@ export const getItemImageUrl = (
     // Only return valid URLs - filenames without full path are invalid
     // The API should be returning full CDN URLs, not just filenames
     if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-      console.warn('[getItemImageUrl] Invalid imageUrl (not a full URL):', imageUrl);
+      console.warn(
+        '[getItemImageUrl] Invalid imageUrl (not a full URL):',
+        imageUrl,
+      );
       return null;
     }
     return imageUrl;
@@ -212,7 +225,10 @@ export function getPerspectiveLabel(perspective: string): string {
     nutrition_label: 'Nutrition',
     ingredient_list: 'Ingredients',
   };
-  return labels[perspective] || perspective.charAt(0).toUpperCase() + perspective.slice(1);
+  return (
+    labels[perspective] ||
+    perspective.charAt(0).toUpperCase() + perspective.slice(1)
+  );
 }
 
 /**

@@ -1,8 +1,4 @@
-import React, {
-  
-  useEffect,
-  useRef,
-  useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { Pressable, ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -63,7 +59,8 @@ export function InlineAutocomplete<T>({
   keyExtractor,
   onSelect,
   footerComponent,
-  autoCapitalize = 'none' }: InlineAutocompleteProps<T>) {
+  autoCapitalize = 'none',
+}: InlineAutocompleteProps<T>) {
   const { theme } = useUnistyles();
 
   // Track internal search term for visibility logic
@@ -104,34 +101,34 @@ export function InlineAutocomplete<T>({
   }, [value]);
 
   const handleTextChange = (text: string) => {
-      // Store value immediately in ref
-      inputValueRef.current = text;
-      setSearchTerm(text);
-      setShowDropdown(true);
+    // Store value immediately in ref
+    inputValueRef.current = text;
+    setSearchTerm(text);
+    setShowDropdown(true);
 
-      // Clear existing timer
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
+    // Clear existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
 
-      // Notify parent after debounce
-      debounceTimerRef.current = setTimeout(() => {
-        onChangeText(text);
-        debounceTimerRef.current = null;
-      }, debounceMs);
-    };
+    // Notify parent after debounce
+    debounceTimerRef.current = setTimeout(() => {
+      onChangeText(text);
+      debounceTimerRef.current = null;
+    }, debounceMs);
+  };
 
   const handleSelect = (item: T) => {
-      setShowDropdown(false);
+    setShowDropdown(false);
 
-      // Clear pending debounce so value sync effect works immediately
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-        debounceTimerRef.current = null;
-      }
+    // Clear pending debounce so value sync effect works immediately
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
 
-      onSelect(item);
-    };
+    onSelect(item);
+  };
 
   const handleBlur = () => {
     // Delay hiding to allow tap on suggestion
@@ -168,31 +165,34 @@ export function InlineAutocomplete<T>({
       </View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      {!!shouldShowDropdown && !!(slicedItems.length > 0 || footerComponent) && (
-        <View style={styles.suggestionsContainer}>
-          <ScrollView
-            style={styles.scrollView}
-            keyboardShouldPersistTaps="handled"
-            nestedScrollEnabled={true}
-            showsVerticalScrollIndicator={true}
-          >
-            {slicedItems.map((item, index) => (
-              <React.Fragment key={keyExtractor(item)}>
-                <Pressable
-                  onPress={() => handleSelect(item)}
-                  style={({ pressed }) => ({ opacity: pressed ? theme.opacity.pressed : 1 })}
-                >
-                  {renderItem(item, index)}
-                </Pressable>
-                {index < slicedItems.length - 1 && (
-                  <View style={styles.separator} />
-                )}
-              </React.Fragment>
-            ))}
-            {footerComponent}
-          </ScrollView>
-        </View>
-      )}
+      {!!shouldShowDropdown &&
+        !!(slicedItems.length > 0 || footerComponent) && (
+          <View style={styles.suggestionsContainer}>
+            <ScrollView
+              style={styles.scrollView}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}
+              showsVerticalScrollIndicator={true}
+            >
+              {slicedItems.map((item, index) => (
+                <React.Fragment key={keyExtractor(item)}>
+                  <Pressable
+                    onPress={() => handleSelect(item)}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? theme.opacity.pressed : 1,
+                    })}
+                  >
+                    {renderItem(item, index)}
+                  </Pressable>
+                  {index < slicedItems.length - 1 && (
+                    <View style={styles.separator} />
+                  )}
+                </React.Fragment>
+              ))}
+              {footerComponent}
+            </ScrollView>
+          </View>
+        )}
     </View>
   );
 }
@@ -200,11 +200,13 @@ export function InlineAutocomplete<T>({
 const styles = StyleSheet.create(theme => ({
   container: {
     position: 'relative',
-    zIndex: 10 },
+    zIndex: 10,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative' },
+    position: 'relative',
+  },
   input: {
     flex: 1,
     height: theme.sizes.input.md,
@@ -215,16 +217,20 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.inputBackground,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: theme.colors.inputText },
+    color: theme.colors.inputText,
+  },
   inputError: {
-    borderColor: theme.colors.error },
+    borderColor: theme.colors.error,
+  },
   errorText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.error,
-    marginTop: theme.spacing.xs },
+    marginTop: theme.spacing.xs,
+  },
   loadingIndicator: {
     position: 'absolute',
-    right: theme.spacing.sm },
+    right: theme.spacing.sm,
+  },
   suggestionsContainer: {
     position: 'absolute',
     top: '100%',
@@ -238,9 +244,13 @@ const styles = StyleSheet.create(theme => ({
     maxHeight: 220,
     zIndex: theme.zIndex.dropdown,
     overflow: 'hidden',
-    ...theme.shadows.lg },
+    ...theme.shadows.lg,
+  },
   scrollView: {
-    flex: 1 },
+    flex: 1,
+  },
   separator: {
     height: 1,
-    backgroundColor: theme.colors.borderLight } }));
+    backgroundColor: theme.colors.borderLight,
+  },
+}));

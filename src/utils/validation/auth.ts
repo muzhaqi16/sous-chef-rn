@@ -1,5 +1,5 @@
 import { object, string, ref } from 'yup';
-import {emailRule, passwordRule} from './common';
+import { emailRule, passwordRule } from './common';
 
 // ----------------------------------------------------------------------------
 

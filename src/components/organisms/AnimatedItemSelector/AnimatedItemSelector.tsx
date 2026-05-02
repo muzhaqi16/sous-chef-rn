@@ -2,10 +2,7 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { SelectorContent } from './SelectorContent';
-import type {
-  AnimatedItemSelectorProps,
-  ItemSelectorRef,
-} from './types';
+import type { AnimatedItemSelectorProps, ItemSelectorRef } from './types';
 
 export const AnimatedItemSelector = forwardRef<
   ItemSelectorRef,
@@ -21,7 +18,7 @@ export const AnimatedItemSelector = forwardRef<
       isActive: () => trayRef.current?.isActive() ?? false,
       toggle: () => trayRef.current?.toggle(),
     }),
-    []
+    [],
   );
 
   return (

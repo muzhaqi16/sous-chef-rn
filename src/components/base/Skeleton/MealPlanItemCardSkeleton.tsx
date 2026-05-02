@@ -16,7 +16,11 @@ export const MealPlanItemCardSkeleton: React.FC = () => (
 
     {/* Image */}
     <View style={styles.image}>
-      <SkeletonBase width={44} height={44} borderRadius={styles.imageBorderRadius.borderRadius} />
+      <SkeletonBase
+        width={44}
+        height={44}
+        borderRadius={styles.imageBorderRadius.borderRadius}
+      />
     </View>
 
     {/* Content */}

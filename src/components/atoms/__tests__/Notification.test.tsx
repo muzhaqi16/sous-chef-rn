@@ -23,7 +23,9 @@ describe('NotificationBanner', () => {
   });
 
   it('displays the message text', () => {
-    render(<NotificationBanner {...defaultProps} message="Something happened" />);
+    render(
+      <NotificationBanner {...defaultProps} message="Something happened" />,
+    );
     expect(screen.getByText('Something happened')).toBeTruthy();
   });
 

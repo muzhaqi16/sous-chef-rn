@@ -40,7 +40,9 @@ export function formatQuantityDisplay(quantity: number, unit?: string): string {
 /**
  * Get display text for a unit, preferring symbol over name.
  */
-export function getUnitDisplayText(unit?: { symbol?: string; name?: string } | null): string {
+export function getUnitDisplayText(
+  unit?: { symbol?: string; name?: string } | null,
+): string {
   return unit?.symbol || unit?.name || '';
 }
 

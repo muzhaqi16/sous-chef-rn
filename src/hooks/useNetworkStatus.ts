@@ -20,24 +20,21 @@ import { useAppStore } from '#store/useAppStore';
 export function useNetworkStatus() {
   const setNetworkStatus = useAppStore(state => state.setNetworkStatus);
 
-  useEffect(
-    () => {
-      // Get initial network state
-      NetInfo.fetch().then(state => {
-        updateNetworkState(state, setNetworkStatus);
-      });
+  useEffect(() => {
+    // Get initial network state
+    NetInfo.fetch().then(state => {
+      updateNetworkState(state, setNetworkStatus);
+    });
 
-      // Subscribe to network state changes
-      const unsubscribe = NetInfo.addEventListener(state => {
-        updateNetworkState(state, setNetworkStatus);
-      });
+    // Subscribe to network state changes
+    const unsubscribe = NetInfo.addEventListener(state => {
+      updateNetworkState(state, setNetworkStatus);
+    });
 
-      return () => {
-        unsubscribe();
-      };
-    },
-    [setNetworkStatus],
-  );
+    return () => {
+      unsubscribe();
+    };
+  }, [setNetworkStatus]);
 }
 
 /**
@@ -49,9 +46,10 @@ function updateNetworkState(
     isOnline: boolean;
     isInternetReachable: boolean | null;
     networkType: string | null;
-  }) => void
+  }) => void,
 ) {
-  const isOnline = state.isConnected === true && state.isInternetReachable !== false;
+  const isOnline =
+    state.isConnected === true && state.isInternetReachable !== false;
 
   setNetworkStatus({
     isOnline,
@@ -59,4 +57,3 @@ function updateNetworkState(
     networkType: state.type,
   });
 }
-

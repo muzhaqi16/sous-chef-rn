@@ -1,4 +1,4 @@
-import {mq} from 'react-native-unistyles';
+import { mq } from 'react-native-unistyles';
 
 export const responsive = {
   // Breakpoint helpers

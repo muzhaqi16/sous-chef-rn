@@ -26,16 +26,21 @@ jest.mock('../AnimatedActionButton', () => {
 });
 
 describe('RightActions', () => {
-  const mockProgress = { value: 0.5, addListener: jest.fn(), removeListener: jest.fn(), modify: jest.fn(), get: jest.fn(), set: jest.fn() };
+  const mockProgress = {
+    value: 0.5,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    modify: jest.fn(),
+    get: jest.fn(),
+    set: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('returns null when no edit or delete callbacks are provided', () => {
-    const { toJSON } = render(
-      <RightActions progress={mockProgress as any} />,
-    );
+    const { toJSON } = render(<RightActions progress={mockProgress as any} />);
     expect(toJSON()).toBeNull();
   });
 

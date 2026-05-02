@@ -2,7 +2,7 @@ import {
   NotificationItem,
   NotificationPriority,
 } from '#store/slices/notificationSlice';
-import {safeParseDate} from '#utils/dateUtils';
+import { safeParseDate } from '#utils/dateUtils';
 
 export interface NotificationGroups {
   urgent: NotificationItem[];
@@ -54,9 +54,9 @@ export const groupNotificationsByDate = (
 
 export const createSectionListData = (groups: NotificationGroups) => {
   return [
-    {title: '🚨 Urgent', data: groups.urgent},
-    {title: 'Today', data: groups.today},
-    {title: 'Yesterday', data: groups.yesterday},
-    {title: 'Older', data: groups.older},
+    { title: '🚨 Urgent', data: groups.urgent },
+    { title: 'Today', data: groups.today },
+    { title: 'Yesterday', data: groups.yesterday },
+    { title: 'Older', data: groups.older },
   ].filter(section => section.data.length > 0);
 };

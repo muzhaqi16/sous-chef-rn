@@ -40,14 +40,16 @@ export function isQueryComplexityError(error: any): boolean {
     return error.graphQLErrors.some(
       (err: any) =>
         err.extensions?.code === QueryComplexityErrorType.TOO_COMPLEX ||
-        err.extensions?.code === QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED
+        err.extensions?.code ===
+          QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
     );
   }
 
   if ('extensions' in error && error.extensions) {
     return (
       error.extensions.code === QueryComplexityErrorType.TOO_COMPLEX ||
-      error.extensions.code === QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED
+      error.extensions.code ===
+        QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED
     );
   }
 
@@ -60,14 +62,17 @@ export function isQueryComplexityError(error: any): boolean {
  * @param error - Error containing query complexity issue
  * @returns Query complexity details or null
  */
-export function getQueryComplexityDetails(error: any): QueryComplexityDetails | null {
+export function getQueryComplexityDetails(
+  error: any,
+): QueryComplexityDetails | null {
   let complexityError: any | undefined;
 
   if ('graphQLErrors' in error && error.graphQLErrors) {
     complexityError = error.graphQLErrors.find(
       (err: any) =>
         err.extensions?.code === QueryComplexityErrorType.TOO_COMPLEX ||
-        err.extensions?.code === QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED
+        err.extensions?.code ===
+          QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
     );
   } else if ('extensions' in error && error.extensions) {
     complexityError = error;
@@ -143,7 +148,7 @@ export function getQueryComplexityMessage(error: any): string {
  */
 export function handleQueryComplexityError(
   error: any,
-  onRetryWithReducedComplexity?: () => void | Promise<void>
+  onRetryWithReducedComplexity?: () => void | Promise<void>,
 ): boolean {
   if (!isQueryComplexityError(error)) {
     return false;
@@ -169,4 +174,3 @@ export function handleQueryComplexityError(
 
   return true;
 }
-

@@ -59,7 +59,11 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
 jest.mock('#components/base/Button', () => ({
   Button: ({ title, onPress, disabled }: any) => {
     const { Pressable, Text } = require('react-native');
-    return <Pressable onPress={onPress} disabled={disabled} testID="upload-button"><Text>{title}</Text></Pressable>;
+    return (
+      <Pressable onPress={onPress} disabled={disabled} testID="upload-button">
+        <Text>{title}</Text>
+      </Pressable>
+    );
   },
 }));
 jest.mock('#components/atoms/CachedImage', () => ({
@@ -77,7 +81,9 @@ describe('ProfilePictureUploadScreen', () => {
 
   it('shows subtitle', () => {
     render(<ProfilePictureUploadScreen />);
-    expect(screen.getByText('Add a photo to personalize your profile')).toBeTruthy();
+    expect(
+      screen.getByText('Add a photo to personalize your profile'),
+    ).toBeTruthy();
   });
 
   it('shows Choose from Gallery option', () => {

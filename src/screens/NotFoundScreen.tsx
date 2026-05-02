@@ -1,8 +1,8 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {useNavigation, CommonActions} from '@react-navigation/native';
-import {Button} from '#/components/base/Button';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useNavigation, CommonActions } from '@react-navigation/native';
+import { Button } from '#/components/base/Button';
 
 export const NotFoundScreen = () => {
   const navigation = useNavigation();
@@ -11,7 +11,7 @@ export const NotFoundScreen = () => {
     navigation.dispatch(
       CommonActions.reset({
         index: 0,
-        routes: [{name: 'Home'}],
+        routes: [{ name: 'Home' }],
       }),
     );
   };

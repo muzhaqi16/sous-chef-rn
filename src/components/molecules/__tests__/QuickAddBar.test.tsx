@@ -24,7 +24,9 @@ describe('QuickAddBar', () => {
   });
 
   it('returns null when visible is false', () => {
-    const { toJSON } = render(<QuickAddBar onAddItem={onAddItem} visible={false} />);
+    const { toJSON } = render(
+      <QuickAddBar onAddItem={onAddItem} visible={false} />,
+    );
     expect(toJSON()).toBeNull();
   });
 

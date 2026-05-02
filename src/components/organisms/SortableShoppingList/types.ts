@@ -1,4 +1,9 @@
-import type { ReactNode, ComponentType, ReactElement, JSXElementConstructor } from 'react';
+import type {
+  ReactNode,
+  ComponentType,
+  ReactElement,
+  JSXElementConstructor,
+} from 'react';
 import type { ScrollViewProps } from 'react-native';
 
 // Positions type for drag-and-drop animation
@@ -48,7 +53,8 @@ export interface SortableShoppingListItem {
 }
 
 // Props for the main sortable list component
-export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' | 'renderItem' | 'keyExtractor'> {
+export interface SortableShoppingListProps
+  extends Omit<ScrollViewProps, 'data' | 'renderItem' | 'keyExtractor'> {
   items: SortableShoppingListItem[];
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
@@ -71,7 +77,10 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   disabled?: boolean;
   groupByPurchased?: boolean;
   ListHeaderComponent?: ReactElement | null;
-  ListFooterComponent?: ReactElement<unknown, string | JSXElementConstructor<any>> | ComponentType<any> | null;
+  ListFooterComponent?:
+    | ReactElement<unknown, string | JSXElementConstructor<any>>
+    | ComponentType<any>
+    | null;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
   onRefresh?: () => void | Promise<void>;
@@ -94,4 +103,3 @@ export interface SortOrderUpdate {
   id: string;
   sortOrder: string; // Changed from number to string for fractional indexing
 }
-

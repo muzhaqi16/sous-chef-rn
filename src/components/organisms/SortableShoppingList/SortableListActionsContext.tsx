@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useRef, useEffect, useState, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useRef,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
 
 /**
  * Actions available for list items.
@@ -43,7 +50,8 @@ interface SortableListActionsContextValue {
   permissionsRef: React.RefObject<SortableListPermissions>;
 }
 
-const SortableListActionsContext = createContext<SortableListActionsContextValue | null>(null);
+const SortableListActionsContext =
+  createContext<SortableListActionsContextValue | null>(null);
 
 /**
  * Hook to access list actions from context.
@@ -52,7 +60,9 @@ const SortableListActionsContext = createContext<SortableListActionsContextValue
 export const useSortableListActions = () => {
   const context = useContext(SortableListActionsContext);
   if (!context) {
-    throw new Error('useSortableListActions must be used within SortableListActionsProvider');
+    throw new Error(
+      'useSortableListActions must be used within SortableListActionsProvider',
+    );
   }
   return context;
 };
@@ -70,11 +80,9 @@ interface SortableListActionsProviderProps {
  * without causing re-renders when parent callbacks change.
  * This eliminates action callbacks from renderItem dependency arrays.
  */
-export const SortableListActionsProvider: React.FC<SortableListActionsProviderProps> = ({
-  actions,
-  permissions,
-  children,
-}) => {
+export const SortableListActionsProvider: React.FC<
+  SortableListActionsProviderProps
+> = ({ actions, permissions, children }) => {
   // Store latest actions in ref - updated via effect but doesn't trigger re-renders
   const actionsRef = useRef(actions);
   useEffect(() => {
@@ -111,9 +119,14 @@ export const SortableListActionsProvider: React.FC<SortableListActionsProviderPr
     onTogglePurchase: (id: string) => actionsRef.current.onTogglePurchase?.(id),
     onMoveToPantry: (id: string) => actionsRef.current.onMoveToPantry?.(id),
     onQuantityPress: (id: string) => actionsRef.current.onQuantityPress?.(id),
-    onSwipeableWillOpen: (ref: any) => actionsRef.current.onSwipeableWillOpen?.(ref),
+    onSwipeableWillOpen: (ref: any) =>
+      actionsRef.current.onSwipeableWillOpen?.(ref),
     onSwipeableClose: () => actionsRef.current.onSwipeableClose?.(),
-    onSortOrderUpdate: (itemId: string, afterItemId: string | null, beforeItemId: string | null) =>
+    onSortOrderUpdate: (
+      itemId: string,
+      afterItemId: string | null,
+      beforeItemId: string | null,
+    ) =>
       actionsRef.current.onSortOrderUpdate?.(itemId, afterItemId, beforeItemId),
   }));
 

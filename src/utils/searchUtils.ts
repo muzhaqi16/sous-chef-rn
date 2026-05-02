@@ -8,9 +8,7 @@
 /**
  * Creates a case-insensitive search predicate for item names
  */
-export const createItemNameSearch = <
-  T extends { itemName?: string | null },
->(
+export const createItemNameSearch = <T extends { itemName?: string | null }>(
   item: T,
   query: string,
 ): boolean => {
@@ -21,9 +19,7 @@ export const createItemNameSearch = <
 /**
  * Creates a case-insensitive search predicate for categories
  */
-export const createCategorySearch = <
-  T extends { category?: string | null },
->(
+export const createCategorySearch = <T extends { category?: string | null }>(
   item: T,
   query: string,
 ): boolean => {
@@ -69,4 +65,3 @@ export const pantryItemSearch = <
 
   return createItemNameSearch(item, trimmedQuery);
 };
-

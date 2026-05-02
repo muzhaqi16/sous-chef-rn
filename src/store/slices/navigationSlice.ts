@@ -3,8 +3,8 @@
 // Navigation and onboarding state
 // ============================================
 
-import {StateCreator} from 'zustand';
-import {RootState} from '../index';
+import { StateCreator } from 'zustand';
+import { RootState } from '../index';
 
 export interface DeepLinkAction {
   type: 'email_verification' | 'password_reset' | 'accept_invitation';

@@ -55,7 +55,9 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
           </Text>
         )}
         <View style={styles.emptyState}>
-          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+          <Text
+            style={[styles.emptyText, { color: theme.colors.textSecondary }]}
+          >
             No data available
           </Text>
         </View>
@@ -93,13 +95,19 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
                 />
                 <View style={styles.legendTextContainer}>
                   <Text
-                    style={[styles.legendText, { color: theme.colors.textPrimary }]}
+                    style={[
+                      styles.legendText,
+                      { color: theme.colors.textPrimary },
+                    ]}
                     numberOfLines={1}
                   >
                     {item.label}
                   </Text>
                   <Text
-                    style={[styles.legendPercentage, { color: theme.colors.textSecondary }]}
+                    style={[
+                      styles.legendPercentage,
+                      { color: theme.colors.textSecondary },
+                    ]}
                   >
                     {item.percentage.toFixed(0)}%
                   </Text>

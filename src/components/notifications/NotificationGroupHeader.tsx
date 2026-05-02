@@ -1,6 +1,6 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 
 interface NotificationGroupHeaderProps {
   title: string;
@@ -8,7 +8,7 @@ interface NotificationGroupHeaderProps {
 
 export const NotificationGroupHeader: React.FC<
   NotificationGroupHeaderProps
-> = ({title}) => {
+> = ({ title }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>

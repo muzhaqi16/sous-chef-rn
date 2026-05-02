@@ -67,9 +67,9 @@ export const ListAnimationProvider: React.FC<ListAnimationProviderProps> = ({
   );
 
   // Track entry animation expiry timeouts for cleanup
-  const entryAnimationTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
+  const entryAnimationTimeoutsRef = useRef<
+    Map<string, ReturnType<typeof setTimeout>>
+  >(new Map());
 
   // Cleanup all pending timeouts on unmount to prevent memory leaks
   useEffect(() => {
@@ -103,7 +103,10 @@ export const ListAnimationProvider: React.FC<ListAnimationProviderProps> = ({
    * Register an item's animation trigger function.
    * Called by item component via useLayoutEffect on mount.
    */
-  const registerAnimationTrigger = (itemId: string, trigger: ExitAnimationTrigger) => {
+  const registerAnimationTrigger = (
+    itemId: string,
+    trigger: ExitAnimationTrigger,
+  ) => {
     animationTriggersRef.current.set(itemId, trigger);
 
     // Check if there's a pending animation waiting for this item to register
@@ -143,7 +146,11 @@ export const ListAnimationProvider: React.FC<ListAnimationProviderProps> = ({
    * O(1) performance - directly calls registered trigger.
    * No context state changes = no re-renders.
    */
-  const scheduleAnimation = (itemId: string, direction: AnimationDirection, onComplete: () => void) => {
+  const scheduleAnimation = (
+    itemId: string,
+    direction: AnimationDirection,
+    onComplete: () => void,
+  ) => {
     // Check if animation already pending for this item (deduplicate)
     if (pendingAnimationsRef.current.has(itemId)) {
       return;
@@ -178,7 +185,10 @@ export const ListAnimationProvider: React.FC<ListAnimationProviderProps> = ({
    * Schedule an entry animation for an item appearing in a new list.
    * Called after cache update moves the item.
    */
-  const scheduleEntryAnimation = (itemId: string, direction: AnimationDirection) => {
+  const scheduleEntryAnimation = (
+    itemId: string,
+    direction: AnimationDirection,
+  ) => {
     // Clear any existing timeout for this item
     const existingTimeout = entryAnimationTimeoutsRef.current.get(itemId);
     if (existingTimeout) {

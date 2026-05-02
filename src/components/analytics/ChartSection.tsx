@@ -34,8 +34,14 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     if (error) {
       return (
         <View style={styles.stateContainer}>
-          <Icon name="alert-circle-outline" size={40} color={theme.colors.error} />
-          <Text style={[styles.stateText, { color: theme.colors.error }]}>{error}</Text>
+          <Icon
+            name="alert-circle-outline"
+            size={40}
+            color={theme.colors.error}
+          />
+          <Text style={[styles.stateText, { color: theme.colors.error }]}>
+            {error}
+          </Text>
         </View>
       );
     }
@@ -43,8 +49,14 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     if (isEmpty) {
       return (
         <View style={styles.stateContainer}>
-          <Icon name="bar-chart-outline" size={40} color={theme.colors.textSecondary} />
-          <Text style={[styles.stateText, { color: theme.colors.textSecondary }]}>
+          <Icon
+            name="bar-chart-outline"
+            size={40}
+            color={theme.colors.textSecondary}
+          />
+          <Text
+            style={[styles.stateText, { color: theme.colors.textSecondary }]}
+          >
             {emptyMessage}
           </Text>
         </View>
@@ -56,7 +68,9 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-      <Text style={[styles.title, { color: theme.colors.textPrimary }]}>{title}</Text>
+      <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+        {title}
+      </Text>
       {renderContent()}
     </View>
   );

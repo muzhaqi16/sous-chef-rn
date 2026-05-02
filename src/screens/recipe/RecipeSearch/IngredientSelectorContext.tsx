@@ -1,11 +1,18 @@
-import React, { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from 'react';
 
 interface IngredientSelectorContextValue {
   selectedIngredients: Set<string>;
   toggleIngredient: (name: string) => void;
 }
 
-const IngredientSelectorContext = createContext<IngredientSelectorContextValue | null>(null);
+const IngredientSelectorContext =
+  createContext<IngredientSelectorContextValue | null>(null);
 
 export const IngredientSelectorProvider: React.FC<{
   children: ReactNode;
@@ -13,15 +20,19 @@ export const IngredientSelectorProvider: React.FC<{
   toggleIngredient: (name: string) => void;
 }> = ({ children, selectedIngredients, toggleIngredient }) => {
   const toggleRef = useRef(toggleIngredient);
-  useEffect(() => { toggleRef.current = toggleIngredient; });
+  useEffect(() => {
+    toggleRef.current = toggleIngredient;
+  });
 
   const selectedRef = useRef(selectedIngredients);
-  useEffect(() => { selectedRef.current = selectedIngredients; });
+  useEffect(() => {
+    selectedRef.current = selectedIngredients;
+  });
 
   const stableToggle = (name: string) => toggleRef.current(name);
 
   const value: IngredientSelectorContextValue = {
-    selectedIngredients,  // pass through directly — extraData handles re-renders
+    selectedIngredients, // pass through directly — extraData handles re-renders
     toggleIngredient: stableToggle,
   };
 
@@ -34,6 +45,9 @@ export const IngredientSelectorProvider: React.FC<{
 
 export const useIngredientSelector = (): IngredientSelectorContextValue => {
   const ctx = useContext(IngredientSelectorContext);
-  if (!ctx) throw new Error('useIngredientSelector must be used within IngredientSelectorProvider');
+  if (!ctx)
+    throw new Error(
+      'useIngredientSelector must be used within IngredientSelectorProvider',
+    );
   return ctx;
 };

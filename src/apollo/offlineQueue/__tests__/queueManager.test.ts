@@ -373,11 +373,7 @@ describe('QueueManager', () => {
         variables: { input: { itemId: 'item-A', afterId: 'c' } },
       });
 
-      const { merged, removed } = mergeMoveItemMutations([
-        move1,
-        move2,
-        move3,
-      ]);
+      const { merged, removed } = mergeMoveItemMutations([move1, move2, move3]);
 
       expect(removed).toContain('move-1');
       expect(removed).toContain('move-2');
@@ -697,11 +693,16 @@ describe('QueueManager', () => {
   // convertToSyncMutation
   // -------------------------------------------------------------------------
   describe('convertToSyncMutation', () => {
-    let convertToSyncMutation: (mutation: QueuedMutation) => { syncMutation: any; syncVariables: any };
+    let convertToSyncMutation: (mutation: QueuedMutation) => {
+      syncMutation: any;
+      syncVariables: any;
+    };
     const { client: mockClient } = require('../../client');
 
     beforeEach(() => {
-      convertToSyncMutation = (manager as any).convertToSyncMutation.bind(manager);
+      convertToSyncMutation = (manager as any).convertToSyncMutation.bind(
+        manager,
+      );
     });
 
     it('converts CreatePantryItem to SyncPantryItemDocument', () => {
@@ -740,7 +741,10 @@ describe('QueueManager', () => {
       });
       const { syncVariables } = convertToSyncMutation(mutation);
       expect(syncVariables.clientId).toBe('sl-1');
-      expect(syncVariables.input).toEqual({ id: 'sl-1', shoppingListId: 'list-1' });
+      expect(syncVariables.input).toEqual({
+        id: 'sl-1',
+        shoppingListId: 'list-1',
+      });
     });
 
     it('converts UpdateShoppingListItemQuantity with cache read', () => {
@@ -779,7 +783,7 @@ describe('QueueManager', () => {
         variables: { id: 'missing-item', quantity: '2' },
       });
       expect(() => convertToSyncMutation(mutation)).toThrow(
-        'Cannot sync UpdateShoppingListItemQuantity'
+        'Cannot sync UpdateShoppingListItemQuantity',
       );
     });
 
@@ -796,7 +800,9 @@ describe('QueueManager', () => {
     it('converts MoveShoppingListItem to SyncMoveShoppingListItemDocument', () => {
       const mutation = makeMutation({
         operationName: 'MoveShoppingListItem',
-        variables: { input: { itemId: 'mv-1', afterId: 'a', beforeId: 'b', version: 2 } },
+        variables: {
+          input: { itemId: 'mv-1', afterId: 'a', beforeId: 'b', version: 2 },
+        },
       });
       const { syncVariables } = convertToSyncMutation(mutation);
       expect(syncVariables.clientId).toBe('mv-1');
@@ -894,7 +900,9 @@ describe('QueueManager', () => {
         operationName: 'CreatePantryItem',
         variables: { input: { id: 'item-1' } },
       });
-      await expect(executeSyncMutation(mutation)).rejects.toThrow('Server error');
+      await expect(executeSyncMutation(mutation)).rejects.toThrow(
+        'Server error',
+      );
       jest.useFakeTimers();
     });
   });
@@ -978,13 +986,25 @@ describe('QueueManager', () => {
       });
 
       const mutations = [
-        makeMutation({ id: 'mut-1', userId: 'user-1', operationName: 'CreatePantryItem', variables: { input: { id: 'item-1' } } }),
+        makeMutation({
+          id: 'mut-1',
+          userId: 'user-1',
+          operationName: 'CreatePantryItem',
+          variables: { input: { id: 'item-1' } },
+        }),
       ];
-      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(mutations);
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(
+        mutations,
+      );
 
       mockClient.mutate.mockResolvedValue({
         data: {
-          syncPantryItem: { item: { id: 'item-1' }, wasCreated: true, serverId: 'srv-1', clientId: 'item-1' },
+          syncPantryItem: {
+            item: { id: 'item-1' },
+            wasCreated: true,
+            serverId: 'srv-1',
+            clientId: 'item-1',
+          },
         },
       });
 
@@ -1001,22 +1021,33 @@ describe('QueueManager', () => {
         callCount++;
         // First call = processQueue check, second = validateToken, third = batch online check
         if (callCount <= 2) {
-          return { user: { id: 'user-1' }, accessToken: 'token', isOnline: true };
+          return {
+            user: { id: 'user-1' },
+            accessToken: 'token',
+            isOnline: true,
+          };
         }
-        return { user: { id: 'user-1' }, accessToken: 'token', isOnline: false };
+        return {
+          user: { id: 'user-1' },
+          accessToken: 'token',
+          isOnline: false,
+        };
       });
 
-      const mutations = [
-        makeMutation({ id: 'mut-1', userId: 'user-1' }),
-      ];
-      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(mutations);
+      const mutations = [makeMutation({ id: 'mut-1', userId: 'user-1' })];
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(
+        mutations,
+      );
 
       jest.useRealTimers();
       await manager.processQueue();
       jest.useFakeTimers();
 
       // Should not process mutation since went offline
-      expect(queueStore.updateMutation).not.toHaveBeenCalledWith('mut-1', expect.objectContaining({ status: QueueStatus.PROCESSING }));
+      expect(queueStore.updateMutation).not.toHaveBeenCalledWith(
+        'mut-1',
+        expect.objectContaining({ status: QueueStatus.PROCESSING }),
+      );
     });
   });
 
@@ -1027,7 +1058,9 @@ describe('QueueManager', () => {
     let validateTokenBeforeReplay: () => Promise<boolean>;
 
     beforeEach(() => {
-      validateTokenBeforeReplay = (manager as any).validateTokenBeforeReplay.bind(manager);
+      validateTokenBeforeReplay = (
+        manager as any
+      ).validateTokenBeforeReplay.bind(manager);
     });
 
     it('returns true when accessToken exists', async () => {
@@ -1066,7 +1099,12 @@ describe('QueueManager', () => {
 
       jest.useRealTimers();
       const mutation = makeMutation({ id: 'auth-retry-1' });
-      const error = { type: 'auth', message: 'Unauthorized', timestamp: Date.now(), retryable: true };
+      const error = {
+        type: 'auth',
+        message: 'Unauthorized',
+        timestamp: Date.now(),
+        retryable: true,
+      };
       const result = await handleAuthError(mutation, error);
       jest.useFakeTimers();
 
@@ -1083,7 +1121,12 @@ describe('QueueManager', () => {
 
       jest.useRealTimers();
       const mutation = makeMutation({ id: 'auth-fail-1' });
-      const error = { type: 'auth', message: 'Unauthorized', timestamp: Date.now(), retryable: true };
+      const error = {
+        type: 'auth',
+        message: 'Unauthorized',
+        timestamp: Date.now(),
+        retryable: true,
+      };
       const result = await handleAuthError(mutation, error);
       jest.useFakeTimers();
 
@@ -1100,10 +1143,15 @@ describe('QueueManager', () => {
   // -------------------------------------------------------------------------
   describe('setFailureHandler and failure invocation', () => {
     let invokeFailureHandler: (mutation: QueuedMutation, error: any) => void;
-    let extractEntityInfo: (mutation: QueuedMutation) => { entityType: string | null; entityId: string | null };
+    let extractEntityInfo: (mutation: QueuedMutation) => {
+      entityType: string | null;
+      entityId: string | null;
+    };
 
     beforeEach(() => {
-      invokeFailureHandler = (manager as any).invokeFailureHandler.bind(manager);
+      invokeFailureHandler = (manager as any).invokeFailureHandler.bind(
+        manager,
+      );
       extractEntityInfo = (manager as any).extractEntityInfo.bind(manager);
     });
 
@@ -1111,8 +1159,17 @@ describe('QueueManager', () => {
       const handler = jest.fn();
       manager.setFailureHandler(handler);
 
-      const mutation = makeMutation({ id: 'fail-h-1', operationName: 'UpdatePantryItem', variables: { input: { id: 'item-1' } } });
-      invokeFailureHandler(mutation, { type: 'unknown', message: 'fail', timestamp: Date.now(), retryable: false });
+      const mutation = makeMutation({
+        id: 'fail-h-1',
+        operationName: 'UpdatePantryItem',
+        variables: { input: { id: 'item-1' } },
+      });
+      invokeFailureHandler(mutation, {
+        type: 'unknown',
+        message: 'fail',
+        timestamp: Date.now(),
+        retryable: false,
+      });
 
       expect(handler).toHaveBeenCalledTimes(1);
       expect(handler).toHaveBeenCalledWith(
@@ -1131,8 +1188,16 @@ describe('QueueManager', () => {
       manager.setFailureHandler(handler1);
       manager.setFailureHandler(handler2);
 
-      const mutation = makeMutation({ id: 'replace-1', operationName: 'TestMutation' });
-      invokeFailureHandler(mutation, { type: 'unknown', message: 'fail', timestamp: Date.now(), retryable: false });
+      const mutation = makeMutation({
+        id: 'replace-1',
+        operationName: 'TestMutation',
+      });
+      invokeFailureHandler(mutation, {
+        type: 'unknown',
+        message: 'fail',
+        timestamp: Date.now(),
+        retryable: false,
+      });
 
       expect(handler1).not.toHaveBeenCalled();
       expect(handler2).toHaveBeenCalledTimes(1);
@@ -1142,18 +1207,30 @@ describe('QueueManager', () => {
       // Manager has no handler set (fresh instance)
       const mutation = makeMutation({ id: 'no-handler-1' });
       expect(() => {
-        invokeFailureHandler(mutation, { type: 'unknown', message: 'fail', timestamp: Date.now(), retryable: false });
+        invokeFailureHandler(mutation, {
+          type: 'unknown',
+          message: 'fail',
+          timestamp: Date.now(),
+          retryable: false,
+        });
       }).not.toThrow();
     });
 
     it('catches and logs handler errors without crashing', () => {
       const { logger } = require('#/utils/environment');
-      const throwingHandler = jest.fn(() => { throw new Error('handler boom'); });
+      const throwingHandler = jest.fn(() => {
+        throw new Error('handler boom');
+      });
       manager.setFailureHandler(throwingHandler);
 
       const mutation = makeMutation({ id: 'throw-1' });
       expect(() => {
-        invokeFailureHandler(mutation, { type: 'unknown', message: 'fail', timestamp: Date.now(), retryable: false });
+        invokeFailureHandler(mutation, {
+          type: 'unknown',
+          message: 'fail',
+          timestamp: Date.now(),
+          retryable: false,
+        });
       }).not.toThrow();
 
       expect(logger.error).toHaveBeenCalledWith(
@@ -1166,104 +1243,213 @@ describe('QueueManager', () => {
       const handler = jest.fn();
       manager.setFailureHandler(handler);
 
-      const error = { type: 'network', message: 'timeout', code: 'TIMEOUT', timestamp: 123, retryable: true };
-      const mutation = makeMutation({ id: 'err-pass-1', operationName: 'CreatePantryItem', variables: { input: { id: 'p1' } } });
+      const error = {
+        type: 'network',
+        message: 'timeout',
+        code: 'TIMEOUT',
+        timestamp: 123,
+        retryable: true,
+      };
+      const mutation = makeMutation({
+        id: 'err-pass-1',
+        operationName: 'CreatePantryItem',
+        variables: { input: { id: 'p1' } },
+      });
       invokeFailureHandler(mutation, error);
 
-      expect(handler).toHaveBeenCalledWith(
-        expect.objectContaining({ error }),
-      );
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ error }));
     });
 
     // --- extractEntityInfo ---
     describe('extractEntityInfo', () => {
       it('extracts PantryItem from pantry operations', () => {
-        const mutation = makeMutation({ operationName: 'UpdatePantryItem', variables: { input: { id: 'pi-1' } } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItem', entityId: 'pi-1' });
+        const mutation = makeMutation({
+          operationName: 'UpdatePantryItem',
+          variables: { input: { id: 'pi-1' } },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'PantryItem',
+          entityId: 'pi-1',
+        });
       });
 
       it('extracts PantryItem from Pantry-prefixed operations', () => {
-        const mutation = makeMutation({ operationName: 'CreatePantry', variables: { input: { id: 'p-1' } } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItem', entityId: 'p-1' });
+        const mutation = makeMutation({
+          operationName: 'CreatePantry',
+          variables: { input: { id: 'p-1' } },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'PantryItem',
+          entityId: 'p-1',
+        });
       });
 
       it('extracts PantryItemBatch from batch operations', () => {
-        const mutation = makeMutation({ operationName: 'OpenPantryItemBatch', variables: { input: { batchId: 'b-1' } } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItemBatch', entityId: 'b-1' });
+        const mutation = makeMutation({
+          operationName: 'OpenPantryItemBatch',
+          variables: { input: { batchId: 'b-1' } },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'PantryItemBatch',
+          entityId: 'b-1',
+        });
       });
 
       it('extracts ShoppingListItem from shopping list operations', () => {
-        const mutation = makeMutation({ operationName: 'ToggleShoppingListItemPurchased', variables: { id: 'sli-1' } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'ShoppingListItem', entityId: 'sli-1' });
+        const mutation = makeMutation({
+          operationName: 'ToggleShoppingListItemPurchased',
+          variables: { id: 'sli-1' },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'ShoppingListItem',
+          entityId: 'sli-1',
+        });
       });
 
       it('extracts ShoppingListItem from ShoppingList-prefixed operations', () => {
-        const mutation = makeMutation({ operationName: 'AddItemToShoppingList', variables: { input: { id: 'sli-2' } } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'ShoppingListItem', entityId: 'sli-2' });
+        const mutation = makeMutation({
+          operationName: 'AddItemToShoppingList',
+          variables: { input: { id: 'sli-2' } },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'ShoppingListItem',
+          entityId: 'sli-2',
+        });
       });
 
       it('extracts MealPlanItem from meal plan item operations', () => {
-        const mutation = makeMutation({ operationName: 'UpdateMealPlanItem', variables: { input: { id: 'mpi-1' } } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'MealPlanItem', entityId: 'mpi-1' });
+        const mutation = makeMutation({
+          operationName: 'UpdateMealPlanItem',
+          variables: { input: { id: 'mpi-1' } },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'MealPlanItem',
+          entityId: 'mpi-1',
+        });
       });
 
       it('extracts MealPlan from meal plan operations (non-item)', () => {
-        const mutation = makeMutation({ operationName: 'CreateMealPlan', variables: { input: { id: 'mp-1' } } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'MealPlan', entityId: 'mp-1' });
+        const mutation = makeMutation({
+          operationName: 'CreateMealPlan',
+          variables: { input: { id: 'mp-1' } },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'MealPlan',
+          entityId: 'mp-1',
+        });
       });
 
       it('extracts SavedRecipe from recipe operations', () => {
-        const mutation = makeMutation({ operationName: 'FavoriteRecipe', variables: { input: { recipeId: 'r-1' } } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'SavedRecipe', entityId: 'r-1' });
+        const mutation = makeMutation({
+          operationName: 'FavoriteRecipe',
+          variables: { input: { recipeId: 'r-1' } },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'SavedRecipe',
+          entityId: 'r-1',
+        });
       });
 
       it('extracts SavedRecipe from Favorite-prefixed operations', () => {
-        const mutation = makeMutation({ operationName: 'UnfavoriteRecipe', variables: { input: { recipeId: 'r-2' } } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'SavedRecipe', entityId: 'r-2' });
+        const mutation = makeMutation({
+          operationName: 'UnfavoriteRecipe',
+          variables: { input: { recipeId: 'r-2' } },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'SavedRecipe',
+          entityId: 'r-2',
+        });
       });
 
       it('extracts entityId from top-level id variable', () => {
-        const mutation = makeMutation({ operationName: 'DeletePantryItem', variables: { id: 'top-1' } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItem', entityId: 'top-1' });
+        const mutation = makeMutation({
+          operationName: 'DeletePantryItem',
+          variables: { id: 'top-1' },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'PantryItem',
+          entityId: 'top-1',
+        });
       });
 
       it('extracts entityId from input.pantryItemId', () => {
-        const mutation = makeMutation({ operationName: 'UpdatePantryItem', variables: { input: { pantryItemId: 'pid-1' } } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItem', entityId: 'pid-1' });
+        const mutation = makeMutation({
+          operationName: 'UpdatePantryItem',
+          variables: { input: { pantryItemId: 'pid-1' } },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'PantryItem',
+          entityId: 'pid-1',
+        });
       });
 
       it('extracts entityId from input.itemId', () => {
-        const mutation = makeMutation({ operationName: 'MoveShoppingListItem', variables: { input: { itemId: 'iid-1' } } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'ShoppingListItem', entityId: 'iid-1' });
+        const mutation = makeMutation({
+          operationName: 'MoveShoppingListItem',
+          variables: { input: { itemId: 'iid-1' } },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'ShoppingListItem',
+          entityId: 'iid-1',
+        });
       });
 
       it('extracts entityId from clientId', () => {
-        const mutation = makeMutation({ operationName: 'CreatePantryItem', variables: { clientId: 'cid-1' } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItem', entityId: 'cid-1' });
+        const mutation = makeMutation({
+          operationName: 'CreatePantryItem',
+          variables: { clientId: 'cid-1' },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'PantryItem',
+          entityId: 'cid-1',
+        });
       });
 
       it('returns null entityType for unknown operation names', () => {
-        const mutation = makeMutation({ operationName: 'DoSomethingRandom', variables: { id: 'x' } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: null, entityId: 'x' });
+        const mutation = makeMutation({
+          operationName: 'DoSomethingRandom',
+          variables: { id: 'x' },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: null,
+          entityId: 'x',
+        });
       });
 
       it('returns null entityId when no recognizable variables exist', () => {
-        const mutation = makeMutation({ operationName: 'UpdatePantryItem', variables: { foo: 'bar' } });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: 'PantryItem', entityId: null });
+        const mutation = makeMutation({
+          operationName: 'UpdatePantryItem',
+          variables: { foo: 'bar' },
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: 'PantryItem',
+          entityId: null,
+        });
       });
 
       it('returns nulls when variables are undefined', () => {
-        const mutation = makeMutation({ operationName: 'UnknownOp', variables: undefined as any });
-        expect(extractEntityInfo(mutation)).toEqual({ entityType: null, entityId: null });
+        const mutation = makeMutation({
+          operationName: 'UnknownOp',
+          variables: undefined as any,
+        });
+        expect(extractEntityInfo(mutation)).toEqual({
+          entityType: null,
+          entityId: null,
+        });
       });
     });
 
     // --- Integration: handleMutationError invokes failure handler ---
     describe('handleMutationError invokes failure handler', () => {
-      let handleMutationError: (mutation: QueuedMutation, error: any) => Promise<any>;
+      let handleMutationError: (
+        mutation: QueuedMutation,
+        error: any,
+      ) => Promise<any>;
 
       beforeEach(() => {
-        handleMutationError = (manager as any).handleMutationError.bind(manager);
+        handleMutationError = (manager as any).handleMutationError.bind(
+          manager,
+        );
         mockedGetState.mockReturnValue({
           user: { id: 'user-1' },
           accessToken: 'token',
@@ -1275,7 +1461,11 @@ describe('QueueManager', () => {
         const handler = jest.fn();
         manager.setFailureHandler(handler);
 
-        const mutation = makeMutation({ id: 'non-retry-1', operationName: 'UpdatePantryItem', variables: { input: { id: 'item-x' } } });
+        const mutation = makeMutation({
+          id: 'non-retry-1',
+          operationName: 'UpdatePantryItem',
+          variables: { input: { id: 'item-x' } },
+        });
         const error = { message: 'Validation error: invalid' };
 
         await handleMutationError(mutation, error);
@@ -1319,7 +1509,10 @@ describe('QueueManager', () => {
 
     // --- Integration: handleAuthError invokes failure handler ---
     describe('handleAuthError invokes failure handler on token refresh failure', () => {
-      let handleAuthError: (mutation: QueuedMutation, error: any) => Promise<any>;
+      let handleAuthError: (
+        mutation: QueuedMutation,
+        error: any,
+      ) => Promise<any>;
 
       beforeEach(() => {
         handleAuthError = (manager as any).handleAuthError.bind(manager);
@@ -1336,8 +1529,17 @@ describe('QueueManager', () => {
         manager.setFailureHandler(handler);
 
         jest.useRealTimers();
-        const mutation = makeMutation({ id: 'auth-fail-h', operationName: 'FavoriteRecipe', variables: { input: { recipeId: 'r-10' } } });
-        const error = { type: 'auth', message: 'Unauthorized', timestamp: Date.now(), retryable: true };
+        const mutation = makeMutation({
+          id: 'auth-fail-h',
+          operationName: 'FavoriteRecipe',
+          variables: { input: { recipeId: 'r-10' } },
+        });
+        const error = {
+          type: 'auth',
+          message: 'Unauthorized',
+          timestamp: Date.now(),
+          retryable: true,
+        };
         await handleAuthError(mutation, error);
         jest.useFakeTimers();
 
@@ -1364,7 +1566,9 @@ describe('QueueManager', () => {
     };
 
     beforeEach(() => {
-      mergeMoveItemMutations = (manager as any).mergeMoveItemMutations.bind(manager);
+      mergeMoveItemMutations = (manager as any).mergeMoveItemMutations.bind(
+        manager,
+      );
     });
 
     it('keeps legacy ReorderShoppingListItems mutations as-is', () => {

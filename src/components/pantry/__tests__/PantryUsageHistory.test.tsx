@@ -38,10 +38,7 @@ describe('PantryUsageHistory', () => {
 
   it('renders CollapsibleSection with title and record count', () => {
     render(
-      <PantryUsageHistory
-        {...defaultProps}
-        usageRecords={[makeRecord('1')]}
-      />,
+      <PantryUsageHistory {...defaultProps} usageRecords={[makeRecord('1')]} />,
     );
     expect(screen.getByText('Usage History (1)')).toBeTruthy();
   });
@@ -85,7 +82,9 @@ describe('PantryUsageHistory', () => {
       <PantryUsageHistory
         {...defaultProps}
         expanded={true}
-        usageRecords={[makeRecord('1', { purpose: 'RESTOCK', quantityUsed: 5 })]}
+        usageRecords={[
+          makeRecord('1', { purpose: 'RESTOCK', quantityUsed: 5 }),
+        ]}
       />,
     );
     expect(screen.getByText(/\+5 L/)).toBeTruthy();

@@ -45,7 +45,11 @@ jest.mock('../../atoms/BackButton', () => {
 
 // Helper wrapper to provide react-hook-form control
 function Wrapper({ children: _children, ...overrides }: any) {
-  const { control, formState: { errors }, handleSubmit } = useForm({
+  const {
+    control,
+    formState: { errors },
+    handleSubmit,
+  } = useForm({
     defaultValues: { email: '', password: '' },
   });
 
@@ -125,7 +129,11 @@ describe('AuthFormTemplate', () => {
   it('renders link when linkText and onLinkPress provided', () => {
     const onLinkPress = jest.fn();
     render(
-      <Wrapper linkText="Forgot Password?" onLinkPress={onLinkPress} linkTestID="link" />,
+      <Wrapper
+        linkText="Forgot Password?"
+        onLinkPress={onLinkPress}
+        linkTestID="link"
+      />,
     );
     expect(screen.getByText('Forgot Password?')).toBeTruthy();
     fireEvent.press(screen.getByTestId('link'));

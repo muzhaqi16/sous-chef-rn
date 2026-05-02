@@ -1,12 +1,12 @@
 import React from 'react';
-import {Text, View} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { Text, View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 
 interface ErrorMessageProps {
   message: string;
 }
 
-const ErrorMessage: React.FC<ErrorMessageProps> = ({message}) => {
+const ErrorMessage: React.FC<ErrorMessageProps> = ({ message }) => {
   return (
     <View style={styles.errorContainer}>
       <Text style={styles.errorText}>{message}</Text>

@@ -57,13 +57,19 @@ describe('IngredientMatchRow', () => {
   it('renders Optional badge for optional ingredients', () => {
     const optionalMatch = makeMatch('Garnish');
     optionalMatch.match.ingredient.isOptional = true;
-    render(<IngredientMatchRow {...defaultProps} editableMatch={optionalMatch} />);
+    render(
+      <IngredientMatchRow {...defaultProps} editableMatch={optionalMatch} />,
+    );
     expect(screen.getByText('Optional')).toBeTruthy();
   });
 
   it('renders matched pantry item info', () => {
     const matched = makeMatch('Sugar', {
-      matchedPantryItem: { itemName: 'White Sugar', quantity: 5, unit: { symbol: 'cups' } },
+      matchedPantryItem: {
+        itemName: 'White Sugar',
+        quantity: 5,
+        unit: { symbol: 'cups' },
+      },
     });
     render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
     expect(screen.getByText(/White Sugar/)).toBeTruthy();

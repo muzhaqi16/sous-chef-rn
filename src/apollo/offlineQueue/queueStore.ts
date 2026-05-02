@@ -26,7 +26,12 @@ export class QueueStore {
         this.cacheHits++;
         if (__DEV__ && this.cacheHits % 50 === 0) {
           console.log(
-            `⚡ Queue cache stats: ${this.cacheHits} hits, ${this.cacheMisses} misses (${((this.cacheHits / (this.cacheHits + this.cacheMisses)) * 100).toFixed(1)}% hit rate)`,
+            `⚡ Queue cache stats: ${this.cacheHits} hits, ${
+              this.cacheMisses
+            } misses (${(
+              (this.cacheHits / (this.cacheHits + this.cacheMisses)) *
+              100
+            ).toFixed(1)}% hit rate)`,
           );
         }
         return this.cache;

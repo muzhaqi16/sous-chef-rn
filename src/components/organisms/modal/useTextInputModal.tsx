@@ -1,7 +1,7 @@
-import React, {useState} from 'react';
-import {TextInputProps} from 'react-native';
-import {TextInputModal} from './TextInputModal';
-import {ValidationRule} from './types';
+import React, { useState } from 'react';
+import { TextInputProps } from 'react-native';
+import { TextInputModal } from './TextInputModal';
+import { ValidationRule } from './types';
 
 // Hook for managing the modal state programmatically
 export const useTextInputModal = () => {
@@ -37,7 +37,9 @@ export const useTextInputModal = () => {
     setVisible(false);
   };
 
-  const TextModalComponent = <TextInputModal visible={visible} onClose={hide} {...modalConfig} />;
+  const TextModalComponent = (
+    <TextInputModal visible={visible} onClose={hide} {...modalConfig} />
+  );
 
   return {
     show,

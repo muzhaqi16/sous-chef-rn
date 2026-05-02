@@ -41,7 +41,13 @@ describe('themes', () => {
       expect(lightTheme.shadows).toBeDefined();
       expect(lightTheme.shadows.none).toEqual({});
       expect(lightTheme.shadows.md.boxShadow).toEqual([
-        { offsetX: 0, offsetY: 2, blurRadius: 4, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.1)' },
+        {
+          offsetX: 0,
+          offsetY: 2,
+          blurRadius: 4,
+          spreadDistance: 0,
+          color: 'rgba(0, 0, 0, 0.1)',
+        },
       ]);
     });
 

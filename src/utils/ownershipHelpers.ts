@@ -78,7 +78,9 @@ const resolveHomeMembers = (home: HomeWithMembers): HomeMember[] => {
   return extractNodes<HomeMember>(home.membersConnection);
 };
 
-const resolveCollaborators = (list: ShoppingListWithOwnership): ShoppingListCollaborator[] => {
+const resolveCollaborators = (
+  list: ShoppingListWithOwnership,
+): ShoppingListCollaborator[] => {
   return extractNodes<ShoppingListCollaborator>(list.collaboratorsConnection);
 };
 

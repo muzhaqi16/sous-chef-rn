@@ -34,12 +34,7 @@ describe('ScreenHeader', () => {
   });
 
   it('renders rightElement when provided', () => {
-    render(
-      <ScreenHeader
-        {...defaultProps}
-        rightElement={<Text>Save</Text>}
-      />,
-    );
+    render(<ScreenHeader {...defaultProps} rightElement={<Text>Save</Text>} />);
     expect(screen.getByText('Save')).toBeTruthy();
   });
 

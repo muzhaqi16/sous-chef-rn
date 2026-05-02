@@ -12,14 +12,33 @@ jest.mock('#hooks/useStandardBottomSheet', () => ({
 }));
 
 jest.mock('#components/atoms/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel, confirmDisabled }: any) => {
+  BottomSheetHeader: ({
+    title,
+    onCancel,
+    onConfirm,
+    confirmLabel,
+    confirmDisabled,
+  }: any) => {
     const RN = require('react-native');
     const R = require('react');
-    return R.createElement(RN.View, { testID: 'header' },
+    return R.createElement(
+      RN.View,
+      { testID: 'header' },
       R.createElement(RN.Text, null, title),
-      R.createElement(RN.Pressable, { onPress: onCancel, testID: 'cancel-btn' }, R.createElement(RN.Text, null, 'Cancel')),
-      R.createElement(RN.Pressable, { onPress: onConfirm, testID: 'confirm-btn', disabled: confirmDisabled },
-        R.createElement(RN.Text, null, confirmLabel)),
+      R.createElement(
+        RN.Pressable,
+        { onPress: onCancel, testID: 'cancel-btn' },
+        R.createElement(RN.Text, null, 'Cancel'),
+      ),
+      R.createElement(
+        RN.Pressable,
+        {
+          onPress: onConfirm,
+          testID: 'confirm-btn',
+          disabled: confirmDisabled,
+        },
+        R.createElement(RN.Text, null, confirmLabel),
+      ),
     );
   },
 }));
@@ -29,7 +48,14 @@ jest.mock('#hooks/mealPlan/useAddRecipeToMealPlan', () => ({
     addRecipeToMealPlan: jest.fn(() => Promise.resolve(true)),
     adding: false,
     hasPlan: true,
-    mealPlans: [{ id: 'plan-1', name: 'Week Plan', startDate: '2024-01-01', endDate: '2024-01-07' }],
+    mealPlans: [
+      {
+        id: 'plan-1',
+        name: 'Week Plan',
+        startDate: '2024-01-01',
+        endDate: '2024-01-07',
+      },
+    ],
     activePlanId: 'plan-1',
   })),
 }));
@@ -88,7 +114,8 @@ describe('AddToMealPlanSheet', () => {
   });
 
   it('shows warning when no active plan', () => {
-    const useAddRecipeToMealPlan = require('#hooks/mealPlan/useAddRecipeToMealPlan').useAddRecipeToMealPlan;
+    const useAddRecipeToMealPlan =
+      require('#hooks/mealPlan/useAddRecipeToMealPlan').useAddRecipeToMealPlan;
     useAddRecipeToMealPlan.mockReturnValue({
       addRecipeToMealPlan: jest.fn(),
       adding: false,
@@ -97,6 +124,8 @@ describe('AddToMealPlanSheet', () => {
       activePlanId: null,
     });
     render(<AddToMealPlanSheet {...defaultProps} />);
-    expect(screen.getByText('No active meal plan. Create one first.')).toBeTruthy();
+    expect(
+      screen.getByText('No active meal plan. Create one first.'),
+    ).toBeTruthy();
   });
 });

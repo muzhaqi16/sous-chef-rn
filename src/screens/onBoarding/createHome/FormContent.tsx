@@ -1,6 +1,9 @@
 import React from 'react';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
-import { DynamicFormFields, type FieldDef } from '#components/molecules/DynamicFormFields';
+import {
+  DynamicFormFields,
+  type FieldDef,
+} from '#components/molecules/DynamicFormFields';
 
 export type FormValues = {
   homeName: string;

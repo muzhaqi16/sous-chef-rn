@@ -23,7 +23,13 @@ export const RatingBreakdown: React.FC<RatingBreakdownProps> = ({
   rating5Count,
 }) => {
   const { theme } = useUnistyles();
-  const counts = [rating5Count, rating4Count, rating3Count, rating2Count, rating1Count];
+  const counts = [
+    rating5Count,
+    rating4Count,
+    rating3Count,
+    rating2Count,
+    rating1Count,
+  ];
   const maxCount = Math.max(...counts, 1);
 
   return (

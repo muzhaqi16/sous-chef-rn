@@ -7,7 +7,8 @@ import {
   hasCredentialsForAccount,
   clearCredentials,
   getStoredAccounts,
-  getBiometricCapability } from '#/storage/keychain';
+  getBiometricCapability,
+} from '#/storage/keychain';
 import { executeQuery } from '#/utils/compilerSafeWrappers';
 import { logger } from '#/utils/environment';
 
@@ -49,7 +50,10 @@ const getBiometricInfo = async () => {
   }
 };
 
-const storeCredentials = async (email: string, password: string): Promise<boolean> => {
+const storeCredentials = async (
+  email: string,
+  password: string,
+): Promise<boolean> => {
   try {
     await saveCredentials(email, password);
     return true;
@@ -77,25 +81,25 @@ const removeCredentials = async (email?: string): Promise<boolean> => {
 export const useCredentialStorage = () => {
   const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
 
-  const loadStoredCredentials = async (email?: string): Promise<Credentials | null> => {
+  const loadStoredCredentials = async (
+    email?: string,
+  ): Promise<Credentials | null> => {
     setIsLoadingCredentials(true);
 
-    const credentials = await executeQuery(
-      async () => {
-        if (email) {
-          return loadCredentialsForAccount();
-        }
-        return loadCredentials();
-      },
-      'Error loading credentials',
-    );
+    const credentials = await executeQuery(async () => {
+      if (email) {
+        return loadCredentialsForAccount();
+      }
+      return loadCredentials();
+    }, 'Error loading credentials');
 
     setIsLoadingCredentials(false);
 
     return credentials
       ? {
           email: credentials.username,
-          password: credentials.password }
+          password: credentials.password,
+        }
       : null;
   };
 
@@ -106,5 +110,6 @@ export const useCredentialStorage = () => {
     getAvailableAccounts,
     getBiometricInfo,
     storeCredentials,
-    removeCredentials };
+    removeCredentials,
+  };
 };

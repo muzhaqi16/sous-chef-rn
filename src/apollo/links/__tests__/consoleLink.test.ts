@@ -61,7 +61,7 @@ describe('createConsoleLink', () => {
   });
 
   describe('enabled option', () => {
-    it('forwards without logging when disabled', (done) => {
+    it('forwards without logging when disabled', done => {
       const link = createConsoleLink({ enabled: false });
       const operation = createMockOperation('TestQuery');
       const forward = createMockForward();
@@ -76,7 +76,7 @@ describe('createConsoleLink', () => {
       });
     });
 
-    it('logs when explicitly enabled', (done) => {
+    it('logs when explicitly enabled', done => {
       const link = createConsoleLink({ enabled: true });
       const operation = createMockOperation('TestQuery');
       const forward = createMockForward();
@@ -93,7 +93,7 @@ describe('createConsoleLink', () => {
   });
 
   describe('logTiming option', () => {
-    it('logs timing info with operation name and duration', (done) => {
+    it('logs timing info with operation name and duration', done => {
       const link = createConsoleLink({ enabled: true, logTiming: true });
       const operation = createMockOperation('GetUser');
       const forward = createMockForward();
@@ -114,7 +114,7 @@ describe('createConsoleLink', () => {
       });
     });
 
-    it('does not log timing when logTiming is false', (done) => {
+    it('does not log timing when logTiming is false', done => {
       const link = createConsoleLink({
         enabled: true,
         logTiming: false,
@@ -139,7 +139,7 @@ describe('createConsoleLink', () => {
       });
     });
 
-    it('marks subscription operations without timing', (done) => {
+    it('marks subscription operations without timing', done => {
       const link = createConsoleLink({ enabled: true, logTiming: true });
       const operation = createMockOperation('OnItemUpdated', 'subscription');
       const forward = createMockForward();
@@ -151,8 +151,7 @@ describe('createConsoleLink', () => {
           const logCalls = jest.mocked(console.log).mock.calls;
           const subLog = logCalls.find(
             (call: any[]) =>
-              typeof call[0] === 'string' &&
-              call[0].includes('SUBSCRIPTION'),
+              typeof call[0] === 'string' && call[0].includes('SUBSCRIPTION'),
           );
           expect(subLog).toBeDefined();
           // Subscription logs should not include "ms" duration
@@ -164,7 +163,7 @@ describe('createConsoleLink', () => {
   });
 
   describe('logVariables option', () => {
-    it('logs variables when enabled and present', (done) => {
+    it('logs variables when enabled and present', done => {
       const link = createConsoleLink({
         enabled: true,
         logVariables: true,
@@ -179,17 +178,19 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const varLog = jest.mocked(console.log).mock.calls.find(
-            (call: any[]) =>
-              typeof call[0] === 'string' && call[0].includes('Variables'),
-          );
+          const varLog = jest
+            .mocked(console.log)
+            .mock.calls.find(
+              (call: any[]) =>
+                typeof call[0] === 'string' && call[0].includes('Variables'),
+            );
           expect(varLog).toBeDefined();
           done();
         },
       });
     });
 
-    it('does not log variables when empty', (done) => {
+    it('does not log variables when empty', done => {
       const link = createConsoleLink({
         enabled: true,
         logVariables: true,
@@ -202,10 +203,12 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const varLog = jest.mocked(console.log).mock.calls.find(
-            (call: any[]) =>
-              typeof call[0] === 'string' && call[0].includes('Variables'),
-          );
+          const varLog = jest
+            .mocked(console.log)
+            .mock.calls.find(
+              (call: any[]) =>
+                typeof call[0] === 'string' && call[0].includes('Variables'),
+            );
           expect(varLog).toBeUndefined();
           done();
         },
@@ -214,7 +217,7 @@ describe('createConsoleLink', () => {
   });
 
   describe('logResponse option', () => {
-    it('logs response data when enabled', (done) => {
+    it('logs response data when enabled', done => {
       const link = createConsoleLink({
         enabled: true,
         logResponse: true,
@@ -228,17 +231,19 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const dataLog = jest.mocked(console.log).mock.calls.find(
-            (call: any[]) =>
-              typeof call[0] === 'string' && call[0].includes('Data'),
-          );
+          const dataLog = jest
+            .mocked(console.log)
+            .mock.calls.find(
+              (call: any[]) =>
+                typeof call[0] === 'string' && call[0].includes('Data'),
+            );
           expect(dataLog).toBeDefined();
           done();
         },
       });
     });
 
-    it('does not log response when disabled', (done) => {
+    it('does not log response when disabled', done => {
       const link = createConsoleLink({
         enabled: true,
         logResponse: false,
@@ -252,10 +257,12 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const dataLog = jest.mocked(console.log).mock.calls.find(
-            (call: any[]) =>
-              typeof call[0] === 'string' && call[0].includes('Data'),
-          );
+          const dataLog = jest
+            .mocked(console.log)
+            .mock.calls.find(
+              (call: any[]) =>
+                typeof call[0] === 'string' && call[0].includes('Data'),
+            );
           expect(dataLog).toBeUndefined();
           done();
         },
@@ -264,7 +271,7 @@ describe('createConsoleLink', () => {
   });
 
   describe('logQuery option', () => {
-    it('logs query body when enabled', (done) => {
+    it('logs query body when enabled', done => {
       const link = createConsoleLink({
         enabled: true,
         logQuery: true,
@@ -278,10 +285,12 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const queryLog = jest.mocked(console.log).mock.calls.find(
-            (call: any[]) =>
-              typeof call[0] === 'string' && call[0].includes('Query'),
-          );
+          const queryLog = jest
+            .mocked(console.log)
+            .mock.calls.find(
+              (call: any[]) =>
+                typeof call[0] === 'string' && call[0].includes('Query'),
+            );
           expect(queryLog).toBeDefined();
           done();
         },
@@ -290,7 +299,7 @@ describe('createConsoleLink', () => {
   });
 
   describe('error handling', () => {
-    it('logs errors from response', (done) => {
+    it('logs errors from response', done => {
       const link = createConsoleLink({
         enabled: true,
         logTiming: false,
@@ -315,7 +324,7 @@ describe('createConsoleLink', () => {
       });
     });
 
-    it('forwards observer errors', (done) => {
+    it('forwards observer errors', done => {
       const link = createConsoleLink({ enabled: true });
       const operation = createMockOperation('ErrorQuery');
       const testError = new Error('Network failure');
@@ -338,7 +347,7 @@ describe('createConsoleLink', () => {
   });
 
   describe('slow query detection', () => {
-    it('uses warning style for queries exceeding slowQueryThreshold', (done) => {
+    it('uses warning style for queries exceeding slowQueryThreshold', done => {
       // Make duration exceed threshold
       let callCount = 0;
       mockedPerformance.now.mockImplementation(() => {
@@ -358,10 +367,12 @@ describe('createConsoleLink', () => {
         next: () => {},
         complete: () => {
           // The slow query log should use the warning color style
-          const timingCall = jest.mocked(console.log).mock.calls.find(
-            (call: any[]) =>
-              typeof call[0] === 'string' && call[0].includes('SlowQuery'),
-          );
+          const timingCall = jest
+            .mocked(console.log)
+            .mock.calls.find(
+              (call: any[]) =>
+                typeof call[0] === 'string' && call[0].includes('SlowQuery'),
+            );
           expect(timingCall).toBeDefined();
           // Second arg is the CSS style; for slow queries it should be amber
           expect(timingCall![1]).toContain('#f59e0b');
@@ -372,7 +383,7 @@ describe('createConsoleLink', () => {
   });
 
   describe('extensions logging', () => {
-    it('logs extensions when present in response', (done) => {
+    it('logs extensions when present in response', done => {
       const link = createConsoleLink({
         enabled: true,
         logTiming: false,
@@ -388,10 +399,12 @@ describe('createConsoleLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          const extLog = jest.mocked(console.log).mock.calls.find(
-            (call: any[]) =>
-              typeof call[0] === 'string' && call[0].includes('Extensions'),
-          );
+          const extLog = jest
+            .mocked(console.log)
+            .mock.calls.find(
+              (call: any[]) =>
+                typeof call[0] === 'string' && call[0].includes('Extensions'),
+            );
           expect(extLog).toBeDefined();
           done();
         },
