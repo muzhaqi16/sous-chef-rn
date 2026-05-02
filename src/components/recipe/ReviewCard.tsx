@@ -5,7 +5,7 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { CachedImage } from '#components/atoms/CachedImage';
-import type { RecipeReviewFragment } from '#generated';
+import { type RecipeReviewFragment } from '../../graphql/operations/recipe/recipeFragments.generated';
 
 interface ReviewCardProps {
   review: RecipeReviewFragment;

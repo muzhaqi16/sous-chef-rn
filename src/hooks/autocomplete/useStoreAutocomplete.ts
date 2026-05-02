@@ -1,4 +1,5 @@
-import { useSearchStoresLazyQuery } from '#generated';
+import { useLazyQuery } from '@apollo/client/react';
+import { SearchStoresDocument } from '../../graphql/operations/store/store.generated';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
 export type StoreItem = {
@@ -9,7 +10,7 @@ export type StoreItem = {
 
 export function useStoreAutocomplete() {
   const [searchStores, { data: storesData, loading }] =
-    useSearchStoresLazyQuery();
+    useLazyQuery(SearchStoresDocument);
 
   const search = (term: string) => {
     searchStores({ variables: { search: term, limit: 20 } });

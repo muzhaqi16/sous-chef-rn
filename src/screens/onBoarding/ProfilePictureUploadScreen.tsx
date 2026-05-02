@@ -33,7 +33,7 @@ import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigati
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
-import { ImageUploadPurpose } from '#generated';
+import { ImageUploadPurpose } from '../../graphql/generated/schemaTypes';
 import { useFocusEffect } from '@react-navigation/native';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useProfileData } from '#hooks/profile/useProfileData';

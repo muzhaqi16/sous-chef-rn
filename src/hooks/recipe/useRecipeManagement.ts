@@ -1,4 +1,9 @@
-import { useMyRecipesQuery, RecipeCategory, Difficulty } from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { MyRecipesDocument } from '../../graphql/operations/recipe/recipe.generated';
+import {
+  RecipeCategory,
+  Difficulty,
+} from '../../graphql/generated/schemaTypes';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
@@ -15,17 +20,17 @@ export interface RecipeFilters {
 export function useRecipeManagement(filters?: RecipeFilters) {
   const isLoggedOut = useIsLoggedOut();
 
-  const { data, loading, error, refetch, fetchMore } = useMyRecipesQuery({
-    variables: {
-      first: 25,
-      category: filters?.category,
-      difficulty: filters?.difficulty,
+  const { data, loading, error, refetch, fetchMore } = useQuery(
+    MyRecipesDocument,
+    {
+      variables: {
+        first: 25,
+        category: filters?.category,
+        difficulty: filters?.difficulty,
+      },
+      skip: isLoggedOut,
     },
-    skip: isLoggedOut,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'all',
-  });
+  );
 
   useApolloErrorLogger('MyRecipes', error);
 

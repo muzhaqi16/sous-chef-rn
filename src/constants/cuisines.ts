@@ -1,4 +1,4 @@
-import { Cuisine } from '#generated';
+import { Cuisine } from '../graphql/generated/schemaTypes';
 
 export interface PopularCuisine {
   label: string;
@@ -18,18 +18,18 @@ export const POPULAR_CUISINES: PopularCuisine[] = [
 
 // Helper function to convert enum value to display label
 export const getCuisineLabel = (value: Cuisine): string => {
-  const cuisine = POPULAR_CUISINES.find((c) => c.value === value);
+  const cuisine = POPULAR_CUISINES.find(c => c.value === value);
   return cuisine?.label || value;
 };
 
 // Helper function to get all cuisine options (popular + remaining)
 export const getAllCuisineOptions = () => {
-  const popularValues = POPULAR_CUISINES.map((c) => c.value);
+  const popularValues = POPULAR_CUISINES.map(c => c.value);
   const allCuisines = Object.values(Cuisine) as Cuisine[];
 
   const remainingCuisines = allCuisines
-    .filter((c) => !popularValues.includes(c as any))
-    .map((value) => ({
+    .filter(c => !popularValues.includes(c as any))
+    .map(value => ({
       label: formatCuisineLabel(value),
       value,
     }));
@@ -42,6 +42,6 @@ const formatCuisineLabel = (value: Cuisine): string => {
   // Convert LATIN_AMERICAN -> Latin American, EASTERN_EUROPEAN -> Eastern European, etc.
   return value
     .split('_')
-    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
     .join(' ');
 };

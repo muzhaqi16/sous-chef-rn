@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { AdjustQuantityModal } from '../AdjustQuantityModal';
-import type { PantryItemFragment } from '#generated';
+import { type PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -84,7 +84,11 @@ jest.mock('#components/atoms/FormattedItemSubtitle', () => {
   const RN = require('react-native');
   return {
     FormattedItemSubtitle: ({ quantity, unitSymbol }: any) =>
-      require('react').createElement(RN.Text, null, `${quantity} ${unitSymbol || ''}`),
+      require('react').createElement(
+        RN.Text,
+        null,
+        `${quantity} ${unitSymbol || ''}`,
+      ),
   };
 });
 
@@ -123,7 +127,7 @@ const makePantryItem = (overrides?: Partial<PantryItemFragment>) =>
     netWeightUnit: null,
     lastUsedAt: null,
     ...overrides,
-  }) as unknown as PantryItemFragment;
+  } as unknown as PantryItemFragment);
 
 describe('AdjustQuantityModal', () => {
   const defaultProps = {

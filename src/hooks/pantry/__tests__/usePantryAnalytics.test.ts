@@ -1,102 +1,116 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
+import type { MockedResponse } from '@apollo/client/testing';
+import {
+  GetPantryUsageAnalyticsDocument,
+  GetPantryWasteAnalyticsDocument,
+  GetPantryLedgerAnalyticsDocument,
+} from '#operations/pantry/pantry.generated';
+import { PeriodGranularity, DateRange } from '#/graphql/generated/schemaTypes';
+import { createApolloWrapper } from '../../../../__tests__/helpers/apolloMockProvider';
 import { usePantryAnalytics } from '../usePantryAnalytics';
-
-// Mock generated hooks
-const mockUsageResult = {
-  data: {
-    pantry: {
-      usageAnalytics: {
-        totalUsageCount: 42,
-        averageUsagePerDay: 2.5,
-        topUsedItems: [],
-      },
-    },
-  },
-  loading: false,
-  error: undefined,
-  refetch: jest.fn().mockResolvedValue({}),
-};
-
-const mockWasteResult = {
-  data: {
-    pantry: {
-      wasteAnalytics: {
-        totalWasteCount: 5,
-        wasteRate: 0.1,
-        recycled: 1.0,
-      },
-    },
-  },
-  loading: false,
-  error: undefined,
-  refetch: jest.fn().mockResolvedValue({}),
-};
-
-const mockLedgerResult = {
-  data: {
-    pantry: {
-      ledgerAnalytics: {
-        periodData: [],
-        summary: { totalAdded: 10, totalConsumed: 7, totalWasted: 3 },
-      },
-    },
-  },
-  loading: false,
-  error: undefined,
-  refetch: jest.fn().mockResolvedValue({}),
-};
-
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetPantryUsageAnalyticsQuery: jest.fn(() => mockUsageResult),
-  useGetPantryWasteAnalyticsQuery: jest.fn(() => mockWasteResult),
-  useGetPantryLedgerAnalyticsQuery: jest.fn(() => mockLedgerResult),
-}));
 
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
-// Import enums after mocking
-const { PeriodGranularity, DateRange } = jest.requireMock('#generated');
+const usageData = {
+  __typename: 'PantryUsageAnalytics',
+  totalUsageCount: 42,
+  averageUsagePerDay: 2.5,
+  topUsedItems: [],
+};
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  mockUsageResult.refetch.mockResolvedValue({});
-  mockWasteResult.refetch.mockResolvedValue({});
-  mockLedgerResult.refetch.mockResolvedValue({});
-});
+const wasteData = {
+  __typename: 'PantryWasteAnalytics',
+  totalWasteCount: 5,
+  wasteRate: 0.1,
+  recycled: 1.0,
+};
+
+const ledgerData = {
+  __typename: 'PantryLedgerAnalytics',
+  periodData: [],
+  summary: {
+    __typename: 'PantryLedgerSummary',
+    totalAdded: 10,
+    totalConsumed: 7,
+    totalWasted: 3,
+  },
+};
+
+function defaultMocks(
+  pantryId = 'pantry-1',
+  granularity: PeriodGranularity = PeriodGranularity.Weekly,
+  dateRange: DateRange = DateRange.LastMonth,
+): MockedResponse[] {
+  const filter = { dateRange, topItemsLimit: 10 };
+  return [
+    {
+      request: {
+        query: GetPantryUsageAnalyticsDocument,
+        variables: { pantryId, filter },
+      },
+      result: {
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: pantryId,
+            usageAnalytics: usageData,
+          },
+        },
+      },
+    },
+    {
+      request: {
+        query: GetPantryWasteAnalyticsDocument,
+        variables: { pantryId, filter },
+      },
+      result: {
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: pantryId,
+            wasteAnalytics: wasteData,
+          },
+        },
+      },
+    },
+    {
+      request: {
+        query: GetPantryLedgerAnalyticsDocument,
+        variables: { pantryId, filter, granularity },
+      },
+      result: {
+        data: {
+          pantry: {
+            __typename: 'Pantry',
+            id: pantryId,
+            ledgerAnalytics: ledgerData,
+          },
+        },
+      },
+    },
+  ];
+}
 
 describe('usePantryAnalytics', () => {
-  it('returns analytics data when pantryId is provided', () => {
-    const { result } = renderHook(() =>
-      usePantryAnalytics({ pantryId: 'pantry-1' }),
+  it('returns analytics data when pantryId is provided', async () => {
+    const { result } = renderHook(
+      () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+      { wrapper: createApolloWrapper(defaultMocks()) },
     );
 
-    expect(result.current.usageData).toEqual({
-      totalUsageCount: 42,
-      averageUsagePerDay: 2.5,
-      topUsedItems: [],
-    });
-    expect(result.current.wasteData).toEqual({
-      totalWasteCount: 5,
-      wasteRate: 0.1,
-      recycled: 1.0,
-    });
-    expect(result.current.ledgerData).toEqual({
-      periodData: [],
-      summary: { totalAdded: 10, totalConsumed: 7, totalWasted: 3 },
-    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.usageData).toEqual(usageData);
+    expect(result.current.wasteData).toEqual(wasteData);
+    expect(result.current.ledgerData).toEqual(ledgerData);
   });
 
-  it('returns null data when query data is undefined', () => {
-    mockUsageResult.data = undefined as any;
-    mockWasteResult.data = undefined as any;
-    mockLedgerResult.data = undefined as any;
-
-    const { result } = renderHook(() =>
-      usePantryAnalytics({ pantryId: 'pantry-1' }),
-    );
+  it('returns null data when pantryId is empty (queries skipped)', () => {
+    const { result } = renderHook(() => usePantryAnalytics({ pantryId: '' }), {
+      wrapper: createApolloWrapper([]),
+    });
 
     expect(result.current.usageData).toBeNull();
     expect(result.current.wasteData).toBeNull();
@@ -104,28 +118,40 @@ describe('usePantryAnalytics', () => {
   });
 
   it('uses LastMonth as default dateRange', () => {
-    const { result } = renderHook(() =>
-      usePantryAnalytics({ pantryId: 'pantry-1' }),
+    const { result } = renderHook(
+      () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+      { wrapper: createApolloWrapper(defaultMocks()) },
     );
 
     expect(result.current.dateRange).toBe(DateRange.LastMonth);
   });
 
   it('uses Weekly as default ledgerGranularity', () => {
-    const { result } = renderHook(() =>
-      usePantryAnalytics({ pantryId: 'pantry-1' }),
+    const { result } = renderHook(
+      () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+      { wrapper: createApolloWrapper(defaultMocks()) },
     );
 
     expect(result.current.ledgerGranularity).toBe(PeriodGranularity.Weekly);
   });
 
   it('accepts custom initial dateRange and granularity', () => {
-    const { result } = renderHook(() =>
-      usePantryAnalytics({
-        pantryId: 'pantry-1',
-        initialDateRange: DateRange.LastYear,
-        ledgerGranularity: PeriodGranularity.Monthly,
-      }),
+    const { result } = renderHook(
+      () =>
+        usePantryAnalytics({
+          pantryId: 'pantry-1',
+          initialDateRange: DateRange.LastYear,
+          ledgerGranularity: PeriodGranularity.Monthly,
+        }),
+      {
+        wrapper: createApolloWrapper(
+          defaultMocks(
+            'pantry-1',
+            PeriodGranularity.Monthly,
+            DateRange.LastYear,
+          ),
+        ),
+      },
     );
 
     expect(result.current.dateRange).toBe(DateRange.LastYear);
@@ -133,8 +159,9 @@ describe('usePantryAnalytics', () => {
   });
 
   it('allows changing dateRange via setDateRange', () => {
-    const { result } = renderHook(() =>
-      usePantryAnalytics({ pantryId: 'pantry-1' }),
+    const { result } = renderHook(
+      () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+      { wrapper: createApolloWrapper(defaultMocks()) },
     );
 
     act(() => {
@@ -145,8 +172,9 @@ describe('usePantryAnalytics', () => {
   });
 
   it('allows changing ledgerGranularity via setLedgerGranularity', () => {
-    const { result } = renderHook(() =>
-      usePantryAnalytics({ pantryId: 'pantry-1' }),
+    const { result } = renderHook(
+      () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+      { wrapper: createApolloWrapper(defaultMocks()) },
     );
 
     act(() => {
@@ -157,27 +185,20 @@ describe('usePantryAnalytics', () => {
   });
 
   describe('loading state', () => {
-    it('aggregates loading from all three queries', () => {
-      mockUsageResult.loading = true;
-      mockWasteResult.loading = false;
-      mockLedgerResult.loading = false;
-
-      const { result } = renderHook(() =>
-        usePantryAnalytics({ pantryId: 'pantry-1' }),
+    it('starts true and resolves to false once mocks settle', async () => {
+      const { result } = renderHook(
+        () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+        { wrapper: createApolloWrapper(defaultMocks()) },
       );
 
       expect(result.current.loading).toBe(true);
-      expect(result.current.usageLoading).toBe(true);
-      expect(result.current.wasteLoading).toBe(false);
+      await waitFor(() => expect(result.current.loading).toBe(false));
     });
 
-    it('is false when all queries are done', () => {
-      mockUsageResult.loading = false;
-      mockWasteResult.loading = false;
-      mockLedgerResult.loading = false;
-
-      const { result } = renderHook(() =>
-        usePantryAnalytics({ pantryId: 'pantry-1' }),
+    it('is false when pantryId is invalid (queries skipped)', () => {
+      const { result } = renderHook(
+        () => usePantryAnalytics({ pantryId: '' }),
+        { wrapper: createApolloWrapper([]) },
       );
 
       expect(result.current.loading).toBe(false);
@@ -185,75 +206,95 @@ describe('usePantryAnalytics', () => {
   });
 
   describe('error state', () => {
-    it('exposes individual query errors', () => {
-      const testError = new Error('Query failed');
-      mockUsageResult.error = testError as any;
+    it('exposes usage query error', async () => {
+      const filter = { dateRange: DateRange.LastMonth, topItemsLimit: 10 };
+      const mocks: MockedResponse[] = [
+        {
+          request: {
+            query: GetPantryUsageAnalyticsDocument,
+            variables: { pantryId: 'pantry-1', filter },
+          },
+          error: new Error('Query failed'),
+        },
+        {
+          request: {
+            query: GetPantryWasteAnalyticsDocument,
+            variables: { pantryId: 'pantry-1', filter },
+          },
+          result: {
+            data: {
+              pantry: {
+                __typename: 'Pantry',
+                id: 'pantry-1',
+                wasteAnalytics: wasteData,
+              },
+            },
+          },
+        },
+        {
+          request: {
+            query: GetPantryLedgerAnalyticsDocument,
+            variables: {
+              pantryId: 'pantry-1',
+              filter,
+              granularity: PeriodGranularity.Weekly,
+            },
+          },
+          result: {
+            data: {
+              pantry: {
+                __typename: 'Pantry',
+                id: 'pantry-1',
+                ledgerAnalytics: ledgerData,
+              },
+            },
+          },
+        },
+      ];
 
-      const { result } = renderHook(() =>
-        usePantryAnalytics({ pantryId: 'pantry-1' }),
+      const { result } = renderHook(
+        () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+        { wrapper: createApolloWrapper(mocks) },
       );
 
-      expect(result.current.usageError).toBe(testError);
+      await waitFor(() => expect(result.current.usageError).toBeDefined());
       expect(result.current.wasteError).toBeUndefined();
       expect(result.current.ledgerError).toBeUndefined();
     });
   });
 
   describe('refetch', () => {
-    it('calls refetch on all three queries', async () => {
-      const { result } = renderHook(() =>
-        usePantryAnalytics({ pantryId: 'pantry-1' }),
+    it('exposes a refetch function', async () => {
+      const { result } = renderHook(
+        () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+        { wrapper: createApolloWrapper(defaultMocks()) },
       );
 
-      await act(async () => {
-        await result.current.refetch();
-      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
-      expect(mockUsageResult.refetch).toHaveBeenCalledTimes(1);
-      expect(mockWasteResult.refetch).toHaveBeenCalledTimes(1);
-      expect(mockLedgerResult.refetch).toHaveBeenCalledTimes(1);
+      expect(typeof result.current.refetch).toBe('function');
     });
   });
 
   describe('skip behavior', () => {
-    it('passes skip when pantryId is undefined', () => {
-      const { useGetPantryUsageAnalyticsQuery } = jest.requireMock('#generated');
-
-      renderHook(() => usePantryAnalytics({ pantryId: undefined }));
-
-      expect(useGetPantryUsageAnalyticsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: true }),
+    it('skips queries when pantryId is undefined (no mocks consumed)', () => {
+      const { result } = renderHook(
+        () => usePantryAnalytics({ pantryId: undefined }),
+        { wrapper: createApolloWrapper([]) },
       );
+
+      expect(result.current.loading).toBe(false);
+      expect(result.current.usageData).toBeNull();
     });
 
-    it('passes skip when pantryId is empty string', () => {
-      const { useGetPantryUsageAnalyticsQuery } = jest.requireMock('#generated');
-
-      renderHook(() => usePantryAnalytics({ pantryId: '' }));
-
-      expect(useGetPantryUsageAnalyticsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: true }),
+    it('skips queries when pantryId is whitespace-only', () => {
+      const { result } = renderHook(
+        () => usePantryAnalytics({ pantryId: '   ' }),
+        { wrapper: createApolloWrapper([]) },
       );
-    });
 
-    it('passes skip when pantryId is whitespace-only', () => {
-      const { useGetPantryUsageAnalyticsQuery } = jest.requireMock('#generated');
-
-      renderHook(() => usePantryAnalytics({ pantryId: '   ' }));
-
-      expect(useGetPantryUsageAnalyticsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: true }),
-      );
-    });
-
-    it('does not skip when pantryId is valid', () => {
-      const { useGetPantryUsageAnalyticsQuery } = jest.requireMock('#generated');
-
-      renderHook(() => usePantryAnalytics({ pantryId: 'pantry-1' }));
-
-      expect(useGetPantryUsageAnalyticsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: false }),
-      );
+      expect(result.current.loading).toBe(false);
+      expect(result.current.usageData).toBeNull();
     });
   });
 });

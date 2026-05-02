@@ -9,7 +9,7 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
 import { Icon } from '#utils/iconUtils';
-import type { MealPlanDisplayFragment } from '#generated';
+import { type MealPlanDisplayFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 
 interface DuplicatePlanSheetProps {
   visible: boolean;

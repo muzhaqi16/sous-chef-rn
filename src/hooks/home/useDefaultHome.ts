@@ -1,7 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { useApolloClient } from '@apollo/client/react';
+import {
+  useApolloClient,
+  useLazyQuery,
+  useMutation,
+} from '@apollo/client/react';
 import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
-import { useGetHomesLazyQuery, useSetDefaultHomeMutation } from '#generated';
+import { GetHomesDocument } from '../../graphql/operations/home/home.generated';
+import { SetDefaultHomeDocument } from '../../graphql/operations/home/userSettings.generated';
 import {
   usePantryState,
   useIsHomeSelectionReady,
@@ -59,19 +64,18 @@ export const useDefaultHome = () => {
   const setIsHomeSelectionReady = useSetIsHomeSelectionReady();
 
   // SetDefaultHome mutation for syncing auto-selection to server
-  const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
-    errorPolicy: 'all',
-  });
+  const [setDefaultHomeMutation] = useMutation(SetDefaultHomeDocument, {});
 
   // PERFORMANCE: Use lazy queries with STABLE options to control when they execute
   // Using hardcoded 'cache-first' instead of dynamic policy prevents function recreation
   // on network status changes which caused query cascades
-  const [getHomes, { data: homes, loading, error, called }] =
-    useGetHomesLazyQuery({
+  const [getHomes, { data: homes, loading, error, called }] = useLazyQuery(
+    GetHomesDocument,
+    {
       fetchPolicy: 'cache-first',
-      nextFetchPolicy: 'cache-first',
       errorPolicy: 'ignore',
-    });
+    },
+  );
 
   // Allow pantry query to start immediately when persisted selections exist.
   // This runs in parallel with GetHomes instead of waiting for selection init.

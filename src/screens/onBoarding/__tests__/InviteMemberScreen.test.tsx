@@ -33,16 +33,18 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useInviteToHomeMutation: jest.fn(() => [
-    jest.fn(() => Promise.resolve()),
-    { loading: false },
-  ]),
-  useAddCollaboratorMutation: jest.fn(() => [
-    jest.fn(() => Promise.resolve()),
-    { loading: false },
-  ]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'InviteToHome') {
+      return [jest.fn(() => Promise.resolve()), { loading: false }];
+    }
+    if (opName === 'AddCollaborator') {
+      return [jest.fn(() => Promise.resolve()), { loading: false }];
+    }
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');
@@ -279,8 +281,8 @@ describe('InviteMemberScreen', () => {
 
   it('sends home invite for home-type invites', async () => {
     const mockInviteToHome = jest.fn().mockResolvedValue({});
-    const { useInviteToHomeMutation } = require('#generated');
-    useInviteToHomeMutation.mockReturnValue([
+    const { useMutation } = require('@apollo/client/react');
+    (useMutation as jest.Mock).mockReturnValueOnce([
       mockInviteToHome,
       { loading: false },
     ]);

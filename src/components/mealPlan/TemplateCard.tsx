@@ -4,7 +4,7 @@ import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMappingHelper } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
-import type { MealTemplateDisplayFragment } from '#generated';
+import { type MealTemplateDisplayFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 
 interface TemplateCardProps {
   template: MealTemplateDisplayFragment;

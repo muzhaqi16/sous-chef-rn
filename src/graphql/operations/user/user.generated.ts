@@ -1,0 +1,1080 @@
+import type * as Types from '../../generated/schemaTypes';
+
+import type { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/core';
+export type GetNotificationPreferencesQueryVariables = Types.Exact<{
+  [key: string]: never;
+}>;
+
+export type GetNotificationPreferencesQuery = {
+  __typename: 'Query';
+  me: {
+    __typename: 'User';
+    id: string;
+    notificationPreferences: {
+      __typename: 'NotificationPreferences';
+      id: string;
+      userId: string;
+      emailEnabled: boolean;
+      pushEnabled: boolean;
+      smsEnabled: boolean;
+      expirationNotifications: boolean;
+      expirationNotificationFrequency: Types.ExpirationFrequency;
+      expirationDaysThreshold: number;
+      lowStockAlerts: boolean;
+      shoppingListUpdates: boolean;
+      pantryChanges: boolean;
+      recipeRecommendations: boolean;
+      mealPlanReminders: boolean;
+      cookingReminders: boolean;
+      collaborationInvites: boolean;
+      homeInvites: boolean;
+      sharedListUpdates: boolean;
+      weeklyDigest: boolean;
+      monthlyReport: boolean;
+      quietHoursEnabled: boolean;
+      quietHoursStart: string | null;
+      quietHoursEnd: string | null;
+      quietHoursTimezone: string | null;
+    } | null;
+  } | null;
+};
+
+export type GetDietaryProfileQueryVariables = Types.Exact<{
+  [key: string]: never;
+}>;
+
+export type GetDietaryProfileQuery = {
+  __typename: 'Query';
+  me: {
+    __typename: 'User';
+    id: string;
+    dietaryProfile: {
+      __typename: 'DietaryProfile';
+      id: string;
+      userId: string;
+      preferredCuisines: Array<string>;
+      dislikedIngredients: Array<string>;
+      favoriteIngredients: Array<string>;
+      calorieTarget: number | null;
+      proteinTarget: number | null;
+      carbsTarget: number | null;
+      fatTarget: number | null;
+      mealsPerDay: number;
+      snacksPerDay: number;
+      cookingSkillLevel: string | null;
+      maxPrepTimeMinutes: number | null;
+      maxCookTimeMinutes: number | null;
+      budgetPerMeal: number | null;
+      createdAt: string;
+      updatedAt: string;
+      restrictions: Array<{
+        __typename: 'DietaryRestriction';
+        id: string;
+        diet: Types.Diet | null;
+        intolerance: Types.Intolerance | null;
+        healthGoal: Types.HealthGoal | null;
+        severity: Types.RestrictionSeverity;
+        notes: string | null;
+        appliesToHomeId: string | null;
+        createdAt: string;
+      }>;
+    } | null;
+  } | null;
+};
+
+export type UpdateNotificationPreferencesMutationVariables = Types.Exact<{
+  input: Types.UpdateNotificationPreferencesInput;
+}>;
+
+export type UpdateNotificationPreferencesMutation = {
+  __typename: 'Mutation';
+  updateNotificationPreferences: {
+    __typename: 'NotificationPreferencesPayload';
+    success: boolean;
+    message: string;
+    code: string;
+    notificationPreferences: {
+      __typename: 'NotificationPreferences';
+      id: string;
+      userId: string;
+      emailEnabled: boolean;
+      pushEnabled: boolean;
+      smsEnabled: boolean;
+      expirationNotifications: boolean;
+      expirationNotificationFrequency: Types.ExpirationFrequency;
+      expirationDaysThreshold: number;
+      lowStockAlerts: boolean;
+      shoppingListUpdates: boolean;
+      pantryChanges: boolean;
+      recipeRecommendations: boolean;
+      mealPlanReminders: boolean;
+      cookingReminders: boolean;
+      collaborationInvites: boolean;
+      homeInvites: boolean;
+      sharedListUpdates: boolean;
+      weeklyDigest: boolean;
+      monthlyReport: boolean;
+      quietHoursEnabled: boolean;
+      quietHoursStart: string | null;
+      quietHoursEnd: string | null;
+      quietHoursTimezone: string | null;
+    } | null;
+  };
+};
+
+export type UpdateDietaryProfileMutationVariables = Types.Exact<{
+  input: Types.UpdateDietaryProfileInput;
+}>;
+
+export type UpdateDietaryProfileMutation = {
+  __typename: 'Mutation';
+  updateDietaryProfile: {
+    __typename: 'DietaryProfilePayload';
+    success: boolean;
+    message: string;
+    code: string;
+    dietaryProfile: {
+      __typename: 'DietaryProfile';
+      id: string;
+      userId: string;
+      preferredCuisines: Array<string>;
+      dislikedIngredients: Array<string>;
+      favoriteIngredients: Array<string>;
+      calorieTarget: number | null;
+      proteinTarget: number | null;
+      carbsTarget: number | null;
+      fatTarget: number | null;
+      mealsPerDay: number;
+      snacksPerDay: number;
+      cookingSkillLevel: string | null;
+      maxPrepTimeMinutes: number | null;
+      maxCookTimeMinutes: number | null;
+      budgetPerMeal: number | null;
+      createdAt: string;
+      updatedAt: string;
+      restrictions: Array<{
+        __typename: 'DietaryRestriction';
+        id: string;
+        diet: Types.Diet | null;
+        intolerance: Types.Intolerance | null;
+        healthGoal: Types.HealthGoal | null;
+        severity: Types.RestrictionSeverity;
+        notes: string | null;
+        appliesToHomeId: string | null;
+        createdAt: string;
+      }>;
+    } | null;
+  };
+};
+
+export type AddDietaryRestrictionMutationVariables = Types.Exact<{
+  input: Types.AddRestrictionInput;
+}>;
+
+export type AddDietaryRestrictionMutation = {
+  __typename: 'Mutation';
+  addRestriction: {
+    __typename: 'DietaryRestrictionPayload';
+    success: boolean;
+    message: string;
+    code: string;
+    dietaryRestriction: {
+      __typename: 'DietaryRestriction';
+      id: string;
+      diet: Types.Diet | null;
+      intolerance: Types.Intolerance | null;
+      healthGoal: Types.HealthGoal | null;
+      severity: Types.RestrictionSeverity;
+      notes: string | null;
+      appliesToHomeId: string | null;
+      createdAt: string;
+    } | null;
+  };
+};
+
+export type UpdateDietaryRestrictionMutationVariables = Types.Exact<{
+  input: Types.UpdateRestrictionInput;
+}>;
+
+export type UpdateDietaryRestrictionMutation = {
+  __typename: 'Mutation';
+  updateRestriction: {
+    __typename: 'DietaryRestrictionPayload';
+    success: boolean;
+    message: string;
+    code: string;
+    dietaryRestriction: {
+      __typename: 'DietaryRestriction';
+      id: string;
+      diet: Types.Diet | null;
+      intolerance: Types.Intolerance | null;
+      healthGoal: Types.HealthGoal | null;
+      severity: Types.RestrictionSeverity;
+      notes: string | null;
+      appliesToHomeId: string | null;
+      createdAt: string;
+    } | null;
+  };
+};
+
+export type RemoveDietaryRestrictionMutationVariables = Types.Exact<{
+  input: Types.RemoveRestrictionInput;
+}>;
+
+export type RemoveDietaryRestrictionMutation = {
+  __typename: 'Mutation';
+  removeRestriction: {
+    __typename: 'DietaryRestrictionPayload';
+    success: boolean;
+    message: string;
+    code: string;
+  };
+};
+
+export const GetNotificationPreferencesDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetNotificationPreferences' },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'me' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'notificationPreferences' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'userId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'emailEnabled' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'pushEnabled' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'smsEnabled' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: {
+                          kind: 'Name',
+                          value: 'expirationNotifications',
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: {
+                          kind: 'Name',
+                          value: 'expirationNotificationFrequency',
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: {
+                          kind: 'Name',
+                          value: 'expirationDaysThreshold',
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'lowStockAlerts' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'shoppingListUpdates' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'pantryChanges' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'recipeRecommendations' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'mealPlanReminders' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cookingReminders' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'collaborationInvites' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'homeInvites' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'sharedListUpdates' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'weeklyDigest' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'monthlyReport' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'quietHoursEnabled' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'quietHoursStart' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'quietHoursEnd' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'quietHoursTimezone' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  GetNotificationPreferencesQuery,
+  GetNotificationPreferencesQueryVariables
+>;
+export const GetDietaryProfileDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetDietaryProfile' },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'me' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'dietaryProfile' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'userId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'preferredCuisines' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'dislikedIngredients' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'favoriteIngredients' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'calorieTarget' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'proteinTarget' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'carbsTarget' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'fatTarget' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'mealsPerDay' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'snacksPerDay' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cookingSkillLevel' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'maxPrepTimeMinutes' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'maxCookTimeMinutes' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'budgetPerMeal' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'createdAt' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'updatedAt' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'restrictions' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'diet' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'intolerance' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'healthGoal' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'severity' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'notes' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'appliesToHomeId' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'createdAt' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  GetDietaryProfileQuery,
+  GetDietaryProfileQueryVariables
+>;
+export const UpdateNotificationPreferencesDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateNotificationPreferences' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: {
+                kind: 'Name',
+                value: 'UpdateNotificationPreferencesInput',
+              },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateNotificationPreferences' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'notificationPreferences' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'userId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'emailEnabled' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'pushEnabled' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'smsEnabled' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: {
+                          kind: 'Name',
+                          value: 'expirationNotifications',
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: {
+                          kind: 'Name',
+                          value: 'expirationNotificationFrequency',
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: {
+                          kind: 'Name',
+                          value: 'expirationDaysThreshold',
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'lowStockAlerts' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'shoppingListUpdates' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'pantryChanges' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'recipeRecommendations' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'mealPlanReminders' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cookingReminders' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'collaborationInvites' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'homeInvites' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'sharedListUpdates' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'weeklyDigest' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'monthlyReport' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'quietHoursEnabled' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'quietHoursStart' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'quietHoursEnd' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'quietHoursTimezone' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  UpdateNotificationPreferencesMutation,
+  UpdateNotificationPreferencesMutationVariables
+>;
+export const UpdateDietaryProfileDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateDietaryProfile' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'UpdateDietaryProfileInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateDietaryProfile' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'dietaryProfile' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'userId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'preferredCuisines' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'dislikedIngredients' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'favoriteIngredients' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'calorieTarget' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'proteinTarget' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'carbsTarget' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'fatTarget' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'mealsPerDay' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'snacksPerDay' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cookingSkillLevel' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'maxPrepTimeMinutes' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'maxCookTimeMinutes' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'budgetPerMeal' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'createdAt' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'updatedAt' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'restrictions' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'diet' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'intolerance' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'healthGoal' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'severity' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'notes' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'appliesToHomeId' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'createdAt' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  UpdateDietaryProfileMutation,
+  UpdateDietaryProfileMutationVariables
+>;
+export const AddDietaryRestrictionDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'AddDietaryRestriction' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'AddRestrictionInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addRestriction' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'dietaryRestriction' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'diet' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'intolerance' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'healthGoal' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'severity' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'appliesToHomeId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'createdAt' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  AddDietaryRestrictionMutation,
+  AddDietaryRestrictionMutationVariables
+>;
+export const UpdateDietaryRestrictionDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateDietaryRestriction' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'UpdateRestrictionInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateRestriction' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'dietaryRestriction' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'diet' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'intolerance' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'healthGoal' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'severity' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'appliesToHomeId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'createdAt' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  UpdateDietaryRestrictionMutation,
+  UpdateDietaryRestrictionMutationVariables
+>;
+export const RemoveDietaryRestrictionDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'RemoveDietaryRestriction' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'RemoveRestrictionInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'removeRestriction' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  RemoveDietaryRestrictionMutation,
+  RemoveDietaryRestrictionMutationVariables
+>;

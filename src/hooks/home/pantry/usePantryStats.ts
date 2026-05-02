@@ -8,8 +8,7 @@
  * falls back to client-side single-pass algorithm (O(n))
  */
 
-;
-import { StorageState } from '#generated';
+import { StorageState } from '../../../graphql/generated/schemaTypes';
 import type { LocationCounts } from './types';
 
 interface UsePantryStatsOptions {
@@ -43,7 +42,8 @@ interface UsePantryStatsOptions {
  * ```
  */
 export function usePantryStats(options: UsePantryStatsOptions) {
-  const { pantryItems, totalCount, storageStateCounts, storageLocationCounts } = options;
+  const { pantryItems, totalCount, storageStateCounts, storageLocationCounts } =
+    options;
 
   return (() => {
     // Server-side counts available — use them (O(1))

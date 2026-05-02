@@ -168,7 +168,15 @@ mutation CompleteOnboarding {
     message
     code
     user {
-      ...AuthUser
+      id
+      email
+      emailVerified
+      role
+      canAccessDevTools
+      onBoarded
+      createdAt
+      updatedAt
+      timezone
     }
   }
 }

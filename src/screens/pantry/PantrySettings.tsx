@@ -9,13 +9,14 @@ import { commonStyles } from '#/styles/commonStyles';
 import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { LoadingInline } from '#components/base/Loading';
 import { InfoRow } from '#components/molecules/InfoRow';
+import { useQuery, useMutation } from '@apollo/client/react';
 import {
-  useGetPantryQuery,
-  useUpdatePantryMutation,
-  useDeletePantryMutation,
-  useCreatePantryMutation,
-  useSetDefaultPantryMutation,
-} from '#generated';
+  GetPantryDocument,
+  UpdatePantryDocument,
+  DeletePantryDocument,
+  CreatePantryDocument,
+  SetDefaultPantryDocument,
+} from '#operations/pantry/pantry.generated';
 import { useAppStore, useSelectedHomeId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -210,7 +211,7 @@ export const PantrySettings: React.FC<
     data: pantryData,
     loading: loadingPantry,
     error: pantryError,
-  } = useGetPantryQuery({
+  } = useQuery(GetPantryDocument, {
     variables: {
       id: pantryId!,
       itemsFirst: 25,
@@ -222,13 +223,12 @@ export const PantrySettings: React.FC<
   // Memoize normalized pantry to prevent re-creating on every render
   const pantry = normalizePantry(pantryData?.pantry);
 
-  const [updatePantry] = useUpdatePantryMutation({
+  const [updatePantry] = useMutation(UpdatePantryDocument, {
     // Update cache directly - Apollo automatically merges the Pantry entity
     // No need to update home's pantries array since the pantry is just updated, not added/removed
   });
 
-  const [setDefaultPantry] = useSetDefaultPantryMutation({
-    errorPolicy: 'all',
+  const [setDefaultPantry] = useMutation(SetDefaultPantryDocument, {
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Set Default Pantry',
@@ -239,8 +239,7 @@ export const PantrySettings: React.FC<
     },
   });
 
-  const [deletePantry] = useDeletePantryMutation({
-    errorPolicy: 'all',
+  const [deletePantry] = useMutation(DeletePantryDocument, {
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Delete Pantry',
@@ -252,7 +251,7 @@ export const PantrySettings: React.FC<
     update: buildDeletePantryUpdater(selectedHomeId),
   });
 
-  const [createPantry] = useCreatePantryMutation({
+  const [createPantry] = useMutation(CreatePantryDocument, {
     // Update cache directly instead of refetching. Builder is module-scope to
     // keep try/catch out of the component body (React Compiler bailout).
     update: buildCreatePantryUpdater(selectedHomeId),

@@ -1,7 +1,6 @@
-import {
-  useGetMealTemplateQuery,
-  type MealTemplateItemFragment,
-} from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { GetMealTemplateDocument } from '../../graphql/operations/mealPlan/mealTemplate.generated';
+import { type MealTemplateItemFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 
 interface GroupedDay {
   dayOffset: number;
@@ -9,11 +8,9 @@ interface GroupedDay {
 }
 
 export function useMealTemplate(templateId: string | undefined) {
-  const { data, loading, error, refetch } = useGetMealTemplateQuery({
+  const { data, loading, error, refetch } = useQuery(GetMealTemplateDocument, {
     variables: { id: templateId! },
     skip: !templateId,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
   });
 
   const template = data?.mealTemplate ?? null;

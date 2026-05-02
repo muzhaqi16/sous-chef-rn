@@ -2,27 +2,41 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
+import { useFragment } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
-import type { MealPlanItemFragment } from '#generated';
+import {
+  MealPlanItemCard_ItemFragmentDoc,
+  type MealPlanItemCard_ItemFragment,
+} from './MealPlanItemCard.generated';
 
 interface MealPlanItemCardProps {
-  item: MealPlanItemFragment;
+  item: MealPlanItemCard_ItemFragment;
   onToggleCompleted?: (
     id: string,
     isCompleted: boolean,
     hasRecipe: boolean,
   ) => void;
-  onPress?: (item: MealPlanItemFragment) => void;
+  onPress?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
 
 export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
-  item,
+  item: itemSource,
   onToggleCompleted,
   onPress,
   onDelete,
 }) => {
+  // Subscribe to this entity's MealPlanItemCard_item fields. Re-renders happen
+  // only when these specific fields change in the cache.
+  const fragmentResult = useFragment({
+    fragment: MealPlanItemCard_ItemFragmentDoc,
+    fragmentName: 'MealPlanItemCard_item',
+    from: itemSource,
+  });
+  // Cache miss (e.g., entity evicted) — fall back to source data so we never blank out a list item.
+  const item = fragmentResult.complete ? fragmentResult.data : itemSource;
+
   const recipeName = item.recipe?.name ?? item.customMealName ?? 'Unnamed meal';
   const imageUrl = item.recipe?.imageUrl;
   const totalTime = item.recipe?.totalTimeMinutes;
@@ -35,7 +49,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-      onPress={() => onPress?.(item)}
+      onPress={() => onPress?.(item.id)}
     >
       {/* Checkbox */}
       {onToggleCompleted ? (

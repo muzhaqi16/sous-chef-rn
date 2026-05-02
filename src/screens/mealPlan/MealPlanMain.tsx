@@ -40,14 +40,19 @@ import { useMealPlanPermissions } from '#hooks/mealPlan/useMealPlanPermissions';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { MealPlanSkeleton } from '#components/base/Skeleton/MealPlanSkeleton';
 import { useAppStore } from '#store/useAppStore';
-import {
-  useDeleteMealPlanMutation,
-  GetMealPlansDocument,
-  SortOrder,
-  MealType,
-  type MealPlanItemFragment,
-  type MealTemplateDisplayFragment,
-} from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { DeleteMealPlanDocument } from '../../graphql/operations/mealPlan/mealPlan.generated';
+import { MealType } from '../../graphql/generated/schemaTypes';
+import { createRemoveFromQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+
+const removeFromMealPlansForMain = createRemoveFromQueryConnectionUpdater(
+  'mealPlans',
+  'MealPlan',
+);
+import { type MealTemplateDisplayFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
+import { type MealPlanMain_ItemFragment } from './MealPlanMain.generated';
+import { type EditCustomMealSheet_ItemFragment } from '#components/mealPlan/EditCustomMealSheet.generated';
+import { type MealPlanItemActionsItem } from '#hooks/mealPlan/useMealPlanItemActions';
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -114,15 +119,17 @@ const MealPlanMainInner: React.FC = () => {
   const [shoppingListSheetVisible, setShoppingListSheetVisible] =
     useState(false);
 
-  // Mark cooked modal state
+  // Mark cooked modal state.
+  // pendingCookItem is forwarded to `toggleCompleted` (needs the action's full item shape)
+  // and read by MarkCookedModal (needs recipe.name + servings).
   const [markCookedVisible, setMarkCookedVisible] = useState(false);
   const [pendingCookItem, setPendingCookItem] =
-    useState<MealPlanItemFragment | null>(null);
+    useState<MealPlanItemActionsItem | null>(null);
 
-  // Edit custom meal state
+  // Edit custom meal state — only the EditCustomMealSheet's narrow shape is needed.
   const [editCustomMealVisible, setEditCustomMealVisible] = useState(false);
   const [editingCustomItem, setEditingCustomItem] =
-    useState<MealPlanItemFragment | null>(null);
+    useState<EditCustomMealSheet_ItemFragment | null>(null);
 
   // Settings and duplicate state
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -197,19 +204,18 @@ const MealPlanMainInner: React.FC = () => {
   const { duplicatePlan, loading: duplicatingPlan } = useDuplicateMealPlan();
 
   // Delete meal plan
-  const [deletePlanMutation, { loading: deletingPlan }] =
-    useDeleteMealPlanMutation({
-      refetchQueries: [
-        {
-          query: GetMealPlansDocument,
-          variables: { first: 20, orderBy: { startDate: SortOrder.Desc } },
-        },
-      ],
-      awaitRefetchQueries: true,
+  const [deletePlanMutation, { loading: deletingPlan }] = useMutation(
+    DeleteMealPlanDocument,
+    {
+      update(cache, { data }, { variables }) {
+        const id = data?.deleteMealPlan?.mealPlan?.id ?? variables?.id;
+        if (id) removeFromMealPlansForMain(cache, id, { evictItem: true });
+      },
       onError: error => {
         toastService.error(error.message || 'Failed to delete meal plan');
       },
-    });
+    },
+  );
 
   // Compute days with meals for calendar indicators
   const daysWithMeals = (() => {
@@ -308,7 +314,11 @@ const MealPlanMainInner: React.FC = () => {
     setAddMealVisible(true);
   };
 
-  const handleItemPress = (item: MealPlanItemFragment) => {
+  const handleItemPress = (id: string) => {
+    const item = items.find(i => i.id === id) as
+      | (MealPlanMain_ItemFragment & EditCustomMealSheet_ItemFragment)
+      | undefined;
+    if (!item) return;
     if (item.recipe?.id) {
       navigate('RecipeDetail', { recipeId: item.recipe.id });
     } else if (item.customMealName && permissions.canEdit) {

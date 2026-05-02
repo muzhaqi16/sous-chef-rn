@@ -9,11 +9,12 @@ import {
 import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { AddItemToShoppingListDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import {
-  useGetPantryItemQuery,
-  useDeletePantryItemMutation,
-  useAddItemToShoppingListMutation,
-} from '#generated';
+  GetPantryItemDocument,
+  DeletePantryItemDocument,
+} from '#operations/pantry/pantry.generated';
 import {
   useSelectedShoppingListId,
   useSelectedPantryId,
@@ -109,17 +110,15 @@ export const PantryItemDetail: React.FC<
   const [loadingRecipes, setLoadingRecipes] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data, refetch } = useGetPantryItemQuery({
+  const { data, refetch } = useQuery(GetPantryItemDocument, {
     variables: { id: itemId },
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
   });
 
   const handleRefresh = () => {
     executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
-  const [deleteItem] = useDeletePantryItemMutation({
+  const [deleteItem] = useMutation(DeletePantryItemDocument, {
     update: (cache, { data: mutationData }, { variables }) => {
       if (
         !mutationData?.deletePantryItem?.pantryItem ||
@@ -145,7 +144,7 @@ export const PantryItemDetail: React.FC<
       });
     },
   });
-  const [addToShoppingList] = useAddItemToShoppingListMutation({
+  const [addToShoppingList] = useMutation(AddItemToShoppingListDocument, {
     update: (cache, { data: mutationData }) => {
       const shoppingListItem =
         mutationData?.addItemToShoppingList?.shoppingListItem;

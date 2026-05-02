@@ -2,7 +2,7 @@
  * Shared types for pantry management hooks
  */
 
-import { StorageState } from '#generated';
+import { StorageState } from '../../../graphql/generated/schemaTypes';
 
 export interface PantryItemInput {
   itemName: string;

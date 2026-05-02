@@ -1,7 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { HomeCard } from '../HomeCard';
-import { MembershipRole, MembershipStatus } from '#/graphql/generated';
+import {
+  MembershipRole,
+  MembershipStatus,
+} from '../../../../graphql/generated/schemaTypes';
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: 'Icon',

@@ -18,11 +18,12 @@
 
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
+import { useLazyQuery } from '@apollo/client/react';
+import { GetUnreadNotificationsDocument } from '../../graphql/operations/notifications/notifications.generated';
 import {
-  useGetUnreadNotificationsLazyQuery,
   NotificationCategory,
   Priority,
-} from '#generated';
+} from '../../graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
 import {
   NotificationPriority,
@@ -39,12 +40,10 @@ export function useNotificationsOnLaunch(userId?: string) {
 
   const hasFetchedRef = useRef(false);
 
-  const [fetchUnreadNotifications, { data, error }] =
-    useGetUnreadNotificationsLazyQuery({
-      fetchPolicy: 'cache-and-network',
-      nextFetchPolicy: 'cache-first',
-      errorPolicy: 'all',
-    });
+  const [fetchUnreadNotifications, { data, error }] = useLazyQuery(
+    GetUnreadNotificationsDocument,
+    {},
+  );
 
   const fetch = () => {
     if (!userId) return;

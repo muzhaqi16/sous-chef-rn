@@ -1,4 +1,5 @@
-import { useMovePurchasedItemsToPantryMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { MovePurchasedItemsToPantryDocument } from '#operations/pantry/pantry.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import {
@@ -22,8 +23,9 @@ export function useBatchMoveToPantry({
   currentListId,
   onSuccess,
 }: UseBatchMoveToPantryOptions): UseBatchMoveToPantryReturn {
-  const [movePurchasedMutation, { loading }] =
-    useMovePurchasedItemsToPantryMutation({
+  const [movePurchasedMutation, { loading }] = useMutation(
+    MovePurchasedItemsToPantryDocument,
+    {
       update: (cache, { data }) => {
         const result = data?.movePurchasedItemsToPantry;
         if (!result || !currentListId) return;
@@ -87,7 +89,8 @@ export function useBatchMoveToPantry({
       onError: error => {
         toastService.error(error.message || 'Failed to move items to pantry');
       },
-    });
+    },
+  );
 
   const batchMoveToPantry = async () => {
     if (!currentListId) {

@@ -1,5 +1,5 @@
 import { resolveImageUrl } from '#utils/imageUtils';
-import type { ShoppingListItemDisplayFragment } from '#generated';
+import { type ShoppingListItemDisplayFragment } from '#operations/shoppingList/shoppingListFragments.generated';
 import type {
   SortableShoppingListItem,
   QuantityElementConfig,

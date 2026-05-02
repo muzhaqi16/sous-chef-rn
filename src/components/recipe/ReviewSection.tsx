@@ -7,7 +7,7 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { RatingBreakdown } from './RatingBreakdown';
 import { ReviewCard } from './ReviewCard';
 import { WriteReviewSheet } from './WriteReviewSheet';
-import type { RecipeReviewFragment } from '#generated';
+import { type RecipeReviewFragment } from '../../graphql/operations/recipe/recipeFragments.generated';
 
 interface ReviewSectionProps {
   reviews: RecipeReviewFragment[];

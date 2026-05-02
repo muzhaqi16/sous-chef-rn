@@ -33,10 +33,18 @@ const mockUseSearchUnitsQuery = jest.fn<any, [any]>(() => ({
 }));
 
 const mockFetchCommonUnits = jest.fn().mockResolvedValue({ data: null });
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useSearchUnitsQuery: (options: any) => mockUseSearchUnitsQuery(options),
-  useGetCommonUnitsLazyQuery: () => [mockFetchCommonUnits, { data: null }],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any, options: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'SearchUnits') return mockUseSearchUnitsQuery(options);
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useLazyQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetCommonUnits') return [mockFetchCommonUnits, {}];
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 beforeEach(() => {

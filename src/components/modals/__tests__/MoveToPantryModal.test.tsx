@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { MoveToPantryModal } from '../MoveToPantryModal';
-import type { ShoppingListItemDisplayFragment } from '#generated';
+import { type ShoppingListItemDisplayFragment } from '#operations/shoppingList/shoppingListFragments.generated';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -56,13 +56,18 @@ jest.mock('#components/molecules/FractionInput', () => {
   };
 });
 
-jest.mock('#components/molecules/AutocompleteField/UnitAutocompleteField', () => {
-  const RN = require('react-native');
-  return {
-    UnitAutocompleteField: () =>
-      require('react').createElement(RN.View, { testID: 'unit-autocomplete' }),
-  };
-});
+jest.mock(
+  '#components/molecules/AutocompleteField/UnitAutocompleteField',
+  () => {
+    const RN = require('react-native');
+    return {
+      UnitAutocompleteField: () =>
+        require('react').createElement(RN.View, {
+          testID: 'unit-autocomplete',
+        }),
+    };
+  },
+);
 
 jest.mock('#components/molecules/FormInput', () => {
   const RN = require('react-native');
@@ -93,7 +98,8 @@ jest.mock('@react-native-community/datetimepicker', () => {
   const RN = require('react-native');
   return {
     __esModule: true,
-    default: () => require('react').createElement(RN.View, { testID: 'date-picker' }),
+    default: () =>
+      require('react').createElement(RN.View, { testID: 'date-picker' }),
   };
 });
 
@@ -171,9 +177,7 @@ describe('MoveToPantryModal', () => {
   });
 
   it('does not render item info when shoppingListItem is null', () => {
-    render(
-      <MoveToPantryModal {...defaultProps} shoppingListItem={null} />,
-    );
+    render(<MoveToPantryModal {...defaultProps} shoppingListItem={null} />);
     expect(screen.queryByText('Milk')).toBeNull();
   });
 
@@ -189,7 +193,12 @@ describe('MoveToPantryModal', () => {
       unitName: 'gallons',
     } as unknown as ShoppingListItemDisplayFragment;
 
-    render(<MoveToPantryModal {...defaultProps} shoppingListItem={itemWithUnitName} />);
+    render(
+      <MoveToPantryModal
+        {...defaultProps}
+        shoppingListItem={itemWithUnitName}
+      />,
+    );
     expect(screen.getByText(/Shopping list quantity/)).toBeTruthy();
   });
 
@@ -199,7 +208,12 @@ describe('MoveToPantryModal', () => {
       quantity: null,
     } as unknown as ShoppingListItemDisplayFragment;
 
-    render(<MoveToPantryModal {...defaultProps} shoppingListItem={itemWithoutQuantity} />);
+    render(
+      <MoveToPantryModal
+        {...defaultProps}
+        shoppingListItem={itemWithoutQuantity}
+      />,
+    );
     expect(screen.getByText(/Shopping list quantity: 1/)).toBeTruthy();
   });
 
@@ -222,27 +236,31 @@ describe('MoveToPantryModal', () => {
 
   it('resets form when modal opens with new item', () => {
     const { rerender } = render(
-      <MoveToPantryModal {...defaultProps} visible={false} shoppingListItem={null} />,
+      <MoveToPantryModal
+        {...defaultProps}
+        visible={false}
+        shoppingListItem={null}
+      />,
     );
     rerender(
-      <MoveToPantryModal {...defaultProps} visible={true} shoppingListItem={mockShoppingListItem} />,
+      <MoveToPantryModal
+        {...defaultProps}
+        visible={true}
+        shoppingListItem={mockShoppingListItem}
+      />,
     );
     expect(screen.getByText('Milk')).toBeTruthy();
   });
 
   it('renders with empty pantries list', () => {
-    render(
-      <MoveToPantryModal {...defaultProps} pantries={[]} />,
-    );
+    render(<MoveToPantryModal {...defaultProps} pantries={[]} />);
     // Should still render but without pantry selector
     expect(screen.getByText('Milk')).toBeTruthy();
     expect(screen.queryByText('Select Pantry')).toBeNull();
   });
 
   it('hides empty pantries section label when no pantries', () => {
-    render(
-      <MoveToPantryModal {...defaultProps} pantries={[]} />,
-    );
+    render(<MoveToPantryModal {...defaultProps} pantries={[]} />);
     expect(screen.queryByText('Kitchen Pantry')).toBeNull();
     expect(screen.queryByText('Garage')).toBeNull();
   });

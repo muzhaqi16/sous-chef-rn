@@ -11,21 +11,22 @@
  * deduplication to prevent self-echo and duplicate updates.
  */
 
+import { useSubscription } from '@apollo/client/react';
 import { useAppStore } from '#store/useAppStore';
 import {
-  usePantryChangesSubscription,
-  usePantryAlertsSubscription,
-  useExpirationNotificationChangedSubscription,
-  PantryItemDisplayFragmentDoc,
+  PantryChangesDocument,
+  PantryAlertsDocument,
+  ExpirationNotificationChangedDocument,
   type PantryChangesSubscription,
   type ExpirationNotificationChangedSubscription,
-} from '#generated';
+} from '#operations/pantry/pantry.generated';
+import { PantryItemDisplayFragmentDoc } from '#operations/pantry/pantryFragments.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
 } from '#/services/subscriptions/types';
-import { MutationType } from '#generated';
+import { MutationType } from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -167,7 +168,7 @@ export function usePantrySubscriptions(userId?: string) {
     },
   });
 
-  usePantryChangesSubscription({
+  useSubscription(PantryChangesDocument, {
     variables: { pantryId: selectedPantryId! },
     skip: !selectedPantryId || !isHomeSelectionReady,
     ...changesHandlers,
@@ -188,7 +189,7 @@ export function usePantrySubscriptions(userId?: string) {
     entityId: selectedPantryId,
   });
 
-  usePantryAlertsSubscription({
+  useSubscription(PantryAlertsDocument, {
     variables: { pantryId: selectedPantryId! },
     skip: !selectedPantryId || !isHomeSelectionReady,
     ...alertsHandlers,
@@ -230,7 +231,7 @@ export function usePantrySubscriptions(userId?: string) {
       },
     });
 
-  useExpirationNotificationChangedSubscription({
+  useSubscription(ExpirationNotificationChangedDocument, {
     variables: { pantryId: selectedPantryId! },
     skip: !selectedPantryId || !isHomeSelectionReady,
     ...expirationHandlers,

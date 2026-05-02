@@ -8,7 +8,8 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
-import { useGetShoppingListsLiteQuery } from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { GetShoppingListsLiteDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import { Icon } from '#utils/iconUtils';
 
 interface GenerateShoppingListSheetProps {
@@ -51,7 +52,7 @@ export const GenerateShoppingListSheet: React.FC<
     }
   }
 
-  const { data: listsData } = useGetShoppingListsLiteQuery({
+  const { data: listsData } = useQuery(GetShoppingListsLiteDocument, {
     variables: { first: 20 },
     skip: !visible,
   });

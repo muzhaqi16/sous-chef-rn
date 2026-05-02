@@ -32,20 +32,30 @@ jest.mock('#/utils/connectionUtils', () => ({
   normalizePantry: jest.fn(() => ({ storageLocations: [] })),
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetPantryItemQuery: jest.fn(() => ({
-    data: null,
-    loading: false,
-    refetch: jest.fn(),
-  })),
-  useGetHomeQuery: jest.fn(() => ({
-    data: null,
-  })),
-  useGetPantryQuery: jest.fn(() => ({
-    data: null,
-  })),
+const queryResponses: Record<string, any> = {};
+const setQueryResponse = (opName: string, response: any) => {
+  queryResponses[opName] = response;
+};
+
+const mutationOverrides: Record<string, [jest.Mock, { loading: boolean }]> = {};
+
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName && queryResponses[opName]) return queryResponses[opName];
+    return { data: null, loading: false, refetch: jest.fn() };
+  }),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName && mutationOverrides[opName]) return mutationOverrides[opName];
+    return [jest.fn(), { loading: false }];
+  }),
 }));
+
+// GetPantry / GetPantryItem are now in the pantry slice (v4 codegen).
+// Spread requireActual so MockedProvider (which depends on @apollo/client/react
+// internals through `renderWithProviders`) keeps working.
 
 jest.mock('#hooks/pantry/mutations/useCreatePantryItem', () => ({
   useCreatePantryItem: jest.fn(() => ({
@@ -173,6 +183,8 @@ jest.mock('#/apollo/links/refreshToken');
 describe('PantryItemForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    for (const k of Object.keys(queryResponses)) delete queryResponses[k];
+    for (const k of Object.keys(mutationOverrides)) delete mutationOverrides[k];
   });
 
   it('renders in add mode with correct title', () => {
@@ -211,8 +223,7 @@ describe('PantryItemForm', () => {
   });
 
   it('shows loading spinner in edit mode while loading', () => {
-    const { useGetPantryItemQuery } = require('#generated');
-    useGetPantryItemQuery.mockReturnValueOnce({
+    setQueryResponse('GetPantryItem', {
       data: null,
       loading: true,
       refetch: jest.fn(),
@@ -223,8 +234,7 @@ describe('PantryItemForm', () => {
   });
 
   it('shows error message when item not found in edit mode', () => {
-    const { useGetPantryItemQuery } = require('#generated');
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: { pantryItem: null },
       loading: false,
       refetch: jest.fn(),
@@ -232,7 +242,7 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.getByText('Item not found')).toBeTruthy();
     // Restore default mock
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: null,
       loading: false,
       refetch: jest.fn(),
@@ -240,8 +250,7 @@ describe('PantryItemForm', () => {
   });
 
   it('renders edit mode form when item data is available', () => {
-    const { useGetPantryItemQuery } = require('#generated');
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           id: 'item-1',
@@ -269,7 +278,7 @@ describe('PantryItemForm', () => {
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     expect(screen.getByTestId('edit-pantry-item-modal')).toBeTruthy();
     // Restore default mock
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: null,
       loading: false,
       refetch: jest.fn(),
@@ -279,8 +288,7 @@ describe('PantryItemForm', () => {
   // --- Branch coverage tests ---
 
   it('renders tags section in edit mode', () => {
-    const { useGetPantryItemQuery } = require('#generated');
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           id: 'item-1',
@@ -308,7 +316,7 @@ describe('PantryItemForm', () => {
     expect(screen.getByText('Tags')).toBeTruthy();
     expect(screen.getByTestId('dynamic-form-fields')).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: null,
       loading: false,
       refetch: jest.fn(),
@@ -316,8 +324,7 @@ describe('PantryItemForm', () => {
   });
 
   it('renders edit mode with storageLocation as string', () => {
-    const { useGetPantryItemQuery } = require('#generated');
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           id: 'item-1',
@@ -344,7 +351,7 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: null,
       loading: false,
       refetch: jest.fn(),
@@ -352,8 +359,7 @@ describe('PantryItemForm', () => {
   });
 
   it('renders edit mode with storageLocation as object', () => {
-    const { useGetPantryItemQuery } = require('#generated');
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           id: 'item-1',
@@ -380,7 +386,7 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: null,
       loading: false,
       refetch: jest.fn(),
@@ -388,8 +394,7 @@ describe('PantryItemForm', () => {
   });
 
   it('renders weight locked hint when item has lastUsedAt', () => {
-    const { useGetPantryItemQuery } = require('#generated');
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           id: 'item-1',
@@ -416,7 +421,7 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.getByText(/Weight locked after use/)).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: null,
       loading: false,
       refetch: jest.fn(),
@@ -424,8 +429,7 @@ describe('PantryItemForm', () => {
   });
 
   it('renders edit mode with no storageState defaults to AMBIENT', () => {
-    const { useGetPantryItemQuery } = require('#generated');
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           id: 'item-1',
@@ -452,7 +456,7 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: null,
       loading: false,
       refetch: jest.fn(),
@@ -466,8 +470,7 @@ describe('PantryItemForm', () => {
   });
 
   it('renders edit mode quantity testID', () => {
-    const { useGetPantryItemQuery } = require('#generated');
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           id: 'item-1',
@@ -494,7 +497,7 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.getByTestId('edit-pantry-item-quantity-input')).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: null,
       loading: false,
       refetch: jest.fn(),
@@ -502,8 +505,7 @@ describe('PantryItemForm', () => {
   });
 
   it('does not render weight locked hint when item has no lastUsedAt', () => {
-    const { useGetPantryItemQuery } = require('#generated');
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           id: 'item-1',
@@ -530,7 +532,7 @@ describe('PantryItemForm', () => {
     renderWithProviders(<PantryItemForm mode="edit" itemId="item-1" />);
     expect(screen.queryByText(/Weight locked after use/)).toBeNull();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: null,
       loading: false,
       refetch: jest.fn(),
@@ -538,8 +540,7 @@ describe('PantryItemForm', () => {
   });
 
   it('renders edit mode with existing item that has all fields populated', () => {
-    const { useGetPantryItemQuery } = require('#generated');
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           id: 'item-1',
@@ -567,7 +568,7 @@ describe('PantryItemForm', () => {
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     expect(screen.getByText(/Weight locked after use/)).toBeTruthy();
     // Restore
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: null,
       loading: false,
       refetch: jest.fn(),
@@ -578,11 +579,6 @@ describe('PantryItemForm', () => {
 // ─── Additional branch-coverage tests ────────────────────────────────────────
 
 describe('PantryItemForm – additional branch coverage', () => {
-  const {
-    useGetPantryItemQuery,
-    useGetHomeQuery,
-    useGetPantryQuery,
-  } = require('#generated');
   const { useAppStore } = require('#store/useAppStore');
   const { normalizeHome, normalizePantry } = require('#/utils/connectionUtils');
   const { parseFractionalInput } = require('#/utils/fractionUtils');
@@ -609,27 +605,14 @@ describe('PantryItemForm – additional branch coverage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    useGetPantryItemQuery.mockReturnValue({
-      data: null,
-      loading: false,
-      refetch: jest.fn(),
-    });
-    useGetHomeQuery.mockReturnValue({ data: null });
-    useGetPantryQuery.mockReturnValue({ data: null });
+    for (const k of Object.keys(queryResponses)) delete queryResponses[k];
+    for (const k of Object.keys(mutationOverrides)) delete mutationOverrides[k];
     useAppStore.mockReturnValue(null);
     normalizeHome.mockReturnValue({
       pantries: [{ id: 'p1', isDefault: true }],
     });
     normalizePantry.mockReturnValue({ storageLocations: [] });
     parseFractionalInput.mockImplementation((v: string) => parseFloat(v) || 0);
-  });
-
-  afterEach(() => {
-    useGetPantryItemQuery.mockReturnValue({
-      data: null,
-      loading: false,
-      refetch: jest.fn(),
-    });
   });
 
   // ---------- getDefaultPantry branches ----------
@@ -663,7 +646,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   it('uses pantryId from existingItemData when no store/home data', () => {
     normalizeHome.mockReturnValue(null);
     useAppStore.mockReturnValue(null);
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: { ...baseEditItem, pantryId: 'existing-pantry' },
       },
@@ -682,7 +665,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('initializes edit values when existing item has all null/empty fields', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -707,7 +690,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('initializes edit values with storageLocation as string', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -722,7 +705,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('initializes edit values with storageLocation as object', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -737,7 +720,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('initializes with category name from existing item', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -752,7 +735,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('initializes brand name from existing item', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -767,7 +750,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('initializes with existing item that has expiresAt', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -784,7 +767,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   // ---------- "adjusting state during render" data sync branches ----------
 
   it('sets tracking unit from existing item.unit during render sync', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -799,7 +782,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('sets net weight unit display from existing item during render sync', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -814,7 +797,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('uses netWeightUnit.name when symbol is absent during sync', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -829,7 +812,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('uses empty string when netWeightUnit has no symbol or name', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -844,7 +827,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('does not sync when mode is add', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: { pantryItem: baseEditItem },
       loading: false,
       refetch: jest.fn(),
@@ -856,7 +839,7 @@ describe('PantryItemForm – additional branch coverage', () => {
 
   it('does not re-sync when existingItemData reference stays the same', () => {
     const stableData = { pantryItem: baseEditItem };
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: stableData,
       loading: false,
       refetch: jest.fn(),
@@ -1566,7 +1549,7 @@ describe('PantryItemForm – additional branch coverage', () => {
 
   it('tags renderValue handles array input', () => {
     // This tests the tagsFields definition functions
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -1583,7 +1566,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   // ---------- isWeightLocked false in edit mode (no lastUsedAt) ----------
 
   it('isWeightLocked is false when lastUsedAt is null in edit mode', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -1602,7 +1585,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   // ---------- isWeightLocked true in edit mode (lastUsedAt present) ----------
 
   it('isWeightLocked is true when lastUsedAt is set in edit mode', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -1624,7 +1607,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('sets formTestID to edit-pantry-item-modal in edit mode', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: { pantryItem: baseEditItem },
       loading: false,
       refetch: jest.fn(),
@@ -1642,7 +1625,7 @@ describe('PantryItemForm – additional branch coverage', () => {
         { id: 'sl2', name: 'Pantry', type: 'ambient' },
       ],
     });
-    useGetPantryQuery.mockReturnValue({
+    setQueryResponse('GetPantry', {
       data: { pantry: { id: 'p1' } },
     });
 
@@ -1651,12 +1634,11 @@ describe('PantryItemForm – additional branch coverage', () => {
 
     // Restore
     normalizePantry.mockReturnValue({ storageLocations: [] });
-    useGetPantryQuery.mockReturnValue({ data: null });
   });
 
   it('handles null pantryData by passing empty storageLocations', () => {
     normalizePantry.mockReturnValue(null);
-    useGetPantryQuery.mockReturnValue({
+    setQueryResponse('GetPantry', {
       data: { pantry: null },
     });
 
@@ -1670,7 +1652,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   // ---------- edit mode with unit having null type ----------
 
   it('initializes tracking unit with null type when item.unit.type is null', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -1687,7 +1669,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   // ---------- edit mode with empty tags array ----------
 
   it('renders tags section even with empty tags in edit mode', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,
@@ -1710,7 +1692,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('shows "Edit Pantry Item" title in edit mode header', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: { pantryItem: baseEditItem },
       loading: false,
       refetch: jest.fn(),
@@ -1751,7 +1733,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   });
 
   it('sets submit button testID to edit-pantry-item-submit-button in edit mode', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: { pantryItem: baseEditItem },
       loading: false,
       refetch: jest.fn(),
@@ -1788,7 +1770,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   // ---------- onBrandSelected in edit mode ----------
 
   it('passes onBrandSelected callback in edit mode', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: { pantryItem: baseEditItem },
       loading: false,
       refetch: jest.fn(),
@@ -1829,7 +1811,7 @@ describe('PantryItemForm – additional branch coverage', () => {
   // ---------- edit mode: storageState watchedValues ?? fallback ----------
 
   it('passes StorageState.Ambient as fallback when watchedValues.storageState is undefined', () => {
-    useGetPantryItemQuery.mockReturnValue({
+    setQueryResponse('GetPantryItem', {
       data: {
         pantryItem: {
           ...baseEditItem,

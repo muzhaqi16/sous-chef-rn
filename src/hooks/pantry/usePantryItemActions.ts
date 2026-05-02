@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import {
-  useCreatePantryItemUsageMutation,
-  useRestockPantryItemMutation,
-  UsagePurpose,
-  WasteReason,
-  PantryItemFragment,
-} from '#generated';
+  CreatePantryItemUsageDocument,
+  RestockPantryItemDocument,
+} from '#operations/pantry/pantry.generated';
+import type { PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
+import { UsagePurpose, WasteReason } from '#/graphql/generated/schemaTypes';
 import { isNetworkError } from '#/utils/isNetworkError';
 import {
   isInvalidUnitError,
@@ -140,14 +139,13 @@ export function usePantryItemActions({
   };
 
   // Consume/Waste item mutation (both use createPantryItemUsage)
-  const [createPantryItemUsage] = useCreatePantryItemUsageMutation({
-    errorPolicy: 'all',
-  });
+  const [createPantryItemUsage] = useMutation(
+    CreatePantryItemUsageDocument,
+    {},
+  );
 
   // Restock item mutation
-  const [restockPantryItem] = useRestockPantryItemMutation({
-    errorPolicy: 'all',
-  });
+  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {});
 
   // Handler to confirm consumption
   const handleConfirmConsume = async (

@@ -7,25 +7,23 @@
  * - Cache updates for offline-first support
  */
 
+import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { generateId } from '#/utils/generateId';
 import {
-  useCreatePantryItemMutation,
-  useUpdatePantryItemMutation,
-  useDeletePantryItemMutation,
+  CreatePantryItemDocument,
+  UpdatePantryItemDocument,
+  DeletePantryItemDocument,
   type CreatePantryItemMutation,
   type CreatePantryItemMutationVariables,
   type UpdatePantryItemMutation,
-} from '#generated';
+  type DeletePantryItemMutation,
+} from '#operations/pantry/pantry.generated';
 import { useErrorService } from '#/services/errorService';
 import {
   enhanceWithVersion,
   createOptimisticEntity,
 } from '#/apollo/utils/createOptimisticResponse';
-import {
-  buildOptimisticMutationResponse,
-  buildOptimisticDeleteResponse,
-} from '#/apollo/utils/optimisticTypes';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -39,7 +37,7 @@ import {
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import type { PantryItemInput, PantryItemUpdate } from './types';
-import type { PantryItemDisplayFragment } from '#generated';
+import type { PantryItemDisplayFragment } from '#operations/pantry/pantryFragments.generated';
 
 interface UsePantryItemMutationsOptions {
   pantryId: string | undefined;
@@ -69,44 +67,51 @@ export function usePantryItemMutations({
   const { createAddOperation, createUpdateOperation } = useCrudOperations();
 
   // ADD MUTATION
-  const [addItemMutation] = useCreatePantryItemMutation({
-    errorPolicy: 'all',
+  const [addItemMutation] = useMutation(CreatePantryItemDocument, {
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Add Pantry Item',
       });
       alertService.alert('Error', message);
     },
-    optimisticResponse: (variables: CreatePantryItemMutationVariables) => {
+    optimisticResponse: (
+      variables: CreatePantryItemMutationVariables,
+    ): CreatePantryItemMutation => {
       const tempId = `temp-${generateId()}`;
       const input = variables.input;
-      return buildOptimisticMutationResponse(
-        'createPantryItem',
-        'PantryItemPayload',
-        'pantryItem',
-        {
-          ...createOptimisticEntity('PantryItem', tempId, {
-            itemName: input.item?.name ?? '',
-            quantity: input.quantity ?? 1,
-            storageState: input.storage?.storageState ?? null,
-            storageLocation: input.storage?.storageLocationName ?? null,
-            storageNotes: input.storage?.storageNotes ?? null,
-            expiresAt: input.expiresAt ?? null,
-            autoReorderPoint: null,
-            pantry: {
-              __typename: 'Pantry',
-              id: pantryId || '',
-            },
-            unit: input.unit?.unitId
-              ? {
-                  __typename: 'Unit',
-                  id: input.unit.unitId,
-                }
-              : null,
-          }),
-          __typename: 'PantryItem',
+      const optimisticPantryItem = {
+        ...createOptimisticEntity('PantryItem', tempId, {
+          itemName: input.item?.name ?? '',
+          quantity: input.quantity ?? 1,
+          storageState: input.storage?.storageState ?? null,
+          storageLocation: input.storage?.storageLocationName ?? null,
+          storageNotes: input.storage?.storageNotes ?? null,
+          expiresAt: input.expiresAt ?? null,
+          autoReorderPoint: null,
+          pantry: {
+            __typename: 'Pantry',
+            id: pantryId || '',
+          },
+          unit: input.unit?.unitId
+            ? {
+                __typename: 'Unit',
+                id: input.unit.unitId,
+              }
+            : null,
+        }),
+        __typename: 'PantryItem',
+      };
+      return {
+        __typename: 'Mutation',
+        createPantryItem: {
+          __typename: 'PantryItemPayload',
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          pantryItem:
+            optimisticPantryItem as CreatePantryItemMutation['createPantryItem']['pantryItem'],
         },
-      );
+      };
     },
     update: (cache, { data }) => {
       const pantryItem = data?.createPantryItem?.pantryItem;
@@ -131,8 +136,7 @@ export function usePantryItemMutations({
   });
 
   // UPDATE MUTATION
-  const [updateItemMutation] = useUpdatePantryItemMutation({
-    errorPolicy: 'all',
+  const [updateItemMutation] = useMutation(UpdatePantryItemDocument, {
     onError: error => {
       if (handleVersionConflict(error)) {
         alertService.alert('Item Updated', getVersionConflictMessage(error), [
@@ -147,54 +151,56 @@ export function usePantryItemMutations({
       });
       alertService.alert('Error', message);
     },
-    optimisticResponse: variables => {
+    optimisticResponse: (variables): UpdatePantryItemMutation => {
       const currentItem = pantryItems.find(item => item.id === variables.id);
 
-      if (!currentItem) {
-        return buildOptimisticMutationResponse(
-          'updatePantryItem',
-          'PantryItemPayload',
-          'pantryItem',
-          {
+      const pantryItem = currentItem
+        ? enhanceWithVersion(
+            {
+              ...currentItem,
+              updatedAt: currentItem.updatedAt ?? new Date().toISOString(),
+            },
+            // Input types use InputMaybe (T | null | undefined) while fragment types
+            // don't accept null — safe to cast since this is an optimistic prediction
+            variables.input as Partial<typeof currentItem>,
+          )
+        : {
             __typename: 'PantryItem',
             id: variables.id,
             version: 1,
             updatedAt: new Date().toISOString(),
             ...variables.input,
-          },
-        );
-      }
+          };
 
-      const optimisticUpdate = enhanceWithVersion(
-        {
-          ...currentItem,
-          updatedAt: currentItem.updatedAt ?? new Date().toISOString(),
+      return {
+        __typename: 'Mutation',
+        updatePantryItem: {
+          __typename: 'PantryItemPayload',
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          pantryItem:
+            pantryItem as UpdatePantryItemMutation['updatePantryItem']['pantryItem'],
         },
-        // Input types use InputMaybe (T | null | undefined) while fragment types
-        // don't accept null — safe to cast since this is an optimistic prediction
-        variables.input as Partial<typeof currentItem>,
-      );
-
-      return buildOptimisticMutationResponse(
-        'updatePantryItem',
-        'PantryItemPayload',
-        'pantryItem',
-        optimisticUpdate,
-      );
+      };
     },
   });
 
   // REMOVE MUTATION
-  const [removeItemMutation] = useDeletePantryItemMutation({
-    errorPolicy: 'all',
-    optimisticResponse: variables =>
-      buildOptimisticDeleteResponse(
-        'deletePantryItem',
-        'PantryItemPayload',
-        'pantryItem',
-        'PantryItem',
-        variables.id,
-      ),
+  const [removeItemMutation] = useMutation(DeletePantryItemDocument, {
+    optimisticResponse: (variables): DeletePantryItemMutation => ({
+      __typename: 'Mutation',
+      deletePantryItem: {
+        __typename: 'PantryItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        pantryItem: {
+          __typename: 'PantryItem',
+          id: variables.id,
+        } as DeletePantryItemMutation['deletePantryItem']['pantryItem'],
+      },
+    }),
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Remove Pantry Item',

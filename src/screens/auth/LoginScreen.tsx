@@ -12,7 +12,7 @@ import { EmailInput } from '#components/atoms/EmailInput';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { RememberMeModal } from '#components/organisms/RememberMeModal';
 import { getLoginValidationSchema } from '#/utils/validation/auth';
-import { type LoginInput } from '#generated';
+import { type LoginInput } from '../../graphql/generated/schemaTypes';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { useAppStore } from '#store/useAppStore';

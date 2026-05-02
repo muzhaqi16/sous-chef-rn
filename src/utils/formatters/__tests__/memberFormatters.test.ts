@@ -1,4 +1,7 @@
-import { MembershipRole, MembershipStatus } from '#/graphql/generated';
+import {
+  MembershipRole,
+  MembershipStatus,
+} from '../../../graphql/generated/schemaTypes';
 import {
   CollaboratorDisplayShape,
   getCollaboratorDisplayName,

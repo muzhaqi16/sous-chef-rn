@@ -17,12 +17,27 @@ const mockUpdateRecipe = jest
   .fn()
   .mockResolvedValue({ data: { updateRecipe: { success: true } } });
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetRecipeQuery: jest.fn(() => ({ data: null })),
-  useCreateRecipeMutation: () => [mockCreateRecipe, { loading: false }],
-  useUpdateRecipeMutation: () => [mockUpdateRecipe, { loading: false }],
-  useUpdateRecipeIngredientsMutation: () => [jest.fn(), { loading: false }],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetRecipe')
+      return {
+        data: undefined,
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      };
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateRecipe') return [mockCreateRecipe, {}];
+    if (opName === 'UpdateRecipe') return [mockUpdateRecipe, {}];
+    if (opName === 'UpdateRecipeIngredients')
+      return [jest.fn(), { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');

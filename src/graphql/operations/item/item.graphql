@@ -169,6 +169,50 @@ query AutocompleteItems($input: AutocompleteInput!) {
   }
 }
 
+query SearchItemsSemantic(
+  $prompt: String!
+  $first: Int
+  $maxDistance: Float
+  $filters: ItemFilters
+) {
+  searchItemsSemantic(
+    prompt: $prompt
+    first: $first
+    maxDistance: $maxDistance
+    filters: $filters
+  ) {
+    edges {
+      node {
+        id
+        name
+        type
+        imageUrl
+        netWeight
+        defaultConsumeUnit {
+          id
+          name
+          symbol
+          type
+        }
+        brands {
+          brand {
+            id
+            name
+          }
+        }
+        categories {
+          isPrimary
+          category {
+            id
+            name
+            type
+          }
+        }
+      }
+    }
+  }
+}
+
 query SearchBrands($search: String!, $limit: Int) {
   brands(filters: { search: $search }, first: $limit) {
     edges {

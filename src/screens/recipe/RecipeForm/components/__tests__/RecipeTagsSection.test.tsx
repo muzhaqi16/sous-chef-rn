@@ -3,22 +3,44 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { RecipeTagsSection } from '../RecipeTagsSection';
-import { Diet, HealthGoal, Intolerance } from '#generated';
+import {
+  Diet,
+  HealthGoal,
+  Intolerance,
+} from '../../../../../graphql/generated/schemaTypes';
 
-jest.mock('#components/molecules/MultiSelectChipSheet/MultiSelectChipSheet', () => ({
-  MultiSelectChipSheet: ({ visible, title, onSelect, onClose, onDone }: any) => {
-    const { View, Text, Pressable } = require('react-native');
-    if (!visible) return null;
-    return (
-      <View testID={`sheet-${title}`}>
-        <Text>{title}</Text>
-        <Pressable testID={`close-${title}`} onPress={onClose}><Text>Close</Text></Pressable>
-        <Pressable testID={`done-${title}`} onPress={onDone}><Text>Done</Text></Pressable>
-        <Pressable testID={`select-${title}`} onPress={() => onSelect(['VEGAN'])}><Text>Select</Text></Pressable>
-      </View>
-    );
-  },
-}));
+jest.mock(
+  '#components/molecules/MultiSelectChipSheet/MultiSelectChipSheet',
+  () => ({
+    MultiSelectChipSheet: ({
+      visible,
+      title,
+      onSelect,
+      onClose,
+      onDone,
+    }: any) => {
+      const { View, Text, Pressable } = require('react-native');
+      if (!visible) return null;
+      return (
+        <View testID={`sheet-${title}`}>
+          <Text>{title}</Text>
+          <Pressable testID={`close-${title}`} onPress={onClose}>
+            <Text>Close</Text>
+          </Pressable>
+          <Pressable testID={`done-${title}`} onPress={onDone}>
+            <Text>Done</Text>
+          </Pressable>
+          <Pressable
+            testID={`select-${title}`}
+            onPress={() => onSelect(['VEGAN'])}
+          >
+            <Text>Select</Text>
+          </Pressable>
+        </View>
+      );
+    },
+  }),
+);
 
 const mockOnDietsChange = jest.fn();
 const mockOnHealthGoalsChange = jest.fn();

@@ -1,17 +1,19 @@
 import { useEffect } from 'react';
+import { useQuery } from '@apollo/client/react';
 import {
-  useGetShoppingListSuggestionsQuery,
-  SuggestionSource,
+  GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
-} from '#generated';
+} from '../../graphql/operations/shoppingList/shoppingList.generated';
+import { SuggestionSource } from '../../graphql/generated/schemaTypes';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { preloadImages } from '#components/atoms/CachedImage';
 import type { ErrorLike } from '@apollo/client';
 
 /** Type for a single suggestion from the query result */
-export type ShoppingListSuggestionItem =
-  NonNullable<GetShoppingListSuggestionsQuery['shoppingList']>['suggestions'][number];
+export type ShoppingListSuggestionItem = NonNullable<
+  GetShoppingListSuggestionsQuery['shoppingList']
+>['suggestions'][number];
 
 export interface GroupedSuggestions {
   [key: string]: ShoppingListSuggestionItem[];
@@ -47,15 +49,16 @@ export function useShoppingListSuggestions({
 }: UseShoppingListSuggestionsOptions): UseShoppingListSuggestionsReturn {
   const isOffline = useIsEffectivelyOffline();
 
-  const { data, loading, error, refetch } = useGetShoppingListSuggestionsQuery({
-    variables: {
-      id: shoppingListId ?? '',
-      limit,
+  const { data, loading, error, refetch } = useQuery(
+    GetShoppingListSuggestionsDocument,
+    {
+      variables: {
+        id: shoppingListId ?? '',
+        limit,
+      },
+      skip: !shoppingListId || skip || isOffline,
     },
-    skip: !shoppingListId || skip || isOffline,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-  });
+  );
 
   const suggestions = data?.shoppingList?.suggestions;
 
@@ -79,7 +82,11 @@ export function useShoppingListSuggestions({
     }
   }
 
-  const grouped: GroupedSuggestions = { recentlyDeleted, frequentlyAdded, popular };
+  const grouped: GroupedSuggestions = {
+    recentlyDeleted,
+    frequentlyAdded,
+    popular,
+  };
 
   // Preload suggestion images into disk cache for instant display
   useEffect(() => {
@@ -99,7 +106,7 @@ export function useShoppingListSuggestions({
     grouped.popular.length > 0;
 
   return {
-    suggestions: isOffline ? [] : (suggestions ?? []),
+    suggestions: isOffline ? [] : suggestions ?? [],
     grouped,
     hasSuggestions: isOffline ? false : hasSuggestions,
     loading,

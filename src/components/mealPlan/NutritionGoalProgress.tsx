@@ -1,7 +1,10 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { GoalStatus, type GoalProgress } from '#generated';
+import {
+  GoalStatus,
+  type GoalProgress,
+} from '../../graphql/generated/schemaTypes';
 
 interface NutritionGoalProgressProps {
   overallScore: number;
@@ -11,7 +14,10 @@ interface NutritionGoalProgressProps {
   fatProgress: GoalProgress | null | undefined;
 }
 
-const STATUS_CONFIG: Record<GoalStatus, { label: string; colorKey: 'success' | 'warning' | 'error' }> = {
+const STATUS_CONFIG: Record<
+  GoalStatus,
+  { label: string; colorKey: 'success' | 'warning' | 'error' }
+> = {
   [GoalStatus.OnTarget]: { label: 'On Target', colorKey: 'success' },
   [GoalStatus.UnderTarget]: { label: 'Under', colorKey: 'warning' },
   [GoalStatus.OverTarget]: { label: 'Over', colorKey: 'error' },

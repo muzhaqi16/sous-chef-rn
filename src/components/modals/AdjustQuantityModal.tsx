@@ -9,7 +9,7 @@ import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { PantryItemFragment } from '#generated';
+import { type PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#hooks/pantry/usePantryItemTransformation';
 

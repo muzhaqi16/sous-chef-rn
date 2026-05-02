@@ -4,7 +4,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { useAppStore } from '#store/useAppStore';
-import { useCompleteOnboardingMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { CompleteOnboardingDocument } from '../../graphql/operations/auth/user.generated';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const OnboardingCompleteScreen = () => {
@@ -14,7 +15,7 @@ export const OnboardingCompleteScreen = () => {
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [completeOnboardingMutation] = useCompleteOnboardingMutation({
+  const [completeOnboardingMutation] = useMutation(CompleteOnboardingDocument, {
     onCompleted: () => {
       // Update the user in the store
       if (user) {

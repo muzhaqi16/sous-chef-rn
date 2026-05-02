@@ -7,7 +7,7 @@ import {
   formatInviteStatus,
   getInviteStatusColor,
 } from '#/utils/formatters/inviteFormatters';
-import { InviteStatus } from '#/graphql/generated';
+import { InviteStatus } from '../../../graphql/generated/schemaTypes';
 
 interface Invite {
   id: string;

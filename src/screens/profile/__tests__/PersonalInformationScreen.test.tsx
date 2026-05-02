@@ -30,16 +30,18 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
   useApolloClient: () => ({
     readQuery: jest.fn(() => null),
     writeQuery: jest.fn(),
     refetchQueries: jest.fn(),
   }),
-}));
-
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useUpdateUserProfileMutation: () => [mockUpdateProfileMutation],
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'UpdateUserProfile')
+      return [mockUpdateProfileMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/services/errorService', () => ({

@@ -21,7 +21,8 @@ import {
   type ChipOption,
 } from '#components/atoms/ChipScrollRow';
 import { useMealTemplates } from '#hooks/mealPlan/useMealTemplates';
-import { TemplateCategory, type MealTemplateDisplayFragment } from '#generated';
+import { TemplateCategory } from '../../graphql/generated/schemaTypes';
+import { type MealTemplateDisplayFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 const CATEGORIES: ChipOption<TemplateCategory | undefined>[] = [

@@ -3,7 +3,10 @@ import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { useStore } from '#store';
-import { RefreshTokenDocument, RefreshTokenMutation } from '#generated';
+import {
+  RefreshTokenDocument,
+  type RefreshTokenMutation,
+} from '../../graphql/operations/auth/auth.generated';
 import { reconnectWebSocket, isWebSocketReconnecting } from './wsLink';
 import { client } from '../client';
 
@@ -74,7 +77,10 @@ const canAttemptRefresh = (): boolean => {
 };
 
 const calculateRetryDelay = (retryCount: number): number => {
-  return REFRESH_CONFIG.RETRY_DELAY_BASE * Math.pow(REFRESH_CONFIG.BACKOFF_MULTIPLIER, retryCount);
+  return (
+    REFRESH_CONFIG.RETRY_DELAY_BASE *
+    Math.pow(REFRESH_CONFIG.BACKOFF_MULTIPLIER, retryCount)
+  );
 };
 
 const performTokenRefresh = async (): Promise<string | null> => {
@@ -91,7 +97,9 @@ const performTokenRefresh = async (): Promise<string | null> => {
   refreshState.retryCount++;
 
   try {
-    logger.info(`Attempting token refresh (attempt ${refreshState.retryCount}/${REFRESH_CONFIG.MAX_RETRIES})`);
+    logger.info(
+      `Attempting token refresh (attempt ${refreshState.retryCount}/${REFRESH_CONFIG.MAX_RETRIES})`,
+    );
 
     const response = await client.mutate({
       mutation: RefreshTokenDocument,
@@ -126,7 +134,10 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
     return newToken;
   } catch (error: any) {
-    logger.error(`Token refresh failed (attempt ${refreshState.retryCount}):`, error);
+    logger.error(
+      `Token refresh failed (attempt ${refreshState.retryCount}):`,
+      error,
+    );
 
     // IMPORTANT: Check network errors FIRST before auth errors
     // This prevents offline scenarios from incorrectly clearing the cache
@@ -135,7 +146,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
     if (isNetworkFailure) {
       logger.warn(
         `Token refresh failed due to network error (attempt ${refreshState.retryCount}/${REFRESH_CONFIG.MAX_RETRIES}), cache will be preserved:`,
-        error.message
+        error.message,
       );
 
       // For network errors, we retry but DON'T trigger logout after max retries
@@ -148,39 +159,52 @@ const performTokenRefresh = async (): Promise<string | null> => {
       }
 
       // Max retries exceeded - preserve cache, don't logout
-      logger.warn('Token refresh failed due to network error after max retries, preserving cache for offline usage');
+      logger.warn(
+        'Token refresh failed due to network error after max retries, preserving cache for offline usage',
+      );
       throw error; // Just fail the operation, don't trigger session expiry
     }
 
     // ONLY check for auth errors if NOT a network error
     const isTokenExpiredError =
       error?.networkError?.statusCode === 401 ||
-      error?.graphQLErrors?.some((e: any) =>
-        e.extensions?.code === 'UNAUTHENTICATED' ||
-        e.message?.toLowerCase().includes('expired')
+      error?.graphQLErrors?.some(
+        (e: any) =>
+          e.extensions?.code === 'UNAUTHENTICATED' ||
+          e.message?.toLowerCase().includes('expired'),
       );
 
     if (isTokenExpiredError) {
-      logger.info('Refresh token expired (genuine auth error), triggering logout with cache clear');
+      logger.info(
+        'Refresh token expired (genuine auth error), triggering logout with cache clear',
+      );
       state.tokenRefreshFailed('auth_rejected');
       throw new Error('Refresh token expired');
     }
 
     // Unknown error after max retries — preserve auth state, defer refresh
-    logger.error('Max token refresh retries exceeded for unknown error, deferring token refresh');
+    logger.error(
+      'Max token refresh retries exceeded for unknown error, deferring token refresh',
+    );
     state.tokenRefreshFailed('unknown');
     throw error;
   }
 };
 
-export const attemptTokenRefresh = (operation: any, forward: any): Observable<any> => {
+export const attemptTokenRefresh = (
+  operation: any,
+  forward: any,
+): Observable<any> => {
   return new Observable(observer => {
     // If already refreshing, join the existing promise (don't throttle these)
     if (refreshState.isRefreshing && refreshState.refreshPromise) {
       refreshQueue.push((token: string | null) => {
         if (token) {
           operation.setContext({
-            headers: { ...operation.getContext().headers, authorization: `Bearer ${token}` },
+            headers: {
+              ...operation.getContext().headers,
+              authorization: `Bearer ${token}`,
+            },
           });
           forward(operation).subscribe(observer);
         } else {
@@ -192,7 +216,11 @@ export const attemptTokenRefresh = (operation: any, forward: any): Observable<an
 
     // Check if we can attempt a NEW refresh
     if (!canAttemptRefresh()) {
-      observer.error(new Error('Token refresh not allowed: rate limited or max retries exceeded'));
+      observer.error(
+        new Error(
+          'Token refresh not allowed: rate limited or max retries exceeded',
+        ),
+      );
       return;
     }
 
@@ -205,7 +233,10 @@ export const attemptTokenRefresh = (operation: any, forward: any): Observable<an
         processQueue(newToken);
         if (newToken) {
           operation.setContext({
-            headers: { ...operation.getContext().headers, authorization: `Bearer ${newToken}` },
+            headers: {
+              ...operation.getContext().headers,
+              authorization: `Bearer ${newToken}`,
+            },
           });
           forward(operation).subscribe(observer);
         } else {
@@ -265,7 +296,9 @@ export const proactiveTokenRefresh = async (): Promise<string | null> => {
 
   // Check if already refreshing (shouldn't happen with proactive, but safety check)
   if (refreshState.isRefreshing && refreshState.refreshPromise) {
-    logger.info('[ProactiveRefresh] Already refreshing, returning existing promise');
+    logger.info(
+      '[ProactiveRefresh] Already refreshing, returning existing promise',
+    );
     return refreshState.refreshPromise;
   }
 

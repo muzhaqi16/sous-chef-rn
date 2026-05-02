@@ -8,10 +8,11 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#store/useAppStore', () => {
-  const fn = (selector: any) => selector({
-    user: { id: 'u1', onBoarded: false },
-    updateUser: jest.fn(),
-  });
+  const fn = (selector: any) =>
+    selector({
+      user: { id: 'u1', onBoarded: false },
+      updateUser: jest.fn(),
+    });
   fn.getState = () => ({});
   fn.setState = jest.fn();
   fn.subscribe = jest.fn();
@@ -19,9 +20,14 @@ jest.mock('#store/useAppStore', () => {
 });
 
 const mockCompleteOnboarding = jest.fn(() => Promise.resolve({ data: {} }));
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCompleteOnboardingMutation: jest.fn(() => [mockCompleteOnboarding, { loading: false }]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CompleteOnboarding')
+      return [mockCompleteOnboarding, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');
@@ -41,7 +47,11 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
 jest.mock('#components/base/Button', () => ({
   Button: ({ title, onPress, disabled }: any) => {
     const { Pressable, Text } = require('react-native');
-    return <Pressable onPress={onPress} disabled={disabled} testID="complete-button"><Text>{title}</Text></Pressable>;
+    return (
+      <Pressable onPress={onPress} disabled={disabled} testID="complete-button">
+        <Text>{title}</Text>
+      </Pressable>
+    );
   },
 }));
 
@@ -60,7 +70,9 @@ describe('OnboardingCompleteScreen', () => {
 
   it('renders congratulations text', () => {
     render(<OnboardingCompleteScreen />);
-    expect(screen.getByText("Congratulations! You've successfully set up:")).toBeTruthy();
+    expect(
+      screen.getByText("Congratulations! You've successfully set up:"),
+    ).toBeTruthy();
   });
 
   it('renders summary items', () => {

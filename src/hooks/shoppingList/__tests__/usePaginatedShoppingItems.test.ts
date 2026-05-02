@@ -29,11 +29,16 @@ let mockPurchasedReturn: Record<string, any> = {
   refetch: mockPurchasedRefetch,
 };
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetShoppingListItemsFilteredQuery: jest.fn((options: any) => {
-    if (options?.variables?.isPurchased === false) return mockUnpurchasedReturn;
-    return mockPurchasedReturn;
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any, options: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetShoppingListItemsFiltered') {
+      if (options?.variables?.isPurchased === false)
+        return mockUnpurchasedReturn;
+      return mockPurchasedReturn;
+    }
+    return { data: undefined, loading: false, error: undefined };
   }),
 }));
 
@@ -120,40 +125,40 @@ describe('usePaginatedShoppingItems', () => {
   });
 
   it('skips queries when listId is null', () => {
-    const { useGetShoppingListItemsFilteredQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
 
     renderHook(() => usePaginatedShoppingItems({ listId: null }));
 
     // Called twice (once per tab), both should have skip: true
-    const calls = useGetShoppingListItemsFilteredQuery.mock.calls;
+    const calls = (useQuery as jest.Mock).mock.calls;
     expect(calls).toHaveLength(2);
-    expect(calls[0][0]).toEqual(expect.objectContaining({ skip: true }));
-    expect(calls[1][0]).toEqual(expect.objectContaining({ skip: true }));
+    expect(calls[0][1]).toEqual(expect.objectContaining({ skip: true }));
+    expect(calls[1][1]).toEqual(expect.objectContaining({ skip: true }));
   });
 
   it('skips queries when skip option is true', () => {
-    const { useGetShoppingListItemsFilteredQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
 
     renderHook(() =>
       usePaginatedShoppingItems({ listId: 'list-1', skip: true }),
     );
 
-    const calls = useGetShoppingListItemsFilteredQuery.mock.calls;
+    const calls = (useQuery as jest.Mock).mock.calls;
     expect(calls).toHaveLength(2);
-    expect(calls[0][0]).toEqual(expect.objectContaining({ skip: true }));
-    expect(calls[1][0]).toEqual(expect.objectContaining({ skip: true }));
+    expect(calls[0][1]).toEqual(expect.objectContaining({ skip: true }));
+    expect(calls[1][1]).toEqual(expect.objectContaining({ skip: true }));
   });
 
   it('passes correct isPurchased variable to each query', () => {
-    const { useGetShoppingListItemsFilteredQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
 
     renderHook(() => usePaginatedShoppingItems({ listId: 'list-1' }));
 
-    const calls = useGetShoppingListItemsFilteredQuery.mock.calls;
-    expect(calls[0][0].variables).toEqual(
+    const calls = (useQuery as jest.Mock).mock.calls;
+    expect(calls[0][1].variables).toEqual(
       expect.objectContaining({ isPurchased: false }),
     );
-    expect(calls[1][0].variables).toEqual(
+    expect(calls[1][1].variables).toEqual(
       expect.objectContaining({ isPurchased: true }),
     );
   });

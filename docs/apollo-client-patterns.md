@@ -333,7 +333,7 @@ However, `refetchQueries` is **acceptable** when:
 - Manual cache updates would be disproportionately complex for the mutation's return shape
 - The mutation affects many queries and cache normalization alone isn't sufficient
 
-**Current usage**: 13 files use `refetchQueries` (recipe, mealPlan, profile, onBoarding screens). These are acceptable because they target non-offline-critical flows where the complexity of manual cache updates outweighs the benefit.
+**Current usage**: 7 files use `refetchQueries` (recipe, mealPlan, profile, onBoarding screens). The high-frequency meal-plan paths were converted to cache updates; the remaining 7 are acceptable because they target non-offline-critical flows where the complexity of manual cache updates outweighs the benefit.
 
 **When to migrate away from refetchQueries**:
 - Shopping list or pantry paths (offline-first, performance-critical)
@@ -572,49 +572,70 @@ const [updateMutation] = useUpdateMutation({
 
 ## Subscriptions
 
+All real-time subscriptions go through the singleton `SubscriptionService` at
+`src/services/subscriptions/SubscriptionService.ts`. It handles deduplication,
+cache update strategy selection, pending-delete race conditions, parent-deletion
+filtering, and dev-mode logging — all in one place. Hooks call
+`subscriptionService.register(...)` to get `{ onData, onError, onComplete }`
+handlers and spread them into `useSubscription`.
+
 ### Pattern: Standard Subscription
 
 ```typescript
-import { useStandardSubscription } from '#/hooks/apollo/useStandardSubscription';
+import { useSubscription } from '@apollo/client/react';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { CacheStrategy } from '#/services/subscriptions/types';
 
-// Simple usage (no logging, auto cache updates)
-const subscriptionOptions = useStandardSubscription({
-  operation: 'Shopping List Subscription',
-  enableLogging: false,
+const handlers = subscriptionService.register({
+  subscriptionName: 'ShoppingListItemsChanged',
+  entityType: 'ShoppingListItem',
+  enableDeduplication: true,
+  userId: user?.id,
+  cacheUpdateStrategy: CacheStrategy.AUTOMATIC,
 });
 
-useShoppingListItemsChangedSubscription({
+useSubscription(ShoppingListItemsChangedDocument, {
   variables: { listId },
   skip: !listId,
-  ...subscriptionOptions,
+  ...handlers,
 });
 ```
 
-### Pattern: Advanced Subscription (with deduplication)
+### Pattern: Subscription with custom cache logic
+
+When the subscription needs to move items between filtered connections, set
+`cacheUpdateStrategy: CacheStrategy.NONE` and provide a `customOnData` callback.
+See `usePantrySubscriptions.ts` and `useShoppingListSubscriptions.ts` for
+reference implementations.
 
 ```typescript
-import { useStandardSubscription } from '#/hooks/apollo/useStandardSubscription';
-import { useAuth } from '#/hooks/auth/useAuth';
-
-const { user } = useAuth();
-
-const subscriptionOptions = useStandardSubscription({
-  userId: user?.id, // Enable deduplication
-  operation: 'Pantry Subscription',
+const handlers = subscriptionService.register<PantryChangesPayload>({
+  subscriptionName: 'PantryChanges',
+  entityType: 'PantryItem',
+  enableDeduplication: true,
+  userId: user?.id,
   entityId: pantryId,
-  enableLogging: true, // Dev mode logging
-  onData: ({ data }) => {
-    // Custom handling after deduplication
-    console.log('Subscription update:', data);
+  cacheUpdateStrategy: CacheStrategy.NONE,
+  customOnData: (payload, client) => {
+    // Custom cache update logic — e.g., move between filtered connections
+    // based on payload.mutation type
   },
 });
-
-usePantryItemsChangedSubscription({
-  variables: { pantryId },
-  skip: !pantryId,
-  ...subscriptionOptions,
-});
 ```
+
+### Pending-delete tracking
+
+When deleting an entity optimistically, register the pending delete so a
+subscription echo doesn't re-add it via auto-normalization:
+
+```typescript
+subscriptionService.registerPendingDelete(
+  itemId, parentId, 'PantryItem', 'Pantry', 'itemsConnection',
+);
+await deleteItemMutation({ variables: { id: itemId } });
+```
+
+The service re-evicts the entity if the subscription arrives after the optimistic delete.
 
 ---
 
@@ -1091,7 +1112,8 @@ import {
 // fetchPolicy: 'cache-and-network', nextFetchPolicy: 'cache-first', errorPolicy: 'all'
 
 // Subscriptions
-import { useStandardSubscription } from '#/hooks/apollo/useStandardSubscription';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { CacheStrategy } from '#/services/subscriptions/types';
 ```
 
 ### Common Mistakes to Avoid
@@ -1410,15 +1432,16 @@ Provides standardized CRUD operation wrappers with built-in validation and error
 
 ## Apollo Client 4.x Notes
 
-This project uses Apollo Client `^4.1.5`. AC 4.0 introduced several new hooks and APIs that are stable but **intentionally not adopted** in this codebase:
+This project uses Apollo Client `~4.1.7`. AC 4.0 introduced several new hooks and APIs:
 
 | Hook / API | Purpose | Status |
 |------------|---------|--------|
-| `useSuspenseQuery` | Suspense-compatible query hook (works with React `<Suspense>`) | Available, **not adopted** |
+| `useSuspenseQuery` | Suspense-compatible query hook (works with React `<Suspense>`) | Available, **not adopted** (see rationale below) |
 | `useBackgroundQuery` | Trigger queries in parent, read in child via `useReadQuery` | Available, **not adopted** |
 | `useReadQuery` | Read data from a `useBackgroundQuery` queryRef in a child component | Available, **not adopted** (companion to `useBackgroundQuery`) |
-| `useFragment` | Subscribe to a specific fragment in cache without a query | Available, not adopted (safe to evaluate) |
+| `useFragment` | Subscribe to a specific fragment in cache without a query | **Adopted** for `MealPlanItemCard`. New components consuming entity data should use it; see fragment colocation convention in `CLAUDE.md` |
 | `dataState` | Discriminated union on query results (`{status: 'loading' \| 'error' \| 'complete', data?}`) for type-safe data access | Available, not adopted (would require widespread refactor) |
+| `dataMasking: true` | Strips fragment fields from parent query results so children must use `useFragment` | **Not enabled** — would break direct-access consumers across the codebase. Re-evaluate once colocation migration progresses |
 
 #### AC 4.0 New Concepts
 
@@ -1462,19 +1485,31 @@ This project uses Apollo Client `^4.1.5`. AC 4.0 introduced several new hooks an
 - React Native resolves Suspense stability issues ([RN#49129](https://github.com/facebook/react-native/issues/49129))
 - Performance profiling shows list re-render bottlenecks — then consider `useFragment` first
 
-### Codegen Compatibility — ⚠️ OUTDATED PLUGIN
+### Codegen Setup
 
-The project uses `@graphql-codegen/typescript-react-apollo` (`^4.3.3`) to generate typed hooks. **This plugin is officially declared incompatible with Apollo Client 4.0 by The Guild.** Key issues:
+The project uses `@graphql-codegen/cli` with the `near-operation-file` preset and the
+`typescript-operations` + `typed-document-node` plugins. Each `*.graphql` file in `src/`
+gets a colocated `*.generated.ts` next to it; the generated file exports a
+`TypedDocumentNode` constant (e.g. `GetPantryItemDocument`) plus operation result/variable
+types. Call sites do `useQuery(GetPantryItemDocument, options)` directly — there are no
+wrapper hooks like `useGetPantryItemQuery`.
 
-- Generated hook signatures do not align with AC 4.0's new types (`dataState`, new error classes)
-- The plugin generates `useSuspenseQuery` variants that don't match AC 4.0's actual API
-- The project currently works around this with `@ts-nocheck` on the generated file
+**Why we don't use `@graphql-codegen/client-preset`:** Apollo's docs are explicit —
+"We do not recommend using the client preset with Apollo Client apps because it generates
+additional runtime code that adds bundle size to your application and includes features
+that are incompatible with Apollo Client." The runtime fragment-masking helper in the
+client preset conflicts with Apollo Client 4.x's own `dataMasking` runtime feature. The
+plugin set we use (`typescript-operations` + `typed-document-node`) is the path Apollo's
+docs actually recommend.
 
-**Recommended migration path** (when prioritized):
-1. Replace `typescript-react-apollo` with: `typescript` + `typescript-operations` + `typed-document-node` plugins
-2. Use `useQuery(TypedDocument, options)` directly instead of generated `useXxxQuery()` hooks
-3. This produces `TypedDocumentNode` objects that provide full type inference without wrapper hooks
-4. Remove `@ts-nocheck` from the generated file once migrated
+**Fragment file layout:** Fragments are organized by domain — `auth/userFragments.graphql`,
+`home/homeFragments.graphql`, `item/itemFragments.graphql`, `mealPlan/mealPlanFragments.graphql`,
+`pantry/pantryFragments.graphql`, `recipe/recipeFragments.graphql`,
+`shoppingList/shoppingListFragments.graphql`. Single-consumer fragments (e.g.
+`MealPlanItemCard_item`, `InviteCard_invite`) are colocated next to their consuming
+component. New code should follow strict colocation per `CLAUDE.md`.
+
+Use the `#operations/<domain>/...` import alias rather than long relative paths.
 
 ### `storeFieldName` Pattern for Filtered Connections
 
@@ -1508,5 +1543,5 @@ See `src/apollo/utils/shoppingListCacheUpdaters.ts` for the full implementation.
 
 ---
 
-**Last Updated**: 2026-04-12
+**Last Updated**: 2026-05-02
 **Maintainers**: Development Team

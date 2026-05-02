@@ -1,10 +1,10 @@
 import { useState } from 'react';
 
+import { type ShoppingListItemFragment } from '#operations/shoppingList/shoppingListFragments.generated';
 import {
-  ShoppingListItemFragment,
-  UpdateShoppingListItemInput,
-  UnitSpecInput,
-} from '#generated';
+  type UpdateShoppingListItemInput,
+  type UnitSpecInput,
+} from '../../graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 
 type FormState = {
@@ -34,7 +34,8 @@ const DEFAULT_FORM_STATE: FormState = {
   selectedUnitId: null,
   notes: '',
   category: '',
-  estimatedPrice: '' };
+  estimatedPrice: '',
+};
 
 const DEFAULT_DIRTY_FIELDS: DirtyFields = {
   itemName: false,
@@ -43,35 +44,45 @@ const DEFAULT_DIRTY_FIELDS: DirtyFields = {
   selectedUnitId: false,
   notes: false,
   category: false,
-  estimatedPrice: false };
+  estimatedPrice: false,
+};
 
 export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   const [formState, setFormState] = useState<FormState>({
     ...DEFAULT_FORM_STATE,
-    ...initialState });
+    ...initialState,
+  });
 
   // Track initial state for dirty field comparison (edit mode)
-  const [savedInitialState, setSavedInitialState] = useState<FormState | null>(null);
+  const [savedInitialState, setSavedInitialState] = useState<FormState | null>(
+    null,
+  );
 
   // Compute dirty fields by comparing current state with initial state
   const dirtyFields: DirtyFields = (() => {
     if (!savedInitialState) return DEFAULT_DIRTY_FIELDS;
     return {
       itemName: formState.itemName !== savedInitialState.itemName,
-      quantityInput: formState.quantityInput !== savedInitialState.quantityInput,
+      quantityInput:
+        formState.quantityInput !== savedInitialState.quantityInput,
       unit: formState.unit !== savedInitialState.unit,
-      selectedUnitId: formState.selectedUnitId !== savedInitialState.selectedUnitId,
+      selectedUnitId:
+        formState.selectedUnitId !== savedInitialState.selectedUnitId,
       notes: formState.notes !== savedInitialState.notes,
       category: formState.category !== savedInitialState.category,
-      estimatedPrice: formState.estimatedPrice !== savedInitialState.estimatedPrice,
+      estimatedPrice:
+        formState.estimatedPrice !== savedInitialState.estimatedPrice,
     };
   })();
 
   const hasDirtyFields = Object.values(dirtyFields).some(Boolean);
 
-  const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
-      setFormState(prev => ({ ...prev, [field]: value }));
-    };
+  const updateField = <K extends keyof FormState>(
+    field: K,
+    value: FormState[K],
+  ) => {
+    setFormState(prev => ({ ...prev, [field]: value }));
+  };
 
   const setFromItem = (item: ShoppingListItemFragment) => {
     const state: FormState = {
@@ -81,7 +92,8 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       notes: item.notes || '',
       category: item.category || '',
       selectedUnitId: item.unit?.id || null,
-      estimatedPrice: item.priceEstimate?.estimated?.toString() || '' };
+      estimatedPrice: item.priceEstimate?.estimated?.toString() || '',
+    };
     setFormState(state);
     setSavedInitialState(state); // Save initial state for dirty comparison
   };
@@ -150,5 +162,6 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
     setFromItem,
     parseQuantityInput,
     buildUnitInput,
-    buildDirtyInput };
+    buildDirtyInput,
+  };
 }

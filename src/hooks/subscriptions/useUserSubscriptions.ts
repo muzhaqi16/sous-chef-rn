@@ -10,9 +10,8 @@
  * so no manual cache updates are needed.
  */
 
-import {
-  useUserChangesSubscription,
-} from '#generated';
+import { useSubscription } from '@apollo/client/react';
+import { UserChangesDocument } from '../../graphql/operations/auth/user.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { CacheStrategy } from '#/services/subscriptions/types';
 
@@ -40,7 +39,7 @@ export function useUserSubscriptions(userId?: string) {
     enableLogging: true,
   });
 
-  useUserChangesSubscription({
+  useSubscription(UserChangesDocument, {
     variables: { userId },
     skip: !userId,
     ...userHandlers,

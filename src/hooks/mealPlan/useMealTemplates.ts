@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import {
-  useGetMealTemplatesQuery,
-  type TemplateCategory,
-  type MealTemplateDisplayFragment,
-} from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { GetMealTemplatesDocument } from '../../graphql/operations/mealPlan/mealTemplate.generated';
+import { type TemplateCategory } from '../../graphql/generated/schemaTypes';
+import { type MealTemplateDisplayFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import type { HookReturn } from '#hooks/types';
 
@@ -41,7 +40,8 @@ export function useMealTemplates(
     TemplateCategory | undefined
   >(options.category);
 
-  const { data, loading, error, refetch, fetchMore } = useGetMealTemplatesQuery(
+  const { data, loading, error, refetch, fetchMore } = useQuery(
+    GetMealTemplatesDocument,
     {
       variables: {
         filters: {
@@ -50,7 +50,6 @@ export function useMealTemplates(
         },
         first: 20,
       },
-      fetchPolicy: 'cache-and-network',
     },
   );
 

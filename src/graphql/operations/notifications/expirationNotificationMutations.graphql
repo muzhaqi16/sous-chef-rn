@@ -8,7 +8,9 @@ mutation MarkExpirationAction($input: MarkActionInput!) {
     message
     code
     expirationNotification {
-      ...ExpirationNotificationFragment
+      id
+      status
+      actionTaken
     }
   }
 }
@@ -19,7 +21,9 @@ mutation DismissExpirationNotification($input: DismissNotificationInput!) {
     message
     code
     expirationNotification {
-      ...ExpirationNotificationFragment
+      id
+      status
+      actionTaken
     }
   }
 }
@@ -30,7 +34,9 @@ mutation MarkExpirationNotificationAsRead($notificationId: ID!) {
     message
     code
     expirationNotification {
-      ...ExpirationNotificationFragment
+      id
+      status
+      actionTaken
     }
   }
 }

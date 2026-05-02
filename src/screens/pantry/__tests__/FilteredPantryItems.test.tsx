@@ -105,12 +105,14 @@ jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
   }),
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useAddItemToShoppingListMutation: jest.fn(() => [
-    jest.fn(),
-    { loading: false },
-  ]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'AddItemToShoppingList')
+      return [jest.fn(), { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#components/molecules/Header', () => ({

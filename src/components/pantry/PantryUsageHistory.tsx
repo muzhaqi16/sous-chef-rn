@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
-import { UsagePurpose } from '#generated';
+import { UsagePurpose } from '../../graphql/generated/schemaTypes';
 import { formatDate } from '#hooks/pantry/usePantryItemTransformation';
 
 const usagePurposeLabels: Record<string, string> = {
@@ -57,8 +57,8 @@ export const PantryUsageHistory: React.FC<PantryUsageHistoryProps> = ({
               ? '+'
               : ''
             : isRestock
-              ? '+'
-              : '-';
+            ? '+'
+            : '-';
 
           return (
             <View key={usage.id} style={styles.row}>

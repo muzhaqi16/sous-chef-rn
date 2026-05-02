@@ -6,7 +6,7 @@ import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { format, parseISO, startOfDay } from 'date-fns';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import { MealType } from '#generated';
+import { MealType } from '../../graphql/generated/schemaTypes';
 import { useAddRecipeToMealPlan } from '#hooks/mealPlan/useAddRecipeToMealPlan';
 import { useMealPlanCalendar } from '#hooks/mealPlan/useMealPlanCalendar';
 import { WeekStrip } from '#components/mealPlan/WeekStrip';

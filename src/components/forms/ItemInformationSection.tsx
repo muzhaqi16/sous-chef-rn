@@ -7,7 +7,7 @@ import {
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
 import { FormInput } from '#components/molecules/FormInput';
-import { ItemSuggestion } from '#generated';
+import { ItemSuggestion } from '../../graphql/generated/schemaTypes';
 
 type SuggestedBrand = {
   id: string;

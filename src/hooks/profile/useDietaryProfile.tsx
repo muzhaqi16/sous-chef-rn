@@ -1,17 +1,22 @@
 import { alertService } from '#/services/alertService';
 import { useAppStore } from '#store/useAppStore';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+import { useMutation, useQuery } from '@apollo/client/react';
 import {
-  useGetDietaryProfileQuery,
-  useUpdateDietaryProfileMutation,
-  useAddDietaryRestrictionMutation,
-  useUpdateDietaryRestrictionMutation,
-  useRemoveDietaryRestrictionMutation,
+  GetDietaryProfileDocument,
+  UpdateDietaryProfileDocument,
+  AddDietaryRestrictionDocument,
+  UpdateDietaryRestrictionDocument,
+  RemoveDietaryRestrictionDocument,
+  type UpdateDietaryProfileMutation,
+  type UpdateDietaryRestrictionMutation,
+} from '../../graphql/operations/user/user.generated';
+import {
   Diet,
   Intolerance,
   HealthGoal,
   RestrictionSeverity,
-} from '#generated';
+} from '../../graphql/generated/schemaTypes';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
@@ -52,10 +57,8 @@ export const useDietaryProfile = () => {
 
   // The cache-and-network → cache-first pair
   // means first mount fires once, subsequent mounts read cache only.
-  const { data, loading } = useGetDietaryProfileQuery({
+  const { data, loading } = useQuery(GetDietaryProfileDocument, {
     skip: !user?.id,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
     errorPolicy: 'ignore',
   });
 
@@ -63,14 +66,12 @@ export const useDietaryProfile = () => {
   const profile = usePreservedQueryData(data?.me?.dietaryProfile, null);
 
   // ===== MUTATION 1: Update Dietary Profile =====
-  const [updateProfile] = useUpdateDietaryProfileMutation({
-    errorPolicy: 'all',
+  const [updateProfile] = useMutation(UpdateDietaryProfileDocument, {
     // Uses automatic normalization - mutation returns full DietaryProfile fragment
     // No manual cache update needed (Pattern 2)
     optimisticResponse: (variables, { IGNORE }) => {
       if (!profile) return IGNORE;
-
-      return {
+      const optimistic: UpdateDietaryProfileMutation = {
         __typename: 'Mutation',
         updateDietaryProfile: {
           __typename: 'DietaryProfilePayload',
@@ -80,6 +81,7 @@ export const useDietaryProfile = () => {
           dietaryProfile: enhanceWithVersion(profile, variables.input),
         },
       };
+      return optimistic;
     },
     onError: error => {
       const { message } = handleApolloError(error, {
@@ -90,8 +92,7 @@ export const useDietaryProfile = () => {
   });
 
   // ===== MUTATION 2: Add Dietary Restriction =====
-  const [addRestriction] = useAddDietaryRestrictionMutation({
-    errorPolicy: 'all',
+  const [addRestriction] = useMutation(AddDietaryRestrictionDocument, {
     // Note: No optimistic response - DietaryRestriction has complex enum types that need server validation
     // cache.modify() handles instant UI update when server responds (~100-200ms)
     update: (cache, { data }) => {
@@ -128,8 +129,7 @@ export const useDietaryProfile = () => {
   });
 
   // ===== MUTATION 3: Update Dietary Restriction =====
-  const [updateRestriction] = useUpdateDietaryRestrictionMutation({
-    errorPolicy: 'all',
+  const [updateRestriction] = useMutation(UpdateDietaryRestrictionDocument, {
     // Uses automatic normalization - mutation returns full DietaryRestriction fragment
     // No manual cache update needed (Pattern 2)
     optimisticResponse: (variables, { IGNORE }) => {
@@ -137,8 +137,7 @@ export const useDietaryProfile = () => {
         r => r.id === variables.input.id,
       );
       if (!currentRestriction) return IGNORE;
-
-      return {
+      const optimistic: UpdateDietaryRestrictionMutation = {
         __typename: 'Mutation',
         updateRestriction: {
           __typename: 'DietaryRestrictionPayload',
@@ -151,6 +150,7 @@ export const useDietaryProfile = () => {
           ),
         },
       };
+      return optimistic;
     },
     onError: error => {
       const { message } = handleApolloError(error, {
@@ -161,8 +161,7 @@ export const useDietaryProfile = () => {
   });
 
   // ===== MUTATION 4: Remove Dietary Restriction =====
-  const [removeRestriction] = useRemoveDietaryRestrictionMutation({
-    errorPolicy: 'all',
+  const [removeRestriction] = useMutation(RemoveDietaryRestrictionDocument, {
     // No optimistic response for deletes (following Pattern 4 recommendation)
     update: (cache, { data }, { variables }) => {
       if (

@@ -1,21 +1,30 @@
-import React, { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
-import type { MealTemplateDisplayFragment } from '#generated';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from 'react';
+import { type MealTemplateDisplayFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 
 interface TemplateBrowserContextValue {
   onSelectTemplate: (template: MealTemplateDisplayFragment) => void;
 }
 
-const TemplateBrowserContext = createContext<TemplateBrowserContextValue | null>(null);
+const TemplateBrowserContext =
+  createContext<TemplateBrowserContextValue | null>(null);
 
 export const TemplateBrowserProvider: React.FC<{
   children: ReactNode;
   onSelectTemplate: (template: MealTemplateDisplayFragment) => void;
 }> = ({ children, onSelectTemplate }) => {
   const ref = useRef(onSelectTemplate);
-  useEffect(() => { ref.current = onSelectTemplate; });
+  useEffect(() => {
+    ref.current = onSelectTemplate;
+  });
 
   const stable: TemplateBrowserContextValue = {
-    onSelectTemplate: (template) => ref.current(template),
+    onSelectTemplate: template => ref.current(template),
   };
 
   return (
@@ -27,6 +36,9 @@ export const TemplateBrowserProvider: React.FC<{
 
 export const useTemplateBrowserActions = (): TemplateBrowserContextValue => {
   const ctx = useContext(TemplateBrowserContext);
-  if (!ctx) throw new Error('useTemplateBrowserActions must be used within TemplateBrowserProvider');
+  if (!ctx)
+    throw new Error(
+      'useTemplateBrowserActions must be used within TemplateBrowserProvider',
+    );
   return ctx;
 };

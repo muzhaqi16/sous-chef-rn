@@ -1,9 +1,7 @@
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import {
-  ShoppingListItemDisplayFragmentDoc,
-  useUpdateShoppingListItemQuantityMutation,
-} from '#generated';
+import { ShoppingListItemDisplayFragmentDoc } from '#operations/shoppingList/shoppingListFragments.generated';
+import { UpdateShoppingListItemQuantityDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import { toastService } from '#/services/toastService';
 import {
   handleVersionConflict,
@@ -183,9 +181,10 @@ export function useShoppingListActions({
   const client = useApolloClient();
   const haptic = useHaptic();
 
-  const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
-    errorPolicy: 'all',
-  });
+  const [updateQuantity] = useMutation(
+    UpdateShoppingListItemQuantityDocument,
+    {},
+  );
 
   // Quantity increment handler - uses cache.modify for instant UI without warnings
   const handleIncrementQuantity = async (itemId: string) => {

@@ -1,13 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { alertService } from '#/services/alertService';
+import { useMutation, useQuery } from '@apollo/client/react';
 import {
-  useAddItemToShoppingListMutation,
-  useUpdateShoppingListItemMutation,
-  useGetShoppingListItemQuery,
+  AddItemToShoppingListDocument,
+  UpdateShoppingListItemDocument,
+  GetShoppingListItemDocument,
+} from '../../graphql/operations/shoppingList/shoppingList.generated';
+import {
   ItemSuggestion,
-  ShoppingListItemDisplayFragmentDoc,
   CategoryType,
-} from '#generated';
+} from '../../graphql/generated/schemaTypes';
+import { ShoppingListItemDisplayFragmentDoc } from '#operations/shoppingList/shoppingListFragments.generated';
 import { FormModal } from '#components/organisms/FormModal';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
@@ -65,12 +68,12 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   const itemVersionRef = useRef<number | undefined>(undefined);
 
   // GraphQL hooks
-  const { data } = useGetShoppingListItemQuery({
+  const { data } = useQuery(GetShoppingListItemDocument, {
     variables: { id: itemId || '' },
     skip: !isEdit,
   });
 
-  const [addItem] = useAddItemToShoppingListMutation({
+  const [addItem] = useMutation(AddItemToShoppingListDocument, {
     // Update cache immediately for optimistic UI
     update: (cache, { data: mutationData }) => {
       const newItem = mutationData?.addItemToShoppingList?.shoppingListItem;
@@ -85,8 +88,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     },
   });
 
-  const [updateItem] = useUpdateShoppingListItemMutation({
-    errorPolicy: 'all',
+  const [updateItem] = useMutation(UpdateShoppingListItemDocument, {
     // Update cache to ensure UI reflects changes immediately
     update(cache, { data }) {
       const updatedItem = data?.updateShoppingListItem?.shoppingListItem;

@@ -16,12 +16,13 @@ import { LoadingInline } from '#components/base/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { useMutation } from '@apollo/client/react';
 import {
-  useRemoveCollaboratorMutation,
-  useAddCollaboratorMutation,
-  useShareShoppingListMutation,
-  CollaboratorRole,
-} from '#generated';
+  RemoveCollaboratorDocument,
+  AddCollaboratorDocument,
+  ShareShoppingListDocument,
+} from '../../graphql/operations/shoppingList/shoppingList.generated';
+import { CollaboratorRole } from '../../graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -133,9 +134,9 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   const isHomeLinked = !!shoppingList?.homeId;
 
-  const [shareList] = useAddCollaboratorMutation();
-  const [removeMember] = useRemoveCollaboratorMutation();
-  const [shareShoppingList] = useShareShoppingListMutation();
+  const [shareList] = useMutation(AddCollaboratorDocument);
+  const [removeMember] = useMutation(RemoveCollaboratorDocument);
+  const [shareShoppingList] = useMutation(ShareShoppingListDocument);
 
   // Check if current user is owner
   const currentUserCollaborator = collaborators.find(

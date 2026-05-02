@@ -1,11 +1,15 @@
 import { alertService } from '#/services/alertService';
 import { useAppStore } from '#store/useAppStore';
+import { useMutation, useQuery } from '@apollo/client/react';
 import {
-  useGetNotificationPreferencesQuery,
-  useUpdateNotificationPreferencesMutation,
+  GetNotificationPreferencesDocument,
+  UpdateNotificationPreferencesDocument,
+  type UpdateNotificationPreferencesMutation,
+} from '../../graphql/operations/user/user.generated';
+import {
   ExpirationFrequency,
   type UpdateNotificationPreferencesInput,
-} from '#generated';
+} from '../../graphql/generated/schemaTypes';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useErrorService } from '#/services/errorService';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
@@ -101,52 +105,56 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   // - cache-first: Uses cache if available for settings
   // - errorPolicy: 'all' returns cached data when network fails
 
-  const { data, loading, error } = useGetNotificationPreferencesQuery({
-    skip: !user?.id || options?.skip,
-    fetchPolicy: 'cache-first',
-    errorPolicy: 'all',
-  });
+  const { data, loading, error } = useQuery(
+    GetNotificationPreferencesDocument,
+    {
+      skip: !user?.id || options?.skip,
+      fetchPolicy: 'cache-first',
+    },
+  );
 
   const preferences = data?.me?.notificationPreferences;
 
   useApolloErrorLogger('GetNotificationPreferences', error);
 
   // Update notification preferences mutation
-  const [updatePreferences] = useUpdateNotificationPreferencesMutation({
-    errorPolicy: 'all',
-    // Uses automatic normalization - mutation returns full NotificationPreferences fragment
-    // No manual cache update needed (Pattern 2)
-    optimisticResponse: (variables, { IGNORE }) => {
-      if (!preferences) return IGNORE;
+  const [updatePreferences] = useMutation(
+    UpdateNotificationPreferencesDocument,
+    {
+      // Uses automatic normalization - mutation returns full NotificationPreferences fragment
+      // No manual cache update needed (Pattern 2)
+      optimisticResponse: (variables, { IGNORE }) => {
+        if (!preferences) return IGNORE;
 
-      // Filter out null/undefined values from input to prevent overriding non-nullable fields
-      const definedInputs = Object.fromEntries(
-        Object.entries(variables.input).filter(([, v]) => v != null),
-      );
+        // Filter out null/undefined values from input to prevent overriding non-nullable fields
+        const definedInputs = Object.fromEntries(
+          Object.entries(variables.input).filter(([, v]) => v != null),
+        );
 
-      return {
-        __typename: 'Mutation',
-        updateNotificationPreferences: {
-          __typename: 'NotificationPreferencesPayload',
-          success: true,
-          message: 'Notification preferences updated',
-          code: 'NOTIFICATION_PREFERENCES_UPDATED',
-          notificationPreferences: {
-            ...preferences,
-            ...definedInputs,
-            __typename: 'NotificationPreferences',
-            updatedAt: new Date().toISOString(),
+        const optimistic: UpdateNotificationPreferencesMutation = {
+          __typename: 'Mutation',
+          updateNotificationPreferences: {
+            __typename: 'NotificationPreferencesPayload',
+            success: true,
+            message: 'Notification preferences updated',
+            code: 'NOTIFICATION_PREFERENCES_UPDATED',
+            notificationPreferences: {
+              ...preferences,
+              ...definedInputs,
+              __typename: 'NotificationPreferences',
+            },
           },
-        },
-      };
+        };
+        return optimistic;
+      },
+      onError: error => {
+        const { message } = handleApolloError(error, {
+          operation: 'Update Notification Preferences',
+        });
+        alertService.alert('Error', message);
+      },
     },
-    onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Update Notification Preferences',
-      });
-      alertService.alert('Error', message);
-    },
-  });
+  );
 
   // PERFORMANCE: Memoize settings object to prevent recreating on every render
   const settings = (() => {

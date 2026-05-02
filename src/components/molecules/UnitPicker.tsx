@@ -12,7 +12,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { SPRING, TIMING } from '#/constants/animations';
-import type { UnitType } from '#generated';
+import { type UnitType } from '../../graphql/generated/schemaTypes';
 import type { SelectedUnitInfo } from '#hooks/pantry/useOperationUnits';
 
 /** Minimal interface for any unit renderable in the picker */

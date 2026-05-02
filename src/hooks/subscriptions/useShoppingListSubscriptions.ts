@@ -12,18 +12,23 @@
 import type { ApolloCache } from '@apollo/client';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { useAppStore } from '#store/useAppStore';
+import { useSubscription } from '@apollo/client/react';
 import {
-  useShoppingListChangesSubscription,
-  useMyShoppingListsChangesSubscription,
-  useCollaborationChangesSubscription,
-  CollaboratorStatus,
-  ShoppingListItemDisplayFragmentDoc,
-  ShoppingListChangeType,
-  MutationType,
+  ShoppingListChangesDocument,
+  MyShoppingListsChangesDocument,
   type ShoppingListChangesSubscription,
   type MyShoppingListsChangesSubscription,
+} from '../../graphql/operations/shoppingList/shoppingList.generated';
+import {
+  CollaborationChangesDocument,
   type CollaborationChangesSubscription,
-} from '#generated';
+} from '../../graphql/operations/shoppingList/collaboration.generated';
+import {
+  CollaboratorStatus,
+  ShoppingListChangeType,
+  MutationType,
+} from '../../graphql/generated/schemaTypes';
+import { ShoppingListItemDisplayFragmentDoc } from '#operations/shoppingList/shoppingListFragments.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   CacheStrategy,
@@ -431,7 +436,7 @@ export function useShoppingListSubscriptions(
       },
     });
 
-  useShoppingListChangesSubscription({
+  useSubscription(ShoppingListChangesDocument, {
     variables: { listId: selectedShoppingListId! },
     skip: !selectedShoppingListId,
     ...changesHandlers,
@@ -497,7 +502,7 @@ export function useShoppingListSubscriptions(
       },
     });
 
-  useMyShoppingListsChangesSubscription({
+  useSubscription(MyShoppingListsChangesDocument, {
     skip: !userId,
     ...myListsHandlers,
   });
@@ -577,7 +582,7 @@ export function useShoppingListSubscriptions(
       },
     });
 
-  useCollaborationChangesSubscription({
+  useSubscription(CollaborationChangesDocument, {
     variables: { listId: selectedShoppingListId! },
     skip: !selectedShoppingListId,
     ...collaborationHandlers,

@@ -19,20 +19,33 @@ jest.mock('@react-navigation/native', () => ({
   })),
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useMyShoppingListInvitesQuery: jest.fn(() => ({
-    data: null,
-    loading: false,
-  })),
-  useAcceptShoppingListInviteMutation: jest.fn(() => [jest.fn()]),
-  useDeclineShoppingListInviteMutation: jest.fn(() => [jest.fn()]),
-  useGetMyPendingInvitesQuery: jest.fn(() => ({
-    data: null,
-    loading: false,
-  })),
-  useAcceptHomeInviteMutation: jest.fn(() => [jest.fn()]),
-  useDeclineHomeInviteMutation: jest.fn(() => [jest.fn()]),
+const queryResponses: Record<string, any> = {};
+const setQueryResponse = (opName: string, response: any) => {
+  queryResponses[opName] = response;
+};
+
+const mutationOverrides: Record<string, [jest.Mock, { loading: boolean }]> = {};
+const setMutationFor = (opName: string, fn: jest.Mock) => {
+  mutationOverrides[opName] = [fn, { loading: false }];
+};
+
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName && queryResponses[opName]) return queryResponses[opName];
+    return {
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+    };
+  }),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName && mutationOverrides[opName]) return mutationOverrides[opName];
+    return [jest.fn(), { loading: false }];
+  }),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -57,20 +70,9 @@ jest.mock('#/components/base/SousChefLoader', () => ({
 describe('AcceptInvite', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset generated mocks to defaults (clearAllMocks does not clear mockReturnValue)
-    const gen = jest.requireMock('#generated');
-    gen.useMyShoppingListInvitesQuery.mockReturnValue({
-      data: null,
-      loading: false,
-    });
-    gen.useAcceptShoppingListInviteMutation.mockReturnValue([jest.fn()]);
-    gen.useDeclineShoppingListInviteMutation.mockReturnValue([jest.fn()]);
-    gen.useGetMyPendingInvitesQuery.mockReturnValue({
-      data: null,
-      loading: false,
-    });
-    gen.useAcceptHomeInviteMutation.mockReturnValue([jest.fn()]);
-    gen.useDeclineHomeInviteMutation.mockReturnValue([jest.fn()]);
+    // Reset query/mutation response maps before each test (dispatchers stay installed)
+    for (const k of Object.keys(queryResponses)) delete queryResponses[k];
+    for (const k of Object.keys(mutationOverrides)) delete mutationOverrides[k];
     // Reset route mock
     const nav = jest.requireMock('@react-navigation/native');
     nav.useRoute.mockReturnValue({ params: { inviteId: 'invite-1' } });
@@ -96,19 +98,15 @@ describe('AcceptInvite', () => {
   });
 
   it('shows loading state while fetching invites', () => {
-    const { useMyShoppingListInvitesQuery } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
-      data: null,
-      loading: true,
-    });
+    setQueryResponse('MyShoppingListInvites', { data: null, loading: true });
+    setQueryResponse('GetMyPendingInvites', { data: null, loading: true });
 
     const tree = render(<AcceptInvite />);
     expect(tree.toJSON()).toBeTruthy();
   });
 
   it('renders shopping list invite details', () => {
-    const { useMyShoppingListInvitesQuery } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -131,8 +129,7 @@ describe('AcceptInvite', () => {
   });
 
   it('renders home invite details', () => {
-    const { useGetMyPendingInvitesQuery } = jest.requireMock('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -153,13 +150,11 @@ describe('AcceptInvite', () => {
   });
 
   it('shows Go Back button on not found state', () => {
-    const { useMyShoppingListInvitesQuery, useGetMyPendingInvitesQuery } =
-      jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: null,
       loading: false,
     });
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetHomeInvitation', {
       data: null,
       loading: false,
     });
@@ -169,8 +164,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows shopping list invite with inviter email fallback', () => {
-    const { useMyShoppingListInvitesQuery } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -191,8 +185,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows "Someone" when inviter is missing for shopping list invite', () => {
-    const { useMyShoppingListInvitesQuery } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -213,8 +206,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows role for shopping list invite', () => {
-    const { useMyShoppingListInvitesQuery } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -235,8 +227,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows "Shopping List" as invite type for shopping list invite', () => {
-    const { useMyShoppingListInvitesQuery } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -257,8 +248,7 @@ describe('AcceptInvite', () => {
   });
 
   it('renders invite details when home invite exists', () => {
-    const { useGetMyPendingInvitesQuery } = jest.requireMock('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -282,8 +272,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows role for home invite', () => {
-    const { useGetMyPendingInvitesQuery } = jest.requireMock('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -306,8 +295,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows "Shopping List" fallback when shopping list name is missing', () => {
-    const { useMyShoppingListInvitesQuery } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -329,8 +317,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows description when shopping list has description', () => {
-    const { useMyShoppingListInvitesQuery } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -352,8 +339,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows accept and decline buttons for invite', () => {
-    const { useMyShoppingListInvitesQuery } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -376,11 +362,7 @@ describe('AcceptInvite', () => {
 
   it('calls acceptShoppingListInvite on accept for shopping list invite', async () => {
     const mockAcceptSL = jest.fn().mockResolvedValue({});
-    const {
-      useMyShoppingListInvitesQuery,
-      useAcceptShoppingListInviteMutation,
-    } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -395,7 +377,7 @@ describe('AcceptInvite', () => {
       },
       loading: false,
     });
-    useAcceptShoppingListInviteMutation.mockReturnValue([mockAcceptSL]);
+    setMutationFor('AcceptShoppingListInvite', mockAcceptSL);
 
     const tree = render(<AcceptInvite />);
     // Wait for invitationType useEffect to resolve
@@ -411,9 +393,7 @@ describe('AcceptInvite', () => {
 
   it('calls acceptHomeInvite on accept for home invite', async () => {
     const mockAcceptHome = jest.fn().mockResolvedValue({});
-    const { useGetMyPendingInvitesQuery, useAcceptHomeInviteMutation } =
-      jest.requireMock('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -428,7 +408,7 @@ describe('AcceptInvite', () => {
       },
       loading: false,
     });
-    useAcceptHomeInviteMutation.mockReturnValue([mockAcceptHome]);
+    setMutationFor('AcceptHomeInvite', mockAcceptHome);
 
     const tree = render(<AcceptInvite />);
     // Wait for invitationType useEffect to resolve to 'home' (shows "join" text)
@@ -443,8 +423,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows decline confirmation dialog', async () => {
-    const { useMyShoppingListInvitesQuery } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -473,11 +452,7 @@ describe('AcceptInvite', () => {
 
   it('calls declineShoppingListInvite when decline is confirmed', async () => {
     const mockDeclineSL = jest.fn().mockResolvedValue({});
-    const {
-      useMyShoppingListInvitesQuery,
-      useDeclineShoppingListInviteMutation,
-    } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -492,7 +467,7 @@ describe('AcceptInvite', () => {
       },
       loading: false,
     });
-    useDeclineShoppingListInviteMutation.mockReturnValue([mockDeclineSL]);
+    setMutationFor('DeclineShoppingListInvite', mockDeclineSL);
 
     const tree = render(<AcceptInvite />);
     await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());
@@ -513,9 +488,7 @@ describe('AcceptInvite', () => {
 
   it('calls declineHomeInvite when decline is confirmed for home invite', async () => {
     const mockDeclineHome = jest.fn().mockResolvedValue({});
-    const { useGetMyPendingInvitesQuery, useDeclineHomeInviteMutation } =
-      jest.requireMock('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -530,7 +503,7 @@ describe('AcceptInvite', () => {
       },
       loading: false,
     });
-    useDeclineHomeInviteMutation.mockReturnValue([mockDeclineHome]);
+    setMutationFor('DeclineHomeInvite', mockDeclineHome);
 
     const tree = render(<AcceptInvite />);
     // Wait for invitationType useEffect to resolve to 'home'
@@ -553,11 +526,7 @@ describe('AcceptInvite', () => {
     const mockAcceptSL = jest
       .fn()
       .mockRejectedValue(new Error('Network error'));
-    const {
-      useMyShoppingListInvitesQuery,
-      useAcceptShoppingListInviteMutation,
-    } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -572,7 +541,7 @@ describe('AcceptInvite', () => {
       },
       loading: false,
     });
-    useAcceptShoppingListInviteMutation.mockReturnValue([mockAcceptSL]);
+    setMutationFor('AcceptShoppingListInvite', mockAcceptSL);
 
     const tree = render(<AcceptInvite />);
     await waitFor(() => expect(tree.getByText('Accept')).toBeTruthy());
@@ -592,13 +561,11 @@ describe('AcceptInvite', () => {
     useRoute.mockReturnValue({ params: {} });
 
     // No invites found but not loading
-    const { useMyShoppingListInvitesQuery, useGetMyPendingInvitesQuery } =
-      jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: null,
       loading: false,
     });
-    useGetMyPendingInvitesQuery.mockReturnValue({ data: null, loading: false });
+    setQueryResponse('GetHomeInvitation', { data: null, loading: false });
 
     const tree = render(<AcceptInvite />);
     expect(tree.getByText(/Invitation not found/)).toBeTruthy();
@@ -608,8 +575,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows "Home" invite type label for home invite', () => {
-    const { useGetMyPendingInvitesQuery } = jest.requireMock('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -630,8 +596,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows "Home" fallback when home invite has no home name', () => {
-    const { useGetMyPendingInvitesQuery } = jest.requireMock('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -653,8 +618,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows description for home invite with description', () => {
-    const { useGetMyPendingInvitesQuery } = jest.requireMock('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -682,8 +646,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows "Someone" when home inviter has no displayName or email', () => {
-    const { useGetMyPendingInvitesQuery } = jest.requireMock('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -704,8 +667,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows inviter displayName for home invite when available', () => {
-    const { useGetMyPendingInvitesQuery } = jest.requireMock('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -729,8 +691,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows inviter displayName for shopping list invite when available', () => {
-    const { useMyShoppingListInvitesQuery } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -754,11 +715,8 @@ describe('AcceptInvite', () => {
   });
 
   it('shows loading state when home invites are still loading', () => {
-    const { useGetMyPendingInvitesQuery } = jest.requireMock('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
-      data: null,
-      loading: true,
-    });
+    setQueryResponse('MyShoppingListInvites', { data: null, loading: true });
+    setQueryResponse('GetMyPendingInvites', { data: null, loading: true });
 
     const tree = render(<AcceptInvite />);
     // Should show the loading view, not the error or invite detail view
@@ -772,11 +730,7 @@ describe('AcceptInvite', () => {
     });
 
     const mockAcceptSL = jest.fn().mockResolvedValue({});
-    const {
-      useMyShoppingListInvitesQuery,
-      useAcceptShoppingListInviteMutation,
-    } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -791,7 +745,7 @@ describe('AcceptInvite', () => {
       },
       loading: false,
     });
-    useAcceptShoppingListInviteMutation.mockReturnValue([mockAcceptSL]);
+    setMutationFor('AcceptShoppingListInvite', mockAcceptSL);
 
     const tree = render(<AcceptInvite />);
     // Wait for invitationType useEffect to resolve to 'shopping_list' (shows "collaborate on")
@@ -807,8 +761,7 @@ describe('AcceptInvite', () => {
   });
 
   it('shows "join" text for home invite and "collaborate on" for shopping list', async () => {
-    const { useGetMyPendingInvitesQuery } = jest.requireMock('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -831,11 +784,7 @@ describe('AcceptInvite', () => {
 
   it('shows error alert when decline fails', async () => {
     const mockDeclineSL = jest.fn().mockRejectedValue(new Error('Failed'));
-    const {
-      useMyShoppingListInvitesQuery,
-      useDeclineShoppingListInviteMutation,
-    } = jest.requireMock('#generated');
-    useMyShoppingListInvitesQuery.mockReturnValue({
+    setQueryResponse('MyShoppingListInvites', {
       data: {
         me: {
           pendingCollaborationInvites: [
@@ -850,7 +799,7 @@ describe('AcceptInvite', () => {
       },
       loading: false,
     });
-    useDeclineShoppingListInviteMutation.mockReturnValue([mockDeclineSL]);
+    setMutationFor('DeclineShoppingListInvite', mockDeclineSL);
 
     const tree = render(<AcceptInvite />);
     await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());

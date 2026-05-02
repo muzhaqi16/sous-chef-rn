@@ -7,12 +7,11 @@
  * Complements the local Zustand unreadCount with server truth.
  */
 
-import { useGetNotificationStatsQuery } from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { GetNotificationStatsDocument } from '../../graphql/operations/notifications/notificationStats.generated';
 
 export function useNotificationStats(skip?: boolean) {
-  const { data } = useGetNotificationStatsQuery({
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
+  const { data } = useQuery(GetNotificationStatsDocument, {
     pollInterval: 60_000,
     skip,
   });

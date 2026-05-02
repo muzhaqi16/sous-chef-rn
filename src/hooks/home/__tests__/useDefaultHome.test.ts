@@ -11,7 +11,19 @@ const mockApolloClient = {
 };
 
 jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
   useApolloClient: jest.fn(() => mockApolloClient),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'SetDefaultHome')
+      return [mockSetDefaultHomeMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
+  useLazyQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetHomes') return [mockGetHomes, mockHomesQueryResult];
+    return [jest.fn(), { data: undefined, loading: false, error: undefined }];
+  }),
 }));
 
 const mockSetDefaultHomeMutation = jest.fn().mockResolvedValue({
@@ -25,12 +37,6 @@ const mockHomesQueryResult = {
   error: undefined,
   called: false,
 };
-
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useSetDefaultHomeMutation: jest.fn(() => [mockSetDefaultHomeMutation]),
-  useGetHomesLazyQuery: jest.fn(() => [mockGetHomes, mockHomesQueryResult]),
-}));
 
 // Store mock state
 const mockStoreState = {

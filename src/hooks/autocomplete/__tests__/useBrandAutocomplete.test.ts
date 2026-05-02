@@ -11,15 +11,15 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 const mockSearchBrands = jest.fn();
-let mockBrandsData: any = null;
-let mockBrandsLoading = false;
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useSearchBrandsLazyQuery: () => [
-    mockSearchBrands,
-    { data: mockBrandsData, loading: mockBrandsLoading },
-  ],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useLazyQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'SearchBrands')
+      return [mockSearchBrands, { loading: false }];
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 const suggestedBrands = [
@@ -32,8 +32,6 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockIsOnline = true;
-  mockBrandsData = null;
-  mockBrandsLoading = false;
 });
 
 afterEach(() => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { QuantityDisplay } from '../QuantityDisplay';
-import { DisplayFormat } from '#/graphql/generated';
+import { DisplayFormat } from '../../../graphql/generated/schemaTypes';
 
 describe('QuantityDisplay', () => {
   it('renders a dash when quantity is null', () => {
@@ -48,7 +48,10 @@ describe('QuantityDisplay', () => {
 
   it('renders fraction format for 0.75', () => {
     render(
-      <QuantityDisplay quantity={0.75} displayFormat={DisplayFormat.Fraction} />,
+      <QuantityDisplay
+        quantity={0.75}
+        displayFormat={DisplayFormat.Fraction}
+      />,
     );
     expect(screen.getByText('3/4')).toBeTruthy();
   });
@@ -79,7 +82,9 @@ describe('QuantityDisplay', () => {
   });
 
   it('renders zero quantity as 0', () => {
-    render(<QuantityDisplay quantity={0} displayFormat={DisplayFormat.Fraction} />);
+    render(
+      <QuantityDisplay quantity={0} displayFormat={DisplayFormat.Fraction} />,
+    );
     expect(screen.getByText('0')).toBeTruthy();
   });
 });

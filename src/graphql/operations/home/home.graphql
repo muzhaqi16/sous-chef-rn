@@ -28,7 +28,7 @@ query GetMyPendingInvites {
   me {
     id
     pendingHomeInvites {
-      ...HomeInviteFragment
+      ...InviteCard_invite
     }
   }
 }
@@ -88,7 +88,7 @@ mutation InviteToHome($input: InviteToHomeInput!) {
     message
     code
     homeInvite {
-      ...HomeInviteFragment
+      ...InviteCard_invite
     }
   }
 }
@@ -179,7 +179,7 @@ subscription HomeInviteChanged($homeId: ID!) {
     mutation
     homeId
     homeInvite {
-      ...HomeInviteFragment
+      ...InviteCard_invite
     }
     userId
     timestamp

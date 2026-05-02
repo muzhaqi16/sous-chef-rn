@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { RecipeBasicFields } from '../RecipeBasicFields';
-import { RecipeStatus } from '#generated';
+import { RecipeStatus } from '../../../../../graphql/generated/schemaTypes';
 
 jest.mock('#components/molecules/FormInput', () => ({
   FormInput: ({ label, value, onChangeText, placeholder, testID }: any) => {
@@ -133,7 +133,10 @@ describe('RecipeBasicFields', () => {
     );
 
     fireEvent.changeText(getByTestId('textarea-Description'), 'A description');
-    expect(mockUpdateField).toHaveBeenCalledWith('description', 'A description');
+    expect(mockUpdateField).toHaveBeenCalledWith(
+      'description',
+      'A description',
+    );
   });
 
   it('displays current state values', () => {
@@ -145,7 +148,10 @@ describe('RecipeBasicFields', () => {
     };
 
     const { getByTestId } = render(
-      <RecipeBasicFields state={stateWithValues} updateField={mockUpdateField} />,
+      <RecipeBasicFields
+        state={stateWithValues}
+        updateField={mockUpdateField}
+      />,
     );
 
     expect(getByTestId('input-Recipe Name').props.value).toBe('Pasta');

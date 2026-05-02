@@ -11,7 +11,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
-import { MealType } from '#generated';
+import { MealType } from '../../graphql/generated/schemaTypes';
 import { useSavedRecipes } from '#hooks/recipe/useSavedRecipes';
 import { CachedImage } from '#components/atoms/CachedImage';
 import {

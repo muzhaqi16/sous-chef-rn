@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
-import type { PantryItem } from '#generated';
+import { type PantryItem } from '../../../graphql/generated/schemaTypes';
 import { PantryItemCard } from '../PantryItemCard';
 import { DisplayMapContext } from './displayMapCache';
 

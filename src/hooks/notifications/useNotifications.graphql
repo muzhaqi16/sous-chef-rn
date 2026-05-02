@@ -1,0 +1,12 @@
+fragment useNotifications_notification on Notification {
+  id
+  type
+  status
+  priority
+  title
+  message
+  payload
+  category
+  sentAt
+  expiresAt
+}

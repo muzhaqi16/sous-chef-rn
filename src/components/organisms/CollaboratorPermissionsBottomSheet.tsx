@@ -6,11 +6,10 @@ import { alertService } from '#/services/alertService';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Icon } from '#utils/iconUtils';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import {
-  CollaboratorRole,
-  ShoppingListCollaboratorFragment,
-  useUpdateCollaboratorRoleMutation,
-} from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { CollaboratorRole } from '../../graphql/generated/schemaTypes';
+import { type ShoppingListCollaboratorFragment } from '#operations/shoppingList/shoppingListFragments.generated';
+import { UpdateCollaboratorRoleDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { ROLE_PERMISSIONS } from '#/constants/collaboratorRoles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -49,7 +48,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     snapPoints: ['75%', '90%'],
   });
 
-  const [updateRole] = useUpdateCollaboratorRoleMutation();
+  const [updateRole] = useMutation(UpdateCollaboratorRoleDocument);
 
   useImperativeHandle(ref, () => ({
     open: (collab: ShoppingListCollaboratorFragment) => {

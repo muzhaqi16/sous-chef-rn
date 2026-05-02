@@ -3,7 +3,11 @@ import { View, Text } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { MultiSelectChipSheet } from '#components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
-import { Diet, HealthGoal, Intolerance } from '#generated';
+import {
+  Diet,
+  HealthGoal,
+  Intolerance,
+} from '../../../../graphql/generated/schemaTypes';
 
 interface RecipeTagsSectionProps {
   diets: Diet[];

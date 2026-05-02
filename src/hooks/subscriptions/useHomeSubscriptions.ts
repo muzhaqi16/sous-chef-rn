@@ -12,13 +12,16 @@
  */
 
 import { useAppStore } from '#store/useAppStore';
+import { useSubscription } from '@apollo/client/react';
 import {
-  useMembershipChangesSubscription,
-  useHomeInviteChangedSubscription,
-  HomeInviteMutationType,
+  MembershipChangesDocument,
   type MembershipChangesSubscription,
+} from '../../graphql/operations/home/membership.generated';
+import {
+  HomeInviteChangedDocument,
   type HomeInviteChangedSubscription,
-} from '#generated';
+} from '../../graphql/operations/home/home.generated';
+import { HomeInviteMutationType } from '../../graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   CacheStrategy,
@@ -85,7 +88,7 @@ export function useHomeSubscriptions(userId?: string) {
       },
     });
 
-  useMembershipChangesSubscription({
+  useSubscription(MembershipChangesDocument, {
     variables: { homeId: selectedHomeId! },
     skip: !selectedHomeId || !isHomeSelectionReady,
     ...membershipHandlers,
@@ -160,7 +163,7 @@ export function useHomeSubscriptions(userId?: string) {
     },
   );
 
-  useHomeInviteChangedSubscription({
+  useSubscription(HomeInviteChangedDocument, {
     variables: { homeId: selectedHomeId! },
     skip: !selectedHomeId || !isHomeSelectionReady,
     ...inviteHandlers,

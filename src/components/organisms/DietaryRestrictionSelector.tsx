@@ -4,7 +4,12 @@ import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { RestrictionSection } from '#/components/molecules/RestrictionSection/RestrictionSection';
 import { MultiSelectChipSheet } from '#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
-import { Diet, Intolerance, HealthGoal, RestrictionSeverity } from '#generated';
+import {
+  Diet,
+  Intolerance,
+  HealthGoal,
+  RestrictionSeverity,
+} from '../../graphql/generated/schemaTypes';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 
 // Lifestyle dietary choices

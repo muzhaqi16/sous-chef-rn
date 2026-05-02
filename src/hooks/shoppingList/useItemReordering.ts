@@ -1,8 +1,8 @@
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import type { ModifierDetails } from '@apollo/client/cache';
 import type { Reference } from '@apollo/client/utilities';
-import { useMoveShoppingListItemMutation } from '#generated';
+import { MoveShoppingListItemDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import { generatePosition } from '#/utils/fractionalIndexing';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
@@ -70,8 +70,7 @@ export function useItemReordering<T extends ShoppingListItem>(
   const { listId, items, refetch } = options;
   const client = useApolloClient();
 
-  const [moveItem] = useMoveShoppingListItemMutation({
-    errorPolicy: 'all',
+  const [moveItem] = useMutation(MoveShoppingListItemDocument, {
     // NO optimisticResponse and NO update callback
     // Per apollo-client-patterns.md Pattern 5: Use cache.modify for simple field updates
     // We do cache.modify BEFORE the mutation call for immediate UI feedback

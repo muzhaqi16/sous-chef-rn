@@ -10,7 +10,7 @@ import {
   ItemType,
   BaseDimension,
   type ItemUnitInput,
-} from '#generated';
+} from '../../../graphql/generated/schemaTypes';
 import { FormInput } from '#/components/molecules/FormInput';
 import { FormTextArea } from '#/components/molecules/FormTextArea';
 import { FormNumberInput } from '#/components/molecules/FormNumberInput';

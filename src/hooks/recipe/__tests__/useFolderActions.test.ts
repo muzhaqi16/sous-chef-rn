@@ -3,12 +3,14 @@ import { useFolderActions } from '../useFolderActions';
 
 const mockDeleteRecipeFolderMutation = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useDeleteRecipeFolderMutation: jest.fn(() => [
-    mockDeleteRecipeFolderMutation,
-    { loading: false },
-  ]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'DeleteRecipeFolder')
+      return [mockDeleteRecipeFolderMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 const mockToastSuccess = jest.fn();

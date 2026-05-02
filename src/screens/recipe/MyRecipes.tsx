@@ -6,11 +6,12 @@ import { commonStyles } from '#/styles/commonStyles';
 import { ItemList } from '#components/organisms/ItemList';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { Header } from '#components/molecules/Header';
+import { useMutation } from '@apollo/client/react';
 import {
-  useDeleteRecipeMutation,
+  DeleteRecipeDocument,
   MyRecipesDocument,
   type MyRecipesQuery,
-} from '#generated';
+} from '../../graphql/operations/recipe/recipe.generated';
 import { useRecipeManagement } from '#/hooks/recipe/useRecipeManagement';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -27,7 +28,7 @@ export const MyRecipes: React.FC = () => {
     actions: { refetch },
   } = useRecipeManagement();
 
-  const [deleteRecipeMutation] = useDeleteRecipeMutation({
+  const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument, {
     update: (cache, { data }, { variables }) => {
       if (!data?.deleteRecipe?.success || !variables?.id) return;
       cache.updateQuery<MyRecipesQuery>(

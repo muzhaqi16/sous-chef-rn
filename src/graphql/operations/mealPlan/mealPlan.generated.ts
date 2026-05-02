@@ -1,0 +1,2056 @@
+import type * as Types from '../../generated/schemaTypes';
+
+import type {
+  MealPlanDisplayFragment,
+  MealPlanFullFragment,
+} from './mealPlanFragments.generated';
+import type { MealPlanItemCard_ItemFragment } from '../../../components/mealPlan/MealPlanItemCard.generated';
+import type { EditCustomMealSheet_ItemFragment } from '../../../components/mealPlan/EditCustomMealSheet.generated';
+import type { DailyMeals_ItemFragment } from '../../../hooks/mealPlan/useDailyMeals.generated';
+import type { MealPlanMain_ItemFragment } from '../../../screens/mealPlan/MealPlanMain.generated';
+import type { MealPlanItemActions_ItemFragment } from '../../../hooks/mealPlan/useMealPlanItemActions.generated';
+import type { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/core';
+export type GetMealPlansQueryVariables = Types.Exact<{
+  first?: Types.InputMaybe<Types.Scalars['Int']['input']>;
+  after?: Types.InputMaybe<Types.Scalars['String']['input']>;
+  filters?: Types.InputMaybe<Types.MealPlanFilters>;
+  orderBy?: Types.InputMaybe<Types.MealPlanOrderBy>;
+}>;
+
+export type GetMealPlansQuery = {
+  __typename: 'Query';
+  mealPlans: {
+    __typename: 'MealPlanConnection';
+    totalCount: number | null;
+    edges: Array<{
+      __typename: 'MealPlanEdge';
+      cursor: string;
+      node: { __typename: 'MealPlan' } & MealPlanDisplayFragment;
+    }>;
+    pageInfo: {
+      __typename: 'PageInfo';
+      hasNextPage: boolean;
+      endCursor: string | null;
+    };
+  };
+};
+
+export type GetMealPlanQueryVariables = Types.Exact<{
+  id: Types.Scalars['ID']['input'];
+}>;
+
+export type GetMealPlanQuery = {
+  __typename: 'Query';
+  mealPlan: ({ __typename: 'MealPlan' } & MealPlanFullFragment) | null;
+};
+
+export type CreateMealPlanMutationVariables = Types.Exact<{
+  input: Types.CreateMealPlanInput;
+}>;
+
+export type CreateMealPlanMutation = {
+  __typename: 'Mutation';
+  createMealPlan: {
+    __typename: 'MealPlanPayload';
+    success: boolean;
+    message: string;
+    code: string;
+    mealPlan: ({ __typename: 'MealPlan' } & MealPlanDisplayFragment) | null;
+  };
+};
+
+export type UpdateMealPlanMutationVariables = Types.Exact<{
+  id: Types.Scalars['ID']['input'];
+  input: Types.UpdateMealPlanInput;
+}>;
+
+export type UpdateMealPlanMutation = {
+  __typename: 'Mutation';
+  updateMealPlan: {
+    __typename: 'MealPlanPayload';
+    success: boolean;
+    message: string;
+    code: string;
+    mealPlan: ({ __typename: 'MealPlan' } & MealPlanDisplayFragment) | null;
+  };
+};
+
+export type DeleteMealPlanMutationVariables = Types.Exact<{
+  id: Types.Scalars['ID']['input'];
+}>;
+
+export type DeleteMealPlanMutation = {
+  __typename: 'Mutation';
+  deleteMealPlan: {
+    __typename: 'MealPlanPayload';
+    success: boolean;
+    message: string;
+    code: string;
+    mealPlan: { __typename: 'MealPlan'; id: string } | null;
+  };
+};
+
+export type CreateMealPlanItemMutationVariables = Types.Exact<{
+  input: Types.CreateMealPlanItemInput;
+}>;
+
+export type CreateMealPlanItemMutation = {
+  __typename: 'Mutation';
+  createMealPlanItem: {
+    __typename: 'MealPlanItemPayload';
+    success: boolean;
+    message: string;
+    code: string;
+    mealPlanItem:
+      | ({ __typename: 'MealPlanItem' } & MealPlanItemCard_ItemFragment &
+          EditCustomMealSheet_ItemFragment &
+          DailyMeals_ItemFragment &
+          MealPlanMain_ItemFragment &
+          MealPlanItemActions_ItemFragment)
+      | null;
+  };
+};
+
+export type UpdateMealPlanItemMutationVariables = Types.Exact<{
+  id: Types.Scalars['ID']['input'];
+  input: Types.UpdateMealPlanItemInput;
+}>;
+
+export type UpdateMealPlanItemMutation = {
+  __typename: 'Mutation';
+  updateMealPlanItem: {
+    __typename: 'MealPlanItemPayload';
+    success: boolean;
+    message: string;
+    code: string;
+    mealPlanItem:
+      | ({ __typename: 'MealPlanItem' } & MealPlanItemCard_ItemFragment &
+          EditCustomMealSheet_ItemFragment &
+          DailyMeals_ItemFragment &
+          MealPlanMain_ItemFragment &
+          MealPlanItemActions_ItemFragment)
+      | null;
+  };
+};
+
+export type DeleteMealPlanItemMutationVariables = Types.Exact<{
+  id: Types.Scalars['ID']['input'];
+}>;
+
+export type DeleteMealPlanItemMutation = {
+  __typename: 'Mutation';
+  deleteMealPlanItem: {
+    __typename: 'MealPlanItemPayload';
+    success: boolean;
+    message: string;
+    code: string;
+    mealPlanItem: { __typename: 'MealPlanItem'; id: string } | null;
+  };
+};
+
+export type DuplicateMealPlanMutationVariables = Types.Exact<{
+  input: Types.DuplicateMealPlanInput;
+}>;
+
+export type DuplicateMealPlanMutation = {
+  __typename: 'Mutation';
+  duplicateMealPlan: {
+    __typename: 'MealPlanPayload';
+    success: boolean;
+    message: string;
+    code: string;
+    mealPlan: ({ __typename: 'MealPlan' } & MealPlanDisplayFragment) | null;
+  };
+};
+
+export type GenerateShoppingListFromMealPlanMutationVariables = Types.Exact<{
+  input: Types.GenerateShoppingListFromMealPlanInput;
+}>;
+
+export type GenerateShoppingListFromMealPlanMutation = {
+  __typename: 'Mutation';
+  generateShoppingListFromMealPlan: {
+    __typename: 'ShoppingListPayload';
+    success: boolean;
+    message: string;
+    code: string;
+    shoppingList: {
+      __typename: 'ShoppingList';
+      id: string;
+      name: string;
+      totalItems: number;
+      homeId: string | null;
+      home: { __typename: 'Home'; id: string; name: string } | null;
+    } | null;
+  };
+};
+
+export const GetMealPlansDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetMealPlans' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'first' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'after' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'filters' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'MealPlanFilters' },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'orderBy' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'MealPlanOrderBy' },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'mealPlans' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'first' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'after' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'after' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'filters' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'filters' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'orderBy' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'orderBy' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'MealPlanDisplay' },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanDisplay' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlan' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'planType' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'startDate' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'endDate' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCalories' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalProtein' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCarbs' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalFat' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'actualCost' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'budgetAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'home' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'myMembership' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createdBy' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'profile' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayName' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<GetMealPlansQuery, GetMealPlansQueryVariables>;
+export const GetMealPlanDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetMealPlan' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'mealPlan' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'MealPlanFull' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanDisplay' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlan' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'planType' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'startDate' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'endDate' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCalories' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalProtein' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCarbs' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalFat' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'actualCost' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'budgetAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'home' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'myMembership' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createdBy' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'profile' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayName' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanItemCard_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isCompleted' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customMealName' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'calories' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usedPantryItems' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'totalTimeMinutes' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'EditCustomMealSheet_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'mealType' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customMealName' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'DailyMeals_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'date' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'mealType' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'calories' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customMealName' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanMain_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customMealName' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanItemActions_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isCompleted' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanFull' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlan' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'FragmentSpread',
+            name: { kind: 'Name', value: 'MealPlanDisplay' },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'dietaryProfile' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'calorieTarget' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'proteinTarget' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'carbsTarget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'fatTarget' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'mealPlanItems' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'MealPlanItemCard_item' },
+                },
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'EditCustomMealSheet_item' },
+                },
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'DailyMeals_item' },
+                },
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'MealPlanMain_item' },
+                },
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'MealPlanItemActions_item' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'generatedShoppingLists' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'nutritionSummary' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'totalCalories' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'totalProtein' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCarbs' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalFat' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'avgDailyCalories' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'avgDailyProtein' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'avgDailyCarbs' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'avgDailyFat' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalMeals' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealsWithNutrition' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'coveragePercentage' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealTypeBreakdown' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'mealType' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalCalories' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalProtein' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalCarbs' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalFat' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'mealCount' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'nutritionGoalProgress' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'overallScore' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'caloriesProgress' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'target' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'current' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'percentage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'status' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'proteinProgress' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'target' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'current' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'percentage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'status' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'carbsProgress' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'target' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'current' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'percentage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'status' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'fatProgress' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'target' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'current' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'percentage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'status' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<GetMealPlanQuery, GetMealPlanQueryVariables>;
+export const CreateMealPlanDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'CreateMealPlan' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'CreateMealPlanInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createMealPlan' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'MealPlanDisplay' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanDisplay' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlan' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'planType' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'startDate' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'endDate' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCalories' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalProtein' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCarbs' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalFat' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'actualCost' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'budgetAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'home' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'myMembership' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createdBy' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'profile' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayName' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  CreateMealPlanMutation,
+  CreateMealPlanMutationVariables
+>;
+export const UpdateMealPlanDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateMealPlan' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'UpdateMealPlanInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateMealPlan' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'MealPlanDisplay' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanDisplay' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlan' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'planType' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'startDate' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'endDate' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCalories' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalProtein' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCarbs' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalFat' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'actualCost' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'budgetAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'home' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'myMembership' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createdBy' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'profile' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayName' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  UpdateMealPlanMutation,
+  UpdateMealPlanMutationVariables
+>;
+export const DeleteMealPlanDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'DeleteMealPlan' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'deleteMealPlan' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  DeleteMealPlanMutation,
+  DeleteMealPlanMutationVariables
+>;
+export const CreateMealPlanItemDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'CreateMealPlanItem' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'CreateMealPlanItemInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createMealPlanItem' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlanItem' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'MealPlanItemCard_item' },
+                      },
+                      {
+                        kind: 'FragmentSpread',
+                        name: {
+                          kind: 'Name',
+                          value: 'EditCustomMealSheet_item',
+                        },
+                      },
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'DailyMeals_item' },
+                      },
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'MealPlanMain_item' },
+                      },
+                      {
+                        kind: 'FragmentSpread',
+                        name: {
+                          kind: 'Name',
+                          value: 'MealPlanItemActions_item',
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanItemCard_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isCompleted' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customMealName' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'calories' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usedPantryItems' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'totalTimeMinutes' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'EditCustomMealSheet_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'mealType' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customMealName' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'DailyMeals_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'date' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'mealType' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'calories' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customMealName' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanMain_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customMealName' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanItemActions_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isCompleted' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  CreateMealPlanItemMutation,
+  CreateMealPlanItemMutationVariables
+>;
+export const UpdateMealPlanItemDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateMealPlanItem' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'UpdateMealPlanItemInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateMealPlanItem' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlanItem' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'MealPlanItemCard_item' },
+                      },
+                      {
+                        kind: 'FragmentSpread',
+                        name: {
+                          kind: 'Name',
+                          value: 'EditCustomMealSheet_item',
+                        },
+                      },
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'DailyMeals_item' },
+                      },
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'MealPlanMain_item' },
+                      },
+                      {
+                        kind: 'FragmentSpread',
+                        name: {
+                          kind: 'Name',
+                          value: 'MealPlanItemActions_item',
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanItemCard_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isCompleted' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customMealName' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'calories' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usedPantryItems' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'totalTimeMinutes' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'EditCustomMealSheet_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'mealType' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customMealName' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'DailyMeals_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'date' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'mealType' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'calories' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customMealName' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanMain_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customMealName' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanItemActions_item' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlanItem' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isCompleted' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  UpdateMealPlanItemMutation,
+  UpdateMealPlanItemMutationVariables
+>;
+export const DeleteMealPlanItemDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'DeleteMealPlanItem' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'deleteMealPlanItem' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlanItem' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  DeleteMealPlanItemMutation,
+  DeleteMealPlanItemMutationVariables
+>;
+export const DuplicateMealPlanDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'DuplicateMealPlan' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'DuplicateMealPlanInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'duplicateMealPlan' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'MealPlanDisplay' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MealPlanDisplay' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'MealPlan' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'planType' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'startDate' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'endDate' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCalories' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalProtein' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCarbs' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalFat' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'actualCost' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'budgetAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'home' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'myMembership' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createdBy' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'profile' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayName' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  DuplicateMealPlanMutation,
+  DuplicateMealPlanMutationVariables
+>;
+export const GenerateShoppingListFromMealPlanDocument = /*#__PURE__*/ {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'GenerateShoppingListFromMealPlan' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: {
+                kind: 'Name',
+                value: 'GenerateShoppingListFromMealPlanInput',
+              },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'generateShoppingListFromMealPlan' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'shoppingList' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalItems' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'homeId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'home' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  GenerateShoppingListFromMealPlanMutation,
+  GenerateShoppingListFromMealPlanMutationVariables
+>;

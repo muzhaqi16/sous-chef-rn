@@ -1,5 +1,5 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
-import type { ShoppingListItemDisplayFragment } from '#generated';
+import { type ShoppingListItemDisplayFragment } from '#operations/shoppingList/shoppingListFragments.generated';
 import { MoveToPantryModal } from '#/components/modals/MoveToPantryModal';
 import { AddToShoppingListSheet } from '#/components/modals/AddToShoppingListSheet/AddToShoppingListSheet';
 import { QuantityEditSheet } from '#/components/modals/QuantityEditSheet/QuantityEditSheet';

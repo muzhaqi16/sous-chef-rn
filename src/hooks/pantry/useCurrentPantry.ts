@@ -4,7 +4,8 @@ import {
   usePantryState,
   useIsHomeSelectionReady,
 } from '#store/useAppStore';
-import { useGetHomesQuery } from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { GetHomesDocument } from '../../graphql/operations/home/home.generated';
 import {
   normalizeHomes,
   normalizeHome,
@@ -28,7 +29,7 @@ export function useCurrentPantry() {
   const { selectedPantryId, setSelectedPantryId } = usePantryState();
   const isHomeSelectionReady = useIsHomeSelectionReady();
 
-  const { data: homesData } = useGetHomesQuery({
+  const { data: homesData } = useQuery(GetHomesDocument, {
     fetchPolicy: 'cache-only',
     errorPolicy: 'ignore',
   });

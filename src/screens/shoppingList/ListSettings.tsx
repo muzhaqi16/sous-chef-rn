@@ -12,12 +12,13 @@ import { useShoppingListDetails } from '#hooks/shoppingList/useShoppingListDetai
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useLazyHomeData } from '#/hooks/home/useLazyHomeData';
 import { ModalPicker } from '#components/molecules/ModalPicker';
+import { useMutation } from '@apollo/client/react';
 import {
-  useUpdateShoppingListMutation,
-  useDeleteShoppingListMutation,
-  useCreateShoppingListMutation,
-  useRemoveCollaboratorMutation,
-} from '#generated';
+  UpdateShoppingListDocument,
+  DeleteShoppingListDocument,
+  CreateShoppingListDocument,
+  RemoveCollaboratorDocument,
+} from '../../graphql/operations/shoppingList/shoppingList.generated';
 import {
   createRemoveFromQueryConnectionUpdater,
   createAddToQueryConnectionUpdater,
@@ -107,10 +108,9 @@ export const ListSettings: React.FC<
   );
   const isHomeLinked = !!shoppingList?.homeId;
 
-  const [removeMember] = useRemoveCollaboratorMutation();
-  const [updateList] = useUpdateShoppingListMutation();
-  const [deleteList] = useDeleteShoppingListMutation({
-    errorPolicy: 'all',
+  const [removeMember] = useMutation(RemoveCollaboratorDocument);
+  const [updateList] = useMutation(UpdateShoppingListDocument);
+  const [deleteList] = useMutation(DeleteShoppingListDocument, {
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Delete Shopping List',
@@ -137,8 +137,7 @@ export const ListSettings: React.FC<
     'ShoppingList',
   );
 
-  const [createList] = useCreateShoppingListMutation({
-    errorPolicy: 'all',
+  const [createList] = useMutation(CreateShoppingListDocument, {
     update(cache, { data }) {
       const newList = data?.createShoppingList?.shoppingList;
       if (newList) {

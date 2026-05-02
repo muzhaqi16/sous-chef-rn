@@ -1,15 +1,17 @@
-import { useMySavedRecipesQuery } from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { MySavedRecipesDocument } from '../../graphql/operations/recipe/recipe.generated';
 
 /**
  * Hook to extract unique tags from user's saved recipes
  * Returns a list of tags for autocomplete suggestions and filtering
  */
 export function useRecipeTags() {
-  const { data, loading, error, refetch } = useMySavedRecipesQuery({
+  const { data, loading, error, refetch } = useQuery(MySavedRecipesDocument, {
     fetchPolicy: 'cache-first',
   });
 
-  const savedRecipes = data?.me?.savedRecipesConnection?.edges?.map(e => e.node) ?? [];
+  const savedRecipes =
+    data?.me?.savedRecipesConnection?.edges?.map(e => e.node) ?? [];
 
   // Extract unique tags from all saved recipes
   let tags: string[] = [];

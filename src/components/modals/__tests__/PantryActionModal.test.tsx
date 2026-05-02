@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { PantryActionModal } from '../PantryActionModal';
-import type { PantryItemFragment } from '#generated';
+import { type PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
 import { PantryOperation } from '#hooks/pantry/useOperationUnits';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({

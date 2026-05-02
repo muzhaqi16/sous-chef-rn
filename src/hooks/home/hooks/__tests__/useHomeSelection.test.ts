@@ -4,9 +4,14 @@ import { useHomeSelection } from '../useHomeSelection';
 
 const mockSetDefaultHomeMutation = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useSetDefaultHomeMutation: jest.fn(() => [mockSetDefaultHomeMutation]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'SetDefaultHome')
+      return [mockSetDefaultHomeMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 // Store mock state

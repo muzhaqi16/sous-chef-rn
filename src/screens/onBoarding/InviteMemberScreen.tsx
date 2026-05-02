@@ -6,12 +6,13 @@ import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { EmailInput } from '#components/atoms/EmailInput';
 import { StyleSheet } from 'react-native-unistyles';
+import { useMutation } from '@apollo/client/react';
+import { InviteToHomeDocument } from '../../graphql/operations/home/home.generated';
+import { AddCollaboratorDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import {
-  useInviteToHomeMutation,
-  useAddCollaboratorMutation,
   CollaboratorRole,
   MembershipRole,
-} from '#generated';
+} from '../../graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useUser } from '#store/useAppStore';
@@ -43,13 +44,13 @@ export const InviteMemberScreen = () => {
   const [currentEmail, setCurrentEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
 
-  const [inviteToHome] = useInviteToHomeMutation({
+  const [inviteToHome] = useMutation(InviteToHomeDocument, {
     onError: error => {
       console.error('Failed to invite to home:', error);
     },
   });
 
-  const [addCollaborator] = useAddCollaboratorMutation({
+  const [addCollaborator] = useMutation(AddCollaboratorDocument, {
     onError: error => {
       console.error('Failed to add collaborator:', error);
     },

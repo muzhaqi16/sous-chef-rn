@@ -7,11 +7,16 @@ import { renderWithProviders } from '../../../../__tests__/helpers/renderWithPro
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreatePantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useRestockPantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useAddItemToShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreatePantryItem') return [jest.fn(), { loading: false }];
+    if (opName === 'RestockPantryItem') return [jest.fn(), { loading: false }];
+    if (opName === 'AddItemToShoppingList')
+      return [jest.fn(), { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
@@ -47,17 +52,30 @@ jest.mock('../ActionButtons', () => ({
   ActionButtons: ({ primaryAction, secondaryAction }: any) => {
     const RN = require('react-native');
     const R = require('react');
-    return R.createElement(RN.View, null,
-      R.createElement(RN.Pressable, { onPress: primaryAction.onPress, testID: 'primary-btn' },
-        R.createElement(RN.Text, null, primaryAction.label)),
-      R.createElement(RN.Pressable, { onPress: secondaryAction.onPress, testID: 'secondary-btn' },
-        R.createElement(RN.Text, null, secondaryAction.label)),
+    return R.createElement(
+      RN.View,
+      null,
+      R.createElement(
+        RN.Pressable,
+        { onPress: primaryAction.onPress, testID: 'primary-btn' },
+        R.createElement(RN.Text, null, primaryAction.label),
+      ),
+      R.createElement(
+        RN.Pressable,
+        { onPress: secondaryAction.onPress, testID: 'secondary-btn' },
+        R.createElement(RN.Text, null, secondaryAction.label),
+      ),
     );
   },
 }));
 
 describe('SearchResults', () => {
-  const mockItem = { id: 'item-1', name: 'Organic Milk', upc: '123456', netWeight: 1 };
+  const mockItem = {
+    id: 'item-1',
+    name: 'Organic Milk',
+    upc: '123456',
+    netWeight: 1,
+  };
 
   const defaultProps: SearchResultsProps = {
     item: mockItem,
@@ -82,7 +100,11 @@ describe('SearchResults', () => {
 
   it('renders Add to Shopping List button for shopping list source', () => {
     renderWithProviders(
-      <SearchResults {...defaultProps} source="shoppingList" shoppingListId="list-1" />,
+      <SearchResults
+        {...defaultProps}
+        source="shoppingList"
+        shoppingListId="list-1"
+      />,
     );
     expect(screen.getByText('Add to Shopping List')).toBeTruthy();
   });

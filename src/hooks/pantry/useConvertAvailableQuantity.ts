@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useConvertQuantityLazyQuery } from '#generated';
+import { useLazyQuery } from '@apollo/client/react';
+import { ConvertQuantityDocument } from '../../graphql/operations/item/conversions.generated';
 import { executeQuery } from '#/utils/compilerSafeWrappers';
 
 interface UseConvertAvailableQuantityOptions {
@@ -46,7 +47,7 @@ export function useConvertAvailableQuantity({
   >(null);
   const [availableLoading, setAvailableLoading] = useState(false);
 
-  const [convertQuantity] = useConvertQuantityLazyQuery({
+  const [convertQuantity] = useLazyQuery(ConvertQuantityDocument, {
     fetchPolicy: 'network-only',
   });
 

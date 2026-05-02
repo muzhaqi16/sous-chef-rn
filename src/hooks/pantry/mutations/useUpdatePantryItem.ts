@@ -8,19 +8,20 @@
  * - Optimistic response with cache update
  */
 
+import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import {
-  useUpdatePantryItemMutation,
-  PantryItemFragment,
-  StorageType,
-} from '#generated';
+  UpdatePantryItemDocument,
+  type UpdatePantryItemMutation,
+} from '#operations/pantry/pantry.generated';
+import type { PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
+import { StorageType } from '#/graphql/generated/schemaTypes';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import {
   buildDirtyUpdateInput,
@@ -68,8 +69,7 @@ export function useUpdatePantryItem({
 }: UseUpdatePantryItemOptions) {
   const { handleApolloError } = useErrorService();
 
-  const [updateMutation] = useUpdatePantryItemMutation({
-    errorPolicy: 'all',
+  const [updateMutation] = useMutation(UpdatePantryItemDocument, {
     onError: error => {
       if (handleVersionConflict(error)) {
         alertService.alert('Item Updated', getVersionConflictMessage(error), [
@@ -167,14 +167,24 @@ export function useUpdatePantryItem({
     const oldLocationId = currentItem.storageLocation?.id ?? null;
 
     // Fire mutation asynchronously - don't await to allow immediate navigation
+    const optimisticPantryItem = enhanceWithVersion(
+      currentItem,
+      optimisticUpdate,
+    );
+    const optimisticResponse: UpdatePantryItemMutation = {
+      __typename: 'Mutation',
+      updatePantryItem: {
+        __typename: 'PantryItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        pantryItem:
+          optimisticPantryItem as UpdatePantryItemMutation['updatePantryItem']['pantryItem'],
+      },
+    };
     updateMutation({
       variables: { id: itemId, input: updateInput },
-      optimisticResponse: buildOptimisticMutationResponse(
-        'updatePantryItem',
-        'PantryItemPayload',
-        'pantryItem',
-        enhanceWithVersion(currentItem, optimisticUpdate),
-      ),
+      optimisticResponse,
       update(cache) {
         executeCacheUpdate(
           () => {

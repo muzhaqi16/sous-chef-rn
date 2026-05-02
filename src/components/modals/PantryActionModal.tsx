@@ -12,7 +12,8 @@ import {
   type PantryOperation,
 } from '#hooks/pantry/useOperationUnits';
 import { useConvertAvailableQuantity } from '#hooks/pantry/useConvertAvailableQuantity';
-import type { PantryItemFragment, UnitType } from '#generated';
+import { type PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
+import { type UnitType } from '../../graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
 
 export interface PantryActionSharedState {

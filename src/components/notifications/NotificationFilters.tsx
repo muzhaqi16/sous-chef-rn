@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
-import { NotificationCategory } from '#generated';
+import { NotificationCategory } from '../../graphql/generated/schemaTypes';
 import { NOTIFICATION_CATEGORIES } from '#store/slices/notificationSlice';
 
 interface NotificationFiltersProps {

@@ -9,7 +9,8 @@ import { QuantityInputFeedback } from '#components/molecules/QuantityInputFeedba
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { validateDeductionQuantity } from '#/utils/validateDeductionQuantity';
 import { useQuantityFeedback } from '#hooks/pantry/useQuantityFeedback';
-import { WasteReason, PantryItemFragment } from '#generated';
+import { WasteReason } from '../../graphql/generated/schemaTypes';
+import { type PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { PantryOperation } from '#hooks/pantry/useOperationUnits';
 import {

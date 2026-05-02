@@ -4,11 +4,26 @@ import { useRemoveShoppingItem } from '../useRemoveShoppingItem';
 // --- Mocks ---
 
 const mockRemoveItemMutation = jest.fn();
-const mockHandleApolloError = jest.fn(() => ({ message: 'Something went wrong' }));
+const mockHandleApolloError = jest.fn(() => ({
+  message: 'Something went wrong',
+}));
 const mockCreateRemoveOperation = jest.fn();
 
-jest.mock('#generated', () => ({
-  useRemoveItemFromShoppingListMutation: () => [mockRemoveItemMutation],
+jest.mock('@apollo/client/react', () => ({
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'RemoveItemFromShoppingList')
+      return [mockRemoveItemMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
+  useQuery: jest.fn(() => ({
+    data: undefined,
+    loading: false,
+    error: undefined,
+  })),
+  useApolloClient: jest.fn(() => ({
+    cache: { modify: jest.fn(), identify: jest.fn(() => 'cache-id') },
+  })),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -21,16 +36,6 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: () => ({
     createRemoveOperation: mockCreateRemoveOperation,
   }),
-}));
-
-jest.mock('#/apollo/utils/optimisticTypes', () => ({
-  buildOptimisticDeleteResponse: jest.fn(() => ({
-    __typename: 'Mutation',
-    removeItemFromShoppingList: {
-      __typename: 'ShoppingListItemPayload',
-      success: true,
-    },
-  })),
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');

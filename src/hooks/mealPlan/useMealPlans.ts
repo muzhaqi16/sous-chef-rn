@@ -1,8 +1,9 @@
+import { useQuery } from '@apollo/client/react';
+import { GetMealPlansDocument } from '../../graphql/operations/mealPlan/mealPlan.generated';
 import {
-  useGetMealPlansQuery,
   SortOrder,
   type MealPlanFilters,
-} from '#generated';
+} from '../../graphql/generated/schemaTypes';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
@@ -10,17 +11,17 @@ import { useConnectionData } from '#hooks/utils/useConnectionData';
 export function useMealPlans(filters?: MealPlanFilters) {
   const isLoggedOut = useIsLoggedOut();
 
-  const { data, loading, error, refetch, fetchMore } = useGetMealPlansQuery({
-    variables: {
-      first: 20,
-      filters: filters ?? undefined,
-      orderBy: { startDate: SortOrder.Desc },
+  const { data, loading, error, refetch, fetchMore } = useQuery(
+    GetMealPlansDocument,
+    {
+      variables: {
+        first: 20,
+        filters: filters ?? undefined,
+        orderBy: { startDate: SortOrder.Desc },
+      },
+      skip: isLoggedOut,
     },
-    skip: isLoggedOut,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'all',
-  });
+  );
 
   useApolloErrorLogger('GetMealPlans', error);
 

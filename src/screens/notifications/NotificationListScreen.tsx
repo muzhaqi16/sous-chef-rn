@@ -10,7 +10,7 @@ import { NotificationFilters } from '#components/notifications/NotificationFilte
 import { UrgentNotificationsBanner } from '#components/notifications/UrgentNotificationsBanner';
 import { useNotifications } from '#hooks/notifications/useNotifications';
 import { NotificationItem as NotificationType } from '#store/slices/notificationSlice';
-import { NotificationCategory } from '#generated';
+import { NotificationCategory } from '../../graphql/generated/schemaTypes';
 import { Header } from '#components/molecules/Header';
 import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
 import {

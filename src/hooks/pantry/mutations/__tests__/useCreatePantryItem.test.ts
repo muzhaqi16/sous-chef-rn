@@ -5,10 +5,16 @@ import { useCreatePantryItem } from '../useCreatePantryItem';
 const mockCreateMutation = jest.fn();
 const mockRestockMutation = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreatePantryItemMutation: jest.fn(() => [mockCreateMutation]),
-  useRestockPantryItemMutation: jest.fn(() => [mockRestockMutation]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreatePantryItem')
+      return [mockCreateMutation, { loading: false }];
+    if (opName === 'RestockPantryItem')
+      return [mockRestockMutation, { loading: false }];
+    return [jest.fn(), { loading: false }];
+  }),
 }));
 
 jest.mock('#/services/errorService', () => ({

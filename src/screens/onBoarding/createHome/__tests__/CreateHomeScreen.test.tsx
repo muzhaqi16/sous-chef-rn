@@ -41,22 +41,33 @@ const mockCreatePantry = jest.fn();
 const mockAcceptHomeInvite = jest.fn();
 const mockDeclineHomeInvite = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreateHomeMutation: () => [mockCreateHome],
-  useCreatePantryMutation: () => [mockCreatePantry, {}],
-  useGetHomesQuery: jest.fn(() => ({
-    data: { homes: { edges: [] } },
-    loading: false,
-    refetch: jest.fn(),
-  })),
-  useGetMyPendingInvitesQuery: jest.fn(() => ({
-    data: { me: { pendingHomeInvites: [] } },
-    loading: false,
-  })),
-  useAcceptHomeInviteMutation: () => [mockAcceptHomeInvite, { loading: false }],
-  useDeclineHomeInviteMutation: () => [mockDeclineHomeInvite],
+const queryResponses: Record<string, any> = {};
+const setQueryResponse = (opName: string, response: any) => {
+  queryResponses[opName] = response;
+};
+
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateHome') return [mockCreateHome, { loading: false }];
+    if (opName === 'CreatePantry')
+      return [mockCreatePantry, { loading: false }];
+    if (opName === 'AcceptHomeInvite')
+      return [mockAcceptHomeInvite, { loading: false }];
+    if (opName === 'DeclineHomeInvite')
+      return [mockDeclineHomeInvite, { loading: false }];
+    return [jest.fn(), {}];
+  }),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName && queryResponses[opName]) return queryResponses[opName];
+    return { data: undefined, loading: false, refetch: jest.fn() };
+  }),
 }));
+
+// CreatePantry is now part of the pantry slice (v4 codegen) and routed
+// through useMutation from @apollo/client/react.
 
 jest.mock('#/utils/validation/onboarding', () => ({
   getCreateHomeSchema: jest.fn(() => ({
@@ -182,17 +193,14 @@ jest.mock('#/services/alertService', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
-  // Restore default mock implementations after clearAllMocks
-  const {
-    useGetHomesQuery,
-    useGetMyPendingInvitesQuery,
-  } = require('#generated');
-  useGetHomesQuery.mockReturnValue({
+  // Reset query response map and install defaults
+  for (const k of Object.keys(queryResponses)) delete queryResponses[k];
+  setQueryResponse('GetHomes', {
     data: { homes: { edges: [] } },
     loading: false,
     refetch: jest.fn(),
   });
-  useGetMyPendingInvitesQuery.mockReturnValue({
+  setQueryResponse('GetMyPendingInvites', {
     data: { me: { pendingHomeInvites: [] } },
     loading: false,
   });
@@ -224,8 +232,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows loading view when checking existing resources', () => {
-    const { useGetHomesQuery } = require('#generated');
-    useGetHomesQuery.mockReturnValue({
+    setQueryResponse('GetHomes', {
       data: null,
       loading: true,
       refetch: jest.fn(),
@@ -266,8 +273,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows pending invites when available and no home', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -293,8 +299,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows loading view when invites are loading', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetHomes', {
       data: null,
       loading: true,
     });
@@ -398,8 +403,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('calls skipToStep when "Create My Own Home" is pressed on invites screen', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -426,8 +430,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows inviter display name when available', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -452,8 +455,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows inviter email when displayName is missing', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -475,8 +477,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows "Someone" when inviter info is missing', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -498,8 +499,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows "Unknown Home" when home name is missing from invite', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -521,8 +521,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('calls acceptHomeInvite when Accept button is pressed', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -547,8 +546,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('calls alertService.alert when Decline button is pressed', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -598,8 +596,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows "Create My Own Home" button on invite view', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -639,8 +636,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('switches to create form after pressing "Create My Own Home" on invite view', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -665,8 +661,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('calls declineHomeInvite when decline confirmation is accepted', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -741,9 +736,7 @@ describe('CreateHomeScreen', () => {
         homes: { edges: [{ node: { id: 'found-home', name: 'My Home' } }] },
       },
     });
-
-    const { useGetHomesQuery } = require('#generated');
-    useGetHomesQuery.mockReturnValue({
+    setQueryResponse('GetHomes', {
       data: { homes: { edges: [] } },
       loading: false,
       refetch: mockRefetch,
@@ -872,8 +865,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('skips to CreateShoppingList when loading view skip is pressed', () => {
-    const { useGetHomesQuery } = require('#generated');
-    useGetHomesQuery.mockReturnValue({
+    setQueryResponse('GetHomes', {
       data: null,
       loading: true,
       refetch: jest.fn(),
@@ -896,8 +888,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows role text from formatRole for invite', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -919,8 +910,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows Pending Invitations section title on invite view', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [
@@ -998,8 +988,7 @@ describe('CreateHomeScreen', () => {
   });
 
   it('shows multiple pending invites', () => {
-    const { useGetMyPendingInvitesQuery } = require('#generated');
-    useGetMyPendingInvitesQuery.mockReturnValue({
+    setQueryResponse('GetMyPendingInvites', {
       data: {
         me: {
           pendingHomeInvites: [

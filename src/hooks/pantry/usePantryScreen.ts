@@ -7,7 +7,10 @@ import { useHybridSearch } from '#/hooks/search/useHybridSearch';
 import { useCreateStorageLocation } from '#/hooks/storageLocation/useCreateStorageLocation';
 import { useAppStore, useIsOnline } from '#/store/useAppStore';
 import { useShallow } from 'zustand/shallow';
-import { GetPantryDocument, type GetPantryQuery } from '#generated';
+import {
+  GetPantryDocument,
+  type GetPantryQuery,
+} from '../../graphql/operations/pantry/pantry.generated';
 import { normalizePantry } from '#/utils/connectionUtils';
 import {
   type LocationFilter,

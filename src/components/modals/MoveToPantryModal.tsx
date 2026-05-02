@@ -13,7 +13,8 @@ import { Header } from '#components/molecules/Header';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { Icon } from '#utils/iconUtils';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { StorageState, ShoppingListItemDisplayFragment } from '#generated';
+import { StorageState } from '../../graphql/generated/schemaTypes';
+import { type ShoppingListItemDisplayFragment } from '#operations/shoppingList/shoppingListFragments.generated';
 
 const STORAGE_STATES = Object.values(StorageState);
 

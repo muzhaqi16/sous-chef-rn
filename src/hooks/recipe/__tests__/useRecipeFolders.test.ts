@@ -3,14 +3,20 @@ import { useRecipeFolders } from '../useRecipeFolders';
 
 const mockRefetch = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useSavedRecipeFoldersQuery: jest.fn(() => ({
-    data: { savedRecipeFolders: ['Weeknight', 'Holiday', 'Quick'] },
-    loading: false,
-    error: undefined,
-    refetch: mockRefetch,
-  })),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'SavedRecipeFolders') {
+      return {
+        data: { savedRecipeFolders: ['Weeknight', 'Holiday', 'Quick'] },
+        loading: false,
+        error: undefined,
+        refetch: mockRefetch,
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 // Break circular dependency
@@ -28,8 +34,8 @@ describe('useRecipeFolders', () => {
   });
 
   it('returns empty array when data is undefined', () => {
-    const { useSavedRecipeFoldersQuery } = require('#generated');
-    useSavedRecipeFoldersQuery.mockReturnValueOnce({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: undefined,
       loading: true,
       error: undefined,
@@ -49,9 +55,9 @@ describe('useRecipeFolders', () => {
   });
 
   it('returns error when query fails', () => {
-    const { useSavedRecipeFoldersQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
     const mockError = new Error('Network error');
-    useSavedRecipeFoldersQuery.mockReturnValueOnce({
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: undefined,
       loading: false,
       error: mockError,

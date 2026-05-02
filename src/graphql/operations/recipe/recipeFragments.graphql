@@ -1,0 +1,96 @@
+fragment RecipeIngredientFragment on RecipeIngredient {
+  id
+  name
+  quantity
+  item {
+    id
+    name
+    imageUrl
+  }
+  unit {
+    id
+    name
+    symbol
+  }
+  image
+  isOptional
+  notes
+  preparation
+  sortOrder
+  section
+}
+
+fragment RecipeReviewFragment on RecipeReview {
+  id
+  rating
+  comment
+  helpful
+  verified
+  createdAt
+  updatedAt
+  user { ...UserSummary }
+  helpfulVotes {
+    id
+    user { id }
+  }
+}
+
+fragment BasicRecipeFragment on Recipe {
+  id
+  name
+  description
+  imageUrl
+  servings
+  prepTimeMinutes
+  cookTimeMinutes
+  totalTimeMinutes
+  difficulty
+  category
+  cuisine
+  status
+  isExternal
+  externalSource
+  externalId
+  primarySource
+  caloriesPerServing
+  createdAt
+  updatedAt
+  savedDetails {
+    id
+    folder
+    tags
+    notes
+    personalRating
+    cookedCount
+  }
+}
+
+fragment RecipeFragment on Recipe {
+  ...BasicRecipeFragment
+
+  # Extended fields not in BasicRecipeFragment
+  instructions
+  notes
+  videoUrl
+  sourceUrl
+  source
+
+  # Metadata
+  isPublished
+  averageRating
+  totalReviews
+  rating1Count
+  rating2Count
+  rating3Count
+  rating4Count
+  rating5Count
+  # Relations
+  createdBy {
+    id
+    email
+  }
+
+  ingredients {
+    ...RecipeIngredientFragment
+  }
+}

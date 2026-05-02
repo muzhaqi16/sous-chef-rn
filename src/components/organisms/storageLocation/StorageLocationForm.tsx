@@ -15,7 +15,7 @@ import Animated, {
 import { Pressable, ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
-import { StorageState } from '#generated';
+import { StorageState } from '../../../graphql/generated/schemaTypes';
 import { FormTextArea } from '#components/molecules/FormTextArea';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { FormNumberInput } from '#components/molecules/FormNumberInput';

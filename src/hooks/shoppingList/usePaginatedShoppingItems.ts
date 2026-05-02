@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import {
-  useGetShoppingListItemsFilteredQuery,
-  type ShoppingListItemDisplayFragment,
-} from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { GetShoppingListItemsFilteredDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
+import { type ShoppingListItemDisplayFragment } from '#operations/shoppingList/shoppingListFragments.generated';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { PAGINATION } from '#/constants/shoppingList';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
@@ -83,16 +82,13 @@ export function usePaginatedShoppingItems({
     error: uError,
     fetchMore: uFetchMore,
     refetch: uRefetch,
-  } = useGetShoppingListItemsFilteredQuery({
+  } = useQuery(GetShoppingListItemsFilteredDocument, {
     variables: {
       id: listId!,
       first: PAGINATION.ITEMS_PAGE_SIZE,
       isPurchased: false,
     },
     skip: shouldSkip,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'all',
   });
 
   const {
@@ -101,16 +97,13 @@ export function usePaginatedShoppingItems({
     error: pError,
     fetchMore: pFetchMore,
     refetch: pRefetch,
-  } = useGetShoppingListItemsFilteredQuery({
+  } = useQuery(GetShoppingListItemsFilteredDocument, {
     variables: {
       id: listId!,
       first: PAGINATION.ITEMS_PAGE_SIZE,
       isPurchased: true,
     },
     skip: shouldSkip || !purchasedReady,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'all',
   });
 
   useApolloErrorLogger('GetShoppingListItemsFiltered[unpurchased]', uError);

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useStorageLocationAutocomplete } from '#hooks/autocomplete/useStorageLocationAutocomplete';
-import type { StorageLocation } from '#generated';
+import { type StorageLocation } from '../../../graphql/generated/schemaTypes';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import { AutocompleteField } from './AutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
@@ -15,11 +15,16 @@ interface StorageLocationAutocompleteFieldProps {
   error?: string;
   testID?: string;
   storageLocations: StorageLocation[];
-  onStorageLocationSelected?: (locationId: string | null, location: StorageLocation | null) => void;
+  onStorageLocationSelected?: (
+    locationId: string | null,
+    location: StorageLocation | null,
+  ) => void;
   onAddNewLocation?: (name: string) => void;
 }
 
-export const StorageLocationAutocompleteField: React.FC<StorageLocationAutocompleteFieldProps> = ({
+export const StorageLocationAutocompleteField: React.FC<
+  StorageLocationAutocompleteFieldProps
+> = ({
   variant,
   label,
   value,
@@ -30,32 +35,34 @@ export const StorageLocationAutocompleteField: React.FC<StorageLocationAutocompl
   testID,
   storageLocations = [],
   onStorageLocationSelected,
-  onAddNewLocation }) => {
+  onAddNewLocation,
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const hasSelectionRef = useRef(false);
 
   const { displayItems, showAddNew } = useStorageLocationAutocomplete({
     storageLocations,
-    searchTerm });
+    searchTerm,
+  });
 
   const handleTextChange = (text: string) => {
-      onChangeText(text);
-      setSearchTerm(text);
-      if (hasSelectionRef.current) {
-        hasSelectionRef.current = false;
-        onStorageLocationSelected?.(null, null);
-      }
-    };
+    onChangeText(text);
+    setSearchTerm(text);
+    if (hasSelectionRef.current) {
+      hasSelectionRef.current = false;
+      onStorageLocationSelected?.(null, null);
+    }
+  };
 
   const handleSelect = (item: StorageLocation) => {
-      hasSelectionRef.current = true;
-      const displayName = item.parentLocation
-        ? `${item.name} (${item.parentLocation.name})`
-        : item.name;
-      onChangeText(displayName);
-      setSearchTerm('');
-      onStorageLocationSelected?.(item.id, item);
-    };
+    hasSelectionRef.current = true;
+    const displayName = item.parentLocation
+      ? `${item.name} (${item.parentLocation.name})`
+      : item.name;
+    onChangeText(displayName);
+    setSearchTerm('');
+    onStorageLocationSelected?.(item.id, item);
+  };
 
   const handleAddNew = () => {
     hasSelectionRef.current = false;
@@ -66,13 +73,15 @@ export const StorageLocationAutocompleteField: React.FC<StorageLocationAutocompl
   };
 
   const renderItem = (item: StorageLocation) => (
-      <AutocompleteRow
-        iconElement={<StorageLocationIcon type={item.type} size={24} />}
-        title={item.name}
-        subtitle={item.parentLocation ? `Inside ${item.parentLocation.name}` : undefined}
-        badge={item.isDefault ? 'Default' : undefined}
-      />
-    );
+    <AutocompleteRow
+      iconElement={<StorageLocationIcon type={item.type} size={24} />}
+      title={item.name}
+      subtitle={
+        item.parentLocation ? `Inside ${item.parentLocation.name}` : undefined
+      }
+      badge={item.isDefault ? 'Default' : undefined}
+    />
+  );
 
   const keyExtractor = (item: StorageLocation) => item.id;
 
@@ -117,7 +126,11 @@ export const StorageLocationAutocompleteField: React.FC<StorageLocationAutocompl
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       onSelect={handleSelect}
-      emptyText={storageLocations.length === 0 ? 'No storage locations yet' : 'No matching locations'}
+      emptyText={
+        storageLocations.length === 0
+          ? 'No storage locations yet'
+          : 'No matching locations'
+      }
       emptySubtext={
         searchTerm.length >= 2
           ? `Tap "Add" below to create "${searchTerm}"`

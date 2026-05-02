@@ -22,30 +22,10 @@ jest.mock('#hooks/auth/useAuth', () => ({
   }),
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useDeleteAccountMutation: (options: any) => {
-    return [
-      async () => {
-        const result = await mockDeleteAccount();
-        if (options?.onCompleted) {
-          options.onCompleted();
-        }
-        return result;
-      },
-    ];
-  },
-  useCanDeleteAccountQuery: () => ({
-    data: {
-      canDeleteAccount: {
-        canDelete: true,
-        blockers: [],
-      },
-    },
-    loading: false,
-    error: null,
-    refetch: mockRefetch,
-  }),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn(),
+  useQuery: jest.fn(),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -94,9 +74,48 @@ jest.mock('#components/base/Loading', () => {
   };
 });
 
+const apolloMocks = jest.requireMock('@apollo/client/react') as {
+  useMutation: jest.Mock;
+  useQuery: jest.Mock;
+};
+
+const setCanDeleteResult = (result: any) => {
+  apolloMocks.useQuery.mockImplementation((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CanDeleteAccount') return result;
+    return { data: undefined, loading: false, error: undefined };
+  });
+};
+
+const setDefaultDeleteMutation = () => {
+  apolloMocks.useMutation.mockImplementation((doc: any, options: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'DeleteAccount') {
+      return [
+        async () => {
+          const result = await mockDeleteAccount();
+          if (options?.onCompleted) options.onCompleted();
+          return result;
+        },
+        { loading: false },
+      ];
+    }
+    return [jest.fn(), {}];
+  });
+};
+
 describe('DeleteAccountScreen - delete form', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    setDefaultDeleteMutation();
+    setCanDeleteResult({
+      data: {
+        canDeleteAccount: { canDelete: true, blockers: [] },
+      },
+      loading: false,
+      error: null,
+      refetch: mockRefetch,
+    });
   });
 
   it('renders the header with Delete Account title', () => {
@@ -153,14 +172,13 @@ describe('DeleteAccountScreen - delete form', () => {
 describe('DeleteAccountScreen - loading state', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest
-      .spyOn(require('#generated'), 'useCanDeleteAccountQuery')
-      .mockReturnValue({
-        data: null,
-        loading: true,
-        error: null,
-        refetch: mockRefetch,
-      });
+    setDefaultDeleteMutation();
+    setCanDeleteResult({
+      data: null,
+      loading: true,
+      error: null,
+      refetch: mockRefetch,
+    });
   });
 
   it('shows loading state when checking eligibility', () => {
@@ -172,14 +190,13 @@ describe('DeleteAccountScreen - loading state', () => {
 describe('DeleteAccountScreen - error state', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest
-      .spyOn(require('#generated'), 'useCanDeleteAccountQuery')
-      .mockReturnValue({
-        data: null,
-        loading: false,
-        error: { message: 'Network error' },
-        refetch: mockRefetch,
-      });
+    setDefaultDeleteMutation();
+    setCanDeleteResult({
+      data: null,
+      loading: false,
+      error: { message: 'Network error' },
+      refetch: mockRefetch,
+    });
   });
 
   it('shows error state on eligibility check failure', () => {
@@ -203,25 +220,24 @@ describe('DeleteAccountScreen - error state', () => {
 describe('DeleteAccountScreen - blocked state', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest
-      .spyOn(require('#generated'), 'useCanDeleteAccountQuery')
-      .mockReturnValue({
-        data: {
-          canDeleteAccount: {
-            canDelete: false,
-            blockers: [
-              {
-                resourceId: 'home-1',
-                resourceName: 'My Home',
-                message: 'You are the sole owner',
-              },
-            ],
-          },
+    setDefaultDeleteMutation();
+    setCanDeleteResult({
+      data: {
+        canDeleteAccount: {
+          canDelete: false,
+          blockers: [
+            {
+              resourceId: 'home-1',
+              resourceName: 'My Home',
+              message: 'You are the sole owner',
+            },
+          ],
         },
-        loading: false,
-        error: null,
-        refetch: mockRefetch,
-      });
+      },
+      loading: false,
+      error: null,
+      refetch: mockRefetch,
+    });
   });
 
   it('shows blocked state with blocker information', () => {

@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { useLazyQuery, useMutation } from '@apollo/client/react';
 import {
-  useMatchRecipeIngredientsToPantryLazyQuery,
-  useConfirmRecipeConsumptionMutation,
+  MatchRecipeIngredientsToPantryDocument,
+  ConfirmRecipeConsumptionDocument,
   type MatchRecipeIngredientsToPantryQuery,
-  type ConfirmedIngredientConsumptionInput,
-} from '#generated';
+} from '../../graphql/operations/recipe/recipe.generated';
+import { type ConfirmedIngredientConsumptionInput } from '../../graphql/generated/schemaTypes';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
@@ -48,17 +49,21 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const [editableMatches, setEditableMatches] = useState<EditableMatch[]>([]);
   const [isSheetVisible, setIsSheetVisible] = useState(false);
 
-  const [loadMatchesQuery, { loading: matchesLoading }] =
-    useMatchRecipeIngredientsToPantryLazyQuery({
+  const [loadMatchesQuery, { loading: matchesLoading }] = useLazyQuery(
+    MatchRecipeIngredientsToPantryDocument,
+    {
       fetchPolicy: 'network-only',
-    });
+    },
+  );
 
-  const [confirmMutation, { loading: confirmLoading }] =
-    useConfirmRecipeConsumptionMutation({
+  const [confirmMutation, { loading: confirmLoading }] = useMutation(
+    ConfirmRecipeConsumptionDocument,
+    {
       onError: error => {
         toastService.error(error.message || 'Failed to confirm consumption');
       },
-    });
+    },
+  );
 
   const loadMatches = async (servings: number) => {
     if (!recipeId || !pantryId) {

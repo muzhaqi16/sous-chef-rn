@@ -13,13 +13,22 @@ const mockConfirmItemUpload = jest.fn();
 const mockUpdateProfile = jest.fn();
 const mockUpdateItemImage = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreateImageUploadUrlMutation: () => [mockCreateUploadUrl],
-  useConfirmProfileImageUploadMutation: () => [mockConfirmProfileUpload],
-  useConfirmItemImageUploadMutation: () => [mockConfirmItemUpload],
-  useUpdateUserProfileMutation: () => [mockUpdateProfile],
-  useUpdateItemImageMutation: () => [mockUpdateItemImage],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateImageUploadUrl')
+      return [mockCreateUploadUrl, { loading: false }];
+    if (opName === 'ConfirmProfileImageUpload')
+      return [mockConfirmProfileUpload, { loading: false }];
+    if (opName === 'ConfirmItemImageUpload')
+      return [mockConfirmItemUpload, { loading: false }];
+    if (opName === 'UpdateUserProfile')
+      return [mockUpdateProfile, { loading: false }];
+    if (opName === 'UpdateItemImage')
+      return [mockUpdateItemImage, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#utils/imageValidation', () => ({

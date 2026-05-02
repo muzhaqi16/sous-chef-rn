@@ -1,4 +1,5 @@
-import { useMySavedRecipesQuery } from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { MySavedRecipesDocument } from '../../graphql/operations/recipe/recipe.generated';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
@@ -107,16 +108,16 @@ function normalizeSavedRecipe(savedRecipe: {
 export function useSavedRecipes(folder?: string | null): UseSavedRecipesResult {
   const isLoggedOut = useIsLoggedOut();
 
-  const { data, loading, error, refetch, fetchMore } = useMySavedRecipesQuery({
-    variables: {
-      folder: folder ?? undefined,
-      first: DEFAULT_PAGE_SIZE,
+  const { data, loading, error, refetch, fetchMore } = useQuery(
+    MySavedRecipesDocument,
+    {
+      variables: {
+        folder: folder ?? undefined,
+        first: DEFAULT_PAGE_SIZE,
+      },
+      skip: isLoggedOut,
     },
-    skip: isLoggedOut,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'all',
-  });
+  );
 
   useApolloErrorLogger('MySavedRecipes', error);
 

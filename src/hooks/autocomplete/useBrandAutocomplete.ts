@@ -1,4 +1,5 @@
-import { useSearchBrandsLazyQuery } from '#generated';
+import { useLazyQuery } from '@apollo/client/react';
+import { SearchBrandsDocument } from '../../graphql/operations/item/item.generated';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
 interface SuggestedBrand {
@@ -21,7 +22,7 @@ export function useBrandAutocomplete(
 ) {
   const { suggestedBrands = [] } = options;
   const [searchBrands, { data: brandsData, loading }] =
-    useSearchBrandsLazyQuery();
+    useLazyQuery(SearchBrandsDocument);
 
   const search = (term: string) => {
     searchBrands({ variables: { search: term, limit: 20 } });

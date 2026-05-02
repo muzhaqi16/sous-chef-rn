@@ -1,8 +1,9 @@
 'use no memo';
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { fireEvent } from '@testing-library/react-native';
 import { MealPlanItemCard } from '../../../src/components/mealPlan/MealPlanItemCard';
+import { renderWithApollo } from '../../helpers/apolloMockProvider';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
@@ -12,14 +13,13 @@ jest.mock('../../../src/components/atoms/CachedImage', () => ({
 }));
 
 const makeItem = (overrides = {}) => ({
+  __typename: 'MealPlanItem',
   id: 'mp1',
   isCompleted: false,
-  mealType: 'DINNER',
   customMealName: 'Pasta Night',
   recipe: null,
   servings: 4,
   calories: 500,
-  notes: null,
   usedPantryItems: [],
   ...overrides,
 });
@@ -28,7 +28,7 @@ describe('MealPlanItemCard', () => {
   const onToggleCompleted = jest.fn();
 
   it('renders meal name', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithApollo(
       <MealPlanItemCard
         item={makeItem() as any}
         onToggleCompleted={onToggleCompleted}
@@ -39,16 +39,16 @@ describe('MealPlanItemCard', () => {
 
   it('renders recipe name when recipe exists', () => {
     const item = makeItem({
-      recipe: { name: 'Spaghetti Bolognese', imageUrl: null, totalTimeMinutes: 30 },
+      recipe: { __typename: 'Recipe', id: 'r1', name: 'Spaghetti Bolognese', imageUrl: null, totalTimeMinutes: 30 },
     });
-    const { getByText } = render(
+    const { getByText } = renderWithApollo(
       <MealPlanItemCard item={item as any} onToggleCompleted={onToggleCompleted} />,
     );
     expect(getByText('Spaghetti Bolognese')).toBeTruthy();
   });
 
   it('shows meta info with servings and calories', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithApollo(
       <MealPlanItemCard
         item={makeItem() as any}
         onToggleCompleted={onToggleCompleted}
@@ -59,7 +59,7 @@ describe('MealPlanItemCard', () => {
 
   it('renders delete button when onDelete provided', () => {
     const onDelete = jest.fn();
-    const { toJSON } = render(
+    const { toJSON } = renderWithApollo(
       <MealPlanItemCard
         item={makeItem() as any}
         onToggleCompleted={onToggleCompleted}
@@ -69,10 +69,10 @@ describe('MealPlanItemCard', () => {
     expect(toJSON()).toBeTruthy();
   });
 
-  it('calls onPress when card is pressed', () => {
+  it('calls onPress with item id when card is pressed', () => {
     const onPress = jest.fn();
     const item = makeItem();
-    const { getByText } = render(
+    const { getByText } = renderWithApollo(
       <MealPlanItemCard
         item={item as any}
         onToggleCompleted={onToggleCompleted}
@@ -80,6 +80,6 @@ describe('MealPlanItemCard', () => {
       />,
     );
     fireEvent.press(getByText('Pasta Night'));
-    expect(onPress).toHaveBeenCalledWith(item);
+    expect(onPress).toHaveBeenCalledWith('mp1');
   });
 });

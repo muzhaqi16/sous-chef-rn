@@ -9,7 +9,7 @@ import { SLIDE_PRESETS } from '#/constants/animations';
 import { Counter } from './Counter';
 import { QuantityDisplay } from './QuantityDisplay';
 import { Icon } from '#/utils/iconUtils';
-import { DisplayFormat } from '#/graphql/generated';
+import { DisplayFormat } from '../../graphql/generated/schemaTypes';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
 

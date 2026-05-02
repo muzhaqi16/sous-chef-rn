@@ -10,7 +10,7 @@ import { FormInput } from '#components/molecules/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { useMealTemplate } from '#hooks/mealPlan/useMealTemplate';
-import type { MealTemplateDisplayFragment } from '#generated';
+import { type MealTemplateDisplayFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 
 interface TemplatePreviewSheetProps {
   visible: boolean;

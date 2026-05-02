@@ -7,15 +7,15 @@
  * - Apollo auto-normalizes response by __typename + id
  */
 
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import {
-  useUpdateShoppingListItemMutation,
-  ShoppingListItemDisplayFragmentDoc,
-} from '#generated';
-import type { ShoppingListItemDisplayFragment } from '#generated';
+  UpdateShoppingListItemDocument,
+  type UpdateShoppingListItemMutation,
+} from '../../../graphql/operations/shoppingList/shoppingList.generated';
+import { ShoppingListItemDisplayFragmentDoc } from '#operations/shoppingList/shoppingListFragments.generated';
+import { type ShoppingListItemDisplayFragment } from '#operations/shoppingList/shoppingListFragments.generated';
 import { useErrorService } from '#/services/errorService';
-import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -46,8 +46,7 @@ export function useUpdateShoppingItem({
 
   // Apollo auto-normalizes the server response by __typename + id
   // No manual cache update needed - Apollo merge functions handle this automatically
-  const [updateItemMutation] = useUpdateShoppingListItemMutation({
-    errorPolicy: 'all',
+  const [updateItemMutation] = useMutation(UpdateShoppingListItemDocument, {
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Update Shopping List Item',
@@ -79,26 +78,32 @@ export function useUpdateShoppingItem({
     const optimisticQuantity = updates.quantity ?? item.quantity;
     const optimisticCategory = updates.category ?? item.category;
     const optimisticUnitName = updates.unitName ?? item.unitName;
-    const optimisticResponse = buildOptimisticMutationResponse(
-      'updateShoppingListItem',
-      'ShoppingListItemPayload',
-      'shoppingListItem',
-      {
-        __typename: 'ShoppingListItem',
-        id: item.id,
-        itemName: optimisticItemName,
-        quantity: optimisticQuantity,
-        quantityInput: item.quantityInput,
-        purchaseInfo: item.purchaseInfo,
-        version: item.version,
-        updatedAt: new Date().toISOString(),
-        category: optimisticCategory,
-        unitName: optimisticUnitName,
-        unit: item.unit,
-        sortOrder: item.sortOrder,
-        item: item.item,
+    const optimisticResponse: UpdateShoppingListItemMutation = {
+      __typename: 'Mutation',
+      updateShoppingListItem: {
+        __typename: 'ShoppingListItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        shoppingListItem: {
+          __typename: 'ShoppingListItem',
+          id: item.id,
+          itemName: optimisticItemName,
+          quantity: optimisticQuantity,
+          quantityInput: item.quantityInput,
+          displayFormat: item.displayFormat,
+          notes: item.notes,
+          purchaseInfo: item.purchaseInfo,
+          version: item.version,
+          updatedAt: new Date().toISOString(),
+          category: optimisticCategory,
+          unitName: optimisticUnitName,
+          unit: item.unit,
+          sortOrder: item.sortOrder,
+          item: item.item,
+        },
       },
-    );
+    };
 
     const result = await executeMutation(
       () =>

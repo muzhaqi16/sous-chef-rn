@@ -10,7 +10,8 @@ import { ShoppingListAvatar } from '#components/atoms/ShoppingListAvatar';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { IconLibrary } from '#/utils/iconUtils';
 import { useStore } from '#store';
-import { useDeleteShoppingListMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { DeleteShoppingListDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
 import { createRemoveFromQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useErrorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
@@ -95,8 +96,7 @@ export function useShoppingListSelectorModal({
   const longPressItemRef = useRef<string | null>(null);
   const { handleApolloError } = useErrorService();
 
-  const [deleteList] = useDeleteShoppingListMutation({
-    errorPolicy: 'all',
+  const [deleteList] = useMutation(DeleteShoppingListDocument, {
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Delete Shopping List',

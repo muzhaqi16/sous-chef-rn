@@ -1,5 +1,8 @@
 import React from 'react';
-import { CategorySuggestion, CategoryType } from '#generated';
+import {
+  CategorySuggestion,
+  CategoryType,
+} from '../../../graphql/generated/schemaTypes';
 import { useCategoryAutocomplete } from '#hooks/autocomplete/useCategoryAutocomplete';
 import { AutocompleteField } from './AutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
@@ -17,7 +20,9 @@ interface CategoryAutocompleteFieldProps {
   categoryType?: CategoryType;
 }
 
-export const CategoryAutocompleteField: React.FC<CategoryAutocompleteFieldProps> = ({
+export const CategoryAutocompleteField: React.FC<
+  CategoryAutocompleteFieldProps
+> = ({
   variant,
   label,
   value,
@@ -27,27 +32,25 @@ export const CategoryAutocompleteField: React.FC<CategoryAutocompleteFieldProps>
   error,
   testID,
   onCategorySelected,
-  categoryType = CategoryType.General }) => {
+  categoryType = CategoryType.General,
+}) => {
   const category = useCategoryAutocomplete({ categoryType });
 
   const handleTextChange = (text: string) => {
-      onChangeText(text);
-      category.handleSearchTermChange(text);
-      onCategorySelected?.(null);
-    };
+    onChangeText(text);
+    category.handleSearchTermChange(text);
+    onCategorySelected?.(null);
+  };
 
   const handleSelect = (item: CategorySuggestion) => {
-      onChangeText(item.name);
-      onCategorySelected?.(item.id);
-      category.setSearchTerm('');
-    };
+    onChangeText(item.name);
+    onCategorySelected?.(item.id);
+    category.setSearchTerm('');
+  };
 
   const renderItem = (item: CategorySuggestion) => (
-      <AutocompleteRow
-        icon={item.icon ?? undefined}
-        title={item.name}
-      />
-    );
+    <AutocompleteRow icon={item.icon ?? undefined} title={item.name} />
+  );
 
   const keyExtractor = (item: CategorySuggestion) => item.id;
 

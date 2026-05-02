@@ -1,12 +1,13 @@
 import React from 'react';
-import {useForm} from 'react-hook-form';
-import {yupResolver} from '@hookform/resolvers/yup';
-import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { AuthFormTemplate } from '../../components/templates/AuthFormTemplate';
 import { EmailInput } from '../../components/atoms/EmailInput';
-import {getForgotPasswordValidationSchema} from '#utils/validation/auth';
-import {AuthWrapper} from '../../components/templates/AuthWrapper';
-import {useForgotPasswordMutation} from '../../graphql/generated';
-import {useAuthNavigation} from '#hooks/navigation/useAuthNavigation';
+import { getForgotPasswordValidationSchema } from '#utils/validation/auth';
+import { AuthWrapper } from '../../components/templates/AuthWrapper';
+import { useMutation } from '@apollo/client/react';
+import { ForgotPasswordDocument } from '../../graphql/operations/auth/auth.generated';
+import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { errorService } from '#/services/errorService';
 
 type ForgotPasswordValues = {
@@ -14,29 +15,31 @@ type ForgotPasswordValues = {
 };
 
 export function ForgotPasswordScreen() {
-  const {navigateToLogin} = useAuthNavigation();
-  const [forgotPasswordApi] = useForgotPasswordMutation();
+  const { navigateToLogin } = useAuthNavigation();
+  const [forgotPasswordApi] = useMutation(ForgotPasswordDocument);
 
   const {
     control,
     handleSubmit,
-    formState: {errors},
+    formState: { errors },
   } = useForm<ForgotPasswordValues>({
     resolver: yupResolver(getForgotPasswordValidationSchema()),
-    defaultValues: {email: ''},
+    defaultValues: { email: '' },
   });
 
   const sendResetEmail = async (data: ForgotPasswordValues) => {
-    const {email} = data;
+    const { email } = data;
     // Simulate sending reset email
     try {
       await forgotPasswordApi({
-        variables: {email},
+        variables: { email },
       });
       // On success, navigate to login
       navigateToLogin();
     } catch (error) {
-      errorService.reportError(error, { operation: 'ForgotPassword.sendResetEmail' });
+      errorService.reportError(error, {
+        operation: 'ForgotPassword.sendResetEmail',
+      });
     }
     // Here you would typically call your API to send the reset email
     // For example: await api.sendResetEmail(email);
@@ -52,7 +55,7 @@ export function ForgotPasswordScreen() {
             name: 'email',
             label: 'Email address',
             component: EmailInput,
-            props: {testID: 'forgot-password-email-input'},
+            props: { testID: 'forgot-password-email-input' },
           },
         ]}
         control={control}

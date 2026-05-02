@@ -1,4 +1,4 @@
-import { StorageLocation } from '#generated';
+import { StorageLocation } from '../../graphql/generated/schemaTypes';
 
 interface UseStorageLocationAutocompleteOptions {
   storageLocations: StorageLocation[];
@@ -18,7 +18,9 @@ export function useStorageLocationAutocomplete({
     return storageLocations.filter(location => {
       const matchesName = location.name.toLowerCase().includes(lowerSearch);
       const matchesType = location.type.toLowerCase().includes(lowerSearch);
-      const matchesParent = location.parentLocation?.name.toLowerCase().includes(lowerSearch);
+      const matchesParent = location.parentLocation?.name
+        .toLowerCase()
+        .includes(lowerSearch);
       return matchesName || matchesType || matchesParent;
     });
   })();

@@ -19,7 +19,8 @@ import { useMealTemplateActions } from '#hooks/mealPlan/useMealTemplateActions';
 import { useHomeQuery } from '#hooks/home/hooks/useHomeQuery';
 import { useAppStore } from '#store/useAppStore';
 import { addDays, addWeeks, addMonths } from 'date-fns';
-import { MealPlanType, type MealTemplateDisplayFragment } from '#generated';
+import { MealPlanType } from '../../graphql/generated/schemaTypes';
+import { type MealTemplateDisplayFragment } from '../../graphql/operations/mealPlan/mealPlanFragments.generated';
 
 const PLAN_TYPES = [MealPlanType.Weekly, MealPlanType.Monthly];
 

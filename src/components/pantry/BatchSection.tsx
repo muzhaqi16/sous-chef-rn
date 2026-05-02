@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useLazyQuery } from '@apollo/client/react';
 import { Icon } from '#/utils/iconUtils';
-import {
-  BatchStatus,
-  type PantryItemBatchFragment,
-  useGetPantryItemBatchesLazyQuery,
-} from '#generated';
+import { GetPantryItemBatchesDocument } from '#operations/pantry/pantry.generated';
+import type { PantryItemBatchFragment } from '#operations/pantry/pantryFragments.generated';
+import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import { BatchListItem } from './BatchListItem';
 import { useOpenPantryItemBatch } from '#hooks/pantry/mutations/useOpenPantryItemBatch';
 import { useWastePantryItemBatch } from '#hooks/pantry/mutations/useWastePantryItemBatch';
@@ -31,11 +30,10 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   const { wasteBatch } = useWastePantryItemBatch();
 
   // Lazy query for loading all batches (including depleted/wasted)
-  const [fetchAllBatches, { data: allBatchesData }] =
-    useGetPantryItemBatchesLazyQuery({
-      fetchPolicy: 'cache-and-network',
-      nextFetchPolicy: 'cache-first',
-    });
+  const [fetchAllBatches, { data: allBatchesData }] = useLazyQuery(
+    GetPantryItemBatchesDocument,
+    {},
+  );
 
   // Sort active batches by expiration (FIFO order) — earliest first
   const activeBatches = batches

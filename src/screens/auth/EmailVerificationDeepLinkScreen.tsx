@@ -6,7 +6,12 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { useUser, useAppStore } from '#store/useAppStore';
-import { useVerifyEmailMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import {
+  VerifyEmailDocument,
+  type VerifyEmailMutation,
+  type VerifyEmailMutationVariables,
+} from '../../graphql/operations/auth/auth.generated';
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -19,7 +24,10 @@ interface EmailVerificationRouteParams {
 /** Module-level try-catch extraction for React Compiler compatibility */
 async function performVerificationImpl(
   token: string | undefined,
-  verifyEmail: ReturnType<typeof useVerifyEmailMutation>[0],
+  verifyEmail: useMutation.MutationFunction<
+    VerifyEmailMutation,
+    VerifyEmailMutationVariables
+  >,
   user: ReturnType<typeof useUser>,
   updateUser: (updates: Partial<{ emailVerified: boolean }>) => void,
   toast: ReturnType<typeof useToast>,
@@ -100,7 +108,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const { token } = (route.params ??
     {}) as Partial<EmailVerificationRouteParams>;
 
-  const [verifyEmail] = useVerifyEmailMutation();
+  const [verifyEmail] = useMutation(VerifyEmailDocument);
   const [isVerifying, setIsVerifying] = useState(true);
   const [verificationResult, setVerificationResult] = useState<
     'success' | 'error' | null

@@ -11,15 +11,16 @@ const mockIdentify = jest.fn((obj: any) => `${obj.__typename}:${obj.id}`);
 
 let capturedMutationOptions: Record<string, any> = {};
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useToggleShoppingListItemPurchasedMutation: (options: any) => {
-    capturedMutationOptions = options;
-    return [mockToggleMutation];
-  },
-}));
-
 jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any, options: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'ToggleShoppingListItemPurchased') {
+      capturedMutationOptions = options;
+      return [mockToggleMutation, { loading: false }];
+    }
+    return [jest.fn(), {}];
+  }),
   useApolloClient: () => ({
     cache: {
       readFragment: mockReadFragment,

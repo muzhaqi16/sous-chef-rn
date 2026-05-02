@@ -53,11 +53,15 @@ jest.mock('#hooks/shoppingList/useShoppingListDetails', () => ({
   }),
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useRemoveCollaboratorMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useAddCollaboratorMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useShareShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'RemoveCollaborator') return [jest.fn(), { loading: false }];
+    if (opName === 'AddCollaborator') return [jest.fn(), { loading: false }];
+    if (opName === 'ShareShoppingList') return [jest.fn(), { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({

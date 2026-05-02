@@ -11,7 +11,6 @@ import { useStorageLocationManagement } from '../useStorageLocationManagement';
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
-const mockRefetch = jest.fn().mockResolvedValue({});
 const mockCreateMutation = jest.fn().mockResolvedValue({
   data: {
     createStorageLocation: {
@@ -38,49 +37,61 @@ const mockSetDefaultMutation = jest.fn().mockResolvedValue({
 });
 const mockFetchTree = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetStorageLocationsQuery: jest.fn(() => ({
-    data: {
-      storageLocations: {
-        edges: [
-          {
-            node: {
-              id: 'loc-1',
-              name: 'Fridge',
-              sortOrder: 1,
-              isDefault: true,
-            },
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetStorageLocations') {
+      return {
+        data: {
+          storageLocations: {
+            edges: [
+              {
+                node: {
+                  id: 'loc-1',
+                  name: 'Fridge',
+                  sortOrder: 1,
+                  isDefault: true,
+                  parentId: null,
+                },
+              },
+              {
+                node: {
+                  id: 'loc-2',
+                  name: 'Pantry',
+                  sortOrder: 2,
+                  isDefault: false,
+                  parentId: null,
+                },
+              },
+            ],
           },
-          {
-            node: {
-              id: 'loc-2',
-              name: 'Pantry',
-              sortOrder: 2,
-              isDefault: false,
-            },
-          },
-        ],
-      },
-    },
-    loading: false,
-    error: undefined,
-    refetch: mockRefetch,
-  })),
-  useGetStorageLocationTreeLazyQuery: jest.fn(() => [
-    mockFetchTree,
-    { data: null },
-  ]),
-  useCreateStorageLocationMutation: jest.fn(() => [
-    mockCreateMutation,
-    { loading: false },
-  ]),
-  useUpdateStorageLocationMutation: jest.fn(() => [
-    mockUpdateMutation,
-    { loading: false },
-  ]),
-  useDeleteStorageLocationMutation: jest.fn(() => [mockDeleteMutation]),
-  useSetDefaultStorageLocationMutation: jest.fn(() => [mockSetDefaultMutation]),
+        },
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useLazyQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetStorageLocationTree')
+      return [mockFetchTree, { loading: false }];
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateStorageLocation')
+      return [mockCreateMutation, { loading: false }];
+    if (opName === 'UpdateStorageLocation')
+      return [mockUpdateMutation, { loading: false }];
+    if (opName === 'DeleteStorageLocation')
+      return [mockDeleteMutation, { loading: false }];
+    if (opName === 'SetDefaultStorageLocation')
+      return [mockSetDefaultMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
@@ -138,19 +149,21 @@ describe('useStorageLocationManagement', () => {
   });
 
   it('skips query when homeId is undefined', () => {
-    const { useGetStorageLocationsQuery } = jest.requireMock('#generated');
+    const { useQuery } = jest.requireMock('@apollo/client/react');
     renderHook(() => useStorageLocationManagement(undefined));
 
-    expect(useGetStorageLocationsQuery).toHaveBeenCalledWith(
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ skip: true }),
     );
   });
 
   it('does not skip when homeId is provided', () => {
-    const { useGetStorageLocationsQuery } = jest.requireMock('#generated');
+    const { useQuery } = jest.requireMock('@apollo/client/react');
     renderHook(() => useStorageLocationManagement('home-1'));
 
-    expect(useGetStorageLocationsQuery).toHaveBeenCalledWith(
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ skip: false }),
     );
   });

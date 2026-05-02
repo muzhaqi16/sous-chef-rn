@@ -3,7 +3,7 @@ import { View, Text, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { CartesianChart, Line, Area } from 'victory-native';
 import { matchFont, Circle } from '@shopify/react-native-skia';
-import type { TimeSeriesDataPoint } from '#generated';
+import { type TimeSeriesDataPoint } from '../../graphql/generated/schemaTypes';
 
 const fontFamily = Platform.select({ ios: 'Helvetica', default: 'sans-serif' });
 const axisFont = matchFont({ fontFamily, fontSize: 10 });
@@ -45,7 +45,9 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
           </Text>
         )}
         <View style={styles.emptyState}>
-          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+          <Text
+            style={[styles.emptyText, { color: theme.colors.textSecondary }]}
+          >
             No data available
           </Text>
         </View>
@@ -71,12 +73,14 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
           xKey="x"
           yKeys={['y']}
           domainPadding={{ left: 10, right: 10, top: 20, bottom: 10 }}
-          yAxis={[{
-            font: axisFont,
-            tickCount: 5,
-            labelColor: theme.colors.textSecondary,
-            lineColor: theme.colors.border,
-          }]}
+          yAxis={[
+            {
+              font: axisFont,
+              tickCount: 5,
+              labelColor: theme.colors.textSecondary,
+              lineColor: theme.colors.border,
+            },
+          ]}
           frame={{
             lineColor: theme.colors.border,
             lineWidth: 1,
@@ -99,14 +103,16 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
                 strokeWidth={2}
                 animate={{ type: 'timing', duration: 300 }}
               />
-              {chartData.length === 1 && !!points.y[0] && points.y[0].y != null && (
-                <Circle
-                  cx={points.y[0].x}
-                  cy={points.y[0].y}
-                  r={4}
-                  color={lineColor}
-                />
-              )}
+              {chartData.length === 1 &&
+                !!points.y[0] &&
+                points.y[0].y != null && (
+                  <Circle
+                    cx={points.y[0].x}
+                    cy={points.y[0].y}
+                    r={4}
+                    color={lineColor}
+                  />
+                )}
             </>
           )}
         </CartesianChart>

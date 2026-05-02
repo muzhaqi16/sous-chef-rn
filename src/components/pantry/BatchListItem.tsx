@@ -3,7 +3,8 @@ import { View, Text } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
-import { BatchStatus, type PantryItemBatchFragment } from '#generated';
+import { BatchStatus } from '../../graphql/generated/schemaTypes';
+import { type PantryItemBatchFragment } from '#operations/pantry/pantryFragments.generated';
 import { formatQuantity } from '#/utils/formatQuantity';
 
 interface BatchListItemProps {

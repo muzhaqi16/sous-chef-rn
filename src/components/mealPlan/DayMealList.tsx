@@ -9,7 +9,7 @@ import { Icon } from '#utils/iconUtils';
 import { MealTypeSection } from './MealTypeSection';
 import { EmptyDayState } from './EmptyDayState';
 import type { MealTypeGroup } from '#hooks/mealPlan/useDailyMeals';
-import type { MealType, MealPlanItemFragment } from '#generated';
+import { type MealType } from '../../graphql/generated/schemaTypes';
 
 interface DayMealListProps {
   selectedDate: Date;
@@ -20,7 +20,7 @@ interface DayMealListProps {
     isCompleted: boolean,
     hasRecipe: boolean,
   ) => void;
-  onItemPress?: (item: MealPlanItemFragment) => void;
+  onItemPress?: (id: string) => void;
   onDeleteItem?: (id: string) => void;
   onAddMeal?: (mealType?: MealType) => void;
   onScroll?: ReturnType<typeof useAnimatedScrollHandler>;

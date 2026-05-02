@@ -1,0 +1,14 @@
+fragment MealPlanItemCard_item on MealPlanItem {
+  id
+  isCompleted
+  customMealName
+  servings
+  calories
+  usedPantryItems
+  recipe {
+    id
+    name
+    imageUrl
+    totalTimeMinutes
+  }
+}

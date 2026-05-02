@@ -8,26 +8,27 @@ const mockToggleHelpful = jest.fn();
 
 const mockUseGetRecipeReviewsQuery = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreateRecipeReviewMutation: jest.fn(() => [
-    mockCreateReview,
-    { loading: false },
-  ]),
-  useUpdateRecipeReviewMutation: jest.fn(() => [
-    mockUpdateReview,
-    { loading: false },
-  ]),
-  useDeleteRecipeReviewMutation: jest.fn(() => [
-    mockDeleteReview,
-    { loading: false },
-  ]),
-  useToggleReviewHelpfulMutation: jest.fn(() => [
-    mockToggleHelpful,
-    { loading: false },
-  ]),
-  useGetRecipeReviewsQuery: (...args: any[]) =>
-    mockUseGetRecipeReviewsQuery(...args),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateRecipeReview')
+      return [mockCreateReview, { loading: false }];
+    if (opName === 'UpdateRecipeReview')
+      return [mockUpdateReview, { loading: false }];
+    if (opName === 'DeleteRecipeReview')
+      return [mockDeleteReview, { loading: false }];
+    if (opName === 'ToggleReviewHelpful')
+      return [mockToggleHelpful, { loading: false }];
+    return [jest.fn(), {}];
+  }),
+  useQuery: jest.fn((...args: any[]) => {
+    const doc = args[0];
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetRecipeReviews')
+      return mockUseGetRecipeReviewsQuery(...args);
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#store/useAppStore', () => ({
