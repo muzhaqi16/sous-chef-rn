@@ -10,3 +10,16 @@ fragment MealPlanItemActions_item on MealPlanItem {
     servings
   }
 }
+
+# Compound fragment for `toggleCompleted` — must satisfy the full
+# `UpdateMealPlanItem` mutation `mealPlanItem` selection set so the
+# optimistic response can spread the item without a type cast. Page-level
+# `MealPlanFull` already selects all five fragments on `mealPlanItems`,
+# so callers (e.g. MealPlanMain) hold the matching shape.
+fragment MealPlanItemActions_optimisticFullItem on MealPlanItem {
+  ...MealPlanItemCard_item
+  ...EditCustomMealSheet_item
+  ...DailyMeals_item
+  ...MealPlanMain_item
+  ...MealPlanItemActions_item
+}

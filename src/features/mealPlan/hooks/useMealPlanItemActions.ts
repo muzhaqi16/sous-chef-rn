@@ -4,9 +4,8 @@ import {
   UpdateMealPlanItemDocument,
   DeleteMealPlanItemDocument,
   GetMealPlanDocument,
-  type UpdateMealPlanItemMutation,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { type MealPlanItemActions_ItemFragment } from './useMealPlanItemActions.generated';
+import { type MealPlanItemActions_OptimisticFullItemFragment } from './useMealPlanItemActions.generated';
 import {
   type CreateMealPlanItemInput,
   type UpdateMealPlanItemInput,
@@ -99,12 +98,13 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
   };
 
   const toggleCompleted = async (
-    item: MealPlanItemActions_ItemFragment,
+    item: MealPlanItemActions_OptimisticFullItemFragment,
     options?: { deductFromPantry?: boolean; servings?: number; notes?: string },
   ) => {
     const markingComplete = !item.isCompleted;
     const hasRecipe = !!item.recipe;
     const deductFromPantry = options?.deductFromPantry;
+    const completedAt = markingComplete ? new Date().toISOString() : null;
 
     // Persist optimistic completion state to survive cache-and-network refetches while offline
     optimisticDataPersistence.save(
@@ -119,7 +119,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         id: item.id,
         input: {
           isCompleted: markingComplete,
-          completedAt: markingComplete ? new Date().toISOString() : null,
+          completedAt,
           ...(markingComplete &&
             deductFromPantry != null && { deductFromPantry }),
           ...(markingComplete &&
@@ -138,10 +138,10 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
           mealPlanItem: {
             ...item,
             isCompleted: markingComplete,
-            completedAt: markingComplete ? new Date().toISOString() : null,
+            completedAt,
             ...(options?.servings != null && { servings: options.servings }),
             ...(options?.notes != null && { notes: options.notes }),
-          } as UpdateMealPlanItemMutation['updateMealPlanItem']['mealPlanItem'],
+          },
         },
       },
     });

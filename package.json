@@ -48,7 +48,7 @@
     "codegen": "npm run codegen:schema && graphql-codegen --config codegen.ts",
     "codegen:watch": "graphql-codegen --watch --config codegen.ts",
     "typecheck": "tsc --noEmit",
-    "typecheck:tests": "tsc --project tsconfig.test.json --noEmit",
+    "typecheck:tests": "tsc --project __tests__/tsconfig.json --noEmit",
     "watchman": "watchman watch-del-all && watchman shutdown-server",
     "test": "jest",
     "test:changed": "jest --changedSince=main --bail",

@@ -52,7 +52,7 @@ const removeFromMealPlansForMain = createRemoveFromQueryConnectionUpdater(
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { type MealPlanMain_ItemFragment } from './MealPlanMain.generated';
 import { type EditCustomMealSheet_ItemFragment } from '#features/mealPlan/components/EditCustomMealSheet.generated';
-import { type MealPlanItemActions_ItemFragment as MealPlanItemActionsItem } from '#features/mealPlan/hooks/useMealPlanItemActions.generated';
+import { type MealPlanItemActions_OptimisticFullItemFragment as MealPlanItemActionsItem } from '#features/mealPlan/hooks/useMealPlanItemActions.generated';
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
