@@ -1,4 +1,1 @@
 npx lint-staged
-npm run codegen
-npm run typecheck
-git diff --exit-code --quiet src/graphql/generated/ || { echo "codegen produced changes in src/graphql/generated/. Stage the changes and recommit."; exit 1; }

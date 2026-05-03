@@ -12,129 +12,11 @@ export type SearchStoresQueryVariables = Types.Exact<{
   limit?: Types.InputMaybe<Types.Scalars['Int']['input']>;
 }>;
 
-export type SearchStoresQuery = {
-  __typename: 'Query';
-  stores: {
-    __typename: 'StoreConnection';
-    totalCount: number | null;
-    edges: Array<{
-      __typename: 'StoreEdge';
-      node: {
-        __typename: 'Store';
-        id: string;
-        name: string;
-        address: string | null;
-      };
-    }>;
-  };
-};
 
-export const SearchStoresDocument = /*#__PURE__*/ {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'SearchStores' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'search' },
-          },
-          type: {
-            kind: 'NonNullType',
-            type: {
-              kind: 'NamedType',
-              name: { kind: 'Name', value: 'String' },
-            },
-          },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'limit' },
-          },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'stores' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'filters' },
-                value: {
-                  kind: 'ObjectValue',
-                  fields: [
-                    {
-                      kind: 'ObjectField',
-                      name: { kind: 'Name', value: 'search' },
-                      value: {
-                        kind: 'Variable',
-                        name: { kind: 'Name', value: 'search' },
-                      },
-                    },
-                  ],
-                },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'first' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'limit' },
-                },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'edges' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'node' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'id' },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'name' },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'address' },
-                            },
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
+export type SearchStoresQuery = { __typename: 'Query', stores: { __typename: 'StoreConnection', totalCount: number | null, edges: Array<{ __typename: 'StoreEdge', node: { __typename: 'Store', id: string, name: string, address: string | null } }> } };
+
+
+export const SearchStoresDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"SearchStores"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"search"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"limit"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"stores"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"search"},"value":{"kind":"Variable","name":{"kind":"Name","value":"search"}}}]}},{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"Variable","name":{"kind":"Name","value":"limit"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"address"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useSearchStoresQuery__
@@ -153,82 +35,22 @@ export const SearchStoresDocument = /*#__PURE__*/ {
  *   },
  * });
  */
-export function useSearchStoresQuery(
-  baseOptions: ApolloReactHooks.QueryHookOptions<
-    SearchStoresQuery,
-    SearchStoresQueryVariables
-  > &
-    (
-      | { variables: SearchStoresQueryVariables; skip?: boolean }
-      | { skip: boolean }
-    ),
-) {
-  const options = { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useQuery<
-    SearchStoresQuery,
-    SearchStoresQueryVariables
-  >(SearchStoresDocument, options);
-}
-export function useSearchStoresLazyQuery(
-  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
-    SearchStoresQuery,
-    SearchStoresQueryVariables
-  >,
-) {
-  const options = { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useLazyQuery<
-    SearchStoresQuery,
-    SearchStoresQueryVariables
-  >(SearchStoresDocument, options);
-}
+export function useSearchStoresQuery(baseOptions: ApolloReactHooks.QueryHookOptions<SearchStoresQuery, SearchStoresQueryVariables> & ({ variables: SearchStoresQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<SearchStoresQuery, SearchStoresQueryVariables>(SearchStoresDocument, options);
+      }
+export function useSearchStoresLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<SearchStoresQuery, SearchStoresQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<SearchStoresQuery, SearchStoresQueryVariables>(SearchStoresDocument, options);
+        }
 // @ts-ignore
-export function useSearchStoresSuspenseQuery(
-  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
-    SearchStoresQuery,
-    SearchStoresQueryVariables
-  >,
-): ApolloReactHooks.UseSuspenseQueryResult<
-  SearchStoresQuery,
-  SearchStoresQueryVariables
->;
-export function useSearchStoresSuspenseQuery(
-  baseOptions?:
-    | ApolloReactHooks.SkipToken
-    | ApolloReactHooks.SuspenseQueryHookOptions<
-        SearchStoresQuery,
-        SearchStoresQueryVariables
-      >,
-): ApolloReactHooks.UseSuspenseQueryResult<
-  SearchStoresQuery | undefined,
-  SearchStoresQueryVariables
->;
-export function useSearchStoresSuspenseQuery(
-  baseOptions?:
-    | ApolloReactHooks.SkipToken
-    | ApolloReactHooks.SuspenseQueryHookOptions<
-        SearchStoresQuery,
-        SearchStoresQueryVariables
-      >,
-) {
-  const options =
-    baseOptions === ApolloReactHooks.skipToken
-      ? baseOptions
-      : { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useSuspenseQuery<
-    SearchStoresQuery,
-    SearchStoresQueryVariables
-  >(SearchStoresDocument, options);
-}
-export type SearchStoresQueryHookResult = ReturnType<
-  typeof useSearchStoresQuery
->;
-export type SearchStoresLazyQueryHookResult = ReturnType<
-  typeof useSearchStoresLazyQuery
->;
-export type SearchStoresSuspenseQueryHookResult = ReturnType<
-  typeof useSearchStoresSuspenseQuery
->;
-export type SearchStoresQueryResult = ApolloReactCommon.QueryResult<
-  SearchStoresQuery,
-  SearchStoresQueryVariables
->;
+export function useSearchStoresSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<SearchStoresQuery, SearchStoresQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<SearchStoresQuery, SearchStoresQueryVariables>;
+export function useSearchStoresSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<SearchStoresQuery, SearchStoresQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<SearchStoresQuery | undefined, SearchStoresQueryVariables>;
+export function useSearchStoresSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<SearchStoresQuery, SearchStoresQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<SearchStoresQuery, SearchStoresQueryVariables>(SearchStoresDocument, options);
+        }
+export type SearchStoresQueryHookResult = ReturnType<typeof useSearchStoresQuery>;
+export type SearchStoresLazyQueryHookResult = ReturnType<typeof useSearchStoresLazyQuery>;
+export type SearchStoresSuspenseQueryHookResult = ReturnType<typeof useSearchStoresSuspenseQuery>;
+export type SearchStoresQueryResult = ApolloReactCommon.QueryResult<SearchStoresQuery, SearchStoresQueryVariables>;

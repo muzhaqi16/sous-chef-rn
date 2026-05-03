@@ -5,7 +5,7 @@ module.exports = {
   ignorePatterns: [
     'e2e/**/*',
     'src/graphql/generated/**/*',
-    '**/*.generated.ts',
+    'src/**/*.generated.ts',
   ],
   env: {
     jest: true,

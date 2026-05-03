@@ -7,49 +7,13 @@ import type { DocumentNode } from 'graphql';
 import type * as ApolloReactCommon from '@apollo/client';
 import * as ApolloReactHooks from '@apollo/client/react';
 const defaultOptions = {} as const;
-export type MarkAllNotificationsAsReadMutationVariables = Types.Exact<{
-  [key: string]: never;
-}>;
+export type MarkAllNotificationsAsReadMutationVariables = Types.Exact<{ [key: string]: never; }>;
 
-export type MarkAllNotificationsAsReadMutation = {
-  __typename: 'Mutation';
-  markAllNotificationsAsRead: {
-    __typename: 'BulkNotificationPayload';
-    success: boolean;
-    message: string;
-    code: string;
-    count: number;
-  };
-};
 
-export const MarkAllNotificationsAsReadDocument = /*#__PURE__*/ {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'mutation',
-      name: { kind: 'Name', value: 'MarkAllNotificationsAsRead' },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'markAllNotificationsAsRead' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'success' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'message' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'code' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'count' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
+export type MarkAllNotificationsAsReadMutation = { __typename: 'Mutation', markAllNotificationsAsRead: { __typename: 'BulkNotificationPayload', success: boolean, message: string, code: string, count: number } };
+
+
+export const MarkAllNotificationsAsReadDocument = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"MarkAllNotificationsAsRead"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"markAllNotificationsAsRead"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"count"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useMarkAllNotificationsAsReadMutation__
@@ -67,25 +31,10 @@ export const MarkAllNotificationsAsReadDocument = /*#__PURE__*/ {
  *   },
  * });
  */
-export function useMarkAllNotificationsAsReadMutation(
-  baseOptions?: ApolloReactHooks.MutationHookOptions<
-    MarkAllNotificationsAsReadMutation,
-    MarkAllNotificationsAsReadMutationVariables
-  >,
-) {
-  const options = { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useMutation<
-    MarkAllNotificationsAsReadMutation,
-    MarkAllNotificationsAsReadMutationVariables
-  >(MarkAllNotificationsAsReadDocument, options);
-}
-export type MarkAllNotificationsAsReadMutationHookResult = ReturnType<
-  typeof useMarkAllNotificationsAsReadMutation
->;
-export type MarkAllNotificationsAsReadMutationResult =
-  ApolloReactCommon.MutationResult<MarkAllNotificationsAsReadMutation>;
-export type MarkAllNotificationsAsReadMutationOptions =
-  ApolloReactCommon.BaseMutationOptions<
-    MarkAllNotificationsAsReadMutation,
-    MarkAllNotificationsAsReadMutationVariables
-  >;
+export function useMarkAllNotificationsAsReadMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<MarkAllNotificationsAsReadMutation, MarkAllNotificationsAsReadMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<MarkAllNotificationsAsReadMutation, MarkAllNotificationsAsReadMutationVariables>(MarkAllNotificationsAsReadDocument, options);
+      }
+export type MarkAllNotificationsAsReadMutationHookResult = ReturnType<typeof useMarkAllNotificationsAsReadMutation>;
+export type MarkAllNotificationsAsReadMutationResult = ApolloReactCommon.MutationResult<MarkAllNotificationsAsReadMutation>;
+export type MarkAllNotificationsAsReadMutationOptions = ApolloReactCommon.BaseMutationOptions<MarkAllNotificationsAsReadMutation, MarkAllNotificationsAsReadMutationVariables>;

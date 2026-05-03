@@ -1,0 +1,17 @@
+npm run typecheck || exit 1
+
+if ! git diff --quiet HEAD || ! git diff --cached --quiet HEAD; then
+  echo "Working tree has uncommitted changes; skipping codegen drift check." >&2
+  exit 0
+fi
+
+npm run codegen || exit 1
+
+if ! git diff --quiet HEAD -- src/graphql/generated/ '*.generated.ts'; then
+  echo "" >&2
+  echo "codegen produced changes — your committed generated files are stale." >&2
+  echo "Run 'npm run codegen', commit the changes, and push again." >&2
+  echo "" >&2
+  git diff --stat HEAD -- src/graphql/generated/ '*.generated.ts' >&2
+  exit 1
+fi
