@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, RefreshControl, ScrollView } from 'react-native';
+import { View, RefreshControl, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '#utils/iconUtils';
 import { Header, HeaderAction, HeaderVariant } from '../molecules/Header';
 import { Button } from '../base/Button';
 import { commonStyles } from '#/styles/commonStyles';
+import { Text } from '#components/atoms/Text';
 
 interface DetailSection {
   title?: string;
@@ -78,7 +79,14 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
             ]}
           >
             {!!section.title && (
-              <Text style={styles.sectionTitle}>{section.title}</Text>
+              <Text
+                size="md"
+                weight="semibold"
+                tone="primary"
+                style={styles.sectionTitle}
+              >
+                {section.title}
+              </Text>
             )}
             {section.content}
           </View>
@@ -114,9 +122,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   sectionTitle: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing['3'],
   },
 }));

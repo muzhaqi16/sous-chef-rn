@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppStore } from '#store/useAppStore';
 import { formatRole } from '#/utils/formatters/roleFormatters';
@@ -12,6 +12,7 @@ import {
   getMemberDisplayName,
   type Member,
 } from '#/utils/formatters/memberFormatters';
+import { Text } from '#components/atoms/Text';
 
 interface ListInvite {
   id: string;
@@ -43,7 +44,14 @@ export const MembersList: React.FC<MembersListProps> = ({
 
   return (
     <View style={styles.membersSection}>
-      <Text style={styles.membersSectionTitle}>Members</Text>
+      <Text
+        size="sm"
+        weight="semibold"
+        tone="secondary"
+        style={styles.membersSectionTitle}
+      >
+        Members
+      </Text>
       <View style={styles.membersList}>
         {members.map(member => {
           const displayName = getMemberDisplayName(member, currentUser?.id);
@@ -108,9 +116,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing['3'],
   },
   membersSectionTitle: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
   membersList: {

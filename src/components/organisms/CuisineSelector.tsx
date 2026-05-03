@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
@@ -8,6 +8,7 @@ import { POPULAR_CUISINES, getAllCuisineOptions } from '#/constants/cuisines';
 import { Cuisine } from '#generated';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
+import { Text } from '#components/atoms/Text';
 
 type CuisineSelectorProps = {
   selectedCuisines: Cuisine[];
@@ -75,7 +76,14 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
               size={18}
               color={theme.colors.primary}
             />
-            <Text style={styles.showMoreText}>Show All Cuisines</Text>
+            <Text
+              size="base"
+              weight="semibold"
+              tone="accent"
+              style={styles.showMoreText}
+            >
+              Show All Cuisines
+            </Text>
           </Pressable>
         )}
 
@@ -127,9 +135,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
   },
   showMoreText: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
     marginLeft: theme.spacing.xs,
   },
   pressed: {

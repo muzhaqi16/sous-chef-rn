@@ -1,8 +1,9 @@
 import { Icon } from '#/utils/iconUtils';
 import React, { useState } from 'react';
-import { View, Text, TextInput } from 'react-native';
+import { View, TextInput } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Pressable } from 'react-native-gesture-handler';
+import { Text } from '#components/atoms/Text';
 
 export interface RowProps {
   label: string;
@@ -88,10 +89,8 @@ export const Row: React.FC<RowProps> = ({
         )}
 
         <Text
-          style={[
-            styles.rowLabel,
-            leadingIcon ? styles.rowLabelWithIcon : undefined,
-          ]}
+          size="md"
+          style={leadingIcon ? styles.rowLabelWithIcon : undefined}
         >
           {label}
         </Text>
@@ -100,6 +99,9 @@ export const Row: React.FC<RowProps> = ({
 
         {value ? (
           <Text
+            size="md"
+            weight="medium"
+            tone="secondary"
             style={[
               styles.rowValue,
               badgeColor ? { color: badgeColor } : undefined,
@@ -142,11 +144,7 @@ const styles = StyleSheet.create(theme => ({
     height: 48,
   },
   iconContainer: {
-    marginRight: 12,
-  },
-  rowLabel: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textPrimary,
+    marginRight: theme.spacing['3'],
   },
   rowLabelWithIcon: {
     marginLeft: theme.spacing.xs,
@@ -155,9 +153,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   rowValue: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
     marginRight: theme.spacing.sm,
   },
   editRow: {
@@ -171,12 +166,12 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
-    paddingHorizontal: 12,
+    paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.sm,
     color: theme.colors.textPrimary,
   },
   editIcon: {
-    marginLeft: 12,
+    marginLeft: theme.spacing['3'],
   },
   pressed: {
     opacity: theme.opacity.pressed,

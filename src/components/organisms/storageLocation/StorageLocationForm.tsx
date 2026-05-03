@@ -4,7 +4,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react';
-import { View, Text, TextInput, ActivityIndicator } from 'react-native';
+import { View, TextInput, ActivityIndicator } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -23,6 +23,7 @@ import { FormSelect } from '#components/molecules/FormSelect';
 import { Icon } from '#utils/iconUtils';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import { SPRING, TIMING } from '#/constants/animations';
+import { Text } from '#components/atoms/Text';
 
 export interface StorageLocationFormRef {
   submit: () => void;
@@ -229,6 +230,10 @@ export const StorageLocationForm = forwardRef<
                 >
                   <StorageLocationIcon type={type.value} size={28} />
                   <Text
+                    size="xs"
+                    weight={
+                      formData.type === type.value ? 'semibold' : 'medium'
+                    }
                     style={
                       formData.type === type.value
                         ? styles.typeLabelSelected
@@ -266,6 +271,8 @@ export const StorageLocationForm = forwardRef<
                   }
                 >
                   <Text
+                    size="sm"
+                    weight={!formData.parentLocationId ? 'semibold' : 'medium'}
                     style={
                       !formData.parentLocationId
                         ? styles.parentLabelSelected
@@ -292,6 +299,12 @@ export const StorageLocationForm = forwardRef<
                     }
                   >
                     <Text
+                      size="sm"
+                      weight={
+                        formData.parentLocationId === location.id
+                          ? 'semibold'
+                          : 'medium'
+                      }
                       style={
                         formData.parentLocationId === location.id
                           ? styles.parentLabelSelected
@@ -304,7 +317,7 @@ export const StorageLocationForm = forwardRef<
                 ))}
               </ScrollView>
             </View>
-            <Text style={styles.hint}>
+            <Text size="xs" tone="secondary" style={styles.hint}>
               Organize locations hierarchically (e.g., drawer inside fridge)
             </Text>
           </View>
@@ -345,6 +358,12 @@ export const StorageLocationForm = forwardRef<
                   }
                 >
                   <Text
+                    size="sm"
+                    weight={
+                      formData.temperature === option.value
+                        ? 'semibold'
+                        : 'medium'
+                    }
                     style={
                       formData.temperature === option.value
                         ? styles.parentLabelSelected
@@ -378,7 +397,9 @@ export const StorageLocationForm = forwardRef<
                 ]}
                 onPress={() => setFormData({ ...formData, color: null })}
               >
-                <Text style={styles.colorNoneText}>-</Text>
+                <Text size="sm" tone="secondary" weight="medium">
+                  -
+                </Text>
               </Pressable>
               {COLOR_PRESETS.map(preset => (
                 <Pressable
@@ -408,7 +429,9 @@ export const StorageLocationForm = forwardRef<
           ]}
           onPress={() => setAdvancedExpanded(!advancedExpanded)}
         >
-          <Text style={styles.advancedHeaderText}>Advanced Settings</Text>
+          <Text size="sm" weight="semibold" tone="secondary">
+            Advanced Settings
+          </Text>
           <Animated.View style={animatedChevronStyle}>
             <Icon
               name="chevron-down"
@@ -570,28 +593,18 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xs,
   },
   typeLabel: {
-    fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium,
   },
   typeLabelSelected: {
-    fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
   },
   parentLabel: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium,
   },
   parentLabelSelected: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
   },
   hint: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
   colorSwatch: {
@@ -634,11 +647,6 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 3,
     borderColor: theme.colors.textPrimary,
   },
-  colorNoneText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium,
-  },
   advancedHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -647,11 +655,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
-  },
-  advancedHeaderText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
   },
   capacityRow: {
     flexDirection: 'row',

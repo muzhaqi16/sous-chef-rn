@@ -1,5 +1,5 @@
 import React, { useState, useRef, ReactNode, useEffect } from 'react';
-import { Text } from 'react-native';
+
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -18,6 +18,7 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { ToastContext } from '../../hooks/useToast';
 import { toastService } from '#/services/toastService';
 import { SPRING, TIMING, TOAST } from '#/constants/animations';
+import { Text } from '#components/atoms/Text';
 
 // Define toast types
 export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info';

@@ -1,5 +1,5 @@
 import React, { useLayoutEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import {
   Canvas,
   Group,
@@ -20,6 +20,7 @@ import {
   useReducedMotion,
   Easing,
 } from 'react-native-reanimated';
+import { Text } from '#components/atoms/Text';
 
 // Colors for the grocery bag illustration
 const COLORS = {
@@ -229,18 +230,17 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
       {!!showBrand && (
         <View style={componentStyles.brandContainer}>
           <Text
-            style={[
-              componentStyles.brandTitle,
-              { color: theme.colors.textPrimary },
-            ]}
+            size="2xl"
+            weight="bold"
+            tone="primary"
+            style={componentStyles.brandTitle}
           >
             Sous Chef
           </Text>
           <Text
-            style={[
-              componentStyles.brandSubtitle,
-              { color: theme.colors.textSecondary },
-            ]}
+            size="sm"
+            tone="secondary"
+            style={componentStyles.brandSubtitle}
           >
             Your Kitchen Assistant
           </Text>
@@ -347,6 +347,8 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
         ]}
       >
         <Text
+          weight="bold"
+          align="center"
           style={[
             componentStyles.bannerText,
             {
@@ -386,12 +388,9 @@ const componentStyles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   brandTitle: {
-    fontSize: theme.fonts.size['2xl'],
-    fontWeight: theme.fonts.weight.bold,
     letterSpacing: 1,
   },
   brandSubtitle: {
-    fontSize: theme.fonts.size.sm,
     marginTop: theme.spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 2,
@@ -402,8 +401,6 @@ const componentStyles = StyleSheet.create(theme => ({
     height: 28,
   },
   bannerText: {
-    fontWeight: theme.fonts.weight.bold,
     letterSpacing: 3,
-    textAlign: 'center',
   },
 }));

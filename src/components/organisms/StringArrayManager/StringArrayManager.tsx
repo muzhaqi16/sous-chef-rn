@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
@@ -15,6 +15,7 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { Text } from '#components/atoms/Text';
 
 const defaultTransform = (item: string) => item.trim();
 
@@ -293,7 +294,11 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
             editable={!loading}
           />
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error ? (
+            <Text size="sm" style={styles.errorText}>
+              {error}
+            </Text>
+          ) : null}
         </BottomSheetView>
       </BottomSheetModal>
     </View>
@@ -366,7 +371,6 @@ const styles = StyleSheet.create(theme => ({
   },
   errorText: {
     color: theme.colors.danger,
-    fontSize: theme.typography.fontSize.sm,
     marginTop: theme.spacing.xs,
   },
   pressed: {

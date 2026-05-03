@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, Pressable } from 'react-native';
+import { View, Modal, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { authService } from '#/services/authService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { Text } from '#components/atoms/Text';
 
 interface PostLoginBiometricPromptProps {
   visible: boolean;
@@ -112,8 +113,17 @@ export const PostLoginBiometricPrompt = ({
             </View>
           </View>
 
-          <Text style={styles.title}>{getBiometricTitle()}</Text>
-          <Text style={styles.description}>{getBiometricDescription()}</Text>
+          <Text size="lg" weight="bold" align="center" style={styles.title}>
+            {getBiometricTitle()}
+          </Text>
+          <Text
+            size="md"
+            tone="secondary"
+            align="center"
+            style={styles.description}
+          >
+            {getBiometricDescription()}
+          </Text>
 
           <View style={styles.buttons}>
             <Pressable
@@ -126,7 +136,11 @@ export const PostLoginBiometricPrompt = ({
               testID="biometric-prompt-enable"
               accessibilityLabel="Enable Now"
             >
-              <Text style={styles.primaryButtonText}>
+              <Text
+                size="md"
+                weight="semibold"
+                style={styles.primaryButtonText}
+              >
                 {isEnabling ? 'Setting up...' : 'Enable Now'}
               </Text>
             </Pressable>
@@ -141,7 +155,9 @@ export const PostLoginBiometricPrompt = ({
               testID="biometric-prompt-decline"
               accessibilityLabel="Not now"
             >
-              <Text style={styles.secondaryButtonText}>Not now</Text>
+              <Text size="md" weight="semibold" tone="secondary">
+                Not now
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -189,16 +205,9 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
   },
   title: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
     marginBottom: theme.spacing.sm,
   },
   description: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
     lineHeight: theme.fonts.size.md * 1.4,
     marginBottom: theme.spacing.lg,
   },
@@ -238,13 +247,6 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
   },
   primaryButtonText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.background,
-  },
-  secondaryButtonText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
   },
 }));

@@ -1,9 +1,10 @@
 import React, { useRef } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
+import { Text } from '#components/atoms/Text';
 
 // ============================================
 // Types
@@ -229,7 +230,10 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Title */}
       {showTitle ? (
         <Text
-          style={[styles.title, shouldCenterTitle && styles.centerTitle]}
+          size="lg"
+          weight="semibold"
+          align={shouldCenterTitle ? 'center' : undefined}
+          style={styles.title}
           numberOfLines={1}
         >
           {title}
@@ -250,15 +254,8 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     flex: 1,
     marginHorizontal: theme.spacing.sm,
-  },
-
-  centerTitle: {
-    textAlign: 'center',
   },
 
   titleSpacer: {

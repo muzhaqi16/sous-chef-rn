@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { RecipeIngredientEditor } from '../../../../../src/screens/recipe/RecipeForm/components/RecipeIngredientEditor';
+import { RecipeIngredientEditor } from '../../../../../src/features/recipes/screens/RecipeForm/components/RecipeIngredientEditor';
 
 jest.mock('../../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../../src/apollo/links/refreshToken');

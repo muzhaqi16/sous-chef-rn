@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
@@ -7,6 +7,7 @@ import { FormInput } from '#components/molecules/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FieldRow } from '#components/molecules/FieldRow';
+import { Text } from '#components/atoms/Text';
 
 export interface DetailsPageProps {
   quantityInput: string;
@@ -118,7 +119,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
             placeholder="oz, g, ml"
           />
         </FieldRow>
-        <Text style={styles.netWeightHint}>
+        <Text size="sm" tone="secondary" style={styles.netWeightHint}>
           Net weight is used for consumption tracking and is optional.
         </Text>
       </View>
@@ -132,7 +133,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.toggleButtonText}>
+          <Text size="md" weight="medium" tone="accent">
             {showPackageDetails
               ? 'Hide Package Details'
               : 'Add Package Details'}
@@ -141,7 +142,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
 
         {!!showPackageDetails && (
           <View style={styles.packageDetailsContainer}>
-            <Text style={styles.sectionDescription}>
+            <Text size="sm" tone="secondary" style={styles.sectionDescription}>
               Define what's inside a package (e.g., 12 cans of 335ml each).
             </Text>
 
@@ -210,26 +211,17 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   sectionDescription: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.md,
   },
   toggleButton: {
     paddingVertical: theme.spacing.sm,
     alignItems: 'center',
   },
-  toggleButtonText: {
-    color: theme.colors.primary,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-  },
   packageDetailsContainer: {
     marginTop: theme.spacing.sm,
   },
   netWeightHint: {
-    fontSize: theme.fonts.size.sm,
     fontStyle: 'italic',
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
   pressed: {

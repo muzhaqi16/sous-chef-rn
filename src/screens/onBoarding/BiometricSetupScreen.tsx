@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -16,6 +16,7 @@ import {
   clearTempRegistrationPassword,
 } from '#/storage/keychain';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { Text } from '#components/atoms/Text';
 
 /** Module-level helper to fetch biometric availability info.
  *  Extracted to avoid try/catch inside the component's useEffect (React Compiler bailout). */
@@ -200,7 +201,7 @@ export const BiometricSetupScreen = () => {
         totalSteps={7}
       >
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>
+          <Text size="md" tone="secondary" align="center">
             Checking biometric availability...
           </Text>
         </View>
@@ -254,7 +255,14 @@ export const BiometricSetupScreen = () => {
             </View>
           </View>
 
-          <Text style={styles.description}>{getBiometricDescription()}</Text>
+          <Text
+            size="md"
+            tone="secondary"
+            align="center"
+            style={styles.description}
+          >
+            {getBiometricDescription()}
+          </Text>
 
           <View style={styles.benefits}>
             <View style={styles.benefitItem}>
@@ -263,7 +271,9 @@ export const BiometricSetupScreen = () => {
                 size={20}
                 color={theme.colors.success}
               />
-              <Text style={styles.benefitText}>Quick and secure access</Text>
+              <Text size="md" style={styles.benefitText}>
+                Quick and secure access
+              </Text>
             </View>
             <View style={styles.benefitItem}>
               <Icon
@@ -271,7 +281,9 @@ export const BiometricSetupScreen = () => {
                 size={20}
                 color={theme.colors.success}
               />
-              <Text style={styles.benefitText}>No password required</Text>
+              <Text size="md" style={styles.benefitText}>
+                No password required
+              </Text>
             </View>
             <View style={styles.benefitItem}>
               <Icon
@@ -279,7 +291,9 @@ export const BiometricSetupScreen = () => {
                 size={20}
                 color={theme.colors.success}
               />
-              <Text style={styles.benefitText}>Enhanced security</Text>
+              <Text size="md" style={styles.benefitText}>
+                Enhanced security
+              </Text>
             </View>
           </View>
 
@@ -293,7 +307,11 @@ export const BiometricSetupScreen = () => {
               disabled={isEnabling}
               testID="biometric-setup-enable"
             >
-              <Text style={styles.primaryButtonText}>
+              <Text
+                size="md"
+                weight="semibold"
+                style={styles.primaryButtonText}
+              >
                 {isEnabling ? 'Setting up...' : 'Enable Now'}
               </Text>
             </Pressable>
@@ -307,11 +325,13 @@ export const BiometricSetupScreen = () => {
               disabled={isEnabling}
               testID="biometric-setup-skip"
             >
-              <Text style={styles.secondaryButtonText}>Set up later</Text>
+              <Text size="md" weight="semibold" tone="secondary">
+                Set up later
+              </Text>
             </Pressable>
           </View>
 
-          <Text style={styles.footer}>
+          <Text size="sm" tone="secondary" align="center">
             You can always enable this later in Settings
           </Text>
         </View>
@@ -332,11 +352,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
   iconContainer: {
     marginBottom: theme.spacing.xl,
   },
@@ -351,9 +366,6 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
   },
   description: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
     lineHeight: theme.fonts.size.md * 1.5,
     marginBottom: theme.spacing.xl,
     paddingHorizontal: theme.spacing.md,
@@ -369,8 +381,6 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
   },
   benefitText: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textPrimary,
     flex: 1,
   },
   buttons: {
@@ -395,18 +405,6 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
   },
   primaryButtonText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.background,
-  },
-  secondaryButtonText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
-  },
-  footer: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
   },
 }));

@@ -2,12 +2,12 @@
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { NutritionSummaryCard } from '../../../src/components/mealPlan/NutritionSummaryCard';
+import { NutritionSummaryCard } from '../../../src/features/mealPlan/components/NutritionSummaryCard';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../src/components/mealPlan/NutritionGoalProgress', () => ({
+jest.mock('../../../src/features/mealPlan/components/NutritionGoalProgress', () => ({
   NutritionGoalProgress: () => null,
 }));
 

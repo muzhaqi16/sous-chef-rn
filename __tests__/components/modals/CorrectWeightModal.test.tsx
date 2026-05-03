@@ -36,7 +36,7 @@ jest.mock('../../../src/components/molecules/AutocompleteField/UnitAutocompleteF
 jest.mock('../../../src/components/atoms/FormattedItemSubtitle', () => ({
   FormattedItemSubtitle: () => null,
 }));
-jest.mock('../../../src/hooks/pantry/usePantryItemTransformation', () => ({
+jest.mock('../../../src/features/pantry/hooks/usePantryItemTransformation', () => ({
   formatNetWeightDisplay: jest.fn((weight, unit) =>
     weight != null && unit ? `${weight} ${unit.symbol}` : null,
   ),

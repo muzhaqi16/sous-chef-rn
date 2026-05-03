@@ -1,15 +1,19 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import type { CardLeftSlotProps } from './types';
+import { Text } from '#components/atoms/Text';
 
 /**
  * Lightweight image slot — no useUnistyles, all styles from stylesheet
  */
-const ImageSlot: React.FC<{ imageUrl: string; dimmed: boolean }> = ({ imageUrl, dimmed }) => (
+const ImageSlot: React.FC<{ imageUrl: string; dimmed: boolean }> = ({
+  imageUrl,
+  dimmed,
+}) => (
   <View
     style={[
       commonStyles.listItemImageContainerCompact,
@@ -89,7 +93,7 @@ const ThemedSlot: React.FC<CardLeftSlotProps> = ({
         dimmed && styles.dimmed,
       ]}
     >
-      <Text style={styles.emoji}>{emoji || '📦'}</Text>
+      <Text size="xl">{emoji || '📦'}</Text>
     </View>
   );
 };
@@ -98,10 +102,12 @@ const ThemedSlot: React.FC<CardLeftSlotProps> = ({
  * Left slot component for BaseItemCard
  * Renders emoji, image, icon, or custom content
  */
-export const CardLeftSlot: React.FC<CardLeftSlotProps> = (props) => {
+export const CardLeftSlot: React.FC<CardLeftSlotProps> = props => {
   // Image path is lightweight — no useUnistyles needed
   if (props.type === 'image' && props.imageUrl) {
-    return <ImageSlot imageUrl={props.imageUrl} dimmed={props.dimmed ?? false} />;
+    return (
+      <ImageSlot imageUrl={props.imageUrl} dimmed={props.dimmed ?? false} />
+    );
   }
 
   // All other types need theme access
@@ -120,9 +126,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing['3'],
-  },
-  emoji: {
-    fontSize: theme.typography.fontSize.xl,
   },
   dimmed: {
     opacity: 0.5,

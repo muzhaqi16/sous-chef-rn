@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -11,6 +11,7 @@ import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { Text } from '#components/atoms/Text';
 
 interface EmailVerificationRouteParams {
   token: string;
@@ -149,7 +150,13 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
               showBrand={false}
               message="Verifying your email..."
             />
-            <Text style={styles.subtitle}>
+            <Text
+              size="md"
+              tone="secondary"
+              align="center"
+              lineHeight="relaxed"
+              style={styles.subtitle}
+            >
               Please wait while we verify your email address.
             </Text>
           </>
@@ -164,8 +171,21 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
                 color={theme.colors.success}
               />
             </View>
-            <Text style={styles.title}>Email Verified!</Text>
-            <Text style={styles.subtitle}>
+            <Text
+              size="xl"
+              weight="semibold"
+              align="center"
+              style={styles.title}
+            >
+              Email Verified!
+            </Text>
+            <Text
+              size="md"
+              tone="secondary"
+              align="center"
+              lineHeight="relaxed"
+              style={styles.subtitle}
+            >
               Your email address has been successfully verified.
               {user?.onBoarded
                 ? ' You can now access your account.'
@@ -183,8 +203,23 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
                 color={theme.colors.error}
               />
             </View>
-            <Text style={styles.title}>Verification Failed</Text>
-            <Text style={styles.subtitle}>{errorMessage}</Text>
+            <Text
+              size="xl"
+              weight="semibold"
+              align="center"
+              style={styles.title}
+            >
+              Verification Failed
+            </Text>
+            <Text
+              size="md"
+              tone="secondary"
+              align="center"
+              lineHeight="relaxed"
+              style={styles.subtitle}
+            >
+              {errorMessage}
+            </Text>
 
             <View style={styles.actions}>
               <Pressable
@@ -194,7 +229,13 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
                 ]}
                 onPress={performVerification}
               >
-                <Text style={styles.retryButtonText}>Try Again</Text>
+                <Text
+                  size="md"
+                  weight="semibold"
+                  style={styles.retryButtonText}
+                >
+                  Try Again
+                </Text>
               </Pressable>
             </View>
           </>
@@ -219,18 +260,10 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xl,
   },
   title: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
     marginTop: theme.spacing.md,
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
     marginTop: theme.spacing['3'],
-    lineHeight: theme.typography.lineHeight.relaxed,
   },
   actions: {
     marginTop: theme.spacing.xl,
@@ -245,7 +278,5 @@ const styles = StyleSheet.create(theme => ({
   },
   retryButtonText: {
     color: theme.colors.white,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
 }));

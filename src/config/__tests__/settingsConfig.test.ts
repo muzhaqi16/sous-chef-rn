@@ -93,9 +93,9 @@ describe('settingsConfig', () => {
       expect(keys).toContain('changePassword');
     });
 
-    it('has a Theme & Language section with theme and language options', () => {
+    it('has an Appearance & Language section with theme and language options', () => {
       const section = PROFILE_SETTINGS_CONFIG.find(
-        s => s.title === 'Theme & Language',
+        s => s.title === 'Appearance & Language',
       );
       expect(section).toBeDefined();
       const themeItem = section!.items.find(i => i.key === 'theme') as any;

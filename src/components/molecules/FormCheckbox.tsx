@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, ViewStyle } from 'react-native';
+import { View, ViewStyle } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 interface FormCheckboxProps {
   label: string;
@@ -41,11 +42,18 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
             <Icon name="checkmark" size={18} color={theme.colors.white} />
           )}
         </View>
-        <Text style={[styles.label, disabled && styles.disabledLabel]}>
+        <Text
+          size="base"
+          style={[styles.label, disabled && styles.disabledLabel]}
+        >
           {label}
         </Text>
       </Pressable>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? (
+        <Text size="sm" tone="error" style={styles.errorText}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 };
@@ -77,16 +85,12 @@ const styles = StyleSheet.create(theme => ({
     opacity: theme.opacity.disabled,
   },
   label: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textPrimary,
     flex: 1,
   },
   disabledLabel: {
     opacity: theme.opacity.disabled,
   },
   errorText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.error,
     marginTop: theme.spacing.xs,
   },
   pressed: {

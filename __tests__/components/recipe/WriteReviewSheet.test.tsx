@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { WriteReviewSheet } from '../../../src/components/recipe/WriteReviewSheet';
+import { WriteReviewSheet } from '../../../src/features/recipes/components/WriteReviewSheet';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
@@ -24,7 +24,7 @@ jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
 jest.mock('../../../src/components/atoms/BottomSheetFormScrollView', () => ({
   BottomSheetFormScrollView: ({ children }: any) => children,
 }));
-jest.mock('../../../src/components/recipe/StarRatingInput', () => ({
+jest.mock('../../../src/features/recipes/components/StarRatingInput', () => ({
   StarRatingInput: () => null,
 }));
 

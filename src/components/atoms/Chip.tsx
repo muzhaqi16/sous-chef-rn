@@ -1,7 +1,8 @@
 import React from 'react';
-import { Text, StyleProp, ViewStyle } from 'react-native';
+import { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from 'react-native-gesture-handler';
+import { Text } from '#components/atoms/Text';
 
 type ChipProps = {
   label: string;
@@ -30,10 +31,9 @@ const Chip: React.FC<ChipProps> = ({ label, selected, onPress, style }) => {
       accessibilityState={{ selected }}
     >
       <Text
-        style={[
-          styles.chipText,
-          selected ? styles.selectedText : styles.unselectedText,
-        ]}
+        size="sm"
+        weight="semibold"
+        style={selected ? styles.selectedText : styles.unselectedText}
       >
         {label}
       </Text>
@@ -47,10 +47,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'],
     borderRadius: theme.radii['2xl'],
     marginRight: theme.spacing.sm,
-  },
-  chipText: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.semibold,
   },
   selected: {
     backgroundColor: theme.colors.chipSelectedBackground,

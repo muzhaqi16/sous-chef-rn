@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, ActivityIndicator } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -10,6 +10,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { SPRING } from '#constants/animations';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
+import { Text } from '#components/atoms/Text';
 
 interface ButtonProps {
   onPress: () => void;

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { Text, Linking, View } from 'react-native';
+import { Linking, View } from 'react-native';
+import { Text } from '#components/atoms/Text';
 import { GraphQLError } from 'graphql';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
 import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
@@ -283,10 +284,8 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
         subtitle={
           <>
             We emailed a code to{' '}
-            <Text style={{ fontWeight: 'bold' }}>
-              {user.email || 'your email'}
-            </Text>
-            . Please enter the code to continue.
+            <Text weight="bold">{user.email || 'your email'}</Text>. Please
+            enter the code to continue.
           </>
         }
         fields={[{ name: 'code', label: '', component: CodeInputAdapter }]}

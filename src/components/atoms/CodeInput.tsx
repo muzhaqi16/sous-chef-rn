@@ -1,7 +1,8 @@
 import React, { useRef } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from 'react-native-gesture-handler';
+import { Text } from '#components/atoms/Text';
 
 export const CodeInput: React.FC<{
   value: string;
@@ -30,8 +31,17 @@ export const CodeInput: React.FC<{
         />
         <View style={styles.formInputOverflow}>
           {Array.from({ length: 6 }).map((_, idx) => (
-            <Text key={idx} style={styles.formInputChar}>
-              {value[idx] ?? <Text style={styles.formInputCharEmpty}>-</Text>}
+            <Text
+              key={idx}
+              align="center"
+              weight="semibold"
+              style={styles.formInputChar}
+            >
+              {value[idx] ?? (
+                <Text tone="tertiary" weight="regular">
+                  -
+                </Text>
+              )}
             </Text>
           ))}
         </View>
@@ -69,12 +79,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     lineHeight: theme.sizes.input.lg + theme.spacing.sm,
     fontSize: theme.typography.fontSize['4xl'] - 2,
-    textAlign: 'center',
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  formInputCharEmpty: {
-    color: theme.colors.textTertiary,
-    fontWeight: theme.fonts.weight.regular,
   },
   pressed: {
     opacity: theme.opacity.pressed,

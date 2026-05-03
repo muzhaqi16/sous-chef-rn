@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 interface ChartSectionProps {
   title: string;
@@ -34,8 +35,14 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     if (error) {
       return (
         <View style={styles.stateContainer}>
-          <Icon name="alert-circle-outline" size={40} color={theme.colors.error} />
-          <Text style={[styles.stateText, { color: theme.colors.error }]}>{error}</Text>
+          <Icon
+            name="alert-circle-outline"
+            size={40}
+            color={theme.colors.error}
+          />
+          <Text size="sm" align="center" tone="error">
+            {error}
+          </Text>
         </View>
       );
     }
@@ -43,8 +50,12 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     if (isEmpty) {
       return (
         <View style={styles.stateContainer}>
-          <Icon name="bar-chart-outline" size={40} color={theme.colors.textSecondary} />
-          <Text style={[styles.stateText, { color: theme.colors.textSecondary }]}>
+          <Icon
+            name="bar-chart-outline"
+            size={40}
+            color={theme.colors.textSecondary}
+          />
+          <Text size="sm" align="center" tone="secondary">
             {emptyMessage}
           </Text>
         </View>
@@ -56,7 +67,9 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-      <Text style={[styles.title, { color: theme.colors.textPrimary }]}>{title}</Text>
+      <Text size="lg" weight="semibold" style={styles.title}>
+        {title}
+      </Text>
       {renderContent()}
     </View>
   );
@@ -69,8 +82,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   title: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
     marginBottom: theme.spacing.md,
   },
   stateContainer: {
@@ -78,9 +89,5 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     paddingVertical: theme.spacing.xl,
     gap: theme.spacing.sm,
-  },
-  stateText: {
-    fontSize: theme.fonts.size.sm,
-    textAlign: 'center',
   },
 }));

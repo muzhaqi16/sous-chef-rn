@@ -5,11 +5,12 @@
  */
 
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#utils/iconUtils';
 import { getInitials } from '#utils/ownershipHelpers';
+import { Text } from '#components/atoms/Text';
 
 interface AvatarProps {
   /** Avatar image URL */
@@ -76,11 +77,9 @@ export const Avatar: React.FC<AvatarProps> = ({
         ]}
       >
         <Text
-          style={[
-            styles.initials,
-            { fontSize },
-            textColor && { color: textColor },
-          ]}
+          weight="semibold"
+          tone="accent"
+          style={[{ fontSize }, textColor && { color: textColor }]}
         >
           {initials}
         </Text>
@@ -119,10 +118,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     overflow: 'hidden',
     backgroundColor: theme.colors.primary + '20',
-  },
-  initials: {
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
   },
   iconContainer: {
     justifyContent: 'center',

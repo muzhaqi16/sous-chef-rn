@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, IconLibrary } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 export type AlertBannerVariant = 'error' | 'warning' | 'info' | 'success';
 
@@ -85,16 +86,19 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
             library={iconLibrary}
           />
         ) : (
-          <Text style={styles.icon}>{icon}</Text>
+          <Text size="base">{icon}</Text>
         )}
       </View>
 
       <View style={styles.content}>
-        <Text style={[styles.title, { color: variantColors.text }]}>
+        <Text size="sm" weight="semibold" style={{ color: variantColors.text }}>
           {title}
         </Text>
         {!!subtitle && (
-          <Text style={[styles.subtitle, { color: variantColors.text }]}>
+          <Text
+            size="xs"
+            style={[styles.subtitle, { color: variantColors.text }]}
+          >
             {subtitle}
           </Text>
         )}
@@ -133,18 +137,10 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     marginRight: theme.spacing['2.5'],
   },
-  icon: {
-    fontSize: theme.typography.fontSize.base,
-  },
   content: {
     flex: 1,
   },
-  title: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.semibold,
-  },
   subtitle: {
-    fontSize: theme.typography.fontSize.xs,
     marginTop: 1,
     opacity: 0.8,
   },

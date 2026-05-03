@@ -4,18 +4,18 @@ import {
   createNativeStackNavigator,
   createNativeStackScreen,
 } from '@react-navigation/native-stack';
-import { SearchResultsScreen } from '#screens/barcode/SearchResultsScreen';
-import { IdentifiedItemFormScreen } from '#screens/barcode/IdentifiedItemFormScreen';
+import { SearchResultsScreen } from '#features/barcode/screens/SearchResultsScreen';
+import { IdentifiedItemFormScreen } from '#features/barcode/screens/IdentifiedItemFormScreen';
 
 // Lazy-load camera-heavy screens to defer vision-camera JS loading
 const BarcodeScannerScreen = React.lazy(() =>
-  import('#screens/barcode/BarcodeScannerScreen').then(m => ({
+  import('#features/barcode/screens/BarcodeScannerScreen').then(m => ({
     default: m.BarcodeScannerScreen,
   })),
 );
 
 const IdentifyItemScreen = React.lazy(() =>
-  import('#screens/barcode/IdentifyItemScreen').then(m => ({
+  import('#features/barcode/screens/IdentifyItemScreen').then(m => ({
     default: m.IdentifyItemScreen,
   })),
 );

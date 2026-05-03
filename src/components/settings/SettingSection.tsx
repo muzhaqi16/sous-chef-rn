@@ -1,6 +1,7 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 interface SettingSectionProps {
   title: string;
@@ -16,8 +17,14 @@ export const SettingSection: React.FC<SettingSectionProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
-        <Text style={styles.title}>{title}</Text>
-        {description ? <Text style={styles.description}>{description}</Text> : null}
+        <Text weight="bold" tone="secondary" style={styles.title}>
+          {title}
+        </Text>
+        {description ? (
+          <Text tone="tertiary" style={styles.description}>
+            {description}
+          </Text>
+        ) : null}
       </View>
       <View style={styles.content}>{children}</View>
     </View>
@@ -35,14 +42,11 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.sm - 1,
-    fontWeight: 'bold',
-    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   description: {
     fontSize: theme.typography.fontSize.sm - 1,
-    color: theme.colors.textTertiary,
     marginTop: theme.spacing.xs,
   },
   content: {

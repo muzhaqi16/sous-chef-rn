@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#/utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 export interface InfoRowProps {
   /**
@@ -122,7 +123,7 @@ export const InfoRow: React.FC<InfoRowProps> = ({
   }
 
   const valueContent = children ?? (
-    <Text style={[commonStyles.subtitle, styles.value, valueStyle]}>
+    <Text align="right" style={[commonStyles.subtitle, valueStyle]}>
       {formattedValue}
     </Text>
   );
@@ -136,7 +137,8 @@ export const InfoRow: React.FC<InfoRowProps> = ({
       ]}
     >
       <Text style={[commonStyles.body, styles.label, labelStyle]}>
-        {label}{showColon ? ':' : ''}
+        {label}
+        {showColon ? ':' : ''}
       </Text>
       {icon ? (
         <View style={styles.valueWithIcon}>
@@ -169,9 +171,6 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     flex: 1,
-  },
-  value: {
-    textAlign: 'right',
   },
   valueWithIcon: {
     flexDirection: 'row',

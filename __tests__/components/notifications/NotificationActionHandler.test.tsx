@@ -3,18 +3,18 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Text } from 'react-native';
-import { NotificationActionHandler } from '../../../src/components/notifications/NotificationActionHandler';
+import { NotificationActionHandler } from '../../../src/features/notifications/components/NotificationActionHandler';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../src/components/notifications/InvitationAcceptanceModal', () => ({
+jest.mock('../../../src/features/notifications/components/InvitationAcceptanceModal', () => ({
   InvitationAcceptanceModal: () => null,
 }));
-jest.mock('../../../src/components/notifications/ExpirationActionSheet', () => ({
+jest.mock('../../../src/features/notifications/components/ExpirationActionSheet', () => ({
   ExpirationActionSheet: () => null,
 }));
-jest.mock('../../../src/hooks/notifications/useExpirationNotificationSync', () => ({
+jest.mock('../../../src/features/notifications/hooks/useExpirationNotificationSync', () => ({
   useExpirationNotificationSync: () => ({
     syncMarkAction: jest.fn(),
     syncDismiss: jest.fn(),

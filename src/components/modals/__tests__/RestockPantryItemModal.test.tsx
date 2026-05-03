@@ -39,7 +39,14 @@ jest.mock('../PantryActionModal', () => ({
       activeUnitSymbol: 'oz',
       activeUnitId: 'unit-1',
       isConvertedUnit: false,
-      selectedUnitInfo: { unitId: 'unit-1', unitSymbol: 'oz', unitName: 'Ounces', unitType: 'WEIGHT', isTrackingUnit: true, conversionConfidence: null },
+      selectedUnitInfo: {
+        unitId: 'unit-1',
+        unitSymbol: 'oz',
+        unitName: 'Ounces',
+        unitType: 'WEIGHT',
+        isTrackingUnit: true,
+        conversionConfidence: null,
+      },
       setSelectedUnitInfo: jest.fn(),
       notes: '',
       setNotes: jest.fn(),
@@ -54,7 +61,7 @@ jest.mock('../PantryActionModal', () => ({
     );
   },
 }));
-jest.mock('#hooks/pantry/useConversionPreview', () => ({
+jest.mock('#features/pantry/hooks/useConversionPreview', () => ({
   useConversionPreview: () => ({
     previewText: null,
     availableInSelectedUnit: null,

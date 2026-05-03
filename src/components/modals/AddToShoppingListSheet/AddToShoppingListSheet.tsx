@@ -4,7 +4,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useShoppingListSuggestions,
   ShoppingListSuggestionItem,
-} from '#hooks/shoppingList/useShoppingListSuggestions';
+} from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import { toastService } from '#/services/toastService';
 import {
   useAddItemToShoppingListMutation,
@@ -16,13 +16,13 @@ import {
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
-import { createOptimisticShoppingListItem } from '#/hooks/shoppingList/mutations/utils';
+import { createOptimisticShoppingListItem } from '#features/shoppingList/hooks/mutations/utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import {
   useShoppingListTutorial,
   ShoppingListTutorialStep,
-} from '#/context/ShoppingListTutorialContext';
+} from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { SheetTutorialHint } from '#components/molecules/SheetTutorialHint';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';

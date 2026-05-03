@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextStyle } from 'react-native';
+import { View, TextStyle } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -12,6 +12,7 @@ import { Icon } from '#/utils/iconUtils';
 import { DisplayFormat } from '#/graphql/generated';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { Text } from '#components/atoms/Text';
 
 interface ShoppingListItemProps {
   id: string;

@@ -1,8 +1,9 @@
 import React from 'react';
-import { Text } from 'react-native';
+
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -27,7 +28,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         style={({ pressed }) => [styles.header, pressed && styles.pressed]}
         onPress={onToggle}
       >
-        <Text style={styles.title}>
+        <Text size="base" weight="semibold">
           {title}
           {count != null ? ` (${count})` : ''}
         </Text>
@@ -52,11 +53,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-  },
-  title: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

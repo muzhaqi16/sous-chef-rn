@@ -1,9 +1,10 @@
-import React, {useState} from 'react';
-import {TextInput, Text} from 'react-native';
-import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import React, { useState } from 'react';
+import { TextInput } from 'react-native';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
+import { Text } from '#components/atoms/Text';
 
 interface FractionInputProps {
   value: string;
@@ -13,7 +14,11 @@ interface FractionInputProps {
   label?: string;
   disabled?: boolean;
   testID?: string;
-  keyboardType?: 'default' | 'numeric' | 'decimal-pad' | 'numbers-and-punctuation';
+  keyboardType?:
+    | 'default'
+    | 'numeric'
+    | 'decimal-pad'
+    | 'numbers-and-punctuation';
   /** Use BottomSheetTextInput for proper keyboard handling inside bottom sheets */
   useBottomSheetInput?: boolean;
   /** Show red asterisk to indicate required field */
@@ -43,7 +48,8 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   required = false,
 }) => {
   const contextValue = useIsBottomSheetInput();
-  const InputComponent = (useBottomSheetInput || contextValue) ? BottomSheetTextInput : TextInput;
+  const InputComponent =
+    useBottomSheetInput || contextValue ? BottomSheetTextInput : TextInput;
   const { theme } = useUnistyles();
   const [isFocused, setIsFocused] = useState(false);
 
@@ -66,7 +72,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   return (
     <FormFieldWrapper
       label={label || ''}
-      error={hasError ? (error || 'Use format: 1/4, 1 1/4, or 1.5') : undefined}
+      error={hasError ? error || 'Use format: 1/4, 1 1/4, or 1.5' : undefined}
       required={required}
     >
       <InputComponent
@@ -88,7 +94,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
         testID={testID}
       />
       {!hasError && !!value && !!isFocused && (
-        <Text style={styles.hintText}>
+        <Text size="xs" tone="secondary" style={styles.hintText}>
           Formats: 1/4, 1 1/4, 0.75, or 2
         </Text>
       )}
@@ -119,8 +125,6 @@ const styles = StyleSheet.create(theme => ({
     opacity: theme.opacity.disabled,
   },
   hintText: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
 }));

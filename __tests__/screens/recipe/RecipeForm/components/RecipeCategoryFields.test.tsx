@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { RecipeCategoryFields } from '../../../../../src/screens/recipe/RecipeForm/components/RecipeCategoryFields';
+import { RecipeCategoryFields } from '../../../../../src/features/recipes/screens/RecipeForm/components/RecipeCategoryFields';
 import { Difficulty, RecipeStatus } from '../../../../../src/graphql/generated';
 
 jest.mock('../../../../../src/apollo/links/tokenScheduler');

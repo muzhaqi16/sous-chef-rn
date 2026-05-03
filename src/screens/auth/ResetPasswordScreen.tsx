@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -16,6 +16,7 @@ import { useToast } from '#/hooks/useToast';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import type { ToastFn } from '#/components/atoms/Toast';
+import { Text } from '#components/atoms/Text';
 
 /** Module-level async function for password reset submission.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
@@ -169,8 +170,16 @@ export const ResetPasswordScreen: React.FC = () => {
               color={theme.colors.error}
             />
           </View>
-          <Text style={styles.title}>Invalid Reset Link</Text>
-          <Text style={styles.subtitle}>
+          <Text size="xl" weight="semibold" align="center" style={styles.title}>
+            Invalid Reset Link
+          </Text>
+          <Text
+            size="md"
+            tone="secondary"
+            align="center"
+            lineHeight="relaxed"
+            style={styles.subtitle}
+          >
             This password reset link is invalid or has expired. Please request a
             new password reset from the login screen.
           </Text>
@@ -200,15 +209,25 @@ export const ResetPasswordScreen: React.FC = () => {
           />
         </View>
 
-        <Text style={styles.title}>Reset Your Password</Text>
-        <Text style={styles.subtitle}>
+        <Text size="xl" weight="semibold" align="center" style={styles.title}>
+          Reset Your Password
+        </Text>
+        <Text
+          size="md"
+          tone="secondary"
+          align="center"
+          lineHeight="relaxed"
+          style={styles.subtitle}
+        >
           Enter your new password below. Make sure it's secure and easy for you
           to remember.
         </Text>
 
         <View style={styles.form}>
           <View style={styles.field}>
-            <Text style={styles.label}>New Password</Text>
+            <Text size="md" weight="medium" style={styles.label}>
+              New Password
+            </Text>
             <PasswordInput
               value={watchedValues.newPassword}
               onChangeText={text => form.setValue('newPassword', text)}
@@ -218,7 +237,9 @@ export const ResetPasswordScreen: React.FC = () => {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Confirm Password</Text>
+            <Text size="md" weight="medium" style={styles.label}>
+              Confirm Password
+            </Text>
             <PasswordInput
               value={watchedValues.confirmPassword}
               onChangeText={text => form.setValue('confirmPassword', text)}
@@ -257,17 +278,9 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xl,
   },
   title: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
     marginBottom: theme.spacing['3'],
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: theme.typography.lineHeight.relaxed,
     marginBottom: theme.spacing.xl,
   },
   form: {
@@ -278,9 +291,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   label: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   buttonSpacing: {

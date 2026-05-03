@@ -1,12 +1,16 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { getMemberDisplayName, type Member } from '#/utils/formatters/memberFormatters';
+import {
+  getMemberDisplayName,
+  type Member,
+} from '#/utils/formatters/memberFormatters';
 import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
 import { HomeMemberCard } from './HomeMemberCard';
 import { HomeInviteCard } from './HomeInviteCard';
 import { InviteStatus } from '#/graphql/generated';
+import { Text } from '#components/atoms/Text';
 
 interface Invite {
   id: string;
@@ -40,7 +44,9 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
   const { theme } = useUnistyles();
 
   // Filter pending invites
-  const pendingInvites = invites.filter(inv => inv.status !== InviteStatus.Accepted);
+  const pendingInvites = invites.filter(
+    inv => inv.status !== InviteStatus.Accepted,
+  );
 
   return (
     <View>
@@ -66,15 +72,28 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
         })
       ) : (
         <View style={styles.emptyContainer}>
-          <Icon name="people-outline" size={48} color={theme.colors.textSecondary} />
-          <Text style={styles.emptyText}>No members</Text>
+          <Icon
+            name="people-outline"
+            size={48}
+            color={theme.colors.textSecondary}
+          />
+          <Text size="md" tone="secondary" style={styles.emptyText}>
+            No members
+          </Text>
         </View>
       )}
 
       {/* Pending Invites */}
       {!!pendingInvites && pendingInvites.length > 0 && (
         <View style={styles.invitesSection}>
-          <Text style={styles.invitesSectionTitle}>Pending Invitations</Text>
+          <Text
+            size="sm"
+            weight="semibold"
+            tone="secondary"
+            style={styles.invitesSectionTitle}
+          >
+            Pending Invitations
+          </Text>
           {pendingInvites.map(invite => {
             const displayName = getInviteDisplayName(invite);
 
@@ -101,8 +120,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xl * 2,
   },
   emptyText: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
   },
   invitesSection: {
@@ -112,9 +129,6 @@ const styles = StyleSheet.create(theme => ({
     borderTopColor: theme.colors.border,
   },
   invitesSectionTitle: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.5,

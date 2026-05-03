@@ -6,10 +6,7 @@ import {
   createBottomTabNavigator,
   createBottomTabScreen,
 } from '@react-navigation/bottom-tabs';
-import { PantryStack } from './PantryStack';
-import { ShoppingListStack } from './ShoppingListStack';
-import { RecipeStack } from './RecipeStack';
-import { MealPlanStack } from './MealPlanStack';
+import { TAB_FEATURES } from '#features/registry';
 import { TabBarActionsProvider } from '#/context/TabBarActionsContext';
 import { FloatingTabBar } from '#components/navigation/FloatingTabBar/FloatingTabBar';
 
@@ -24,6 +21,19 @@ function HomeTabsLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Build tab screens from the feature registry (evaluated at module scope).
+// Today all features are always enabled; adding a flag check here is a
+// one-line change per entry when feature gating ships.
+const tabScreens = Object.fromEntries(
+  TAB_FEATURES.map(f => [
+    f.tab.screenName,
+    createBottomTabScreen({
+      screen: f.tab.stack,
+      options: { title: f.tab.title },
+    }),
+  ]),
+);
+
 export const HomeTabs = createBottomTabNavigator({
   tabBar: props => <FloatingTabBar {...props} />,
   layout: HomeTabsLayout,
@@ -33,24 +43,7 @@ export const HomeTabs = createBottomTabNavigator({
     lazy: true,
     animation: 'none',
   },
-  screens: {
-    Pantry: createBottomTabScreen({
-      screen: PantryStack,
-      options: { title: 'Pantry' },
-    }),
-    ShoppingList: createBottomTabScreen({
-      screen: ShoppingListStack,
-      options: { title: 'List' },
-    }),
-    Recipe: createBottomTabScreen({
-      screen: RecipeStack,
-      options: { title: 'Recipes' },
-    }),
-    MealPlan: createBottomTabScreen({
-      screen: MealPlanStack,
-      options: { title: 'Meal Plan' },
-    }),
-  },
+  screens: tabScreens,
 });
 
 export type HomeTabsParams = StaticParamList<typeof HomeTabs>;

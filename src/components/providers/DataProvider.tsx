@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useDataPreloading } from '#/hooks/useDataPreloading';
-import { useNotificationsOnLaunch } from '#/hooks/notifications/useNotificationsOnLaunch';
+import { useNotificationsOnLaunch } from '#features/notifications/hooks/useNotificationsOnLaunch';
 import { useUser } from '#store/useAppStore';
 import { useGetUserProfileQuery } from '#/graphql/generated';
 import { useAppStore } from '#store/useAppStore';

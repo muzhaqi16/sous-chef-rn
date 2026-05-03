@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 interface TabScreenHeaderProps {
   label: string;
@@ -21,6 +22,8 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
   const titleContent = (
     <View style={styles.titleRow}>
       <Text
+        size="2xl"
+        weight="bold"
         maxFontSizeMultiplier={1.5}
         style={styles.title}
         numberOfLines={1}
@@ -35,7 +38,12 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
   return (
     <View style={styles.header}>
       <View style={styles.leftContent}>
-        <Text maxFontSizeMultiplier={1.5} style={styles.label}>
+        <Text
+          size="sm"
+          tone="secondary"
+          maxFontSizeMultiplier={1.5}
+          style={styles.label}
+        >
           {label}
         </Text>
         {onTitlePress ? (
@@ -65,9 +73,6 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.md,
   },
   label: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.regular,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
   },
   titleRow: {
@@ -76,9 +81,6 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   title: {
-    fontSize: theme.fonts.size['2xl'],
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
     flexShrink: 1,
   },
   headerActions: {

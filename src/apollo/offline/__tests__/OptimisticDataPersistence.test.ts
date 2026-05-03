@@ -10,37 +10,52 @@ const DATA_KEY = 'apollo-optimistic-data-v1';
  * This avoids any issues with the in-memory cache being out of sync
  * with storage when we write directly via storage.set().
  */
-function seedData(entries: Array<{ entityType: string; entityId: string; field: string; value: any }>) {
+function seedData(
+  entries: Array<{
+    entityType: string;
+    entityId: string;
+    field: string;
+    value: any;
+  }>,
+) {
   for (const entry of entries) {
-    optimisticDataPersistence.save(entry.entityType, entry.entityId, entry.field, entry.value);
+    optimisticDataPersistence.save(
+      entry.entityType,
+      entry.entityId,
+      entry.field,
+      entry.value,
+    );
   }
-  // Flush the batch
-  jest.advanceTimersByTime(100);
+  // Drain the batched microtask synchronously
+  optimisticDataPersistence.flush();
 }
 
 describe('OptimisticDataPersistence', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
-    // Flush any pending batch timers from previous tests
-    jest.runOnlyPendingTimers();
     // Clear underlying MMKV store and reset singleton state
     storage.clearAll();
     optimisticDataPersistence.clearAll();
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   describe('save (batched)', () => {
     it('does not write to storage immediately', () => {
-      optimisticDataPersistence.save('ShoppingListItem', '123', 'sortOrder', 'a5');
+      optimisticDataPersistence.save(
+        'ShoppingListItem',
+        '123',
+        'sortOrder',
+        'a5',
+      );
       expect(storage.getString(DATA_KEY)).toBeUndefined();
     });
 
-    it('flushes to storage after batch timeout (100ms)', () => {
-      optimisticDataPersistence.save('ShoppingListItem', '123', 'sortOrder', 'a5');
-      jest.advanceTimersByTime(100);
+    it('flushes to storage on the next microtask', async () => {
+      optimisticDataPersistence.save(
+        'ShoppingListItem',
+        '123',
+        'sortOrder',
+        'a5',
+      );
+      await Promise.resolve();
 
       const stored = JSON.parse(storage.getString(DATA_KEY)!);
       expect(stored['ShoppingListItem:123:sortOrder']).toMatchObject({
@@ -54,7 +69,7 @@ describe('OptimisticDataPersistence', () => {
       );
     });
 
-    it('batches multiple saves into a single storage write', () => {
+    it('batches multiple saves into a single storage write', async () => {
       // Track how many times storage.set is called for the data key
       let dataKeySetCount = 0;
       const originalSet = storage.set.bind(storage);
@@ -64,11 +79,21 @@ describe('OptimisticDataPersistence', () => {
       });
       storage.set = wrappedSet as any;
 
-      optimisticDataPersistence.save('ShoppingListItem', '1', 'sortOrder', 'a1');
-      optimisticDataPersistence.save('ShoppingListItem', '2', 'sortOrder', 'a2');
+      optimisticDataPersistence.save(
+        'ShoppingListItem',
+        '1',
+        'sortOrder',
+        'a1',
+      );
+      optimisticDataPersistence.save(
+        'ShoppingListItem',
+        '2',
+        'sortOrder',
+        'a2',
+      );
       optimisticDataPersistence.save('PantryItem', '3', 'quantity', 5);
 
-      jest.advanceTimersByTime(100);
+      await Promise.resolve();
 
       // Only one set call for the data key
       expect(dataKeySetCount).toBe(1);
@@ -80,26 +105,46 @@ describe('OptimisticDataPersistence', () => {
       storage.set = originalSet as any;
     });
 
-    it('merges with existing data in storage', () => {
+    it('merges with existing data in storage', async () => {
       seedData([
-        { entityType: 'ShoppingListItem', entityId: 'old', field: 'field', value: 'existing' },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: 'old',
+          field: 'field',
+          value: 'existing',
+        },
       ]);
 
-      optimisticDataPersistence.save('ShoppingListItem', 'new', 'sortOrder', 'a1');
-      jest.advanceTimersByTime(100);
+      optimisticDataPersistence.save(
+        'ShoppingListItem',
+        'new',
+        'sortOrder',
+        'a1',
+      );
+      await Promise.resolve();
 
       const stored = JSON.parse(storage.getString(DATA_KEY)!);
       expect(stored['ShoppingListItem:old:field']).toBeDefined();
       expect(stored['ShoppingListItem:new:sortOrder']).toBeDefined();
     });
 
-    it('overwrites existing field for same entity', () => {
+    it('overwrites existing field for same entity', async () => {
       seedData([
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'sortOrder', value: 'a1' },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'sortOrder',
+          value: 'a1',
+        },
       ]);
 
-      optimisticDataPersistence.save('ShoppingListItem', '1', 'sortOrder', 'b2');
-      jest.advanceTimersByTime(100);
+      optimisticDataPersistence.save(
+        'ShoppingListItem',
+        '1',
+        'sortOrder',
+        'b2',
+      );
+      await Promise.resolve();
 
       const stored = JSON.parse(storage.getString(DATA_KEY)!);
       expect(stored['ShoppingListItem:1:sortOrder'].value).toBe('b2');
@@ -114,9 +159,24 @@ describe('OptimisticDataPersistence', () => {
 
     it('returns field updates for the specific entity', () => {
       seedData([
-        { entityType: 'ShoppingListItem', entityId: '123', field: 'sortOrder', value: 'a5' },
-        { entityType: 'ShoppingListItem', entityId: '123', field: 'quantity', value: 2 },
-        { entityType: 'ShoppingListItem', entityId: '456', field: 'sortOrder', value: 'b1' },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '123',
+          field: 'sortOrder',
+          value: 'a5',
+        },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '123',
+          field: 'quantity',
+          value: 2,
+        },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '456',
+          field: 'sortOrder',
+          value: 'b1',
+        },
       ]);
 
       const result = optimisticDataPersistence.get('ShoppingListItem', '123');
@@ -125,7 +185,12 @@ describe('OptimisticDataPersistence', () => {
 
     it('does not return updates for other entity types', () => {
       seedData([
-        { entityType: 'PantryItem', entityId: '123', field: 'quantity', value: 10 },
+        {
+          entityType: 'PantryItem',
+          entityId: '123',
+          field: 'quantity',
+          value: 10,
+        },
       ]);
 
       const result = optimisticDataPersistence.get('ShoppingListItem', '123');
@@ -135,19 +200,41 @@ describe('OptimisticDataPersistence', () => {
 
   describe('getAllForType', () => {
     it('returns empty map when no data exists', () => {
-      const result = optimisticDataPersistence.getAllForType('ShoppingListItem');
+      const result =
+        optimisticDataPersistence.getAllForType('ShoppingListItem');
       expect(result.size).toBe(0);
     });
 
     it('groups updates by entity ID', () => {
       seedData([
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'sortOrder', value: 'a1' },
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'quantity', value: 3 },
-        { entityType: 'ShoppingListItem', entityId: '2', field: 'sortOrder', value: 'b1' },
-        { entityType: 'PantryItem', entityId: '3', field: 'quantity', value: 5 },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'sortOrder',
+          value: 'a1',
+        },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'quantity',
+          value: 3,
+        },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '2',
+          field: 'sortOrder',
+          value: 'b1',
+        },
+        {
+          entityType: 'PantryItem',
+          entityId: '3',
+          field: 'quantity',
+          value: 5,
+        },
       ]);
 
-      const result = optimisticDataPersistence.getAllForType('ShoppingListItem');
+      const result =
+        optimisticDataPersistence.getAllForType('ShoppingListItem');
       expect(result.size).toBe(2);
       expect(result.get('1')).toEqual({ sortOrder: 'a1', quantity: 3 });
       expect(result.get('2')).toEqual({ sortOrder: 'b1' });
@@ -155,10 +242,16 @@ describe('OptimisticDataPersistence', () => {
 
     it('does not include other entity types', () => {
       seedData([
-        { entityType: 'PantryItem', entityId: '1', field: 'quantity', value: 5 },
+        {
+          entityType: 'PantryItem',
+          entityId: '1',
+          field: 'quantity',
+          value: 5,
+        },
       ]);
 
-      const result = optimisticDataPersistence.getAllForType('ShoppingListItem');
+      const result =
+        optimisticDataPersistence.getAllForType('ShoppingListItem');
       expect(result.size).toBe(0);
     });
   });
@@ -166,8 +259,18 @@ describe('OptimisticDataPersistence', () => {
   describe('clear (single field)', () => {
     it('removes a specific field from storage', () => {
       seedData([
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'sortOrder', value: 'a1' },
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'quantity', value: 2 },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'sortOrder',
+          value: 'a1',
+        },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'quantity',
+          value: 2,
+        },
       ]);
 
       optimisticDataPersistence.clear('ShoppingListItem', '1', 'sortOrder');
@@ -179,7 +282,12 @@ describe('OptimisticDataPersistence', () => {
 
     it('removes entire storage key when last field is cleared', () => {
       seedData([
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'sortOrder', value: 'a1' },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'sortOrder',
+          value: 'a1',
+        },
       ]);
 
       optimisticDataPersistence.clear('ShoppingListItem', '1', 'sortOrder');
@@ -189,16 +297,35 @@ describe('OptimisticDataPersistence', () => {
 
     it('is a no-op when key does not exist', () => {
       // Should not throw
-      optimisticDataPersistence.clear('ShoppingListItem', 'nonexistent', 'field');
+      optimisticDataPersistence.clear(
+        'ShoppingListItem',
+        'nonexistent',
+        'field',
+      );
     });
   });
 
   describe('clearEntity', () => {
     it('removes all fields for a specific entity', () => {
       seedData([
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'sortOrder', value: 'a1' },
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'quantity', value: 2 },
-        { entityType: 'ShoppingListItem', entityId: '2', field: 'sortOrder', value: 'b1' },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'sortOrder',
+          value: 'a1',
+        },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'quantity',
+          value: 2,
+        },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '2',
+          field: 'sortOrder',
+          value: 'b1',
+        },
       ]);
 
       optimisticDataPersistence.clearEntity('ShoppingListItem', '1');
@@ -210,7 +337,12 @@ describe('OptimisticDataPersistence', () => {
 
     it('removes storage key when all entities are cleared', () => {
       seedData([
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'sortOrder', value: 'a1' },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'sortOrder',
+          value: 'a1',
+        },
       ]);
 
       optimisticDataPersistence.clearEntity('ShoppingListItem', '1');
@@ -222,8 +354,18 @@ describe('OptimisticDataPersistence', () => {
   describe('clearType', () => {
     it('removes all fields for a specific entity type', () => {
       seedData([
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'sortOrder', value: 'a1' },
-        { entityType: 'PantryItem', entityId: '2', field: 'quantity', value: 5 },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'sortOrder',
+          value: 'a1',
+        },
+        {
+          entityType: 'PantryItem',
+          entityId: '2',
+          field: 'quantity',
+          value: 5,
+        },
       ]);
 
       optimisticDataPersistence.clearType('ShoppingListItem');
@@ -235,7 +377,12 @@ describe('OptimisticDataPersistence', () => {
 
     it('removes storage key when all types are cleared', () => {
       seedData([
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'sortOrder', value: 'a1' },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'sortOrder',
+          value: 'a1',
+        },
       ]);
 
       optimisticDataPersistence.clearType('ShoppingListItem');
@@ -247,7 +394,12 @@ describe('OptimisticDataPersistence', () => {
   describe('clearAll', () => {
     it('removes the entire optimistic data key from storage', () => {
       seedData([
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'sortOrder', value: 'a1' },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'sortOrder',
+          value: 'a1',
+        },
       ]);
 
       optimisticDataPersistence.clearAll();
@@ -269,8 +421,18 @@ describe('OptimisticDataPersistence', () => {
 
     it('returns correct stats for stored data', () => {
       seedData([
-        { entityType: 'ShoppingListItem', entityId: '1', field: 'sortOrder', value: 'a1' },
-        { entityType: 'PantryItem', entityId: '2', field: 'quantity', value: 5 },
+        {
+          entityType: 'ShoppingListItem',
+          entityId: '1',
+          field: 'sortOrder',
+          value: 'a1',
+        },
+        {
+          entityType: 'PantryItem',
+          entityId: '2',
+          field: 'quantity',
+          value: 5,
+        },
       ]);
 
       const stats = optimisticDataPersistence.getStats();
@@ -285,9 +447,7 @@ describe('OptimisticDataPersistence', () => {
 
   describe('getCacheStats', () => {
     it('tracks cache hits and misses', () => {
-      seedData([
-        { entityType: 'A', entityId: '1', field: 'f', value: 'v' },
-      ]);
+      seedData([{ entityType: 'A', entityId: '1', field: 'f', value: 'v' }]);
 
       // After seedData, the cache is populated.
       // Each subsequent get() call hits the cache.

@@ -10,7 +10,7 @@ import { ProfilePictureUploadScreen } from '#screens/onBoarding/ProfilePictureUp
 import { InviteMemberScreen } from '#screens/onBoarding/InviteMemberScreen';
 import { OnboardingCompleteScreen } from '#screens/onBoarding/OnboardingCompleteScreen';
 import { BiometricSetupScreen } from '#screens/onBoarding/BiometricSetupScreen';
-import { ImageCropScreen } from '#screens/profile/ImageCropScreen';
+import { ImageCropScreen } from '#features/profile/screens/ImageCropScreen';
 
 export const OnboardingStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({

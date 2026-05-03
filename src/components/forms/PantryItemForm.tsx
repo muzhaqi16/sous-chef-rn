@@ -24,14 +24,14 @@ import {
   useGetPantryQuery,
   ItemSuggestion,
 } from '#generated';
-import { useCreatePantryItem } from '#hooks/pantry/mutations/useCreatePantryItem';
-import { useUpdatePantryItem } from '#hooks/pantry/mutations/useUpdatePantryItem';
-import { useUpdatePantryItemQuantity } from '#hooks/pantry/mutations/useUpdatePantryItemQuantity';
-import { useResolveUnit } from '#hooks/pantry/mutations/useResolveUnit';
+import { useCreatePantryItem } from '#features/pantry/hooks/mutations/useCreatePantryItem';
+import { useUpdatePantryItem } from '#features/pantry/hooks/mutations/useUpdatePantryItem';
+import { useUpdatePantryItemQuantity } from '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity';
+import { useResolveUnit } from '#features/pantry/hooks/mutations/useResolveUnit';
 import {
   emptyUnitSelection,
   type UnitSelection,
-} from '#hooks/pantry/mutations/types';
+} from '#features/pantry/hooks/mutations/types';
 import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
 import { normalizePantry } from '#/utils/connectionUtils';
 import {

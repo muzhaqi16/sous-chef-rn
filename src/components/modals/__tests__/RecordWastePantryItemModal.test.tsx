@@ -14,13 +14,25 @@ jest.mock('#/utils/iconUtils', () => ({
 jest.mock('#components/molecules/FractionInput', () => ({
   FractionInput: (props: any) => {
     const { TextInput } = require('react-native');
-    return <TextInput testID="fraction-input" value={props.value} onChangeText={props.onChangeText} />;
+    return (
+      <TextInput
+        testID="fraction-input"
+        value={props.value}
+        onChangeText={props.onChangeText}
+      />
+    );
   },
 }));
 jest.mock('#components/molecules/FormInput', () => ({
   FormInput: (props: any) => {
     const { TextInput } = require('react-native');
-    return <TextInput testID="form-input" value={props.value} onChangeText={props.onChangeText} />;
+    return (
+      <TextInput
+        testID="form-input"
+        value={props.value}
+        onChangeText={props.onChangeText}
+      />
+    );
   },
 }));
 jest.mock('#components/molecules/FormCheckbox', () => ({
@@ -39,7 +51,14 @@ jest.mock('../PantryActionModal', () => ({
       activeUnitSymbol: 'oz',
       activeUnitId: 'unit-1',
       isConvertedUnit: false,
-      selectedUnitInfo: { unitId: 'unit-1', unitSymbol: 'oz', unitName: 'Ounces', unitType: 'WEIGHT', isTrackingUnit: true, conversionConfidence: null },
+      selectedUnitInfo: {
+        unitId: 'unit-1',
+        unitSymbol: 'oz',
+        unitName: 'Ounces',
+        unitType: 'WEIGHT',
+        isTrackingUnit: true,
+        conversionConfidence: null,
+      },
       setSelectedUnitInfo: jest.fn(),
       notes: '',
       setNotes: jest.fn(),
@@ -54,7 +73,7 @@ jest.mock('../PantryActionModal', () => ({
     );
   },
 }));
-jest.mock('#hooks/pantry/useConversionPreview', () => ({
+jest.mock('#features/pantry/hooks/useConversionPreview', () => ({
   useConversionPreview: () => ({
     previewText: null,
     availableInSelectedUnit: null,

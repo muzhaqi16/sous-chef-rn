@@ -1,5 +1,9 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { useSettings, useShowTutorials, useShowNavigationLabels } from '../useSettings';
+import {
+  useSettings,
+  useShowTutorials,
+  useShowNavigationLabels,
+} from '../useSettings';
 
 // Break circular dependency chain
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -8,7 +12,7 @@ jest.mock('../../../apollo/links/refreshToken');
 const mockUpdateAppSetting = jest.fn().mockResolvedValue(true);
 const mockResetServerDefaults = jest.fn().mockResolvedValue(true);
 
-jest.mock('#hooks/profile/useAppSettings', () => ({
+jest.mock('#features/profile/hooks/useAppSettings', () => ({
   useAppSettings: () => ({
     settings: {
       showTutorials: true,

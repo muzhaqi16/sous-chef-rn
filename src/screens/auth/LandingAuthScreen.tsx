@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, Text, Linking } from 'react-native';
+import { View, Image, Linking } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { CommonActions } from '@react-navigation/native';
@@ -8,6 +8,8 @@ import { Button } from '#components/base/Button';
 import { Link } from '#components/atoms/Link';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { getWebAppUrl } from '#utils/environment';
+import { appConfig } from '#/config/appConfig';
+import { Text } from '#components/atoms/Text';
 
 export function LandingAuthScreen() {
   const { navigation } = useSafeNavigation();
@@ -17,7 +19,7 @@ export function LandingAuthScreen() {
       {/* 1. Hero image flex-zone */}
       <View style={styles.heroContainer}>
         <Image
-          source={require('../../assets/images/logo.png')}
+          source={appConfig.assets.logo}
           style={styles.hero}
           resizeMode="contain"
         />
@@ -25,11 +27,19 @@ export function LandingAuthScreen() {
 
       {/* 2. Content flex-zone */}
       <View style={styles.content}>
-        <Text style={styles.title}>End Waste, Save Time & Money</Text>
+        <Text size="lg" weight="bold" align="left">
+          End Waste, Save Time & Money
+        </Text>
 
         <View style={styles.divider} />
 
-        <Text style={styles.subtitle}>
+        <Text
+          size="md"
+          weight="medium"
+          tone="secondary"
+          align="left"
+          style={styles.subtitle}
+        >
           Know what you have, plan what's next, and shop smarter every time.
         </Text>
 
@@ -61,7 +71,12 @@ export function LandingAuthScreen() {
             );
           }}
         >
-          <Text style={styles.footerText}>
+          <Text
+            size="sm"
+            tone="secondary"
+            align="center"
+            style={styles.footerText}
+          >
             By continuing, you agree to our{'\n'}
             <Link variant="subtle">Terms & Conditions</Link> and{' '}
             <Link variant="subtle">Privacy Policy</Link>.
@@ -87,13 +102,6 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.xl,
   },
 
-  title: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-    textAlign: 'left',
-  },
-
   divider: {
     width: 40,
     height: 3,
@@ -107,11 +115,7 @@ const styles = StyleSheet.create(theme => ({
     textTransform: 'uppercase',
   },
   subtitle: {
-    fontSize: theme.fonts.size.md,
     lineHeight: theme.spacing.lg,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-    textAlign: 'left',
     width: '100%',
   },
 
@@ -124,10 +128,7 @@ const styles = StyleSheet.create(theme => ({
   },
 
   footerText: {
-    fontSize: theme.fonts.size.sm,
     lineHeight: theme.fonts.size.md * 1.5,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
     marginTop: theme.spacing.lg,
   },
   pressed: {

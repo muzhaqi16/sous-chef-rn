@@ -84,7 +84,11 @@ jest.mock('#components/atoms/FormattedItemSubtitle', () => {
   const RN = require('react-native');
   return {
     FormattedItemSubtitle: ({ quantity, unitSymbol }: any) =>
-      require('react').createElement(RN.Text, null, `${quantity} ${unitSymbol || ''}`),
+      require('react').createElement(
+        RN.Text,
+        null,
+        `${quantity} ${unitSymbol || ''}`,
+      ),
   };
 });
 
@@ -100,7 +104,7 @@ jest.mock('#/styles/commonStyles', () => ({
   },
 }));
 
-jest.mock('#hooks/pantry/usePantryItemTransformation', () => ({
+jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
   formatNetWeightDisplay: (weight: any, unit: any) =>
     weight != null ? `${weight} ${unit?.symbol || ''}` : '',
 }));
@@ -123,7 +127,7 @@ const makePantryItem = (overrides?: Partial<PantryItemFragment>) =>
     netWeightUnit: null,
     lastUsedAt: null,
     ...overrides,
-  }) as unknown as PantryItemFragment;
+  } as unknown as PantryItemFragment);
 
 describe('AdjustQuantityModal', () => {
   const defaultProps = {

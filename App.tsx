@@ -26,13 +26,14 @@ import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#hooks/useNetworkStatus';
 import { useTheme } from '#hooks/useTheme';
+import { useAppearance } from '#hooks/useAppearance';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
 import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { toastService } from '#/services/toastService';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { NotificationProvider } from '#/components/notifications/NotificationProvider';
+import { NotificationProvider } from '#features/notifications/components/NotificationProvider';
 import { AlertProvider } from '#/components/providers/AlertProvider';
 import { DataProvider } from '#/components/providers/DataProvider';
 import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
@@ -127,6 +128,9 @@ const App = () => {
 
   // Sync user theme preference -> UnistylesRuntime adaptive themes
   useTheme();
+
+  // Apply user appearance overrides (brand color, density, font scale, high contrast)
+  useAppearance();
 
   // Initialize network monitoring
   useNetworkStatus();

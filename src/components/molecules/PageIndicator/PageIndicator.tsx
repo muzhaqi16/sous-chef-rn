@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 export interface PageIndicatorItem {
   label: string;
@@ -56,13 +57,9 @@ export const PageIndicator: React.FC<PageIndicatorProps> = ({
           >
             <View style={[styles.dot, { backgroundColor: dotColor }]} />
             <Text
-              style={[
-                styles.label,
-                {
-                  color: labelColor,
-                  fontWeight: selected ? '600' : '400',
-                },
-              ]}
+              size="sm"
+              weight={selected ? 'semibold' : 'regular'}
+              style={{ color: labelColor }}
             >
               {label}
             </Text>
@@ -91,9 +88,6 @@ const styles = StyleSheet.create(theme => ({
     width: 8,
     height: 8,
     borderRadius: theme.radii.full,
-  },
-  label: {
-    fontSize: theme.fonts.size.sm,
   },
   pressed: {
     opacity: theme.opacity.pressed,

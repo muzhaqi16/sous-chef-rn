@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
@@ -11,6 +11,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { SLIDE_PRESETS } from '#constants/animations';
+import { Text } from '#components/atoms/Text';
 
 export interface SuggestionListItemProps {
   imageUrl?: string | null;
@@ -144,11 +145,16 @@ export const SuggestionListItem = ({
           </View>
         )}
         <View style={styles.info}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text size="base" weight="medium" numberOfLines={1}>
             {title}
           </Text>
           {!!subtitle && (
-            <Text style={styles.subtitle} numberOfLines={1}>
+            <Text
+              size="sm"
+              tone="secondary"
+              style={styles.subtitle}
+              numberOfLines={1}
+            >
               {subtitle}
             </Text>
           )}
@@ -209,14 +215,7 @@ const styles = StyleSheet.create(theme => ({
   info: {
     flex: 1,
   },
-  title: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
   subtitle: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: 2,
   },
   quickAddButton: {

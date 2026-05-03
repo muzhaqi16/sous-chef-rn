@@ -2,7 +2,11 @@ module.exports = {
   root: true,
   extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
   plugins: ['no-barrel-files', 'react-compiler'],
-  ignorePatterns: ['e2e/**/*', 'src/graphql/generated/**/*'],
+  ignorePatterns: [
+    'e2e/**/*',
+    'src/graphql/generated/**/*',
+    '**/*.generated.ts',
+  ],
   env: {
     jest: true,
   },
