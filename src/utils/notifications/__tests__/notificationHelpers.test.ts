@@ -1,7 +1,5 @@
-import { NotificationType } from '#generated';
-import {
-  getNotificationIcon,
-} from '../notificationHelpers';
+import { NotificationType } from '#/graphql/generated/schemaTypes';
+import { getNotificationIcon } from '../notificationHelpers';
 
 describe('notificationHelpers', () => {
   describe('getNotificationIcon', () => {
@@ -20,8 +18,9 @@ describe('notificationHelpers', () => {
     });
 
     it('returns notifications icon for unknown type', () => {
-      expect(getNotificationIcon(NotificationType.RecipeCooked)).toBe('notifications');
+      expect(getNotificationIcon(NotificationType.RecipeCooked)).toBe(
+        'notifications',
+      );
     });
   });
-
 });

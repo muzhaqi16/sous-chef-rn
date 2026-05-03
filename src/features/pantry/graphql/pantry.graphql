@@ -755,7 +755,7 @@ subscription ExpirationNotificationChanged($pantryId: ID!) {
   expirationNotificationChanged(pantryId: $pantryId) {
     changeType
     notification {
-      ...ExpirationNotificationFragment
+      ...usePantrySubscriptions_expirationNotification
     }
     pantryId
     timestamp

@@ -3,7 +3,7 @@ import { View, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { CartesianChart, Line, Area } from 'victory-native';
 import { matchFont, Circle } from '@shopify/react-native-skia';
-import type { TimeSeriesDataPoint } from '#generated';
+import { type TimeSeriesDataPoint } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 
 const fontFamily = Platform.select({ ios: 'Helvetica', default: 'sans-serif' });

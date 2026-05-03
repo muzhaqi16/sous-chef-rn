@@ -8,12 +8,15 @@ const mockHandleApolloError = jest.fn(() => ({ message: 'Update error' }));
 const mockReadFragment = jest.fn();
 const mockIdentify = jest.fn((obj: any) => `${obj.__typename}:${obj.id}`);
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useUpdateShoppingListItemMutation: () => [mockUpdateItemMutation],
-}));
-
 jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'UpdateShoppingListItem') {
+      return [mockUpdateItemMutation, { loading: false }];
+    }
+    return [jest.fn(), {}];
+  }),
   useApolloClient: () => ({
     cache: {
       readFragment: mockReadFragment,
@@ -26,26 +29,6 @@ jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
     handleApolloError: mockHandleApolloError,
   }),
-}));
-
-jest.mock('#/apollo/utils/optimisticTypes', () => ({
-  buildOptimisticMutationResponse: jest.fn(
-    (
-      _field: string,
-      _payloadType: string,
-      _entityField: string,
-      entity: any,
-    ) => ({
-      __typename: 'Mutation',
-      updateShoppingListItem: {
-        __typename: 'ShoppingListItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        shoppingListItem: entity,
-      },
-    }),
-  ),
 }));
 
 jest.mock('#/utils/errors/versionConflict', () => ({
@@ -209,10 +192,6 @@ describe('useUpdateShoppingItem', () => {
   });
 
   it('uses existing item values when updates do not specify them', async () => {
-    const {
-      buildOptimisticMutationResponse,
-    } = require('#/apollo/utils/optimisticTypes');
-
     mockUpdateItemMutation.mockResolvedValue({
       data: {
         updateShoppingListItem: { success: true },
@@ -227,16 +206,20 @@ describe('useUpdateShoppingItem', () => {
       await result.current.updateItem('item-1', { quantity: 5 });
     });
 
-    // buildOptimisticMutationResponse should receive item fields with updated quantity
-    expect(buildOptimisticMutationResponse).toHaveBeenCalledWith(
-      'updateShoppingListItem',
-      'ShoppingListItemPayload',
-      'shoppingListItem',
+    // optimisticResponse should reflect the updated quantity while preserving
+    // unchanged fields from the existing cached item
+    expect(mockUpdateItemMutation).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: 'item-1',
-        itemName: 'Milk', // unchanged
-        quantity: 5, // updated
-        category: 'Dairy', // unchanged
+        optimisticResponse: expect.objectContaining({
+          updateShoppingListItem: expect.objectContaining({
+            shoppingListItem: expect.objectContaining({
+              id: 'item-1',
+              itemName: 'Milk', // unchanged
+              quantity: 5, // updated
+              category: 'Dairy', // unchanged
+            }),
+          }),
+        }),
       }),
     );
   });

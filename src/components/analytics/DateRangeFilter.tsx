@@ -2,7 +2,7 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { DateRange } from '#generated';
+import { DateRange } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 
 interface DateRangeOption {

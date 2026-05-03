@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { alertService } from '#/services/alertService';
-import {
-  useUpdateShoppingListItemQuantityMutation,
-  ShoppingListItemDisplayFragment,
-} from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -95,8 +94,7 @@ export function useQuantityEditModal(
   const [isLoading, setIsLoading] = useState(false);
 
   // Update mutation
-  const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
-    errorPolicy: 'all',
+  const [updateQuantity] = useMutation(UpdateShoppingListItemQuantityDocument, {
     onError: error => {
       alertService.alert('Error', error.message || 'Failed to update item');
     },

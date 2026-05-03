@@ -27,17 +27,20 @@ jest.mock('#components/molecules/FractionInput', () => {
   };
 });
 
-jest.mock('#components/molecules/AutocompleteField/UnitAutocompleteField', () => {
-  const { View, Text } = require('react-native');
-  return {
-    UnitAutocompleteField: ({ label, value, testID }: any) => (
-      <View testID={testID || 'unit-autocomplete'}>
-        <Text>{label}</Text>
-        {value ? <Text>{value}</Text> : null}
-      </View>
-    ),
-  };
-});
+jest.mock(
+  '#components/molecules/AutocompleteField/UnitAutocompleteField',
+  () => {
+    const { View, Text } = require('react-native');
+    return {
+      UnitAutocompleteField: ({ label, value, testID }: any) => (
+        <View testID={testID || 'unit-autocomplete'}>
+          <Text>{label}</Text>
+          {value ? <Text>{value}</Text> : null}
+        </View>
+      ),
+    };
+  },
+);
 
 jest.mock('#components/molecules/FieldRow', () => {
   const { View } = require('react-native');
@@ -47,7 +50,10 @@ jest.mock('#components/molecules/FieldRow', () => {
 });
 
 function Wrapper(overrides: any) {
-  const { control, formState: { errors } } = useForm({
+  const {
+    control,
+    formState: { errors },
+  } = useForm({
     defaultValues: {
       quantityInput: '1',
       unit: '',
@@ -104,13 +110,7 @@ describe('QuantitySection', () => {
   });
 
   it('passes testID props through', () => {
-    render(
-      <Wrapper
-        mode="add"
-        testID="qty-input"
-        unitTestID="unit-picker"
-      />,
-    );
+    render(<Wrapper mode="add" testID="qty-input" unitTestID="unit-picker" />);
     expect(screen.getByTestId('qty-input')).toBeTruthy();
     expect(screen.getByTestId('unit-picker')).toBeTruthy();
   });

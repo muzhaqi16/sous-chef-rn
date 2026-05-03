@@ -1,4 +1,7 @@
-import { MembershipRole, CollaboratorStatus } from '#generated';
+import {
+  MembershipRole,
+  CollaboratorStatus,
+} from '#/graphql/generated/schemaTypes';
 import {
   getShoppingListPermissions,
   isShoppingListOwner,
@@ -74,17 +77,25 @@ describe('shoppingListPermissions', () => {
     it('returns guest permissions for GUEST role', () => {
       const list = { homeId: 'h1' };
       const membership = { role: MembershipRole.Guest };
-      expect(getShoppingListPermissions(list, 'u1', membership)).toEqual(GUEST_PERMS);
+      expect(getShoppingListPermissions(list, 'u1', membership)).toEqual(
+        GUEST_PERMS,
+      );
     });
 
-    it.each([MembershipRole.Owner, MembershipRole.Admin, MembershipRole.Member])(
-      'uses membership permission fields for %s role',
-      (role) => {
-        const list = { homeId: 'h1' };
-        const membership = { role, canAddItems: true, canRemoveItems: true, canEditPantry: true };
-        expect(getShoppingListPermissions(list, 'u1', membership)).toEqual(FULL);
-      },
-    );
+    it.each([
+      MembershipRole.Owner,
+      MembershipRole.Admin,
+      MembershipRole.Member,
+    ])('uses membership permission fields for %s role', role => {
+      const list = { homeId: 'h1' };
+      const membership = {
+        role,
+        canAddItems: true,
+        canRemoveItems: true,
+        canEditPantry: true,
+      };
+      expect(getShoppingListPermissions(list, 'u1', membership)).toEqual(FULL);
+    });
 
     it('defaults undefined membership fields to true', () => {
       const list = { homeId: 'h1' };
@@ -137,7 +148,10 @@ describe('shoppingListPermissions', () => {
     });
 
     it('returns no permissions when no collaborator found', () => {
-      const list = { homeId: null, collaboratorsConnection: makeCollaborator('other') };
+      const list = {
+        homeId: null,
+        collaboratorsConnection: makeCollaborator('other'),
+      };
       expect(getShoppingListPermissions(list, 'u1')).toEqual(NONE);
     });
 
@@ -152,7 +166,10 @@ describe('shoppingListPermissions', () => {
     });
 
     it('returns no permissions when userId is undefined', () => {
-      const list = { homeId: null, collaboratorsConnection: makeCollaborator('u1') };
+      const list = {
+        homeId: null,
+        collaboratorsConnection: makeCollaborator('u1'),
+      };
       expect(getShoppingListPermissions(list)).toEqual(NONE);
     });
 
@@ -162,7 +179,10 @@ describe('shoppingListPermissions', () => {
     });
 
     it('handles null node in edges', () => {
-      const list = { homeId: null, collaboratorsConnection: { edges: [null, { node: null }] } };
+      const list = {
+        homeId: null,
+        collaboratorsConnection: { edges: [null, { node: null }] },
+      };
       expect(getShoppingListPermissions(list, 'u1')).toEqual(NONE);
     });
 
@@ -170,17 +190,19 @@ describe('shoppingListPermissions', () => {
       const list = {
         homeId: null,
         collaboratorsConnection: {
-          edges: [{
-            node: {
-              collaboratorId: null,
-              collaborator: { id: 'u1' },
-              status: CollaboratorStatus.Active,
-              canAddItems: true,
-              canRemoveItems: true,
-              canEditItems: true,
-              canMarkPurchased: true,
+          edges: [
+            {
+              node: {
+                collaboratorId: null,
+                collaborator: { id: 'u1' },
+                status: CollaboratorStatus.Active,
+                canAddItems: true,
+                canRemoveItems: true,
+                canEditItems: true,
+                canMarkPurchased: true,
+              },
             },
-          }],
+          ],
         },
       };
       expect(getShoppingListPermissions(list, 'u1')).toEqual(FULL);

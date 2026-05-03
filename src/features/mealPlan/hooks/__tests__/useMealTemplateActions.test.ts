@@ -9,24 +9,20 @@ const mockCreateTemplateMutation = jest.fn();
 const mockDeleteTemplateMutation = jest.fn();
 const mockDuplicateTemplateMutation = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreateMealPlanFromTemplateMutation: jest.fn(() => [
-    mockCreateFromTemplateMutation,
-    { loading: false },
-  ]),
-  useCreateTemplateFromMealPlanMutation: jest.fn(() => [
-    mockCreateTemplateMutation,
-    { loading: false },
-  ]),
-  useDeleteMealTemplateMutation: jest.fn(() => [
-    mockDeleteTemplateMutation,
-    { loading: false },
-  ]),
-  useDuplicateTemplateMutation: jest.fn(() => [
-    mockDuplicateTemplateMutation,
-    { loading: false },
-  ]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateMealPlanFromTemplate')
+      return [mockCreateFromTemplateMutation, { loading: false }];
+    if (opName === 'CreateTemplateFromMealPlan')
+      return [mockCreateTemplateMutation, { loading: false }];
+    if (opName === 'DeleteMealTemplate')
+      return [mockDeleteTemplateMutation, { loading: false }];
+    if (opName === 'DuplicateTemplate')
+      return [mockDuplicateTemplateMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/services/toastService', () => ({

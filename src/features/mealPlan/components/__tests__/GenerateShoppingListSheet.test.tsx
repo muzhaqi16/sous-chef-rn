@@ -77,18 +77,29 @@ jest.mock('#components/molecules/FormInput', () => ({
   },
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetShoppingListsLiteQuery: jest.fn(() => ({
-    data: {
-      shoppingLists: {
-        edges: [
-          { node: { id: 'sl-1', name: 'Weekly Groceries', totalItems: 10 } },
-          { node: { id: 'sl-2', name: 'Party Supplies', totalItems: 5 } },
-        ],
-      },
-    },
-  })),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetShoppingListsLite') {
+      return {
+        data: {
+          shoppingLists: {
+            edges: [
+              {
+                node: { id: 'sl-1', name: 'Weekly Groceries', totalItems: 10 },
+              },
+              { node: { id: 'sl-2', name: 'Party Supplies', totalItems: 5 } },
+            ],
+          },
+        },
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#/apollo/links/tokenScheduler');

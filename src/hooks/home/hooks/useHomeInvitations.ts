@@ -8,12 +8,13 @@
  */
 
 import { alertService } from '#/services/alertService';
+import { useLazyQuery, useMutation } from '@apollo/client/react';
 import {
-  useInviteToHomeMutation,
-  useJoinHomeByCodeMutation,
-  useGetHomeByJoinCodeLazyQuery,
-  MembershipRole,
-} from '#generated';
+  InviteToHomeDocument,
+  JoinHomeByCodeDocument,
+  GetHomeByJoinCodeDocument,
+} from '#operations/home/home.generated';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useErrorService } from '#/services/errorService';
 import { normalizeHome } from '#/utils/connectionUtils';
 import {
@@ -53,33 +54,35 @@ export function useHomeInvitations({
   const { handleApolloError } = useErrorService();
 
   // Invite user to home mutation
-  const [inviteUserMutation, { loading: inviting }] = useInviteToHomeMutation({
-    errorPolicy: 'all',
-    update: (cache, { data }, { variables }) => {
-      if (!data?.inviteToHome?.homeInvite || !variables) return;
+  const [inviteUserMutation, { loading: inviting }] = useMutation(
+    InviteToHomeDocument,
+    {
+      update: (cache, { data }, { variables }) => {
+        if (!data?.inviteToHome?.homeInvite || !variables) return;
 
-      executeCacheUpdate(() => {
-        addInviteToHomeCache(
-          cache,
-          variables.input.homeId,
-          data.inviteToHome!.homeInvite!,
-          { position: 'end' },
-        );
-      }, 'Cache update failed for inviteUser:');
-    },
+        executeCacheUpdate(() => {
+          addInviteToHomeCache(
+            cache,
+            variables.input.homeId,
+            data.inviteToHome!.homeInvite!,
+            { position: 'end' },
+          );
+        }, 'Cache update failed for inviteUser:');
+      },
 
-    onError: (error: any) => {
-      const { message } = handleApolloError(error, {
-        operation: 'Invite User',
-      });
-      alertService.alert('Error', message);
+      onError: (error: any) => {
+        const { message } = handleApolloError(error, {
+          operation: 'Invite User',
+        });
+        alertService.alert('Error', message);
+      },
     },
-  });
+  );
 
   // Join home by code mutation
-  const [joinHomeByCodeMutation, { loading: joiningByCode }] =
-    useJoinHomeByCodeMutation({
-      errorPolicy: 'all',
+  const [joinHomeByCodeMutation, { loading: joiningByCode }] = useMutation(
+    JoinHomeByCodeDocument,
+    {
       // Note: No optimistic response or manual cache update
       // The mutation returns only Membership data (not the full Home object)
       // We refetch GetHomesQuery to get the complete home with all fields
@@ -115,11 +118,12 @@ export function useHomeInvitations({
         });
         alertService.alert('Error', message);
       },
-    });
+    },
+  );
 
   // Preview home by join code query
   const [getHomeByJoinCode, { loading: loadingPreview, data: previewData }] =
-    useGetHomeByJoinCodeLazyQuery({
+    useLazyQuery(GetHomeByJoinCodeDocument, {
       fetchPolicy: 'network-only', // Always fetch fresh data (one-time operation)
     });
 
@@ -197,4 +201,4 @@ export function useHomeInvitations({
 }
 
 // MembershipRole is available from '#generated' directly
-// import { MembershipRole } from '#generated';
+// import { MembershipRole } from '#/graphql/generated/schemaTypes';

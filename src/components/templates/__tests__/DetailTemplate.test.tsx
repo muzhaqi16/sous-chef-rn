@@ -13,7 +13,11 @@ jest.mock('../../molecules/Header', () => {
         </Pressable>
         {title ? <RNText>{title}</RNText> : null}
         {rightActions?.map((action: any, i: number) => (
-          <Pressable key={i} onPress={action.onPress} testID={`header-action-${i}`}>
+          <Pressable
+            key={i}
+            onPress={action.onPress}
+            testID={`header-action-${i}`}
+          >
             <RNText>{action.icon || 'action'}</RNText>
           </Pressable>
         ))}
@@ -93,12 +97,7 @@ describe('DetailTemplate', () => {
 
   it('renders header actions', () => {
     const headerAction = { icon: 'edit' as any, onPress: jest.fn() };
-    render(
-      <DetailTemplate
-        {...defaultProps}
-        headerActions={[headerAction]}
-      />,
-    );
+    render(<DetailTemplate {...defaultProps} headerActions={[headerAction]} />);
     fireEvent.press(screen.getByTestId('header-action-0'));
     expect(headerAction.onPress).toHaveBeenCalledTimes(1);
   });

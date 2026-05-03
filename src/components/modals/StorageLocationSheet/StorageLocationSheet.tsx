@@ -23,7 +23,7 @@ interface StorageLocationData {
   isDefault?: boolean | null;
 }
 
-import { StorageLocation } from '#generated';
+import { StorageLocation } from '#/graphql/generated/schemaTypes';
 
 interface StorageLocationSheetProps {
   visible: boolean;

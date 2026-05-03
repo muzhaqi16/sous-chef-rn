@@ -4,13 +4,15 @@ import {
   useAnimatedStyle,
   withTiming,
   Easing,
-  cancelAnimation } from 'react-native-reanimated';
+  cancelAnimation,
+} from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useRecyclingState } from '@shopify/flash-list';
 import type {
   SlideDirection,
   UseSlideAnimationOptions,
-  UseSlideAnimationReturn } from './types';
+  UseSlideAnimationReturn,
+} from './types';
 
 /** Default easing: standard cubic bezier for smooth animations */
 const defaultEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
@@ -56,7 +58,8 @@ export function useSlideAnimation({
   withOpacity = false,
   opacityTarget = 0,
   allowedDirections = 'both',
-  disabled = false }: UseSlideAnimationOptions): UseSlideAnimationReturn {
+  disabled = false,
+}: UseSlideAnimationOptions): UseSlideAnimationReturn {
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
   const isAnimatingShared = useSharedValue(false);
@@ -87,7 +90,8 @@ export function useSlideAnimation({
 
   const animatedSlideStyle = useAnimatedStyle(() => {
     const style: { transform: { translateX: number }[]; opacity?: number } = {
-      transform: [{ translateX: translateX.get() }] };
+      transform: [{ translateX: translateX.get() }],
+    };
     if (withOpacity) {
       style.opacity = opacity.get();
     }
@@ -95,59 +99,66 @@ export function useSlideAnimation({
   });
 
   const triggerSlide = (direction: SlideDirection, onComplete?: () => void) => {
-      // Guard: disabled mode
-      if (disabled) {
-        if (onComplete) {
-          // Store callback and execute via RN-runtime wrapper
-          onCompleteRef.current = onComplete;
-          executeOnComplete();
-        }
-        return;
-      }
-
-      // Guard: direction constraints
-      if (allowedDirections === 'right' && direction === -1) return;
-      if (allowedDirections === 'left' && direction === 1) return;
-
-      // Guard: prevent double-tap / re-entry while animating
-      if (isAnimatingShared.get()) return;
-
-      isAnimatingShared.set(true);
-
-      // Store callback before animation starts
+    // Guard: disabled mode
+    if (disabled) {
       if (onComplete) {
+        // Store callback and execute via RN-runtime wrapper
         onCompleteRef.current = onComplete;
+        executeOnComplete();
       }
+      return;
+    }
 
-      const animationEasing = easing ?? defaultEasing;
-      const timingConfig = { duration, easing: animationEasing };
+    // Guard: direction constraints
+    if (allowedDirections === 'right' && direction === -1) return;
+    if (allowedDirections === 'left' && direction === 1) return;
 
-      // Animate opacity if enabled
-      if (withOpacity) {
-        opacity.set(withTiming(opacityTarget, timingConfig));
-      }
+    // Guard: prevent double-tap / re-entry while animating
+    if (isAnimatingShared.get()) return;
 
-      translateX.set(withTiming(
-        direction * slideDistance,
-        timingConfig,
-        finished => {
-          isAnimatingShared.set(false);
-          if (finished && onComplete) {
-            scheduleOnRN(executeOnComplete);
-          }
-        },
-      ));
-    };
+    isAnimatingShared.set(true);
+
+    // Store callback before animation starts
+    if (onComplete) {
+      onCompleteRef.current = onComplete;
+    }
+
+    const animationEasing = easing ?? defaultEasing;
+    const timingConfig = { duration, easing: animationEasing };
+
+    // Animate opacity if enabled
+    if (withOpacity) {
+      opacity.set(withTiming(opacityTarget, timingConfig));
+    }
+
+    translateX.set(
+      withTiming(direction * slideDistance, timingConfig, finished => {
+        isAnimatingShared.set(false);
+        if (finished && onComplete) {
+          scheduleOnRN(executeOnComplete);
+        }
+      }),
+    );
+  };
 
   const resetSlide = () => {
     cancelAnimation(translateX);
     cancelAnimation(opacity);
-    translateX.set(withTiming(0, { duration: duration / 2, easing: defaultEasing }));
+    translateX.set(
+      withTiming(0, { duration: duration / 2, easing: defaultEasing }),
+    );
     if (withOpacity) {
-      opacity.set(withTiming(1, { duration: duration / 2, easing: defaultEasing }));
+      opacity.set(
+        withTiming(1, { duration: duration / 2, easing: defaultEasing }),
+      );
     }
     isAnimatingShared.set(false);
   };
 
-  return { animatedSlideStyle, triggerSlide, resetSlide, isAnimating: isAnimatingShared };
+  return {
+    animatedSlideStyle,
+    triggerSlide,
+    resetSlide,
+    isAnimating: isAnimatingShared,
+  };
 }

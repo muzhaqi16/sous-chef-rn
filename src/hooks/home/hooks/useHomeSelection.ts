@@ -9,7 +9,11 @@
 
 import { useEffect, useRef } from 'react';
 import { alertService } from '#/services/alertService';
-import { useSetDefaultHomeMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import {
+  SetDefaultHomeDocument,
+  type SetDefaultHomeMutation,
+} from '#operations/home/userSettings.generated';
 import {
   useAppStore,
   useSelectedHomeId,
@@ -59,11 +63,9 @@ export function useHomeSelection({
   // Ref to track if initial home auto-selection has been attempted
   const hasInitializedDefaultHome = useRef(false);
 
-  const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
-    errorPolicy: 'all',
-
+  const [setDefaultHomeMutation] = useMutation(SetDefaultHomeDocument, {
     // Optimistic response for instant UI updates (especially offline)
-    optimisticResponse: variables => ({
+    optimisticResponse: (variables): SetDefaultHomeMutation => ({
       __typename: 'Mutation',
       setDefaultHome: {
         __typename: 'SetDefaultHomePayload',

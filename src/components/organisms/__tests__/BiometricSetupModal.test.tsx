@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react-native';
 import { BiometricSetupModal } from '../BiometricSetupModal';
 
 jest.mock('#/utils/iconUtils', () => ({
@@ -31,7 +36,9 @@ jest.mock('#/services/authService', () => ({
 }));
 
 // Get references to mock functions after the module mock is created
-const { authService: mockAuthService } = jest.requireMock('#/services/authService') as {
+const { authService: mockAuthService } = jest.requireMock(
+  '#/services/authService',
+) as {
   authService: {
     getBiometricInfo: jest.Mock;
     storeCredentials: jest.Mock;
@@ -52,7 +59,11 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
       return false;
     }
   },
-  executeWithLoadingState: async (fn: () => Promise<void>, setLoading: (v: boolean) => void, onError?: (e: unknown) => void) => {
+  executeWithLoadingState: async (
+    fn: () => Promise<void>,
+    setLoading: (v: boolean) => void,
+    onError?: (e: unknown) => void,
+  ) => {
     setLoading(true);
     try {
       await fn();
@@ -169,12 +180,7 @@ describe('BiometricSetupModal', () => {
   });
 
   it('shows password input when userPassword is not provided in onboarding mode', async () => {
-    render(
-      <BiometricSetupModal
-        {...defaultProps}
-        userPassword={undefined}
-      />,
-    );
+    render(<BiometricSetupModal {...defaultProps} userPassword={undefined} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('password-input')).toBeTruthy();

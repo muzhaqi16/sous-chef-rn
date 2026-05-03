@@ -47,41 +47,33 @@ jest.mock('#/services/recipeApi/SpoonacularService', () => ({
   },
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetRecipeQuery: jest.fn(() => ({
-    data: null,
-    loading: false,
-    error: undefined,
-  })),
-  useCreateShoppingListItemsFromRecipeMutation: jest.fn(() => [jest.fn()]),
-  useCreateShoppingListItemFromRecipeIngredientMutation: jest.fn(() => [
-    jest.fn(),
-  ]),
-  useAddItemToShoppingListMutation: jest.fn(() => [jest.fn()]),
-  useAddItemsToShoppingListMutation: jest.fn(() => [jest.fn()]),
-  useGetShoppingListsLiteQuery: jest.fn(() => ({
-    data: {
-      shoppingLists: {
-        edges: [
-          {
-            node: {
-              id: 'sl-1',
-              name: 'Weekly',
-              isDefault: true,
-              totalItems: 5,
-            },
-          },
-        ],
-      },
-    },
-    loading: false,
-  })),
-  useMyRecipesQuery: jest.fn(() => ({ data: null })),
-  useMarkRecipeAsCookedMutation: jest.fn(() => [jest.fn()]),
-  useUpdateFavoriteRecipeMutation: jest.fn(() => [jest.fn()]),
-  useUnfavoriteRecipeMutation: jest.fn(() => [jest.fn()]),
-  useCreateShoppingListMutation: jest.fn(() => [jest.fn()]),
+const queryResponses: Record<string, any> = {};
+const setQueryResponse = (opName: string, response: any) => {
+  queryResponses[opName] = response;
+};
+
+const mutationOverrides: Record<string, [jest.Mock, { loading: boolean }]> = {};
+const setMutationFor = (opName: string, fn: jest.Mock) => {
+  mutationOverrides[opName] = [fn, { loading: false }];
+};
+
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName && queryResponses[opName]) return queryResponses[opName];
+    return {
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+    };
+  }),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName && mutationOverrides[opName]) return mutationOverrides[opName];
+    return [jest.fn(), { loading: false }];
+  }),
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
@@ -137,9 +129,39 @@ jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#hooks/performance/useScreenTransition');
 
+const defaultShoppingListsResponse = {
+  data: {
+    shoppingLists: {
+      edges: [
+        {
+          node: {
+            id: 'sl-1',
+            name: 'Weekly',
+            isDefault: true,
+            totalItems: 5,
+          },
+        },
+      ],
+    },
+  },
+  loading: false,
+};
+
 describe('useRecipeDetail', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetRecipeInfo.mockReset();
+    mockGetRecipeInfo.mockResolvedValue({
+      id: 123,
+      title: 'Test Recipe',
+      image: 'https://example.com/recipe.jpg',
+      servings: 4,
+      readyInMinutes: 30,
+      extendedIngredients: [],
+    });
+    for (const k of Object.keys(queryResponses)) delete queryResponses[k];
+    for (const k of Object.keys(mutationOverrides)) delete mutationOverrides[k];
+    setQueryResponse('GetShoppingListsLite', defaultShoppingListsResponse);
   });
 
   it('returns expected API shape', () => {
@@ -227,8 +249,7 @@ describe('useRecipeDetail', () => {
     const { useRoute } = require('@react-navigation/native');
     useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-    const { useGetRecipeQuery } = require('#generated');
-    useGetRecipeQuery.mockReturnValue({
+    setQueryResponse('GetRecipe', {
       data: {
         recipe: {
           name: 'Backend Pasta',
@@ -261,7 +282,7 @@ describe('useRecipeDetail', () => {
     useRoute.mockReturnValue({
       params: { externalSource: 'SPOONACULAR', externalId: '123' },
     });
-    useGetRecipeQuery.mockReturnValue({
+    setQueryResponse('GetRecipe', {
       data: null,
       loading: false,
       error: undefined,
@@ -272,8 +293,7 @@ describe('useRecipeDetail', () => {
     const { useRoute } = require('@react-navigation/native');
     useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-    const { useGetRecipeQuery } = require('#generated');
-    useGetRecipeQuery.mockReturnValue({
+    setQueryResponse('GetRecipe', {
       data: {
         recipe: {
           name: 'Saved Recipe',
@@ -312,7 +332,7 @@ describe('useRecipeDetail', () => {
     useRoute.mockReturnValue({
       params: { externalSource: 'SPOONACULAR', externalId: '123' },
     });
-    useGetRecipeQuery.mockReturnValue({
+    setQueryResponse('GetRecipe', {
       data: null,
       loading: false,
       error: undefined,
@@ -346,8 +366,7 @@ describe('useRecipeDetail', () => {
 
   it('handleAddSingleIngredient shows error when no shopping lists', () => {
     const { toastService } = require('#/services/toastService');
-    const { useGetShoppingListsLiteQuery } = require('#generated');
-    useGetShoppingListsLiteQuery.mockReturnValue({
+    setQueryResponse('GetShoppingListsLite', {
       data: { shoppingLists: { edges: [] } },
       loading: false,
     });
@@ -363,7 +382,7 @@ describe('useRecipeDetail', () => {
     );
 
     // Cleanup
-    useGetShoppingListsLiteQuery.mockReturnValue({
+    setQueryResponse('GetShoppingListsLite', {
       data: {
         shoppingLists: {
           edges: [
@@ -540,8 +559,7 @@ describe('useRecipeDetail', () => {
 
   it('openListPicker shows info toast when shopping lists are loading', () => {
     const { toastService } = require('#/services/toastService');
-    const { useGetShoppingListsLiteQuery } = require('#generated');
-    useGetShoppingListsLiteQuery.mockReturnValue({
+    setQueryResponse('GetShoppingListsLite', {
       data: {
         shoppingLists: {
           edges: [
@@ -568,7 +586,7 @@ describe('useRecipeDetail', () => {
     expect(toastService.info).toHaveBeenCalledWith('Loading shopping lists...');
 
     // Cleanup
-    useGetShoppingListsLiteQuery.mockReturnValue({
+    setQueryResponse('GetShoppingListsLite', {
       data: {
         shoppingLists: {
           edges: [
@@ -589,7 +607,6 @@ describe('useRecipeDetail', () => {
 
   it('savedFolder comes from savedFolderLocal for external recipes', () => {
     const { normalizeRecipes } = require('#/utils/connectionUtils');
-    const { useMyRecipesQuery } = require('#generated');
 
     normalizeRecipes.mockReturnValue({
       recipes: [
@@ -600,7 +617,7 @@ describe('useRecipeDetail', () => {
         },
       ],
     });
-    useMyRecipesQuery.mockReturnValue({
+    setQueryResponse('MyRecipes', {
       data: { recipes: 'mockData' },
     });
 
@@ -610,15 +627,14 @@ describe('useRecipeDetail', () => {
 
     // Cleanup
     normalizeRecipes.mockReturnValue({ recipes: [] });
-    useMyRecipesQuery.mockReturnValue({ data: null });
+    setQueryResponse('GetRecipe', { data: null });
   });
 
   it('loading is true when backendLoading is true', () => {
     const { useRoute } = require('@react-navigation/native');
     useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-    const { useGetRecipeQuery } = require('#generated');
-    useGetRecipeQuery.mockReturnValue({
+    setQueryResponse('GetRecipe', {
       data: null,
       loading: true,
       error: undefined,
@@ -631,7 +647,7 @@ describe('useRecipeDetail', () => {
     useRoute.mockReturnValue({
       params: { externalSource: 'SPOONACULAR', externalId: '123' },
     });
-    useGetRecipeQuery.mockReturnValue({
+    setQueryResponse('GetRecipe', {
       data: null,
       loading: false,
       error: undefined,
@@ -812,7 +828,6 @@ describe('useRecipeDetail', () => {
   describe('syncSavedRecipeState', () => {
     it('sets recipeSaved to false and savedFolderLocal to null when recipe is not saved', () => {
       const { normalizeRecipes } = require('#/utils/connectionUtils');
-      const { useMyRecipesQuery } = require('#generated');
 
       // No matching recipe in saved list
       normalizeRecipes.mockReturnValue({
@@ -824,7 +839,7 @@ describe('useRecipeDetail', () => {
           },
         ],
       });
-      useMyRecipesQuery.mockReturnValue({ data: { recipes: 'mockData' } });
+      setQueryResponse('MyRecipes', { data: { recipes: 'mockData' } });
 
       const { result } = renderHook(() => useRecipeDetail());
 
@@ -833,12 +848,11 @@ describe('useRecipeDetail', () => {
 
       // Cleanup
       normalizeRecipes.mockReturnValue({ recipes: [] });
-      useMyRecipesQuery.mockReturnValue({ data: null });
+      setQueryResponse('GetRecipe', { data: null });
     });
 
     it('sets recipeSaved to true when saved recipe has null folder', () => {
       const { normalizeRecipes } = require('#/utils/connectionUtils');
-      const { useMyRecipesQuery } = require('#generated');
 
       normalizeRecipes.mockReturnValue({
         recipes: [
@@ -849,7 +863,7 @@ describe('useRecipeDetail', () => {
           },
         ],
       });
-      useMyRecipesQuery.mockReturnValue({ data: { recipes: 'mockData' } });
+      setQueryResponse('MyRecipes', { data: { recipes: 'mockData' } });
 
       const { result } = renderHook(() => useRecipeDetail());
 
@@ -858,17 +872,16 @@ describe('useRecipeDetail', () => {
 
       // Cleanup
       normalizeRecipes.mockReturnValue({ recipes: [] });
-      useMyRecipesQuery.mockReturnValue({ data: null });
+      setQueryResponse('GetRecipe', { data: null });
     });
 
     it('handles savedRecipe without savedDetails', () => {
       const { normalizeRecipes } = require('#/utils/connectionUtils');
-      const { useMyRecipesQuery } = require('#generated');
 
       normalizeRecipes.mockReturnValue({
         recipes: [{ externalSource: 'SPOONACULAR', externalId: '123' }],
       });
-      useMyRecipesQuery.mockReturnValue({ data: { recipes: 'mockData' } });
+      setQueryResponse('MyRecipes', { data: { recipes: 'mockData' } });
 
       const { result } = renderHook(() => useRecipeDetail());
 
@@ -877,7 +890,7 @@ describe('useRecipeDetail', () => {
 
       // Cleanup
       normalizeRecipes.mockReturnValue({ recipes: [] });
-      useMyRecipesQuery.mockReturnValue({ data: null });
+      setQueryResponse('GetRecipe', { data: null });
     });
   });
 
@@ -888,8 +901,7 @@ describe('useRecipeDetail', () => {
       useAppStore.mockReturnValue('non-existent-id');
 
       const mockAddItemMutation = jest.fn().mockResolvedValue({});
-      const { useAddItemToShoppingListMutation } = require('#generated');
-      useAddItemToShoppingListMutation.mockReturnValue([mockAddItemMutation]);
+      setMutationFor('AddItemToShoppingList', mockAddItemMutation);
 
       // Load an external recipe first
       const mockRecipe = {
@@ -931,16 +943,11 @@ describe('useRecipeDetail', () => {
 
       // Cleanup
       useAppStore.mockReturnValue(null);
-      useAddItemToShoppingListMutation.mockReturnValue([jest.fn()]);
     });
 
     it('falls back to first list when no default and no selected list', async () => {
-      const {
-        useGetShoppingListsLiteQuery,
-        useAddItemToShoppingListMutation,
-      } = require('#generated');
       const { toastService } = require('#/services/toastService');
-      useGetShoppingListsLiteQuery.mockReturnValue({
+      setQueryResponse('GetShoppingListsLite', {
         data: {
           shoppingLists: {
             edges: [
@@ -958,7 +965,7 @@ describe('useRecipeDetail', () => {
         loading: false,
       });
       const mockAddItemMutation = jest.fn().mockResolvedValue({});
-      useAddItemToShoppingListMutation.mockReturnValue([mockAddItemMutation]);
+      setMutationFor('AddItemToShoppingList', mockAddItemMutation);
 
       // Load external recipe
       const mockRecipe = {
@@ -999,7 +1006,7 @@ describe('useRecipeDetail', () => {
       expect(toastService.success).toHaveBeenCalledWith('Added to "Groceries"');
 
       // Cleanup
-      useGetShoppingListsLiteQuery.mockReturnValue({
+      setQueryResponse('GetShoppingListsLite', {
         data: {
           shoppingLists: {
             edges: [
@@ -1016,7 +1023,6 @@ describe('useRecipeDetail', () => {
         },
         loading: false,
       });
-      useAddItemToShoppingListMutation.mockReturnValue([jest.fn()]);
     });
   });
 
@@ -1187,11 +1193,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useCreateShoppingListItemFromRecipeIngredientMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -1211,9 +1213,10 @@ describe('useRecipeDetail', () => {
       });
 
       const mockAddIngredientMutation = jest.fn().mockResolvedValue({});
-      useCreateShoppingListItemFromRecipeIngredientMutation.mockReturnValue([
+      setMutationFor(
+        'CreateShoppingListItemFromRecipeIngredient',
         mockAddIngredientMutation,
-      ]);
+      );
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -1235,20 +1238,16 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useCreateShoppingListItemFromRecipeIngredientMutation.mockReturnValue([
-        jest.fn(),
-      ]);
     });
 
     it('adds external recipe ingredient via addItemToShoppingListMutation with all fields', async () => {
       const mockAddItemMutation = jest.fn().mockResolvedValue({});
-      const { useAddItemToShoppingListMutation } = require('#generated');
-      useAddItemToShoppingListMutation.mockReturnValue([mockAddItemMutation]);
+      setMutationFor('AddItemToShoppingList', mockAddItemMutation);
       const { toastService } = require('#/services/toastService');
 
       const mockRecipe = {
@@ -1292,13 +1291,11 @@ describe('useRecipeDetail', () => {
       expect(toastService.success).toHaveBeenCalledWith('Added to "Weekly"');
 
       // Cleanup
-      useAddItemToShoppingListMutation.mockReturnValue([jest.fn()]);
     });
 
     it('uses originalString fallback for item name and metric unit fallback', async () => {
       const mockAddItemMutation = jest.fn().mockResolvedValue({});
-      const { useAddItemToShoppingListMutation } = require('#generated');
-      useAddItemToShoppingListMutation.mockReturnValue([mockAddItemMutation]);
+      setMutationFor('AddItemToShoppingList', mockAddItemMutation);
 
       const mockRecipe = {
         id: 123,
@@ -1339,13 +1336,11 @@ describe('useRecipeDetail', () => {
       });
 
       // Cleanup
-      useAddItemToShoppingListMutation.mockReturnValue([jest.fn()]);
     });
 
     it('uses "Unknown ingredient" fallback when no name or originalString', async () => {
       const mockAddItemMutation = jest.fn().mockResolvedValue({});
-      const { useAddItemToShoppingListMutation } = require('#generated');
-      useAddItemToShoppingListMutation.mockReturnValue([mockAddItemMutation]);
+      setMutationFor('AddItemToShoppingList', mockAddItemMutation);
 
       const mockRecipe = {
         id: 123,
@@ -1381,15 +1376,13 @@ describe('useRecipeDetail', () => {
       });
 
       // Cleanup
-      useAddItemToShoppingListMutation.mockReturnValue([jest.fn()]);
     });
 
     it('handles mutation error in handleAddSingleIngredient', async () => {
       const mockAddItemMutation = jest
         .fn()
         .mockRejectedValue(new Error('mutation failed'));
-      const { useAddItemToShoppingListMutation } = require('#generated');
-      useAddItemToShoppingListMutation.mockReturnValue([mockAddItemMutation]);
+      setMutationFor('AddItemToShoppingList', mockAddItemMutation);
       const { toastService } = require('#/services/toastService');
 
       const mockRecipe = {
@@ -1418,7 +1411,6 @@ describe('useRecipeDetail', () => {
       );
 
       // Cleanup
-      useAddItemToShoppingListMutation.mockReturnValue([jest.fn()]);
     });
   });
 
@@ -1427,11 +1419,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useCreateShoppingListItemsFromRecipeMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -1462,9 +1450,7 @@ describe('useRecipeDetail', () => {
           },
         },
       });
-      useCreateShoppingListItemsFromRecipeMutation.mockReturnValue([
-        mockAddRecipeToList,
-      ]);
+      setMutationFor('CreateShoppingListItemsFromRecipe', mockAddRecipeToList);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -1497,23 +1483,18 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useCreateShoppingListItemsFromRecipeMutation.mockReturnValue([jest.fn()]);
     });
 
     it('shows success without updated count when totalUpdated is 0', async () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useCreateShoppingListItemsFromRecipeMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -1541,9 +1522,7 @@ describe('useRecipeDetail', () => {
           },
         },
       });
-      useCreateShoppingListItemsFromRecipeMutation.mockReturnValue([
-        mockAddRecipeToList,
-      ]);
+      setMutationFor('CreateShoppingListItemsFromRecipe', mockAddRecipeToList);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -1565,16 +1544,14 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useCreateShoppingListItemsFromRecipeMutation.mockReturnValue([jest.fn()]);
     });
 
     it('adds external recipe ingredients via batch mutation', async () => {
-      const { useAddItemsToShoppingListMutation } = require('#generated');
       const mockBatchAdd = jest.fn().mockResolvedValue({
         data: {
           addItemsToShoppingList: {
@@ -1588,7 +1565,7 @@ describe('useRecipeDetail', () => {
           },
         },
       });
-      useAddItemsToShoppingListMutation.mockReturnValue([mockBatchAdd]);
+      setMutationFor('AddItemsToShoppingList', mockBatchAdd);
 
       const mockRecipe = {
         id: 123,
@@ -1660,11 +1637,9 @@ describe('useRecipeDetail', () => {
       );
 
       // Cleanup
-      useAddItemsToShoppingListMutation.mockReturnValue([jest.fn()]);
     });
 
     it('shows success without updated count when incrementedCount is 0 for batch', async () => {
-      const { useAddItemsToShoppingListMutation } = require('#generated');
       const mockBatchAdd = jest.fn().mockResolvedValue({
         data: {
           addItemsToShoppingList: {
@@ -1674,7 +1649,7 @@ describe('useRecipeDetail', () => {
           },
         },
       });
-      useAddItemsToShoppingListMutation.mockReturnValue([mockBatchAdd]);
+      setMutationFor('AddItemsToShoppingList', mockBatchAdd);
 
       const mockRecipe = {
         id: 123,
@@ -1714,7 +1689,6 @@ describe('useRecipeDetail', () => {
       );
 
       // Cleanup
-      useAddItemsToShoppingListMutation.mockReturnValue([jest.fn()]);
     });
 
     it('shows error when list not found in executeAddAllIngredientsToList', async () => {
@@ -1773,11 +1747,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useCreateShoppingListItemsFromRecipeMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -1799,9 +1769,7 @@ describe('useRecipeDetail', () => {
       const mockAddRecipeToList = jest
         .fn()
         .mockRejectedValue(new Error('mutation failed'));
-      useCreateShoppingListItemsFromRecipeMutation.mockReturnValue([
-        mockAddRecipeToList,
-      ]);
+      setMutationFor('CreateShoppingListItemsFromRecipe', mockAddRecipeToList);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -1823,12 +1791,11 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useCreateShoppingListItemsFromRecipeMutation.mockReturnValue([jest.fn()]);
     });
   });
 
@@ -1837,11 +1804,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useCreateShoppingListItemFromRecipeIngredientMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -1881,9 +1844,10 @@ describe('useRecipeDetail', () => {
             },
           },
         });
-      useCreateShoppingListItemFromRecipeIngredientMutation.mockReturnValue([
+      setMutationFor(
+        'CreateShoppingListItemFromRecipeIngredient',
         mockAddIngredient,
-      ]);
+      );
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -1935,14 +1899,12 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useCreateShoppingListItemFromRecipeIngredientMutation.mockReturnValue([
-        jest.fn(),
-      ]);
+      setMutationFor('AddItemToShoppingList', jest.fn());
     });
 
     it('exits early when no backendRecipe for selected ingredients', async () => {
@@ -1969,8 +1931,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const { useGetRecipeQuery } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2019,7 +1980,7 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
@@ -2030,11 +1991,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useCreateShoppingListItemFromRecipeIngredientMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2061,9 +2018,10 @@ describe('useRecipeDetail', () => {
           },
         },
       });
-      useCreateShoppingListItemFromRecipeIngredientMutation.mockReturnValue([
+      setMutationFor(
+        'CreateShoppingListItemFromRecipeIngredient',
         mockAddIngredient,
-      ]);
+      );
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -2092,14 +2050,12 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useCreateShoppingListItemFromRecipeIngredientMutation.mockReturnValue([
-        jest.fn(),
-      ]);
+      setMutationFor('AddItemToShoppingList', jest.fn());
     });
   });
 
@@ -2108,8 +2064,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const { useGetRecipeQuery } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2143,7 +2098,7 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
@@ -2156,8 +2111,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const { useGetRecipeQuery } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2196,7 +2150,7 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
@@ -2227,11 +2181,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useMarkRecipeAsCookedMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2251,7 +2201,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockMarkCooked = jest.fn().mockResolvedValue({});
-      useMarkRecipeAsCookedMutation.mockReturnValue([mockMarkCooked]);
+      setMutationFor('MarkRecipeAsCooked', mockMarkCooked);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -2284,23 +2234,18 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useMarkRecipeAsCookedMutation.mockReturnValue([jest.fn()]);
     });
 
     it('marks recipe as cooked with simple deduction and deductFromPantry false', async () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useMarkRecipeAsCookedMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2320,7 +2265,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockMarkCooked = jest.fn().mockResolvedValue({});
-      useMarkRecipeAsCookedMutation.mockReturnValue([mockMarkCooked]);
+      setMutationFor('MarkRecipeAsCooked', mockMarkCooked);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -2352,20 +2297,18 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useMarkRecipeAsCookedMutation.mockReturnValue([jest.fn()]);
     });
 
     it('uses granular deduction and loads matches successfully', async () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const { useGetRecipeQuery } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2418,7 +2361,7 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
@@ -2440,11 +2383,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useMarkRecipeAsCookedMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2464,7 +2403,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockMarkCooked = jest.fn().mockResolvedValue({});
-      useMarkRecipeAsCookedMutation.mockReturnValue([mockMarkCooked]);
+      setMutationFor('MarkRecipeAsCooked', mockMarkCooked);
 
       const mockLoadMatches = jest.fn().mockResolvedValue(false);
       const {
@@ -2514,12 +2453,11 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useMarkRecipeAsCookedMutation.mockReturnValue([jest.fn()]);
       useRecipeIngredientMatching.mockReturnValue({
         loadMatches: jest.fn(),
         closeSheet: jest.fn(),
@@ -2539,11 +2477,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useMarkRecipeAsCookedMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2563,7 +2497,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockMarkCooked = jest.fn().mockResolvedValue({});
-      useMarkRecipeAsCookedMutation.mockReturnValue([mockMarkCooked]);
+      setMutationFor('MarkRecipeAsCooked', mockMarkCooked);
 
       const mockCloseSheet = jest.fn();
       const {
@@ -2607,12 +2541,11 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useMarkRecipeAsCookedMutation.mockReturnValue([jest.fn()]);
       useRecipeIngredientMatching.mockReturnValue({
         loadMatches: jest.fn(),
         closeSheet: jest.fn(),
@@ -2632,11 +2565,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useUpdateFavoriteRecipeMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2656,7 +2585,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockUpdateFavorite = jest.fn().mockResolvedValue({});
-      useUpdateFavoriteRecipeMutation.mockReturnValue([mockUpdateFavorite]);
+      setMutationFor('UpdateFavoriteRecipe', mockUpdateFavorite);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -2677,23 +2606,18 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useUpdateFavoriteRecipeMutation.mockReturnValue([jest.fn()]);
     });
 
     it('calls updateFavoriteRecipeMutation with null folder and shows removed toast', async () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useUpdateFavoriteRecipeMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2713,7 +2637,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockUpdateFavorite = jest.fn().mockResolvedValue({});
-      useUpdateFavoriteRecipeMutation.mockReturnValue([mockUpdateFavorite]);
+      setMutationFor('UpdateFavoriteRecipe', mockUpdateFavorite);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -2734,12 +2658,11 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useUpdateFavoriteRecipeMutation.mockReturnValue([jest.fn()]);
     });
   });
 
@@ -2748,11 +2671,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useUpdateFavoriteRecipeMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2772,7 +2691,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockUpdateFavorite = jest.fn().mockResolvedValue({});
-      useUpdateFavoriteRecipeMutation.mockReturnValue([mockUpdateFavorite]);
+      setMutationFor('UpdateFavoriteRecipe', mockUpdateFavorite);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -2793,12 +2712,11 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useUpdateFavoriteRecipeMutation.mockReturnValue([jest.fn()]);
     });
   });
 
@@ -2807,11 +2725,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useUpdateFavoriteRecipeMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2831,7 +2745,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockUpdateFavorite = jest.fn().mockResolvedValue({});
-      useUpdateFavoriteRecipeMutation.mockReturnValue([mockUpdateFavorite]);
+      setMutationFor('UpdateFavoriteRecipe', mockUpdateFavorite);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -2852,23 +2766,18 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useUpdateFavoriteRecipeMutation.mockReturnValue([jest.fn()]);
     });
 
     it('passes undefined for notes when empty string', async () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useUpdateFavoriteRecipeMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2888,7 +2797,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockUpdateFavorite = jest.fn().mockResolvedValue({});
-      useUpdateFavoriteRecipeMutation.mockReturnValue([mockUpdateFavorite]);
+      setMutationFor('UpdateFavoriteRecipe', mockUpdateFavorite);
 
       const { result } = renderHook(() => useRecipeDetail());
 
@@ -2907,12 +2816,11 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useUpdateFavoriteRecipeMutation.mockReturnValue([jest.fn()]);
     });
   });
 
@@ -2921,11 +2829,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useUpdateFavoriteRecipeMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -2945,7 +2849,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockUpdateFavorite = jest.fn().mockResolvedValue({});
-      useUpdateFavoriteRecipeMutation.mockReturnValue([mockUpdateFavorite]);
+      setMutationFor('UpdateFavoriteRecipe', mockUpdateFavorite);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -2966,23 +2870,18 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useUpdateFavoriteRecipeMutation.mockReturnValue([jest.fn()]);
     });
 
     it('shows "Rating removed" when rating is null', async () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useUpdateFavoriteRecipeMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -3002,7 +2901,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockUpdateFavorite = jest.fn().mockResolvedValue({});
-      useUpdateFavoriteRecipeMutation.mockReturnValue([mockUpdateFavorite]);
+      setMutationFor('UpdateFavoriteRecipe', mockUpdateFavorite);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -3023,12 +2922,11 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useUpdateFavoriteRecipeMutation.mockReturnValue([jest.fn()]);
     });
   });
 
@@ -3037,11 +2935,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const {
-        useGetRecipeQuery,
-        useUnfavoriteRecipeMutation,
-      } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Backend Recipe',
@@ -3067,7 +2961,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockUnfavorite = jest.fn().mockResolvedValue({});
-      useUnfavoriteRecipeMutation.mockReturnValue([mockUnfavorite]);
+      setMutationFor('UnfavoriteRecipe', mockUnfavorite);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -3087,12 +2981,11 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
       });
-      useUnfavoriteRecipeMutation.mockReturnValue([jest.fn()]);
     });
 
     it('unfavorites recipe using preloadedRecipe.id when no recipeId', async () => {
@@ -3107,9 +3000,8 @@ describe('useRecipeDetail', () => {
         savingToFavorites: false,
       });
 
-      const { useUnfavoriteRecipeMutation } = require('#generated');
       const mockUnfavorite = jest.fn().mockResolvedValue({});
-      useUnfavoriteRecipeMutation.mockReturnValue([mockUnfavorite]);
+      setMutationFor('UnfavoriteRecipe', mockUnfavorite);
 
       const { toastService } = require('#/services/toastService');
       const { result } = renderHook(() => useRecipeDetail());
@@ -3133,7 +3025,6 @@ describe('useRecipeDetail', () => {
         saveRecipeToFavorites: jest.fn().mockResolvedValue({ success: true }),
         savingToFavorites: false,
       });
-      useUnfavoriteRecipeMutation.mockReturnValue([jest.fn()]);
     });
   });
 
@@ -3212,8 +3103,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const { useGetRecipeQuery } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Minimal Recipe',
@@ -3246,7 +3136,7 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
@@ -3256,9 +3146,8 @@ describe('useRecipeDetail', () => {
 
   describe('openListPicker edge cases', () => {
     it('opens list picker even when shopping lists are empty (user can create inline)', () => {
-      const { useGetShoppingListsLiteQuery } = require('#generated');
       const { toastService } = require('#/services/toastService');
-      useGetShoppingListsLiteQuery.mockReturnValue({
+      setQueryResponse('GetShoppingListsLite', {
         data: { shoppingLists: { edges: [] } },
         loading: false,
       });
@@ -3275,7 +3164,7 @@ describe('useRecipeDetail', () => {
       );
 
       // Cleanup
-      useGetShoppingListsLiteQuery.mockReturnValue({
+      setQueryResponse('GetShoppingListsLite', {
         data: {
           shoppingLists: {
             edges: [
@@ -3355,9 +3244,8 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const { useGetRecipeQuery } = require('#generated');
       const mockError = new Error('Backend query failed');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: mockError,
@@ -3371,7 +3259,7 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
@@ -3384,8 +3272,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const { useGetRecipeQuery } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'No Saved Details',
@@ -3416,7 +3303,7 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
@@ -3470,8 +3357,7 @@ describe('useRecipeDetail', () => {
       const { useRoute } = require('@react-navigation/native');
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
-      const { useGetRecipeQuery } = require('#generated');
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: {
           recipe: {
             name: 'Unsaved Backend',
@@ -3499,7 +3385,7 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
-      useGetRecipeQuery.mockReturnValue({
+      setQueryResponse('GetRecipe', {
         data: null,
         loading: false,
         error: undefined,
@@ -3511,7 +3397,6 @@ describe('useRecipeDetail', () => {
     it('does not match when externalSource or externalId is missing', () => {
       const { useRoute } = require('@react-navigation/native');
       const { normalizeRecipes } = require('#/utils/connectionUtils');
-      const { useMyRecipesQuery } = require('#generated');
 
       // Only externalSource, no externalId
       useRoute.mockReturnValue({ params: { externalSource: 'SPOONACULAR' } });
@@ -3524,7 +3409,7 @@ describe('useRecipeDetail', () => {
           },
         ],
       });
-      useMyRecipesQuery.mockReturnValue({ data: { recipes: 'mockData' } });
+      setQueryResponse('MyRecipes', { data: { recipes: 'mockData' } });
 
       const { result } = renderHook(() => useRecipeDetail());
 
@@ -3535,15 +3420,14 @@ describe('useRecipeDetail', () => {
         params: { externalSource: 'SPOONACULAR', externalId: '123' },
       });
       normalizeRecipes.mockReturnValue({ recipes: [] });
-      useMyRecipesQuery.mockReturnValue({ data: null });
+      setQueryResponse('GetRecipe', { data: null });
     });
 
     it('returns undefined when normalizeRecipes returns null recipes', () => {
       const { normalizeRecipes } = require('#/utils/connectionUtils');
-      const { useMyRecipesQuery } = require('#generated');
 
       normalizeRecipes.mockReturnValue(null);
-      useMyRecipesQuery.mockReturnValue({ data: { recipes: 'mockData' } });
+      setQueryResponse('MyRecipes', { data: { recipes: 'mockData' } });
 
       const { result } = renderHook(() => useRecipeDetail());
 
@@ -3551,7 +3435,7 @@ describe('useRecipeDetail', () => {
 
       // Cleanup
       normalizeRecipes.mockReturnValue({ recipes: [] });
-      useMyRecipesQuery.mockReturnValue({ data: null });
+      setQueryResponse('GetRecipe', { data: null });
     });
   });
 
@@ -3576,16 +3460,12 @@ describe('useRecipeDetail', () => {
   describe('multiple shopping lists', () => {
     it('uses user-selected list from store when available and found', async () => {
       const { useAppStore } = require('#store/useAppStore');
-      const {
-        useGetShoppingListsLiteQuery,
-        useAddItemToShoppingListMutation,
-      } = require('#generated');
       const { toastService } = require('#/services/toastService');
 
       useAppStore.mockReturnValue('sl-2');
       const storeModule = require('#store/useAppStore');
       storeModule.useSelectedShoppingListId.mockReturnValue('sl-2');
-      useGetShoppingListsLiteQuery.mockReturnValue({
+      setQueryResponse('GetShoppingListsLite', {
         data: {
           shoppingLists: {
             edges: [
@@ -3612,7 +3492,7 @@ describe('useRecipeDetail', () => {
       });
 
       const mockAddItemMutation = jest.fn().mockResolvedValue({});
-      useAddItemToShoppingListMutation.mockReturnValue([mockAddItemMutation]);
+      setMutationFor('AddItemToShoppingList', mockAddItemMutation);
 
       const mockRecipe = {
         id: 123,
@@ -3653,7 +3533,7 @@ describe('useRecipeDetail', () => {
 
       // Cleanup
       useAppStore.mockReturnValue(null);
-      useGetShoppingListsLiteQuery.mockReturnValue({
+      setQueryResponse('GetShoppingListsLite', {
         data: {
           shoppingLists: {
             edges: [
@@ -3670,7 +3550,6 @@ describe('useRecipeDetail', () => {
         },
         loading: false,
       });
-      useAddItemToShoppingListMutation.mockReturnValue([jest.fn()]);
     });
   });
 

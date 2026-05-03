@@ -25,7 +25,7 @@ import {
   type PantryItemActions,
 } from './PantryActionsContext';
 import { usePantrySorting } from './hooks/usePantrySorting';
-import { PantryItem } from '#generated';
+import { PantryItem } from '#/graphql/generated/schemaTypes';
 import { PantryAlertBar } from '#features/pantry/components/PantryAlertBar';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';

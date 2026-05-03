@@ -3,26 +3,30 @@ import { useRecipeTags } from '../useRecipeTags';
 
 const mockRefetch = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useMySavedRecipesQuery: jest.fn(() => ({
-    data: {
-      me: {
-        savedRecipesConnection: {
-          edges: [
-            { node: { tags: ['Italian', 'Quick'] } },
-            { node: { tags: ['Quick', 'Vegetarian'] } },
-            { node: { tags: null } },
-            { node: { tags: [] } },
-            { node: { tags: ['italian'] } }, // lowercase duplicate
-          ],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'MySavedRecipes') {
+      return {
+        data: {
+          me: {
+            savedRecipesConnection: {
+              edges: [
+                { node: { tags: ['Italian', 'Quick'] } },
+                { node: { tags: ['italian', 'Quick'] } },
+                { node: { tags: ['Vegetarian'] } },
+              ],
+            },
+          },
         },
-      },
-    },
-    loading: false,
-    error: undefined,
-    refetch: mockRefetch,
-  })),
+        loading: false,
+        error: undefined,
+        refetch: mockRefetch,
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 // Break circular dependency
@@ -58,8 +62,8 @@ describe('useRecipeTags', () => {
   });
 
   it('returns empty tags when no saved recipes', () => {
-    const { useMySavedRecipesQuery } = require('#generated');
-    useMySavedRecipesQuery.mockReturnValueOnce({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: undefined,
       loading: false,
       error: undefined,

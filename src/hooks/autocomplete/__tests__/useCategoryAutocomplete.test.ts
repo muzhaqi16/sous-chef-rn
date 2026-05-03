@@ -11,23 +11,21 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 const mockSearchCategories = jest.fn();
-let mockCategoryData: any = null;
-let mockCategoryLoading = false;
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useAutocompleteCategoriesLazyQuery: () => [
-    mockSearchCategories,
-    { data: mockCategoryData, loading: mockCategoryLoading },
-  ],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useLazyQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'AutocompleteCategories')
+      return [mockSearchCategories, { loading: false }];
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockIsOnline = true;
-  mockCategoryData = null;
-  mockCategoryLoading = false;
 });
 
 afterEach(() => {

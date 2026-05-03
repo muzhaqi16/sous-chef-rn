@@ -1,85 +1,38 @@
 import type { CodegenConfig } from '@graphql-codegen/cli';
 
-/**
- * Shared plugin config used by both base types and per-operation outputs.
- */
-const sharedConfig = {
-  // React hooks configuration
-  withHooks: true,
-  withComponent: false,
-  withHOC: false,
+// Apollo Client v4 codegen setup, per
+// https://www.apollographql.com/docs/react/development-testing/graphql-codegen
+//
+// - `typescript` emits the shared schema types (enums, scalars, input objects)
+//   into `schemaTypes.ts`.
+// - `near-operation-file` preset emits a `<name>.generated.ts` next to every
+//   `<name>.graphql` with the typed `TypedDocumentNode` exports and operation
+//   result/variable types. Call sites import the precompiled `XxxDocument` and
+//   pass it to `useQuery` / `useMutation` from `@apollo/client/react`.
+// - `client-preset` is intentionally NOT used. Apollo's docs are explicit:
+//   "We do not recommend using the client preset with Apollo Client apps
+//   because it generates additional runtime code that adds bundle size to your
+//   application and includes features that are incompatible with Apollo Client."
+//   The `typed-document-node` plugin produces all the runtime DocumentNodes we
+//   need, and `FragmentType<typeof Doc>` from `@apollo/client` works directly
+//   with our outputs once `dataMasking: true` is enabled.
 
-  // Disable unused generated code
-  withRefetchFn: false,
-  withMutationFn: false,
-  withSuspenseQuery: false,
+const ALL_OPERATIONS = [
+  'src/**/*.{graphql,gql}',
+  '!src/graphql/generated/**/*.{ts,tsx}',
+  '!src/**/node_modules/**',
+];
 
-  // Apollo Client v4 configuration - React hooks from separate export
-  apolloReactHooksImportFrom: '@apollo/client/react',
-  apolloReactCommonImportFrom: '@apollo/client',
-
-  // Document mode
-  documentMode: 'documentNode',
-
-  // Type safety improvements
-  avoidOptionals: {
-    field: true, // Changed to match server
-    inputValue: false,
-    object: false,
-  },
-
-  // Scalars - match your server config
-  scalars: {
-    DateTime: 'string',
-    Date: 'string',
-    JSON: 'any',
-    Upload: '{ uri: string; type: string; name: string }',
-    BigInt: 'string',
-    IPv4: 'string',
-    FlexibleQuantity: {
-      input: 'string | number',
-      output: 'string',
-    },
-  },
-
-  // Modern TypeScript
-  useTypeImports: true,
-
-  // Nullable handling - GraphQL returns null, never undefined
-  maybeValue: 'T | null',
-  inputMaybeValue: 'T | null | undefined', // Allows explicit null to clear fields
-
-  // Error handling
-  errorType: 'ApolloError',
-
-  // Deduplication
-  dedupeOperationSuffix: true,
-  skipTypename: false,
-
-  // Fragment handling
-  inlineFragmentTypes: 'combine',
-  nonOptionalTypename: true,
-
-  // Immutable types
-  immutableTypes: false,
-
-  // Enum handling
-  enumsAsTypes: false,
-
-  // NEW for v6 - strict scalars
-  strictScalars: true,
-
-  // Tree-shaking: annotate generated code with /*#__PURE__*/ for Metro/Hermes
-  pureMagicComment: true,
-};
-
-const addHeader = {
-  add: {
-    content: [
-      '// This file is auto-generated. Do not edit manually.',
-      '/* eslint-disable */',
-      '// @ts-nocheck',
-    ].join('\n'),
+const SCALARS = {
+  DateTime: 'string',
+  Date: 'string',
+  JSON: 'any',
+  Upload: '{ uri: string; type: string; name: string }',
+  BigInt: 'string',
+  IPv4: 'string',
+  FlexibleQuantity: {
+    input: 'string | number',
+    output: 'string',
   },
 };
 
@@ -87,41 +40,66 @@ const config: CodegenConfig = {
   overwrite: true,
   schema: process.env.SCHEMA_PATH || 'src/graphql/generated/schema.graphql',
 
-  documents: [
-    'src/graphql/operations/**/*.{graphql,gql}',
-    'src/features/*/graphql/*.{graphql,gql}',
-    '!src/graphql/generated/**/*.{ts,tsx}',
-    '!src/**/node_modules/**',
-  ],
-
   ignoreNoDocuments: true,
 
   generates: {
-    // 1. Base schema types (enums, input types, object types, scalars)
-    //    Shared by all per-operation generated files.
-    'src/graphql/generated/baseTypes.ts': {
-      plugins: [addHeader, 'typescript'],
-      config: sharedConfig,
+    // Apollo fragment matcher — required for proper interface/union type
+    // resolution in the InMemoryCache (see `src/apollo/cache.ts`).
+    'src/graphql/generated/fragmentMatcher.json': {
+      documents: ALL_OPERATIONS,
+      plugins: ['fragment-matcher'],
+      config: {
+        apolloClientVersion: 4,
+      },
     },
 
-    // 2. Per-operation generated files (near each .graphql source)
-    //    Each .graphql gets a sibling .generated.ts with its hooks + operation types.
-    //    These import base types from baseTypes.ts via calculated relative paths.
+    // Shared schema types — scalars, enums, input objects, schema-wide types.
+    // Imported by every per-file `*.generated.ts` via `baseTypesPath`.
+    'src/graphql/generated/schemaTypes.ts': {
+      plugins: ['typescript'],
+      config: {
+        scalars: SCALARS,
+        useTypeImports: true,
+        maybeValue: 'T | null',
+        inputMaybeValue: 'T | null | undefined',
+        avoidOptionals: {
+          field: true,
+          inputValue: false,
+          object: false,
+        },
+        enumsAsTypes: false,
+        strictScalars: true,
+        nonOptionalTypename: true,
+      },
+    },
+
+    // Per-file operation types + TypedDocumentNode.
+    // Emits `<name>.generated.ts` next to every `<name>.graphql`.
     'src/': {
       preset: 'near-operation-file',
       presetConfig: {
         extension: '.generated.ts',
-        baseTypesPath: 'graphql/generated/baseTypes.ts',
+        baseTypesPath: 'graphql/generated/schemaTypes.ts',
       },
-      plugins: [addHeader, 'typescript-operations', 'typescript-react-apollo'],
-      config: sharedConfig,
-    },
-
-    // 3. Fragment matcher for Apollo cache
-    'src/graphql/generated/fragmentMatcher.json': {
-      plugins: ['fragment-matcher'],
+      documents: ALL_OPERATIONS,
+      plugins: ['typescript-operations', 'typed-document-node'],
       config: {
-        apolloClientVersion: 4,
+        scalars: SCALARS,
+        useTypeImports: true,
+        maybeValue: 'T | null',
+        inputMaybeValue: 'T | null | undefined',
+        avoidOptionals: {
+          field: true,
+          inputValue: false,
+          object: false,
+        },
+        dedupeOperationSuffix: true,
+        skipTypename: false,
+        inlineFragmentTypes: 'combine',
+        nonOptionalTypename: true,
+        immutableTypes: false,
+        strictScalars: true,
+        pureMagicComment: true,
       },
     },
   },

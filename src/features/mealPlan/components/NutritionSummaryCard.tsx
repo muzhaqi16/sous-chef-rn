@@ -4,8 +4,8 @@ import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { NutritionGoalProgress } from './NutritionGoalProgress';
-import type { MealPlanFullFragment } from '#generated';
 import { Text } from '#components/atoms/Text';
+import { type MealPlanFullFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 
 interface NutritionSummaryCardProps {
   nutritionSummary: NonNullable<MealPlanFullFragment['nutritionSummary']>;

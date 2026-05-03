@@ -10,10 +10,18 @@ jest.mock('#/apollo/links/refreshToken');
 const mockCreatePantryItem = jest.fn();
 const mockRestockPantryItem = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreatePantryItemMutation: () => [mockCreatePantryItem, { loading: false }],
-  useRestockPantryItemMutation: () => [mockRestockPantryItem, {}],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreatePantryItem') {
+      return [mockCreatePantryItem, { loading: false }];
+    }
+    if (opName === 'RestockPantryItem') {
+      return [mockRestockPantryItem, {}];
+    }
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({

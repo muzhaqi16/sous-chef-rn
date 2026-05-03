@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { AdjustQuantityModal } from '../AdjustQuantityModal';
-import type { PantryItemFragment } from '#generated';
+import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({

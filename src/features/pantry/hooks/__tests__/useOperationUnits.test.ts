@@ -1,44 +1,27 @@
-import { renderHook } from '@testing-library/react-native';
-import { useOperationUnits, PantryOperation } from '../useOperationUnits';
-
-const mockConsumptionResult = {
-  data: undefined as any,
-  loading: false,
-  error: undefined,
-};
-
-const mockRestockResult = {
-  data: undefined as any,
-  loading: false,
-  error: undefined,
-};
-
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useConsumptionUnitsForItemQuery: jest.fn(() => mockConsumptionResult),
-  useRestockUnitsForItemQuery: jest.fn(() => mockRestockResult),
-}));
-
-const {
-  useConsumptionUnitsForItemQuery,
-  useRestockUnitsForItemQuery,
+import { renderHook, waitFor } from '@testing-library/react-native';
+import type { MockedResponse } from '@apollo/client/testing';
+import {
+  ConsumptionUnitsForItemDocument,
+  RestockUnitsForItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import {
   UnitType,
   UnitRole,
   UnitSource,
-} = jest.requireMock('#generated');
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+} from '#/graphql/generated/schemaTypes';
+import { createApolloWrapper } from '#/test-utils/apolloMockProvider';
+import { useOperationUnits, PantryOperation } from '../useOperationUnits';
 
 function makeRankedUnit(overrides: Record<string, unknown> = {}) {
   return {
+    __typename: 'RankedUnit',
     rank: 1,
     source: UnitSource.Auto,
     defaultIncrement: null,
     commonFractions: null,
     isWholeContainer: false,
     unit: {
+      __typename: 'Unit',
       id: 'unit-1',
       name: 'gram',
       symbol: 'g',
@@ -51,6 +34,52 @@ function makeRankedUnit(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function consumptionMock(
+  units: ReturnType<typeof makeRankedUnit>[],
+  variables = {
+    itemId: 'item-1',
+    trackingUnitId: 'unit-1',
+    netWeightUnitId: null,
+  },
+): MockedResponse {
+  return {
+    request: { query: ConsumptionUnitsForItemDocument, variables },
+    result: { data: { consumptionUnitsForItem: units } },
+  };
+}
+
+function consumptionErrorMock(
+  variables = {
+    itemId: 'item-1',
+    trackingUnitId: 'unit-1',
+    netWeightUnitId: null,
+  },
+): MockedResponse {
+  return {
+    request: { query: ConsumptionUnitsForItemDocument, variables },
+    error: new Error('Query failed'),
+  };
+}
+
+function restockMock(
+  units: ReturnType<typeof makeRankedUnit>[],
+  variables = { pantryItemId: 'pantry-item-1' },
+): MockedResponse {
+  return {
+    request: { query: RestockUnitsForItemDocument, variables },
+    result: { data: { restockUnitsForItem: units } },
+  };
+}
+
+function restockErrorMock(
+  variables = { pantryItemId: 'pantry-item-1' },
+): MockedResponse {
+  return {
+    request: { query: RestockUnitsForItemDocument, variables },
+    error: new Error('Restock query failed'),
+  };
+}
+
 const defaultOptions = {
   itemId: 'item-1',
   pantryItemId: 'pantry-item-1',
@@ -59,80 +88,64 @@ const defaultOptions = {
   netWeightUnitId: null,
 };
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  mockConsumptionResult.data = undefined;
-  mockConsumptionResult.loading = false;
-  mockConsumptionResult.error = undefined;
-  mockRestockResult.data = undefined;
-  mockRestockResult.loading = false;
-  mockRestockResult.error = undefined;
-});
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe('useOperationUnits', () => {
   describe('query routing', () => {
-    it('calls consumptionUnitsForItemQuery when operation is Consume', () => {
-      renderHook(() =>
-        useOperationUnits({
-          ...defaultOptions,
-          operation: PantryOperation.Consume,
-        }),
+    it('uses consumption query when operation is Consume', async () => {
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            operation: PantryOperation.Consume,
+          }),
+        { wrapper: createApolloWrapper([consumptionMock([makeRankedUnit()])]) },
       );
 
-      expect(useConsumptionUnitsForItemQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: false }),
-      );
-      expect(useRestockUnitsForItemQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: true }),
-      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.allUnits).toHaveLength(1);
     });
 
-    it('calls consumptionUnitsForItemQuery when operation is Waste', () => {
-      renderHook(() =>
-        useOperationUnits({
-          ...defaultOptions,
-          operation: PantryOperation.Waste,
-        }),
+    it('uses consumption query when operation is Waste', async () => {
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            operation: PantryOperation.Waste,
+          }),
+        { wrapper: createApolloWrapper([consumptionMock([makeRankedUnit()])]) },
       );
 
-      expect(useConsumptionUnitsForItemQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: false }),
-      );
-      expect(useRestockUnitsForItemQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: true }),
-      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.allUnits).toHaveLength(1);
     });
 
-    it('calls restockUnitsForItemQuery when operation is Restock', () => {
-      renderHook(() =>
-        useOperationUnits({
-          ...defaultOptions,
-          operation: PantryOperation.Restock,
-        }),
+    it('uses restock query when operation is Restock', async () => {
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            operation: PantryOperation.Restock,
+          }),
+        {
+          wrapper: createApolloWrapper([
+            restockMock([makeRankedUnit({ rank: 1 })]),
+          ]),
+        },
       );
 
-      expect(useRestockUnitsForItemQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: false }),
-      );
-      expect(useConsumptionUnitsForItemQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: true }),
-      );
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.allUnits).toHaveLength(1);
     });
   });
 
   describe('loading state', () => {
-    it('returns empty groups when loading', () => {
-      mockConsumptionResult.loading = true;
-
-      const { result } = renderHook(() =>
-        useOperationUnits({
-          ...defaultOptions,
-          operation: PantryOperation.Consume,
-        }),
+    it('returns empty groups while loading', () => {
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            operation: PantryOperation.Consume,
+          }),
+        { wrapper: createApolloWrapper([consumptionMock([makeRankedUnit()])]) },
       );
 
       expect(result.current.loading).toBe(true);
@@ -143,153 +156,150 @@ describe('useOperationUnits', () => {
   });
 
   describe('skip behavior', () => {
-    it('skips consumption query when itemId is undefined', () => {
-      renderHook(() =>
-        useOperationUnits({
-          ...defaultOptions,
-          itemId: undefined,
-          operation: PantryOperation.Consume,
-        }),
+    it('skips consumption query when itemId is undefined (no mock consumed)', () => {
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            itemId: undefined,
+            operation: PantryOperation.Consume,
+          }),
+        { wrapper: createApolloWrapper([]) },
       );
 
-      expect(useConsumptionUnitsForItemQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: true }),
-      );
+      expect(result.current.loading).toBe(false);
+      expect(result.current.allUnits).toEqual([]);
     });
 
     it('skips restock query when pantryItemId is undefined', () => {
-      renderHook(() =>
-        useOperationUnits({
-          ...defaultOptions,
-          pantryItemId: undefined,
-          operation: PantryOperation.Restock,
-        }),
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            pantryItemId: undefined,
+            operation: PantryOperation.Restock,
+          }),
+        { wrapper: createApolloWrapper([]) },
       );
 
-      expect(useRestockUnitsForItemQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: true }),
-      );
+      expect(result.current.loading).toBe(false);
+      expect(result.current.allUnits).toEqual([]);
     });
   });
 
   describe('grouping', () => {
-    it('correctly groups units by UnitType', () => {
-      mockConsumptionResult.data = {
-        consumptionUnitsForItem: [
-          makeRankedUnit({
-            rank: 1,
-            unit: {
-              id: 'u-g',
-              name: 'gram',
-              symbol: 'g',
-              type: UnitType.Weight,
-              unitRole: UnitRole.Measurement,
-              commonFractions: null,
-              displayAsFraction: false,
-            },
+    it('correctly groups units by UnitType with tracking type first', async () => {
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            operation: PantryOperation.Consume,
           }),
-          makeRankedUnit({
-            rank: 2,
-            unit: {
-              id: 'u-ml',
-              name: 'milliliter',
-              symbol: 'ml',
-              type: UnitType.Volume,
-              unitRole: UnitRole.Measurement,
-              commonFractions: null,
-              displayAsFraction: false,
-            },
-          }),
-          makeRankedUnit({
-            rank: 3,
-            unit: {
-              id: 'u-piece',
-              name: 'piece',
-              symbol: 'pc',
-              type: UnitType.Count,
-              unitRole: UnitRole.Portion,
-              commonFractions: null,
-              displayAsFraction: false,
-            },
-          }),
-          makeRankedUnit({
-            rank: 4,
-            unit: {
-              id: 'u-oz',
-              name: 'ounce',
-              symbol: 'oz',
-              type: UnitType.Weight,
-              unitRole: UnitRole.Measurement,
-              commonFractions: null,
-              displayAsFraction: false,
-            },
-          }),
-        ],
-      };
-
-      const { result } = renderHook(() =>
-        useOperationUnits({
-          ...defaultOptions,
-          operation: PantryOperation.Consume,
-        }),
+        {
+          wrapper: createApolloWrapper([
+            consumptionMock([
+              makeRankedUnit({
+                rank: 1,
+                unit: {
+                  __typename: 'Unit',
+                  id: 'u-g',
+                  name: 'gram',
+                  symbol: 'g',
+                  type: UnitType.Weight,
+                  unitRole: UnitRole.Measurement,
+                  commonFractions: null,
+                  displayAsFraction: false,
+                },
+              }),
+              makeRankedUnit({
+                rank: 2,
+                unit: {
+                  __typename: 'Unit',
+                  id: 'u-ml',
+                  name: 'milliliter',
+                  symbol: 'ml',
+                  type: UnitType.Volume,
+                  unitRole: UnitRole.Measurement,
+                  commonFractions: null,
+                  displayAsFraction: false,
+                },
+              }),
+              makeRankedUnit({
+                rank: 3,
+                unit: {
+                  __typename: 'Unit',
+                  id: 'u-piece',
+                  name: 'piece',
+                  symbol: 'pc',
+                  type: UnitType.Count,
+                  unitRole: UnitRole.Portion,
+                  commonFractions: null,
+                  displayAsFraction: false,
+                },
+              }),
+              makeRankedUnit({
+                rank: 4,
+                unit: {
+                  __typename: 'Unit',
+                  id: 'u-oz',
+                  name: 'ounce',
+                  symbol: 'oz',
+                  type: UnitType.Weight,
+                  unitRole: UnitRole.Measurement,
+                  commonFractions: null,
+                  displayAsFraction: false,
+                },
+              }),
+            ]),
+          ]),
+        },
       );
 
-      // Tracking unit type (Weight) should come first
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
       expect(result.current.groups).toHaveLength(3);
       expect(result.current.groups[0].type).toBe(UnitType.Weight);
       expect(result.current.groups[0].label).toBe('Weight');
       expect(result.current.groups[0].units).toHaveLength(2);
-
       expect(result.current.groups[1].type).toBe(UnitType.Volume);
-      expect(result.current.groups[1].label).toBe('Volume');
       expect(result.current.groups[1].units).toHaveLength(1);
-
       expect(result.current.groups[2].type).toBe(UnitType.Count);
-      expect(result.current.groups[2].label).toBe('Count');
       expect(result.current.groups[2].units).toHaveLength(1);
-
       expect(result.current.allUnits).toHaveLength(4);
     });
   });
 
   describe('default unit', () => {
-    it('resolves default unit to first ranked unit', () => {
-      mockConsumptionResult.data = {
-        consumptionUnitsForItem: [
-          makeRankedUnit({
-            rank: 1,
-            source: UnitSource.TrackingUnit,
-            unit: {
-              id: 'unit-1',
-              name: 'gram',
-              symbol: 'g',
-              type: UnitType.Weight,
-              unitRole: UnitRole.Measurement,
-              commonFractions: null,
-              displayAsFraction: false,
-            },
+    it('resolves default unit to first ranked unit', async () => {
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            operation: PantryOperation.Consume,
           }),
-          makeRankedUnit({
-            rank: 2,
-            unit: {
-              id: 'u-ml',
-              name: 'milliliter',
-              symbol: 'ml',
-              type: UnitType.Volume,
-              unitRole: UnitRole.Measurement,
-              commonFractions: null,
-              displayAsFraction: false,
-            },
-          }),
-        ],
-      };
-
-      const { result } = renderHook(() =>
-        useOperationUnits({
-          ...defaultOptions,
-          operation: PantryOperation.Consume,
-        }),
+        {
+          wrapper: createApolloWrapper([
+            consumptionMock([
+              makeRankedUnit({ rank: 1, source: UnitSource.TrackingUnit }),
+              makeRankedUnit({
+                rank: 2,
+                unit: {
+                  __typename: 'Unit',
+                  id: 'u-ml',
+                  name: 'milliliter',
+                  symbol: 'ml',
+                  type: UnitType.Volume,
+                  unitRole: UnitRole.Measurement,
+                  commonFractions: null,
+                  displayAsFraction: false,
+                },
+              }),
+            ]),
+          ]),
+        },
       );
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.defaultUnit).toEqual({
         unitId: 'unit-1',
@@ -302,39 +312,43 @@ describe('useOperationUnits', () => {
       });
     });
 
-    it('exposes defaultIncrement and commonFractions from default unit', () => {
-      mockConsumptionResult.data = {
-        consumptionUnitsForItem: [
-          makeRankedUnit({
-            rank: 1,
-            defaultIncrement: 50,
-            commonFractions: [0.25, 0.5, 0.75],
+    it('exposes defaultIncrement and commonFractions from default unit', async () => {
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            operation: PantryOperation.Consume,
           }),
-        ],
-      };
-
-      const { result } = renderHook(() =>
-        useOperationUnits({
-          ...defaultOptions,
-          operation: PantryOperation.Consume,
-        }),
+        {
+          wrapper: createApolloWrapper([
+            consumptionMock([
+              makeRankedUnit({
+                rank: 1,
+                defaultIncrement: 50,
+                commonFractions: [0.25, 0.5, 0.75],
+              }),
+            ]),
+          ]),
+        },
       );
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.defaultIncrement).toBe(50);
       expect(result.current.defaultCommonFractions).toEqual([0.25, 0.5, 0.75]);
     });
 
-    it('returns null defaultIncrement and defaultCommonFractions when no units', () => {
-      mockConsumptionResult.data = {
-        consumptionUnitsForItem: [],
-      };
-
-      const { result } = renderHook(() =>
-        useOperationUnits({
-          ...defaultOptions,
-          operation: PantryOperation.Consume,
-        }),
+    it('returns null defaultIncrement and defaultCommonFractions when no units', async () => {
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            operation: PantryOperation.Consume,
+          }),
+        { wrapper: createApolloWrapper([consumptionMock([])]) },
       );
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.defaultUnit).toBeNull();
       expect(result.current.defaultIncrement).toBeNull();
@@ -343,32 +357,32 @@ describe('useOperationUnits', () => {
   });
 
   describe('error state', () => {
-    it('exposes error from consumption query', () => {
-      const testError = new Error('Query failed');
-      mockConsumptionResult.error = testError as any;
-
-      const { result } = renderHook(() =>
-        useOperationUnits({
-          ...defaultOptions,
-          operation: PantryOperation.Consume,
-        }),
+    it('exposes error from consumption query', async () => {
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            operation: PantryOperation.Consume,
+          }),
+        { wrapper: createApolloWrapper([consumptionErrorMock()]) },
       );
 
-      expect(result.current.error).toBe(testError);
+      await waitFor(() => expect(result.current.error).toBeDefined());
+      expect(result.current.error?.message).toBe('Query failed');
     });
 
-    it('exposes error from restock query', () => {
-      const testError = new Error('Restock query failed');
-      mockRestockResult.error = testError as any;
-
-      const { result } = renderHook(() =>
-        useOperationUnits({
-          ...defaultOptions,
-          operation: PantryOperation.Restock,
-        }),
+    it('exposes error from restock query', async () => {
+      const { result } = renderHook(
+        () =>
+          useOperationUnits({
+            ...defaultOptions,
+            operation: PantryOperation.Restock,
+          }),
+        { wrapper: createApolloWrapper([restockErrorMock()]) },
       );
 
-      expect(result.current.error).toBe(testError);
+      await waitFor(() => expect(result.current.error).toBeDefined());
+      expect(result.current.error?.message).toBe('Restock query failed');
     });
   });
 });

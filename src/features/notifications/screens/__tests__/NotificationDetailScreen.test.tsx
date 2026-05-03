@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { NotificationType } from '#generated';
+import { NotificationType } from '#/graphql/generated/schemaTypes';
 import { NotificationDetailScreen } from '../NotificationDetailScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');

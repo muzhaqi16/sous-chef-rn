@@ -4,16 +4,16 @@ import { useRecipePreload } from '../useRecipePreload';
 const mockFavoriteRecipe = jest.fn();
 const mockUpsertRecipe = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useFavoriteRecipeMutation: jest.fn(() => [
-    mockFavoriteRecipe,
-    { loading: false },
-  ]),
-  useUpsertExternalRecipeMutation: jest.fn(() => [
-    mockUpsertRecipe,
-    { loading: false },
-  ]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'FavoriteRecipe')
+      return [mockFavoriteRecipe, { loading: false }];
+    if (opName === 'UpsertExternalRecipe')
+      return [mockUpsertRecipe, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 const mockToastSuccess = jest.fn();

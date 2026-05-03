@@ -14,7 +14,11 @@ import { Icon } from '#/utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { LoadingInline } from '#components/base/Loading';
-import { useDeleteAccountMutation, useCanDeleteAccountQuery } from '#generated';
+import { useMutation, useQuery } from '@apollo/client/react';
+import {
+  DeleteAccountDocument,
+  CanDeleteAccountDocument,
+} from '#operations/auth/user.generated';
 import { authService } from '#/services/authService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { errorService } from '#/services/errorService';
@@ -55,14 +59,14 @@ export const DeleteAccountScreen: React.FC = () => {
     loading: checkingEligibility,
     error: eligibilityError,
     refetch: refetchEligibility,
-  } = useCanDeleteAccountQuery({
+  } = useQuery(CanDeleteAccountDocument, {
     fetchPolicy: 'network-only',
   });
 
   const canDelete = eligibilityData?.canDeleteAccount?.canDelete ?? false;
   const blockers = eligibilityData?.canDeleteAccount?.blockers ?? [];
 
-  const [deleteAccountMutation] = useDeleteAccountMutation({
+  const [deleteAccountMutation] = useMutation(DeleteAccountDocument, {
     onCompleted: () => authService.logout(),
     onError: error => {
       alertService.alert('Error', `Failed to delete account: ${error.message}`);

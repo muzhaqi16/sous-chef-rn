@@ -6,8 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { getTabBarBottomPadding } from '#constants/layout';
-import type { MealType } from '#generated';
 import { Text } from '#components/atoms/Text';
+import { type MealType } from '#/graphql/generated/schemaTypes';
 
 interface EmptyDayStateProps {
   selectedDate: Date;

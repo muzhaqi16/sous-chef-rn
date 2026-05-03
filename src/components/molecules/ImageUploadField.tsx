@@ -6,7 +6,7 @@ import { Icon } from '#utils/iconUtils';
 import { ImagePicker, ImageFile } from './ImagePicker';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { commonStyles } from '#/styles/commonStyles';
-import { ImageUploadPurpose } from '#generated';
+import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
 

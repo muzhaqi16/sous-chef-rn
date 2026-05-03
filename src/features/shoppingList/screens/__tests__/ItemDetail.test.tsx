@@ -11,10 +11,15 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockUseGetShoppingListItemQuery = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetShoppingListItemQuery: (...args: any[]) =>
-    mockUseGetShoppingListItemQuery(...args),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((...args: any[]) => {
+    const [doc] = args;
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetShoppingListItem')
+      return mockUseGetShoppingListItemQuery(doc, ...args);
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#utils/imageUtils', () => ({

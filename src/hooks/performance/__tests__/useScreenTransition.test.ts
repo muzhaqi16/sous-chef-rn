@@ -66,22 +66,20 @@ describe('useScreenTransition', () => {
   });
 
   it('does not create marks when enabled is false', () => {
-    renderHook(() =>
-      useScreenTransition('HomeScreen', { enabled: false }),
-    );
+    renderHook(() => useScreenTransition('HomeScreen', { enabled: false }));
 
     expect(performance.mark).not.toHaveBeenCalled();
   });
 
   it('does not create mount mark when trackMount is false', () => {
-    renderHook(() =>
-      useScreenTransition('HomeScreen', { trackMount: false }),
-    );
+    renderHook(() => useScreenTransition('HomeScreen', { trackMount: false }));
 
     // Focus mark should still be created
     expect(performance.mark).toHaveBeenCalledWith('screen:HomeScreen:focus');
     // But mount mark should not
-    expect(performance.mark).not.toHaveBeenCalledWith('screen:HomeScreen:mounted');
+    expect(performance.mark).not.toHaveBeenCalledWith(
+      'screen:HomeScreen:mounted',
+    );
   });
 
   it('cleans up marks on blur callback', () => {
@@ -101,9 +99,15 @@ describe('useScreenTransition', () => {
       cleanupFn();
     }
 
-    expect(performance.clearMarks).toHaveBeenCalledWith('screen:HomeScreen:focus');
-    expect(performance.clearMarks).toHaveBeenCalledWith('screen:HomeScreen:mounted');
-    expect(performance.clearMarks).toHaveBeenCalledWith('screen:HomeScreen:interactiveEnd');
+    expect(performance.clearMarks).toHaveBeenCalledWith(
+      'screen:HomeScreen:focus',
+    );
+    expect(performance.clearMarks).toHaveBeenCalledWith(
+      'screen:HomeScreen:mounted',
+    );
+    expect(performance.clearMarks).toHaveBeenCalledWith(
+      'screen:HomeScreen:interactiveEnd',
+    );
 
     // Restore original mock
     mockUseFocusEffect.mockImplementation((cb: Function) => cb());
@@ -112,6 +116,8 @@ describe('useScreenTransition', () => {
   it('handles different screen names', () => {
     renderHook(() => useScreenTransition('SettingsScreen'));
 
-    expect(performance.mark).toHaveBeenCalledWith('screen:SettingsScreen:focus');
+    expect(performance.mark).toHaveBeenCalledWith(
+      'screen:SettingsScreen:focus',
+    );
   });
 });

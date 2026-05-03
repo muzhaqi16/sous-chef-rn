@@ -5,9 +5,17 @@ import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper
 import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { useUser } from '#store/useAppStore';
 import { PERSONAL_INFO_CONFIG } from '#/config/settingsConfig';
-import { useUpdateUserProfileMutation, ProfileVisibility } from '#generated';
-import { useApolloClient } from '@apollo/client/react';
-import { GetUserProfileQuery, GetUserProfileDocument } from '#generated';
+import { useApolloClient, useMutation } from '@apollo/client/react';
+import {
+  UpdateUserProfileDocument,
+  type UpdateUserProfileMutation,
+  type UpdateUserProfileMutationVariables,
+} from '#operations/auth/user.generated';
+import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import {
+  GetUserProfileDocument,
+  type GetUserProfileQuery,
+} from '#operations/auth/user.generated';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import {
@@ -20,7 +28,10 @@ import { useUnistyles } from 'react-native-unistyles';
  *  Extracted to avoid try-catch inside component body (React Compiler bailout). */
 async function performProfileUpdate(
   client: ReturnType<typeof useApolloClient>,
-  updateProfileMutation: ReturnType<typeof useUpdateUserProfileMutation>[0],
+  updateProfileMutation: useMutation.MutationFunction<
+    UpdateUserProfileMutation,
+    UpdateUserProfileMutationVariables
+  >,
   input: Partial<Record<any, any>>,
 ): Promise<void> {
   // Read current cache
@@ -59,7 +70,7 @@ export const PersonalInformationScreen: React.FC = () => {
   const user = useUser();
   const client = useApolloClient();
   const { theme } = useUnistyles();
-  const [updateProfileMutation] = useUpdateUserProfileMutation();
+  const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = () => {

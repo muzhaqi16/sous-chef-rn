@@ -17,21 +17,29 @@ export const useAuth = () => {
 
   // Store for registration password
   const registrationPassword = useAppStore(state => state.registrationPassword);
-  const setRegistrationPassword = useAppStore(state => state.setRegistrationPassword);
-  const clearRegistrationPassword = useAppStore(state => state.clearRegistrationPassword);
+  const setRegistrationPassword = useAppStore(
+    state => state.setRegistrationPassword,
+  );
+  const clearRegistrationPassword = useAppStore(
+    state => state.clearRegistrationPassword,
+  );
 
   // Credential storage operations
   const credentialStorage = useCredentialStorage();
 
   // Biometric prompting logic
-  const { shouldShowPostLoginBiometricPrompt, recordBiometricPromptResponse } = useBiometricPrompting();
+  const { shouldShowPostLoginBiometricPrompt, recordBiometricPromptResponse } =
+    useBiometricPrompting();
 
   // User preferences for biometric tracking
   const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
 
   // Event handlers for RememberMe flow
   const handleRememberMeAccept = async (credentials: RememberMeCredentials) => {
-    await credentialStorage.storeCredentials(credentials.email, credentials.password);
+    await credentialStorage.storeCredentials(
+      credentials.email,
+      credentials.password,
+    );
   };
 
   const handleRememberMeDecline = () => {
@@ -41,10 +49,14 @@ export const useAuth = () => {
   // RememberMe modal logic with event handlers
   const rememberMe = useRememberMe({
     onAccept: handleRememberMeAccept,
-    onDecline: handleRememberMeDecline });
+    onDecline: handleRememberMeDecline,
+  });
 
   // Event handlers for biometric setup completion
-  const handlePostLoginBiometricComplete = (enabled: boolean, declined?: boolean) => {
+  const handlePostLoginBiometricComplete = (
+    enabled: boolean,
+    declined?: boolean,
+  ) => {
     // Close biometric setup modal
     authState.setShowBiometricSetup(false);
 
@@ -78,31 +90,39 @@ export const useAuth = () => {
   // Convert credential storage functions to event interface
   const credentialStorageEvents = {
     onCredentialCheck: credentialStorage.checkStoredCredentials,
-    onCredentialLoad: async (email?: string): Promise<LoginCredentials | null> => {
+    onCredentialLoad: async (
+      email?: string,
+    ): Promise<LoginCredentials | null> => {
       const result = await credentialStorage.loadStoredCredentials(email);
       return result ? { email: result.email, password: result.password } : null;
     },
     onCredentialStore: credentialStorage.storeCredentials,
-    onCredentialRemove: credentialStorage.removeCredentials };
+    onCredentialRemove: credentialStorage.removeCredentials,
+  };
 
   // Auth operations with all event handlers
   const authOperations = useAuthOperations({
     credentialStorage: credentialStorageEvents,
     rememberMe: {
-      onShowRememberMe: handleShowRememberMe },
+      onShowRememberMe: handleShowRememberMe,
+    },
     biometricSetup: {
-      onShowBiometricSetup: handleShowBiometricSetup },
+      onShowBiometricSetup: handleShowBiometricSetup,
+    },
     navigation: {
-      onNavigate: authState.setNavigationState },
+      onNavigate: authState.setNavigationState,
+    },
     authState: {
       onSetAuth: authState.setAuth,
       onClearAuth: authState.clearAuth,
       onSetRememberMe: authState.setRememberMe,
       onSetUserNavigationState: authState.setUserNavigationState,
       onSetRegistrationPassword: setRegistrationPassword,
-      onClearRegistrationPassword: clearRegistrationPassword },
+      onClearRegistrationPassword: clearRegistrationPassword,
+    },
     // Pass biometric prompting logic directly
-    shouldShowPostLoginBiometricPrompt });
+    shouldShowPostLoginBiometricPrompt,
+  });
 
   // Logout wrapper that passes user info
   const logout = (clearAllCredentials = false) => {
@@ -175,5 +195,6 @@ export const useAuth = () => {
     handleLogin: authOperations.handleLogin,
     handleRegistration: authOperations.handleRegistration,
     handleAuthSuccess: authOperations.handleAuthSuccess,
-    handleAuthError: authOperations.handleAuthError };
+    handleAuthError: authOperations.handleAuthError,
+  };
 };

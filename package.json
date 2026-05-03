@@ -79,7 +79,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"./*.{json,js}\""
   },
   "dependencies": {
-    "@apollo/client": "^4.1.7",
+    "@apollo/client": "~4.1.7",
     "@callstack/liquid-glass": "^0.7.0",
     "@gorhom/bottom-sheet": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
@@ -149,11 +149,12 @@
     "@graphql-codegen/cli": "^6.0.0",
     "@graphql-codegen/fragment-matcher": "^6.0.0",
     "@graphql-codegen/introspection": "^5.0.0",
-    "@graphql-codegen/near-operation-file-preset": "^5.0.0",
+    "@graphql-codegen/near-operation-file-preset": "^5.1.0",
     "@graphql-codegen/schema-ast": "^5.0.0",
+    "@graphql-codegen/typed-document-node": "^7.0.0",
     "@graphql-codegen/typescript": "^5.0.0",
     "@graphql-codegen/typescript-operations": "^5.0.0",
-    "@graphql-codegen/typescript-react-apollo": "^4.3.3",
+    "@graphql-tools/mock": "^9.1.7",
     "@react-native-community/cli": "^20.1.1",
     "@react-native/babel-preset": "0.83.4",
     "@react-native/eslint-config": "0.83.4",
@@ -186,7 +187,7 @@
     "typescript": "^5.8.3"
   },
   "lint-staged": {
-    "src/**/*.{ts,tsx}": [
+    "src/**/!(*.generated).{ts,tsx}": [
       "eslint --fix",
       "prettier --write",
       "jest --bail --findRelatedTests --passWithNoTests"

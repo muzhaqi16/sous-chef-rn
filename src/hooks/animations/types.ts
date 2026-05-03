@@ -1,4 +1,8 @@
-import { type SharedValue, type withTiming, type useAnimatedStyle } from 'react-native-reanimated';
+import {
+  type SharedValue,
+  type withTiming,
+  type useAnimatedStyle,
+} from 'react-native-reanimated';
 
 export interface SpringConfig {
   mass?: number;
@@ -44,7 +48,9 @@ export interface SlideAnimationConfig {
   /** Animation duration in ms (default: 200) */
   duration?: number;
   /** Custom easing function (default: standard cubic bezier) */
-  easing?: Parameters<typeof withTiming>[1] extends { easing?: infer E } ? E : never;
+  easing?: Parameters<typeof withTiming>[1] extends { easing?: infer E }
+    ? E
+    : never;
   /** Enable opacity fade during slide (default: false) */
   withOpacity?: boolean;
   /** Final opacity value when withOpacity is true (default: 0) */
@@ -53,7 +59,8 @@ export interface SlideAnimationConfig {
   allowedDirections?: AllowedDirections;
 }
 
-export interface UseSlideAnimationOptions extends Omit<SlideAnimationConfig, 'slideDistance'> {
+export interface UseSlideAnimationOptions
+  extends Omit<SlideAnimationConfig, 'slideDistance'> {
   /** Item ID for FlashList view recycling detection */
   itemId: string;
   /** Distance to slide in pixels (default: 50) */

@@ -61,11 +61,15 @@ describe('inviteFormatters', () => {
 
   describe('getInviteDisplayName', () => {
     it('prefers recipientName', () => {
-      expect(getInviteDisplayName({ recipientName: 'Alice', email: 'a@b.com' })).toBe('Alice');
+      expect(
+        getInviteDisplayName({ recipientName: 'Alice', email: 'a@b.com' }),
+      ).toBe('Alice');
     });
 
     it('falls back to email username', () => {
-      expect(getInviteDisplayName({ email: 'alice@example.com' })).toBe('alice');
+      expect(getInviteDisplayName({ email: 'alice@example.com' })).toBe(
+        'alice',
+      );
     });
 
     it('falls back to full email when username is empty', () => {
@@ -77,7 +81,9 @@ describe('inviteFormatters', () => {
     });
 
     it('returns Unknown for null values', () => {
-      expect(getInviteDisplayName({ recipientName: null, email: null })).toBe('Unknown');
+      expect(getInviteDisplayName({ recipientName: null, email: null })).toBe(
+        'Unknown',
+      );
     });
   });
 

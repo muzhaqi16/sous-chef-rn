@@ -175,9 +175,7 @@ describe('keychain storage', () => {
     });
 
     it('throws on error but still invalidates cache', async () => {
-      mockResetGenericPassword.mockRejectedValue(
-        new Error('Clear failed'),
-      );
+      mockResetGenericPassword.mockRejectedValue(new Error('Clear failed'));
 
       await expect(clearCredentials()).rejects.toThrow('Clear failed');
       expect(console.error).toHaveBeenCalledWith(

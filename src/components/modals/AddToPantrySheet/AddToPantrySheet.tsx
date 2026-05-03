@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   usePantryItemSuggestions,
@@ -7,14 +7,17 @@ import {
 } from '#features/pantry/hooks/usePantryItemSuggestions';
 import { toastService } from '#/services/toastService';
 import {
-  useCreatePantryItemMutation,
-  useRestockPantryItemMutation,
+  CreatePantryItemDocument,
+  RestockPantryItemDocument,
   GetPantryDocument,
   type GetPantryQuery,
   GetPantryItemSuggestionsDocument,
   type GetPantryItemSuggestionsQuery,
+} from '#features/pantry/graphql/pantry.generated';
+import type {
   ItemSuggestion,
-} from '#generated';
+  StorageLocation,
+} from '#/graphql/generated/schemaTypes';
 import { normalizePantry } from '#/utils/connectionUtils';
 import {
   isPantryItemDuplicateError,
@@ -23,7 +26,6 @@ import {
 import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { incrementNestedCounter } from '#/apollo/utils/cacheUpdaters';
-import type { StorageLocation } from '#generated';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type {
@@ -83,8 +85,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   );
 
   // Create pantry item mutation — synchronous cache update prevents flickering
-  const [createPantryItem] = useCreatePantryItemMutation({
-    errorPolicy: 'all',
+  const [createPantryItem] = useMutation(CreatePantryItemDocument, {
     update: (cache, { data }) => {
       const pantryItem = data?.createPantryItem?.pantryItem;
       if (!pantryItem || !pantryId) return;
@@ -104,8 +105,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   });
 
   // Restock pantry item mutation
-  const [restockPantryItem] = useRestockPantryItemMutation({
-    errorPolicy: 'all',
+  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
     update: (cache, { data }) => {
       const pantryItem = data?.restockPantryItem?.pantryItemUsage?.pantryItem;
       if (!pantryItem || !pantryId) return;

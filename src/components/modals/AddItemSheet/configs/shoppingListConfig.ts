@@ -47,5 +47,5 @@ export const shoppingListSheetConfig: AddItemSheetConfig = {
   addManuallyPosition: 'bottom',
   emptyStateMessage: 'No suggestions yet',
   emptyStateSubtext:
-    'Add items to your list and they\'ll appear here for quick re-adding',
+    "Add items to your list and they'll appear here for quick re-adding",
 };

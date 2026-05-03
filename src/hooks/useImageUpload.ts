@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { alertService } from '#/services/alertService';
 import { validateImageFile, getMimeTypeFromUri } from '#utils/imageValidation';
+import { useMutation } from '@apollo/client/react';
 import {
-  useCreateImageUploadUrlMutation,
-  useConfirmProfileImageUploadMutation,
-  useConfirmItemImageUploadMutation,
-  useUpdateUserProfileMutation,
-  useUpdateItemImageMutation,
-  ImageUploadPurpose,
-} from '#generated';
+  CreateImageUploadUrlDocument,
+  ConfirmProfileImageUploadDocument,
+  ConfirmItemImageUploadDocument,
+  UpdateItemImageDocument,
+} from '#operations/image/imageUpload.generated';
+import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
+import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import { useStore } from '#store';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -48,11 +49,11 @@ export const useImageUpload = () => {
     };
   }, []);
 
-  const [createUploadUrl] = useCreateImageUploadUrlMutation();
-  const [confirmProfileUpload] = useConfirmProfileImageUploadMutation();
-  const [confirmItemUpload] = useConfirmItemImageUploadMutation();
-  const [updateProfile] = useUpdateUserProfileMutation();
-  const [updateItemImage] = useUpdateItemImageMutation();
+  const [createUploadUrl] = useMutation(CreateImageUploadUrlDocument);
+  const [confirmProfileUpload] = useMutation(ConfirmProfileImageUploadDocument);
+  const [confirmItemUpload] = useMutation(ConfirmItemImageUploadDocument);
+  const [updateProfile] = useMutation(UpdateUserProfileDocument);
+  const [updateItemImage] = useMutation(UpdateItemImageDocument);
 
   const uploadToMinIO = async (
     file: ImageFile,

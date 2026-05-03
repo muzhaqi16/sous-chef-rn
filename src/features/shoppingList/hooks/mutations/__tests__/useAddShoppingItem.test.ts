@@ -10,9 +10,14 @@ const mockHandleApolloError = jest.fn(() => ({
 const mockCreateAddOperation = jest.fn();
 
 // Mock generated Apollo hook
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useAddItemToShoppingListMutation: () => [mockAddItemMutation],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'AddItemToShoppingList')
+      return [mockAddItemMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 // Mock errorService
@@ -20,20 +25,6 @@ jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
     handleApolloError: mockHandleApolloError,
   }),
-}));
-
-// Mock optimisticTypes
-jest.mock('#/apollo/utils/optimisticTypes', () => ({
-  buildOptimisticMutationResponse: jest.fn(() => ({
-    __typename: 'Mutation',
-    addItemToShoppingList: {
-      __typename: 'ShoppingListItemPayload',
-      success: true,
-      message: '',
-      code: 'SUCCESS',
-      shoppingListItem: { id: 'temp-123', itemName: 'Milk' },
-    },
-  })),
 }));
 
 // Mock useCrudOperations

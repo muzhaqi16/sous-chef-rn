@@ -10,11 +10,15 @@ const mockCreatePantryItem = jest.fn();
 const mockUpdatePantryItem = jest.fn();
 const mockDeletePantryItem = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreatePantryItemMutation: () => [mockCreatePantryItem, {}],
-  useUpdatePantryItemMutation: () => [mockUpdatePantryItem, {}],
-  useDeletePantryItemMutation: () => [mockDeletePantryItem, {}],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreatePantryItem') return [mockCreatePantryItem, {}];
+    if (opName === 'UpdatePantryItem') return [mockUpdatePantryItem, {}];
+    if (opName === 'DeletePantryItem') return [mockDeletePantryItem, {}];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -37,31 +41,6 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
       __typename: typename,
       id,
       ...fields,
-    }),
-  ),
-}));
-
-jest.mock('#/apollo/utils/optimisticTypes', () => ({
-  buildOptimisticMutationResponse: jest.fn(
-    (opName: string, payloadType: string, fieldName: string, data: any) => ({
-      __typename: 'Mutation',
-      [opName]: { __typename: payloadType, success: true, [fieldName]: data },
-    }),
-  ),
-  buildOptimisticDeleteResponse: jest.fn(
-    (
-      opName: string,
-      payloadType: string,
-      fieldName: string,
-      typename: string,
-      id: string,
-    ) => ({
-      __typename: 'Mutation',
-      [opName]: {
-        __typename: payloadType,
-        success: true,
-        [fieldName]: { __typename: typename, id },
-      },
     }),
   ),
 }));

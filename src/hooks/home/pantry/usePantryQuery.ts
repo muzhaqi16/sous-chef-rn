@@ -10,11 +10,12 @@
 
 import { useEffect, useState } from 'react';
 import { NetworkStatus } from '@apollo/client';
-import {
-  useGetPantryQuery,
-  type PantryItemFilters,
-  type PantryItemOrderBy,
-} from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import type {
+  PantryItemFilters,
+  PantryItemOrderBy,
+} from '#/graphql/generated/schemaTypes';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { usePagination } from '#/hooks/utils/usePagination';
@@ -87,8 +88,9 @@ export function usePantryQuery(
   const isLatched = activatedForId === pantryId && !!pantryId;
   const shouldSkip = !hasValidPantryId && !isLatched;
 
-  const { data, loading, error, refetch, fetchMore, networkStatus } =
-    useGetPantryQuery({
+  const { data, loading, error, refetch, fetchMore, networkStatus } = useQuery(
+    GetPantryDocument,
+    {
       variables: {
         id: pantryId || '',
         itemsFirst: PAGE_SIZE.DEFAULT,
@@ -97,7 +99,6 @@ export function usePantryQuery(
         storageLocationsFirst: PAGE_SIZE.COMPACT,
       },
       skip: shouldSkip,
-      fetchPolicy: 'cache-and-network',
       // After the initial network fetch, use cache-first for re-renders to avoid
       // duplicate requests. On variable changes (filter/sort), revert to the
       // initial policy so the user gets fresh data.
@@ -112,7 +113,8 @@ export function usePantryQuery(
       // RefreshControl in PantryMain can observe pull-to-refresh state via
       // `isRefreshing` below.
       notifyOnNetworkStatusChange: true,
-    });
+    },
+  );
 
   // Pull-to-refresh state — derived directly from Apollo's networkStatus.
   const isRefreshing = networkStatus === NetworkStatus.refetch;

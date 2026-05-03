@@ -4,19 +4,20 @@ import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { MealPlanItemCard } from './MealPlanItemCard';
-import type { MealType, MealPlanItemFragment } from '#generated';
 import { Text } from '#components/atoms/Text';
+import { type MealType } from '#/graphql/generated/schemaTypes';
+import { type MealPlanItemCard_ItemFragment } from './MealPlanItemCard.generated';
 
 interface MealTypeSectionProps {
   mealType: MealType;
   label: string;
-  items: MealPlanItemFragment[];
+  items: MealPlanItemCard_ItemFragment[];
   onToggleCompleted?: (
     id: string,
     isCompleted: boolean,
     hasRecipe: boolean,
   ) => void;
-  onItemPress?: (item: MealPlanItemFragment) => void;
+  onItemPress?: (id: string) => void;
   onDeleteItem?: (id: string) => void;
   onAddMeal?: (mealType: MealType) => void;
 }

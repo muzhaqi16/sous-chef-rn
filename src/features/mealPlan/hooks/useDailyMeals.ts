@@ -1,5 +1,13 @@
 import { isSameDay } from 'date-fns';
-import { MealType, type MealPlanItemFragment } from '#generated';
+import { MealType } from '#/graphql/generated/schemaTypes';
+import { type DailyMeals_ItemFragment } from './useDailyMeals.generated';
+import { type MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
+
+// Hook input items must satisfy this hook's own fragment AND the downstream
+// MealPlanItemCard fragment (since items flow through MealTypeSection → MealPlanItemCard).
+// The page-level GetMealPlan query spreads both, so its result naturally satisfies this.
+export type DailyMealsItem = DailyMeals_ItemFragment &
+  MealPlanItemCard_ItemFragment;
 
 const MEAL_TYPE_ORDER: MealType[] = [
   MealType.Breakfast,
@@ -13,7 +21,7 @@ const MEAL_TYPE_ORDER: MealType[] = [
 export interface MealTypeGroup {
   mealType: MealType;
   label: string;
-  items: MealPlanItemFragment[];
+  items: DailyMealsItem[];
 }
 
 function getMealTypeLabel(mealType: MealType): string {
@@ -35,10 +43,7 @@ function getMealTypeLabel(mealType: MealType): string {
   }
 }
 
-export function useDailyMeals(
-  items: MealPlanItemFragment[],
-  selectedDate: Date,
-) {
+export function useDailyMeals(items: DailyMealsItem[], selectedDate: Date) {
   const dailyMeals = (() => {
     // Filter items for the selected date
     const dayItems = items.filter(item =>

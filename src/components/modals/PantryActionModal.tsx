@@ -12,7 +12,8 @@ import {
   type PantryOperation,
 } from '#features/pantry/hooks/useOperationUnits';
 import { useConvertAvailableQuantity } from '#features/pantry/hooks/useConvertAvailableQuantity';
-import type { PantryItemFragment, UnitType } from '#generated';
+import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
+import { type UnitType } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 

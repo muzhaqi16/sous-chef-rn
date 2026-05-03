@@ -13,7 +13,7 @@ import {
   HealthGoal,
   Cuisine,
   RestrictionSeverity,
-} from '#generated';
+} from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#/utils/iconUtils';
 import { StringArrayManager } from '#/components/organisms/StringArrayManager/StringArrayManager';

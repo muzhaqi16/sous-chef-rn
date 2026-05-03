@@ -12,9 +12,9 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { SPRING, TIMING } from '#/constants/animations';
-import type { UnitType } from '#generated';
-import type { SelectedUnitInfo } from '#features/pantry/hooks/useOperationUnits';
 import { Text } from '#components/atoms/Text';
+import { type UnitType } from '#/graphql/generated/schemaTypes';
+import type { SelectedUnitInfo } from '#features/pantry/hooks/useOperationUnits';
 
 /** Minimal interface for any unit renderable in the picker */
 export interface PickableUnit {

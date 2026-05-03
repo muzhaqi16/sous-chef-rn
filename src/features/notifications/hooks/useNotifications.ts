@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
+import { useSubscription } from '@apollo/client/react';
+import { NotificationChangedDocument } from '#features/notifications/graphql/notifications.generated';
 import {
-  useNotificationChangedSubscription,
   NotificationType,
   NotificationCategory,
   Priority,
-} from '#generated';
+} from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
@@ -178,7 +179,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   };
 
   // General notifications
-  useNotificationChangedSubscription({
+  useSubscription(NotificationChangedDocument, {
     skip: config.skip || !user?.id,
     onData: ({ data }) => {
       if (data.data?.notificationChanged?.notification) {

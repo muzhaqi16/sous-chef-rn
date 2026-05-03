@@ -1,7 +1,7 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
-import { NotificationType } from '#generated';
+import { NotificationType } from '#/graphql/generated/schemaTypes';
 import { useNotifications } from '../useNotifications';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -43,10 +43,16 @@ jest.mock('#store', () => ({
 }));
 
 const mockSubscriptionOnData = jest.fn();
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useNotificationChangedSubscription: jest.fn((opts: any) => {
-    mockSubscriptionOnData.mockImplementation(opts.onData);
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useSubscription: jest.fn((doc: any, opts: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'NotificationChanged') {
+      if (opts?.onData) {
+        mockSubscriptionOnData.mockImplementation(opts.onData);
+      }
+      return {};
+    }
     return {};
   }),
 }));
@@ -137,11 +143,12 @@ describe('useNotifications', () => {
   });
 
   it('skips subscription when config.skip is true', () => {
-    const { useNotificationChangedSubscription } = require('#generated');
+    const { useSubscription } = require('@apollo/client/react');
 
     renderHook(() => useNotifications({ skip: true }));
 
-    expect(useNotificationChangedSubscription).toHaveBeenCalledWith(
+    expect(useSubscription).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ skip: true }),
     );
   });

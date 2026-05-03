@@ -4,7 +4,11 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { AddItemSheet, useAddItemSheetRefs } from '../AddItemSheet';
 import { renderHook } from '@testing-library/react-native';
-import type { AddItemSheetConfig, SuggestionsHookResult, BaseSuggestionItem } from '../types';
+import type {
+  AddItemSheetConfig,
+  SuggestionsHookResult,
+  BaseSuggestionItem,
+} from '../types';
 
 // Mock GlobalBottomSheetBackdrop
 jest.mock('#components/atoms/GlobalBottomSheetBackdrop', () => {
@@ -66,7 +70,10 @@ jest.mock('#components/molecules/ActionCard', () => {
     ActionCard: (props: any) =>
       R.createElement(
         RN.Pressable,
-        { testID: props.testID || `action-${props.label}`, onPress: props.onPress },
+        {
+          testID: props.testID || `action-${props.label}`,
+          onPress: props.onPress,
+        },
         R.createElement(RN.Text, {}, props.label),
       ),
   };
@@ -124,7 +131,9 @@ jest.mock('#utils/iconUtils', () => {
   };
 });
 
-const createConfig = (overrides: Partial<AddItemSheetConfig> = {}): AddItemSheetConfig => ({
+const createConfig = (
+  overrides: Partial<AddItemSheetConfig> = {},
+): AddItemSheetConfig => ({
   title: 'Add to Pantry',
   testIDPrefix: 'add-pantry',
   placeholderIcon: 'cube-outline',
@@ -133,13 +142,15 @@ const createConfig = (overrides: Partial<AddItemSheetConfig> = {}): AddItemSheet
     {
       key: 'low_stock',
       title: 'LOW STOCK',
-      accessor: (grouped: Record<string, BaseSuggestionItem[]>) => grouped.lowStock ?? [],
+      accessor: (grouped: Record<string, BaseSuggestionItem[]>) =>
+        grouped.lowStock ?? [],
       priority: 1,
     },
     {
       key: 'add_again',
       title: 'ADD AGAIN',
-      accessor: (grouped: Record<string, BaseSuggestionItem[]>) => grouped.addAgain ?? [],
+      accessor: (grouped: Record<string, BaseSuggestionItem[]>) =>
+        grouped.addAgain ?? [],
       priority: 2,
     },
   ],
@@ -157,7 +168,9 @@ const createConfig = (overrides: Partial<AddItemSheetConfig> = {}): AddItemSheet
   ...overrides,
 });
 
-const createSuggestions = (overrides: Partial<SuggestionsHookResult> = {}): SuggestionsHookResult => ({
+const createSuggestions = (
+  overrides: Partial<SuggestionsHookResult> = {},
+): SuggestionsHookResult => ({
   grouped: {},
   loading: false,
   hasSuggestions: false,
@@ -202,21 +215,29 @@ describe('AddItemSheet', () => {
   it('renders empty state when no suggestions', () => {
     render(<AddItemSheet {...defaultProps} />);
     expect(screen.getByText('No suggestions yet')).toBeTruthy();
-    expect(screen.getByText('Add items to your pantry to get started')).toBeTruthy();
+    expect(
+      screen.getByText('Add items to your pantry to get started'),
+    ).toBeTruthy();
   });
 
   it('renders loading state for suggestions', () => {
     render(
       <AddItemSheet
         {...defaultProps}
-        suggestions={createSuggestions({ loading: true, hasSuggestions: false })}
+        suggestions={createSuggestions({
+          loading: true,
+          hasSuggestions: false,
+        })}
       />,
     );
     // ActivityIndicator should be present (loading)
     const { toJSON } = render(
       <AddItemSheet
         {...defaultProps}
-        suggestions={createSuggestions({ loading: true, hasSuggestions: false })}
+        suggestions={createSuggestions({
+          loading: true,
+          hasSuggestions: false,
+        })}
       />,
     );
     expect(toJSON()).toBeTruthy();
@@ -317,7 +338,9 @@ describe('AddItemSheet', () => {
         suggestions={createSuggestions({
           hasSuggestions: true,
           grouped: {
-            lowStock: [{ id: 's1', itemId: 'item-1', name: 'Milk', category: 'Dairy' }],
+            lowStock: [
+              { id: 's1', itemId: 'item-1', name: 'Milk', category: 'Dairy' },
+            ],
             addAgain: [],
           },
         })}
@@ -333,13 +356,13 @@ describe('AddItemSheet', () => {
         {
           key: 'add_again',
           title: 'ADD AGAIN',
-          accessor: (grouped) => grouped.addAgain ?? [],
+          accessor: grouped => grouped.addAgain ?? [],
           priority: 2,
         },
         {
           key: 'low_stock',
           title: 'LOW STOCK',
-          accessor: (grouped) => grouped.lowStock ?? [],
+          accessor: grouped => grouped.lowStock ?? [],
           priority: 1,
         },
       ],
@@ -352,8 +375,12 @@ describe('AddItemSheet', () => {
         suggestions={createSuggestions({
           hasSuggestions: true,
           grouped: {
-            lowStock: [{ id: 's1', itemId: 'i1', name: 'Milk', category: 'Dairy' }],
-            addAgain: [{ id: 's2', itemId: 'i2', name: 'Eggs', category: 'Dairy' }],
+            lowStock: [
+              { id: 's1', itemId: 'i1', name: 'Milk', category: 'Dairy' },
+            ],
+            addAgain: [
+              { id: 's2', itemId: 'i2', name: 'Eggs', category: 'Dairy' },
+            ],
           },
         })}
       />,
@@ -365,7 +392,9 @@ describe('AddItemSheet', () => {
   });
 
   it('shows search results when autocomplete has data', () => {
-    const { useItemAutocomplete } = require('#hooks/autocomplete/useItemAutocomplete');
+    const {
+      useItemAutocomplete,
+    } = require('#hooks/autocomplete/useItemAutocomplete');
     useItemAutocomplete.mockReturnValue({
       searchTerm: 'mi',
       displayItems: [{ id: '1', name: 'Milk' }],

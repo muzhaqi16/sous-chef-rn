@@ -1,5 +1,5 @@
 import React from 'react';
-import { ItemSuggestion } from '#generated';
+import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { useItemAutocomplete } from '#hooks/autocomplete/useItemAutocomplete';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { AutocompleteField } from './AutocompleteField';
@@ -29,27 +29,30 @@ export const ItemAutocompleteField: React.FC<ItemAutocompleteFieldProps> = ({
   error,
   testID,
   onSelectItem,
-  showBrand = false }) => {
+  showBrand = false,
+}) => {
   const item = useItemAutocomplete();
 
   const handleTextChange = (text: string) => {
-      onChangeText(text);
-      item.handleSearchTermChange(text);
-    };
+    onChangeText(text);
+    item.handleSearchTermChange(text);
+  };
 
   const handleSelect = (selected: ItemSuggestion) => {
-      onChangeText(selected.name.trim());
-      onSelectItem?.(selected);
-      item.setSearchTerm('');
-    };
+    onChangeText(selected.name.trim());
+    onSelectItem?.(selected);
+    item.setSearchTerm('');
+  };
 
   const renderItem = (i: ItemSuggestion) => (
-      <AutocompleteRow
-        image={resolveImageUrl(i) ?? null}
-        title={i.name}
-        subtitle={showBrand && i.brands?.length === 1 ? i.brands[0].name : undefined}
-      />
-    );
+    <AutocompleteRow
+      image={resolveImageUrl(i) ?? null}
+      title={i.name}
+      subtitle={
+        showBrand && i.brands?.length === 1 ? i.brands[0].name : undefined
+      }
+    />
+  );
 
   const keyExtractor = (i: ItemSuggestion) => i.id;
 

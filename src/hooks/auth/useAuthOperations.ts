@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { useToast } from '#/hooks/useToast';
+import { useMutation } from '@apollo/client/react';
 import {
-  useLoginMutation,
-  useRegisterMutation,
-  LoginInput,
-  RegisterInput,
-} from '#generated';
+  LoginDocument,
+  RegisterDocument,
+} from '#operations/auth/auth.generated';
+import {
+  type LoginInput,
+  type RegisterInput,
+} from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { useErrorService } from '#/services/errorService';
 import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
-import {
-  executeMutation,
-  executeQuery,
-} from '#/utils/compilerSafeWrappers';
+import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { LogoutCleanup } from '#/apollo/logoutCleanup';
@@ -403,8 +403,8 @@ export const useAuthOperations = ({
   } = useUserPreferences();
 
   // GraphQL mutations
-  const [loginMutation] = useLoginMutation();
-  const [registerMutation] = useRegisterMutation();
+  const [loginMutation] = useMutation(LoginDocument);
+  const [registerMutation] = useMutation(RegisterDocument);
 
   // Auth flow handlers
   const handleAuthSuccess = (message: string) => {

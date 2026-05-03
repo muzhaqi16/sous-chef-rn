@@ -22,17 +22,21 @@ import { incrementLoginCount } from '#/hooks/useFeatureHint';
 import {
   LoginDocument,
   RegisterDocument,
-  RegisterDeviceDocument,
-  type LoginInput,
-  type RegisterInput,
   type LoginMutation,
   type LoginMutationVariables,
   type RegisterMutation,
   type RegisterMutationVariables,
+} from '#operations/auth/auth.generated';
+import {
+  RegisterDeviceDocument,
   type RegisterDeviceMutation,
   type RegisterDeviceMutationVariables,
+} from '#operations/auth/device.generated';
+import {
+  type LoginInput,
+  type RegisterInput,
   type DeviceRegistrationInput,
-} from '#generated';
+} from '#/graphql/generated/schemaTypes';
 import {
   loadCredentials,
   loadCredentialsForAccount,
@@ -404,8 +408,7 @@ async function handleLogin(
   // Check biometric setup eligibility (skip during registration)
   if (loginCredentials && user.emailVerified && user.onBoarded) {
     try {
-      const biometricResult =
-        await shouldShowPostLoginBiometricPrompt(user);
+      const biometricResult = await shouldShowPostLoginBiometricPrompt(user);
       if (biometricResult.shouldShow) {
         store.setPostLoginCredentials(loginCredentials);
         store.setShowBiometricSetup(true);

@@ -36,13 +36,25 @@ jest.mock('#store/useAppStore', () => {
 let mockListsData: any = { shoppingLists: { edges: [] } };
 let mockListsLoading = false;
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreateShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useGetShoppingListsLiteQuery: jest.fn(() => ({
-    data: mockListsData,
-    loading: mockListsLoading,
-  })),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateShoppingList') return [jest.fn(), { loading: false }];
+    return [jest.fn(), {}];
+  }),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetShoppingListsLite') {
+      return {
+        data: mockListsData,
+        loading: mockListsLoading,
+        error: undefined,
+        refetch: jest.fn(),
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({

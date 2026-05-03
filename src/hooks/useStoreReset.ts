@@ -1,5 +1,5 @@
-import {useAppStore} from '#store/useAppStore';
-import {RESET_SCENARIOS, ResetOptions} from '#store/resetManager';
+import { useAppStore } from '#store/useAppStore';
+import { RESET_SCENARIOS, ResetOptions } from '#store/resetManager';
 
 export const useStoreReset = () => {
   const resetStore = useAppStore(state => state.resetStore);
@@ -21,8 +21,8 @@ export const useStoreReset = () => {
   };
 
   const customReset = (options: ResetOptions) => {
-      resetStore(options);
-    };
+    resetStore(options);
+  };
 
   return {
     logout,
@@ -31,12 +31,13 @@ export const useStoreReset = () => {
     resetOnboarding,
     customReset,
     // Direct access to reset scenarios for flexibility
-    scenarios: RESET_SCENARIOS };
+    scenarios: RESET_SCENARIOS,
+  };
 };
 
 // Alternative: Individual hooks for specific use cases
 export const useAuth = () => {
-  const {logout} = useStoreReset();
+  const { logout } = useStoreReset();
   const user = useAppStore(state => state.user);
   const isAuthenticated = useAppStore(state => state.getIsAuthenticated());
 
@@ -48,7 +49,7 @@ export const useAuth = () => {
 };
 
 export const useSession = () => {
-  const {sessionExpired} = useStoreReset();
+  const { sessionExpired } = useStoreReset();
 
   const handleSessionExpiry = () => {
     // Could add additional logic here like showing a modal
@@ -56,5 +57,6 @@ export const useSession = () => {
   };
 
   return {
-    handleSessionExpiry };
+    handleSessionExpiry,
+  };
 };

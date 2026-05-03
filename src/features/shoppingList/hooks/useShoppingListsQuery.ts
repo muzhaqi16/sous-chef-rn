@@ -1,7 +1,8 @@
+import { useQuery } from '@apollo/client/react';
 import {
-  useGetShoppingListsLiteQuery,
-  GetShoppingListsLiteQuery,
-} from '#generated';
+  GetShoppingListsLiteDocument,
+  type GetShoppingListsLiteQuery,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
@@ -37,13 +38,12 @@ export function useShoppingListsQuery() {
   // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders (fixes infinite loop)
   // - Pull-to-refresh calls refetch() for fresh data
   // - Fetches ALL user's lists (home-based and personal) - filtering happens in useShoppingListSelection
-  const { data, previousData, loading, error, refetch } =
-    useGetShoppingListsLiteQuery({
+  const { data, previousData, loading, error, refetch } = useQuery(
+    GetShoppingListsLiteDocument,
+    {
       variables: { first: 50 },
-      fetchPolicy: 'cache-and-network',
-      nextFetchPolicy: 'cache-first',
-      errorPolicy: 'all',
-    });
+    },
+  );
 
   useApolloErrorLogger('GetShoppingListsLite', error);
 

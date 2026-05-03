@@ -39,17 +39,33 @@ jest.mock('#features/shoppingList/hooks/useShoppingListItemForm', () => ({
   }),
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useAddItemToShoppingListMutation: jest.fn(() => [
-    jest.fn(() => Promise.resolve({ data: null })),
-    { loading: false },
-  ]),
-  useUpdateShoppingListItemMutation: jest.fn(() => [
-    jest.fn(() => Promise.resolve({ data: null })),
-    { loading: false },
-  ]),
-  useGetShoppingListItemQuery: jest.fn(() => ({ data: null, loading: false })),
+const queryResponses: Record<string, any> = {};
+const setQueryResponse = (opName: string, response: any) => {
+  queryResponses[opName] = response;
+};
+
+const mutationOverrides: Record<string, [jest.Mock, { loading: boolean }]> = {};
+const setMutationFor = (opName: string, fn: jest.Mock) => {
+  mutationOverrides[opName] = [fn, { loading: false }];
+};
+
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName && mutationOverrides[opName]) return mutationOverrides[opName];
+    return [jest.fn(() => Promise.resolve({ data: null })), { loading: false }];
+  }),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName && queryResponses[opName]) return queryResponses[opName];
+    return {
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+    };
+  }),
 }));
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
@@ -163,7 +179,11 @@ describe('AddEditItem', () => {
   const addRoute = { params: { listId: 'sl1' } };
   const editRoute = { params: { listId: 'sl1', itemId: 'item1' } };
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    for (const k of Object.keys(queryResponses)) delete queryResponses[k];
+    for (const k of Object.keys(mutationOverrides)) delete mutationOverrides[k];
+  });
 
   it('renders add item title', () => {
     render(<AddEditItem route={addRoute} />);
@@ -342,12 +362,7 @@ describe('AddEditItem', () => {
         },
       },
     });
-
-    const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([
-      mockAddItem,
-      { loading: false },
-    ]);
+    setMutationFor('AddItemToShoppingList', mockAddItem);
 
     jest
       .spyOn(
@@ -385,15 +400,8 @@ describe('AddEditItem', () => {
       },
     });
 
-    const {
-      useUpdateShoppingListItemMutation,
-      useGetShoppingListItemQuery,
-    } = require('#generated');
-    useUpdateShoppingListItemMutation.mockReturnValue([
-      mockUpdateItem,
-      { loading: false },
-    ]);
-    useGetShoppingListItemQuery.mockReturnValue({
+    setMutationFor('UpdateShoppingListItem', mockUpdateItem);
+    setQueryResponse('GetShoppingListItem', {
       data: {
         shoppingListItem: { id: 'item1', name: 'Milk', version: 1 },
       },
@@ -438,11 +446,7 @@ describe('AddEditItem', () => {
 
   it('shows error alert when addItem returns no data', async () => {
     const mockAddItem = jest.fn().mockResolvedValue({ data: null });
-    const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([
-      mockAddItem,
-      { loading: false },
-    ]);
+    setMutationFor('AddItemToShoppingList', mockAddItem);
 
     jest
       .spyOn(
@@ -478,11 +482,7 @@ describe('AddEditItem', () => {
     const mockAddItem = jest.fn().mockResolvedValue({
       data: { addItemToShoppingList: { shoppingListItem: null } },
     });
-    const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([
-      mockAddItem,
-      { loading: false },
-    ]);
+    setMutationFor('AddItemToShoppingList', mockAddItem);
 
     jest
       .spyOn(
@@ -527,11 +527,7 @@ describe('AddEditItem', () => {
     const mockUpdateItem = jest
       .fn()
       .mockRejectedValue(new Error('VERSION_CONFLICT'));
-    const { useUpdateShoppingListItemMutation } = require('#generated');
-    useUpdateShoppingListItemMutation.mockReturnValue([
-      mockUpdateItem,
-      { loading: false },
-    ]);
+    setMutationFor('UpdateShoppingListItem', mockUpdateItem);
 
     jest
       .spyOn(
@@ -574,11 +570,7 @@ describe('AddEditItem', () => {
       networkError: new Error('timeout'),
       message: 'Network error',
     });
-    const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([
-      mockAddItem,
-      { loading: false },
-    ]);
+    setMutationFor('AddItemToShoppingList', mockAddItem);
 
     jest
       .spyOn(
@@ -621,11 +613,7 @@ describe('AddEditItem', () => {
         { extensions: { code: 'VALIDATION_ERROR' }, message: 'Invalid' },
       ],
     });
-    const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([
-      mockAddItem,
-      { loading: false },
-    ]);
+    setMutationFor('AddItemToShoppingList', mockAddItem);
 
     jest
       .spyOn(
@@ -668,11 +656,7 @@ describe('AddEditItem', () => {
         { extensions: { code: 'UNAUTHENTICATED' }, message: 'Unauthorized' },
       ],
     });
-    const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([
-      mockAddItem,
-      { loading: false },
-    ]);
+    setMutationFor('AddItemToShoppingList', mockAddItem);
 
     jest
       .spyOn(
@@ -715,11 +699,7 @@ describe('AddEditItem', () => {
         { extensions: { code: 'INTERNAL_ERROR' }, message: 'Something broke' },
       ],
     });
-    const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([
-      mockAddItem,
-      { loading: false },
-    ]);
+    setMutationFor('AddItemToShoppingList', mockAddItem);
 
     jest
       .spyOn(
@@ -758,11 +738,7 @@ describe('AddEditItem', () => {
     handleVersionConflict.mockReturnValue(false);
 
     const mockAddItem = jest.fn().mockRejectedValue(new Error('Unknown'));
-    const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([
-      mockAddItem,
-      { loading: false },
-    ]);
+    setMutationFor('AddItemToShoppingList', mockAddItem);
 
     jest
       .spyOn(
@@ -804,11 +780,7 @@ describe('AddEditItem', () => {
         },
       },
     });
-    const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([
-      mockAddItem,
-      { loading: false },
-    ]);
+    setMutationFor('AddItemToShoppingList', mockAddItem);
 
     jest
       .spyOn(
@@ -847,8 +819,7 @@ describe('AddEditItem', () => {
 
   it('populates form from existing item data in edit mode', () => {
     const mockSetFromItem = jest.fn();
-    const { useGetShoppingListItemQuery } = require('#generated');
-    useGetShoppingListItemQuery.mockReturnValue({
+    setQueryResponse('GetShoppingListItem', {
       data: {
         shoppingListItem: {
           id: 'item1',
@@ -891,11 +862,7 @@ describe('AddEditItem', () => {
     const mockUpdateItem = jest.fn().mockResolvedValue({
       data: { updateShoppingListItem: { shoppingListItem: null } },
     });
-    const { useUpdateShoppingListItemMutation } = require('#generated');
-    useUpdateShoppingListItemMutation.mockReturnValue([
-      mockUpdateItem,
-      { loading: false },
-    ]);
+    setMutationFor('UpdateShoppingListItem', mockUpdateItem);
 
     jest
       .spyOn(
@@ -935,11 +902,7 @@ describe('AddEditItem', () => {
         },
       },
     });
-    const { useAddItemToShoppingListMutation } = require('#generated');
-    useAddItemToShoppingListMutation.mockReturnValue([
-      mockAddItem,
-      { loading: false },
-    ]);
+    setMutationFor('AddItemToShoppingList', mockAddItem);
 
     jest
       .spyOn(

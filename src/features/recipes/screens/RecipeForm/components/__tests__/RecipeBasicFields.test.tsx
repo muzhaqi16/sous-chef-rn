@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { RecipeBasicFields } from '../RecipeBasicFields';
-import { RecipeStatus } from '#generated';
+import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#components/molecules/FormInput', () => ({
   FormInput: ({ label, value, onChangeText, placeholder, testID }: any) => {

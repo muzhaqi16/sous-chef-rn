@@ -56,7 +56,11 @@ describe('TagInput', () => {
 
   it('renders placeholder when tags are empty', () => {
     render(
-      <TagInput tags={[]} onTagsChange={jest.fn()} placeholder="Add a tag..." />,
+      <TagInput
+        tags={[]}
+        onTagsChange={jest.fn()}
+        placeholder="Add a tag..."
+      />,
     );
     expect(screen.getByPlaceholderText('Add a tag...')).toBeTruthy();
   });

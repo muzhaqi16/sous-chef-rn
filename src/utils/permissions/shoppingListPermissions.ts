@@ -1,4 +1,7 @@
-import { MembershipRole, CollaboratorStatus } from '#generated';
+import {
+  MembershipRole,
+  CollaboratorStatus,
+} from '#/graphql/generated/schemaTypes';
 
 /**
  * Permission flags for shopping list item operations
@@ -89,7 +92,10 @@ function findMyCollaborator(
     const collab = edge.node;
 
     // Match by collaborator.id or collaboratorId
-    if (collab.collaborator?.id === userId || collab.collaboratorId === userId) {
+    if (
+      collab.collaborator?.id === userId ||
+      collab.collaboratorId === userId
+    ) {
       // Only return if status is ACTIVE
       if (collab.status === CollaboratorStatus.Active) {
         return collab;
@@ -107,7 +113,9 @@ function findMyCollaborator(
  * - OWNER/ADMIN/MEMBER: all permissions (use membership fields)
  * - GUEST: mark purchased only
  */
-function getHomePermissions(membership: HomeMembership): ShoppingListPermissions {
+function getHomePermissions(
+  membership: HomeMembership,
+): ShoppingListPermissions {
   // Guest role: mark purchased only
   if (membership.role === MembershipRole.Guest) {
     return GUEST_PERMISSIONS;
@@ -126,7 +134,9 @@ function getHomePermissions(membership: HomeMembership): ShoppingListPermissions
 /**
  * Get permissions from collaborator for personal lists (no homeId)
  */
-function getCollaboratorPermissions(collaborator: Collaborator): ShoppingListPermissions {
+function getCollaboratorPermissions(
+  collaborator: Collaborator,
+): ShoppingListPermissions {
   return {
     canAddItems: collaborator.canAddItems ?? false,
     canRemoveItems: collaborator.canRemoveItems ?? false,
@@ -160,7 +170,10 @@ export function getShoppingListPermissions(
   }
 
   // For personal lists (no homeId), use collaborator permissions
-  const collaborator = findMyCollaborator(shoppingList.collaboratorsConnection, userId);
+  const collaborator = findMyCollaborator(
+    shoppingList.collaboratorsConnection,
+    userId,
+  );
   if (collaborator) {
     return getCollaboratorPermissions(collaborator);
   }

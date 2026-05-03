@@ -1,78 +1,113 @@
-import { renderHook } from '@testing-library/react-native';
+import React, { type ReactNode } from 'react';
+import { renderHook, waitFor } from '@testing-library/react-native';
+import { MockedProvider } from '@apollo/client/testing/react';
+import type { MockedResponse } from '@apollo/client/testing';
+import { GetPantryItemSuggestionsDocument } from '#features/pantry/graphql/pantry.generated';
+import { PantrySuggestionSource } from '#/graphql/generated/schemaTypes';
 import { usePantryItemSuggestions } from '../usePantryItemSuggestions';
 
-// Mock offline mode hook
 let mockIsOffline = false;
 jest.mock('#hooks/settings/useOfflineMode', () => ({
   useIsEffectivelyOffline: () => mockIsOffline,
 }));
 
-// Mock image utilities
 jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: (item: any) =>
     item?.imageUrl ? `https://cdn.test/${item.imageUrl}` : null,
 }));
 
-// Mock image preloading
 const mockPreloadImages = jest.fn();
 jest.mock('#components/atoms/CachedImage', () => ({
   preloadImages: (...args: unknown[]) => mockPreloadImages(...args),
 }));
 
-// Mock generated hooks/enums
-const mockQueryResult = {
-  data: undefined as any,
-  loading: false,
-  error: undefined,
-  refetch: jest.fn().mockResolvedValue({}),
-};
-
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetPantryItemSuggestionsQuery: jest.fn(() => mockQueryResult),
-}));
-
-const { PantrySuggestionSource } = jest.requireMock('#generated');
-
-function createSuggestion(overrides: Record<string, unknown> = {}) {
+function makeSuggestion(overrides: Record<string, unknown> = {}) {
   return {
+    __typename: 'PantryItemSuggestion',
     id: 'sug-1',
-    itemName: 'Milk',
+    itemId: 'item-1',
+    name: 'Milk',
     source: PantrySuggestionSource.LowStock,
     imageUrl: 'milk.jpg',
+    category: null,
+    defaultUnitId: null,
+    currentQuantity: null,
+    minQuantity: null,
+    restockQuantity: null,
+    daysUntilExpiry: null,
+    expiresAt: null,
+    lastQuantity: null,
+    lastUnitId: null,
+    frequencyCount: null,
+    popularityRank: null,
+    pantryItemId: null,
+    defaultUnit: null,
+    item: {
+      __typename: 'SuggestionItem',
+      id: 'item-1',
+      name: 'Milk',
+      imageUrl: null,
+    },
     ...overrides,
   };
+}
+
+function buildMock(
+  suggestions: ReturnType<typeof makeSuggestion>[],
+  variables: { pantryId: string; limit: number } = {
+    pantryId: 'pantry-1',
+    limit: 10,
+  },
+): MockedResponse {
+  return {
+    request: { query: GetPantryItemSuggestionsDocument, variables },
+    result: {
+      data: {
+        pantry: {
+          __typename: 'Pantry',
+          id: variables.pantryId,
+          suggestions,
+        },
+      },
+    },
+  };
+}
+
+function renderWith(
+  mocks: MockedResponse[],
+  props: Parameters<typeof usePantryItemSuggestions>[0],
+) {
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    React.createElement(
+      MockedProvider,
+      { mocks, showWarnings: false },
+      children,
+    );
+  return renderHook(() => usePantryItemSuggestions(props), { wrapper });
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockIsOffline = false;
-  mockQueryResult.data = undefined;
-  mockQueryResult.loading = false;
-  mockQueryResult.error = undefined;
 });
 
 describe('usePantryItemSuggestions', () => {
-  it('returns empty state when no data', () => {
-    const { result } = renderHook(() =>
-      usePantryItemSuggestions({ pantryId: 'pantry-1' }),
-    );
+  it('returns empty state before the network resolves', () => {
+    const { result } = renderWith([buildMock([makeSuggestion()])], {
+      pantryId: 'pantry-1',
+    });
 
     expect(result.current.suggestions).toEqual([]);
     expect(result.current.hasSuggestions).toBe(false);
-    expect(result.current.loading).toBe(false);
+    expect(result.current.loading).toBe(true);
   });
 
-  it('returns suggestions with resolved imageUrl', () => {
-    mockQueryResult.data = {
-      pantry: {
-        suggestions: [createSuggestion()],
-      },
-    };
+  it('returns suggestions with resolved imageUrl after the network resolves', async () => {
+    const { result } = renderWith([buildMock([makeSuggestion()])], {
+      pantryId: 'pantry-1',
+    });
 
-    const { result } = renderHook(() =>
-      usePantryItemSuggestions({ pantryId: 'pantry-1' }),
-    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.suggestions).toHaveLength(1);
     expect(result.current.suggestions[0].imageUrl).toBe(
@@ -81,56 +116,49 @@ describe('usePantryItemSuggestions', () => {
     expect(result.current.hasSuggestions).toBe(true);
   });
 
-  it('returns null imageUrl when suggestion has no image', () => {
-    mockQueryResult.data = {
-      pantry: {
-        suggestions: [createSuggestion({ imageUrl: null })],
-      },
-    };
-
-    const { result } = renderHook(() =>
-      usePantryItemSuggestions({ pantryId: 'pantry-1' }),
+  it('returns null imageUrl when suggestion has no image', async () => {
+    const { result } = renderWith(
+      [buildMock([makeSuggestion({ imageUrl: null })])],
+      { pantryId: 'pantry-1' },
     );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.suggestions[0].imageUrl).toBeNull();
   });
 
   describe('grouping by source', () => {
-    it('groups suggestions by PantrySuggestionSource', () => {
-      mockQueryResult.data = {
-        pantry: {
-          suggestions: [
-            createSuggestion({
+    it('groups suggestions by PantrySuggestionSource', async () => {
+      const { result } = renderWith(
+        [
+          buildMock([
+            makeSuggestion({
               id: '1',
               source: PantrySuggestionSource.LowStock,
             }),
-            createSuggestion({
+            makeSuggestion({
               id: '2',
               source: PantrySuggestionSource.ExpiringSoon,
             }),
-            createSuggestion({
+            makeSuggestion({
               id: '3',
               source: PantrySuggestionSource.LowStock,
             }),
-            createSuggestion({
-              id: '4',
-              source: PantrySuggestionSource.Popular,
-            }),
-            createSuggestion({
+            makeSuggestion({ id: '4', source: PantrySuggestionSource.Popular }),
+            makeSuggestion({
               id: '5',
               source: PantrySuggestionSource.FrequentlyAdded,
             }),
-            createSuggestion({
+            makeSuggestion({
               id: '6',
               source: PantrySuggestionSource.RecentlyDeleted,
             }),
-          ],
-        },
-      };
-
-      const { result } = renderHook(() =>
-        usePantryItemSuggestions({ pantryId: 'pantry-1' }),
+          ]),
+        ],
+        { pantryId: 'pantry-1' },
       );
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.grouped.lowStock).toHaveLength(2);
       expect(result.current.grouped.expiringSoon).toHaveLength(1);
@@ -139,10 +167,10 @@ describe('usePantryItemSuggestions', () => {
       expect(result.current.grouped.recentlyDeleted).toHaveLength(1);
     });
 
-    it('returns empty groups when no suggestions', () => {
-      const { result } = renderHook(() =>
-        usePantryItemSuggestions({ pantryId: 'pantry-1' }),
-      );
+    it('returns empty groups when no suggestions', async () => {
+      const { result } = renderWith([buildMock([])], { pantryId: 'pantry-1' });
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.grouped.lowStock).toHaveLength(0);
       expect(result.current.grouped.expiringSoon).toHaveLength(0);
@@ -153,37 +181,32 @@ describe('usePantryItemSuggestions', () => {
   });
 
   describe('offline behavior', () => {
-    it('returns empty suggestions when offline', () => {
+    it('returns empty suggestions when offline (no network call fires)', () => {
       mockIsOffline = true;
-      mockQueryResult.data = {
-        pantry: {
-          suggestions: [createSuggestion()],
-        },
-      };
-
-      const { result } = renderHook(() =>
-        usePantryItemSuggestions({ pantryId: 'pantry-1' }),
-      );
+      // No mock provided — if the query fired, MockedProvider would error
+      const { result } = renderWith([], { pantryId: 'pantry-1' });
 
       expect(result.current.suggestions).toEqual([]);
       expect(result.current.hasSuggestions).toBe(false);
       expect(result.current.isOffline).toBe(true);
+      expect(result.current.loading).toBe(false);
     });
   });
 
   describe('image preloading', () => {
-    it('preloads images when suggestions have URLs', () => {
-      mockQueryResult.data = {
-        pantry: {
-          suggestions: [
-            createSuggestion({ id: '1', imageUrl: 'img1.jpg' }),
-            createSuggestion({ id: '2', imageUrl: 'img2.jpg' }),
-            createSuggestion({ id: '3', imageUrl: null }),
-          ],
-        },
-      };
+    it('preloads images when suggestions have URLs', async () => {
+      const { result } = renderWith(
+        [
+          buildMock([
+            makeSuggestion({ id: '1', imageUrl: 'img1.jpg' }),
+            makeSuggestion({ id: '2', imageUrl: 'img2.jpg' }),
+            makeSuggestion({ id: '3', imageUrl: null }),
+          ]),
+        ],
+        { pantryId: 'pantry-1' },
+      );
 
-      renderHook(() => usePantryItemSuggestions({ pantryId: 'pantry-1' }));
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(mockPreloadImages).toHaveBeenCalledWith([
         'https://cdn.test/img1.jpg',
@@ -191,107 +214,79 @@ describe('usePantryItemSuggestions', () => {
       ]);
     });
 
-    it('does not preload when no suggestions', () => {
-      renderHook(() => usePantryItemSuggestions({ pantryId: 'pantry-1' }));
+    it('does not preload when no suggestions', async () => {
+      const { result } = renderWith([buildMock([])], { pantryId: 'pantry-1' });
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(mockPreloadImages).not.toHaveBeenCalled();
     });
   });
 
-  describe('query configuration', () => {
+  describe('skip conditions', () => {
     it('skips query when pantryId is undefined', () => {
-      const { useGetPantryItemSuggestionsQuery } =
-        jest.requireMock('#generated');
+      const { result } = renderWith([], { pantryId: undefined });
 
-      renderHook(() => usePantryItemSuggestions({ pantryId: undefined }));
-
-      expect(useGetPantryItemSuggestionsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: true }),
-      );
+      expect(result.current.loading).toBe(false);
+      expect(result.current.suggestions).toEqual([]);
     });
 
     it('skips query when skip option is true', () => {
-      const { useGetPantryItemSuggestionsQuery } =
-        jest.requireMock('#generated');
+      const { result } = renderWith([], { pantryId: 'pantry-1', skip: true });
 
-      renderHook(() =>
-        usePantryItemSuggestions({ pantryId: 'pantry-1', skip: true }),
-      );
-
-      expect(useGetPantryItemSuggestionsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: true }),
-      );
-    });
-
-    it('skips query when offline', () => {
-      mockIsOffline = true;
-      const { useGetPantryItemSuggestionsQuery } =
-        jest.requireMock('#generated');
-
-      renderHook(() => usePantryItemSuggestions({ pantryId: 'pantry-1' }));
-
-      expect(useGetPantryItemSuggestionsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: true }),
-      );
-    });
-
-    it('uses default limit of 10', () => {
-      const { useGetPantryItemSuggestionsQuery } =
-        jest.requireMock('#generated');
-
-      renderHook(() => usePantryItemSuggestions({ pantryId: 'pantry-1' }));
-
-      expect(useGetPantryItemSuggestionsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          variables: { pantryId: 'pantry-1', limit: 10 },
-        }),
-      );
-    });
-
-    it('uses custom limit when provided', () => {
-      const { useGetPantryItemSuggestionsQuery } =
-        jest.requireMock('#generated');
-
-      renderHook(() =>
-        usePantryItemSuggestions({ pantryId: 'pantry-1', limit: 5 }),
-      );
-
-      expect(useGetPantryItemSuggestionsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          variables: { pantryId: 'pantry-1', limit: 5 },
-        }),
-      );
+      expect(result.current.loading).toBe(false);
+      expect(result.current.suggestions).toEqual([]);
     });
   });
 
-  describe('loading and error', () => {
-    it('exposes loading state from query', () => {
-      mockQueryResult.loading = true;
-
-      const { result } = renderHook(() =>
-        usePantryItemSuggestions({ pantryId: 'pantry-1' }),
+  describe('limit variable', () => {
+    it('uses default limit of 10 (mock matches limit=10)', async () => {
+      const { result } = renderWith(
+        [buildMock([makeSuggestion()], { pantryId: 'pantry-1', limit: 10 })],
+        { pantryId: 'pantry-1' },
       );
 
-      expect(result.current.loading).toBe(true);
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.suggestions).toHaveLength(1);
     });
 
-    it('exposes error from query', () => {
-      const error = { message: 'Failed' };
-      mockQueryResult.error = error as any;
-
-      const { result } = renderHook(() =>
-        usePantryItemSuggestions({ pantryId: 'pantry-1' }),
+    it('uses custom limit when provided (mock matches limit=5)', async () => {
+      const { result } = renderWith(
+        [buildMock([makeSuggestion()], { pantryId: 'pantry-1', limit: 5 })],
+        { pantryId: 'pantry-1', limit: 5 },
       );
 
-      expect(result.current.error).toBe(error);
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.suggestions).toHaveLength(1);
+    });
+  });
+
+  describe('error handling', () => {
+    it('exposes refetch function', async () => {
+      const { result } = renderWith([buildMock([])], { pantryId: 'pantry-1' });
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(typeof result.current.refetch).toBe('function');
     });
 
-    it('exposes refetch function', () => {
-      const { result } = renderHook(() =>
-        usePantryItemSuggestions({ pantryId: 'pantry-1' }),
+    it('exposes error from query', async () => {
+      const { result } = renderWith(
+        [
+          {
+            request: {
+              query: GetPantryItemSuggestionsDocument,
+              variables: { pantryId: 'pantry-1', limit: 10 },
+            },
+            error: new Error('Failed'),
+          },
+        ],
+        { pantryId: 'pantry-1' },
       );
 
-      expect(result.current.refetch).toBe(mockQueryResult.refetch);
+      await waitFor(() => expect(result.current.error).toBeDefined());
+
+      expect(result.current.error?.message).toBe('Failed');
     });
   });
 });

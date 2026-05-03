@@ -1,4 +1,4 @@
-import type { CreateItemInput } from '#generated';
+import type { CreateItemInput } from '#/graphql/generated/schemaTypes';
 import { storage } from '#/storage/mmkv';
 
 /**

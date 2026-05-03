@@ -4,7 +4,8 @@ import type { KeyboardAwareScrollViewProps } from 'react-native-keyboard-control
 import { BottomSheetKeyboardAwareScrollView } from './BottomSheetKeyboardAwareScrollView';
 import { BottomSheetInputProvider } from '#context/BottomSheetInputContext';
 
-type Props = ScrollViewProps & KeyboardAwareScrollViewProps & { children: React.ReactNode };
+type Props = ScrollViewProps &
+  KeyboardAwareScrollViewProps & { children: React.ReactNode };
 
 /**
  * Drop-in replacement for `BottomSheetScrollView` in sheets that contain inputs.

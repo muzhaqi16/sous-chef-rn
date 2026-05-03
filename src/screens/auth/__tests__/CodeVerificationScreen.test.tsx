@@ -25,10 +25,15 @@ jest.mock('#/hooks/useToast', () => ({
   useToast: () => mockToast,
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useVerifyEmailMutation: () => [mockVerifyEmail],
-  useResendVerificationEmailMutation: () => [mockResendVerificationEmail],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'VerifyEmail') return [mockVerifyEmail, { loading: false }];
+    if (opName === 'ResendVerificationEmail')
+      return [mockResendVerificationEmail, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/services/errorService', () => ({
@@ -51,7 +56,9 @@ jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#components/templates/AuthWrapper', () => {
   const { View } = require('react-native');
   return {
-    AuthWrapper: ({ children }: any) => <View testID="auth-wrapper">{children}</View>,
+    AuthWrapper: ({ children }: any) => (
+      <View testID="auth-wrapper">{children}</View>
+    ),
   };
 });
 
@@ -141,10 +148,7 @@ describe('CodeVerificationScreen', () => {
 
   it('returns null when user is already verified', () => {
     jest
-      .spyOn(
-        require('#store/useAppStore'),
-        'useAppStore',
-      )
+      .spyOn(require('#store/useAppStore'), 'useAppStore')
       .mockImplementation((selector: any) => {
         const state = {
           user: { id: '1', email: 'test@example.com', emailVerified: true },
@@ -159,10 +163,7 @@ describe('CodeVerificationScreen', () => {
 
   it('returns null when there is no user', () => {
     jest
-      .spyOn(
-        require('#store/useAppStore'),
-        'useAppStore',
-      )
+      .spyOn(require('#store/useAppStore'), 'useAppStore')
       .mockImplementation((selector: any) => {
         const state = {
           user: null,

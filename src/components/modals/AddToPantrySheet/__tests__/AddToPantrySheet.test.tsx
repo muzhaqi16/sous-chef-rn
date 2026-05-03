@@ -17,10 +17,22 @@ jest.mock('#features/pantry/hooks/usePantryItemSuggestions', () => ({
   })),
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreatePantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useRestockPantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+jest.mock('@apollo/client/react', () => ({
+  __esModule: true,
+  useMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+  useApolloClient: jest.fn(() => ({
+    cache: {
+      modify: jest.fn(),
+      identify: jest.fn(() => 'cache-id'),
+      updateQuery: jest.fn(),
+      readFragment: jest.fn(),
+    },
+  })),
+  useQuery: jest.fn(() => ({
+    data: undefined,
+    loading: false,
+    error: undefined,
+  })),
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({
@@ -72,13 +84,6 @@ jest.mock('../../AddItemSheet/configs/pantryConfig', () => ({
 
 jest.mock('../AddDetailsSheet', () => ({
   AddDetailsSheet: () => null,
-}));
-
-jest.mock('@apollo/client/react', () => ({
-  useApolloClient: () => ({
-    readQuery: jest.fn(() => null),
-    cache: { updateQuery: jest.fn() },
-  }),
 }));
 
 describe('AddToPantrySheet', () => {
@@ -144,34 +149,21 @@ describe('AddToPantrySheet', () => {
   });
 
   it('renders with create mutation loading', () => {
-    const { useCreatePantryItemMutation } = jest.requireMock('#generated');
-    useCreatePantryItemMutation.mockReturnValue([jest.fn(), { loading: true }]);
+    const { useMutation } = jest.requireMock('@apollo/client/react');
+    useMutation.mockReturnValueOnce([jest.fn(), { loading: true }]);
 
     render(<AddToPantrySheet {...defaultProps} />);
     expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
-
-    // Restore
-    useCreatePantryItemMutation.mockReturnValue([
-      jest.fn(),
-      { loading: false },
-    ]);
   });
 
   it('renders with restock mutation loading', () => {
-    const { useRestockPantryItemMutation } = jest.requireMock('#generated');
-    useRestockPantryItemMutation.mockReturnValue([
-      jest.fn(),
-      { loading: true },
-    ]);
+    const { useMutation } = jest.requireMock('@apollo/client/react');
+    useMutation
+      .mockReturnValueOnce([jest.fn(), { loading: false }])
+      .mockReturnValueOnce([jest.fn(), { loading: true }]);
 
     render(<AddToPantrySheet {...defaultProps} />);
     expect(screen.getByTestId('add-item-sheet')).toBeTruthy();
-
-    // Restore
-    useRestockPantryItemMutation.mockReturnValue([
-      jest.fn(),
-      { loading: false },
-    ]);
   });
 
   it('renders with different pantryId', () => {

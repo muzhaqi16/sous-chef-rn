@@ -90,7 +90,7 @@ export interface ModalManagerResult {
  *   ADD_CUISINE: 'addCuisine',
  *   EDIT_NUTRITION: 'editNutrition',
  *   ADD_FAVORITE: 'addFavorite',
- * } as const;
+ * };
  *
  * const modal = useModalManager();
  *
@@ -110,17 +110,18 @@ export function useModalManager(): ModalManagerResult {
   };
 
   const isOpen = (modalName: string) => {
-      return activeModal === modalName;
-    };
+    return activeModal === modalName;
+  };
 
   const toggleModal = (modalName: string) => {
-      setActiveModal((current) => (current === modalName ? null : modalName));
-    };
+    setActiveModal(current => (current === modalName ? null : modalName));
+  };
 
   return {
     activeModal,
     openModal,
     closeModal,
     isOpen,
-    toggleModal };
+    toggleModal,
+  };
 }

@@ -1,0 +1,182 @@
+fragment PantryItemCore on PantryItem {
+  id
+  pantryId
+  itemId
+  itemName
+  quantity
+  version
+  updatedAt
+  storageState
+  expiresAt
+  lowStockAlert
+  isLowStock
+  minQuantity
+  lastUsedAt
+  netWeight
+  remainingNetWeight
+  activeBatchCount
+  earliestBatchExpiration
+}
+
+fragment PantryItemDisplay on PantryItem {
+  ...PantryItemCore
+  item {
+    id
+    imageUrl
+    images { url kind }
+  }
+  unit {
+    id
+    name
+    symbol
+  }
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
+  storageLocation {
+    id
+    name
+    type
+  }
+  packageBreakdown {
+    count
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    perUnitNetWeight
+    perUnitNetWeightUnit {
+      id
+      name
+      symbol
+    }
+    totalNetWeight
+  }
+  quantityBreakdown {
+    fullPackages
+    looseContentUnits
+    contentUnit {
+      id
+      name
+      symbol
+    }
+    totalContentUnits
+    remainingWeight
+    remainingWeightUnit {
+      id
+      name
+      symbol
+    }
+  }
+}
+
+fragment PantryItemFragment on PantryItem {
+  ...PantryItemDisplay
+  item {
+    name
+    shelfLifeDays
+    shelfLifeOpenedDays
+    nutritions
+    defaultConsumeIncrement
+    defaultConsumeUnitId
+    defaultConsumeUnit {
+      id
+      name
+      symbol
+      type
+    }
+    displayUnit {
+      id
+      symbol
+    }
+    categories {
+      isPrimary
+      category {
+        id
+        name
+      }
+    }
+    unitConversions {
+      id
+      fromUnit { id name symbol type }
+      toUnit { id name symbol type }
+      conversionRatio
+      confidence
+      source
+    }
+  }
+  unit {
+    type
+    isMetric
+    baseUnitId
+    conversionFactor
+    isCommon
+    displayAsFraction
+    minPrecision
+    autoConvertThreshold
+  }
+  brand {
+    id
+    name
+  }
+  tags
+  storageNotes
+  createdAt
+  restockQuantity
+  store {
+    id
+    name
+  }
+  condition
+  acquisitionMethod
+  costPerUnit
+  totalCost
+  purchase {
+    id
+    purchaseDate
+    unitPrice
+    totalPrice
+    quantity
+  }
+  usageRecords(first: 5) {
+    edges {
+      node {
+        id
+        quantityUsed
+        usageUnit {
+          symbol
+        }
+        usedAt
+        purpose
+        adjustmentReason
+      }
+    }
+  }
+  batches {
+    ...PantryItemBatchFragment
+  }
+}
+
+fragment PantryItemBatchFragment on PantryItemBatch {
+  id
+  batchNumber
+  quantity
+  status
+  expiresAt
+  expiresAtIsManual
+  costPerUnit
+  totalCost
+  store { id name }
+  notes
+  isOpened
+  openedAt
+  depletedAt
+  remainingNetWeight
+  createdAt
+  updatedAt
+  wasteReason
+  pantryItemId
+}

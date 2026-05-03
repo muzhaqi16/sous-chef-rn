@@ -12,12 +12,13 @@
  * Uses executeMutation from compilerSafeWrappers to avoid try-catch in the hook body.
  */
 
+import { useMutation } from '@apollo/client/react';
 import {
-  useMarkExpirationActionMutation,
-  useDismissExpirationNotificationMutation,
-  useMarkExpirationNotificationAsReadMutation,
-  ExpirationAction,
-} from '#generated';
+  MarkExpirationActionDocument,
+  DismissExpirationNotificationDocument,
+  MarkExpirationNotificationAsReadDocument,
+} from '#features/notifications/graphql/expirationNotificationMutations.generated';
+import { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { errorService } from '#/services/errorService';
@@ -34,9 +35,11 @@ const ACTION_LABELS: Record<ExpirationAction, string> = {
 };
 
 export function useExpirationNotificationSync() {
-  const [markActionMutation] = useMarkExpirationActionMutation();
-  const [dismissMutation] = useDismissExpirationNotificationMutation();
-  const [markReadMutation] = useMarkExpirationNotificationAsReadMutation();
+  const [markActionMutation] = useMutation(MarkExpirationActionDocument);
+  const [dismissMutation] = useMutation(DismissExpirationNotificationDocument);
+  const [markReadMutation] = useMutation(
+    MarkExpirationNotificationAsReadDocument,
+  );
 
   const syncMarkAction = (
     notificationId: string,

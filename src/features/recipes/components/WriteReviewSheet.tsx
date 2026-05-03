@@ -8,7 +8,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { StarRatingInput } from './StarRatingInput';
-import type { RecipeReviewFragment } from '#generated';
+import { type RecipeReviewFragment } from '#features/recipes/graphql/recipeFragments.generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 

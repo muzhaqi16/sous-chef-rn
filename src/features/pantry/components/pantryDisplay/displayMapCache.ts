@@ -8,7 +8,7 @@ import {
   formatQuantityBreakdown,
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
-import type { PantryItem } from '#generated';
+import { type PantryItem } from '#/graphql/generated/schemaTypes';
 import type { ItemVariant } from '../PantryItemCard';
 import type { ItemDisplayData, ExpirationColors } from './types';
 

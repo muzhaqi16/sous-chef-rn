@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { QuantityDisplay } from '#/components/molecules/QuantityDisplay';
-import { DisplayFormat } from '#/graphql/generated';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 
 interface FormattedItemSubtitleProps {

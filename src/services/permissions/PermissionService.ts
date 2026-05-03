@@ -10,9 +10,15 @@ import notifee, { AuthorizationStatus } from '@notifee/react-native';
 
 export type AppPermission = 'camera' | 'notifications' | 'photoLibrary';
 
-export type PermissionStatus = 'granted' | 'denied' | 'blocked' | 'undetermined';
+export type PermissionStatus =
+  | 'granted'
+  | 'denied'
+  | 'blocked'
+  | 'undetermined';
 
-function normalizeRNPermissionStatus(status: RNPermissionStatus): PermissionStatus {
+function normalizeRNPermissionStatus(
+  status: RNPermissionStatus,
+): PermissionStatus {
   switch (status) {
     case RESULTS.GRANTED:
     case RESULTS.LIMITED:
@@ -109,7 +115,9 @@ class PermissionServiceClass {
       const result = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
       );
-      return result === PermissionsAndroid.RESULTS.GRANTED ? 'granted' : 'blocked';
+      return result === PermissionsAndroid.RESULTS.GRANTED
+        ? 'granted'
+        : 'blocked';
     }
     return 'granted';
   }

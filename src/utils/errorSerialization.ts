@@ -69,10 +69,13 @@ export function serializeError(error: any, maxDepth = 4): Record<string, any> {
   // ---- Apollo GraphQL Errors ----
   if (Array.isArray(error.graphQLErrors)) {
     serialized.graphQLErrors = error.graphQLErrors.map((gqlErr: any) => ({
-      message: typeof gqlErr.message === 'string' ? gqlErr.message : String(gqlErr.message || ''),
+      message:
+        typeof gqlErr.message === 'string'
+          ? gqlErr.message
+          : String(gqlErr.message || ''),
       path: Array.isArray(gqlErr.path)
         ? gqlErr.path.map((p: any) =>
-            typeof p === 'string' || typeof p === 'number' ? p : String(p)
+            typeof p === 'string' || typeof p === 'number' ? p : String(p),
           )
         : safeSerialize(gqlErr.path, 1),
       extensions: safeSerialize(gqlErr.extensions, 1),
@@ -82,12 +85,14 @@ export function serializeError(error: any, maxDepth = 4): Record<string, any> {
   // ---- Apollo Network Error ----
   if (error.networkError) {
     serialized.networkError = {
-      name: typeof error.networkError.name === 'string'
-        ? error.networkError.name
-        : String(error.networkError.name || 'NetworkError'),
-      message: typeof error.networkError.message === 'string'
-        ? error.networkError.message
-        : String(error.networkError.message || ''),
+      name:
+        typeof error.networkError.name === 'string'
+          ? error.networkError.name
+          : String(error.networkError.name || 'NetworkError'),
+      message:
+        typeof error.networkError.message === 'string'
+          ? error.networkError.message
+          : String(error.networkError.message || ''),
       statusCode: error.networkError.statusCode,
       result: safeSerialize(error.networkError.result, 1),
     };
@@ -96,9 +101,10 @@ export function serializeError(error: any, maxDepth = 4): Record<string, any> {
   // ---- Apollo Error Operation ----
   if (error.operation) {
     serialized.operation = {
-      operationName: typeof error.operation.operationName === 'string'
-        ? error.operation.operationName
-        : String(error.operation.operationName || ''),
+      operationName:
+        typeof error.operation.operationName === 'string'
+          ? error.operation.operationName
+          : String(error.operation.operationName || ''),
       variables: safeSerialize(error.operation.variables, 1),
     };
   }
@@ -134,7 +140,8 @@ export function serializeError(error: any, maxDepth = 4): Record<string, any> {
         serialized.additionalProperties = unknownProps;
       }
     } catch {
-      serialized.additionalProperties = '[Error serializing additional properties]';
+      serialized.additionalProperties =
+        '[Error serializing additional properties]';
     }
   }
 
@@ -231,17 +238,16 @@ export function safeStringifyError(error: any): {
       message: '',
     };
   } catch (stringifyError: unknown) {
-    const stringifyMessage = stringifyError instanceof Error ? stringifyError.message : '';
+    const stringifyMessage =
+      stringifyError instanceof Error ? stringifyError.message : '';
     const isCircular =
-      stringifyMessage.includes(
-        'Converting circular structure to JSON',
-      ) || stringifyMessage.includes('circular');
+      stringifyMessage.includes('Converting circular structure to JSON') ||
+      stringifyMessage.includes('circular');
 
     if (isCircular) {
       // Extract error message if available
-      const errorMessage = error instanceof Error
-        ? error.message
-        : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
 
       return {
         stringified: `[Circular structure detected] ${errorMessage}`,

@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
+import { useQuery } from '@apollo/client/react';
 import {
-  useGetShoppingListSuggestionsQuery,
-  SuggestionSource,
+  GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
-} from '#generated';
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { SuggestionSource } from '#/graphql/generated/schemaTypes';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { preloadImages } from '#components/atoms/CachedImage';
@@ -48,15 +49,16 @@ export function useShoppingListSuggestions({
 }: UseShoppingListSuggestionsOptions): UseShoppingListSuggestionsReturn {
   const isOffline = useIsEffectivelyOffline();
 
-  const { data, loading, error, refetch } = useGetShoppingListSuggestionsQuery({
-    variables: {
-      id: shoppingListId ?? '',
-      limit,
+  const { data, loading, error, refetch } = useQuery(
+    GetShoppingListSuggestionsDocument,
+    {
+      variables: {
+        id: shoppingListId ?? '',
+        limit,
+      },
+      skip: !shoppingListId || skip || isOffline,
     },
-    skip: !shoppingListId || skip || isOffline,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-  });
+  );
 
   const suggestions = data?.shoppingList?.suggestions;
 

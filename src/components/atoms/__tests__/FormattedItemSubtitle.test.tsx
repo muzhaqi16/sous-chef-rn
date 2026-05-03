@@ -6,7 +6,11 @@ import { FormattedItemSubtitle } from '../FormattedItemSubtitle';
 jest.mock('#/components/molecules/QuantityDisplay', () => ({
   QuantityDisplay: ({ quantity, unitSymbol }: any) => {
     const { Text } = require('react-native');
-    return require('react').createElement(Text, null, `${quantity}${unitSymbol ? ' ' + unitSymbol : ''}`);
+    return require('react').createElement(
+      Text,
+      null,
+      `${quantity}${unitSymbol ? ' ' + unitSymbol : ''}`,
+    );
   },
 }));
 
@@ -17,13 +21,17 @@ describe('FormattedItemSubtitle', () => {
   });
 
   it('renders quantity and weight with separator for qty > 1', () => {
-    render(<FormattedItemSubtitle quantity={2} netWeight={100} unitSymbol="g" />);
+    render(
+      <FormattedItemSubtitle quantity={2} netWeight={100} unitSymbol="g" />,
+    );
     expect(screen.getByText('2')).toBeTruthy();
     expect(screen.getByText(/100 g/)).toBeTruthy();
   });
 
   it('renders only weight when quantity is 1', () => {
-    render(<FormattedItemSubtitle quantity={1} netWeight={3.2} unitSymbol="oz" />);
+    render(
+      <FormattedItemSubtitle quantity={1} netWeight={3.2} unitSymbol="oz" />,
+    );
     expect(screen.getByText(/3.2 oz/)).toBeTruthy();
   });
 
@@ -43,12 +51,26 @@ describe('FormattedItemSubtitle', () => {
   });
 
   it('displays additional info alongside quantity and weight', () => {
-    render(<FormattedItemSubtitle quantity={2} netWeight={100} unitSymbol="g" additionalInfo="Fresh" />);
+    render(
+      <FormattedItemSubtitle
+        quantity={2}
+        netWeight={100}
+        unitSymbol="g"
+        additionalInfo="Fresh"
+      />,
+    );
     expect(screen.getByText('Fresh')).toBeTruthy();
   });
 
   it('renders partial single item with remaining label', () => {
-    render(<FormattedItemSubtitle quantity={0.5} initialQuantity={1} netWeight={50} unitSymbol="g" />);
+    render(
+      <FormattedItemSubtitle
+        quantity={0.5}
+        initialQuantity={1}
+        netWeight={50}
+        unitSymbol="g"
+      />,
+    );
     expect(screen.getByText(/50 g/)).toBeTruthy();
   });
 });

@@ -47,9 +47,7 @@ describe('TabBarActionsContext', () => {
     it('throws when used outside provider', () => {
       expect(() => {
         renderHook(() => useTabBarState());
-      }).toThrow(
-        'useTabBarState must be used within a TabBarActionsProvider',
-      );
+      }).toThrow('useTabBarState must be used within a TabBarActionsProvider');
     });
 
     it('returns default state', () => {

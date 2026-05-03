@@ -40,10 +40,15 @@ jest.mock('#/hooks/navigation/useUserPreferences', () => ({
 // Mock GraphQL mutations
 const mockLoginMutationFn = jest.fn();
 const mockRegisterMutationFn = jest.fn();
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useLoginMutation: () => [mockLoginMutationFn],
-  useRegisterMutation: () => [mockRegisterMutationFn],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'Login') return [mockLoginMutationFn, { loading: false }];
+    if (opName === 'Register')
+      return [mockRegisterMutationFn, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 // Mock environment logger
@@ -112,7 +117,9 @@ const mockOnSetRememberMe = jest.fn();
 const mockOnSetUserNavigationState = jest.fn();
 const mockOnSetRegistrationPassword = jest.fn();
 const mockOnClearRegistrationPassword = jest.fn();
-const mockShouldShowPostLoginBiometricPrompt = jest.fn().mockResolvedValue({ shouldShow: false });
+const mockShouldShowPostLoginBiometricPrompt = jest
+  .fn()
+  .mockResolvedValue({ shouldShow: false });
 
 const defaultProps = {
   credentialStorage: {
@@ -149,7 +156,9 @@ beforeEach(() => {
   mockOnCredentialRemove.mockResolvedValue(true);
   mockLoginMutationFn.mockResolvedValue({ data: null, error: null });
   mockRegisterMutationFn.mockResolvedValue({ data: null, error: null });
-  mockShouldShowPostLoginBiometricPrompt.mockResolvedValue({ shouldShow: false });
+  mockShouldShowPostLoginBiometricPrompt.mockResolvedValue({
+    shouldShow: false,
+  });
   mockShouldShowCredentialPrompt.mockReturnValue(true);
   mockHandleApolloError.mockReturnValue({
     message: 'An error occurred',
@@ -183,7 +192,12 @@ describe('useAuthOperations', () => {
     const { result } = renderHook(() => useAuthOperations(defaultProps));
 
     const loginResponse = {
-      user: { id: 'u1', email: 'test@test.com', emailVerified: true, onBoarded: true },
+      user: {
+        id: 'u1',
+        email: 'test@test.com',
+        emailVerified: true,
+        onBoarded: true,
+      },
       accessToken: 'at',
       refreshToken: 'rt',
     };
@@ -194,17 +208,25 @@ describe('useAuthOperations', () => {
 
     expect(mockOnSetAuth).toHaveBeenCalledWith(loginResponse.user, 'at', 'rt');
     expect(mockOnSetRememberMe).toHaveBeenCalledWith(true);
-    expect(mockOnSetUserNavigationState).toHaveBeenCalledWith('u1', expect.objectContaining({
-      lastLoginTimestamp: expect.any(Number),
-      rememberMeChoice: true,
-    }));
+    expect(mockOnSetUserNavigationState).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({
+        lastLoginTimestamp: expect.any(Number),
+        rememberMeChoice: true,
+      }),
+    );
   });
 
   it('handleLogin navigates to verification when email not verified', async () => {
     const { result } = renderHook(() => useAuthOperations(defaultProps));
 
     const loginResponse = {
-      user: { id: 'u1', email: 'test@test.com', emailVerified: false, onBoarded: false },
+      user: {
+        id: 'u1',
+        email: 'test@test.com',
+        emailVerified: false,
+        onBoarded: false,
+      },
       accessToken: 'at',
       refreshToken: 'rt',
     };
@@ -220,7 +242,12 @@ describe('useAuthOperations', () => {
     const { result } = renderHook(() => useAuthOperations(defaultProps));
 
     const loginResponse = {
-      user: { id: 'u1', email: 'test@test.com', emailVerified: true, onBoarded: false },
+      user: {
+        id: 'u1',
+        email: 'test@test.com',
+        emailVerified: true,
+        onBoarded: false,
+      },
       accessToken: 'at',
       refreshToken: 'rt',
     };
@@ -236,7 +263,12 @@ describe('useAuthOperations', () => {
     const { result } = renderHook(() => useAuthOperations(defaultProps));
 
     const loginResponse = {
-      user: { id: 'u1', email: 'test@test.com', emailVerified: true, onBoarded: true },
+      user: {
+        id: 'u1',
+        email: 'test@test.com',
+        emailVerified: true,
+        onBoarded: true,
+      },
       accessToken: 'at',
       refreshToken: 'rt',
     };
@@ -264,7 +296,12 @@ describe('useAuthOperations', () => {
     const { result } = renderHook(() => useAuthOperations(defaultProps));
 
     const registerResponse = {
-      user: { id: 'u2', email: 'new@test.com', emailVerified: false, onBoarded: false },
+      user: {
+        id: 'u2',
+        email: 'new@test.com',
+        emailVerified: false,
+        onBoarded: false,
+      },
       accessToken: 'at2',
       refreshToken: 'rt2',
     };
@@ -273,11 +310,18 @@ describe('useAuthOperations', () => {
       await result.current.handleRegistration(registerResponse, true);
     });
 
-    expect(mockOnSetAuth).toHaveBeenCalledWith(registerResponse.user, 'at2', 'rt2');
-    expect(mockOnSetUserNavigationState).toHaveBeenCalledWith('u2', expect.objectContaining({
-      isNewUser: true,
-      rememberMeChoice: true,
-    }));
+    expect(mockOnSetAuth).toHaveBeenCalledWith(
+      registerResponse.user,
+      'at2',
+      'rt2',
+    );
+    expect(mockOnSetUserNavigationState).toHaveBeenCalledWith(
+      'u2',
+      expect.objectContaining({
+        isNewUser: true,
+        rememberMeChoice: true,
+      }),
+    );
     expect(mockOnNavigate).toHaveBeenCalledWith('verification');
   });
 
@@ -316,7 +360,12 @@ describe('useAuthOperations', () => {
     mockLoginMutationFn.mockResolvedValue({
       data: {
         login: {
-          user: { id: 'u1', email: 'test@test.com', emailVerified: true, onBoarded: true },
+          user: {
+            id: 'u1',
+            email: 'test@test.com',
+            emailVerified: true,
+            onBoarded: true,
+          },
           accessToken: 'at',
           refreshToken: 'rt',
         },
@@ -327,7 +376,10 @@ describe('useAuthOperations', () => {
 
     let success: boolean = false;
     await act(async () => {
-      success = await result.current.login({ email: 'test@test.com', password: 'pass123' });
+      success = await result.current.login({
+        email: 'test@test.com',
+        password: 'pass123',
+      });
     });
 
     expect(success).toBe(true);
@@ -346,7 +398,10 @@ describe('useAuthOperations', () => {
 
     let success: boolean = true;
     await act(async () => {
-      success = await result.current.login({ email: 'test@test.com', password: 'wrong' });
+      success = await result.current.login({
+        email: 'test@test.com',
+        password: 'wrong',
+      });
     });
 
     expect(success).toBe(false);
@@ -356,7 +411,12 @@ describe('useAuthOperations', () => {
     mockLoginMutationFn.mockResolvedValue({
       data: {
         login: {
-          user: { id: 'u1', email: 'test@test.com', emailVerified: true, onBoarded: true },
+          user: {
+            id: 'u1',
+            email: 'test@test.com',
+            emailVerified: true,
+            onBoarded: true,
+          },
           accessToken: 'at',
           refreshToken: 'rt',
         },
@@ -368,7 +428,10 @@ describe('useAuthOperations', () => {
     const { result } = renderHook(() => useAuthOperations(defaultProps));
 
     await act(async () => {
-      await result.current.login({ email: 'test@test.com', password: 'pass123' }, true);
+      await result.current.login(
+        { email: 'test@test.com', password: 'pass123' },
+        true,
+      );
     });
 
     expect(mockOnShowRememberMe).toHaveBeenCalled();
@@ -379,7 +442,12 @@ describe('useAuthOperations', () => {
     mockRegisterMutationFn.mockResolvedValue({
       data: {
         register: {
-          user: { id: 'u2', email: 'new@test.com', emailVerified: false, onBoarded: false },
+          user: {
+            id: 'u2',
+            email: 'new@test.com',
+            emailVerified: false,
+            onBoarded: false,
+          },
           accessToken: 'at2',
           refreshToken: 'rt2',
         },
@@ -436,11 +504,19 @@ describe('useAuthOperations', () => {
 
   it('autoLogin uses stored credentials', async () => {
     mockOnCredentialCheck.mockResolvedValue(true);
-    mockOnCredentialLoad.mockResolvedValue({ email: 'stored@test.com', password: 'stored-pass' });
+    mockOnCredentialLoad.mockResolvedValue({
+      email: 'stored@test.com',
+      password: 'stored-pass',
+    });
     mockLoginMutationFn.mockResolvedValue({
       data: {
         login: {
-          user: { id: 'u1', email: 'stored@test.com', emailVerified: true, onBoarded: true },
+          user: {
+            id: 'u1',
+            email: 'stored@test.com',
+            emailVerified: true,
+            onBoarded: true,
+          },
           accessToken: 'at',
           refreshToken: 'rt',
         },
@@ -456,7 +532,9 @@ describe('useAuthOperations', () => {
 
     expect(success).toBe(true);
     expect(mockLoginMutationFn).toHaveBeenCalledWith({
-      variables: { input: { email: 'stored@test.com', password: 'stored-pass' } },
+      variables: {
+        input: { email: 'stored@test.com', password: 'stored-pass' },
+      },
     });
   });
 
@@ -471,12 +549,19 @@ describe('useAuthOperations', () => {
   });
 
   it('handleLogin triggers biometric setup when eligible', async () => {
-    mockShouldShowPostLoginBiometricPrompt.mockResolvedValue({ shouldShow: true });
+    mockShouldShowPostLoginBiometricPrompt.mockResolvedValue({
+      shouldShow: true,
+    });
 
     const { result } = renderHook(() => useAuthOperations(defaultProps));
 
     const loginResponse = {
-      user: { id: 'u1', email: 'test@test.com', emailVerified: true, onBoarded: true },
+      user: {
+        id: 'u1',
+        email: 'test@test.com',
+        emailVerified: true,
+        onBoarded: true,
+      },
       accessToken: 'at',
       refreshToken: 'rt',
     };
@@ -484,7 +569,11 @@ describe('useAuthOperations', () => {
 
     let returnVal: boolean = false;
     await act(async () => {
-      returnVal = await result.current.handleLogin(loginResponse, true, credentials);
+      returnVal = await result.current.handleLogin(
+        loginResponse,
+        true,
+        credentials,
+      );
     });
 
     expect(returnVal).toBe(true);
@@ -495,7 +584,12 @@ describe('useAuthOperations', () => {
     const { result } = renderHook(() => useAuthOperations(defaultProps));
 
     const response = {
-      user: { id: 'u3', email: 'user@test.com', emailVerified: true, onBoarded: true },
+      user: {
+        id: 'u3',
+        email: 'user@test.com',
+        emailVerified: true,
+        onBoarded: true,
+      },
       accessToken: 'at3',
       refreshToken: 'rt3',
     };

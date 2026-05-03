@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import {
+  MembershipRole,
+  TemplateCategory,
+} from '#/graphql/generated/schemaTypes';
 import { TemplatePreviewSheet } from '../TemplatePreviewSheet';
 
 jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
@@ -80,11 +85,12 @@ jest.mock('#utils/iconUtils', () => ({
 }));
 
 describe('TemplatePreviewSheet', () => {
-  const mockTemplate = {
+  const mockTemplate: MealTemplateDisplayFragment = {
+    __typename: 'MealTemplate',
     id: 'tmpl-1',
     name: 'Weekly Healthy',
     description: 'A healthy weekly plan',
-    category: 'HEALTHY',
+    category: TemplateCategory.Weekly,
     durationDays: 7,
     defaultServings: 4,
     tags: ['healthy'],
@@ -93,13 +99,22 @@ describe('TemplatePreviewSheet', () => {
     homeId: 'home-1',
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
-    home: { __typename: 'Home', id: 'home-1', name: 'My Home' },
-    __typename: 'MealTemplate',
+    home: {
+      __typename: 'Home',
+      id: 'home-1',
+      name: 'My Home',
+      myMembership: {
+        __typename: 'Membership',
+        id: 'mem-1',
+        role: MembershipRole.Owner,
+      },
+    },
+    user: { __typename: 'User', id: 'user-1' },
   };
 
   const defaultProps = {
     visible: true,
-    template: mockTemplate as any,
+    template: mockTemplate,
     onClose: jest.fn(),
     onConfirm: jest.fn(),
     confirmLoading: false,
@@ -126,7 +141,7 @@ describe('TemplatePreviewSheet', () => {
 
   it('renders category text', () => {
     render(<TemplatePreviewSheet {...defaultProps} />);
-    expect(screen.getByText('Healthy')).toBeTruthy();
+    expect(screen.getByText('Weekly')).toBeTruthy();
   });
 
   it('renders Configuration section', () => {

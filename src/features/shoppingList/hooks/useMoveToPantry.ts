@@ -1,10 +1,9 @@
 import { useRef } from 'react';
 import { alertService } from '#/services/alertService';
-import {
-  useMoveShoppingItemToPantryMutation,
-  StorageState,
-  ShoppingListItemDisplayFragment,
-} from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { StorageState } from '#/graphql/generated/schemaTypes';
+import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { removeItemFromShoppingListForMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
@@ -43,8 +42,9 @@ export function useMoveToPantry({
   const selectedItemRef = useRef<ShoppingListItemDisplayFragment | null>(null);
 
   // Move to pantry mutation with smart cache updates
-  const [moveShoppingItemToPantry, { loading }] =
-    useMoveShoppingItemToPantryMutation({
+  const [moveShoppingItemToPantry, { loading }] = useMutation(
+    MoveShoppingItemToPantryDocument,
+    {
       update: (cache, { data }) => {
         if (!data?.moveShoppingItemToPantry || !moveToPantryIdRef.current)
           return;
@@ -109,7 +109,8 @@ export function useMoveToPantry({
           error.message || 'Failed to move item to pantry',
         );
       },
-    });
+    },
+  );
 
   /**
    * Move a shopping list item to pantry

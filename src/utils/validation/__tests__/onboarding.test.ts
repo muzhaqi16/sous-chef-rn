@@ -39,13 +39,19 @@ describe('onboarding validation', () => {
     it('accepts valid home and pantry names', async () => {
       const schema = getCreateHomeSchema(true);
       expect(
-        await validate(schema, { homeName: 'My Home', pantryName: 'Kitchen Pantry' }),
+        await validate(schema, {
+          homeName: 'My Home',
+          pantryName: 'Kitchen Pantry',
+        }),
       ).toBeNull();
     });
 
     it('rejects home name under 2 chars', async () => {
       const schema = getCreateHomeSchema(true);
-      const msg = await validate(schema, { homeName: 'A', pantryName: 'Kitchen' });
+      const msg = await validate(schema, {
+        homeName: 'A',
+        pantryName: 'Kitchen',
+      });
       expect(msg).toContain('2');
     });
 
@@ -70,7 +76,10 @@ describe('onboarding validation', () => {
     it('allows hyphens and apostrophes in home name', async () => {
       const schema = getCreateHomeSchema(true);
       expect(
-        await validate(schema, { homeName: "O'Brien's Home", pantryName: 'Kitchen' }),
+        await validate(schema, {
+          homeName: "O'Brien's Home",
+          pantryName: 'Kitchen',
+        }),
       ).toBeNull();
     });
 
@@ -90,7 +99,9 @@ describe('onboarding validation', () => {
   describe('createShoppingListSchema', () => {
     it('accepts valid shopping list name', async () => {
       expect(
-        await validate(createShoppingListSchema, { shoppingListName: 'Weekly Groceries' }),
+        await validate(createShoppingListSchema, {
+          shoppingListName: 'Weekly Groceries',
+        }),
       ).toBeNull();
     });
 
@@ -100,7 +111,9 @@ describe('onboarding validation', () => {
     });
 
     it('rejects name under 2 chars', async () => {
-      const msg = await validate(createShoppingListSchema, { shoppingListName: 'A' });
+      const msg = await validate(createShoppingListSchema, {
+        shoppingListName: 'A',
+      });
       expect(msg).toContain('2');
     });
 

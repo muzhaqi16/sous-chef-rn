@@ -158,7 +158,9 @@ export class LogoutCleanup {
       // Per Apollo docs: "call gc() after evict() operations"
       const cache = client.cache as InMemoryCache;
       const removedIds = cache.gc({ resetResultCache: true });
-      logger.info(`🗑️ Garbage collected ${removedIds.length} unreachable cache objects`);
+      logger.info(
+        `🗑️ Garbage collected ${removedIds.length} unreachable cache objects`,
+      );
 
       // Clear new cache persistence
       apolloCachePersistence.clear();
@@ -187,7 +189,9 @@ export class LogoutCleanup {
         logger.warn('Failed to clear secure storage:', storageError);
       }
 
-      logger.info('🗑️ Apollo cache, navigation state, and mutation queue cleared');
+      logger.info(
+        '🗑️ Apollo cache, navigation state, and mutation queue cleared',
+      );
     } catch (error) {
       logger.warn('Failed to clear Apollo cache:', error);
     }

@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
+import { useQuery } from '@apollo/client/react';
 import {
-  useGetPantryItemSuggestionsQuery,
-  PantrySuggestionSource,
+  GetPantryItemSuggestionsDocument,
   type GetPantryItemSuggestionsQuery,
-} from '#generated';
+} from '#features/pantry/graphql/pantry.generated';
+import { PantrySuggestionSource } from '#/graphql/generated/schemaTypes';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { preloadImages } from '#components/atoms/CachedImage';
@@ -45,12 +46,13 @@ export function usePantryItemSuggestions({
 }: UsePantryItemSuggestionsOptions): UsePantryItemSuggestionsReturn {
   const isOffline = useIsEffectivelyOffline();
 
-  const { data, loading, error, refetch } = useGetPantryItemSuggestionsQuery({
-    variables: { pantryId: pantryId!, limit },
-    skip: skip || !pantryId || isOffline,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-  });
+  const { data, loading, error, refetch } = useQuery(
+    GetPantryItemSuggestionsDocument,
+    {
+      variables: { pantryId: pantryId!, limit },
+      skip: skip || !pantryId || isOffline,
+    },
+  );
 
   const suggestions = (data?.pantry?.suggestions ?? []).map(
     (s: PantryItemSuggestion) => ({

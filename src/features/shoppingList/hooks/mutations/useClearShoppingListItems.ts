@@ -12,10 +12,10 @@
  */
 
 import { useRef } from 'react';
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
-import { useClearShoppingListItemsMutation } from '#generated';
-import type { ShoppingListItemDisplayFragment } from '#generated';
+import { ClearShoppingListItemsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   clearAllPurchasedItemsFromCache,
@@ -95,9 +95,7 @@ export function useClearShoppingListItems({
   const client = useApolloClient();
   const isClearingRef = useRef(false);
 
-  const [clearMutation] = useClearShoppingListItemsMutation({
-    errorPolicy: 'all',
-  });
+  const [clearMutation] = useMutation(ClearShoppingListItemsDocument, {});
 
   const clearItems = async (purchased: boolean) => {
     if (!listId || isClearingRef.current) return;

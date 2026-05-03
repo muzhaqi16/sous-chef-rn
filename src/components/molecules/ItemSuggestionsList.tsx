@@ -4,8 +4,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { ItemSuggestion } from '#generated';
 import { Text } from '#components/atoms/Text';
+import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 
 interface ItemSuggestionsListProps {
   /** Search query for the "Add manually" text */

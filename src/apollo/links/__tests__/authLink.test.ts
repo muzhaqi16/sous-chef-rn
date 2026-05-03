@@ -184,11 +184,14 @@ describe('authLink middleware', () => {
     const { authLink } = require('../authLink');
     // The SetContextLink takes (prevContext, operation) and returns new context
     // We can test the function returned by the link
-    const linkFn = (authLink as any).contextSetter || (authLink as any).setContext;
+    const linkFn =
+      (authLink as any).contextSetter || (authLink as any).setContext;
 
     // When shouldSkipOperation is true, it should throw
     if (linkFn) {
-      await expect(linkFn({}, { operationName: 'TestQuery' })).rejects.toThrow('Operation cancelled');
+      await expect(linkFn({}, { operationName: 'TestQuery' })).rejects.toThrow(
+        'Operation cancelled',
+      );
     }
     LogoutCleanup.shouldSkipOperation.mockReturnValue(false);
   });
@@ -228,7 +231,9 @@ describe('authLink middleware', () => {
       mockStoreState.isOnline = true;
       // When online with expired refresh token, should trigger genuine logout
       mockStoreState.tokenRefreshFailed('auth_rejected');
-      expect(mockStoreState.tokenRefreshFailed).toHaveBeenCalledWith('auth_rejected');
+      expect(mockStoreState.tokenRefreshFailed).toHaveBeenCalledWith(
+        'auth_rejected',
+      );
     });
   });
 });

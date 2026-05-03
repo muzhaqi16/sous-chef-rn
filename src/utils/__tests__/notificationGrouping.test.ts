@@ -3,7 +3,10 @@ import {
   createSectionListData,
   NotificationGroups,
 } from '../notificationGrouping';
-import { NotificationCategory, NotificationType } from '#generated';
+import {
+  NotificationCategory,
+  NotificationType,
+} from '#/graphql/generated/schemaTypes';
 import {
   NotificationPriority,
   NotificationItem,

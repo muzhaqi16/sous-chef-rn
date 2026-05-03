@@ -13,7 +13,11 @@ jest.mock('#utils/iconUtils', () => ({
 jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: ({ uri }: any) => {
     const { Text } = require('react-native');
-    return require('react').createElement(Text, { testID: 'cached-image' }, `img-${uri}`);
+    return require('react').createElement(
+      Text,
+      { testID: 'cached-image' },
+      `img-${uri}`,
+    );
   },
 }));
 
@@ -35,13 +39,24 @@ describe('ImageGalleryTabs', () => {
   });
 
   it('renders fallback image when provided with no images', () => {
-    render(<ImageGalleryTabs images={[]} fallbackImageUrl="https://example.com/fallback.jpg" />);
+    render(
+      <ImageGalleryTabs
+        images={[]}
+        fallbackImageUrl="https://example.com/fallback.jpg"
+      />,
+    );
     expect(screen.getByTestId('cached-image')).toBeTruthy();
   });
 
   it('renders image from parsed images array', () => {
-    const images = [{ url: 'https://example.com/front.jpg', perspective: 'front' }];
-    const { hasImages, groupImagesByPerspective, getBestImageUrl } = require('#utils/imageUtils');
+    const images = [
+      { url: 'https://example.com/front.jpg', perspective: 'front' },
+    ];
+    const {
+      hasImages,
+      groupImagesByPerspective,
+      getBestImageUrl,
+    } = require('#utils/imageUtils');
     hasImages.mockReturnValue(true);
     groupImagesByPerspective.mockReturnValue([{ key: 'front', images }]);
     getBestImageUrl.mockReturnValue('https://example.com/front.jpg');
@@ -51,12 +66,16 @@ describe('ImageGalleryTabs', () => {
   });
 
   it('renders with custom height', () => {
-    const { toJSON } = render(<ImageGalleryTabs images={[]} imageHeight={300} />);
+    const { toJSON } = render(
+      <ImageGalleryTabs images={[]} imageHeight={300} />,
+    );
     expect(toJSON()).toBeTruthy();
   });
 
   it('renders with custom style', () => {
-    const { toJSON } = render(<ImageGalleryTabs images={[]} style={{ margin: 10 }} />);
+    const { toJSON } = render(
+      <ImageGalleryTabs images={[]} style={{ margin: 10 }} />,
+    );
     expect(toJSON()).toBeTruthy();
   });
 });

@@ -44,23 +44,33 @@ jest.mock('zustand/shallow', () => ({
   useShallow: (fn: any) => fn,
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useItemByUpcFilterQuery: jest.fn(() => ({
-    data: undefined,
-    loading: true,
-    error: undefined,
-  })),
-  useItemBySkuFilterQuery: jest.fn(() => ({
-    data: undefined,
-    loading: false,
-    error: undefined,
-  })),
-  useCreateItemMutation: jest.fn(() => [
-    mockCreateItemMutation,
-    { loading: false },
-  ]),
-  useFlagItemForReviewMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'ItemByUpcFilter')
+      return {
+        data: undefined,
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      };
+    if (opName === 'ItemBySkuFilter')
+      return {
+        data: undefined,
+        loading: false,
+        error: undefined,
+        refetch: jest.fn(),
+      };
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreateItem')
+      return [mockCreateItemMutation, { loading: false }];
+    if (opName === 'FlagItemForReview') return [jest.fn(), { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#hooks/useImageUpload', () => ({
@@ -96,6 +106,14 @@ describe('useSearchResults', () => {
   });
 
   it('returns loading true when UPC query is loading', () => {
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
+      data: undefined,
+      loading: true,
+      error: undefined,
+      refetch: jest.fn(),
+    });
+
     const { result } = renderHook(() => useSearchResults('1234567890'));
 
     expect(result.current.loading).toBe(true);
@@ -134,8 +152,8 @@ describe('useSearchResults', () => {
   });
 
   it('sets search results when UPC query finds an item', () => {
-    const { useItemByUpcFilterQuery } = require('#generated');
-    useItemByUpcFilterQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: {
         items: {
           edges: [
@@ -174,16 +192,13 @@ describe('useSearchResults', () => {
   });
 
   it('falls back to SKU query when UPC finds nothing', () => {
-    const {
-      useItemByUpcFilterQuery,
-      useItemBySkuFilterQuery,
-    } = require('#generated');
-    useItemByUpcFilterQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: { items: { edges: [] } },
       loading: false,
       error: undefined,
     });
-    useItemBySkuFilterQuery.mockReturnValue({
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: {
         items: {
           edges: [
@@ -220,16 +235,13 @@ describe('useSearchResults', () => {
   });
 
   it('shows bottom sheet when neither UPC nor SKU finds results', () => {
-    const {
-      useItemByUpcFilterQuery,
-      useItemBySkuFilterQuery,
-    } = require('#generated');
-    useItemByUpcFilterQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: { items: { edges: [] } },
       loading: false,
       error: undefined,
     });
-    useItemBySkuFilterQuery.mockReturnValue({
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: { items: { edges: [] } },
       loading: false,
       error: undefined,
@@ -242,8 +254,8 @@ describe('useSearchResults', () => {
   });
 
   it('handles timeout error from UPC query', () => {
-    const { useItemByUpcFilterQuery } = require('#generated');
-    useItemByUpcFilterQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: undefined,
       loading: false,
       error: { message: 'Request timeout', networkError: null },
@@ -258,8 +270,8 @@ describe('useSearchResults', () => {
   });
 
   it('handles network error from queries', () => {
-    const { useItemByUpcFilterQuery } = require('#generated');
-    useItemByUpcFilterQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: undefined,
       loading: false,
       error: { message: 'Network error', networkError: new Error('net') },
@@ -273,8 +285,8 @@ describe('useSearchResults', () => {
   });
 
   it('handles generic query error', () => {
-    const { useItemByUpcFilterQuery } = require('#generated');
-    useItemByUpcFilterQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: undefined,
       loading: false,
       error: { message: 'Server error' },
@@ -288,10 +300,11 @@ describe('useSearchResults', () => {
   });
 
   it('maps ean-13 format correctly', () => {
-    const { useItemByUpcFilterQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
     renderHook(() => useSearchResults('1234567890', 'ean-13'));
 
-    expect(useItemByUpcFilterQuery).toHaveBeenCalledWith(
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         variables: { upc: '1234567890', upcFormat: 'EAN_13' },
       }),
@@ -299,10 +312,11 @@ describe('useSearchResults', () => {
   });
 
   it('maps upc-a format correctly', () => {
-    const { useItemByUpcFilterQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
     renderHook(() => useSearchResults('1234567890', 'upc-a'));
 
-    expect(useItemByUpcFilterQuery).toHaveBeenCalledWith(
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         variables: { upc: '1234567890', upcFormat: 'UPC_A' },
       }),
@@ -310,10 +324,11 @@ describe('useSearchResults', () => {
   });
 
   it('passes undefined for unknown format', () => {
-    const { useItemByUpcFilterQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
     renderHook(() => useSearchResults('1234567890', 'unknown-format'));
 
-    expect(useItemByUpcFilterQuery).toHaveBeenCalledWith(
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         variables: { upc: '1234567890', upcFormat: undefined },
       }),
@@ -321,9 +336,9 @@ describe('useSearchResults', () => {
   });
 
   it('handleAddItem stores images and calls mutation', async () => {
-    const { useItemByUpcFilterQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
     const { storage } = require('#/storage/mmkv');
-    useItemByUpcFilterQuery.mockReturnValue({
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: undefined,
       loading: false,
       error: undefined,
@@ -355,9 +370,9 @@ describe('useSearchResults', () => {
   });
 
   it('handleAddItem uses singular selectedImage for backward compat', async () => {
-    const { useItemByUpcFilterQuery } = require('#generated');
+    const { useQuery } = require('@apollo/client/react');
     const { storage } = require('#/storage/mmkv');
-    useItemByUpcFilterQuery.mockReturnValue({
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: undefined,
       loading: false,
       error: undefined,
@@ -379,16 +394,13 @@ describe('useSearchResults', () => {
   });
 
   it('returns loading true when SKU query is loading', () => {
-    const {
-      useItemByUpcFilterQuery,
-      useItemBySkuFilterQuery,
-    } = require('#generated');
-    useItemByUpcFilterQuery.mockReturnValue({
+    const { useQuery } = require('@apollo/client/react');
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: { items: { edges: [] } },
       loading: false,
       error: undefined,
     });
-    useItemBySkuFilterQuery.mockReturnValue({
+    (useQuery as jest.Mock).mockReturnValueOnce({
       data: undefined,
       loading: true,
       error: undefined,

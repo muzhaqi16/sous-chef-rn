@@ -9,13 +9,13 @@
 
 import { useRef } from 'react';
 import { alertService } from '#/services/alertService';
+import { useMutation } from '@apollo/client/react';
 import {
-  useAddItemToShoppingListMutation,
+  AddItemToShoppingListDocument,
   type AddItemToShoppingListMutation,
   type AddItemToShoppingListMutationVariables,
-} from '#generated';
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { useErrorService } from '#/services/errorService';
-import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
@@ -48,8 +48,7 @@ export function useAddShoppingItem({
   // callbacks configured at hook level that need to share per-mutation state
   const lastTempIdRef = useRef<string | null>(null);
 
-  const [addItemMutation] = useAddItemToShoppingListMutation({
-    errorPolicy: 'all',
+  const [addItemMutation] = useMutation(AddItemToShoppingListDocument, {
     optimisticResponse: (variables: AddItemToShoppingListMutationVariables) => {
       const { tempId, entity } = createOptimisticShoppingListItem({
         itemName: variables.input.itemName ?? '',
@@ -61,12 +60,18 @@ export function useAddShoppingItem({
         unitId: variables.input.unit?.unitId,
       });
       lastTempIdRef.current = tempId;
-      return buildOptimisticMutationResponse(
-        'addItemToShoppingList',
-        'ShoppingListItemPayload',
-        'shoppingListItem',
-        entity,
-      );
+      const optimistic: AddItemToShoppingListMutation = {
+        __typename: 'Mutation',
+        addItemToShoppingList: {
+          __typename: 'ShoppingListItemPayload',
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          shoppingListItem:
+            entity as AddItemToShoppingListMutation['addItemToShoppingList']['shoppingListItem'],
+        },
+      };
+      return optimistic;
     },
     update(cache, { data }) {
       if (!data?.addItemToShoppingList?.shoppingListItem || !listId) return;

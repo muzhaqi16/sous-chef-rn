@@ -7,7 +7,8 @@ import { QuantityInputFeedback } from '#components/molecules/QuantityInputFeedba
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { validateDeductionQuantity } from '#/utils/validateDeductionQuantity';
 import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
-import { UsagePurpose, PantryItemFragment } from '#generated';
+import { UsagePurpose } from '#/graphql/generated/schemaTypes';
+import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
 import {
   PantryOperation,

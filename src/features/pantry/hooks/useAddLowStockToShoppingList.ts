@@ -1,4 +1,5 @@
-import { useAddLowStockItemsToShoppingListMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { AddLowStockItemsToShoppingListDocument } from '#features/pantry/graphql/pantry.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -10,12 +11,14 @@ interface UseAddLowStockToShoppingListOptions {
 export function useAddLowStockToShoppingList({
   homeId,
 }: UseAddLowStockToShoppingListOptions) {
-  const [addLowStockMutation, { loading }] =
-    useAddLowStockItemsToShoppingListMutation({
+  const [addLowStockMutation, { loading }] = useMutation(
+    AddLowStockItemsToShoppingListDocument,
+    {
       onError: error => {
         toastService.error(error.message || 'Failed to add low stock items');
       },
-    });
+    },
+  );
 
   const addLowStockToShoppingList = async () => {
     if (!homeId) {

@@ -1,7 +1,7 @@
 'use no memo';
 
 import { usePantryStats } from '../usePantryStats';
-import { StorageState } from '#generated';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 
 describe('usePantryStats', () => {
   describe('client-side fallback (no storageStateCounts)', () => {
@@ -220,9 +220,7 @@ describe('usePantryStats', () => {
           frozen: 5,
           ambient: 5,
         },
-        storageLocationCounts: [
-          { storageLocationId: 'garage', itemCount: 7 },
-        ],
+        storageLocationCounts: [{ storageLocationId: 'garage', itemCount: 7 }],
       });
 
       expect(locationCounts.garage).toBe(7);

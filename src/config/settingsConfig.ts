@@ -92,14 +92,8 @@ export const PROFILE_SETTINGS_CONFIG = [
     ],
   },
   {
-    title: 'Appearance & Language',
+    title: 'Theme & Language',
     items: [
-      {
-        key: 'appearance',
-        label: 'Appearance',
-        type: 'navigation',
-        subtitle: 'Theme, brand color, density, font scale',
-      },
       {
         key: 'theme',
         label: 'Theme',

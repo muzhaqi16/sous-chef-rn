@@ -1,36 +1,43 @@
+import { useMutation } from '@apollo/client/react';
 import {
-  useCreateMealPlanMutation,
-  useUpdateMealPlanMutation,
-  useDeleteMealPlanMutation,
+  CreateMealPlanDocument,
+  UpdateMealPlanDocument,
+  DeleteMealPlanDocument,
   GetMealPlansDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
+import {
   SortOrder,
   type CreateMealPlanInput,
   type UpdateMealPlanInput,
-} from '#generated';
+} from '#/graphql/generated/schemaTypes';
 
 export function useMealPlanActions() {
-  const [createMealPlanMutation, { loading: creating }] =
-    useCreateMealPlanMutation({
+  const [createMealPlanMutation, { loading: creating }] = useMutation(
+    CreateMealPlanDocument,
+    {
       refetchQueries: [
         {
           query: GetMealPlansDocument,
           variables: { first: 20, orderBy: { startDate: SortOrder.Desc } },
         },
       ],
-    });
+    },
+  );
 
   const [updateMealPlanMutation, { loading: updating }] =
-    useUpdateMealPlanMutation();
+    useMutation(UpdateMealPlanDocument);
 
-  const [deleteMealPlanMutation, { loading: deleting }] =
-    useDeleteMealPlanMutation({
+  const [deleteMealPlanMutation, { loading: deleting }] = useMutation(
+    DeleteMealPlanDocument,
+    {
       refetchQueries: [
         {
           query: GetMealPlansDocument,
           variables: { first: 20, orderBy: { startDate: SortOrder.Desc } },
         },
       ],
-    });
+    },
+  );
 
   const createMealPlan = async (input: CreateMealPlanInput) => {
     const result = await createMealPlanMutation({

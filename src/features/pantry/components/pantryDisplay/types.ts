@@ -1,5 +1,8 @@
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import type { PantryItem, PantryStats } from '#generated';
+import {
+  type PantryItem,
+  type PantryStats,
+} from '#/graphql/generated/schemaTypes';
 import type { LocationFilter } from '#utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import type { ItemVariant, ExpirationVariant } from '../PantryItemCard';

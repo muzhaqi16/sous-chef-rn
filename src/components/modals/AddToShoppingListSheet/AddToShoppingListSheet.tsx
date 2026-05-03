@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useShoppingListSuggestions,
@@ -7,15 +7,15 @@ import {
 } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import { toastService } from '#/services/toastService';
 import {
-  useAddItemToShoppingListMutation,
+  AddItemToShoppingListDocument,
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
+  type AddItemToShoppingListMutation,
   type AddItemToShoppingListMutationVariables,
-  ItemSuggestion,
-} from '#generated';
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import { createOptimisticShoppingListItem } from '#features/shoppingList/hooks/mutations/utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
@@ -101,24 +101,29 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const lastTempIdRef = useRef<string | null>(null);
 
   // Add shopping list item mutation with optimistic response for instant UI
-  const [addItemMutation, { loading: adding }] =
-    useAddItemToShoppingListMutation({
-      errorPolicy: 'all',
+  const [addItemMutation, { loading: adding }] = useMutation(
+    AddItemToShoppingListDocument,
+    {
       optimisticResponse: (
         variables: AddItemToShoppingListMutationVariables,
-      ) => {
+      ): AddItemToShoppingListMutation => {
         const { tempId, entity } = createOptimisticShoppingListItem({
           itemName: variables.input.itemName ?? '',
           itemId: variables.input.itemId,
           unitId: variables.input.unit?.unitId,
         });
         lastTempIdRef.current = tempId;
-        return buildOptimisticMutationResponse(
-          'addItemToShoppingList',
-          'ShoppingListItemPayload',
-          'shoppingListItem',
-          entity,
-        );
+        return {
+          __typename: 'Mutation',
+          addItemToShoppingList: {
+            __typename: 'ShoppingListItemPayload',
+            success: true,
+            message: '',
+            code: 'SUCCESS',
+            shoppingListItem:
+              entity as AddItemToShoppingListMutation['addItemToShoppingList']['shoppingListItem'],
+          },
+        };
       },
       update(cache, { data }) {
         const newItem = data?.addItemToShoppingList?.shoppingListItem;
@@ -138,7 +143,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       onError: () => {
         lastTempIdRef.current = null;
       },
-    });
+    },
+  );
 
   // Handle scan barcode press
   const handleScanPress = () => {

@@ -5,18 +5,21 @@ import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { StyleSheet } from 'react-native-unistyles';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useSelectableItems } from '#hooks/useSelectableItems';
+import { useMutation, useQuery } from '@apollo/client/react';
+import { GetOnboardingItemsDocument } from '#operations/item/item.generated';
 import {
-  useGetOnboardingItemsQuery,
-  useGetPantryQuery,
-  useCreatePantryItemMutation,
-  useDeletePantryItemMutation,
+  GetPantryDocument,
+  CreatePantryItemDocument,
+  DeletePantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import {
   StorageState,
   ItemCondition,
   AcquisitionMethod,
   ItemSortField,
   SortOrder,
   ItemType,
-} from '#generated';
+} from '#/graphql/generated/schemaTypes';
 import { extractNodes } from '#/utils/connectionUtils';
 import { removeFromPantryItemsCache } from '#/hooks/home/pantry/utils';
 import { useAppStore } from '#store/useAppStore';
@@ -39,7 +42,7 @@ export const SelectPantryItems = () => {
     loading,
     error: queryError,
     refetch,
-  } = useGetOnboardingItemsQuery({
+  } = useQuery(GetOnboardingItemsDocument, {
     variables: {
       filters: {
         curation: { showInOnboarding: true },
@@ -51,19 +54,18 @@ export const SelectPantryItems = () => {
       },
       first: 50,
     },
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
   });
 
-  const { data: pantryData, loading: pantryLoading } = useGetPantryQuery({
-    variables: { id: selectedPantryId!, itemsFirst: 100 },
-    skip: !selectedPantryId,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-  });
+  const { data: pantryData, loading: pantryLoading } = useQuery(
+    GetPantryDocument,
+    {
+      variables: { id: selectedPantryId!, itemsFirst: 100 },
+      skip: !selectedPantryId,
+    },
+  );
 
-  const [addItemToPantry] = useCreatePantryItemMutation();
-  const [deletePantryItem] = useDeletePantryItemMutation();
+  const [addItemToPantry] = useMutation(CreatePantryItemDocument);
+  const [deletePantryItem] = useMutation(DeletePantryItemDocument);
 
   const [isSaving, setIsSaving] = useState(false);
 

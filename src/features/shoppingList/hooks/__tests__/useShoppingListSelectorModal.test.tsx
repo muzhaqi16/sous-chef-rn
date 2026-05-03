@@ -97,12 +97,14 @@ jest.mock('#components/atoms/ShoppingListAvatar', () => ({
 const mockDeleteList = jest.fn().mockResolvedValue({
   data: { deleteShoppingList: { shoppingList: { id: 'list-1' } } },
 });
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useDeleteShoppingListMutation: jest.fn(() => [
-    mockDeleteList,
-    { loading: false },
-  ]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'DeleteShoppingList')
+      return [mockDeleteList, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({

@@ -8,15 +8,23 @@ describe('useRecipeSuggestionsStore', () => {
   describe('setCachedSuggestions', () => {
     it('caches recipes by item name', () => {
       const recipes = [{ id: 1, title: 'Pasta' }] as any;
-      useRecipeSuggestionsStore.getState().setCachedSuggestions('Tomato', recipes);
-      const cached = useRecipeSuggestionsStore.getState().getCachedSuggestions('Tomato');
+      useRecipeSuggestionsStore
+        .getState()
+        .setCachedSuggestions('Tomato', recipes);
+      const cached = useRecipeSuggestionsStore
+        .getState()
+        .getCachedSuggestions('Tomato');
       expect(cached).toEqual(recipes);
     });
 
     it('normalizes key to lowercase and trimmed', () => {
       const recipes = [{ id: 1, title: 'Soup' }] as any;
-      useRecipeSuggestionsStore.getState().setCachedSuggestions('  CHICKEN  ', recipes);
-      const cached = useRecipeSuggestionsStore.getState().getCachedSuggestions('chicken');
+      useRecipeSuggestionsStore
+        .getState()
+        .setCachedSuggestions('  CHICKEN  ', recipes);
+      const cached = useRecipeSuggestionsStore
+        .getState()
+        .getCachedSuggestions('chicken');
       expect(cached).toEqual(recipes);
     });
   });
@@ -30,7 +38,9 @@ describe('useRecipeSuggestionsStore', () => {
 
     it('returns null for expired cache', () => {
       const recipes = [{ id: 1, title: 'Old' }] as any;
-      useRecipeSuggestionsStore.getState().setCachedSuggestions('item', recipes);
+      useRecipeSuggestionsStore
+        .getState()
+        .setCachedSuggestions('item', recipes);
       // Manually expire the cache entry
       useRecipeSuggestionsStore.setState(state => {
         const key = 'item';
@@ -49,7 +59,9 @@ describe('useRecipeSuggestionsStore', () => {
 
     it('removes expired entry from cache', () => {
       const recipes = [{ id: 1 }] as any;
-      useRecipeSuggestionsStore.getState().setCachedSuggestions('item', recipes);
+      useRecipeSuggestionsStore
+        .getState()
+        .setCachedSuggestions('item', recipes);
       useRecipeSuggestionsStore.setState(state => {
         state.cache.item = {
           ...state.cache.item,
@@ -58,14 +70,18 @@ describe('useRecipeSuggestionsStore', () => {
         return state;
       });
       useRecipeSuggestionsStore.getState().getCachedSuggestions('item');
-      expect(useRecipeSuggestionsStore.getState().cache).not.toHaveProperty('item');
+      expect(useRecipeSuggestionsStore.getState().cache).not.toHaveProperty(
+        'item',
+      );
     });
   });
 
   describe('clearExpiredCache', () => {
     it('removes only expired entries', () => {
       const recipes = [{ id: 1 }] as any;
-      useRecipeSuggestionsStore.getState().setCachedSuggestions('fresh', recipes);
+      useRecipeSuggestionsStore
+        .getState()
+        .setCachedSuggestions('fresh', recipes);
       useRecipeSuggestionsStore.getState().setCachedSuggestions('old', recipes);
       // Expire 'old' entry
       useRecipeSuggestionsStore.setState(state => {
@@ -76,8 +92,12 @@ describe('useRecipeSuggestionsStore', () => {
         return state;
       });
       useRecipeSuggestionsStore.getState().clearExpiredCache();
-      expect(useRecipeSuggestionsStore.getState().cache).toHaveProperty('fresh');
-      expect(useRecipeSuggestionsStore.getState().cache).not.toHaveProperty('old');
+      expect(useRecipeSuggestionsStore.getState().cache).toHaveProperty(
+        'fresh',
+      );
+      expect(useRecipeSuggestionsStore.getState().cache).not.toHaveProperty(
+        'old',
+      );
     });
   });
 

@@ -1,4 +1,4 @@
-import { MembershipRole } from '#generated';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import {
   getInvitableRoles,
   canInviteToHome,
@@ -11,7 +11,9 @@ describe('getInvitableRoles', () => {
   });
 
   it('Member can only invite Members', () => {
-    expect(getInvitableRoles(MembershipRole.Member)).toEqual([MembershipRole.Member]);
+    expect(getInvitableRoles(MembershipRole.Member)).toEqual([
+      MembershipRole.Member,
+    ]);
   });
 
   it('Admin can invite Members and Admins', () => {

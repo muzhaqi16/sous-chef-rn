@@ -8,10 +8,11 @@ import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { Button } from '#components/base/Button';
+import { useMutation, useQuery } from '@apollo/client/react';
 import {
-  useCreateShoppingListMutation,
-  useGetShoppingListsLiteQuery,
-} from '#generated';
+  CreateShoppingListDocument,
+  GetShoppingListsLiteDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useAppStore, useUser, useSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
@@ -96,11 +97,12 @@ export const CreateShoppingListScreen = () => {
   const [checkingExisting, setCheckingExisting] = useState(true);
 
   // GraphQL query - uses lightweight query for list metadata only
-  const { data: listsData, loading: listsLoading } =
-    useGetShoppingListsLiteQuery({
+  const { data: listsData, loading: listsLoading } = useQuery(
+    GetShoppingListsLiteDocument,
+    {
       skip: !user?.id,
-      fetchPolicy: 'cache-and-network',
-    });
+    },
+  );
 
   // Extract nodes from connection type (shoppingLists returns ShoppingListConnection)
   const lists = extractNodes(listsData?.shoppingLists);
@@ -115,7 +117,7 @@ export const CreateShoppingListScreen = () => {
     },
   });
 
-  const [createShoppingList] = useCreateShoppingListMutation();
+  const [createShoppingList] = useMutation(CreateShoppingListDocument);
 
   // Check existing lists
   useEffect(() => {

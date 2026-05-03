@@ -1,7 +1,6 @@
-import {
-  useCreateStorageLocationMutation,
-  type CreateStorageLocationInput,
-} from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { CreateStorageLocationDocument } from '#operations/storageLocation/storageLocation.generated';
+import { type CreateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
   createAddToQueryConnectionUpdater,
@@ -22,42 +21,38 @@ export function useCreateStorageLocation(
 ) {
   const { createAddOperation } = useCrudOperations();
 
-  const [createMutation, { loading: creating }] =
-    useCreateStorageLocationMutation({
-      errorPolicy: 'all',
+  const [createMutation, { loading: creating }] = useMutation(
+    CreateStorageLocationDocument,
+    {
       update: (cache, { data }) => {
         const newLocation = data?.createStorageLocation?.storageLocation;
         if (!newLocation) return;
 
-        executeCacheUpdate(
-          () => {
-            // Keep the StorageLocationsScreen query cache warm
-            const addToStorageLocationsCache =
-              createAddToQueryConnectionUpdater(
-                'storageLocations',
-                'StorageLocation',
-              );
-            addToStorageLocationsCache(cache, newLocation, {
+        executeCacheUpdate(() => {
+          // Keep the StorageLocationsScreen query cache warm
+          const addToStorageLocationsCache = createAddToQueryConnectionUpdater(
+            'storageLocations',
+            'StorageLocation',
+          );
+          addToStorageLocationsCache(cache, newLocation, {
+            position: 'end',
+          });
+
+          // Update PantryMain's tabs immediately via the parent Pantry connection
+          if (pantryId) {
+            const addToPantryLocations = createAddToParentConnectionUpdater(
+              'Pantry',
+              'storageLocationsConnection',
+              'StorageLocation',
+            );
+            addToPantryLocations(cache, pantryId, newLocation, {
               position: 'end',
             });
-
-            // Update PantryMain's tabs immediately via the parent Pantry connection
-            if (pantryId) {
-              const addToPantryLocations =
-                createAddToParentConnectionUpdater(
-                  'Pantry',
-                  'storageLocationsConnection',
-                  'StorageLocation',
-                );
-              addToPantryLocations(cache, pantryId, newLocation, {
-                position: 'end',
-              });
-            }
-          },
-          'Cache update failed for createStorageLocation:',
-        );
+          }
+        }, 'Cache update failed for createStorageLocation:');
       },
-    });
+    },
+  );
 
   const createLocation = createAddOperation({
     mutation: createMutation,

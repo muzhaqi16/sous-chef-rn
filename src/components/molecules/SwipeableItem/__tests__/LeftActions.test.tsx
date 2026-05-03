@@ -27,16 +27,21 @@ jest.mock('../AnimatedActionButton', () => {
 
 describe('LeftActions', () => {
   const mockSwipeableRef = { current: { close: jest.fn() } };
-  const mockProgress = { value: 0.5, addListener: jest.fn(), removeListener: jest.fn(), modify: jest.fn(), get: jest.fn(), set: jest.fn() };
+  const mockProgress = {
+    value: 0.5,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    modify: jest.fn(),
+    get: jest.fn(),
+    set: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('returns null when no action callbacks are provided', () => {
-    const { toJSON } = render(
-      <LeftActions progress={mockProgress as any} />,
-    );
+    const { toJSON } = render(<LeftActions progress={mockProgress as any} />);
     expect(toJSON()).toBeNull();
   });
 

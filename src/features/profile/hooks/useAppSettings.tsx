@@ -1,13 +1,16 @@
 import { useEffect } from 'react';
 import { useAppStore } from '#store/useAppStore';
 import { useStore } from '#store/index';
+import { useMutation, useQuery } from '@apollo/client/react';
 import {
-  useGetUserSettingsQuery,
-  useUpdateUserPreferencesMutation,
+  GetUserSettingsDocument,
+  UpdateUserPreferencesDocument,
+} from '#operations/auth/user.generated';
+import {
   AppTheme,
   UnitSystem,
-  UpdateUserSettingsInput,
-} from '#generated';
+  type UpdateUserSettingsInput,
+} from '#/graphql/generated/schemaTypes';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { storage } from '#/storage/mmkv';
 
@@ -24,10 +27,10 @@ export interface AppSettings {
 
 export const useAppSettings = () => {
   const user = useAppStore(state => state.user);
-  const { data, loading, refetch } = useGetUserSettingsQuery({
+  const { data, loading, refetch } = useQuery(GetUserSettingsDocument, {
     skip: !user?.id,
   });
-  const [updateSettings] = useUpdateUserPreferencesMutation();
+  const [updateSettings] = useMutation(UpdateUserPreferencesDocument);
 
   const settings = data?.me?.settings;
 

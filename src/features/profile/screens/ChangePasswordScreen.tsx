@@ -14,7 +14,12 @@ import { Icon } from '#utils/iconUtils';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { Header } from '#components/molecules/Header';
 import { Button } from '#components/base/Button';
-import { useChangePasswordMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import {
+  ChangePasswordDocument,
+  type ChangePasswordMutation,
+  type ChangePasswordMutationVariables,
+} from '#operations/auth/auth.generated';
 import { useToast } from '#hooks/useToast';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { changePasswordSchema } from '#utils/validation/auth';
@@ -29,7 +34,10 @@ interface ChangePasswordForm {
 /** Module-level async function to handle password change mutation.
  *  Extracted to avoid try-catch/throw inside component body (React Compiler bailout). */
 async function performChangePassword(
-  changePassword: ReturnType<typeof useChangePasswordMutation>[0],
+  changePassword: useMutation.MutationFunction<
+    ChangePasswordMutation,
+    ChangePasswordMutationVariables
+  >,
   data: ChangePasswordForm,
   toast: ReturnType<typeof useToast>,
   goBack: () => void,
@@ -66,7 +74,7 @@ export const ChangePasswordScreen: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [changePassword] = useChangePasswordMutation();
+  const [changePassword] = useMutation(ChangePasswordDocument);
 
   const form = useForm<ChangePasswordForm>({
     resolver: yupResolver(changePasswordSchema),

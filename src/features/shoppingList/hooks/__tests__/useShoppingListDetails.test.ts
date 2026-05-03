@@ -11,9 +11,13 @@ let mockQueryResult: any = {
   networkStatus: 7, // NetworkStatus.ready
 };
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetShoppingListDetailsQuery: () => mockQueryResult,
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetShoppingListDetails') return mockQueryResult;
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('@apollo/client', () => ({

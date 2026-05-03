@@ -11,14 +11,23 @@ describe('IconButton', () => {
 
   it('renders without crashing', () => {
     const { toJSON } = render(
-      <IconButton name="close" onPress={mockOnPress} accessibilityLabel="Close" />,
+      <IconButton
+        name="close"
+        onPress={mockOnPress}
+        accessibilityLabel="Close"
+      />,
     );
     expect(toJSON()).toBeTruthy();
   });
 
   it('calls onPress when pressed', () => {
     render(
-      <IconButton name="close" onPress={mockOnPress} accessibilityLabel="Close" testID="icon-btn" />,
+      <IconButton
+        name="close"
+        onPress={mockOnPress}
+        accessibilityLabel="Close"
+        testID="icon-btn"
+      />,
     );
     fireEvent.press(screen.getByTestId('icon-btn'));
     expect(mockOnPress).toHaveBeenCalledTimes(1);
@@ -26,7 +35,13 @@ describe('IconButton', () => {
 
   it('does not call onPress when disabled', () => {
     render(
-      <IconButton name="close" onPress={mockOnPress} accessibilityLabel="Close" disabled testID="icon-btn" />,
+      <IconButton
+        name="close"
+        onPress={mockOnPress}
+        accessibilityLabel="Close"
+        disabled
+        testID="icon-btn"
+      />,
     );
     fireEvent.press(screen.getByTestId('icon-btn'));
     expect(mockOnPress).not.toHaveBeenCalled();
@@ -34,21 +49,35 @@ describe('IconButton', () => {
 
   it('has correct accessibility label', () => {
     render(
-      <IconButton name="settings" onPress={mockOnPress} accessibilityLabel="Open settings" />,
+      <IconButton
+        name="settings"
+        onPress={mockOnPress}
+        accessibilityLabel="Open settings"
+      />,
     );
     expect(screen.getByLabelText('Open settings')).toBeTruthy();
   });
 
   it('has accessibilityRole button by default', () => {
     render(
-      <IconButton name="edit" onPress={mockOnPress} accessibilityLabel="Edit" />,
+      <IconButton
+        name="edit"
+        onPress={mockOnPress}
+        accessibilityLabel="Edit"
+      />,
     );
     expect(screen.getByRole('button')).toBeTruthy();
   });
 
   it('sets disabled accessibility state', () => {
     render(
-      <IconButton name="delete" onPress={mockOnPress} accessibilityLabel="Delete" disabled testID="icon-btn" />,
+      <IconButton
+        name="delete"
+        onPress={mockOnPress}
+        accessibilityLabel="Delete"
+        disabled
+        testID="icon-btn"
+      />,
     );
     const btn = screen.getByTestId('icon-btn');
     expect(btn.props.accessibilityState).toEqual({ disabled: true });
@@ -56,7 +85,12 @@ describe('IconButton', () => {
 
   it('renders with testID', () => {
     render(
-      <IconButton name="menu" onPress={mockOnPress} accessibilityLabel="Menu" testID="menu-btn" />,
+      <IconButton
+        name="menu"
+        onPress={mockOnPress}
+        accessibilityLabel="Menu"
+        testID="menu-btn"
+      />,
     );
     expect(screen.getByTestId('menu-btn')).toBeTruthy();
   });

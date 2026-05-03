@@ -6,12 +6,12 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import type { MealPlanItemFragment } from '#generated';
+import { type EditCustomMealSheet_ItemFragment } from './EditCustomMealSheet.generated';
 import { Text } from '#components/atoms/Text';
 
 interface EditCustomMealSheetProps {
   visible: boolean;
-  item: MealPlanItemFragment | null;
+  item: EditCustomMealSheet_ItemFragment | null;
   onClose: () => void;
   onSave: (
     id: string,

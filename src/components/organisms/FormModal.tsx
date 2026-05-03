@@ -1,8 +1,8 @@
 import React from 'react';
-import {View} from 'react-native';
+import { View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import {StyleSheet} from 'react-native-unistyles';
-import {Header} from '../molecules/Header';
+import { StyleSheet } from 'react-native-unistyles';
+import { Header } from '../molecules/Header';
 
 interface FormModalProps {
   title: string;

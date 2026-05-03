@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import {
-  useGetShoppingListsLiteQuery,
-  useGetPantriesQuery,
-  useGetHomesQuery,
-} from '../graphql/generated';
+import { useQuery } from '@apollo/client/react';
+import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { GetHomesDocument } from '#operations/home/home.generated';
+import { GetPantriesDocument } from '#features/pantry/graphql/pantry.generated';
 import { usePreservedArrayData } from './apollo/usePreservedQueryData';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
@@ -41,25 +40,24 @@ export const useItemSelector = ({
   // - errorPolicy: 'ignore' returns cached data when network fails (offline graceful degradation)
 
   // Query data based on type
-  const { data: shoppingListData, loading: shoppingListLoading } =
-    useGetShoppingListsLiteQuery({
-      fetchPolicy: 'cache-and-network',
-      nextFetchPolicy: 'cache-first',
+  const { data: shoppingListData, loading: shoppingListLoading } = useQuery(
+    GetShoppingListsLiteDocument,
+    {
       errorPolicy: 'ignore', // Return cached data on network errors
       skip: type !== 'shoppingList',
-    });
+    },
+  );
 
-  const { data: pantryData, loading: pantryLoading } = useGetPantriesQuery({
-    variables: { homeId: selectedHomeId || '' },
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    skip: type !== 'pantry' || !selectedHomeId,
-    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
-  });
+  const { data: pantryData, loading: pantryLoading } = useQuery(
+    GetPantriesDocument,
+    {
+      variables: { homeId: selectedHomeId || '' },
+      skip: type !== 'pantry' || !selectedHomeId,
+      errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
+    },
+  );
 
-  const { data: homeData, loading: homeLoading } = useGetHomesQuery({
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
+  const { data: homeData, loading: homeLoading } = useQuery(GetHomesDocument, {
     errorPolicy: 'ignore', // Return cached data on network errors
     skip: type !== 'home',
   });

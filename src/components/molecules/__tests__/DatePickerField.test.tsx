@@ -28,9 +28,7 @@ describe('DatePickerField', () => {
   });
 
   it('renders custom placeholder', () => {
-    render(
-      <DatePickerField {...defaultProps} placeholder="Choose a date" />,
-    );
+    render(<DatePickerField {...defaultProps} placeholder="Choose a date" />);
     expect(screen.getByText('Choose a date')).toBeTruthy();
   });
 

@@ -9,10 +9,13 @@
 
 import { gql } from '@apollo/client';
 import { alertService } from '#/services/alertService';
-import { useRemoveItemFromShoppingListMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import {
+  RemoveItemFromShoppingListDocument,
+  type RemoveItemFromShoppingListMutation,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { useErrorService } from '#/services/errorService';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
-import { buildOptimisticDeleteResponse } from '#/apollo/utils/optimisticTypes';
 import { removeFromShoppingListItemsCache } from './utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 
@@ -41,17 +44,20 @@ export function useRemoveShoppingItem({
   const { handleApolloError } = useErrorService();
   const { createRemoveOperation } = useCrudOperations();
 
-  const [removeItemMutation] = useRemoveItemFromShoppingListMutation({
-    errorPolicy: 'all',
-    optimisticResponse: variables => {
-      return buildOptimisticDeleteResponse(
-        'removeItemFromShoppingList',
-        'ShoppingListItemPayload',
-        'shoppingListItem',
-        'ShoppingListItem',
-        variables.id,
-      );
-    },
+  const [removeItemMutation] = useMutation(RemoveItemFromShoppingListDocument, {
+    optimisticResponse: (variables): RemoveItemFromShoppingListMutation => ({
+      __typename: 'Mutation',
+      removeItemFromShoppingList: {
+        __typename: 'ShoppingListItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        shoppingListItem: {
+          __typename: 'ShoppingListItem',
+          id: variables.id,
+        } as RemoveItemFromShoppingListMutation['removeItemFromShoppingList']['shoppingListItem'],
+      },
+    }),
     update(cache, { data }, { variables }) {
       if (!data?.removeItemFromShoppingList || !listId || !variables) return;
 

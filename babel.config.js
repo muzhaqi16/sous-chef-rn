@@ -49,6 +49,7 @@ module.exports = api => {
             '#features/*': './src/features/*',
             '#generated': './src/graphql/generated',
             '#graphql': './src/graphql',
+            '#operations': './src/graphql/operations',
             '#hooks': './src/hooks',
             '#hooks/*': './src/hooks/*',
             '#navigation': './src/navigation',

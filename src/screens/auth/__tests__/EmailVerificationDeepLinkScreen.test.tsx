@@ -44,9 +44,13 @@ jest.mock('#store/useAppStore', () => ({
   })),
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useVerifyEmailMutation: () => [mockVerifyEmail],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'VerifyEmail') return [mockVerifyEmail, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/hooks/useToast', () => ({

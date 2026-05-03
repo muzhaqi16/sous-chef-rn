@@ -13,7 +13,7 @@ import { ChartSection } from '#components/analytics/ChartSection';
 import { TrendLineChart } from '#components/charts/TrendLineChart';
 import { BreakdownPieChart } from '#components/charts/BreakdownPieChart';
 import { TopItemsBarChart } from '#components/charts/TopItemsBarChart';
-import { PeriodGranularity } from '#generated';
+import { PeriodGranularity } from '#/graphql/generated/schemaTypes';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Text } from '#components/atoms/Text';
 

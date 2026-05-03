@@ -16,11 +16,12 @@ import { useSavedRecipes } from '#features/recipes/hooks/useSavedRecipes';
 import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
 import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
+import { useMutation } from '@apollo/client/react';
 import {
-  useUnfavoriteRecipeMutation,
+  UnfavoriteRecipeDocument,
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
-} from '#generated';
+} from '#features/recipes/graphql/recipe.generated';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { alertService } from '#/services/alertService';
@@ -51,7 +52,7 @@ export const SavedRecipes: React.FC = () => {
   } = useFolderActions();
 
   // Unfavorite (remove from saved) recipe mutation
-  const [unfavoriteRecipeMutation] = useUnfavoriteRecipeMutation({
+  const [unfavoriteRecipeMutation] = useMutation(UnfavoriteRecipeDocument, {
     update: (cache, { data }, { variables }) => {
       if (!data?.unfavoriteRecipe?.success || !variables?.recipeId) return;
 

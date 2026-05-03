@@ -1,6 +1,9 @@
 import { StateCreator } from 'zustand';
 import { RootState } from '../index';
-import { NotificationType, NotificationCategory } from '#/graphql/generated';
+import {
+  NotificationType,
+  NotificationCategory,
+} from '#/graphql/generated/schemaTypes';
 import { safeParseDate } from '#utils/dateUtils';
 
 // Helper to check if a notification is an invitation (should always show)

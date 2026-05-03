@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { StorageState, PantryItem } from '#generated';
+import { StorageState, PantryItem } from '#/graphql/generated/schemaTypes';
 import { formatQuantityAsFraction } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 

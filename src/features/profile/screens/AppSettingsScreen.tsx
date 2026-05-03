@@ -6,7 +6,7 @@ import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useAppSettings } from '#features/profile/hooks/useAppSettings';
-import { UnitSystem } from '#generated';
+import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { Picker } from '@react-native-picker/picker';
 import { commonStyles } from '#/styles/commonStyles';
 import { useAppStore } from '#/store/useAppStore';

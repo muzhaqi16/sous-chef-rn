@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { useSearchUnitsQuery, useGetCommonUnitsLazyQuery } from '#generated';
+import { useLazyQuery, useQuery } from '@apollo/client/react';
+import {
+  SearchUnitsDocument,
+  GetCommonUnitsDocument,
+} from '#operations/item/unit.generated';
 import { useAppStore } from '#store/useAppStore';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
@@ -26,7 +30,7 @@ export function useUnitAutocomplete() {
   // Lazy preload: fetch common units on first mount (when AddItemSheet opens)
   // and cache in Zustand for local-first autocomplete on subsequent uses
   const hasPreloadedRef = useRef(false);
-  const [fetchCommonUnits] = useGetCommonUnitsLazyQuery({
+  const [fetchCommonUnits] = useLazyQuery(GetCommonUnitsDocument, {
     fetchPolicy: 'cache-first',
     errorPolicy: 'ignore',
   });
@@ -50,13 +54,20 @@ export function useUnitAutocomplete() {
         }
       });
     });
-  }, [cachedUnits.length, lastUnitsFetchedAt, fetchCommonUnits, setCachedUnits, setLastUnitsFetchedAt]);
+  }, [
+    cachedUnits.length,
+    lastUnitsFetchedAt,
+    fetchCommonUnits,
+    setCachedUnits,
+    setLastUnitsFetchedAt,
+  ]);
 
   // Skip-based query (not lazy)
-  const { data: searchData, loading } = useSearchUnitsQuery({
+  const { data: searchData, loading } = useQuery(SearchUnitsDocument, {
     variables: { query: debouncedSearchTerm, limit: 10 },
     skip: !debouncedSearchTerm || debouncedSearchTerm.length < 2,
-    fetchPolicy: 'cache-first' });
+    fetchPolicy: 'cache-first',
+  });
 
   const search = (term: string) => {
     setDebouncedSearchTerm(term);
@@ -72,13 +83,13 @@ export function useUnitAutocomplete() {
   const fallbackItems = cachedUnits as UnitItem[];
 
   const filterFallback = (term: string, items: UnitItem[]): UnitItem[] => {
-      const lower = term.toLowerCase();
-      return items.filter(
-        unit =>
-          unit.symbol.toLowerCase().includes(lower) ||
-          unit.name.toLowerCase().includes(lower),
-      );
-    };
+    const lower = term.toLowerCase();
+    return items.filter(
+      unit =>
+        unit.symbol.toLowerCase().includes(lower) ||
+        unit.name.toLowerCase().includes(lower),
+    );
+  };
 
   const autocomplete = useAutocompleteSearch<UnitItem>({
     search,
@@ -91,7 +102,8 @@ export function useUnitAutocomplete() {
     fallbackItems,
     filterFallback,
     maxResults: 10,
-    localFirst: true });
+    localFirst: true,
+  });
 
   return autocomplete;
 }

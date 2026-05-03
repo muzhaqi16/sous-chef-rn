@@ -3,7 +3,8 @@ import { AppState } from 'react-native';
 import {
   PermissionService,
   type AppPermission,
-  type PermissionStatus } from '#/services/permissions/PermissionService';
+  type PermissionStatus,
+} from '#/services/permissions/PermissionService';
 
 export function usePermission(permission: AppPermission) {
   const [status, setStatus] = useState<PermissionStatus>('undetermined');
@@ -46,5 +47,6 @@ export function usePermission(permission: AppPermission) {
     request: requestPermission,
     openSettings,
     isGranted: status === 'granted',
-    isBlocked: status === 'blocked' };
+    isBlocked: status === 'blocked',
+  };
 }

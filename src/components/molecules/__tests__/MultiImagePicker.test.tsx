@@ -91,8 +91,18 @@ describe('MultiImagePicker', () => {
 
   it('renders images when provided', () => {
     const images: any[] = [
-      { uri: 'file://img1.jpg', type: 'image/jpeg', name: 'img1.jpg', perspective: 'front' },
-      { uri: 'file://img2.jpg', type: 'image/jpeg', name: 'img2.jpg', perspective: 'back' },
+      {
+        uri: 'file://img1.jpg',
+        type: 'image/jpeg',
+        name: 'img1.jpg',
+        perspective: 'front',
+      },
+      {
+        uri: 'file://img2.jpg',
+        type: 'image/jpeg',
+        name: 'img2.jpg',
+        perspective: 'back',
+      },
     ];
     render(<MultiImagePicker {...defaultProps} images={images} />);
     expect(screen.getByText('Product Images (2/6)')).toBeTruthy();
@@ -100,8 +110,18 @@ describe('MultiImagePicker', () => {
 
   it('shows perspective labels for each image', () => {
     const images: any[] = [
-      { uri: 'file://img1.jpg', type: 'image/jpeg', name: 'img1.jpg', perspective: 'front' },
-      { uri: 'file://img2.jpg', type: 'image/jpeg', name: 'img2.jpg', perspective: 'back' },
+      {
+        uri: 'file://img1.jpg',
+        type: 'image/jpeg',
+        name: 'img1.jpg',
+        perspective: 'front',
+      },
+      {
+        uri: 'file://img2.jpg',
+        type: 'image/jpeg',
+        name: 'img2.jpg',
+        perspective: 'back',
+      },
     ];
     render(<MultiImagePicker {...defaultProps} images={images} />);
     expect(screen.getByText('Front')).toBeTruthy();
@@ -110,7 +130,12 @@ describe('MultiImagePicker', () => {
 
   it('shows Add More button when under max images', () => {
     const images: any[] = [
-      { uri: 'file://img1.jpg', type: 'image/jpeg', name: 'img1.jpg', perspective: 'front' },
+      {
+        uri: 'file://img1.jpg',
+        type: 'image/jpeg',
+        name: 'img1.jpg',
+        perspective: 'front',
+      },
     ];
     render(<MultiImagePicker {...defaultProps} images={images} />);
     expect(screen.getByText('Add More')).toBeTruthy();
@@ -129,7 +154,12 @@ describe('MultiImagePicker', () => {
 
   it('renders remove buttons with correct accessibility label', () => {
     const images: any[] = [
-      { uri: 'file://img1.jpg', type: 'image/jpeg', name: 'img1.jpg', perspective: 'front' },
+      {
+        uri: 'file://img1.jpg',
+        type: 'image/jpeg',
+        name: 'img1.jpg',
+        perspective: 'front',
+      },
     ];
     render(<MultiImagePicker {...defaultProps} images={images} />);
     expect(screen.getByLabelText('Remove image')).toBeTruthy();

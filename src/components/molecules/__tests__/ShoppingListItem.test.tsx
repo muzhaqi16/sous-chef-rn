@@ -8,7 +8,9 @@ jest.mock('react-native-unistyles', () => {
     StyleSheet: {
       create: (styleFnOrObj: any) => {
         const result =
-          typeof styleFnOrObj === 'function' ? styleFnOrObj(lightTheme) : styleFnOrObj;
+          typeof styleFnOrObj === 'function'
+            ? styleFnOrObj(lightTheme)
+            : styleFnOrObj;
         result.useVariants = jest.fn();
         return result;
       },
@@ -16,7 +18,10 @@ jest.mock('react-native-unistyles', () => {
     },
     useUnistyles: jest.fn(() => ({ theme: lightTheme, styles: {} })),
     useStyles: jest.fn((stylesheet: any) => ({
-      styles: typeof stylesheet === 'function' ? stylesheet(lightTheme) : stylesheet || {},
+      styles:
+        typeof stylesheet === 'function'
+          ? stylesheet(lightTheme)
+          : stylesheet || {},
       theme: lightTheme,
     })),
     useInitialTheme: jest.fn(),
@@ -77,7 +82,11 @@ jest.mock('../SwipeableItem/SwipeableItem', () => {
   const { View } = require('react-native');
   return {
     SwipeableItem: ({ children }: any) =>
-      require('react').createElement(View, { testID: 'swipeable-item' }, children),
+      require('react').createElement(
+        View,
+        { testID: 'swipeable-item' },
+        children,
+      ),
   };
 });
 
@@ -140,11 +149,7 @@ describe('ShoppingListItem', () => {
 
   it('displays quantity input when provided', () => {
     render(
-      <ShoppingListItem
-        {...defaultProps}
-        quantityInput="1/2"
-        unit="cup"
-      />,
+      <ShoppingListItem {...defaultProps} quantityInput="1/2" unit="cup" />,
     );
     expect(screen.getByText('1/2 cup')).toBeTruthy();
   });

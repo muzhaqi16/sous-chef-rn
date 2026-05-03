@@ -2,8 +2,10 @@
  * useWastePantryItemBatch - Mutation hook for wasting a specific batch
  */
 
+import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import { useWastePantryItemBatchMutation, type WasteReason } from '#generated';
+import { WastePantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
+import type { WasteReason } from '#/graphql/generated/schemaTypes';
 import { useErrorService } from '#/services/errorService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
@@ -16,9 +18,10 @@ export function useWastePantryItemBatch({
 }: UseWastePantryItemBatchOptions = {}) {
   const { handleApolloError } = useErrorService();
 
-  const [wasteMutation, { loading }] = useWastePantryItemBatchMutation({
-    errorPolicy: 'all',
-  });
+  const [wasteMutation, { loading }] = useMutation(
+    WastePantryItemBatchDocument,
+    {},
+  );
 
   const wasteBatch = async (
     batchId: string,

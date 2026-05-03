@@ -1,5 +1,5 @@
 import { clamp, parseISO, startOfDay } from 'date-fns';
-import { MealType } from '#generated';
+import { MealType } from '#/graphql/generated/schemaTypes';
 import { useMealPlans } from './useMealPlans';
 import { useMealPlanItemActions } from './useMealPlanItemActions';
 import { toastService } from '#/services/toastService';

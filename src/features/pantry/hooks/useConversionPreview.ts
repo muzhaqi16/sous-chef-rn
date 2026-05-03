@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { useConvertQuantityLazyQuery } from '#generated';
+import { useLazyQuery } from '@apollo/client/react';
+import { ConvertQuantityDocument } from '#operations/item/conversions.generated';
 import { executeQuery } from '#/utils/compilerSafeWrappers';
 
 interface UseConversionPreviewOptions {
@@ -56,7 +57,7 @@ export function useConversionPreview({
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [convertQuantity] = useConvertQuantityLazyQuery({
+  const [convertQuantity] = useLazyQuery(ConvertQuantityDocument, {
     fetchPolicy: 'network-only',
   });
 

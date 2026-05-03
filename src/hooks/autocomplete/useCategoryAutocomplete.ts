@@ -1,25 +1,38 @@
-import { useAutocompleteCategoriesLazyQuery, CategorySuggestion, CategoryType } from '#generated';
+import { useLazyQuery } from '@apollo/client/react';
+import { AutocompleteCategoriesDocument } from '#operations/item/item.generated';
+import {
+  CategorySuggestion,
+  CategoryType,
+} from '#/graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
 interface UseCategoryAutocompleteOptions {
   categoryType?: CategoryType;
 }
 
-export function useCategoryAutocomplete(options: UseCategoryAutocompleteOptions = {}) {
+export function useCategoryAutocomplete(
+  options: UseCategoryAutocompleteOptions = {},
+) {
   const { categoryType = CategoryType.General } = options;
-  const [searchCategories, { data, loading }] = useAutocompleteCategoriesLazyQuery();
+  const [searchCategories, { data, loading }] = useLazyQuery(
+    AutocompleteCategoriesDocument,
+  );
 
   const search = (term: string) => {
-      searchCategories({
-        variables: {
-          input: {
-            query: term,
-            limit: 5,
-            type: categoryType } } });
-    };
+    searchCategories({
+      variables: {
+        input: {
+          query: term,
+          limit: 5,
+          type: categoryType,
+        },
+      },
+    });
+  };
 
   const getResults = (): CategorySuggestion[] => {
-    return (data?.autocompleteCategories?.suggestions || []) as CategorySuggestion[];
+    return (data?.autocompleteCategories?.suggestions ||
+      []) as CategorySuggestion[];
   };
 
   const autocomplete = useAutocompleteSearch<CategorySuggestion>({
@@ -30,7 +43,8 @@ export function useCategoryAutocomplete(options: UseCategoryAutocompleteOptions 
     minChars: 2,
     debounceMs: 300,
     requiresNetwork: true,
-    maxResults: 5 });
+    maxResults: 5,
+  });
 
   return autocomplete;
 }

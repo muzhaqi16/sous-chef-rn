@@ -3,9 +3,14 @@ import { useResolveUnit } from '../useResolveUnit';
 
 const mockUnitQuery = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetUnitBySymbolLazyQuery: jest.fn(() => [mockUnitQuery]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useLazyQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetUnitBySymbol')
+      return [mockUnitQuery, { loading: false }];
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 beforeEach(() => {

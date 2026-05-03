@@ -1,19 +1,29 @@
-import {
-  useDuplicateMealPlanMutation,
-  GetMealPlansDocument,
-  type DuplicateMealPlanInput,
-} from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { DuplicateMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { type DuplicateMealPlanInput } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+
+const addToMealPlans = createAddToQueryConnectionUpdater<{ id: string }>(
+  'mealPlans',
+  'MealPlan',
+);
 
 export function useDuplicateMealPlan() {
-  const [duplicateMutation, { loading }] = useDuplicateMealPlanMutation({
-    refetchQueries: [{ query: GetMealPlansDocument }],
-    onError: error => {
-      toastService.error(error.message || 'Failed to duplicate meal plan');
+  const [duplicateMutation, { loading }] = useMutation(
+    DuplicateMealPlanDocument,
+    {
+      update(cache, { data }) {
+        const newPlan = data?.duplicateMealPlan?.mealPlan;
+        if (newPlan) addToMealPlans(cache, newPlan);
+      },
+      onError: error => {
+        toastService.error(error.message || 'Failed to duplicate meal plan');
+      },
     },
-  });
+  );
 
   const duplicatePlan = async (input: DuplicateMealPlanInput) => {
     const result = await executeMutation(

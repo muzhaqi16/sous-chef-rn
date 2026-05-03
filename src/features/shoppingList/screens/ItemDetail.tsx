@@ -2,7 +2,8 @@ import React from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useGetShoppingListItemQuery } from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
@@ -31,7 +32,7 @@ export const ShoppingListItemDetail: React.FC<
   const { listId, itemId } = route.params;
 
   // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
-  const { data } = useGetShoppingListItemQuery({
+  const { data } = useQuery(GetShoppingListItemDocument, {
     variables: { id: itemId },
     fetchPolicy: 'cache-first',
   });

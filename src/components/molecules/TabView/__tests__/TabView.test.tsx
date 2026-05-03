@@ -25,7 +25,12 @@ jest.mock('react-native-tab-view', () => {
           return R.createElement(
             RN.View,
             { key: route.key, testID: `scene-${route.key}` },
-            renderScene({ route, jumpTo: jest.fn(), layout: { width: 390, height: 844 }, position: { interpolate: jest.fn() } }),
+            renderScene({
+              route,
+              jumpTo: jest.fn(),
+              layout: { width: 390, height: 844 },
+              position: { interpolate: jest.fn() },
+            }),
           );
         }
         return null;
@@ -117,7 +122,11 @@ describe('TabView', () => {
 
   it('renders without errors when swipeEnabled is false', () => {
     const { toJSON } = render(
-      <TabView routes={routes} renderScene={renderScene} swipeEnabled={false} />,
+      <TabView
+        routes={routes}
+        renderScene={renderScene}
+        swipeEnabled={false}
+      />,
     );
     expect(toJSON()).toBeTruthy();
   });

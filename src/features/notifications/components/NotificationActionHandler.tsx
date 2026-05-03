@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { alertService } from '#/services/alertService';
-import { ExpirationAction } from '#generated';
+import { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import {
   InvitationAcceptanceModal,
   InvitationData,

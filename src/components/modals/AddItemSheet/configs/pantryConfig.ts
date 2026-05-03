@@ -58,6 +58,5 @@ export const pantrySheetConfig: AddItemSheetConfig = {
   barcodeSource: 'pantry',
   addManuallyPosition: 'top',
   emptyStateMessage: 'No suggestions yet',
-  emptyStateSubtext:
-    'Add items to your pantry to get personalized suggestions',
+  emptyStateSubtext: 'Add items to your pantry to get personalized suggestions',
 };

@@ -1,4 +1,4 @@
-import {useAppStore} from '#store/useAppStore';
+import { useAppStore } from '#store/useAppStore';
 
 export const useAuthState = () => {
   const user = useAppStore(state => state.user);
@@ -18,7 +18,8 @@ export const useAuthState = () => {
 
     // Legacy computed states for backward compatibility (will be removed later)
     baseIsAuthenticated: isHydrated && !!user,
-    baseIsFullyAuthenticated: isHydrated && !!user && user.emailVerified && user.onBoarded === true,
+    baseIsFullyAuthenticated:
+      isHydrated && !!user && user.emailVerified && user.onBoarded === true,
 
     // Raw values for convenience
     user,

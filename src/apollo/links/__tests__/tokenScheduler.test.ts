@@ -20,7 +20,9 @@ import {
 import { useStore } from '../../../store';
 
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
-const mockedGetState = useStore.getState as jest.MockedFunction<typeof useStore.getState>;
+const mockedGetState = useStore.getState as jest.MockedFunction<
+  typeof useStore.getState
+>;
 
 describe('tokenScheduler', () => {
   beforeEach(() => {
@@ -63,7 +65,9 @@ describe('tokenScheduler', () => {
       expect(getScheduleState().isScheduled).toBe(true);
       expect(callback).not.toHaveBeenCalled();
       expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('[TokenScheduler] Scheduling proactive refresh'),
+        expect.stringContaining(
+          '[TokenScheduler] Scheduling proactive refresh',
+        ),
       );
     });
 
@@ -112,7 +116,9 @@ describe('tokenScheduler', () => {
 
       expect(callback).not.toHaveBeenCalled();
       expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping proactive refresh - device is offline'),
+        expect.stringContaining(
+          'Skipping proactive refresh - device is offline',
+        ),
       );
     });
 
@@ -137,7 +143,9 @@ describe('tokenScheduler', () => {
       expect(callback1).not.toHaveBeenCalled();
       // Both schedule calls should log
       expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('[TokenScheduler] Scheduling proactive refresh'),
+        expect.stringContaining(
+          '[TokenScheduler] Scheduling proactive refresh',
+        ),
       );
     });
 

@@ -26,7 +26,8 @@ export const handleSubscriptionError = (
 
   // Check if this is a network-related error that will auto-recover
   const isSocketClosed = errorMessage.includes('socket closed');
-  const isNetworkError = errorMessage.includes('network') ||
+  const isNetworkError =
+    errorMessage.includes('network') ||
     errorMessage.includes('connection') ||
     errorMessage.includes('websocket');
 
@@ -36,12 +37,16 @@ export const handleSubscriptionError = (
   }
 
   // Check if this is a server-side resolver issue
-  const isServerResolverError =
-    errorMessage.includes('subscription field must return async iterable');
+  const isServerResolverError = errorMessage.includes(
+    'subscription field must return async iterable',
+  );
 
   if (!isServerResolverError) {
     // For non-resolver errors, don't retry
-    console.error(`Subscription ${operationName} failed with non-resolver error:`, serializeError(error));
+    console.error(
+      `Subscription ${operationName} failed with non-resolver error:`,
+      serializeError(error),
+    );
     return false;
   }
 

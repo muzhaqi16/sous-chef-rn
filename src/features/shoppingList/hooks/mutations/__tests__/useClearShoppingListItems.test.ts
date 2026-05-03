@@ -5,12 +5,14 @@ import { useClearShoppingListItems } from '../useClearShoppingListItems';
 
 const mockClearMutation = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useClearShoppingListItemsMutation: () => [mockClearMutation],
-}));
-
 jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'ClearShoppingListItems')
+      return [mockClearMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
   useApolloClient: () => ({
     cache: {
       identify: jest.fn((obj: any) => `${obj.__typename}:${obj.id}`),

@@ -14,10 +14,12 @@ import {
 import {
   SyncPantryItemDocument,
   SyncDeletePantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import {
   SyncShoppingListItemDocument,
   SyncDeleteShoppingListItemDocument,
   SyncMoveShoppingListItemDocument,
-} from '#generated';
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { generateId } from '#/utils/generateId';
 import { logger } from '#/utils/environment';
 
@@ -132,7 +134,9 @@ export class QueueManager {
           const existing = moveMutations.get(itemId);
           if (existing) {
             removedIds.push(existing.id);
-            logger.info(`🔄 Queue: Merging move mutation ${existing.id} into ${mutation.id} for item ${itemId}`);
+            logger.info(
+              `🔄 Queue: Merging move mutation ${existing.id} into ${mutation.id} for item ${itemId}`,
+            );
           }
 
           // Keep only the latest move for each item
@@ -145,7 +149,9 @@ export class QueueManager {
         // Legacy mutation - keep for backward compatibility during migration
         const listId = mutation.variables?.input?.shoppingListId;
         if (listId) {
-          logger.info(`⚠️ Queue: Found legacy ReorderShoppingListItems mutation ${mutation.id} - consider migrating to MoveShoppingListItem`);
+          logger.info(
+            `⚠️ Queue: Found legacy ReorderShoppingListItems mutation ${mutation.id} - consider migrating to MoveShoppingListItem`,
+          );
         }
         otherMutations.push(mutation);
       } else {
@@ -181,7 +187,8 @@ export class QueueManager {
     logger.info(`📊 Queue: Found ${mutations.length} pending mutations`);
 
     // Merge multiple move mutations for the same item
-    const { merged: mergedMutations, removed: removedIds } = this.mergeMoveItemMutations(mutations);
+    const { merged: mergedMutations, removed: removedIds } =
+      this.mergeMoveItemMutations(mutations);
 
     // Remove merged mutations from queue
     removedIds.forEach(id => {
@@ -189,7 +196,9 @@ export class QueueManager {
     });
 
     if (removedIds.length > 0) {
-      logger.info(`🔄 Queue: Merged ${removedIds.length} duplicate move mutations, processing ${mergedMutations.length} mutations`);
+      logger.info(
+        `🔄 Queue: Merged ${removedIds.length} duplicate move mutations, processing ${mergedMutations.length} mutations`,
+      );
     }
 
     // Process mutations in batches (use merged mutations)
@@ -209,7 +218,7 @@ export class QueueManager {
 
       // Process independent mutations (different entities) concurrently
       const independentResults = await Promise.allSettled(
-        independent.map(mutation => this.processMutation(mutation))
+        independent.map(mutation => this.processMutation(mutation)),
       );
 
       // Process same-entity groups sequentially
@@ -229,12 +238,16 @@ export class QueueManager {
 
       // Log batch results - check actual mutation success, not promise resolution
       const succeeded = results.filter(
-        r => r.status === 'fulfilled' && r.value.success
+        r => r.status === 'fulfilled' && r.value.success,
       ).length;
       const failed = results.filter(
-        r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)
+        r =>
+          r.status === 'rejected' ||
+          (r.status === 'fulfilled' && !r.value.success),
       ).length;
-      logger.info(`📦 Queue: Batch complete - ${succeeded} succeeded, ${failed} failed`);
+      logger.info(
+        `📦 Queue: Batch complete - ${succeeded} succeeded, ${failed} failed`,
+      );
     }
 
     // Cleanup old successful mutations
@@ -246,7 +259,9 @@ export class QueueManager {
   /**
    * Process a single mutation
    */
-  private async processMutation(mutation: QueuedMutation): Promise<ProcessingResult> {
+  private async processMutation(
+    mutation: QueuedMutation,
+  ): Promise<ProcessingResult> {
     const mutationId = mutation.id;
 
     try {
@@ -255,7 +270,9 @@ export class QueueManager {
         status: QueueStatus.PROCESSING,
       });
 
-      logger.info(`⚡ Queue: Processing ${mutation.operationName} (${mutationId})`);
+      logger.info(
+        `⚡ Queue: Processing ${mutation.operationName} (${mutationId})`,
+      );
 
       // Execute mutation with timeout
       const result = await Promise.race([
@@ -304,7 +321,6 @@ export class QueueManager {
         ...mutation.context,
         skipQueueLink: true,
       },
-      errorPolicy: 'all',
     });
 
     if (result.error) {
@@ -318,7 +334,8 @@ export class QueueManager {
    * Execute sync mutation and handle ID mapping
    */
   private async executeSyncMutation(mutation: QueuedMutation): Promise<any> {
-    const { syncMutation, syncVariables } = this.convertToSyncMutation(mutation);
+    const { syncMutation, syncVariables } =
+      this.convertToSyncMutation(mutation);
 
     logger.info(`🔄 Queue: Using sync mutation for ${mutation.operationName}`);
 
@@ -329,7 +346,6 @@ export class QueueManager {
         ...mutation.context,
         skipQueueLink: true,
       },
-      errorPolicy: 'all',
     });
 
     if (result.error) {
@@ -342,14 +358,16 @@ export class QueueManager {
     // Handle ID mapping for creates
     if (syncResult.wasCreated && syncResult.serverId && syncResult.clientId) {
       this.idMapping.set(syncResult.clientId, syncResult.serverId);
-      logger.info(`🔗 Queue: Mapped ${syncResult.clientId} → ${syncResult.serverId}`);
+      logger.info(
+        `🔗 Queue: Mapped ${syncResult.clientId} → ${syncResult.serverId}`,
+      );
     }
 
     // Handle conflicts
     if (syncResult.conflict) {
       logger.warn(
         `⚠️ Queue: Conflict detected for ${mutation.operationName}:`,
-        syncResult.conflict.message
+        syncResult.conflict.message,
       );
       // Server wins - return server's version (already in syncResult.item)
     }
@@ -369,9 +387,7 @@ export class QueueManager {
 
     // Determine clientId (temp-ID or real ID)
     const clientId =
-      variables.id ||
-      variables.input?.id ||
-      `temp-${generateId()}`;
+      variables.id || variables.input?.id || `temp-${generateId()}`;
 
     // PantryItem sync mutations
     if (
@@ -474,7 +490,9 @@ export class QueueManager {
 
     // Fallback: For mutations without Sync versions, replay the original mutation
     // This allows all queued mutations to be replayed when coming back online
-    logger.info(`ℹ️ Queue: No sync mutation for ${operationName}, using original mutation`);
+    logger.info(
+      `ℹ️ Queue: No sync mutation for ${operationName}, using original mutation`,
+    );
     return {
       syncMutation: mutation.mutation,
       syncVariables: variables,
@@ -533,7 +551,7 @@ export class QueueManager {
    */
   private async handleMutationError(
     mutation: QueuedMutation,
-    error: any
+    error: any,
   ): Promise<ProcessingResult> {
     const queueError = this.classifyError(error);
 
@@ -545,7 +563,9 @@ export class QueueManager {
     // Handle retryable errors
     if (queueError.retryable && mutation.retryCount < mutation.maxRetries) {
       logger.info(
-        `🔄 Queue: Scheduling retry for ${mutation.id} (attempt ${mutation.retryCount + 1}/${mutation.maxRetries})`
+        `🔄 Queue: Scheduling retry for ${mutation.id} (attempt ${
+          mutation.retryCount + 1
+        }/${mutation.maxRetries})`,
       );
 
       // Update retry count
@@ -558,7 +578,10 @@ export class QueueManager {
       // Retry immediately if still online
       const state = useStore.getState();
       if (state.isOnline) {
-        return await this.processMutation({ ...mutation, retryCount: mutation.retryCount + 1 });
+        return await this.processMutation({
+          ...mutation,
+          retryCount: mutation.retryCount + 1,
+        });
       }
     }
 
@@ -578,9 +601,11 @@ export class QueueManager {
    */
   private async handleAuthError(
     mutation: QueuedMutation,
-    error: QueueError
+    error: QueueError,
   ): Promise<ProcessingResult> {
-    logger.info(`🔐 Queue: Auth error for ${mutation.id}, attempting token refresh`);
+    logger.info(
+      `🔐 Queue: Auth error for ${mutation.id}, attempting token refresh`,
+    );
 
     // Try token refresh one more time
     const refreshed = await this.validateTokenBeforeReplay();
@@ -618,7 +643,9 @@ export class QueueManager {
 
     // Check if a deferred token refresh is pending
     if (state.needsTokenRefresh) {
-      logger.info('🔄 Queue: Deferred token refresh pending, attempting refresh before replay');
+      logger.info(
+        '🔄 Queue: Deferred token refresh pending, attempting refresh before replay',
+      );
       const { proactiveTokenRefresh } = await import('../links/refreshToken');
       const newToken = await proactiveTokenRefresh();
       if (newToken) {
@@ -626,7 +653,9 @@ export class QueueManager {
         return true;
       }
       // Refresh failed — cannot safely replay queue
-      logger.error('❌ Queue: Deferred token refresh failed, aborting queue processing');
+      logger.error(
+        '❌ Queue: Deferred token refresh failed, aborting queue processing',
+      );
       return false;
     }
 
@@ -639,7 +668,10 @@ export class QueueManager {
    * Extract entity type and ID from a mutation's variables.
    * Inspects common variable patterns used across the app.
    */
-  private extractEntityInfo(mutation: QueuedMutation): { entityType: string | null; entityId: string | null } {
+  private extractEntityInfo(mutation: QueuedMutation): {
+    entityType: string | null;
+    entityId: string | null;
+  } {
     const vars = mutation.variables ?? {};
     const opName = mutation.operationName;
 
@@ -658,11 +690,17 @@ export class QueueManager {
     // Infer entity type from operation name
     let entityType: string | null = null;
     if (opName.includes('PantryItemBatch')) entityType = 'PantryItemBatch';
-    else if (opName.includes('PantryItem') || opName.includes('Pantry')) entityType = 'PantryItem';
-    else if (opName.includes('ShoppingListItem') || opName.includes('ShoppingList')) entityType = 'ShoppingListItem';
+    else if (opName.includes('PantryItem') || opName.includes('Pantry'))
+      entityType = 'PantryItem';
+    else if (
+      opName.includes('ShoppingListItem') ||
+      opName.includes('ShoppingList')
+    )
+      entityType = 'ShoppingListItem';
     else if (opName.includes('MealPlanItem')) entityType = 'MealPlanItem';
     else if (opName.includes('MealPlan')) entityType = 'MealPlan';
-    else if (opName.includes('Recipe') || opName.includes('Favorite')) entityType = 'SavedRecipe';
+    else if (opName.includes('Recipe') || opName.includes('Favorite'))
+      entityType = 'SavedRecipe';
 
     return { entityType, entityId };
   }
@@ -671,9 +709,14 @@ export class QueueManager {
    * Invoke the registered failure handler for a permanently failed mutation.
    * Extracts entity metadata and passes it to the handler.
    */
-  private invokeFailureHandler(mutation: QueuedMutation, error: QueueError): void {
+  private invokeFailureHandler(
+    mutation: QueuedMutation,
+    error: QueueError,
+  ): void {
     if (!this.failureHandler) {
-      logger.debug(`Queue: No failure handler registered for failed mutation ${mutation.id}`);
+      logger.debug(
+        `Queue: No failure handler registered for failed mutation ${mutation.id}`,
+      );
       return;
     }
 
@@ -825,7 +868,7 @@ export class QueueManager {
    */
   private timeout(ms: number): Promise<never> {
     return new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Operation timed out')), ms)
+      setTimeout(() => reject(new Error('Operation timed out')), ms),
     );
   }
 
@@ -851,7 +894,9 @@ export class QueueManager {
    */
   onUserChange(newUserId: string | null, previousUserId: string | null): void {
     if (previousUserId && previousUserId !== newUserId) {
-      logger.info(`🔄 Queue: User changed from ${previousUserId} to ${newUserId}, clearing old queue`);
+      logger.info(
+        `🔄 Queue: User changed from ${previousUserId} to ${newUserId}, clearing old queue`,
+      );
       queueStore.clearQueueForUser(previousUserId);
     }
 

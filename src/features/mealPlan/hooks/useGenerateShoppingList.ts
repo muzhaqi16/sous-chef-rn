@@ -1,16 +1,18 @@
+import { useMutation } from '@apollo/client/react';
 import {
-  useGenerateShoppingListFromMealPlanMutation,
+  GenerateShoppingListFromMealPlanDocument,
   GetMealPlanDocument,
-  GetShoppingListsLiteDocument,
-  type GenerateShoppingListFromMealPlanInput,
-} from '#generated';
+} from '#features/mealPlan/graphql/mealPlan.generated';
+import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { type GenerateShoppingListFromMealPlanInput } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 export function useGenerateShoppingList(mealPlanId: string | null) {
-  const [generateMutation, { loading }] =
-    useGenerateShoppingListFromMealPlanMutation({
+  const [generateMutation, { loading }] = useMutation(
+    GenerateShoppingListFromMealPlanDocument,
+    {
       refetchQueries: [
         ...(mealPlanId
           ? [{ query: GetMealPlanDocument, variables: { id: mealPlanId } }]

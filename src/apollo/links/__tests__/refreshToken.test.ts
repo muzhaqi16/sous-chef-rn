@@ -63,9 +63,16 @@ import { reconnectWebSocket, isWebSocketReconnecting } from '../wsLink';
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedClient = client as jest.Mocked<typeof client>;
 const mockedUseStore = useStore as jest.Mocked<typeof useStore>;
-const mockedIsNetworkError = isNetworkError as jest.MockedFunction<typeof isNetworkError>;
-const mockedReconnectWebSocket = reconnectWebSocket as jest.MockedFunction<typeof reconnectWebSocket>;
-const mockedIsWebSocketReconnecting = isWebSocketReconnecting as jest.MockedFunction<typeof isWebSocketReconnecting>;
+const mockedIsNetworkError = isNetworkError as jest.MockedFunction<
+  typeof isNetworkError
+>;
+const mockedReconnectWebSocket = reconnectWebSocket as jest.MockedFunction<
+  typeof reconnectWebSocket
+>;
+const mockedIsWebSocketReconnecting =
+  isWebSocketReconnecting as jest.MockedFunction<
+    typeof isWebSocketReconnecting
+  >;
 
 describe('refreshToken', () => {
   beforeEach(() => {
@@ -190,7 +197,7 @@ describe('refreshToken', () => {
       mockOperation.getContext.mockClear();
     });
 
-    it('starts a new refresh when no refresh is in progress', (done) => {
+    it('starts a new refresh when no refresh is in progress', done => {
       const mockSetTokens = jest.fn();
       const mockTokenRefreshFailed = jest.fn();
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
@@ -223,7 +230,7 @@ describe('refreshToken', () => {
       });
     });
 
-    it('errors when rate limited (too frequent refresh)', (done) => {
+    it('errors when rate limited (too frequent refresh)', done => {
       // Simulate recent refresh by making canAttemptRefresh return false
       // We need to set lastRefreshTime recently via a successful refresh first
       const mockSetTokens = jest.fn();
@@ -259,7 +266,7 @@ describe('refreshToken', () => {
       });
     });
 
-    it('errors when no refresh token available and sets needsTokenRefresh flag', (done) => {
+    it('errors when no refresh token available and sets needsTokenRefresh flag', done => {
       const mockSetNeedsTokenRefresh = jest.fn();
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
         refreshToken: null,
@@ -279,7 +286,7 @@ describe('refreshToken', () => {
       });
     });
 
-    it('errors when refresh returns invalid response', (done) => {
+    it('errors when refresh returns invalid response', done => {
       const mockTokenRefreshFailed = jest.fn();
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
         refreshToken: 'mock-refresh-token',
@@ -301,7 +308,7 @@ describe('refreshToken', () => {
       });
     });
 
-    it('reconnects websocket after successful refresh', (done) => {
+    it('reconnects websocket after successful refresh', done => {
       const mockSetTokens = jest.fn();
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
         refreshToken: 'mock-refresh-token',
@@ -330,7 +337,7 @@ describe('refreshToken', () => {
       });
     });
 
-    it('skips websocket reconnect if already reconnecting', (done) => {
+    it('skips websocket reconnect if already reconnecting', done => {
       const mockSetTokens = jest.fn();
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
         refreshToken: 'mock-refresh-token',
@@ -359,7 +366,7 @@ describe('refreshToken', () => {
       });
     });
 
-    it('handles token expired error by triggering logout with auth_rejected', (done) => {
+    it('handles token expired error by triggering logout with auth_rejected', done => {
       const mockTokenRefreshFailed = jest.fn();
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
         refreshToken: 'mock-refresh-token',
@@ -368,7 +375,9 @@ describe('refreshToken', () => {
         setNeedsTokenRefresh: jest.fn(),
       });
       (mockedClient.mutate as jest.Mock).mockRejectedValue({
-        graphQLErrors: [{ extensions: { code: 'UNAUTHENTICATED' }, message: 'Token expired' }],
+        graphQLErrors: [
+          { extensions: { code: 'UNAUTHENTICATED' }, message: 'Token expired' },
+        ],
       });
       (mockedIsNetworkError as jest.Mock).mockReturnValue(false);
       const mockForward = createMockForward();
@@ -382,7 +391,7 @@ describe('refreshToken', () => {
       });
     });
 
-    it('handles network error without calling tokenRefreshFailed', (done) => {
+    it('handles network error without calling tokenRefreshFailed', done => {
       const mockTokenRefreshFailed = jest.fn();
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
         refreshToken: 'mock-refresh-token',
@@ -455,7 +464,9 @@ describe('refreshToken', () => {
         setTokens: jest.fn(),
         setNeedsTokenRefresh: jest.fn(),
       });
-      (mockedClient.mutate as jest.Mock).mockRejectedValue(new Error('Network error'));
+      (mockedClient.mutate as jest.Mock).mockRejectedValue(
+        new Error('Network error'),
+      );
       (mockedIsNetworkError as jest.Mock).mockReturnValue(true);
 
       const result = await proactiveTokenRefresh();

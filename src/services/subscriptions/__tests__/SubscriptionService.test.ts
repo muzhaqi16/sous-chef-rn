@@ -1,5 +1,5 @@
 jest.mock('#/utils/errorSerialization', () => ({
-  serializeError: jest.fn((e) => ({ message: String(e) })),
+  serializeError: jest.fn(e => ({ message: String(e) })),
   isCircularStructureError: jest.fn(() => false),
   isTimerCircularStructureError: jest.fn(() => false),
 }));
@@ -98,7 +98,7 @@ describe('SubscriptionService', () => {
 
       const filtered = service.filterPendingDeletes(items);
       expect(filtered).toHaveLength(2);
-      expect(filtered.map((i) => i.id)).toEqual(['item-1', 'item-3']);
+      expect(filtered.map(i => i.id)).toEqual(['item-1', 'item-3']);
     });
 
     it('returns original array if no pending deletes', () => {
@@ -248,7 +248,10 @@ describe('SubscriptionService', () => {
 
       expect(customOnData).toHaveBeenCalledTimes(1);
       expect(customOnData).toHaveBeenCalledWith(
-        expect.objectContaining({ mutation: 'UPDATED', item: { id: 'item-1' } }),
+        expect.objectContaining({
+          mutation: 'UPDATED',
+          item: { id: 'item-1' },
+        }),
         expect.objectContaining({ cache: {} }),
       );
     });
@@ -284,7 +287,9 @@ describe('SubscriptionService', () => {
       handlers.onError({ message: 'GraphQL validation error' });
 
       expect(customOnError).toHaveBeenCalledTimes(1);
-      expect(customOnError).toHaveBeenCalledWith({ message: 'GraphQL validation error' });
+      expect(customOnError).toHaveBeenCalledWith({
+        message: 'GraphQL validation error',
+      });
       expect(service.getStats().totalErrors).toBe(1);
       expect(console.error).toHaveBeenCalledWith(
         expect.stringContaining('❌'),
@@ -313,7 +318,9 @@ describe('SubscriptionService', () => {
 
       handlers.onComplete();
 
-      expect(service.getActiveSubscriptions()).not.toContain('TestSubscription');
+      expect(service.getActiveSubscriptions()).not.toContain(
+        'TestSubscription',
+      );
     });
 
     it('calls customOnComplete', () => {
@@ -410,7 +417,12 @@ describe('SubscriptionService', () => {
       const config = createConfig();
       const handlers = service.register(config);
 
-      const mockCache = { modify: jest.fn(), identify: jest.fn(), evict: jest.fn(), gc: jest.fn() };
+      const mockCache = {
+        modify: jest.fn(),
+        identify: jest.fn(),
+        evict: jest.fn(),
+        gc: jest.fn(),
+      };
       handlers.onData({
         data: {
           data: {
@@ -564,7 +576,10 @@ describe('SubscriptionService', () => {
     });
 
     it('warns when no cacheFieldName for MANUAL strategy', () => {
-      const config = createConfig({ cacheFieldName: '', cacheUpdateStrategy: CacheStrategy.MANUAL });
+      const config = createConfig({
+        cacheFieldName: '',
+        cacheUpdateStrategy: CacheStrategy.MANUAL,
+      });
       const handlers = service.register(config);
 
       handlers.onData({
@@ -583,7 +598,9 @@ describe('SubscriptionService', () => {
     });
 
     it('warns when no item ID in payload', () => {
-      const config = createConfig({ cacheUpdateStrategy: CacheStrategy.MANUAL });
+      const config = createConfig({
+        cacheUpdateStrategy: CacheStrategy.MANUAL,
+      });
       const handlers = service.register(config);
 
       handlers.onData({
@@ -628,7 +645,13 @@ describe('SubscriptionService', () => {
       const handlers = service.register(config);
 
       // Register a pending delete
-      service.registerPendingDelete('pending-item', 'parent-1', 'TestEntity', 'ParentType', 'itemsConnection');
+      service.registerPendingDelete(
+        'pending-item',
+        'parent-1',
+        'TestEntity',
+        'ParentType',
+        'itemsConnection',
+      );
 
       const mockCache = {
         modify: jest.fn(),
@@ -659,7 +682,9 @@ describe('SubscriptionService', () => {
     });
 
     it('logs unknown mutation type', () => {
-      const config = createConfig({ cacheUpdateStrategy: CacheStrategy.MANUAL });
+      const config = createConfig({
+        cacheUpdateStrategy: CacheStrategy.MANUAL,
+      });
       const handlers = service.register(config);
 
       handlers.onData({
@@ -673,16 +698,29 @@ describe('SubscriptionService', () => {
             },
           },
         },
-        client: { cache: { modify: jest.fn(), identify: jest.fn(), evict: jest.fn(), gc: jest.fn(), data: { data: {} } } },
+        client: {
+          cache: {
+            modify: jest.fn(),
+            identify: jest.fn(),
+            evict: jest.fn(),
+            gc: jest.fn(),
+            data: { data: {} },
+          },
+        },
       });
     });
 
     it('handles cache update error gracefully', () => {
-      const config = createConfig({ cacheUpdateStrategy: CacheStrategy.MANUAL, enableLogging: true });
+      const config = createConfig({
+        cacheUpdateStrategy: CacheStrategy.MANUAL,
+        enableLogging: true,
+      });
       const handlers = service.register(config);
 
       const mockCache = {
-        modify: jest.fn(() => { throw new Error('Cache boom'); }),
+        modify: jest.fn(() => {
+          throw new Error('Cache boom');
+        }),
       };
       handlers.onData({
         data: {
@@ -923,7 +961,9 @@ describe('SubscriptionService', () => {
         cacheUpdateStrategy: CacheStrategy.NONE,
         enableLogging: true,
         logLevel: LogLevel.ERROR,
-        customOnData: () => { throw new Error('Custom handler crash'); },
+        customOnData: () => {
+          throw new Error('Custom handler crash');
+        },
       });
 
       // Should not throw
@@ -1010,29 +1050,27 @@ describe('SubscriptionService', () => {
       ...overrides,
     });
 
-    it.each([
-      'ITEM_UPDATED',
-      'STATUS_CHANGED',
-      'ITEM_COMPLETED',
-      'COMPLETED',
-    ])('uses Apollo normalization for %s', (mutation) => {
-      const handlers = service.register(createConfig());
-      const mockCache = { modify: jest.fn() };
-      handlers.onData({
-        data: {
+    it.each(['ITEM_UPDATED', 'STATUS_CHANGED', 'ITEM_COMPLETED', 'COMPLETED'])(
+      'uses Apollo normalization for %s',
+      mutation => {
+        const handlers = service.register(createConfig());
+        const mockCache = { modify: jest.fn() };
+        handlers.onData({
           data: {
-            sub: {
-              mutation,
-              userId: 'user2',
-              timestamp: `2026-01-01T00:00:20Z`,
-              item: { id: `update-${mutation}` },
+            data: {
+              sub: {
+                mutation,
+                userId: 'user2',
+                timestamp: `2026-01-01T00:00:20Z`,
+                item: { id: `update-${mutation}` },
+              },
             },
           },
-        },
-        client: { cache: mockCache },
-      });
-      // These are handled by Apollo normalization, no cache.modify
-      expect(mockCache.modify).not.toHaveBeenCalled();
-    });
+          client: { cache: mockCache },
+        });
+        // These are handled by Apollo normalization, no cache.modify
+        expect(mockCache.modify).not.toHaveBeenCalled();
+      },
+    );
   });
 });

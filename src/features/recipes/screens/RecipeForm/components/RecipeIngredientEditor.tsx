@@ -16,7 +16,7 @@ import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { Header } from '#components/molecules/Header';
 import { generateId } from '#/utils/generateId';
-import type { ItemSuggestion } from '#generated';
+import { type ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import type { IngredientFormState } from '../useRecipeForm';
 import { Text } from '#components/atoms/Text';
 

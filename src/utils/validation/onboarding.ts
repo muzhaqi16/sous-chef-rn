@@ -1,5 +1,5 @@
 import { object, string, array } from 'yup';
-import {emailRule} from './common';
+import { emailRule } from './common';
 
 // home name rule
 const homeNameRule = string()
@@ -32,7 +32,7 @@ const inviteEmailRule = emailRule.lowercase().trim();
 // ----------------------------------------------------------------------------
 
 export const getCreateHomeSchema = (needsHome: boolean = true) => {
-  return object<{homeName: string; pantryName: string}>().shape({
+  return object<{ homeName: string; pantryName: string }>().shape({
     homeName: needsHome ? homeNameRule : string().notRequired(),
     pantryName: pantryNameRule,
   });
@@ -83,9 +83,7 @@ export const getInviteMembersSchema = () => inviteMembersSchema;
 
 // 9) select pantry items schema (optional selection)
 export const selectPantryItemsSchema = object({
-  selectedItems: array()
-    .of(string())
-    .max(5, 'You can select up to 5 items'),
+  selectedItems: array().of(string()).max(5, 'You can select up to 5 items'),
 });
 
 export const getSelectPantryItemsSchema = () => selectPantryItemsSchema;

@@ -21,7 +21,13 @@ describe('QuantityBadge', () => {
   });
 
   it('prefers quantityInput over formatted quantity', () => {
-    render(<QuantityBadge quantity={0.25} quantityInput="1/4" onPress={mockOnPress} />);
+    render(
+      <QuantityBadge
+        quantity={0.25}
+        quantityInput="1/4"
+        onPress={mockOnPress}
+      />,
+    );
     expect(screen.getByText('1/4')).toBeTruthy();
   });
 

@@ -4,46 +4,52 @@ import { useRecipeManagement } from '../useRecipeManagement';
 const mockRefetch = jest.fn();
 const mockFetchMore = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useMyRecipesQuery: jest.fn(() => ({
-    data: {
-      recipes: {
-        edges: [
-          {
-            node: {
-              id: 'r1',
-              name: 'Pasta',
-              category: 'MAIN_COURSE',
-              difficulty: 'EASY',
-            },
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'MyRecipes') {
+      return {
+        data: {
+          recipes: {
+            edges: [
+              {
+                node: {
+                  id: 'r1',
+                  name: 'Pasta',
+                  category: 'MAIN_COURSE',
+                  difficulty: 'EASY',
+                },
+              },
+              {
+                node: {
+                  id: 'r2',
+                  name: 'Salad',
+                  category: 'APPETIZER',
+                  difficulty: 'EASY',
+                },
+              },
+              {
+                node: {
+                  id: 'r3',
+                  name: 'Soup',
+                  category: 'APPETIZER',
+                  difficulty: 'HARD',
+                },
+              },
+            ],
+            pageInfo: { hasNextPage: false, endCursor: null },
+            totalCount: 3,
           },
-          {
-            node: {
-              id: 'r2',
-              name: 'Salad',
-              category: 'APPETIZER',
-              difficulty: 'EASY',
-            },
-          },
-          {
-            node: {
-              id: 'r3',
-              name: 'Cake',
-              category: 'DESSERT',
-              difficulty: 'HARD',
-            },
-          },
-        ],
-        totalCount: 3,
-        pageInfo: { hasNextPage: false, endCursor: 'c3' },
-      },
-    },
-    loading: false,
-    error: undefined,
-    refetch: mockRefetch,
-    fetchMore: mockFetchMore,
-  })),
+        },
+        loading: false,
+        error: undefined,
+        refetch: mockRefetch,
+        fetchMore: mockFetchMore,
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#hooks/auth/useAuth', () => ({

@@ -1,6 +1,6 @@
-import {useNavigation, CommonActions} from '@react-navigation/native';
-import {useAppStore} from '#store/useAppStore';
-import {useStore} from '#store';
+import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useAppStore } from '#store/useAppStore';
+import { useStore } from '#store';
 
 export function useAuthNavigation() {
   const navigation = useNavigation();
@@ -11,37 +11,42 @@ export function useAuthNavigation() {
   );
 
   const handleSuccessfulLogin = (authData: any, rememberMe?: boolean) => {
-      const {user, accessToken, refreshToken} = authData;
-      // Save preferences
-      if (rememberMe !== undefined) {
-        setRememberMe(rememberMe);
-      }
-      // Track login
-      if (user?.id) {
-        setUserNavigationState(user.id, {
-          lastLoginTimestamp: Date.now(),
-          rememberMeChoice: rememberMe });
-      }
-      // Update auth state - navigation happens automatically
-      setAuth(user, accessToken, refreshToken);
-    };
+    const { user, accessToken, refreshToken } = authData;
+    // Save preferences
+    if (rememberMe !== undefined) {
+      setRememberMe(rememberMe);
+    }
+    // Track login
+    if (user?.id) {
+      setUserNavigationState(user.id, {
+        lastLoginTimestamp: Date.now(),
+        rememberMeChoice: rememberMe,
+      });
+    }
+    // Update auth state - navigation happens automatically
+    setAuth(user, accessToken, refreshToken);
+  };
 
-  const handleSuccessfulRegistration = (authData: any, rememberMe?: boolean) => {
-      const {user, accessToken, refreshToken} = authData;
-      // Save preferences
-      if (rememberMe !== undefined) {
-        setRememberMe(rememberMe);
-      }
-      // Mark as new user
-      if (user?.id) {
-        setUserNavigationState(user.id, {
-          lastLoginTimestamp: Date.now(),
-          rememberMeChoice: rememberMe,
-          isNewUser: true });
-      }
-      // Update auth state - navigation happens automatically
-      setAuth(user, accessToken, refreshToken);
-    };
+  const handleSuccessfulRegistration = (
+    authData: any,
+    rememberMe?: boolean,
+  ) => {
+    const { user, accessToken, refreshToken } = authData;
+    // Save preferences
+    if (rememberMe !== undefined) {
+      setRememberMe(rememberMe);
+    }
+    // Mark as new user
+    if (user?.id) {
+      setUserNavigationState(user.id, {
+        lastLoginTimestamp: Date.now(),
+        rememberMeChoice: rememberMe,
+        isNewUser: true,
+      });
+    }
+    // Update auth state - navigation happens automatically
+    setAuth(user, accessToken, refreshToken);
+  };
 
   const handleLogout = async () => {
     // Use the store's logout method which handles everything
@@ -76,5 +81,6 @@ export function useAuthNavigation() {
     navigateToVerification,
     navigateToForgotPassword,
     navigateToLogin,
-    navigateToSignUp };
+    navigateToSignUp,
+  };
 }

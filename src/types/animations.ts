@@ -45,7 +45,10 @@ export interface ListAnimationContextType {
    * Register a list item's exit animation trigger function.
    * Called by list item components on mount via useLayoutEffect.
    */
-  registerAnimationTrigger: (itemId: string, trigger: ExitAnimationTrigger) => void;
+  registerAnimationTrigger: (
+    itemId: string,
+    trigger: ExitAnimationTrigger,
+  ) => void;
 
   /**
    * Unregister a list item's animation trigger.
@@ -68,7 +71,10 @@ export interface ListAnimationContextType {
    * Schedule an entry animation for an item appearing in a new list.
    * Called after cache update moves the item.
    */
-  scheduleEntryAnimation: (itemId: string, direction: AnimationDirection) => void;
+  scheduleEntryAnimation: (
+    itemId: string,
+    direction: AnimationDirection,
+  ) => void;
 
   /**
    * Claim a pending entry animation for an item.

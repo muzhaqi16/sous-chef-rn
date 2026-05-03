@@ -7,7 +7,8 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
 import { Button } from '#components/base/Button';
 import { Icon } from '#utils/iconUtils';
-import { useJoinShoppingListByShareCodeMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { JoinShoppingListByShareCodeDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
@@ -24,7 +25,7 @@ export const JoinByShareCodeScreen: React.FC<
   const [code, setCode] = useState(initialCode);
   const [joining, setJoining] = useState(false);
 
-  const [joinMutation] = useJoinShoppingListByShareCodeMutation();
+  const [joinMutation] = useMutation(JoinShoppingListByShareCodeDocument);
 
   const handleJoin = () => {
     const trimmed = code.trim();

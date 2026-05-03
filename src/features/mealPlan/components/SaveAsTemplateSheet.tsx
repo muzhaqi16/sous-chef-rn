@@ -11,8 +11,8 @@ import {
 } from '#components/atoms/ChipScrollRow';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormTextArea } from '#components/molecules/FormTextArea';
-import { TemplateCategory } from '#generated';
 import { Text } from '#components/atoms/Text';
+import { TemplateCategory } from '#/graphql/generated/schemaTypes';
 
 const CATEGORY_OPTIONS: ChipOption<TemplateCategory>[] = [
   { key: TemplateCategory.Weekly, label: 'Weekly' },

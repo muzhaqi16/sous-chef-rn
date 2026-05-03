@@ -13,7 +13,10 @@
  * ```
  */
 
-import { type PantryItemFilters, type PantryItemOrderBy } from '#generated';
+import {
+  type PantryItemFilters,
+  type PantryItemOrderBy,
+} from '#/graphql/generated/schemaTypes';
 import { usePantryQuery } from './usePantryQuery';
 import { usePantryStats } from './usePantryStats';
 import { usePantryItemMutations } from './usePantryItemMutations';

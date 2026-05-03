@@ -130,12 +130,51 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
 }
 
 /**
- * Generic merge function for cursor-based connection pagination.
+ * Reads the `node.id` from a connection edge via Apollo's `readField` helper.
+ * Returns undefined when the edge or its node is missing — callers should skip
+ * those edges rather than treat them as deduplication keys.
+ */
+function readEdgeNodeId(
+  edge: any,
+  readField: (field: string, ref: any) => any,
+): string | undefined {
+  const node = readField('node', edge);
+  if (!node) return undefined;
+  return readField('id', node) as string | undefined;
+}
+
+/**
+ * Decides whether to preserve `existing.pageInfo` instead of overwriting it
+ * with `incoming.pageInfo`. Existing wins on a background refetch (no cursor)
+ * when the server returned fewer edges than the cache already has — a common
+ * pattern when only page 1 refreshes while cache holds pages 1+2.
+ */
+function shouldPreservePageInfo(
+  existing: any,
+  incoming: any,
+  args: any,
+): boolean {
+  const isBackgroundRefetch = !args?.after;
+  const existingEdgeCount = (existing.edges || []).length;
+  const incomingEdgeCount = (incoming.edges || []).length;
+  return (
+    isBackgroundRefetch &&
+    existingEdgeCount > incomingEdgeCount &&
+    !!existing.pageInfo
+  );
+}
+
+/**
+ * Connection merge for non-paginated-window lists where fresh server data
+ * should win on duplicate node IDs.
  *
- * Deduplicates edges by node ID, with incoming edges taking precedence
- * over existing ones (fresh data wins). When no cursor is provided
- * (initial load), incoming data replaces existing data entirely.
+ * Used for membership/invites/saved-recipes-style connections where the
+ * server's representation of a node is always authoritative. Incoming edges
+ * overwrite existing ones at the same id (last-write-wins).
  *
+ * For append-only paginated lists with cursor windows, use
+ * {@link itemsConnectionFieldPolicy} instead — its dedup strategy preserves
+ * existing edge positions and bounds the window via MAX_WINDOW_EDGES.
  */
 function mergeConnectionByNodeId() {
   return {
@@ -148,23 +187,16 @@ function mergeConnectionByNodeId() {
       const edgeMap = new Map();
       const existingEdges = existing.edges || [];
       existingEdges.forEach((edge: any) => {
-        const id = readField('id', edge?.node);
+        const id = readEdgeNodeId(edge, readField);
         if (id) edgeMap.set(id, edge);
       });
       const existingCount = edgeMap.size;
       (incoming.edges || []).forEach((edge: any) => {
-        const id = readField('id', edge?.node);
+        const id = readEdgeNodeId(edge, readField);
         if (id) edgeMap.set(id, edge);
       });
 
-      // Preserve existing pageInfo when a background refetch (no cursor) returns
-      // fewer edges than already accumulated (e.g., page-1-only refetch when
-      // cache has pages 1+2 with hasNextPage:false)
-      const isBackgroundRefetch = !args?.after;
-      const existingHasMoreData =
-        existingEdges.length > (incoming.edges || []).length;
-      const preservePageInfo =
-        isBackgroundRefetch && existingHasMoreData && !!existing.pageInfo;
+      const preservePageInfo = shouldPreservePageInfo(existing, incoming, args);
 
       if (__DEV__ && preservePageInfo) {
         console.log(
@@ -204,12 +236,16 @@ function mergeConnectionByNodeId() {
 }
 
 /**
- * Shared field policy for paginated itemsConnection fields.
+ * Connection merge for paginated, append-only lists with a bounded edge window.
  *
- * Used by both ShoppingList.itemsConnection and Pantry.itemsConnection
- * to avoid duplicating the same merge logic. Deduplicates edges by node ID,
- * uses 'filters' as keyArgs for separate cache entries, and handles
- * initial load vs. pagination (cursor-based) correctly.
+ * Used by ShoppingList.itemsConnection and Pantry.itemsConnection. Existing
+ * edges keep their positions; only incoming edges with new node IDs are
+ * appended. The result is capped at MAX_WINDOW_EDGES — the oldest edges are
+ * evicted when the window overflows, which keeps memory bounded for users
+ * with thousands of historical items.
+ *
+ * For non-paginated connections where fresh data should overwrite duplicates,
+ * use {@link mergeConnectionByNodeId} instead.
  */
 function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
   return {
@@ -222,18 +258,12 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
       // Append-only: keep existing edges in place, add only new incoming edges
       const existingIds = new Set<string>();
       for (const edge of existing.edges || []) {
-        const node = readField('node', edge);
-        const id = node
-          ? (readField('id', node) as string | undefined)
-          : undefined;
+        const id = readEdgeNodeId(edge, readField);
         if (id) existingIds.add(id);
       }
 
       const newEdges = (incoming.edges || []).filter((edge: any) => {
-        const node = readField('node', edge);
-        const id = node
-          ? (readField('id', node) as string | undefined)
-          : undefined;
+        const id = readEdgeNodeId(edge, readField);
         return id && !existingIds.has(id);
       });
 
@@ -241,11 +271,8 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
       // Existing pageInfo wins when:
       //   1. Background refetch (no cursor) returned fewer edges than cache has
       //   2. Cursor-based request returned all duplicates — we already advanced past that cursor
-      const isBackgroundRefetch = !args?.after;
-      const existingHasMoreData =
-        (existing.edges || []).length > (incoming.edges || []).length;
       const keepExistingPageInfo =
-        (isBackgroundRefetch && existingHasMoreData && !!existing.pageInfo) ||
+        shouldPreservePageInfo(existing, incoming, args) ||
         (!!args?.after && newEdges.length === 0);
       const pageInfo = keepExistingPageInfo
         ? existing.pageInfo

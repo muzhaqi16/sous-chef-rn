@@ -8,10 +8,11 @@ import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
 import { CodeInputAdapter } from '#components/molecules/CodeInputAdapter';
 import { useAppStore } from '#store/useAppStore';
 import { useToast } from '#/hooks/useToast';
+import { useMutation } from '@apollo/client/react';
 import {
-  useVerifyEmailMutation,
-  useResendVerificationEmailMutation,
-} from '#generated';
+  VerifyEmailDocument,
+  ResendVerificationEmailDocument,
+} from '#operations/auth/auth.generated';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -82,8 +83,10 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
   const user = useAppStore(state => state.user);
   const updateUser = useAppStore(state => state.updateUser);
   const toast = useToast();
-  const [verifyEmail] = useVerifyEmailMutation();
-  const [resendVerificationEmail] = useResendVerificationEmailMutation();
+  const [verifyEmail] = useMutation(VerifyEmailDocument);
+  const [resendVerificationEmail] = useMutation(
+    ResendVerificationEmailDocument,
+  );
 
   // Auto-verify state for deep link handling
   const [isAutoVerifying, setIsAutoVerifying] = useState(false);

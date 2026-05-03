@@ -112,7 +112,11 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     // - Already fetching more (ref checked synchronously)
     if (!hasMore || loading || !endCursor || isFetchingMoreRef.current) {
       if (__DEV__) {
-        console.log(`📊 [Pagination] loadMore guarded: hasMore=${hasMore} loading=${loading} cursor=${!!endCursor} fetching=${isFetchingMoreRef.current}`);
+        console.log(
+          `📊 [Pagination] loadMore guarded: hasMore=${hasMore} loading=${loading} cursor=${!!endCursor} fetching=${
+            isFetchingMoreRef.current
+          }`,
+        );
       }
       return;
     }

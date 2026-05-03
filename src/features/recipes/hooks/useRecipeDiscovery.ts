@@ -7,7 +7,8 @@ import type {
   RecipeSearchResult,
   RecipeInformation,
 } from '#/services/recipeApi/types';
-import { useGetHomeQuery } from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { GetHomeDocument } from '#operations/home/home.generated';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import {
   useRecipeCacheStore,
@@ -255,11 +256,9 @@ export function useRecipeDiscovery(
     actions: { getDefaultPantry },
   } = useDefaultHome();
 
-  const { data: homeData } = useGetHomeQuery({
+  const { data: homeData } = useQuery(GetHomeDocument, {
     variables: { homeId: selectedHomeId ?? '' },
     skip: !selectedHomeId,
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
   });
 
   const defaultPantry = getDefaultPantry(homeData);

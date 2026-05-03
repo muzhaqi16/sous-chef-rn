@@ -1,0 +1,6 @@
+fragment EditCustomMealSheet_item on MealPlanItem {
+  id
+  mealType
+  customMealName
+  notes
+}

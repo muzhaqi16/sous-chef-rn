@@ -11,7 +11,11 @@ import AddItemForm, {
   type AddItemFormInitialData,
 } from '#components/organisms/AddItemForm/AddItemForm';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useCreateItemMutation, useSearchBrandsLazyQuery } from '#generated';
+import { useMutation, useLazyQuery } from '@apollo/client/react';
+import {
+  CreateItemDocument,
+  SearchBrandsDocument,
+} from '#operations/item/item.generated';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { alertService } from '#/services/alertService';
@@ -55,7 +59,7 @@ export const IdentifiedItemFormScreen: React.FC<
   // Resolve the raw OCR'd brand text against the catalog so we capture a
   // proper brandId when the user's scan matches a known brand. Falls back to
   // the raw text when there's no match.
-  const [searchBrands] = useSearchBrandsLazyQuery();
+  const [searchBrands] = useLazyQuery(SearchBrandsDocument);
   const [resolvedBrand, setResolvedBrand] = useState<{
     id?: string;
     name: string;
@@ -75,7 +79,7 @@ export const IdentifiedItemFormScreen: React.FC<
     });
   }, [brandName, searchBrands]);
 
-  const [addNewItem, { loading }] = useCreateItemMutation({
+  const [addNewItem, { loading }] = useMutation(CreateItemDocument, {
     onCompleted: async data => {
       const createdItem = data.createItem?.item;
       if (!createdItem) return;

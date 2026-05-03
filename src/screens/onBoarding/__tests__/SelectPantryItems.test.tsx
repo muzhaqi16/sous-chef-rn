@@ -51,24 +51,32 @@ const mockItems = [
 let mockLoading = false;
 let mockQueryError: any = null;
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetOnboardingItemsQuery: jest.fn(() => ({
-    data: {
-      items: {
-        edges: mockItems.map(item => ({ node: item })),
-      },
-    },
-    loading: mockLoading,
-    error: mockQueryError,
-    refetch: jest.fn(),
-  })),
-  useGetPantryQuery: jest.fn(() => ({
-    data: { pantry: { itemsConnection: { edges: [] } } },
-    loading: false,
-  })),
-  useCreatePantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useDeletePantryItemMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetOnboardingItems') {
+      return {
+        data: {
+          items: {
+            edges: mockItems.map(item => ({ node: item })),
+          },
+        },
+        loading: mockLoading,
+        error: mockQueryError,
+        refetch: jest.fn(),
+      };
+    }
+    if (opName === 'GetPantry') {
+      return {
+        data: { pantry: { itemsConnection: { edges: [] } } },
+        loading: false,
+        error: undefined,
+      };
+    }
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useMutation: jest.fn(() => [jest.fn(), { loading: false }]),
 }));
 
 jest.mock('#/utils/connectionUtils', () => ({

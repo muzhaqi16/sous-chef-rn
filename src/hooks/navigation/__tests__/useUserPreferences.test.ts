@@ -35,14 +35,18 @@ describe('useUserPreferences (navigation)', () => {
     });
 
     it('returns true when credentialPromptDeclined is false', () => {
-      mockGetUserNavigationState.mockReturnValue({ credentialPromptDeclined: false });
+      mockGetUserNavigationState.mockReturnValue({
+        credentialPromptDeclined: false,
+      });
       const { result } = renderHook(() => useUserPreferences());
 
       expect(result.current.shouldShowCredentialPrompt()).toBe(true);
     });
 
     it('returns false when credentialPromptDeclined is true', () => {
-      mockGetUserNavigationState.mockReturnValue({ credentialPromptDeclined: true });
+      mockGetUserNavigationState.mockReturnValue({
+        credentialPromptDeclined: true,
+      });
       const { result } = renderHook(() => useUserPreferences());
 
       expect(result.current.shouldShowCredentialPrompt()).toBe(false);
@@ -56,7 +60,9 @@ describe('useUserPreferences (navigation)', () => {
     });
 
     it('uses provided userId over current user', () => {
-      mockGetUserNavigationState.mockReturnValue({ credentialPromptDeclined: true });
+      mockGetUserNavigationState.mockReturnValue({
+        credentialPromptDeclined: true,
+      });
       const { result } = renderHook(() => useUserPreferences());
 
       result.current.shouldShowCredentialPrompt('other-user');

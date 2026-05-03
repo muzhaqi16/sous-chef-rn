@@ -1,5 +1,5 @@
-import {StateCreator} from 'zustand';
-import {RootState} from '../index';
+import { StateCreator } from 'zustand';
+import { RootState } from '../index';
 
 interface Unit {
   id: string;
@@ -10,12 +10,12 @@ interface Unit {
 
 // Navigation state machine for explicit flow control
 export type NavigationState =
-  | 'loading'           // App is loading/hydrating
-  | 'auth'              // User needs to authenticate
-  | 'verification'      // Email verification needed
-  | 'biometric_setup'   // Post-login biometric setup
-  | 'onboarding'        // User onboarding flow
-  | 'main_app';         // Fully authenticated main app
+  | 'loading' // App is loading/hydrating
+  | 'auth' // User needs to authenticate
+  | 'verification' // Email verification needed
+  | 'biometric_setup' // Post-login biometric setup
+  | 'onboarding' // User onboarding flow
+  | 'main_app'; // Fully authenticated main app
 
 export interface AppState {
   isHydrated: boolean;
@@ -41,7 +41,9 @@ export interface AppState {
   // Navigation state actions
   setNavigationState: (state: NavigationState) => void;
   setShowBiometricSetup: (flag: boolean) => void;
-  setPostLoginCredentials: (credentials: { email: string; password: string } | null) => void;
+  setPostLoginCredentials: (
+    credentials: { email: string; password: string } | null,
+  ) => void;
 
   // Registration password actions
   setRegistrationPassword: (password: string | null) => void;
@@ -73,28 +75,28 @@ export const createAppSlice: StateCreator<
 > = set => ({
   ...initialAppState,
 
-  setHydrated: flag => set({isHydrated: flag}),
-  setLoggingOut: flag => set({isLoggingOut: flag}),
+  setHydrated: flag => set({ isHydrated: flag }),
+  setLoggingOut: flag => set({ isLoggingOut: flag }),
 
   // Navigation state actions
   setNavigationState: (state: NavigationState) => {
-    set({navigationState: state});
+    set({ navigationState: state });
   },
   setShowBiometricSetup: flag => {
-    set({showBiometricSetup: flag});
+    set({ showBiometricSetup: flag });
   },
   setPostLoginCredentials: credentials => {
-    set({postLoginCredentials: credentials});
+    set({ postLoginCredentials: credentials });
   },
 
   // Registration password actions
   setRegistrationPassword: password => {
-    set({registrationPassword: password});
+    set({ registrationPassword: password });
   },
   clearRegistrationPassword: () => {
-    set({registrationPassword: null});
+    set({ registrationPassword: null });
   },
 
-  setCachedUnits: units => set({cachedUnits: units}),
-  setLastUnitsFetchedAt: timestamp => set({lastUnitsFetchedAt: timestamp}),
+  setCachedUnits: units => set({ cachedUnits: units }),
+  setLastUnitsFetchedAt: timestamp => set({ lastUnitsFetchedAt: timestamp }),
 });

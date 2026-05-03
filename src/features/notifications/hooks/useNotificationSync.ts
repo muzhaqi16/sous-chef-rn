@@ -13,22 +13,23 @@
  * Uses executeMutation from compilerSafeWrappers to avoid try-catch in the hook body.
  */
 
+import { useMutation } from '@apollo/client/react';
 import {
-  useMarkNotificationAsReadMutation,
-  useMarkNotificationUnreadMutation,
-  useDeleteNotificationMutation,
-  useMarkAllNotificationsAsReadMutation,
-} from '#generated';
+  MarkNotificationAsReadDocument,
+  MarkNotificationUnreadDocument,
+  DeleteNotificationDocument,
+} from '#features/notifications/graphql/notificationMutations.generated';
+import { MarkAllNotificationsAsReadDocument } from '#features/notifications/graphql/bulkNotificationMutations.generated';
 import { useStore } from '#store';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { errorService } from '#/services/errorService';
 import { isNetworkError } from '#/utils/isNetworkError';
 
 export function useNotificationSync() {
-  const [markReadMutation] = useMarkNotificationAsReadMutation();
-  const [markUnreadMutation] = useMarkNotificationUnreadMutation();
-  const [deleteMutation] = useDeleteNotificationMutation();
-  const [markAllReadMutation] = useMarkAllNotificationsAsReadMutation();
+  const [markReadMutation] = useMutation(MarkNotificationAsReadDocument);
+  const [markUnreadMutation] = useMutation(MarkNotificationUnreadDocument);
+  const [deleteMutation] = useMutation(DeleteNotificationDocument);
+  const [markAllReadMutation] = useMutation(MarkAllNotificationsAsReadDocument);
 
   const syncMarkAsRead = (id: string) => {
     // Skip if already read

@@ -6,9 +6,15 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 const mockUseGetMealPlansQuery = jest.fn();
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetMealPlansQuery: (...args: any[]) => mockUseGetMealPlansQuery(...args),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((...args: any[]) => {
+    const [doc] = args;
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetMealPlans')
+      return mockUseGetMealPlansQuery(doc, ...args);
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 jest.mock('#hooks/auth/useAuth', () => ({

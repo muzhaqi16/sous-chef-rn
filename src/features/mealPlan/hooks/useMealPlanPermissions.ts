@@ -3,7 +3,10 @@ import {
   getMealPlanPermissions,
   type MealPlanPermissions,
 } from '#utils/permissions/mealPlanPermissions';
-import type { MealPlanDisplayFragment, MealPlanFullFragment } from '#generated';
+import {
+  type MealPlanDisplayFragment,
+  type MealPlanFullFragment,
+} from '#features/mealPlan/graphql/mealPlanFragments.generated';
 
 type MealPlanLike = MealPlanDisplayFragment | MealPlanFullFragment;
 

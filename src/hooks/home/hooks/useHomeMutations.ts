@@ -9,12 +9,14 @@
 
 import type { ErrorLike } from '@apollo/client';
 import { alertService } from '#/services/alertService';
+import { useMutation } from '@apollo/client/react';
 import {
-  useCreateHomeMutation,
-  useUpdateHomeMutation,
-  useDeleteHomeMutation,
+  CreateHomeDocument,
+  UpdateHomeDocument,
+  DeleteHomeDocument,
   GetHomesDocument,
-} from '#generated';
+  type UpdateHomeMutation,
+} from '#operations/home/home.generated';
 import { useSelectedHomeId, useHomeState } from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
 import {
@@ -61,9 +63,9 @@ export function useHomeMutations({
   const { handleApolloError } = useErrorService();
   const { createAddOperation, createRemoveOperation } = useCrudOperations();
 
-  const [createHomeMutation, { loading: creating, client }] =
-    useCreateHomeMutation({
-      errorPolicy: 'all',
+  const [createHomeMutation, { loading: creating, client }] = useMutation(
+    CreateHomeDocument,
+    {
       // Note: No optimisticResponse - the mutation returns complex nested types that are difficult to predict
       update: (cache, { data }) => {
         if (!data?.createHome?.home) return;
@@ -114,48 +116,51 @@ export function useHomeMutations({
         });
         alertService.alert('Error', message);
       },
-    });
-
-  const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
-    errorPolicy: 'all',
-    optimisticResponse: (variables, { IGNORE }) => {
-      const currentHome = homes?.find((h: any) => h.id === variables.id);
-      if (!currentHome) return IGNORE;
-
-      return {
-        __typename: 'Mutation',
-        updateHome: {
-          __typename: 'HomePayload',
-          success: true,
-          message: 'Home updated successfully',
-          code: 'HOME_UPDATED',
-          home: enhanceWithVersion(currentHome, variables.input),
-        },
-      };
     },
-    onCompleted: data => {
-      if (data?.updateHome?.home) {
-        alertService.alert('Success', 'Home updated successfully');
-      }
-    },
-    onError: (error: ErrorLike) => {
-      if (handleVersionConflict(error)) {
-        alertService.alert('Home Updated', getVersionConflictMessage(error), [
-          { text: 'Refresh', onPress: () => refetch() },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-        return;
-      }
+  );
 
-      const { message } = handleApolloError(error, {
-        operation: 'Update Home',
-      });
-      alertService.alert('Error', message);
+  const [updateHomeMutation, { loading: updating }] = useMutation(
+    UpdateHomeDocument,
+    {
+      optimisticResponse: (variables, { IGNORE }) => {
+        const currentHome = homes?.find((h: any) => h.id === variables.id);
+        if (!currentHome) return IGNORE;
+        const optimistic: UpdateHomeMutation = {
+          __typename: 'Mutation',
+          updateHome: {
+            __typename: 'HomePayload',
+            success: true,
+            message: 'Home updated successfully',
+            code: 'HOME_UPDATED',
+            home: enhanceWithVersion(currentHome, variables.input),
+          },
+        };
+        return optimistic;
+      },
+      onCompleted: data => {
+        if (data?.updateHome?.home) {
+          alertService.alert('Success', 'Home updated successfully');
+        }
+      },
+      onError: (error: ErrorLike) => {
+        if (handleVersionConflict(error)) {
+          alertService.alert('Home Updated', getVersionConflictMessage(error), [
+            { text: 'Refresh', onPress: () => refetch() },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+          return;
+        }
+
+        const { message } = handleApolloError(error, {
+          operation: 'Update Home',
+        });
+        alertService.alert('Error', message);
+      },
     },
-  });
+  );
 
   const [deleteHomeMutation, { loading: deleting, client: deleteClient }] =
-    useDeleteHomeMutation({
+    useMutation(DeleteHomeDocument, {
       update: (cache, { data }, { variables }) => {
         if (!data?.deleteHome?.success || !variables) return;
 

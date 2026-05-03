@@ -9,7 +9,7 @@ import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector/types';
-import type { MealPlanDisplayFragment } from '#generated';
+import { type MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 
 interface UseMealPlanSelectorConfigOptions {
   mealPlans: MealPlanDisplayFragment[];

@@ -68,10 +68,16 @@ jest.mock('#hooks/navigation/useUserPreferences', () => ({
 const mockUpdateProfileMutation = jest.fn().mockResolvedValue({ data: {} });
 const mockUpdateSettingsMutation = jest.fn().mockResolvedValue({ data: {} });
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useUpdateUserProfileMutation: jest.fn(() => [mockUpdateProfileMutation]),
-  useUpdateUserPreferencesMutation: jest.fn(() => [mockUpdateSettingsMutation]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'UpdateUserProfile')
+      return [mockUpdateProfileMutation, { loading: false }];
+    if (opName === 'UpdateUserPreferences')
+      return [mockUpdateSettingsMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/config/settingsConfig', () => ({

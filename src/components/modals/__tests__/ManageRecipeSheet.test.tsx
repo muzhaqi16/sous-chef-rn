@@ -42,9 +42,7 @@ jest.mock('#components/molecules/TagInput', () => {
         RN.View,
         { testID: 'tag-input' },
         R.createElement(RN.Text, null, placeholder),
-        tags.map((tag: string) =>
-          R.createElement(RN.Text, { key: tag }, tag),
-        ),
+        tags.map((tag: string) => R.createElement(RN.Text, { key: tag }, tag)),
       ),
   };
 });

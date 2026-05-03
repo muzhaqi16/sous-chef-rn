@@ -1,0 +1,215 @@
+fragment HomeInviteDisplay on HomeInvite {
+  id
+  email
+  recipientName
+  role
+  status
+  expiresAt
+  message
+  home {
+    id
+    name
+  }
+  inviter {
+    id
+    email
+    profile {
+      id
+      displayName
+    }
+  }
+}
+
+fragment MemberShipFragment on Membership {
+  id
+  homeId
+  userId
+  user {
+    ...UserSummary
+  }
+  role
+  status
+  displayName
+  canManageHome
+  canViewPantry
+  canEditPantry
+  canAddItems
+  canRemoveItems
+  canInviteOthers
+}
+
+fragment BasicPantryFragment on Pantry {
+  id
+  homeId
+  name
+  isDefault
+}
+
+fragment HomeDisplay on Home {
+  id
+  name
+  version
+  updatedAt
+  isDefault
+  membersConnection(first: 10) {
+    edges {
+      node {
+        id
+        role
+        status
+        userId
+        displayName
+      }
+    }
+    totalCount
+  }
+  invitesConnection(first: 10) {
+    edges {
+      node {
+        ...HomeInviteDisplay
+      }
+    }
+    totalCount
+  }
+  pantriesConnection(first: 20) {
+    edges {
+      node {
+        ...BasicPantryFragment
+      }
+    }
+    totalCount
+  }
+  myMembership {
+    id
+    role
+    status
+    displayName
+    canManageHome
+    canViewPantry
+    canEditPantry
+    canAddItems
+    canRemoveItems
+    canInviteOthers
+  }
+}
+
+fragment HomeListFragment on Home {
+  id
+  name
+  isDefault
+  version
+  membersConnection(first: 5) {
+    edges {
+      node {
+        id
+        role
+        status
+        userId
+        displayName
+      }
+    }
+    totalCount
+  }
+  invitesConnection(first: 5) {
+    edges {
+      node {
+        id
+        email
+        recipientName
+        status
+      }
+    }
+    totalCount
+  }
+  pantriesConnection(first: 10) {
+    edges {
+      node {
+        id
+        name
+        isDefault
+      }
+    }
+    totalCount
+  }
+  myMembership {
+    id
+    role
+    canManageHome
+    canViewPantry
+    canEditPantry
+    canAddItems
+    canRemoveItems
+    canInviteOthers
+  }
+}
+
+fragment HomeFragment on Home {
+  id
+  name
+  description
+  timezone
+  currency
+  isPublic
+  joinCode
+  allowJoinCode
+  maxMembers
+  version
+  createdAt
+  updatedAt
+
+  invitesConnection(first: 20) {
+    edges {
+      node {
+        id
+        email
+        recipientName
+        role
+        status
+      }
+    }
+    totalCount
+  }
+
+  membersConnection(first: 20) {
+    edges {
+      node {
+        id
+        homeId
+        userId
+        role
+        status
+        displayName
+        canManageHome
+        user {
+          id
+          email
+        }
+      }
+    }
+    totalCount
+  }
+
+  pantriesConnection(first: 20) {
+    edges {
+      node {
+        id
+        name
+        isDefault
+      }
+    }
+    totalCount
+  }
+
+  myMembership {
+    id
+    role
+    status
+    displayName
+    canManageHome
+    canViewPantry
+    canEditPantry
+    canAddItems
+    canRemoveItems
+    canInviteOthers
+  }
+}

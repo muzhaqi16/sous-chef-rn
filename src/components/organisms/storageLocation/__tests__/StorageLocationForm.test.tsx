@@ -42,7 +42,11 @@ describe('StorageLocationForm', () => {
     render(
       <StorageLocationForm
         {...defaultProps}
-        initialData={{ name: 'My Fridge', type: 'REFRIGERATOR', icon: '\uD83E\uDDCA' }}
+        initialData={{
+          name: 'My Fridge',
+          type: 'REFRIGERATOR',
+          icon: '\uD83E\uDDCA',
+        }}
       />,
     );
     expect(screen.getByText('Update')).toBeTruthy();
@@ -63,7 +67,11 @@ describe('StorageLocationForm', () => {
     render(
       <StorageLocationForm
         {...defaultProps}
-        initialData={{ name: 'Kitchen Fridge', type: 'REFRIGERATOR', icon: '\uD83E\uDDCA' }}
+        initialData={{
+          name: 'Kitchen Fridge',
+          type: 'REFRIGERATOR',
+          icon: '\uD83E\uDDCA',
+        }}
       />,
     );
     expect(screen.getByDisplayValue('Kitchen Fridge')).toBeTruthy();

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 
+import { type ShoppingListItemFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
-  ShoppingListItemFragment,
-  UpdateShoppingListItemInput,
-  UnitSpecInput,
-} from '#generated';
+  type UpdateShoppingListItemInput,
+  type UnitSpecInput,
+} from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 
 type FormState = {

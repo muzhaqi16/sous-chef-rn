@@ -1,4 +1,4 @@
-import { MembershipRole } from '#generated';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 /**
  * Permission flags for pantry operations

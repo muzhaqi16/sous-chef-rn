@@ -25,7 +25,7 @@ import { useHomeMutations } from './useHomeMutations';
 import { useHomeInvitations } from './useHomeInvitations';
 
 // MembershipRole is available from '#generated' directly
-// import { MembershipRole } from '#generated';
+// import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 export function useHomeManagement() {
   // Query hook - fetches homes and computes stats
@@ -54,19 +54,13 @@ export function useHomeManagement() {
   });
 
   // Mutations hook - CRUD operations
-  const {
-    createHome,
-    updateHome,
-    deleteHome,
-    creating,
-    updating,
-    deleting,
-  } = useHomeMutations({
-    homes,
-    refetch,
-    setDefaultHome,
-    setSelectedPantryId,
-  });
+  const { createHome, updateHome, deleteHome, creating, updating, deleting } =
+    useHomeMutations({
+      homes,
+      refetch,
+      setDefaultHome,
+      setSelectedPantryId,
+    });
 
   // Invitations hook - invite and join operations
   const {

@@ -8,15 +8,16 @@
  */
 
 import { useState, useRef } from 'react';
+import { useMutation } from '@apollo/client/react';
 import {
-  useFavoriteRecipeMutation,
-  useUpsertExternalRecipeMutation,
-  ExternalSource,
+  FavoriteRecipeDocument,
+  UpsertExternalRecipeDocument,
   MySavedRecipesDocument,
   SavedRecipeFoldersDocument,
   type MySavedRecipesQuery,
   type SavedRecipeFoldersQuery,
-} from '#generated';
+} from '#features/recipes/graphql/recipe.generated';
+import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { RecipeInformation } from '#/services/recipeApi/types';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { toastService } from '#/services/toastService';
@@ -77,7 +78,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const attemptedPreloadsRef = useRef<Set<string>>(new Set());
 
   // Mutations
-  const [favoriteRecipe] = useFavoriteRecipeMutation({
+  const [favoriteRecipe] = useMutation(FavoriteRecipeDocument, {
     // Use cache.updateQuery instead of refetchQueries for better performance and offline support
     update: (cache, { data }) => {
       if (!data?.favoriteRecipe?.savedRecipe) return;
@@ -149,7 +150,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       }
     },
   });
-  const [upsertRecipe] = useUpsertExternalRecipeMutation();
+  const [upsertRecipe] = useMutation(UpsertExternalRecipeDocument);
 
   /**
    * Transform Spoonacular recipe data to CreateRecipeInput format

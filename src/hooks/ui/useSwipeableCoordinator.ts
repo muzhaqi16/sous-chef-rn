@@ -65,5 +65,6 @@ export function useSwipeableCoordinator() {
   return {
     handleSwipeableWillOpen,
     handleSwipeableClose,
-    closeAll };
+    closeAll,
+  };
 }

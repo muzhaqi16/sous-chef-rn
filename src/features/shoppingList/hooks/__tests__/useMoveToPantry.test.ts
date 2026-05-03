@@ -6,12 +6,16 @@ import { useMoveToPantry } from '../useMoveToPantry';
 const mockMoveShoppingItemToPantry = jest.fn();
 let capturedMutationOptions: any;
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useMoveShoppingItemToPantryMutation: (options: any) => {
-    capturedMutationOptions = options;
-    return [mockMoveShoppingItemToPantry, { loading: false }];
-  },
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any, options: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'MoveShoppingItemToPantry') {
+      capturedMutationOptions = options;
+      return [mockMoveShoppingItemToPantry, { loading: false }];
+    }
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/services/telemetry', () => ({

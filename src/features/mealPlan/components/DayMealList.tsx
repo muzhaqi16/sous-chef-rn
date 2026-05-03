@@ -8,9 +8,9 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { MealTypeSection } from './MealTypeSection';
 import { EmptyDayState } from './EmptyDayState';
-import type { MealTypeGroup } from '#features/mealPlan/hooks/useDailyMeals';
-import type { MealType, MealPlanItemFragment } from '#generated';
 import { Text } from '#components/atoms/Text';
+import type { MealTypeGroup } from '#features/mealPlan/hooks/useDailyMeals';
+import { type MealType } from '#/graphql/generated/schemaTypes';
 
 interface DayMealListProps {
   selectedDate: Date;
@@ -21,7 +21,7 @@ interface DayMealListProps {
     isCompleted: boolean,
     hasRecipe: boolean,
   ) => void;
-  onItemPress?: (item: MealPlanItemFragment) => void;
+  onItemPress?: (id: string) => void;
   onDeleteItem?: (id: string) => void;
   onAddMeal?: (mealType?: MealType) => void;
   onScroll?: ReturnType<typeof useAnimatedScrollHandler>;

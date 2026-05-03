@@ -24,7 +24,7 @@ import {
 import { useImageUpload } from '#hooks/useImageUpload';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
-import { ImageUploadPurpose } from '#generated';
+import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import {
   executeWithLoadingState,

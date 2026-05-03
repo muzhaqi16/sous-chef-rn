@@ -2,7 +2,9 @@ import { emailRule, passwordRule, nameRule } from '../common';
 
 describe('emailRule', () => {
   it('accepts valid email', async () => {
-    await expect(emailRule.validate('user@example.com')).resolves.toBe('user@example.com');
+    await expect(emailRule.validate('user@example.com')).resolves.toBe(
+      'user@example.com',
+    );
   });
 
   it('rejects empty string', async () => {
@@ -10,7 +12,9 @@ describe('emailRule', () => {
   });
 
   it('rejects invalid email format', async () => {
-    await expect(emailRule.validate('notanemail')).rejects.toThrow('valid email');
+    await expect(emailRule.validate('notanemail')).rejects.toThrow(
+      'valid email',
+    );
   });
 });
 
@@ -50,7 +54,9 @@ describe('nameRule', () => {
   });
 
   it('rejects > 50 chars', async () => {
-    await expect(nameRule.validate('A'.repeat(51))).rejects.toThrow('50 characters');
+    await expect(nameRule.validate('A'.repeat(51))).rejects.toThrow(
+      '50 characters',
+    );
   });
 
   it('rejects numbers in name', async () => {

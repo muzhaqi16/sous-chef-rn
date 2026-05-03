@@ -6,7 +6,8 @@
  * - Cache-first policy for efficient lookups
  */
 
-import { useGetUnitBySymbolLazyQuery } from '#generated';
+import { useLazyQuery } from '@apollo/client/react';
+import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
 
 /**
  * Hook for resolving unit symbols to unit IDs
@@ -18,7 +19,7 @@ import { useGetUnitBySymbolLazyQuery } from '#generated';
  * ```
  */
 export function useResolveUnit() {
-  const [unitQuery] = useGetUnitBySymbolLazyQuery({
+  const [unitQuery] = useLazyQuery(GetUnitBySymbolDocument, {
     fetchPolicy: 'cache-first',
   });
 

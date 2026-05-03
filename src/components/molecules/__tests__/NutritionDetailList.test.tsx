@@ -6,19 +6,61 @@ import { NutritionDetailList } from '../NutritionDetailList';
 jest.mock('#utils/nutritionUtils', () => ({
   parseNutritions: jest.fn((raw: any) => raw),
   getNutrientEntries: jest.fn(() => [
-    { key: 'protein', name: 'Protein', amount: 15, unit: 'g', category: 'macro' },
-    { key: 'carbs', name: 'Carbohydrates', amount: 30, unit: 'g', category: 'macro' },
+    {
+      key: 'protein',
+      name: 'Protein',
+      amount: 15,
+      unit: 'g',
+      category: 'macro',
+    },
+    {
+      key: 'carbs',
+      name: 'Carbohydrates',
+      amount: 30,
+      unit: 'g',
+      category: 'macro',
+    },
     { key: 'fat', name: 'Total Fat', amount: 10, unit: 'g', category: 'macro' },
-    { key: 'vitC', name: 'Vitamin C', amount: 45, unit: 'mg', category: 'vitamin' },
+    {
+      key: 'vitC',
+      name: 'Vitamin C',
+      amount: 45,
+      unit: 'mg',
+      category: 'vitamin',
+    },
   ]),
   groupNutrientsByCategory: jest.fn(() => ({
     macro: [
-      { key: 'protein', name: 'Protein', amount: 15, unit: 'g', category: 'macro' },
-      { key: 'carbs', name: 'Carbohydrates', amount: 30, unit: 'g', category: 'macro' },
-      { key: 'fat', name: 'Total Fat', amount: 10, unit: 'g', category: 'macro' },
+      {
+        key: 'protein',
+        name: 'Protein',
+        amount: 15,
+        unit: 'g',
+        category: 'macro',
+      },
+      {
+        key: 'carbs',
+        name: 'Carbohydrates',
+        amount: 30,
+        unit: 'g',
+        category: 'macro',
+      },
+      {
+        key: 'fat',
+        name: 'Total Fat',
+        amount: 10,
+        unit: 'g',
+        category: 'macro',
+      },
     ],
     vitamin: [
-      { key: 'vitC', name: 'Vitamin C', amount: 45, unit: 'mg', category: 'vitamin' },
+      {
+        key: 'vitC',
+        name: 'Vitamin C',
+        amount: 45,
+        unit: 'mg',
+        category: 'vitamin',
+      },
     ],
     mineral: [],
     other: [],

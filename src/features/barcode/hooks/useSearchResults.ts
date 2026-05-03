@@ -1,12 +1,14 @@
 import { useEffect, useRef } from 'react';
+import { useMutation, useQuery } from '@apollo/client/react';
+
 import {
-  useItemByUpcFilterQuery,
-  useItemBySkuFilterQuery,
-  useCreateItemMutation,
-  useFlagItemForReviewMutation,
-  CreateItemMutation,
-  UpcFormat,
-} from '#generated';
+  ItemByUpcFilterDocument,
+  ItemBySkuFilterDocument,
+  CreateItemDocument,
+  FlagItemForReviewDocument,
+  type CreateItemMutation,
+} from '#operations/item/item.generated';
+import { UpcFormat } from '#/graphql/generated/schemaTypes';
 import { useSearchState, useBottomSheetState } from '#store/useAppStore';
 import { ScannedItem } from '../store/barcodeScannerSlice';
 import { alertService } from '#/services/alertService';
@@ -229,43 +231,46 @@ export const useSearchResults = (barcode: string, format?: string) => {
     setSearching(true);
   }, [barcode, setSearchResults, setSearchError, setSearching]);
 
-  const [addNewItem, { loading: addingItem }] = useCreateItemMutation({
-    onCompleted: async (data: CreateItemMutation) => {
-      if (data.createItem?.item) {
-        const createdItem = data.createItem.item;
+  const [addNewItem, { loading: addingItem }] = useMutation(
+    CreateItemDocument,
+    {
+      onCompleted: async (data: CreateItemMutation) => {
+        if (data.createItem?.item) {
+          const createdItem = data.createItem.item;
 
-        // Upload pending images (module-level function avoids try-catch in hook)
-        const result = await executeMutation(
-          () => uploadPendingImages(createdItem, uploadItemImage),
-          'Error handling pending image upload:',
-        );
-        const finalItem = result !== false ? result : createdItem;
+          // Upload pending images (module-level function avoids try-catch in hook)
+          const result = await executeMutation(
+            () => uploadPendingImages(createdItem, uploadItemImage),
+            'Error handling pending image upload:',
+          );
+          const finalItem = result !== false ? result : createdItem;
+          cleanupPendingImageStorage();
+
+          const newItem = convertToScannedItem(
+            finalItem,
+            barcode,
+            pendingBrandNameRef.current,
+          );
+          pendingBrandNameRef.current = undefined;
+          setSearchResults([newItem]);
+          addToRecentlyScanned(newItem);
+          hideBottomSheet();
+        }
+      },
+      onError: error => {
         cleanupPendingImageStorage();
-
-        const newItem = convertToScannedItem(
-          finalItem,
-          barcode,
-          pendingBrandNameRef.current,
-        );
         pendingBrandNameRef.current = undefined;
-        setSearchResults([newItem]);
-        addToRecentlyScanned(newItem);
-        hideBottomSheet();
-      }
-    },
-    onError: error => {
-      cleanupPendingImageStorage();
-      pendingBrandNameRef.current = undefined;
 
-      alertService.alert('Error', `Failed to add item: ${error.message}`);
+        alertService.alert('Error', `Failed to add item: ${error.message}`);
+      },
     },
-  });
+  );
 
   const {
     data: upcData,
     loading: upcLoading,
     error: upcError,
-  } = useItemByUpcFilterQuery({
+  } = useQuery(ItemByUpcFilterDocument, {
     variables: { upc: barcode, upcFormat },
     fetchPolicy: 'network-only', // Always fetch fresh - prevents stale data from previous scans
   });
@@ -277,7 +282,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     data: skuData,
     loading: skuLoading,
     error: skuError,
-  } = useItemBySkuFilterQuery({
+  } = useQuery(ItemBySkuFilterDocument, {
     variables: { sku: barcode, skuStoreId: undefined },
     // Skip SKU search while UPC is loading OR if UPC found a result
     // Must include upcLoading to prevent using stale upcItem from previous scan
@@ -416,8 +421,9 @@ export const useSearchResults = (barcode: string, format?: string) => {
     );
   };
 
-  const [flagItem, { loading: suggestingEdit }] =
-    useFlagItemForReviewMutation();
+  const [flagItem, { loading: suggestingEdit }] = useMutation(
+    FlagItemForReviewDocument,
+  );
 
   const handleSuggestEdit = async (itemId: string, formData: any) => {
     const reason = buildSuggestEditReason(formData);

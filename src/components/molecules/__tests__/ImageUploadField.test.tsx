@@ -33,7 +33,9 @@ jest.mock('#hooks/useImageUpload', () => ({
 
 jest.mock('#/utils/compilerSafeWrappers');
 const { executeAsyncWithCleanup: mockExecuteAsyncWithCleanup } =
-  jest.requireMock('#/utils/compilerSafeWrappers') as { executeAsyncWithCleanup: jest.Mock };
+  jest.requireMock('#/utils/compilerSafeWrappers') as {
+    executeAsyncWithCleanup: jest.Mock;
+  };
 
 describe('ImageUploadField', () => {
   beforeEach(() => {
@@ -93,7 +95,10 @@ describe('ImageUploadField', () => {
   it('calls onImageUploaded with empty string when remove is pressed', () => {
     const onImageUploaded = jest.fn();
     render(
-      <ImageUploadField value="https://example.com/image.jpg" onImageUploaded={onImageUploaded} />,
+      <ImageUploadField
+        value="https://example.com/image.jpg"
+        onImageUploaded={onImageUploaded}
+      />,
     );
     fireEvent.press(screen.getByText('trash-outline'));
     expect(onImageUploaded).toHaveBeenCalledWith('');

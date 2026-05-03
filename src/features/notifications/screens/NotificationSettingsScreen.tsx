@@ -12,7 +12,7 @@ import {
   type NotificationSettings,
 } from '#features/notifications/hooks/useNotificationSettings';
 import { useNotificationPermissions } from '#features/notifications/hooks/useNotificationPermissions';
-import { ExpirationFrequency } from '#generated';
+import { ExpirationFrequency } from '#/graphql/generated/schemaTypes';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import {

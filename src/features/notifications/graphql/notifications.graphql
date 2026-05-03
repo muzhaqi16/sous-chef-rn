@@ -6,7 +6,7 @@ subscription NotificationChanged {
   notificationChanged {
     changeType
     notification {
-      ...NotificationFragment
+      ...useNotifications_notification
     }
     timestamp
   }
@@ -26,7 +26,7 @@ query GetUnreadNotifications {
     ) {
       edges {
         node {
-          ...NotificationFragment
+          ...useNotificationsOnLaunch_notification
         }
       }
       pageInfo {

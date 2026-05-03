@@ -69,5 +69,6 @@ export function useSelectorManagement(options: UseSelectorManagementOptions) {
   return {
     handleOpenSelector,
     handleOverlayOpen,
-    handleOverlayClose };
+    handleOverlayClose,
+  };
 }

@@ -138,6 +138,67 @@ When adding cached data to a new autocomplete hook, pass `localFirst: true` alon
 the debounce cycle — e.g., switching from "app" to "banana" won't flash "app" results.
 Consumer hooks do not need to implement their own relevance checks.
 
+### Apollo: Fragment Colocation Convention (new code)
+
+Apollo Client 4.x recommends colocated fragments + `useFragment` for new components,
+and runtime data masking (`dataMasking: true`) once enough consumers are migrated. The
+existing 256+ `useQuery` sites and 39 fragments in `src/graphql/operations/fragments.graphql`
+predate this and stay as-is — **don't migrate working code opportunistically**. New
+components and new entity-consuming child components should follow the convention below.
+
+**New non-page components that consume entity data:**
+
+- Define a colocated fragment named `<ComponentName>_<propName>` next to the component
+  (NOT in `src/graphql/operations/fragments.graphql` — that file is legacy).
+- Accept `FragmentType<typeof MyFragmentDoc>` (from `@apollo/client`) as the prop type,
+  not the raw fragment type.
+- Read fields via `useFragment` (from `@apollo/client/react`), not direct property access.
+  This creates a per-entity cache subscription so the child re-renders only when its own
+  fields change — a real win in deep component trees, available even before `dataMasking: true`
+  is flipped globally.
+- The page-level query composes the child fragments via codegen's automatic inlining;
+  no manual fragment interpolation needed.
+
+**`useSuspenseQuery` / `useBackgroundQuery` — use selectively, not by default.** For this
+React Native app the practical benefit is small:
+- No SSR, so the streaming-SSR benefit Apollo markets doesn't apply.
+- `cache-and-network` + persisted MMKV cache already gives instant paint on cold start,
+  which is what Suspense + cache-first would give.
+- `if (loading)` / `if (error)` moves from the component body to a `<Suspense>` + error
+  boundary wrapper — net LOC is roughly identical.
+- Mixed-source screens (Apollo + REST API) still need manual loading coordination for
+  the non-Apollo half, defeating the simplification.
+
+Reach for `useSuspenseQuery` when a new screen has **2+ independent parallel queries**
+that benefit from `useBackgroundQuery` waterfall avoidance. Otherwise stay with `useQuery`.
+
+**Existing code:**
+
+- The legacy `src/graphql/operations/fragments.graphql` monolith has been deleted.
+  Fragments are organized by domain: `auth/userFragments.graphql`,
+  `home/homeFragments.graphql`, `item/itemFragments.graphql`,
+  `mealPlan/mealPlanFragments.graphql`, `pantry/pantryFragments.graphql`,
+  `recipe/recipeFragments.graphql`, `shoppingList/shoppingListFragments.graphql`.
+  Multi-consumer fragments live in those domain files; single-consumer fragments
+  (e.g. `MealPlanItemCard_item`, `InviteCard_invite`) are colocated next to their
+  component.
+- Use the `#operations/<domain>/...` alias for imports rather than long relative paths.
+- Don't migrate working `useQuery` sites or fragment consumers opportunistically.
+  Convert only when you're touching the area for another reason and the conversion
+  is small.
+
+**Why `dataMasking: true` is NOT set globally:** flipping the flag strips fragment fields
+from parent query results, which would break every existing direct-access consumer (e.g.
+`item.recipe?.name` would return `undefined`). The flag flips only after enough consumers
+are migrated to `useFragment`, which is a separate, scoped initiative.
+
+**Why we don't use graphql-codegen's `client-preset`:** the client-preset bundles its own
+type-level fragment-masking helper (`@graphql-codegen/client-preset`'s `useFragment`) that
+**conflicts** with Apollo Client 4.x's runtime data masking. Apollo's docs explicitly
+advise against client-preset for AC4 projects. Our `near-operation-file` setup already
+emits `TypedDocumentNode`s, which is all Apollo's `FragmentType<typeof Doc>` and runtime
+masking need.
+
 ### Verification Commands
 
 After implementing fixes, run:

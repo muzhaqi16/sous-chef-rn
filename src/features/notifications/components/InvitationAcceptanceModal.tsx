@@ -2,20 +2,22 @@ import React, { useState } from 'react';
 import { View, Modal, ActivityIndicator, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
-import { useApolloClient } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
 import {
-  useAcceptHomeInviteMutation,
-  useAcceptShoppingListInviteMutation,
-  useDeclineHomeInviteMutation,
-  useDeclineShoppingListInviteMutation,
-  MyShoppingListInvitesDocument,
-  MyShoppingListInvitesQuery,
+  AcceptHomeInviteDocument,
+  DeclineHomeInviteDocument,
   GetHomesDocument,
   GetMyPendingInvitesDocument,
-} from '#generated';
+} from '#operations/home/home.generated';
+import {
+  AcceptShoppingListInviteDocument,
+  DeclineShoppingListInviteDocument,
+  MyShoppingListInvitesDocument,
+  type MyShoppingListInvitesQuery,
+} from '#features/shoppingList/graphql/collaboration.generated';
 import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
@@ -71,29 +73,35 @@ export const InvitationAcceptanceModal: React.FC<
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
-  const [acceptHomeInvite] = useAcceptHomeInviteMutation({
+  const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
     refetchQueries: [
       { query: GetHomesDocument },
       { query: GetMyPendingInvitesDocument },
     ],
     awaitRefetchQueries: true,
   });
-  const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation({
-    refetchQueries: [{ query: MyShoppingListInvitesDocument }],
-    update: (cache, { data }) => {
-      if (!data?.acceptShoppingListInvite?.collaborator) return;
-      updateShoppingListCache(
-        cache,
-        data.acceptShoppingListInvite.collaborator,
-      );
+  const [acceptShoppingListInvite] = useMutation(
+    AcceptShoppingListInviteDocument,
+    {
+      refetchQueries: [{ query: MyShoppingListInvitesDocument }],
+      update: (cache, { data }) => {
+        if (!data?.acceptShoppingListInvite?.collaborator) return;
+        updateShoppingListCache(
+          cache,
+          data.acceptShoppingListInvite.collaborator,
+        );
+      },
     },
-  });
-  const [declineHomeInvite] = useDeclineHomeInviteMutation({
+  );
+  const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument, {
     refetchQueries: [{ query: GetMyPendingInvitesDocument }],
   });
-  const [declineShoppingListInvite] = useDeclineShoppingListInviteMutation({
-    refetchQueries: [{ query: MyShoppingListInvitesDocument }],
-  });
+  const [declineShoppingListInvite] = useMutation(
+    DeclineShoppingListInviteDocument,
+    {
+      refetchQueries: [{ query: MyShoppingListInvitesDocument }],
+    },
+  );
 
   const resolveToken = async (): Promise<string | undefined> => {
     let token = invitation?.token;

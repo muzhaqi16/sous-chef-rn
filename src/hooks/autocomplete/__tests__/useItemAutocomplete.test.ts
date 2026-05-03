@@ -11,23 +11,24 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 const mockFetchItems = jest.fn();
-let mockItemData: any = null;
-let mockItemLoading = false;
+const mockFetchSemantic = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useAutocompleteItemsLazyQuery: () => [
-    mockFetchItems,
-    { data: mockItemData, loading: mockItemLoading },
-  ],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useLazyQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'AutocompleteItems')
+      return [mockFetchItems, { loading: false }];
+    if (opName === 'SearchItemsSemantic')
+      return [mockFetchSemantic, { loading: false }];
+    return [jest.fn(), { loading: false }];
+  }),
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockIsOnline = true;
-  mockItemData = null;
-  mockItemLoading = false;
 });
 
 afterEach(() => {

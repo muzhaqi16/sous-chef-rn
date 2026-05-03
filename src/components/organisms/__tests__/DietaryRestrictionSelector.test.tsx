@@ -5,46 +5,61 @@ import { DietaryRestrictionSelector } from '../DietaryRestrictionSelector';
 
 jest.mock('#/utils/compilerSafeWrappers');
 
-jest.mock('#/components/molecules/RestrictionSection/RestrictionSection', () => {
-  const { View, Text, Pressable } = require('react-native');
-  return {
-    RestrictionSection: ({ title, existingItems, onRemove, onAddPress, emptyMessage }: any) => (
-      <View testID={`restriction-section-${title}`}>
-        <Text>{title}</Text>
-        {existingItems.length === 0 ? (
-          <Text>{emptyMessage}</Text>
-        ) : (
-          existingItems.map((item: any) => (
-            <View key={item.id}>
-              <Text>{item.label}</Text>
-              <Pressable testID={`remove-${item.id}`} onPress={() => onRemove(item.id)}>
-                <Text>Remove</Text>
-              </Pressable>
-            </View>
-          ))
-        )}
-        <Pressable testID={`add-${title}`} onPress={onAddPress}>
-          <Text>Add</Text>
-        </Pressable>
-      </View>
-    ),
-  };
-});
-
-jest.mock('#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet', () => {
-  const { View, Text } = require('react-native');
-  return {
-    MultiSelectChipSheet: ({ visible, title, items }: any) =>
-      visible ? (
-        <View testID="multi-select-sheet">
+jest.mock(
+  '#/components/molecules/RestrictionSection/RestrictionSection',
+  () => {
+    const { View, Text, Pressable } = require('react-native');
+    return {
+      RestrictionSection: ({
+        title,
+        existingItems,
+        onRemove,
+        onAddPress,
+        emptyMessage,
+      }: any) => (
+        <View testID={`restriction-section-${title}`}>
           <Text>{title}</Text>
-          {items.map((item: any) => (
-            <Text key={item.id}>{item.label}</Text>
-          ))}
+          {existingItems.length === 0 ? (
+            <Text>{emptyMessage}</Text>
+          ) : (
+            existingItems.map((item: any) => (
+              <View key={item.id}>
+                <Text>{item.label}</Text>
+                <Pressable
+                  testID={`remove-${item.id}`}
+                  onPress={() => onRemove(item.id)}
+                >
+                  <Text>Remove</Text>
+                </Pressable>
+              </View>
+            ))
+          )}
+          <Pressable testID={`add-${title}`} onPress={onAddPress}>
+            <Text>Add</Text>
+          </Pressable>
         </View>
-      ) : null,
-  };
-});
+      ),
+    };
+  },
+);
+
+jest.mock(
+  '#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet',
+  () => {
+    const { View, Text } = require('react-native');
+    return {
+      MultiSelectChipSheet: ({ visible, title, items }: any) =>
+        visible ? (
+          <View testID="multi-select-sheet">
+            <Text>{title}</Text>
+            {items.map((item: any) => (
+              <Text key={item.id}>{item.label}</Text>
+            ))}
+          </View>
+        ) : null,
+    };
+  },
+);
 
 const defaultProps = {
   existingRestrictions: [],
@@ -73,7 +88,12 @@ describe('DietaryRestrictionSelector', () => {
 
   it('renders existing diet restrictions', () => {
     const restrictions = [
-      { id: 'r1', diet: 'VEGETARIAN' as any, intolerance: null, healthGoal: null },
+      {
+        id: 'r1',
+        diet: 'VEGETARIAN' as any,
+        intolerance: null,
+        healthGoal: null,
+      },
       { id: 'r2', diet: 'VEGAN' as any, intolerance: null, healthGoal: null },
     ];
     render(
@@ -101,7 +121,12 @@ describe('DietaryRestrictionSelector', () => {
 
   it('renders existing health goal restrictions', () => {
     const restrictions = [
-      { id: 'r4', diet: null, intolerance: null, healthGoal: 'LOW_CARB' as any },
+      {
+        id: 'r4',
+        diet: null,
+        intolerance: null,
+        healthGoal: 'LOW_CARB' as any,
+      },
     ];
     render(
       <DietaryRestrictionSelector
@@ -121,7 +146,12 @@ describe('DietaryRestrictionSelector', () => {
 
   it('renders remove buttons for existing restrictions', () => {
     const restrictions = [
-      { id: 'r1', diet: 'VEGETARIAN' as any, intolerance: null, healthGoal: null },
+      {
+        id: 'r1',
+        diet: 'VEGETARIAN' as any,
+        intolerance: null,
+        healthGoal: null,
+      },
     ];
     render(
       <DietaryRestrictionSelector
@@ -134,7 +164,12 @@ describe('DietaryRestrictionSelector', () => {
 
   it('calls onRemove when remove button is pressed', () => {
     const restrictions = [
-      { id: 'r1', diet: 'VEGETARIAN' as any, intolerance: null, healthGoal: null },
+      {
+        id: 'r1',
+        diet: 'VEGETARIAN' as any,
+        intolerance: null,
+        healthGoal: null,
+      },
     ];
     render(
       <DietaryRestrictionSelector

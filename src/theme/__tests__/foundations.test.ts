@@ -178,16 +178,40 @@ describe('theme foundations', () => {
     it('exports shadow presets', () => {
       expect(shadows.none).toEqual({});
       expect(shadows.sm.boxShadow).toEqual([
-        { offsetX: 0, offsetY: 1, blurRadius: 2, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.05)' },
+        {
+          offsetX: 0,
+          offsetY: 1,
+          blurRadius: 2,
+          spreadDistance: 0,
+          color: 'rgba(0, 0, 0, 0.05)',
+        },
       ]);
       expect(shadows.md.boxShadow).toEqual([
-        { offsetX: 0, offsetY: 2, blurRadius: 4, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.1)' },
+        {
+          offsetX: 0,
+          offsetY: 2,
+          blurRadius: 4,
+          spreadDistance: 0,
+          color: 'rgba(0, 0, 0, 0.1)',
+        },
       ]);
       expect(shadows.lg.boxShadow).toEqual([
-        { offsetX: 0, offsetY: 4, blurRadius: 8, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.15)' },
+        {
+          offsetX: 0,
+          offsetY: 4,
+          blurRadius: 8,
+          spreadDistance: 0,
+          color: 'rgba(0, 0, 0, 0.15)',
+        },
       ]);
       expect(shadows.xl.boxShadow).toEqual([
-        { offsetX: 0, offsetY: 8, blurRadius: 12, spreadDistance: 0, color: 'rgba(0, 0, 0, 0.2)' },
+        {
+          offsetX: 0,
+          offsetY: 8,
+          blurRadius: 12,
+          spreadDistance: 0,
+          color: 'rgba(0, 0, 0, 0.2)',
+        },
       ]);
     });
 
@@ -205,8 +229,12 @@ describe('theme foundations', () => {
     });
 
     it('shadow intensity increases with severity', () => {
-      const opacityOf = (shadow: (typeof shadows)[keyof Omit<typeof shadows, 'none'>]) => {
-        const match = shadow.boxShadow[0].color.match(/rgba\(0, 0, 0, ([\d.]+)\)/);
+      const opacityOf = (
+        shadow: (typeof shadows)[keyof Omit<typeof shadows, 'none'>],
+      ) => {
+        const match = shadow.boxShadow[0].color.match(
+          /rgba\(0, 0, 0, ([\d.]+)\)/,
+        );
         return match ? parseFloat(match[1]) : 0;
       };
       expect(opacityOf(shadows.sm)).toBeLessThan(opacityOf(shadows.md));

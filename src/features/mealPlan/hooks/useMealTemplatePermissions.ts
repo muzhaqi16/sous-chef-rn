@@ -3,7 +3,7 @@ import {
   getMealTemplatePermissions,
   type MealTemplatePermissions,
 } from '#utils/permissions/mealTemplatePermissions';
-import type { MealTemplateDisplayFragment } from '#generated';
+import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 
 const NO_PERMISSIONS: MealTemplatePermissions = {
   canEdit: false,

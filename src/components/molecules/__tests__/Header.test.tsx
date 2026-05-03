@@ -43,9 +43,7 @@ describe('Header', () => {
   });
 
   it('shows close button instead of back when both are provided', () => {
-    render(
-      <Header title="Test" onBack={jest.fn()} onClose={jest.fn()} />,
-    );
+    render(<Header title="Test" onBack={jest.fn()} onClose={jest.fn()} />);
     expect(screen.getByTestId('header-close-button')).toBeTruthy();
     expect(screen.queryByTestId('header-back-button')).toBeNull();
   });
@@ -71,7 +69,12 @@ describe('Header', () => {
       <Header
         title="Test"
         rightActions={[
-          { icon: 'notifications', onPress: jest.fn(), badge: 5, testID: 'notif-btn' },
+          {
+            icon: 'notifications',
+            onPress: jest.fn(),
+            badge: 5,
+            testID: 'notif-btn',
+          },
         ]}
       />,
     );
@@ -83,7 +86,12 @@ describe('Header', () => {
       <Header
         title="Test"
         rightActions={[
-          { icon: 'notifications', onPress: jest.fn(), badge: 0, testID: 'notif-btn' },
+          {
+            icon: 'notifications',
+            onPress: jest.fn(),
+            badge: 0,
+            testID: 'notif-btn',
+          },
         ]}
       />,
     );

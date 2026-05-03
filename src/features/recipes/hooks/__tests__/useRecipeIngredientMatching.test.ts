@@ -8,16 +8,20 @@ import {
 const mockLoadMatchesQuery = jest.fn();
 const mockConfirmMutation = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useMatchRecipeIngredientsToPantryLazyQuery: jest.fn(() => [
-    mockLoadMatchesQuery,
-    { loading: false },
-  ]),
-  useConfirmRecipeConsumptionMutation: jest.fn(() => [
-    mockConfirmMutation,
-    { loading: false },
-  ]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useLazyQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'MatchRecipeIngredientsToPantry')
+      return [mockLoadMatchesQuery, { loading: false }];
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'ConfirmRecipeConsumption')
+      return [mockConfirmMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#store/useAppStore', () => ({

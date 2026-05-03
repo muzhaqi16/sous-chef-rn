@@ -14,27 +14,30 @@ const mockRemoveMemberMutation = jest.fn();
 const mockRevokeInviteMutation = jest.fn();
 const mockLeaveHomeMutation = jest.fn();
 const mockSetDefaultHomeMutation = jest.fn();
-const mockLeaveClient = {
-  cache: {
-    readQuery: jest.fn(() => null),
-  },
-};
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetHomeQuery: jest.fn(() => mockGetHomeQuery),
-  useUpdateHomeMutation: jest.fn(() => [
-    mockUpdateHomeMutation,
-    { loading: false },
-  ]),
-  useUpdateMembershipMutation: jest.fn(() => [mockUpdateMembershipMutation]),
-  useRemoveMemberMutation: jest.fn(() => [mockRemoveMemberMutation]),
-  useRevokeHomeInviteMutation: jest.fn(() => [mockRevokeInviteMutation]),
-  useLeaveHomeMutation: jest.fn(() => [
-    mockLeaveHomeMutation,
-    { loading: false, client: mockLeaveClient },
-  ]),
-  useSetDefaultHomeMutation: jest.fn(() => [mockSetDefaultHomeMutation]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetHome') return mockGetHomeQuery;
+    return { data: undefined, loading: false, error: undefined };
+  }),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'UpdateHome')
+      return [mockUpdateHomeMutation, { loading: false }];
+    if (opName === 'UpdateMembership')
+      return [mockUpdateMembershipMutation, { loading: false }];
+    if (opName === 'RemoveMember')
+      return [mockRemoveMemberMutation, { loading: false }];
+    if (opName === 'RevokeHomeInvite')
+      return [mockRevokeInviteMutation, { loading: false }];
+    if (opName === 'LeaveHome')
+      return [mockLeaveHomeMutation, { loading: false }];
+    if (opName === 'SetDefaultHome')
+      return [mockSetDefaultHomeMutation, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 const mockStoreState = {

@@ -78,7 +78,10 @@ describe('ProfileHeader', () => {
 
   it('renders avatar image when avatarUrl is provided', () => {
     const { toJSON } = render(
-      <ProfileHeader {...defaultProps} avatarUrl="https://example.com/avatar.jpg" />,
+      <ProfileHeader
+        {...defaultProps}
+        avatarUrl="https://example.com/avatar.jpg"
+      />,
     );
     expect(toJSON()).toBeTruthy();
   });

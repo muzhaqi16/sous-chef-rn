@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import { useMutation } from '@apollo/client/react';
 import {
-  useDeleteRecipeFolderMutation,
+  DeleteRecipeFolderDocument,
   SavedRecipeFoldersDocument,
-  SavedRecipeFoldersQuery,
-} from '#generated';
+  type SavedRecipeFoldersQuery,
+} from '#features/recipes/graphql/recipe.generated';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { toastService } from '#/services/toastService';
 
@@ -16,7 +17,7 @@ import { toastService } from '#/services/toastService';
 export function useFolderActions() {
   const [loading, setLoading] = useState(false);
 
-  const [deleteRecipeFolderMutation] = useDeleteRecipeFolderMutation({
+  const [deleteRecipeFolderMutation] = useMutation(DeleteRecipeFolderDocument, {
     onError: err => {
       console.error('Folder action error:', err);
     },

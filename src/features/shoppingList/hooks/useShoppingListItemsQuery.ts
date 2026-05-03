@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@apollo/client/react';
 import {
-  useGetShoppingListDetailsQuery,
-  GetShoppingListDetailsQuery,
-} from '#generated';
+  GetShoppingListDetailsDocument,
+  type GetShoppingListDetailsQuery,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
@@ -32,16 +33,15 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
   // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders (fixes infinite loop)
   // - errorPolicy: 'all' returns cached data when network fails (offline graceful degradation)
   // - skip controls execution - when skip is false, listId is guaranteed valid
-  const { data, previousData, loading, error, refetch } =
-    useGetShoppingListDetailsQuery({
+  const { data, previousData, loading, error, refetch } = useQuery(
+    GetShoppingListDetailsDocument,
+    {
       variables: {
         id: listId!,
       },
       skip: !hasValidListId,
-      fetchPolicy: 'cache-and-network',
-      nextFetchPolicy: 'cache-first',
-      errorPolicy: 'all',
-    });
+    },
+  );
 
   useApolloErrorLogger('GetShoppingListDetails', error);
 

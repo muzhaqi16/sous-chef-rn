@@ -2,11 +2,14 @@
  * useOpenPantryItemBatch - Mutation hook for marking a batch as opened
  */
 
+import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import { useOpenPantryItemBatchMutation } from '#generated';
+import {
+  OpenPantryItemBatchDocument,
+  type OpenPantryItemBatchMutation,
+} from '#features/pantry/graphql/pantry.generated';
 import { useErrorService } from '#/services/errorService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 
 interface UseOpenPantryItemBatchOptions {
   onSuccess?: () => void;
@@ -17,21 +20,27 @@ export function useOpenPantryItemBatch({
 }: UseOpenPantryItemBatchOptions = {}) {
   const { handleApolloError } = useErrorService();
 
-  const [openMutation, { loading }] = useOpenPantryItemBatchMutation({
-    errorPolicy: 'all',
-  });
+  const [openMutation, { loading }] = useMutation(
+    OpenPantryItemBatchDocument,
+    {},
+  );
 
   const openBatch = async (batchId: string): Promise<boolean> => {
     const now = new Date().toISOString();
 
+    const optimisticResponse: OpenPantryItemBatchMutation = {
+      __typename: 'Mutation',
+      openPantryItemBatch: {
+        __typename: 'PantryItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        pantryItem: null,
+      },
+    };
     const result = await openMutation({
       variables: { input: { batchId } },
-      optimisticResponse: buildOptimisticMutationResponse(
-        'openPantryItemBatch',
-        'PantryItemPayload',
-        'pantryItem',
-        null,
-      ),
+      optimisticResponse,
       update: cache => {
         // Optimistically update the batch in cache
         cache.modify({

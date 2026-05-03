@@ -5,9 +5,13 @@ const mockHomesQueryResult = {
   data: undefined as any,
 };
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useGetHomesQuery: jest.fn(() => mockHomesQueryResult),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useQuery: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'GetHomes') return mockHomesQueryResult;
+    return { data: undefined, loading: false, error: undefined };
+  }),
 }));
 
 const mockStoreState = {

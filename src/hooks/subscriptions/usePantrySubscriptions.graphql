@@ -1,0 +1,14 @@
+fragment usePantrySubscriptions_expirationNotification on ExpirationNotification {
+  id
+  daysUntilExpiry
+  actionTaken
+  genericNotificationId
+  pantryItem {
+    id
+    item {
+      id
+      name
+      imageUrl
+    }
+  }
+}

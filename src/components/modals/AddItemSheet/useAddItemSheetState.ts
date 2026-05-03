@@ -25,7 +25,8 @@ interface UseAddItemSheetStateOptions {
 export function useAddItemSheetState({
   visible,
   contextId,
-  deferFetch = true }: UseAddItemSheetStateOptions): AddItemSheetState {
+  deferFetch = true,
+}: UseAddItemSheetStateOptions): AddItemSheetState {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -68,7 +69,9 @@ export function useAddItemSheetState({
       // Defer fetch until after current frame (don't block sheet animation)
       const rafId = requestAnimationFrame(() => setShouldFetch(true));
       // Defer suggestion rendering until idle (sheet animation settled)
-      const idleId = requestIdleCallback(() => setShouldRenderSuggestions(true));
+      const idleId = requestIdleCallback(() =>
+        setShouldRenderSuggestions(true),
+      );
       return () => {
         cancelAnimationFrame(rafId);
         cancelIdleCallback(idleId);
@@ -103,5 +106,6 @@ export function useAddItemSheetState({
     startExitAnimation,
     completeExitAnimation,
     showSearchResults,
-    showSuggestions };
+    showSuggestions,
+  };
 }

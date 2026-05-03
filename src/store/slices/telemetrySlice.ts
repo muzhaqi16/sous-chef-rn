@@ -21,7 +21,8 @@ export interface TelemetryState {
 
 export const initialTelemetryState = {
   isEnabled: Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
-  enableMetrics: Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
+  enableMetrics:
+    Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
   enableLogs: false,
   enableConsoleInDev: false,
   userConsent: null,
@@ -72,9 +73,11 @@ export const createTelemetrySlice: StateCreator<
   getTelemetryConfig: (): Partial<TelemetryConfig> => {
     const state = get();
     return {
-      enabled: state.isEnabled && (state.userConsent !== false),
-      enableMetrics: state.enableMetrics && state.isEnabled && (state.userConsent !== false),
-      enableLogs: state.enableLogs && state.isEnabled && (state.userConsent !== false),
+      enabled: state.isEnabled && state.userConsent !== false,
+      enableMetrics:
+        state.enableMetrics && state.isEnabled && state.userConsent !== false,
+      enableLogs:
+        state.enableLogs && state.isEnabled && state.userConsent !== false,
       enableConsoleInDev: state.enableConsoleInDev,
     };
   },

@@ -1,7 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { NotificationItem } from '../NotificationItem';
-import { NotificationCategory, NotificationType } from '#generated';
+import {
+  NotificationCategory,
+  NotificationType,
+} from '#/graphql/generated/schemaTypes';
 import { NotificationPriority } from '#store/slices/notificationSlice';
 
 jest.mock('#utils/iconUtils', () => {

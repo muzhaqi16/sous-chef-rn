@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { toastService } from '#/services/toastService';
+import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react';
 import {
-  useGetStorageLocationsQuery,
-  useGetStorageLocationTreeLazyQuery,
-  useUpdateStorageLocationMutation,
-  useDeleteStorageLocationMutation,
-  useSetDefaultStorageLocationMutation,
-  UpdateStorageLocationInput,
-} from '#generated';
+  GetStorageLocationsDocument,
+  GetStorageLocationTreeDocument,
+  UpdateStorageLocationDocument,
+  DeleteStorageLocationDocument,
+  SetDefaultStorageLocationDocument,
+} from '#operations/storageLocation/storageLocation.generated';
+import { type UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { extractNodes } from '#/utils/connectionUtils';
 import {
@@ -82,21 +83,27 @@ export function useStorageLocationManagement(
   // PERFORMANCE OPTIMIZATION:
   // Use cache-first to show cached data instantly, then background refresh with nextFetchPolicy.
   // This reduces initial network load and shows UI immediately.
-  const { data, loading, error, refetch } = useGetStorageLocationsQuery({
-    variables: { homeId: homeId ?? '' },
-    skip: shouldSkip,
-    fetchPolicy: 'cache-first', // Show cached data instantly
-    nextFetchPolicy: 'cache-and-network', // Background refresh on subsequent fetches
-    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
-  });
+  const { data, loading, error, refetch } = useQuery(
+    GetStorageLocationsDocument,
+    {
+      variables: { homeId: homeId ?? '' },
+      skip: shouldSkip,
+      fetchPolicy: 'cache-first', // Show cached data instantly
+      nextFetchPolicy: 'cache-and-network', // Background refresh on subsequent fetches
+      errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
+    },
+  );
 
   // PERFORMANCE: Tree query is lazy - only needed for management screens, not filter tabs.
   // The flat list query above is sufficient for most UI needs.
   // We can build a tree from the flat list as a fallback.
-  const [fetchTree, { data: treeData }] = useGetStorageLocationTreeLazyQuery({
-    fetchPolicy: 'cache-first',
-    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
-  });
+  const [fetchTree, { data: treeData }] = useLazyQuery(
+    GetStorageLocationTreeDocument,
+    {
+      fetchPolicy: 'cache-first',
+      errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
+    },
+  );
 
   // Fetch tree data after initial locations load (deferred, non-blocking)
   useEffect(() => {
@@ -129,8 +136,9 @@ export function useStorageLocationManagement(
     pantryId,
   );
 
-  const [updateMutation, { loading: updating }] =
-    useUpdateStorageLocationMutation({
+  const [updateMutation, { loading: updating }] = useMutation(
+    UpdateStorageLocationDocument,
+    {
       // Update mutation automatically updates the cache for modified fields
       // No manual cache update needed - Apollo handles it automatically
       onError: error => {
@@ -138,10 +146,10 @@ export function useStorageLocationManagement(
           error.message || 'Failed to update storage location',
         );
       },
-    });
+    },
+  );
 
-  const [deleteMutation] = useDeleteStorageLocationMutation({
-    errorPolicy: 'all',
+  const [deleteMutation] = useMutation(DeleteStorageLocationDocument, {
     update: (cache, { data }, { variables }) => {
       if (!data?.deleteStorageLocation?.success || !variables || !homeId)
         return;
@@ -179,7 +187,7 @@ export function useStorageLocationManagement(
     },
   });
 
-  const [setDefaultMutation] = useSetDefaultStorageLocationMutation({
+  const [setDefaultMutation] = useMutation(SetDefaultStorageLocationDocument, {
     // SetDefault mutation returns the updated location with isDefault field
     // Apollo automatically updates the cache for this location
     // No manual cache update needed

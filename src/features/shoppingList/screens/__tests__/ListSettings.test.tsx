@@ -51,12 +51,16 @@ jest.mock('#features/shoppingList/hooks/useShoppingListsQuery', () => ({
   useShoppingListsQuery: () => ({ lists: [] }),
 }));
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useUpdateShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useDeleteShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useCreateShoppingListMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useRemoveCollaboratorMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'UpdateShoppingList') return [jest.fn(), { loading: false }];
+    if (opName === 'DeleteShoppingList') return [jest.fn(), { loading: false }];
+    if (opName === 'CreateShoppingList') return [jest.fn(), { loading: false }];
+    if (opName === 'RemoveCollaborator') return [jest.fn(), { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({

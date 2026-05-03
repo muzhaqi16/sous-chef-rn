@@ -18,11 +18,18 @@ describe('toastService', () => {
   describe('success', () => {
     it('calls showToast with success type', () => {
       toastService.success('Item saved');
-      expect(showToast).toHaveBeenCalledWith('Item saved', 'success', undefined);
+      expect(showToast).toHaveBeenCalledWith(
+        'Item saved',
+        'success',
+        undefined,
+      );
     });
 
     it('passes options', () => {
-      const opts: { duration: number; position: 'top' } = { duration: 5000, position: 'top' };
+      const opts: { duration: number; position: 'top' } = {
+        duration: 5000,
+        position: 'top',
+      };
       toastService.success('Done', opts);
       expect(showToast).toHaveBeenCalledWith('Done', 'success', opts);
     });
@@ -45,7 +52,11 @@ describe('toastService', () => {
   describe('warning', () => {
     it('calls showToast with warning type', () => {
       toastService.warning('Unsaved changes');
-      expect(showToast).toHaveBeenCalledWith('Unsaved changes', 'warning', undefined);
+      expect(showToast).toHaveBeenCalledWith(
+        'Unsaved changes',
+        'warning',
+        undefined,
+      );
     });
   });
 
@@ -95,7 +106,11 @@ describe('toastService', () => {
   describe('showErrorToast', () => {
     it('shows error message', () => {
       showErrorToast({ message: 'Something went wrong' });
-      expect(showToast).toHaveBeenCalledWith('Something went wrong', 'error', undefined);
+      expect(showToast).toHaveBeenCalledWith(
+        'Something went wrong',
+        'error',
+        undefined,
+      );
     });
   });
 });

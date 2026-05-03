@@ -5,22 +5,31 @@ import { usePantryItemActions } from '../usePantryItemActions';
 const mockCacheModify = jest.fn();
 const mockCacheIdentify = jest.fn((obj: any) => `${obj.__typename}:${obj.id}`);
 
+const mockCreatePantryItemUsage = jest.fn();
+const mockRestockPantryItem = jest.fn();
+
+// Mock the Apollo React hooks our hook calls so we can intercept the mutation
+// invocations and observe `client.cache.modify` calls without spinning up a
+// MockedProvider — that would force us to assert on cache state instead of
+// spies, which would change every assertion in this file.
 jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
   useApolloClient: jest.fn(() => ({
     cache: {
       modify: mockCacheModify,
       identify: mockCacheIdentify,
     },
   })),
-}));
-
-const mockCreatePantryItemUsage = jest.fn();
-const mockRestockPantryItem = jest.fn();
-
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreatePantryItemUsageMutation: jest.fn(() => [mockCreatePantryItemUsage]),
-  useRestockPantryItemMutation: jest.fn(() => [mockRestockPantryItem]),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'CreatePantryItemUsage') {
+      return [mockCreatePantryItemUsage, { loading: false }];
+    }
+    if (opName === 'RestockPantryItem') {
+      return [mockRestockPantryItem, { loading: false }];
+    }
+    return [jest.fn(), { loading: false }];
+  }),
 }));
 
 jest.mock('#/utils/isNetworkError', () => ({

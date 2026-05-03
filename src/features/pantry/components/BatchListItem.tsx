@@ -3,7 +3,8 @@ import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
-import { BatchStatus, type PantryItemBatchFragment } from '#generated';
+import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { type PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 

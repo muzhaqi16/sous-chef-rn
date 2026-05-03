@@ -1,20 +1,23 @@
+import { useMutation } from '@apollo/client/react';
+import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
-  useCreateMealPlanFromTemplateMutation,
-  useCreateTemplateFromMealPlanMutation,
-  useDeleteMealTemplateMutation,
-  useDuplicateTemplateMutation,
+  CreateMealPlanFromTemplateDocument,
+  CreateTemplateFromMealPlanDocument,
+  DeleteMealTemplateDocument,
+  DuplicateTemplateDocument,
   GetMealTemplatesDocument,
-  GetMealPlansDocument,
+} from '#features/mealPlan/graphql/mealTemplate.generated';
+import {
   type CreateMealPlanFromTemplateInput,
   type CreateTemplateFromMealPlanInput,
-} from '#generated';
+} from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 export function useMealTemplateActions() {
   const [createFromTemplateMutation, { loading: creatingFromTemplate }] =
-    useCreateMealPlanFromTemplateMutation({
+    useMutation(CreateMealPlanFromTemplateDocument, {
       refetchQueries: [{ query: GetMealPlansDocument }],
       onError: error => {
         toastService.error(
@@ -23,29 +26,35 @@ export function useMealTemplateActions() {
       },
     });
 
-  const [createTemplateMutation, { loading: creatingTemplate }] =
-    useCreateTemplateFromMealPlanMutation({
+  const [createTemplateMutation, { loading: creatingTemplate }] = useMutation(
+    CreateTemplateFromMealPlanDocument,
+    {
       refetchQueries: [{ query: GetMealTemplatesDocument }],
       onError: error => {
         toastService.error(error.message || 'Failed to save as template');
       },
-    });
+    },
+  );
 
-  const [deleteTemplateMutation, { loading: deleting }] =
-    useDeleteMealTemplateMutation({
+  const [deleteTemplateMutation, { loading: deleting }] = useMutation(
+    DeleteMealTemplateDocument,
+    {
       refetchQueries: [{ query: GetMealTemplatesDocument }],
       onError: error => {
         toastService.error(error.message || 'Failed to delete template');
       },
-    });
+    },
+  );
 
-  const [duplicateTemplateMutation, { loading: duplicating }] =
-    useDuplicateTemplateMutation({
+  const [duplicateTemplateMutation, { loading: duplicating }] = useMutation(
+    DuplicateTemplateDocument,
+    {
       refetchQueries: [{ query: GetMealTemplatesDocument }],
       onError: error => {
         toastService.error(error.message || 'Failed to duplicate template');
       },
-    });
+    },
+  );
 
   const createPlanFromTemplate = async (
     input: CreateMealPlanFromTemplateInput,

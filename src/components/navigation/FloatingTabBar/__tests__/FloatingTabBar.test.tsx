@@ -2,7 +2,10 @@
 
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
-import { FloatingTabBar as _FloatingTabBar, TAB_BAR_HEIGHT } from '../FloatingTabBar';
+import {
+  FloatingTabBar as _FloatingTabBar,
+  TAB_BAR_HEIGHT,
+} from '../FloatingTabBar';
 const FloatingTabBar = _FloatingTabBar as any;
 
 // Mock TabBarActionsContext
@@ -89,7 +92,11 @@ jest.mock('../TabItem', () => {
     TabItem: ({ route, isFocused, onPress }: any) =>
       R.createElement(
         RN.Pressable,
-        { testID: `tab-${route.name}`, onPress, accessibilityState: { selected: isFocused } },
+        {
+          testID: `tab-${route.name}`,
+          onPress,
+          accessibilityState: { selected: isFocused },
+        },
         R.createElement(RN.Text, {}, route.name),
       ),
   };
@@ -104,7 +111,15 @@ function createNavigationState(
     name,
     params: {},
   }));
-  return { routes, index, type: 'tab', key: 'tab-key', routeNames, stale: false, history: [] } as any;
+  return {
+    routes,
+    index,
+    type: 'tab',
+    key: 'tab-key',
+    routeNames,
+    stale: false,
+    history: [],
+  } as any;
 }
 
 function createDescriptors(
@@ -347,7 +362,10 @@ describe('FloatingTabBar', () => {
   });
 
   it('sets active tab on mount', () => {
-    const state = createNavigationState(['Pantry', 'ShoppingList', 'Recipe', 'MealPlan'], 0);
+    const state = createNavigationState(
+      ['Pantry', 'ShoppingList', 'Recipe', 'MealPlan'],
+      0,
+    );
     render(
       <FloatingTabBar
         state={state}

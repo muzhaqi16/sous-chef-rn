@@ -19,7 +19,9 @@ describe('CardRightSlot', () => {
   });
 
   it('renders tertiary meta text', () => {
-    render(<CardRightSlot type="meta" primary="$4.99" tertiary="expires soon" />);
+    render(
+      <CardRightSlot type="meta" primary="$4.99" tertiary="expires soon" />,
+    );
     expect(screen.getByText('expires soon')).toBeTruthy();
   });
 

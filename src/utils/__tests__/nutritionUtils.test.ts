@@ -123,12 +123,18 @@ describe('generateHighlights', () => {
 
   it('detects High Protein (>= 10g)', () => {
     const highlights = generateHighlights(mockNutritions as any);
-    expect(highlights).toContainEqual({ label: 'High Protein', type: 'positive' });
+    expect(highlights).toContainEqual({
+      label: 'High Protein',
+      type: 'positive',
+    });
   });
 
   it('detects Good Fiber (>= 3g)', () => {
     const highlights = generateHighlights(mockNutritions as any);
-    expect(highlights).toContainEqual({ label: 'Good Fiber', type: 'positive' });
+    expect(highlights).toContainEqual({
+      label: 'Good Fiber',
+      type: 'positive',
+    });
   });
 
   it('detects Low Sugar (<= 5g)', () => {
@@ -138,7 +144,10 @@ describe('generateHighlights', () => {
 
   it('detects High Sodium (>= 600mg) as caution', () => {
     const highlights = generateHighlights(mockNutritions as any);
-    expect(highlights).toContainEqual({ label: 'High Sodium', type: 'caution' });
+    expect(highlights).toContainEqual({
+      label: 'High Sodium',
+      type: 'caution',
+    });
   });
 
   it('detects Vitamin C (>= 9mg)', () => {

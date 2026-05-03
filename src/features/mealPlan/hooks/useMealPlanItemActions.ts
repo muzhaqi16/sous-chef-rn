@@ -1,12 +1,16 @@
+import { useMutation } from '@apollo/client/react';
 import {
-  useCreateMealPlanItemMutation,
-  useUpdateMealPlanItemMutation,
-  useDeleteMealPlanItemMutation,
+  CreateMealPlanItemDocument,
+  UpdateMealPlanItemDocument,
+  DeleteMealPlanItemDocument,
+  GetMealPlanDocument,
+  type UpdateMealPlanItemMutation,
+} from '#features/mealPlan/graphql/mealPlan.generated';
+import { type MealPlanItemActions_ItemFragment } from './useMealPlanItemActions.generated';
+import {
   type CreateMealPlanItemInput,
   type UpdateMealPlanItemInput,
-  type MealPlanItemFragment,
-  GetMealPlanDocument,
-} from '#generated';
+} from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import {
@@ -29,8 +33,9 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     ? [{ query: GetMealPlanDocument, variables: { id: mealPlanId } }]
     : [];
 
-  const [createItemMutation, { loading: creating }] =
-    useCreateMealPlanItemMutation({
+  const [createItemMutation, { loading: creating }] = useMutation(
+    CreateMealPlanItemDocument,
+    {
       refetchQueries: refetchConfig,
       awaitRefetchQueries: true,
       update(cache, { data }) {
@@ -42,15 +47,19 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
           { position: 'end' },
         );
       },
-    });
+    },
+  );
 
-  const [updateItemMutation, { loading: updating }] =
-    useUpdateMealPlanItemMutation({
+  const [updateItemMutation, { loading: updating }] = useMutation(
+    UpdateMealPlanItemDocument,
+    {
       refetchQueries: refetchConfig,
-    });
+    },
+  );
 
-  const [deleteItemMutation, { loading: deleting }] =
-    useDeleteMealPlanItemMutation({
+  const [deleteItemMutation, { loading: deleting }] = useMutation(
+    DeleteMealPlanItemDocument,
+    {
       refetchQueries: refetchConfig,
       awaitRefetchQueries: true,
       update(cache, { data }) {
@@ -62,7 +71,8 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
           { evictItem: true },
         );
       },
-    });
+    },
+  );
 
   const createItem = async (input: CreateMealPlanItemInput) => {
     const result = await createItemMutation({
@@ -89,7 +99,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
   };
 
   const toggleCompleted = async (
-    item: MealPlanItemFragment,
+    item: MealPlanItemActions_ItemFragment,
     options?: { deductFromPantry?: boolean; servings?: number; notes?: string },
   ) => {
     const markingComplete = !item.isCompleted;
@@ -131,7 +141,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
             completedAt: markingComplete ? new Date().toISOString() : null,
             ...(options?.servings != null && { servings: options.servings }),
             ...(options?.notes != null && { notes: options.notes }),
-          },
+          } as UpdateMealPlanItemMutation['updateMealPlanItem']['mealPlanItem'],
         },
       },
     });

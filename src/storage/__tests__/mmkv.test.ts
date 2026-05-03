@@ -3,7 +3,9 @@ import { STORAGE_KEY, storage, zustandStorage, getStorage } from '../mmkv';
 // Mock DeviceKeyManager
 jest.mock('#/utils/security/deviceKey', () => ({
   DeviceKeyManager: {
-    getDeviceEncryptionKey: jest.fn(() => Promise.resolve('test-encryption-key')),
+    getDeviceEncryptionKey: jest.fn(() =>
+      Promise.resolve('test-encryption-key'),
+    ),
   },
 }));
 

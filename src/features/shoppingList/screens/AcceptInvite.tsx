@@ -6,14 +6,17 @@ import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useMutation, useQuery } from '@apollo/client/react';
 import {
-  useMyShoppingListInvitesQuery,
-  useAcceptShoppingListInviteMutation,
-  useDeclineShoppingListInviteMutation,
-  useGetMyPendingInvitesQuery,
-  useAcceptHomeInviteMutation,
-  useDeclineHomeInviteMutation,
-} from '#generated';
+  MyShoppingListInvitesDocument,
+  AcceptShoppingListInviteDocument,
+  DeclineShoppingListInviteDocument,
+} from '#features/shoppingList/graphql/collaboration.generated';
+import {
+  GetMyPendingInvitesDocument,
+  AcceptHomeInviteDocument,
+  DeclineHomeInviteDocument,
+} from '#operations/home/home.generated';
 import { errorService, getErrorMessage } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
@@ -35,20 +38,26 @@ export const AcceptInvite: React.FC = () => {
     useState<InvitationType>('unknown');
 
   // Get shopping list invites
-  const { data: shoppingListData, loading: shoppingListLoading } =
-    useMyShoppingListInvitesQuery();
+  const { data: shoppingListData, loading: shoppingListLoading } = useQuery(
+    MyShoppingListInvitesDocument,
+  );
 
   // Get home invites
-  const { data: homeInviteData, loading: homeInviteLoading } =
-    useGetMyPendingInvitesQuery();
+  const { data: homeInviteData, loading: homeInviteLoading } = useQuery(
+    GetMyPendingInvitesDocument,
+  );
 
   // Mutations for shopping list invites
-  const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation();
-  const [declineShoppingListInvite] = useDeclineShoppingListInviteMutation();
+  const [acceptShoppingListInvite] = useMutation(
+    AcceptShoppingListInviteDocument,
+  );
+  const [declineShoppingListInvite] = useMutation(
+    DeclineShoppingListInviteDocument,
+  );
 
   // Mutations for home invites
-  const [acceptHomeInvite] = useAcceptHomeInviteMutation();
-  const [declineHomeInvite] = useDeclineHomeInviteMutation();
+  const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument);
+  const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument);
 
   const loading = shoppingListLoading || homeInviteLoading;
 

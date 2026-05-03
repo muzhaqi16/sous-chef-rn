@@ -2,9 +2,18 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { PantryContent } from '../PantryContent';
-import { PantryItem, StorageState } from '#generated';
+import {
+  PantryItem,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
 
-function createMockPantryItem(overrides: Partial<PantryItem> = {}): PantryItem {
+type DeepPartial<T> = T extends object
+  ? { [P in keyof T]?: DeepPartial<T[P]> }
+  : T;
+
+function createMockPantryItem(
+  overrides: DeepPartial<PantryItem> = {},
+): PantryItem {
   return {
     __typename: 'PantryItem',
     id: 'mock-id',
@@ -40,7 +49,7 @@ function createMockPantryItem(overrides: Partial<PantryItem> = {}): PantryItem {
       netWeight: null,
       netWeightUnit: null,
       packageBreakdown: null,
-    } as any,
+    },
     itemId: 'item-1',
     unit: null,
     unitId: null,
@@ -58,8 +67,8 @@ function createMockPantryItem(overrides: Partial<PantryItem> = {}): PantryItem {
     storeId: null,
     purchase: null,
     purchaseId: null,
-    condition: 'FRESH' as any,
-    acquisitionMethod: 'PURCHASED' as any,
+    condition: 'FRESH',
+    acquisitionMethod: 'PURCHASED',
     isLowStock: false,
     lowStockAlert: false,
     expirationAlert: false,
@@ -73,7 +82,7 @@ function createMockPantryItem(overrides: Partial<PantryItem> = {}): PantryItem {
     tags: [],
     photos: [],
     sourceShoppingListItemId: null,
-    pantry: { __typename: 'Pantry', id: 'pantry-1' } as any,
+    pantry: { __typename: 'Pantry', id: 'pantry-1' },
     pantryId: 'pantry-1',
     version: 1,
     changeHistory: {
@@ -84,7 +93,7 @@ function createMockPantryItem(overrides: Partial<PantryItem> = {}): PantryItem {
         hasNextPage: false,
         hasPreviousPage: false,
       },
-    } as any,
+    },
     usageRecords: {
       __typename: 'PantryItemUsageConnection',
       edges: [],
@@ -93,8 +102,8 @@ function createMockPantryItem(overrides: Partial<PantryItem> = {}): PantryItem {
         hasNextPage: false,
         hasPreviousPage: false,
       },
-    } as any,
-    ledger: { __typename: 'LedgerSummary' } as any,
+    },
+    ledger: { __typename: 'LedgerSummary' },
     ...overrides,
   } as PantryItem;
 }
@@ -405,9 +414,7 @@ describe('PantryContent', () => {
   it('renders sort direction indicator as descending arrow', () => {
     const items = [createMockPantryItem({ id: '1' })];
     const stats = { totalItems: 1, expiringCount: 0, lowStockCount: 0 };
-    render(
-      <PantryContent {...defaultProps} items={items} stats={stats as any} />,
-    );
+    render(<PantryContent {...defaultProps} items={items} stats={stats} />);
     expect(screen.getByText(/Sort/)).toBeTruthy();
   });
 
@@ -425,13 +432,7 @@ describe('PantryContent', () => {
 
     const sortItems = [createMockPantryItem({ id: '1' })];
     const stats = { totalItems: 1, expiringCount: 0, lowStockCount: 0 };
-    render(
-      <PantryContent
-        {...defaultProps}
-        items={sortItems}
-        stats={stats as any}
-      />,
-    );
+    render(<PantryContent {...defaultProps} items={sortItems} stats={stats} />);
     expect(screen.getByText(/Sort/)).toBeTruthy();
 
     // Restore
@@ -476,7 +477,7 @@ describe('PantryContent', () => {
 
   it('renders items without itemName as Unknown Item', () => {
     const items = [
-      createMockPantryItem({ id: '1', itemName: null as any, quantity: 1 }),
+      createMockPantryItem({ id: '1', itemName: '', quantity: 1 }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
     expect(screen.getByText('Unknown Item')).toBeTruthy();
@@ -541,7 +542,7 @@ describe('PantryContent', () => {
         id: '1',
         itemName: 'Cheese',
         quantity: 2,
-        storageLocation: { id: 'loc-1', name: 'Kitchen Cabinet' } as any,
+        storageLocation: { id: 'loc-1', name: 'Kitchen Cabinet' },
       }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);
@@ -580,7 +581,7 @@ describe('PantryContent', () => {
         id: '1',
         itemName: 'Flour',
         quantity: 500,
-        unit: { symbol: 'g' } as any,
+        unit: { symbol: 'g' },
       }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);

@@ -6,7 +6,11 @@ export interface PantryItemDuplicateInfo {
 const ERROR_CODE = 'PANTRY_ITEM_ALREADY_EXISTS';
 
 interface GraphQLErrorLike {
-  extensions?: { code?: string; existingPantryItemId?: string; existingPantryItemIds?: string[] };
+  extensions?: {
+    code?: string;
+    existingPantryItemId?: string;
+    existingPantryItemIds?: string[];
+  };
   message?: string;
 }
 
@@ -37,17 +41,11 @@ function getGraphQLErrors(error: unknown): GraphQLErrorLike[] | null {
 export function isPantryItemDuplicateError(error: unknown): boolean {
   const gqlErrors = getGraphQLErrors(error);
   if (gqlErrors) {
-    return gqlErrors.some(
-      (err) => err.extensions?.code === ERROR_CODE,
-    );
+    return gqlErrors.some(err => err.extensions?.code === ERROR_CODE);
   }
 
   // Single GraphQL error with extensions
-  if (
-    error != null &&
-    typeof error === 'object' &&
-    'extensions' in error
-  ) {
+  if (error != null && typeof error === 'object' && 'extensions' in error) {
     const { extensions } = error as GraphQLErrorLike;
     return extensions?.code === ERROR_CODE;
   }
@@ -68,9 +66,7 @@ export function getPantryItemDuplicateInfo(
 
   const gqlErrors = getGraphQLErrors(error);
   if (gqlErrors) {
-    duplicateError = gqlErrors.find(
-      (err) => err.extensions?.code === ERROR_CODE,
-    );
+    duplicateError = gqlErrors.find(err => err.extensions?.code === ERROR_CODE);
   } else if (
     error != null &&
     typeof error === 'object' &&

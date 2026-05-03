@@ -15,9 +15,16 @@ jest.mock('#components/molecules/FormInput', () => ({
   FormInput: ({ label, value, onChangeText, placeholder }: any) => {
     const RN = require('react-native');
     const R = require('react');
-    return R.createElement(RN.View, null,
+    return R.createElement(
+      RN.View,
+      null,
       R.createElement(RN.Text, null, label),
-      R.createElement(RN.TextInput, { value, onChangeText, placeholder, testID: `input-${label}` }),
+      R.createElement(RN.TextInput, {
+        value,
+        onChangeText,
+        placeholder,
+        testID: `input-${label}`,
+      }),
     );
   },
 }));
@@ -26,10 +33,20 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
   BottomSheetHeader: ({ title, onCancel, onConfirm, confirmLabel }: any) => {
     const RN = require('react-native');
     const R = require('react');
-    return R.createElement(RN.View, { testID: 'header' },
+    return R.createElement(
+      RN.View,
+      { testID: 'header' },
       R.createElement(RN.Text, null, title),
-      R.createElement(RN.Pressable, { onPress: onCancel, testID: 'cancel-btn' }, R.createElement(RN.Text, null, 'Cancel')),
-      R.createElement(RN.Pressable, { onPress: onConfirm, testID: 'save-btn' }, R.createElement(RN.Text, null, confirmLabel)),
+      R.createElement(
+        RN.Pressable,
+        { onPress: onCancel, testID: 'cancel-btn' },
+        R.createElement(RN.Text, null, 'Cancel'),
+      ),
+      R.createElement(
+        RN.Pressable,
+        { onPress: onConfirm, testID: 'save-btn' },
+        R.createElement(RN.Text, null, confirmLabel),
+      ),
     );
   },
 }));
@@ -62,7 +79,9 @@ describe('MacroTargetsSheet', () => {
 
   it('renders description text', () => {
     render(<MacroTargetsSheet {...defaultProps} />);
-    expect(screen.getByText('Set your daily nutrition goals (optional)')).toBeTruthy();
+    expect(
+      screen.getByText('Set your daily nutrition goals (optional)'),
+    ).toBeTruthy();
   });
 
   it('renders all four macro input fields', () => {

@@ -21,7 +21,8 @@ import {
   type ChipOption,
 } from '#components/atoms/ChipScrollRow';
 import { useMealTemplates } from '#features/mealPlan/hooks/useMealTemplates';
-import { TemplateCategory, type MealTemplateDisplayFragment } from '#generated';
+import { TemplateCategory } from '#/graphql/generated/schemaTypes';
+import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 

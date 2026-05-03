@@ -1,4 +1,5 @@
-import { useGetHomesLazyQuery } from '#generated';
+import { useLazyQuery } from '@apollo/client/react';
+import { GetHomesDocument } from '#operations/home/home.generated';
 import { useSelectedHomeId, useSelectedPantryId } from '#store/useAppStore';
 import {
   normalizeHome,
@@ -22,10 +23,13 @@ export function useLazyHomeData() {
   const selectedHomeId = useSelectedHomeId();
   const selectedPantryId = useSelectedPantryId();
 
-  const [getHomes, { data: homesData, loading }] = useGetHomesLazyQuery({
-    fetchPolicy: 'cache-first', // Use cache if available
-    errorPolicy: 'ignore',
-  });
+  const [getHomes, { data: homesData, loading }] = useLazyQuery(
+    GetHomesDocument,
+    {
+      fetchPolicy: 'cache-first', // Use cache if available
+      errorPolicy: 'ignore',
+    },
+  );
 
   // Normalize homes data (extract nodes from connection type)
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error

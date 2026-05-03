@@ -7,19 +7,22 @@
  * - Optimistic response with cache update
  */
 
+import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import {
-  useUpdatePantryItemQuantityMutation,
+  UpdatePantryItemQuantityDocument,
+  type UpdatePantryItemQuantityMutation,
+} from '#features/pantry/graphql/pantry.generated';
+import {
   PantryItemDisplayFragmentDoc,
-  PantryItemFragment,
-} from '#generated';
+  type PantryItemFragment,
+} from '#features/pantry/graphql/pantryFragments.generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import { buildOptimisticUnit } from './utils';
 import type { UnitSelection } from './types';
 
@@ -61,33 +64,35 @@ export function useUpdatePantryItemQuantity({
 }: UseUpdatePantryItemQuantityOptions) {
   const { handleApolloError } = useErrorService();
 
-  const [updateQuantityMutation] = useUpdatePantryItemQuantityMutation({
-    errorPolicy: 'all',
-    update: (cache, { data }) => {
-      const pantryItem = data?.updatePantryItemQuantity?.pantryItem;
-      if (!pantryItem) return;
+  const [updateQuantityMutation] = useMutation(
+    UpdatePantryItemQuantityDocument,
+    {
+      update: (cache, { data }) => {
+        const pantryItem = data?.updatePantryItemQuantity?.pantryItem;
+        if (!pantryItem) return;
 
-      cache.writeFragment({
-        id: cache.identify({ __typename: 'PantryItem', id: pantryItem.id }),
-        fragment: PantryItemDisplayFragmentDoc,
-        fragmentName: 'PantryItemDisplay',
-        data: pantryItem,
-      });
+        cache.writeFragment({
+          id: cache.identify({ __typename: 'PantryItem', id: pantryItem.id }),
+          fragment: PantryItemDisplayFragmentDoc,
+          fragmentName: 'PantryItemDisplay',
+          data: pantryItem,
+        });
+      },
+      onError: error => {
+        if (handleVersionConflict(error)) {
+          alertService.alert('Item Updated', getVersionConflictMessage(error), [
+            { text: 'Refresh', onPress: () => refetch?.() },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+          return;
+        }
+        const { message } = handleApolloError(error, {
+          operation: 'Update Quantity',
+        });
+        alertService.alert('Error', message);
+      },
     },
-    onError: error => {
-      if (handleVersionConflict(error)) {
-        alertService.alert('Item Updated', getVersionConflictMessage(error), [
-          { text: 'Refresh', onPress: () => refetch?.() },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-        return;
-      }
-      const { message } = handleApolloError(error, {
-        operation: 'Update Quantity',
-      });
-      alertService.alert('Error', message);
-    },
-  });
+  );
 
   /**
    * Update quantity and/or unit of a pantry item
@@ -104,6 +109,21 @@ export function useUpdatePantryItemQuantity({
     const newQuantity = parseFloat(quantityInput || quantityValue.toString());
 
     // Fire mutation asynchronously - don't await to allow immediate navigation
+    const optimisticPantryItem = enhanceWithVersion(currentItem, {
+      quantity: newQuantity,
+      unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
+    });
+    const optimisticResponse: UpdatePantryItemQuantityMutation = {
+      __typename: 'Mutation',
+      updatePantryItemQuantity: {
+        __typename: 'PantryItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        pantryItem:
+          optimisticPantryItem as UpdatePantryItemQuantityMutation['updatePantryItemQuantity']['pantryItem'],
+      },
+    };
     updateQuantityMutation({
       variables: {
         pantryItemId: itemId,
@@ -111,15 +131,7 @@ export function useUpdatePantryItemQuantity({
         unitId: unitId,
         version: currentItem.version ?? undefined,
       },
-      optimisticResponse: buildOptimisticMutationResponse(
-        'updatePantryItemQuantity',
-        'PantryItemPayload',
-        'pantryItem',
-        enhanceWithVersion(currentItem, {
-          quantity: newQuantity,
-          unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
-        }),
-      ),
+      optimisticResponse,
     }).catch(error => {
       console.error('Quantity update failed:', error);
       // Error already handled by mutation's onError

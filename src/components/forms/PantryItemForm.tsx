@@ -13,17 +13,19 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string } from 'yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useNavigation } from '@react-navigation/native';
-
 import { commonStyles } from '#/styles/commonStyles';
 import { useSelectedPantryId, useSelectedHomeId } from '#store/useAppStore';
-import { normalizeHome } from '#/utils/connectionUtils';
+import { normalizeHome, normalizePantry } from '#/utils/connectionUtils';
+import { useQuery } from '@apollo/client/react';
+import { GetHomeDocument } from '#operations/home/home.generated';
+import {
+  GetPantryDocument,
+  GetPantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import {
   StorageState,
-  useGetPantryItemQuery,
-  useGetHomeQuery,
-  useGetPantryQuery,
-  ItemSuggestion,
-} from '#generated';
+  type ItemSuggestion,
+} from '#/graphql/generated/schemaTypes';
 import { useCreatePantryItem } from '#features/pantry/hooks/mutations/useCreatePantryItem';
 import { useUpdatePantryItem } from '#features/pantry/hooks/mutations/useUpdatePantryItem';
 import { useUpdatePantryItemQuantity } from '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity';
@@ -33,7 +35,6 @@ import {
   type UnitSelection,
 } from '#features/pantry/hooks/mutations/types';
 import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
-import { normalizePantry } from '#/utils/connectionUtils';
 import {
   DynamicFormFields,
   FieldDef,
@@ -185,7 +186,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     );
   };
 
-  const { data: homeData } = useGetHomeQuery({
+  const { data: homeData } = useQuery(GetHomeDocument, {
     variables: { homeId: selectedHomeId ?? '' },
     skip: !selectedHomeId,
   });
@@ -195,7 +196,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     data: existingItemData,
     loading: itemLoading,
     refetch: refetchItem,
-  } = useGetPantryItemQuery({
+  } = useQuery(GetPantryItemDocument, {
     variables: { id: itemId ?? '' },
     skip: mode !== 'edit' || !itemId,
   });
@@ -205,7 +206,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     selectedPantryId || pantry?.id || existingItemData?.pantryItem?.pantryId;
 
   // Fetch pantry details to get storage locations
-  const { data: pantryData } = useGetPantryQuery({
+  const { data: pantryData } = useQuery(GetPantryDocument, {
     variables: { id: currentPantryId ?? '' },
     skip: !currentPantryId,
     fetchPolicy: 'cache-first',

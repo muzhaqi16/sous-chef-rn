@@ -5,11 +5,10 @@
  * Creates an ADJUSTMENT usage record with mandatory reason for audit trail.
  */
 
+import { useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import {
-  useAdjustPantryItemQuantityMutation,
-  PantryItemDisplayFragmentDoc,
-} from '#generated';
+import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
+import { PantryItemDisplayFragmentDoc } from '#features/pantry/graphql/pantryFragments.generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
@@ -30,9 +29,10 @@ export function useAdjustPantryItemQuantity({
 }: UseAdjustPantryItemQuantityOptions = {}) {
   const { handleApolloError } = useErrorService();
 
-  const [adjustMutation, { loading }] = useAdjustPantryItemQuantityMutation({
-    errorPolicy: 'all',
-  });
+  const [adjustMutation, { loading }] = useMutation(
+    AdjustPantryItemQuantityDocument,
+    {},
+  );
 
   const adjustQuantity = async (
     pantryItemId: string,

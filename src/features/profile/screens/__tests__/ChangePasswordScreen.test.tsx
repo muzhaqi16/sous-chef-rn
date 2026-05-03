@@ -17,9 +17,14 @@ const mockNav = (
   }
 ).useAppNavigation();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useChangePasswordMutation: () => [mockChangePassword],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'ChangePassword')
+      return [mockChangePassword, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#hooks/useToast', () => ({

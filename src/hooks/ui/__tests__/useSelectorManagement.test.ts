@@ -7,7 +7,12 @@ beforeEach(() => {
 
 describe('useSelectorManagement', () => {
   const createMockRef = (openFn = jest.fn()) => ({
-    current: { open: openFn, close: jest.fn(), isActive: jest.fn(() => false), toggle: jest.fn() },
+    current: {
+      open: openFn,
+      close: jest.fn(),
+      isActive: jest.fn(() => false),
+      toggle: jest.fn(),
+    },
   });
 
   it('returns handleOpenSelector, handleOverlayOpen, and handleOverlayClose', () => {
@@ -127,7 +132,12 @@ describe('useSelectorManagement', () => {
 
     // Now set the ref
     const mockOpen = jest.fn();
-    selectorRef.current = { open: mockOpen, close: jest.fn(), isActive: jest.fn(() => false), toggle: jest.fn() };
+    selectorRef.current = {
+      open: mockOpen,
+      close: jest.fn(),
+      isActive: jest.fn(() => false),
+      toggle: jest.fn(),
+    };
 
     act(() => {
       result.current.handleOpenSelector();

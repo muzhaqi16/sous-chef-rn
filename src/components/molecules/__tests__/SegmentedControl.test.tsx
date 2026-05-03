@@ -39,7 +39,8 @@ describe('SegmentedControl', () => {
   });
 
   it('uses formatLabel to display option text', () => {
-    const formatLabel = (val: string) => val.charAt(0).toUpperCase() + val.slice(1);
+    const formatLabel = (val: string) =>
+      val.charAt(0).toUpperCase() + val.slice(1);
     render(<SegmentedControl {...defaultProps} formatLabel={formatLabel} />);
     expect(screen.getByText('Daily')).toBeTruthy();
     expect(screen.getByText('Weekly')).toBeTruthy();
@@ -52,9 +53,7 @@ describe('SegmentedControl', () => {
   });
 
   it('renders required indicator when label and required are set', () => {
-    render(
-      <SegmentedControl {...defaultProps} label="Type" required />,
-    );
+    render(<SegmentedControl {...defaultProps} label="Type" required />);
     // Label component renders "Type" with nested " *" Text child
     expect(screen.getByText(/Type/)).toBeTruthy();
     expect(screen.getByText(/ \*/)).toBeTruthy();

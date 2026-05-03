@@ -30,10 +30,14 @@ interface OnboardingStateContextType {
 }
 
 // Combined type for backwards compatibility
-type OnboardingContextType = OnboardingActionsContextType & OnboardingStateContextType;
+type OnboardingContextType = OnboardingActionsContextType &
+  OnboardingStateContextType;
 
-const OnboardingActionsContext = createContext<OnboardingActionsContextType | null>(null);
-const OnboardingStateContext = createContext<OnboardingStateContextType | null>(null);
+const OnboardingActionsContext =
+  createContext<OnboardingActionsContextType | null>(null);
+const OnboardingStateContext = createContext<OnboardingStateContextType | null>(
+  null,
+);
 
 interface OnboardingProviderProps {
   children: React.ReactNode;
@@ -74,7 +78,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'OnboardingComplete',
     title: 'Complete',
-    subtitle: 'You\'re all set!',
+    subtitle: "You're all set!",
   },
 ];
 
@@ -178,7 +182,9 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
 export const useOnboardingActions = (): OnboardingActionsContextType => {
   const context = useContext(OnboardingActionsContext);
   if (!context) {
-    throw new Error('useOnboardingActions must be used within an OnboardingProvider');
+    throw new Error(
+      'useOnboardingActions must be used within an OnboardingProvider',
+    );
   }
   return context;
 };
@@ -190,7 +196,9 @@ export const useOnboardingActions = (): OnboardingActionsContextType => {
 export const useOnboardingState = (): OnboardingStateContextType => {
   const context = useContext(OnboardingStateContext);
   if (!context) {
-    throw new Error('useOnboardingState must be used within an OnboardingProvider');
+    throw new Error(
+      'useOnboardingState must be used within an OnboardingProvider',
+    );
   }
   return context;
 };

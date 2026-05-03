@@ -9,8 +9,6 @@ import type { ViewProps } from 'react-native';
 const AnimatedCellRenderer = React.forwardRef<
   React.ComponentRef<typeof Animated.View>,
   ViewProps & { index?: number }
->(({ index: _index, ...props }, ref) => (
-  <Animated.View ref={ref} {...props} />
-));
+>(({ index: _index, ...props }, ref) => <Animated.View ref={ref} {...props} />);
 
 export { AnimatedCellRenderer };

@@ -6,7 +6,8 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import type { PantryItemFragment, StorageType } from '#generated';
+import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
+import { type StorageType } from '#/graphql/generated/schemaTypes';
 import { usePantryItemActions } from '#features/pantry/hooks/usePantryItemActions';
 import { ConsumePantryItemModal } from '#/components/modals/ConsumePantryItemModal';
 import { RecordWastePantryItemModal } from '#/components/modals/RecordWastePantryItemModal';

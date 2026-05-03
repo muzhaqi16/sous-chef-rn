@@ -10,7 +10,8 @@ import { Header } from '#components/molecules/Header';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { Button } from '#components/base/Button';
 import { useAppStore } from '#store/useAppStore';
-import { useResetPasswordMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { ResetPasswordDocument } from '#operations/auth/auth.generated';
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
@@ -88,7 +89,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
   const { token } = (route.params ?? {}) as Partial<ResetPasswordRouteParams>;
 
-  const [resetPassword] = useResetPasswordMutation();
+  const [resetPassword] = useMutation(ResetPasswordDocument);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasValidTokenFormat = !!token && token.length >= 10;
   const [isTokenRejected, setIsTokenRejected] = useState(false);

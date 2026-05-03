@@ -1,15 +1,18 @@
 import { useState } from 'react';
+import { useQuery } from '@apollo/client/react';
 import {
-  useGetPantryUsageAnalyticsQuery,
-  useGetPantryWasteAnalyticsQuery,
-  useGetPantryLedgerAnalyticsQuery,
-  PeriodGranularity,
-  DateRange,
-  type AnalyticsFilters,
+  GetPantryUsageAnalyticsDocument,
+  GetPantryWasteAnalyticsDocument,
+  GetPantryLedgerAnalyticsDocument,
   type GetPantryUsageAnalyticsQuery,
   type GetPantryWasteAnalyticsQuery,
   type GetPantryLedgerAnalyticsQuery,
-} from '#generated';
+} from '#features/pantry/graphql/pantry.generated';
+import {
+  PeriodGranularity,
+  DateRange,
+  type AnalyticsFilters,
+} from '#/graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 type UsageAnalytics = NonNullable<
@@ -68,12 +71,9 @@ export function usePantryAnalytics({
     loading: usageLoading,
     error: usageError,
     refetch: refetchUsage,
-  } = useGetPantryUsageAnalyticsQuery({
+  } = useQuery(GetPantryUsageAnalyticsDocument, {
     variables: { pantryId: pantryId ?? '', filter },
     skip: !hasValidPantryId,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'all',
   });
 
   const {
@@ -81,12 +81,9 @@ export function usePantryAnalytics({
     loading: wasteLoading,
     error: wasteError,
     refetch: refetchWaste,
-  } = useGetPantryWasteAnalyticsQuery({
+  } = useQuery(GetPantryWasteAnalyticsDocument, {
     variables: { pantryId: pantryId ?? '', filter },
     skip: !hasValidPantryId,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'all',
   });
 
   const {
@@ -94,16 +91,13 @@ export function usePantryAnalytics({
     loading: ledgerLoading,
     error: ledgerError,
     refetch: refetchLedger,
-  } = useGetPantryLedgerAnalyticsQuery({
+  } = useQuery(GetPantryLedgerAnalyticsDocument, {
     variables: {
       pantryId: pantryId ?? '',
       filter,
       granularity: ledgerGranularity,
     },
     skip: !hasValidPantryId,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'all',
   });
 
   useApolloErrorLogger('GetPantryUsageAnalytics', usageError);

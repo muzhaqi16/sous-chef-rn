@@ -1,18 +1,21 @@
 import { useState } from 'react';
 import { alertService } from '#/services/alertService';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+import { useMutation, useQuery } from '@apollo/client/react';
 import {
-  useGetHomeQuery,
-  useUpdateHomeMutation,
-  useUpdateMembershipMutation,
-  useRemoveMemberMutation,
-  useRevokeHomeInviteMutation,
-  useLeaveHomeMutation,
-  useSetDefaultHomeMutation,
+  GetHomeDocument,
+  UpdateHomeDocument,
+  UpdateMembershipDocument,
+  RemoveMemberDocument,
+  RevokeHomeInviteDocument,
+  LeaveHomeDocument,
   GetHomesDocument,
-  MembershipRole,
-} from '#generated';
+} from '#operations/home/home.generated';
+import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n/t';
+
+import { MESSAGES } from '#/constants/messages';
 import { normalizeHome } from '#/utils/connectionUtils';
 import {
   createRemoveFromParentConnectionUpdater,
@@ -73,27 +76,25 @@ export function useHomeDetailManagement(homeId: string) {
   // - errorPolicy: 'all' returns cached data AND errors (needed to distinguish "not found" from "failed to load")
 
   // Query
-  const { data, loading, error, refetch } = useGetHomeQuery({
+  const { data, loading, error, refetch } = useQuery(GetHomeDocument, {
     variables: { homeId },
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'all',
   });
 
   // Mutations
-  const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
-    // Mutation returns updated scalar fields; Apollo auto-merges by __typename + id
-    errorPolicy: 'all',
-    onError: error => {
-      alertService.alert(
-        'Error',
-        error.message || t('errors.updateHomeNameFailed'),
-      );
+  const [updateHomeMutation, { loading: updating }] = useMutation(
+    UpdateHomeDocument,
+    {
+      // Mutation returns updated scalar fields; Apollo auto-merges by __typename + id
+      onError: error => {
+        alertService.alert(
+          'Error',
+          error.message || MESSAGES.errors.updateHomeNameFailed,
+        );
+      },
     },
-  });
+  );
 
-  const [updateMembershipMutation] = useUpdateMembershipMutation({
-    errorPolicy: 'all',
+  const [updateMembershipMutation] = useMutation(UpdateMembershipDocument, {
     // Use cache.modify to update the membership role field
     update(cache, { data }, { variables }) {
       if (!data?.updateMembership?.success || !variables) return;
@@ -114,8 +115,7 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
-  const [removeMemberMutation] = useRemoveMemberMutation({
-    errorPolicy: 'all',
+  const [removeMemberMutation] = useMutation(RemoveMemberDocument, {
     update(cache, { data }, { variables }) {
       if (!data?.removeMember?.success || !variables) return;
 
@@ -147,8 +147,7 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
-  const [revokeInviteMutation] = useRevokeHomeInviteMutation({
-    errorPolicy: 'all',
+  const [revokeInviteMutation] = useMutation(RevokeHomeInviteDocument, {
     update(cache, { data }, { variables }) {
       if (!data?.revokeHomeInvite?.success || !variables) return;
 
@@ -180,11 +179,10 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
-  const [setDefaultHomeMutation] = useSetDefaultHomeMutation();
+  const [setDefaultHomeMutation] = useMutation(SetDefaultHomeDocument);
 
   const [leaveHomeMutation, { loading: leaving, client: leaveClient }] =
-    useLeaveHomeMutation({
-      errorPolicy: 'all',
+    useMutation(LeaveHomeDocument, {
       update(cache, { data }) {
         if (!data?.leaveHome?.success) return;
 

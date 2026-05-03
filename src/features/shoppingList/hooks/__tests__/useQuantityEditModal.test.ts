@@ -5,9 +5,14 @@ import { useQuantityEditModal } from '../useQuantityEditModal';
 
 const mockUpdateQuantity = jest.fn();
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useUpdateShoppingListItemQuantityMutation: () => [mockUpdateQuantity],
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn((doc: any) => {
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'UpdateShoppingListItemQuantity')
+      return [mockUpdateQuantity, { loading: false }];
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#/services/telemetry', () => ({

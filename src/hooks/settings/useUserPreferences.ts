@@ -1,7 +1,8 @@
 import { useAppStore } from '#/store/useAppStore';
 import {
   defaultUserPreferences,
-  type UserPreferences } from '#/store/slices/preferencesSlice';
+  type UserPreferences,
+} from '#/store/slices/preferencesSlice';
 
 /**
  * Hook for accessing and updating the current user's per-user preferences.
@@ -20,10 +21,10 @@ export const useUserPreferences = () => {
     : defaultUserPreferences;
 
   const updatePreference = (prefs: Partial<UserPreferences>) => {
-      if (userId) {
-        setUserPreference(userId, prefs);
-      }
-    };
+    if (userId) {
+      setUserPreference(userId, prefs);
+    }
+  };
 
   const resetPreferences = () => {
     if (userId) {

@@ -13,7 +13,7 @@ describe('formatQuantity', () => {
 
   it('strips trailing zeros', () => {
     expect(formatQuantity(1.5)).toBe('1.5');
-    expect(formatQuantity(1.10)).toBe('1.1');
+    expect(formatQuantity(1.1)).toBe('1.1');
   });
 
   it('rounds to 2 decimal places', () => {

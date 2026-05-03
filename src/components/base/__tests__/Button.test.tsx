@@ -20,19 +20,31 @@ describe('Button', () => {
   });
 
   it('calls onPress when pressed', () => {
-    render(<Button onPress={mockOnPress} testID="btn">Press</Button>);
+    render(
+      <Button onPress={mockOnPress} testID="btn">
+        Press
+      </Button>,
+    );
     fireEvent.press(screen.getByTestId('btn'));
     expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 
   it('does not call onPress when disabled', () => {
-    render(<Button onPress={mockOnPress} disabled testID="btn">Press</Button>);
+    render(
+      <Button onPress={mockOnPress} disabled testID="btn">
+        Press
+      </Button>,
+    );
     fireEvent.press(screen.getByTestId('btn'));
     expect(mockOnPress).not.toHaveBeenCalled();
   });
 
   it('does not call onPress when loading', () => {
-    render(<Button onPress={mockOnPress} loading testID="btn">Press</Button>);
+    render(
+      <Button onPress={mockOnPress} loading testID="btn">
+        Press
+      </Button>,
+    );
     fireEvent.press(screen.getByTestId('btn'));
     expect(mockOnPress).not.toHaveBeenCalled();
   });
@@ -43,14 +55,28 @@ describe('Button', () => {
   });
 
   it('sets accessibility state for disabled', () => {
-    render(<Button onPress={mockOnPress} disabled testID="btn">OK</Button>);
+    render(
+      <Button onPress={mockOnPress} disabled testID="btn">
+        OK
+      </Button>,
+    );
     const btn = screen.getByTestId('btn');
-    expect(btn.props.accessibilityState).toEqual({ disabled: true, busy: false });
+    expect(btn.props.accessibilityState).toEqual({
+      disabled: true,
+      busy: false,
+    });
   });
 
   it('sets accessibility state for loading', () => {
-    render(<Button onPress={mockOnPress} loading testID="btn">OK</Button>);
+    render(
+      <Button onPress={mockOnPress} loading testID="btn">
+        OK
+      </Button>,
+    );
     const btn = screen.getByTestId('btn');
-    expect(btn.props.accessibilityState).toEqual({ disabled: true, busy: true });
+    expect(btn.props.accessibilityState).toEqual({
+      disabled: true,
+      busy: true,
+    });
   });
 });

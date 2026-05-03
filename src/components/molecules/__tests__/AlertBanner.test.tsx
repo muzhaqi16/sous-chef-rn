@@ -9,9 +9,7 @@ describe('AlertBanner', () => {
   });
 
   it('renders subtitle when provided', () => {
-    render(
-      <AlertBanner title="Expired" subtitle="Tap to review and remove" />,
-    );
+    render(<AlertBanner title="Expired" subtitle="Tap to review and remove" />);
     expect(screen.getByText('Tap to review and remove')).toBeTruthy();
   });
 

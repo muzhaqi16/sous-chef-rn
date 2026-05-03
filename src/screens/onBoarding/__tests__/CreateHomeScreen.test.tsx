@@ -35,22 +35,14 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useCreateHomeMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useCreatePantryMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useGetHomesQuery: jest.fn(() => ({
-    data: { homes: { edges: [] } },
-    loading: false,
-    refetch: jest.fn(),
-  })),
-  useGetMyPendingInvitesQuery: jest.fn(() => ({
-    data: { me: { pendingHomeInvites: [] } },
-    loading: false,
-  })),
-  useAcceptHomeInviteMutation: jest.fn(() => [jest.fn(), { loading: false }]),
-  useDeclineHomeInviteMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useMutation: jest.fn(() => [jest.fn(), { loading: false }]),
+  useQuery: jest.fn(() => ({ data: undefined, loading: false })),
+  __esModule: true,
 }));
+
+// CreatePantry is now part of the pantry slice (v4 codegen).
 
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/utils/validation/onboarding', () => ({

@@ -35,15 +35,21 @@ describe('roleFormatters', () => {
 
   describe('getRoleDescription', () => {
     it('returns description for OWNER', () => {
-      expect(getRoleDescription('OWNER')).toBe('Full control over home and all members');
+      expect(getRoleDescription('OWNER')).toBe(
+        'Full control over home and all members',
+      );
     });
 
     it('returns description for ADMIN', () => {
-      expect(getRoleDescription('ADMIN')).toBe('Can manage members and settings');
+      expect(getRoleDescription('ADMIN')).toBe(
+        'Can manage members and settings',
+      );
     });
 
     it('returns description for MEMBER', () => {
-      expect(getRoleDescription('MEMBER')).toBe('Can add and edit items in pantry');
+      expect(getRoleDescription('MEMBER')).toBe(
+        'Can add and edit items in pantry',
+      );
     });
 
     it('returns description for GUEST', () => {

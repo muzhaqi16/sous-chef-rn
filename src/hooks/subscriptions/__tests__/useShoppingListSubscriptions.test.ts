@@ -1,7 +1,7 @@
 'use no memo';
 
 import { renderHook } from '@testing-library/react-native';
-import { ShoppingListChangeType } from '#generated';
+import { ShoppingListChangeType } from '#/graphql/generated/schemaTypes';
 import { useShoppingListSubscriptions } from '../useShoppingListSubscriptions';
 
 jest.mock('../../../apollo/links/tokenScheduler');
@@ -23,14 +23,19 @@ jest.mock('#/services/subscriptions/types', () => ({
 const mockUseShoppingListChangesSubscription = jest.fn();
 const mockUseMyShoppingListsChangesSubscription = jest.fn();
 const mockUseCollaborationChangesSubscription = jest.fn();
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useShoppingListChangesSubscription: (...args: any[]) =>
-    mockUseShoppingListChangesSubscription(...args),
-  useMyShoppingListsChangesSubscription: (...args: any[]) =>
-    mockUseMyShoppingListsChangesSubscription(...args),
-  useCollaborationChangesSubscription: (...args: any[]) =>
-    mockUseCollaborationChangesSubscription(...args),
+jest.mock('@apollo/client/react', () => ({
+  ...jest.requireActual('@apollo/client/react'),
+  useSubscription: jest.fn((...args: any[]) => {
+    const [doc] = args;
+    const opName = doc?.definitions?.[0]?.name?.value;
+    if (opName === 'ShoppingListChanges')
+      return mockUseShoppingListChangesSubscription(...args);
+    if (opName === 'MyShoppingListsChanges')
+      return mockUseMyShoppingListsChangesSubscription(...args);
+    if (opName === 'CollaborationChanges')
+      return mockUseCollaborationChangesSubscription(...args);
+    return [jest.fn(), {}];
+  }),
 }));
 
 jest.mock('#store/useAppStore', () => ({
@@ -88,6 +93,7 @@ describe('useShoppingListSubscriptions', () => {
     renderHook(() => useShoppingListSubscriptions('user-1'));
 
     expect(mockUseShoppingListChangesSubscription).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         variables: { listId: 'list-1' },
         skip: false,
@@ -104,6 +110,7 @@ describe('useShoppingListSubscriptions', () => {
     renderHook(() => useShoppingListSubscriptions('user-1'));
 
     expect(mockUseShoppingListChangesSubscription).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ skip: true }),
     );
   });

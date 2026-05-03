@@ -9,8 +9,8 @@ import {
 import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
 import { HomeMemberCard } from './HomeMemberCard';
 import { HomeInviteCard } from './HomeInviteCard';
-import { InviteStatus } from '#/graphql/generated';
 import { Text } from '#components/atoms/Text';
+import { InviteStatus } from '#/graphql/generated/schemaTypes';
 
 interface Invite {
   id: string;

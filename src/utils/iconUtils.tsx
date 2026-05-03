@@ -1,5 +1,5 @@
 import React from 'react';
-import {Ionicons} from '@react-native-vector-icons/ionicons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 
 // Extract icon name type from Ionicons
 type IoniconsIconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -28,6 +28,10 @@ export const renderIcon = ({
 };
 
 // Reusable Icon component
-export const Icon: React.FC<IconProps> = ({name, size = 24, color = '#000'}) => {
-  return renderIcon({name, size, color});
+export const Icon: React.FC<IconProps> = ({
+  name,
+  size = 24,
+  color = '#000',
+}) => {
+  return renderIcon({ name, size, color });
 };

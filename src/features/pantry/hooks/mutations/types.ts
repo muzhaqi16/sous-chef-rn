@@ -2,7 +2,8 @@
  * Shared types for pantry item mutations
  */
 
-import { StorageState, PantryItemFragment } from '#generated';
+import { StorageState } from '#/graphql/generated/schemaTypes';
+import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 
 export interface UnitSelection {
   id: string | null;

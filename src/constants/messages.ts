@@ -33,7 +33,8 @@ export const MESSAGES = {
 
     // Camera/Scanner
     cameraPermission: 'Camera access is required to scan barcodes.',
-    cameraPermissionDenied: 'Camera permission was denied. Please enable it in settings.',
+    cameraPermissionDenied:
+      'Camera permission was denied. Please enable it in settings.',
     noCameraDevice: 'No camera device found',
     scanFailed: 'Failed to scan barcode',
 
@@ -107,7 +108,8 @@ export const MESSAGES = {
     removeMember: 'Are you sure you want to remove this member?',
     revokeInvite: 'Are you sure you want to revoke this invitation?',
     deleteHome: 'Are you sure you want to delete this home?',
-    deleteAccount: 'Are you sure you want to delete your account? This action cannot be undone.',
+    deleteAccount:
+      'Are you sure you want to delete your account? This action cannot be undone.',
     logout: 'Are you sure you want to log out?',
     discardChanges: 'Are you sure you want to discard your changes?',
   },

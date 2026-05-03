@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { alertService } from '#/services/alertService';
-import { ShoppingListItemDisplayFragment } from '#generated';
+import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { useLazyHomeData } from '#hooks/home/useLazyHomeData';
 import { useMoveToPantry, type MoveToPantryInput } from './useMoveToPantry';
 

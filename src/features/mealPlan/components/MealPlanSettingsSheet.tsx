@@ -9,7 +9,7 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
 import { Icon } from '#utils/iconUtils';
-import type { MealPlanFullFragment } from '#generated';
+import { type MealPlanFullFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
 import { Text } from '#components/atoms/Text';
 

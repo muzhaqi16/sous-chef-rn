@@ -3,14 +3,15 @@ import { alertService } from '#/services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormModal } from '#components/organisms/FormModal';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useMutation, useQuery } from '@apollo/client/react';
 import {
-  useGetRecipeQuery,
-  useCreateRecipeMutation,
-  useUpdateRecipeMutation,
-  useUpdateRecipeIngredientsMutation,
+  GetRecipeDocument,
+  CreateRecipeDocument,
+  UpdateRecipeDocument,
+  UpdateRecipeIngredientsDocument,
   MyRecipesDocument,
   type MyRecipesQuery,
-} from '#generated';
+} from '#features/recipes/graphql/recipe.generated';
 import { useRecipeForm } from './useRecipeForm';
 import { RecipeBasicFields } from './components/RecipeBasicFields';
 import { RecipeCategoryFields } from './components/RecipeCategoryFields';
@@ -41,7 +42,7 @@ export const RecipeFormScreen: React.FC<
   const form = useRecipeForm();
 
   // Fetch recipe for edit mode
-  const { data: recipeData } = useGetRecipeQuery({
+  const { data: recipeData } = useQuery(GetRecipeDocument, {
     variables: { id: recipeId! },
     skip: !recipeId,
   });
@@ -54,7 +55,8 @@ export const RecipeFormScreen: React.FC<
     }
   }, [recipeData?.recipe, populateFromRecipe]);
 
-  const [createRecipeMutation, { loading: creating }] = useCreateRecipeMutation(
+  const [createRecipeMutation, { loading: creating }] = useMutation(
+    CreateRecipeDocument,
     {
       update: (cache, { data }) => {
         if (!data?.createRecipe?.success || !data.createRecipe.recipe) return;
@@ -84,9 +86,9 @@ export const RecipeFormScreen: React.FC<
     },
   );
   const [updateRecipeMutation, { loading: updating }] =
-    useUpdateRecipeMutation();
+    useMutation(UpdateRecipeDocument);
   const [updateRecipeIngredientsMutation, { loading: updatingIngredients }] =
-    useUpdateRecipeIngredientsMutation();
+    useMutation(UpdateRecipeIngredientsDocument);
   const loading = creating || updating || updatingIngredients;
 
   const handleSave = () => {

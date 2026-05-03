@@ -35,14 +35,20 @@ describe('OnboardingSteps', () => {
 
   it('renders without crashing', () => {
     const { toJSON } = render(
-      <OnboardingSteps steps={mockSteps} activeIndex={mockActiveIndex as any} />,
+      <OnboardingSteps
+        steps={mockSteps}
+        activeIndex={mockActiveIndex as any}
+      />,
     );
     expect(toJSON()).toBeTruthy();
   });
 
   it('renders with default stepSize of 12', () => {
     const { toJSON } = render(
-      <OnboardingSteps steps={mockSteps} activeIndex={mockActiveIndex as any} />,
+      <OnboardingSteps
+        steps={mockSteps}
+        activeIndex={mockActiveIndex as any}
+      />,
     );
     expect(toJSON()).toBeTruthy();
   });

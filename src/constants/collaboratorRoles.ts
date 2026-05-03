@@ -1,4 +1,4 @@
-import { CollaboratorRole } from '#generated';
+import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 
 export interface RoleInfo {
   label: string;

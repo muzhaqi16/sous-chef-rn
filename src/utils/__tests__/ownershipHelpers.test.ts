@@ -125,7 +125,11 @@ describe('ownershipHelpers', () => {
       const list = {
         ownerships: [],
         collaboratorsConnection: {
-          edges: [{ node: { collaboratorId: 'u1', role: 'EDITOR', status: 'ACTIVE' } }],
+          edges: [
+            {
+              node: { collaboratorId: 'u1', role: 'EDITOR', status: 'ACTIVE' },
+            },
+          ],
         },
       };
       expect(getShoppingListRole(list, 'u1')).toBe('EDITOR');
@@ -133,7 +137,9 @@ describe('ownershipHelpers', () => {
 
     it('falls back to home membership role', () => {
       const list = { ownerships: [] };
-      expect(getShoppingListRole(list, 'u1', { role: 'MEMBER' })).toBe('MEMBER');
+      expect(getShoppingListRole(list, 'u1', { role: 'MEMBER' })).toBe(
+        'MEMBER',
+      );
     });
 
     it('returns null when no match found', () => {

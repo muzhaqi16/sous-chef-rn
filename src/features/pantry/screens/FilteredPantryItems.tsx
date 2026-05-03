@@ -15,7 +15,8 @@ import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useAddItemToShoppingListMutation } from '#generated';
+import { useMutation } from '@apollo/client/react';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowStockToShoppingList';
 import {
@@ -267,7 +268,7 @@ export const FilteredPantryItems: React.FC<
     state: { items: allItems, loading, hasMore, isLoadingMore },
     actions: { refetch, loadMore },
   } = usePantryManagement(pantry?.id);
-  const [addToShoppingList] = useAddItemToShoppingListMutation();
+  const [addToShoppingList] = useMutation(AddItemToShoppingListDocument);
 
   // Progressively load all pages so the filter sees every item
   useEffect(() => {

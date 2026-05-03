@@ -39,10 +39,7 @@ describe('BottomSheetSearchBar', () => {
 
   it('renders custom placeholder', () => {
     render(
-      <BottomSheetSearchBar
-        {...defaultProps}
-        placeholder="Search items..."
-      />,
+      <BottomSheetSearchBar {...defaultProps} placeholder="Search items..." />,
     );
     expect(screen.getByPlaceholderText('Search items...')).toBeTruthy();
   });
@@ -85,12 +82,7 @@ describe('BottomSheetSearchBar', () => {
 
   it('clears text when clear button is pressed', () => {
     const onClear = jest.fn();
-    render(
-      <BottomSheetSearchBar
-        {...defaultProps}
-        onClear={onClear}
-      />,
-    );
+    render(<BottomSheetSearchBar {...defaultProps} onClear={onClear} />);
     const input = screen.getByPlaceholderText('Search...');
 
     // Type some text
@@ -138,53 +130,34 @@ describe('BottomSheetSearchBar', () => {
 
   it('shows loading indicator when isLoading is true', () => {
     const { toJSON } = render(
-      <BottomSheetSearchBar
-        {...defaultProps}
-        isLoading={true}
-      />,
+      <BottomSheetSearchBar {...defaultProps} isLoading={true} />,
     );
     // ActivityIndicator should be rendered
     expect(toJSON()).toBeTruthy();
   });
 
   it('does not show loading indicator when isLoading is false', () => {
-    render(
-      <BottomSheetSearchBar
-        {...defaultProps}
-        isLoading={false}
-      />,
-    );
+    render(<BottomSheetSearchBar {...defaultProps} isLoading={false} />);
     // Just verify it renders without issue
     expect(screen.getByPlaceholderText('Search...')).toBeTruthy();
   });
 
   it('notifies parent when initialValue is provided', () => {
-    render(
-      <BottomSheetSearchBar
-        {...defaultProps}
-        initialValue="preloaded"
-      />,
-    );
+    render(<BottomSheetSearchBar {...defaultProps} initialValue="preloaded" />);
     // The useEffect calls onChangeText with the initialValue
     expect(defaultProps.onChangeText).toHaveBeenCalledWith('preloaded');
   });
 
   it('updates hasText when initialValue changes', () => {
     const { rerender } = render(
-      <BottomSheetSearchBar
-        {...defaultProps}
-        initialValue=""
-      />,
+      <BottomSheetSearchBar {...defaultProps} initialValue="" />,
     );
     // No text initially
     expect(screen.queryByTestId('icon-close')).toBeNull();
 
     // Change initialValue
     rerender(
-      <BottomSheetSearchBar
-        {...defaultProps}
-        initialValue="new value"
-      />,
+      <BottomSheetSearchBar {...defaultProps} initialValue="new value" />,
     );
     // After initialValue changes, hasText should be true (render-time state update)
     expect(screen.getByTestId('icon-close')).toBeTruthy();
@@ -211,12 +184,7 @@ describe('BottomSheetSearchBar', () => {
   describe('ref methods', () => {
     it('exposes clear method', () => {
       const ref = createRef<BottomSheetSearchBarRef>();
-      render(
-        <BottomSheetSearchBar
-          {...defaultProps}
-          ref={ref}
-        />,
-      );
+      render(<BottomSheetSearchBar {...defaultProps} ref={ref} />);
 
       // Type text
       const input = screen.getByPlaceholderText('Search...');
@@ -234,12 +202,7 @@ describe('BottomSheetSearchBar', () => {
 
     it('exposes getValue method', () => {
       const ref = createRef<BottomSheetSearchBarRef>();
-      render(
-        <BottomSheetSearchBar
-          {...defaultProps}
-          ref={ref}
-        />,
-      );
+      render(<BottomSheetSearchBar {...defaultProps} ref={ref} />);
 
       // Initially empty
       expect(ref.current?.getValue()).toBe('');
@@ -253,12 +216,7 @@ describe('BottomSheetSearchBar', () => {
 
     it('exposes setValue method', () => {
       const ref = createRef<BottomSheetSearchBarRef>();
-      render(
-        <BottomSheetSearchBar
-          {...defaultProps}
-          ref={ref}
-        />,
-      );
+      render(<BottomSheetSearchBar {...defaultProps} ref={ref} />);
 
       act(() => {
         ref.current?.setValue('programmatic');
@@ -271,12 +229,7 @@ describe('BottomSheetSearchBar', () => {
 
     it('setValue with empty string hides clear button', () => {
       const ref = createRef<BottomSheetSearchBarRef>();
-      render(
-        <BottomSheetSearchBar
-          {...defaultProps}
-          ref={ref}
-        />,
-      );
+      render(<BottomSheetSearchBar {...defaultProps} ref={ref} />);
 
       act(() => {
         ref.current?.setValue('text');
@@ -291,12 +244,7 @@ describe('BottomSheetSearchBar', () => {
   });
 
   it('renders with custom testID', () => {
-    render(
-      <BottomSheetSearchBar
-        {...defaultProps}
-        testID="my-search"
-      />,
-    );
+    render(<BottomSheetSearchBar {...defaultProps} testID="my-search" />);
     expect(screen.getByTestId('my-search')).toBeTruthy();
   });
 

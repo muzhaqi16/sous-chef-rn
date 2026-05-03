@@ -4,7 +4,10 @@ import { createTestStore } from '#/test-utils/createTestStore';
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
-const { scheduleTokenRefresh, cancelTokenRefresh } = require('../../../apollo/links/tokenScheduler');
+const {
+  scheduleTokenRefresh,
+  cancelTokenRefresh,
+} = require('../../../apollo/links/tokenScheduler');
 
 const testUser = {
   id: 'user-1',
@@ -54,7 +57,12 @@ describe('authSlice', () => {
       const store = createTestStore();
       const userWithProfile = {
         ...testUser,
-        profile: { firstName: 'Profile', lastName: 'Name', displayName: 'pname', avatar: 'avatar.jpg' },
+        profile: {
+          firstName: 'Profile',
+          lastName: 'Name',
+          displayName: 'pname',
+          avatar: 'avatar.jpg',
+        },
       };
       store.getState().setAuth(userWithProfile as any, 'a', 'r');
       const user = store.getState().user;
@@ -79,7 +87,10 @@ describe('authSlice', () => {
     it('schedules token refresh', () => {
       const store = createTestStore();
       store.getState().setAuth(testUser, 'access-tk', 'r');
-      expect(scheduleTokenRefresh).toHaveBeenCalledWith('access-tk', expect.any(Function));
+      expect(scheduleTokenRefresh).toHaveBeenCalledWith(
+        'access-tk',
+        expect.any(Function),
+      );
     });
 
     it('clears isAutoLoggingIn', () => {
@@ -128,7 +139,10 @@ describe('authSlice', () => {
     it('schedules refresh for new access token', () => {
       const store = createTestStore();
       store.getState().setTokens({ accessToken: 'new' });
-      expect(scheduleTokenRefresh).toHaveBeenCalledWith('new', expect.any(Function));
+      expect(scheduleTokenRefresh).toHaveBeenCalledWith(
+        'new',
+        expect.any(Function),
+      );
     });
   });
 

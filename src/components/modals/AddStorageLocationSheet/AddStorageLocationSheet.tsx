@@ -8,7 +8,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { StorageType } from '#generated';
+import { StorageType } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 
 /** Module-level async wrapper to keep try-catch out of the component body (React Compiler). */

@@ -1,16 +1,10 @@
-import { renderHook, act } from '@testing-library/react-native';
+import React, { type ReactNode } from 'react';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { MockedProvider } from '@apollo/client/testing/react';
+import type { MockedResponse } from '@apollo/client/testing';
 import { alertService } from '#/services/alertService';
+import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
 import { useConvertExpiredToWaste } from '../useConvertExpiredToWaste';
-
-const mockConvertMutation = jest.fn();
-
-jest.mock('#generated', () => ({
-  ...jest.requireActual('#generated'),
-  useConvertExpiredToWasteMutation: jest.fn(() => [
-    mockConvertMutation,
-    { loading: false },
-  ]),
-}));
 
 jest.mock('#/services/errorService', () => ({
   useErrorService: () => ({
@@ -22,13 +16,75 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
+function renderWith(
+  mocks: MockedResponse[],
+  hookOptions: Parameters<typeof useConvertExpiredToWaste>[0] = {},
+) {
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    React.createElement(
+      MockedProvider,
+      { mocks, showWarnings: false },
+      children,
+    );
+  return renderHook(() => useConvertExpiredToWaste(hookOptions), { wrapper });
+}
+
+const successMock = (id: string): MockedResponse => ({
+  request: {
+    query: ConvertExpiredToWasteDocument,
+    variables: { pantryItemId: id },
+  },
+  result: {
+    data: {
+      convertExpiredToWaste: {
+        __typename: 'PantryItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        pantryItem: {
+          __typename: 'PantryItem',
+          id,
+          quantity: 0,
+          condition: 'SPOILED',
+        },
+      },
+    },
+  },
+});
+
+const errorMock = (id: string): MockedResponse => ({
+  request: {
+    query: ConvertExpiredToWasteDocument,
+    variables: { pantryItemId: id },
+  },
+  error: new Error('Something went wrong'),
+});
+
+const nullPantryItemMock = (id: string): MockedResponse => ({
+  request: {
+    query: ConvertExpiredToWasteDocument,
+    variables: { pantryItemId: id },
+  },
+  result: {
+    data: {
+      convertExpiredToWaste: {
+        __typename: 'PantryItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        pantryItem: null,
+      },
+    },
+  },
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 describe('useConvertExpiredToWaste', () => {
   it('returns convertExpiredToWaste function and loading state', () => {
-    const { result } = renderHook(() => useConvertExpiredToWaste());
+    const { result } = renderWith([successMock('item-1')]);
 
     expect(typeof result.current.convertExpiredToWaste).toBe('function');
     expect(result.current.loading).toBe(false);
@@ -36,77 +92,48 @@ describe('useConvertExpiredToWaste', () => {
 
   it('returns true and calls onSuccess on successful mutation', async () => {
     const onSuccess = jest.fn();
-    mockConvertMutation.mockResolvedValue({
-      data: {
-        convertExpiredToWaste: {
-          pantryItem: { id: 'item-1', quantity: 0, condition: 'SPOILED' },
-        },
-      },
-    });
+    const { result } = renderWith([successMock('item-1')], { onSuccess });
 
-    const { result } = renderHook(() =>
-      useConvertExpiredToWaste({ onSuccess }),
-    );
-
-    let success: boolean;
+    let success: boolean | undefined;
     await act(async () => {
       success = await result.current.convertExpiredToWaste('item-1');
     });
 
-    expect(success!).toBe(true);
+    expect(success).toBe(true);
     expect(onSuccess).toHaveBeenCalled();
-    expect(mockConvertMutation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        variables: { pantryItemId: 'item-1' },
-      }),
-    );
   });
 
   it('returns false and shows alert on error', async () => {
-    mockConvertMutation.mockResolvedValue({
-      data: null,
-      error: { message: 'Something went wrong' },
-    });
+    const { result } = renderWith([errorMock('item-1')]);
 
-    const { result } = renderHook(() => useConvertExpiredToWaste());
-
-    let success: boolean;
+    let success: boolean | undefined;
     await act(async () => {
       success = await result.current.convertExpiredToWaste('item-1');
     });
 
-    expect(success!).toBe(false);
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Test error message',
+    expect(success).toBe(false);
+    await waitFor(() =>
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Test error message',
+      ),
     );
   });
 
   it('returns false when mutation returns no pantryItem', async () => {
-    mockConvertMutation.mockResolvedValue({
-      data: { convertExpiredToWaste: { pantryItem: null } },
-    });
+    const { result } = renderWith([nullPantryItemMock('item-1')]);
 
-    const { result } = renderHook(() => useConvertExpiredToWaste());
-
-    let success: boolean;
+    let success: boolean | undefined;
     await act(async () => {
       success = await result.current.convertExpiredToWaste('item-1');
     });
 
-    expect(success!).toBe(false);
+    expect(success).toBe(false);
   });
 
   it('does not call onSuccess when mutation fails', async () => {
     const onSuccess = jest.fn();
-    mockConvertMutation.mockResolvedValue({
-      data: null,
-      error: { message: 'fail' },
-    });
-
-    const { result } = renderHook(() =>
-      useConvertExpiredToWaste({ onSuccess }),
-    );
+    const { result } = renderWith([errorMock('item-1')], { onSuccess });
 
     await act(async () => {
       await result.current.convertExpiredToWaste('item-1');

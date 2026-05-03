@@ -1,5 +1,5 @@
 import React from 'react';
-import {BaseInput, BaseInputProps} from './BaseInput/BaseInput';
+import { BaseInput, BaseInputProps } from './BaseInput/BaseInput';
 
 // Phone Input Component
 export const PhoneInput: React.FC<

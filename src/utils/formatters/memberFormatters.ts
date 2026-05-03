@@ -1,7 +1,5 @@
-import type {
-  MemberShipFragment,
-  ShoppingListCollaboratorFragment,
-} from '#/graphql/generated';
+import { type MemberShipFragment } from '#operations/home/homeFragments.generated';
+import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 
 /**
  * Loose `Membership` shape used by home-membership UI components.

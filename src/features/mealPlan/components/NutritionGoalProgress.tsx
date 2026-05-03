@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { GoalStatus, type GoalProgress } from '#generated';
 import { Text } from '#components/atoms/Text';
+import { GoalStatus, type GoalProgress } from '#/graphql/generated/schemaTypes';
 
 interface NutritionGoalProgressProps {
   overallScore: number;

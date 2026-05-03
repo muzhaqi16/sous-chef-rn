@@ -1,4 +1,5 @@
-import { useGetPopularItemsQuery } from '#generated';
+import { useQuery } from '@apollo/client/react';
+import { GetPopularItemsDocument } from '#operations/item/item.generated';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 
 export interface PopularItem {
@@ -26,7 +27,7 @@ export interface PopularItem {
 export function usePopularItems(limit = 10) {
   const isOffline = useIsEffectivelyOffline();
 
-  const { data, loading, error } = useGetPopularItemsQuery({
+  const { data, loading, error } = useQuery(GetPopularItemsDocument, {
     variables: { first: limit },
     fetchPolicy: 'cache-first',
     skip: isOffline,
@@ -40,23 +41,28 @@ export function usePopularItems(limit = 10) {
       // Get first brand name if available
       const firstBrand = item.brands?.[0]?.brand;
       // Get primary category or first category
-      const primaryCategory = item.categories?.find(c => c.isPrimary)?.category
-        || item.categories?.[0]?.category;
+      const primaryCategory =
+        item.categories?.find(c => c.isPrimary)?.category ||
+        item.categories?.[0]?.category;
 
       return {
         id: item.id,
         name: item.name,
         imageUrl: item.imageUrl,
-        displayUnit: item.displayUnit ? {
-          id: item.displayUnit.id,
-          name: item.displayUnit.name,
-          symbol: item.displayUnit.symbol,
-        } : null,
+        displayUnit: item.displayUnit
+          ? {
+              id: item.displayUnit.id,
+              name: item.displayUnit.name,
+              symbol: item.displayUnit.symbol,
+            }
+          : null,
         brand: firstBrand?.name ?? null,
-        category: primaryCategory ? {
-          id: primaryCategory.id,
-          name: primaryCategory.name,
-        } : null,
+        category: primaryCategory
+          ? {
+              id: primaryCategory.id,
+              name: primaryCategory.name,
+            }
+          : null,
       };
     });
   })();
@@ -65,7 +71,7 @@ export function usePopularItems(limit = 10) {
     popularItems: isOffline ? [] : popularItems,
     loading,
     error,
-    totalCount: isOffline ? 0 : (data?.items?.totalCount ?? 0),
+    totalCount: isOffline ? 0 : data?.items?.totalCount ?? 0,
     isOffline,
   };
 }

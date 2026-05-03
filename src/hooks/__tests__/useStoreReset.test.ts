@@ -15,10 +15,30 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#store/resetManager', () => ({
   RESET_SCENARIOS: {
-    LOGOUT: { auth: true, ui: true, preferences: false, clearApolloCache: true },
-    SESSION_EXPIRED: { auth: true, ui: false, preferences: false, clearApolloCache: false },
-    FULL_RESET: { auth: true, ui: true, preferences: true, clearApolloCache: true },
-    ONBOARDING_RESET: { auth: false, ui: true, preferences: false, clearApolloCache: false },
+    LOGOUT: {
+      auth: true,
+      ui: true,
+      preferences: false,
+      clearApolloCache: true,
+    },
+    SESSION_EXPIRED: {
+      auth: true,
+      ui: false,
+      preferences: false,
+      clearApolloCache: false,
+    },
+    FULL_RESET: {
+      auth: true,
+      ui: true,
+      preferences: true,
+      clearApolloCache: true,
+    },
+    ONBOARDING_RESET: {
+      auth: false,
+      ui: true,
+      preferences: false,
+      clearApolloCache: false,
+    },
   },
 }));
 
