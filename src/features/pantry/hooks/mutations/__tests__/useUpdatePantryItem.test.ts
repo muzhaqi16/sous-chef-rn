@@ -1,7 +1,4 @@
-import { renderHook } from '@testing-library/react-native';
-import type { MockedResponse } from '@apollo/client/testing';
-import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { createApolloWrapper } from '#/test-utils/apolloMockProvider';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useUpdatePantryItem } from '../useUpdatePantryItem';
 
 jest.mock('#/services/errorService', () => ({
@@ -39,17 +36,39 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-const createCurrentItem = () =>
-  ({
-    id: 'item-1',
-    pantryId: 'pantry-1',
-    quantity: 5,
-    unit: { id: 'unit-1', symbol: 'g', name: 'Gram' },
-    version: 1,
-    storageState: 'PANTRY',
-    storageLocation: null,
-    updatedAt: '2025-01-01T00:00:00Z',
-  } as any);
+// `currentItem` is passed directly into the hook (not fetched via a query),
+// so the schema mock can't fill it in for us. The optimistic response Apollo
+// writes is `currentItem` + dirty-field updates; both halves must satisfy the
+// PantryItemDisplay selection set or the cache logs "Missing field …".
+const buildPantryItemDisplay = (overrides: Record<string, any> = {}) => ({
+  __typename: 'PantryItem',
+  id: 'item-1',
+  pantryId: 'pantry-1',
+  itemId: null,
+  itemName: 'Milk',
+  quantity: 5,
+  version: 1,
+  updatedAt: '2025-01-01T00:00:00Z',
+  storageState: 'PANTRY',
+  expiresAt: null,
+  lowStockAlert: false,
+  isLowStock: false,
+  minQuantity: null,
+  lastUsedAt: null,
+  netWeight: null,
+  remainingNetWeight: null,
+  activeBatchCount: 0,
+  earliestBatchExpiration: null,
+  item: null,
+  unit: { __typename: 'Unit', id: 'unit-1', name: 'Gram', symbol: 'g' },
+  netWeightUnit: null,
+  storageLocation: null,
+  packageBreakdown: null,
+  quantityBreakdown: null,
+  ...overrides,
+});
+
+const createCurrentItem = () => buildPantryItemDisplay() as any;
 
 const createFormData = (overrides: Record<string, any> = {}) =>
   ({
@@ -62,48 +81,22 @@ const createFormData = (overrides: Record<string, any> = {}) =>
     ...overrides,
   } as any);
 
-const successMock = (variables: {
-  id: string;
-  input: any;
-}): MockedResponse => ({
-  request: { query: UpdatePantryItemDocument, variables },
-  result: {
-    data: {
-      updatePantryItem: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: 'OK',
-        code: 'OK',
-        pantryItem: {
-          __typename: 'PantryItem',
-          id: variables.id,
-          ...variables.input,
-        },
-      },
-    },
-  },
-});
-
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
 describe('useUpdatePantryItem', () => {
   it('returns updatePantryItemFields function', () => {
-    const { result } = renderHook(() => useUpdatePantryItem({}), {
-      wrapper: createApolloWrapper([]),
-    });
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}));
 
     expect(typeof result.current.updatePantryItemFields).toBe('function');
   });
 
   it('fires mutation with dirty fields only', () => {
     const onSuccess = jest.fn();
-    const { result } = renderHook(() => useUpdatePantryItem({ onSuccess }), {
-      wrapper: createApolloWrapper([
-        successMock({ id: 'item-1', input: { itemName: 'Milk' } }),
-      ]),
-    });
+    const { result } = renderHookWithApollo(() =>
+      useUpdatePantryItem({ onSuccess }),
+    );
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
@@ -120,11 +113,9 @@ describe('useUpdatePantryItem', () => {
 
   it('calls onSuccess immediately without waiting for mutation', () => {
     const onSuccess = jest.fn();
-    const { result } = renderHook(() => useUpdatePantryItem({ onSuccess }), {
-      wrapper: createApolloWrapper([
-        successMock({ id: 'item-1', input: { itemName: 'Milk' } }),
-      ]),
-    });
+    const { result } = renderHookWithApollo(() =>
+      useUpdatePantryItem({ onSuccess }),
+    );
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
@@ -140,10 +131,9 @@ describe('useUpdatePantryItem', () => {
 
   it('calls onSuccess without mutation when no dirty fields', () => {
     const onSuccess = jest.fn();
-    // Empty mocks — if a mutation fires, MockedProvider errors
-    const { result } = renderHook(() => useUpdatePantryItem({ onSuccess }), {
-      wrapper: createApolloWrapper([]),
-    });
+    const { result } = renderHookWithApollo(() =>
+      useUpdatePantryItem({ onSuccess }),
+    );
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
@@ -155,14 +145,13 @@ describe('useUpdatePantryItem', () => {
     });
 
     expect(onSuccess).toHaveBeenCalled();
+    // Early return — buildDirtyUpdateInput returns {} so the mutation never fires.
+    const { buildDirtyUpdateInput } = jest.requireMock('../utils');
+    expect(buildDirtyUpdateInput.mock.results[0]?.value).toEqual({});
   });
 
   it('builds optimistic unit when trackingUnit has different id', () => {
-    const { result } = renderHook(() => useUpdatePantryItem({}), {
-      wrapper: createApolloWrapper([
-        successMock({ id: 'item-1', input: { storageNotes: 'Fresh milk' } }),
-      ]),
-    });
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}));
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
@@ -184,11 +173,7 @@ describe('useUpdatePantryItem', () => {
   });
 
   it('does not build optimistic unit when trackingUnit matches current', () => {
-    const { result } = renderHook(() => useUpdatePantryItem({}), {
-      wrapper: createApolloWrapper([
-        successMock({ id: 'item-1', input: { storageNotes: 'Fresh milk' } }),
-      ]),
-    });
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}));
 
     result.current.updatePantryItemFields({
       itemId: 'item-1',
