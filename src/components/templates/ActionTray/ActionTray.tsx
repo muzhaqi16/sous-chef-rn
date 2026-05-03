@@ -133,7 +133,7 @@ ActionTray.displayName = 'ActionTray';
 const styles = UnistylesStyleSheet.create(theme => ({
   modal: {
     marginHorizontal: '2.5%', // Creates 95% width centered
-    borderRadius: 16,
+    borderRadius: theme.radii.xl,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
     boxShadow: [
@@ -148,7 +148,7 @@ const styles = UnistylesStyleSheet.create(theme => ({
   },
   background: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 16,
+    borderRadius: theme.radii.xl,
   },
   handle: {
     display: 'none', // Hide default handle, ActionTrayContent has its own UI

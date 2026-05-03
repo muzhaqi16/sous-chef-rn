@@ -4,8 +4,8 @@ import {
   AutocompleteItemsDocument,
   SearchItemsSemanticDocument,
   SearchItemsSemanticQuery,
-} from '../../graphql/operations/item/item.generated';
-import { ItemSuggestion } from '../../graphql/generated/schemaTypes';
+} from '#operations/item/item.generated';
+import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
 type SemanticItem = NonNullable<

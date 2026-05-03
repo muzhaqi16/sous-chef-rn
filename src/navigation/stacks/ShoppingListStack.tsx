@@ -3,12 +3,12 @@ import {
   createNativeStackNavigator,
   createNativeStackScreen,
 } from '@react-navigation/native-stack';
-import { ShoppingListMain } from '#screens/shoppingList/ShoppingListMain';
-import { ListSettings } from '#screens/shoppingList/ListSettings';
-import { ShareList } from '#screens/shoppingList/ShareList';
-import { AddEditItem } from '#screens/shoppingList/AddEditItem';
-import { ShoppingListItemDetail } from '#screens/shoppingList/ItemDetail';
-import { PurchaseHistoryScreen } from '#screens/shoppingList/PurchaseHistoryScreen';
+import { ShoppingListMain } from '#features/shoppingList/screens/ShoppingListMain';
+import { ListSettings } from '#features/shoppingList/screens/ListSettings';
+import { ShareList } from '#features/shoppingList/screens/ShareList';
+import { AddEditItem } from '#features/shoppingList/screens/AddEditItem';
+import { ShoppingListItemDetail } from '#features/shoppingList/screens/ItemDetail';
+import { PurchaseHistoryScreen } from '#features/shoppingList/screens/PurchaseHistoryScreen';
 
 export const ShoppingListStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({

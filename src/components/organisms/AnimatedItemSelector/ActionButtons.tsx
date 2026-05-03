@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
@@ -10,6 +10,7 @@ import Animated, {
 import { TIMING } from '#constants/animations';
 import { Icon } from '#utils/iconUtils';
 import type { ActionButtonConfig } from './types';
+import { Text } from '#components/atoms/Text';
 
 interface ActionButtonsProps {
   actions: ActionButtonConfig[];
@@ -49,6 +50,8 @@ const ActionButton: React.FC<{
           library={action.iconLibrary}
         />
         <Text
+          size="md"
+          weight="semibold"
           style={[
             styles.actionButtonText,
             variant === 'primary'
@@ -110,8 +113,6 @@ const styles = StyleSheet.create(theme => ({
   },
   actionButtonText: {
     marginLeft: theme.spacing.md,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
   primaryButtonText: {
     color: theme.colors.background,

@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, Platform } from 'react-native';
+import { View, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { CartesianChart, Line, Area } from 'victory-native';
 import { matchFont, Circle } from '@shopify/react-native-skia';
-import { type TimeSeriesDataPoint } from '../../graphql/generated/schemaTypes';
+import { type TimeSeriesDataPoint } from '#/graphql/generated/schemaTypes';
+import { Text } from '#components/atoms/Text';
 
 const fontFamily = Platform.select({ ios: 'Helvetica', default: 'sans-serif' });
 const axisFont = matchFont({ fontFamily, fontSize: 10 });
@@ -40,14 +41,12 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
     return (
       <View style={[styles.container, { height }]}>
         {!!title && (
-          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+          <Text size="md" weight="semibold" style={styles.title}>
             {title}
           </Text>
         )}
         <View style={styles.emptyState}>
-          <Text
-            style={[styles.emptyText, { color: theme.colors.textSecondary }]}
-          >
+          <Text size="sm" tone="secondary">
             No data available
           </Text>
         </View>
@@ -58,12 +57,12 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
   return (
     <View style={styles.container}>
       {!!title && (
-        <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+        <Text size="md" weight="semibold" style={styles.title}>
           {title}
         </Text>
       )}
       {!!subtitle && (
-        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+        <Text size="xs" tone="secondary" style={styles.subtitle}>
           {subtitle}
         </Text>
       )}
@@ -126,13 +125,10 @@ const styles = StyleSheet.create(theme => ({
     marginVertical: theme.spacing.sm,
   },
   title: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
     marginBottom: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: theme.fonts.size.xs,
     marginBottom: theme.spacing.sm,
     paddingHorizontal: theme.spacing.sm,
   },
@@ -141,8 +137,5 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: 100,
-  },
-  emptyText: {
-    fontSize: theme.fonts.size.sm,
   },
 }));

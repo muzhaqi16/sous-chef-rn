@@ -14,12 +14,12 @@ import {
 import {
   SyncPantryItemDocument,
   SyncDeletePantryItemDocument,
-} from '../../graphql/operations/pantry/pantry.generated';
+} from '#features/pantry/graphql/pantry.generated';
 import {
   SyncShoppingListItemDocument,
   SyncDeleteShoppingListItemDocument,
   SyncMoveShoppingListItemDocument,
-} from '../../graphql/operations/shoppingList/shoppingList.generated';
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { generateId } from '#/utils/generateId';
 import { logger } from '#/utils/environment';
 

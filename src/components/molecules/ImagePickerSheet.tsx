@@ -1,10 +1,11 @@
 import React, { forwardRef, useRef, useImperativeHandle } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { Text } from '#components/atoms/Text';
 
 interface ImagePickerSheetProps {
   onCamera: () => void;
@@ -54,7 +55,9 @@ export const ImagePickerSheet = forwardRef<
       stackBehavior="push"
     >
       <BottomSheetView style={[styles.container, contentContainerStyle]}>
-        <Text style={styles.title}>Add Photo</Text>
+        <Text size="lg" weight="bold" align="center" style={styles.title}>
+          Add Photo
+        </Text>
         <View style={styles.optionsContainer}>
           <Pressable
             style={({ pressed }) => [styles.option, pressed && styles.pressed]}
@@ -63,7 +66,9 @@ export const ImagePickerSheet = forwardRef<
             <View style={styles.iconContainer}>
               <Icon name="camera" size={24} color={theme.colors.primary} />
             </View>
-            <Text style={styles.optionLabel}>Take Photo</Text>
+            <Text size="md" weight="medium">
+              Take Photo
+            </Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.option, pressed && styles.pressed]}
@@ -72,7 +77,9 @@ export const ImagePickerSheet = forwardRef<
             <View style={styles.iconContainer}>
               <Icon name="image" size={24} color={theme.colors.primary} />
             </View>
-            <Text style={styles.optionLabel}>Choose from Library</Text>
+            <Text size="md" weight="medium">
+              Choose from Library
+            </Text>
           </Pressable>
         </View>
         <Pressable
@@ -82,7 +89,9 @@ export const ImagePickerSheet = forwardRef<
           ]}
           onPress={handleDismiss}
         >
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text size="md" weight="medium" tone="secondary">
+            Cancel
+          </Text>
         </Pressable>
       </BottomSheetView>
     </BottomSheetModal>
@@ -97,10 +106,6 @@ const styles = StyleSheet.create(theme => ({
     paddingTop: theme.spacing.sm,
   },
   title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
     marginBottom: theme.spacing.lg,
   },
   optionsContainer: {
@@ -123,20 +128,10 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  optionLabel: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
   cancelButton: {
     marginTop: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     alignItems: 'center',
-  },
-  cancelText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

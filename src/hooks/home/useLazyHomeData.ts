@@ -1,5 +1,5 @@
 import { useLazyQuery } from '@apollo/client/react';
-import { GetHomesDocument } from '../../graphql/operations/home/home.generated';
+import { GetHomesDocument } from '#operations/home/home.generated';
 import { useSelectedHomeId, useSelectedPantryId } from '#store/useAppStore';
 import {
   normalizeHome,

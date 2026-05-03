@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { FieldValues, Control, FieldErrors } from 'react-hook-form';
 import { DynamicFormFields, FieldDef } from '../molecules/DynamicFormFields';
@@ -7,6 +7,7 @@ import { Button } from '../base/Button';
 import { BackButton } from '../atoms/BackButton';
 import { Link } from '../atoms/Link';
 import { Pressable } from 'react-native-gesture-handler';
+import { Text } from '#components/atoms/Text';
 
 interface Props<T extends FieldValues> {
   title: string;
@@ -62,8 +63,25 @@ export function AuthFormTemplate<T extends FieldValues>({
           />
         )}
 
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        <Text
+          size="2xl"
+          weight="bold"
+          tone="primary"
+          align="center"
+          style={styles.title}
+        >
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text
+            size="md"
+            tone="secondary"
+            align="center"
+            style={styles.subtitle}
+          >
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
 
       <DynamicFormFields<T> fields={fields} control={control} errors={errors} />
@@ -94,6 +112,8 @@ export function AuthFormTemplate<T extends FieldValues>({
           style={({ pressed }) => pressed && styles.pressed}
         >
           <Text
+            tone="secondary"
+            align="center"
             style={[styles.footer, footerLinkDisabled && styles.footerDisabled]}
           >
             {footerText}{' '}
@@ -124,16 +144,9 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.transparent,
   },
   title: {
-    fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
     marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
     marginBottom: theme.spacing.xl,
   },
   linkRow: {
@@ -144,9 +157,7 @@ const styles = StyleSheet.create(theme => ({
   },
   footer: {
     marginTop: 'auto',
-    textAlign: 'center',
     paddingVertical: theme.spacing.xl,
-    color: theme.colors.textSecondary,
   },
   footerDisabled: {
     opacity: theme.opacity.disabled,

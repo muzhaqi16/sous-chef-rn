@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { TextInput, Text } from 'react-native';
+import { TextInput } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
+import { Text } from '#components/atoms/Text';
 
 interface FractionInputProps {
   value: string;
@@ -93,7 +94,9 @@ export const FractionInput: React.FC<FractionInputProps> = ({
         testID={testID}
       />
       {!hasError && !!value && !!isFocused && (
-        <Text style={styles.hintText}>Formats: 1/4, 1 1/4, 0.75, or 2</Text>
+        <Text size="xs" tone="secondary" style={styles.hintText}>
+          Formats: 1/4, 1 1/4, 0.75, or 2
+        </Text>
       )}
     </FormFieldWrapper>
   );
@@ -122,8 +125,6 @@ const styles = StyleSheet.create(theme => ({
     opacity: theme.opacity.disabled,
   },
   hintText: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
 }));

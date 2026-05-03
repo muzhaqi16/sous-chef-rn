@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Counter } from './Counter';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Pressable } from 'react-native-gesture-handler';
+import { Text } from '#components/atoms/Text';
 
 interface ItemData {
   id: string;
@@ -45,9 +46,18 @@ const ItemCard: React.FC<ItemCardProps> = ({
         displaySize={68}
       />
       <View style={styles.cardBody}>
-        <Text style={styles.cardTitle}>{item?.itemName}</Text>
+        <Text
+          size="md"
+          weight="semibold"
+          lineHeight="normal"
+          style={styles.cardTitle}
+        >
+          {item?.itemName}
+        </Text>
 
-        <Text style={styles.cardDescription}>{item?.description}</Text>
+        <Text size="sm" tone="secondary">
+          {item?.description}
+        </Text>
       </View>
       <View style={styles.cardActions}>
         <Counter
@@ -58,7 +68,9 @@ const ItemCard: React.FC<ItemCardProps> = ({
         {/* unitName from server already includes item-specific display name
             with proper singular/plural form based on quantity */}
         {!!item?.unitName && (
-          <Text style={styles.cardDescription}>{item?.unitName}</Text>
+          <Text size="sm" tone="secondary">
+            {item?.unitName}
+          </Text>
         )}
       </View>
     </Pressable>
@@ -85,16 +97,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
   },
   cardTitle: {
-    fontWeight: theme.fonts.weight.semibold,
-    fontSize: theme.fonts.size.md,
-    lineHeight: theme.typography.lineHeight.normal,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
-  },
-  cardDescription: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.regular,
-    color: theme.colors.textSecondary,
   },
   cardImg: {
     width: 64,

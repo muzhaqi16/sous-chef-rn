@@ -18,17 +18,17 @@ import {
   MyShoppingListsChangesDocument,
   type ShoppingListChangesSubscription,
   type MyShoppingListsChangesSubscription,
-} from '../../graphql/operations/shoppingList/shoppingList.generated';
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   CollaborationChangesDocument,
   type CollaborationChangesSubscription,
-} from '../../graphql/operations/shoppingList/collaboration.generated';
+} from '#features/shoppingList/graphql/collaboration.generated';
 import {
   CollaboratorStatus,
   ShoppingListChangeType,
   MutationType,
-} from '../../graphql/generated/schemaTypes';
-import { ShoppingListItemDisplayFragmentDoc } from '#operations/shoppingList/shoppingListFragments.generated';
+} from '#/graphql/generated/schemaTypes';
+import { ShoppingListItemDisplayFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   CacheStrategy,

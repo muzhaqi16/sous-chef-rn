@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { useDataPreloading } from '#/hooks/useDataPreloading';
-import { useNotificationsOnLaunch } from '#/hooks/notifications/useNotificationsOnLaunch';
+import { useNotificationsOnLaunch } from '#features/notifications/hooks/useNotificationsOnLaunch';
 import { useUser } from '#store/useAppStore';
 import { useQuery } from '@apollo/client/react';
-import { GetUserProfileDocument } from '../../graphql/operations/auth/user.generated';
+import { GetUserProfileDocument } from '#operations/auth/user.generated';
 import { useAppStore } from '#store/useAppStore';
 
 interface DataProviderProps {

@@ -16,7 +16,7 @@ import {
   DeleteHomeDocument,
   GetHomesDocument,
   type UpdateHomeMutation,
-} from '../../../graphql/operations/home/home.generated';
+} from '#operations/home/home.generated';
 import { useSelectedHomeId, useHomeState } from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
 import {

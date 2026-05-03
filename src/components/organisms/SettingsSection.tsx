@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingRow, SettingRowProps } from '../molecules/SettingRow';
+import { Text } from '#components/atoms/Text';
 
 export interface SettingsSectionProps {
   title: string;
@@ -14,7 +15,9 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
 }) => {
   return (
     <View style={[styles.section]}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text size="xs" weight="semibold" style={styles.sectionTitle}>
+        {title}
+      </Text>
       <View style={styles.sectionBody}>
         {items.map((item, idx) => (
           <SettingRow
@@ -35,9 +38,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
   },
   sectionTitle: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     textTransform: 'uppercase',
     marginBottom: theme.spacing.md,
     marginTop: theme.spacing.md,

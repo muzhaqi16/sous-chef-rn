@@ -18,7 +18,7 @@ import {
   type CreatePantryItemMutationVariables,
   type UpdatePantryItemMutation,
   type DeletePantryItemMutation,
-} from '#operations/pantry/pantry.generated';
+} from '#features/pantry/graphql/pantry.generated';
 import { useErrorService } from '#/services/errorService';
 import {
   enhanceWithVersion,
@@ -37,7 +37,7 @@ import {
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import type { PantryItemInput, PantryItemUpdate } from './types';
-import type { PantryItemDisplayFragment } from '#operations/pantry/pantryFragments.generated';
+import type { PantryItemDisplayFragment } from '#features/pantry/graphql/pantryFragments.generated';
 
 interface UsePantryItemMutationsOptions {
   pantryId: string | undefined;

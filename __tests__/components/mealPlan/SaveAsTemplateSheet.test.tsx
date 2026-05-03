@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { SaveAsTemplateSheet } from '../../../src/components/mealPlan/SaveAsTemplateSheet';
+import { SaveAsTemplateSheet } from '../../../src/features/mealPlan/components/SaveAsTemplateSheet';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');

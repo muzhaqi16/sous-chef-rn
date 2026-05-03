@@ -1,6 +1,7 @@
 import React from 'react';
-import { Text, TextStyle, StyleProp } from 'react-native';
-import { DisplayFormat } from '../../graphql/generated/schemaTypes';
+import { TextStyle, StyleProp } from 'react-native';
+import { Text } from '#components/atoms/Text';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 
 interface QuantityDisplayProps {
   quantity: number | null | undefined;

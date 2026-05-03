@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleProp, ViewStyle } from 'react-native';
+import { View, StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Button } from './Button';
 import { IconName, Icon } from '#/utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 export interface EmptyStateProps {
   /** Icon to display (can be IconName, emoji string, or React node) */
@@ -98,18 +99,27 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       style={[styles.container, { justifyContent: alignment }, style]}
     >
       {renderIcon()}
-      <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+      <Text
+        size="xl"
+        weight="semibold"
+        align="center"
+        tone="primary"
+        style={styles.title}
+      >
         {title}
       </Text>
       {!!description && (
         <Text
-          style={[styles.description, { color: theme.colors.textSecondary }]}
+          size="md"
+          align="center"
+          tone="secondary"
+          style={styles.description}
         >
           {description}
         </Text>
       )}
       {!!hint && (
-        <Text style={[styles.hint, { color: theme.colors.textTertiary }]}>
+        <Text size="sm" align="center" tone="tertiary" style={styles.hint}>
           {hint}
         </Text>
       )}
@@ -148,23 +158,16 @@ const styles = StyleSheet.create(theme => ({
   },
 
   title: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.fonts.weight.semibold,
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
-    textAlign: 'center',
   },
 
   description: {
-    fontSize: theme.typography.fontSize.md,
     marginBottom: theme.spacing.lg,
-    textAlign: 'center',
   },
 
   hint: {
-    fontSize: theme.typography.fontSize.sm,
     marginBottom: theme.spacing.xl,
-    textAlign: 'center',
     fontStyle: 'italic',
   },
 

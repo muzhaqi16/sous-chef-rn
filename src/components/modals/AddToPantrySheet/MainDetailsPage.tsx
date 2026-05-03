@@ -6,7 +6,7 @@ import { FormInput } from '#components/molecules/FormInput';
 import { BrandAutocompleteField } from '#components/molecules/AutocompleteField/BrandAutocompleteField';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import { StorageState } from '../../../graphql/generated/schemaTypes';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 
 const STORAGE_STATES = Object.values(StorageState);
 

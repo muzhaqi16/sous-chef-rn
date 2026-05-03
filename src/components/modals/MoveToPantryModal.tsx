@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch } from 'react-native';
+import { View, Switch } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { alertService } from '#/services/alertService';
@@ -13,8 +13,9 @@ import { Header } from '#components/molecules/Header';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { Icon } from '#utils/iconUtils';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { StorageState } from '../../graphql/generated/schemaTypes';
-import { type ShoppingListItemDisplayFragment } from '#operations/shoppingList/shoppingListFragments.generated';
+import { Text } from '#components/atoms/Text';
+import { StorageState } from '#/graphql/generated/schemaTypes';
+import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 
 const STORAGE_STATES = Object.values(StorageState);
 
@@ -185,8 +186,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
           <>
             {/* Item Info */}
             <View style={styles.itemInfo}>
-              <Text style={styles.itemName}>{shoppingListItem.itemName}</Text>
-              <Text style={styles.itemQuantity}>
+              <Text size="lg" weight="semibold" style={styles.itemName}>
+                {shoppingListItem.itemName}
+              </Text>
+              <Text size="base" tone="secondary">
                 Shopping list quantity: {shoppingListItem.quantity || 1}{' '}
                 {shoppingListItem.unit?.symbol ||
                   shoppingListItem.unitName ||
@@ -197,8 +200,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             {/* Pantry Selector */}
             {pantries.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>
-                  Select Pantry<Text style={styles.requiredAsterisk}> *</Text>
+                <Text size="md" weight="medium" style={styles.sectionLabel}>
+                  Select Pantry<Text tone="error"> *</Text>
                 </Text>
                 <View style={styles.pantryList}>
                   {pantries.map(pantry => (
@@ -285,7 +288,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
             {/* Storage State */}
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Storage Type</Text>
+              <Text size="md" weight="medium" style={styles.sectionLabel}>
+                Storage Type
+              </Text>
               <View style={styles.segmentedControl}>
                 {STORAGE_STATES.map(state => (
                   <Pressable
@@ -313,7 +318,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
             {/* Expiration Date */}
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Expiration Date</Text>
+              <Text size="md" weight="medium" style={styles.sectionLabel}>
+                Expiration Date
+              </Text>
               <View style={styles.dateRow}>
                 <Pressable
                   style={({ pressed }) => [
@@ -385,10 +392,14 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             {/* Remove from List Toggle */}
             <View style={styles.toggleSection}>
               <View style={styles.toggleInfo}>
-                <Text style={styles.toggleLabel}>
+                <Text size="base" weight="medium">
                   Remove from shopping list
                 </Text>
-                <Text style={styles.toggleDescription}>
+                <Text
+                  size="sm"
+                  tone="secondary"
+                  style={styles.toggleDescription}
+                >
                   Turn off to keep the item in your shopping list
                 </Text>
               </View>
@@ -425,26 +436,13 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
   },
   itemName: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
-  },
-  itemQuantity: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary,
   },
   section: {
     marginBottom: theme.spacing.lg,
   },
   sectionLabel: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
-  },
-  requiredAsterisk: {
-    color: theme.colors.error,
   },
   quantityUnitRow: {
     flexDirection: 'row',
@@ -565,14 +563,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     marginRight: theme.spacing.md,
   },
-  toggleLabel: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
   toggleDescription: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
   pressed: {

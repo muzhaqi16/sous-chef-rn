@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "detox", "node", "react-native"]
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "../e2e/**/*.ts",
+    "../src/**/*.ts",
+    "../src/**/*.tsx"
+  ],
+  "exclude": ["**/node_modules", "**/Pods"]
+}

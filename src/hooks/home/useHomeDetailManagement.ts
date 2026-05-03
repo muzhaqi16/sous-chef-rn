@@ -10,9 +10,11 @@ import {
   RevokeHomeInviteDocument,
   LeaveHomeDocument,
   GetHomesDocument,
-} from '../../graphql/operations/home/home.generated';
-import { SetDefaultHomeDocument } from '../../graphql/operations/home/userSettings.generated';
-import { MembershipRole } from '../../graphql/generated/schemaTypes';
+} from '#operations/home/home.generated';
+import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n/t';
+
 import { MESSAGES } from '#/constants/messages';
 import { normalizeHome } from '#/utils/connectionUtils';
 import {
@@ -108,7 +110,7 @@ export function useHomeDetailManagement(homeId: string) {
     onError: error => {
       alertService.alert(
         'Error',
-        error.message || MESSAGES.errors.updateMemberRoleFailed,
+        error.message || t('errors.updateMemberRoleFailed'),
       );
     },
   });
@@ -140,7 +142,7 @@ export function useHomeDetailManagement(homeId: string) {
 
       alertService.alert(
         'Error',
-        error.message || MESSAGES.errors.removeMemberFailed,
+        error.message || t('errors.removeMemberFailed'),
       );
     },
   });
@@ -172,7 +174,7 @@ export function useHomeDetailManagement(homeId: string) {
 
       alertService.alert(
         'Error',
-        error.message || MESSAGES.errors.revokeInviteFailed,
+        error.message || t('errors.revokeInviteFailed'),
       );
     },
   });

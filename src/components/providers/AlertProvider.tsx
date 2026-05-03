@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, View, Text, Pressable } from 'react-native';
+import { Modal, View, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -14,6 +14,7 @@ import {
   type AlertButton,
 } from '#/services/alertService';
 import { SPRING, TIMING, ALERT } from '#/constants/animations';
+import { Text } from '#components/atoms/Text';
 
 // ─── AlertCard ────────────────────────────────────────────────────────────────
 
@@ -82,12 +83,25 @@ const AlertCard: React.FC<AlertCardProps> = ({
       style={[styles.card, animatedStyle, { zIndex: 100 - stackIndex }]}
       accessibilityViewIsModal={isTop}
     >
-      <Text style={styles.title} accessibilityRole="header">
+      <Text
+        size="lg"
+        weight="semibold"
+        align="center"
+        style={styles.title}
+        accessibilityRole="header"
+      >
         {entry.title}
       </Text>
 
       {entry.message ? (
-        <Text style={styles.message}>{entry.message}</Text>
+        <Text
+          size="base"
+          tone="secondary"
+          align="center"
+          style={styles.message}
+        >
+          {entry.message}
+        </Text>
       ) : null}
 
       <View
@@ -115,6 +129,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
               onPress={() => handleButtonPress(button)}
             >
               <Text
+                size="base"
                 style={[
                   styles.buttonText,
                   isCancel && styles.cancelButtonText,
@@ -279,16 +294,9 @@ const styles = StyleSheet.create(theme => ({
     maxWidth: '85%',
   },
   title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'center',
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   message: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
     marginBottom: theme.spacing.md,
     lineHeight: theme.typography.fontSize.base * 1.5,
   },
@@ -321,7 +329,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.error,
   },
   buttonText: {
-    fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.semibold,
   },
   defaultButtonText: {

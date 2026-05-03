@@ -8,8 +8,8 @@ import { logger } from '#/utils/environment';
 import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { useErrorService } from '#/services/errorService';
 import { useMutation } from '@apollo/client/react';
-import { RegisterDeviceDocument } from '../graphql/operations/auth/device.generated';
-import { type DeviceRegistrationInput } from '../graphql/generated/schemaTypes';
+import { RegisterDeviceDocument } from '#operations/auth/device.generated';
+import { type DeviceRegistrationInput } from '#/graphql/generated/schemaTypes';
 
 interface DeviceRegistrationState {
   isRegistering: boolean;

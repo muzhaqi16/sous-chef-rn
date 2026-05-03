@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 interface DataItem {
   label: string;
@@ -33,14 +34,12 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
     return (
       <View style={[styles.container, { minHeight: height }]}>
         {!!title && (
-          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+          <Text size="md" weight="semibold" style={styles.title}>
             {title}
           </Text>
         )}
         <View style={styles.emptyState}>
-          <Text
-            style={[styles.emptyText, { color: theme.colors.textSecondary }]}
-          >
+          <Text size="sm" tone="secondary">
             No data available
           </Text>
         </View>
@@ -51,7 +50,7 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
   return (
     <View style={styles.container}>
       {!!title && (
-        <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+        <Text size="md" weight="semibold" style={styles.title}>
           {title}
         </Text>
       )}
@@ -63,10 +62,7 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
           return (
             <View key={`${item.label}-${index}`} style={styles.barItem}>
               <View style={styles.barLabelContainer}>
-                <Text
-                  style={[styles.barLabel, { color: theme.colors.textPrimary }]}
-                  numberOfLines={1}
-                >
+                <Text size="sm" weight="medium" numberOfLines={1}>
                   {item.label}
                 </Text>
               </View>
@@ -79,16 +75,11 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
                     ]}
                   />
                 </View>
-                <Text
-                  style={[
-                    styles.barValue,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
+                <Text size="xs" tone="secondary" style={styles.barValue}>
                   {item.value}
                   {!!showSecondaryValue &&
                     item.secondaryValue !== undefined && (
-                      <Text style={styles.secondaryValue}>
+                      <Text weight="regular">
                         {` (${secondaryValuePrefix}${item.secondaryValue.toFixed(
                           2,
                         )})`}
@@ -109,8 +100,6 @@ const styles = StyleSheet.create(theme => ({
     marginVertical: theme.spacing.sm,
   },
   title: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
     marginBottom: theme.spacing.md,
     paddingHorizontal: theme.spacing.sm,
   },
@@ -120,9 +109,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     minHeight: 100,
   },
-  emptyText: {
-    fontSize: theme.fonts.size.sm,
-  },
   barList: {
     paddingHorizontal: theme.spacing.sm,
   },
@@ -131,10 +117,6 @@ const styles = StyleSheet.create(theme => ({
   },
   barLabelContainer: {
     marginBottom: theme.spacing.xs,
-  },
-  barLabel: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
   },
   barContainer: {
     flexDirection: 'row',
@@ -151,10 +133,6 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 4,
   },
   barValue: {
-    fontSize: theme.fonts.size.xs,
     flexShrink: 0,
-  },
-  secondaryValue: {
-    fontWeight: theme.fonts.weight.regular,
   },
 }));

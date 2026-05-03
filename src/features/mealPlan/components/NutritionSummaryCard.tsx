@@ -1,0 +1,219 @@
+import React, { useState } from 'react';
+import { View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
+import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
+import { NutritionGoalProgress } from './NutritionGoalProgress';
+import { Text } from '#components/atoms/Text';
+import { type MealPlanFullFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
+
+interface NutritionSummaryCardProps {
+  nutritionSummary: NonNullable<MealPlanFullFragment['nutritionSummary']>;
+  nutritionGoalProgress?: MealPlanFullFragment['nutritionGoalProgress'];
+}
+
+function MacroStat({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+}) {
+  return (
+    <View style={statStyles.container}>
+      <Text size="lg" weight="bold">
+        {Math.round(value)}
+      </Text>
+      <Text size="xs" tone="tertiary">
+        {unit}
+      </Text>
+      <Text size="xs" tone="secondary" style={statStyles.label}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
+  nutritionSummary,
+  nutritionGoalProgress,
+}) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const toggle = () => setExpanded(prev => !prev);
+
+  return (
+    <View style={styles.container}>
+      <Pressable onPress={toggle} style={styles.header}>
+        <Text size="md" weight="semibold">
+          Nutrition Summary
+        </Text>
+        <View style={styles.headerRight}>
+          {!expanded ? (
+            <Text size="sm" tone="secondary">
+              {Math.round(nutritionSummary.avgDailyCalories)} kcal/day
+            </Text>
+          ) : null}
+          <Icon
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color={styles.chevron.color}
+          />
+        </View>
+      </Pressable>
+
+      {expanded ? (
+        <View style={styles.body}>
+          {/* Daily averages */}
+          <View style={styles.section}>
+            <Text
+              size="sm"
+              weight="semibold"
+              tone="secondary"
+              style={styles.sectionTitle}
+            >
+              Daily Averages
+            </Text>
+            <View style={styles.macroRow}>
+              <MacroStat
+                label="Calories"
+                value={nutritionSummary.avgDailyCalories}
+                unit="kcal"
+              />
+              <MacroStat
+                label="Protein"
+                value={nutritionSummary.avgDailyProtein}
+                unit="g"
+              />
+              <MacroStat
+                label="Carbs"
+                value={nutritionSummary.avgDailyCarbs}
+                unit="g"
+              />
+              <MacroStat
+                label="Fat"
+                value={nutritionSummary.avgDailyFat}
+                unit="g"
+              />
+            </View>
+          </View>
+
+          {/* Plan totals */}
+          <View style={styles.section}>
+            <Text
+              size="sm"
+              weight="semibold"
+              tone="secondary"
+              style={styles.sectionTitle}
+            >
+              Plan Totals
+            </Text>
+            <View style={styles.infoRow}>
+              <Text size="sm" tone="secondary">
+                Total Meals
+              </Text>
+              <Text size="sm" weight="medium">
+                {nutritionSummary.totalMeals}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text size="sm" tone="secondary">
+                Meals with Nutrition Data
+              </Text>
+              <Text size="sm" weight="medium">
+                {nutritionSummary.mealsWithNutrition} (
+                {Math.round(nutritionSummary.coveragePercentage)}%)
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text size="sm" tone="secondary">
+                Total Calories
+              </Text>
+              <Text size="sm" weight="medium">
+                {Math.round(nutritionSummary.totalCalories)} kcal
+              </Text>
+            </View>
+          </View>
+
+          {/* Goal progress */}
+          {!!nutritionGoalProgress && (
+            <View style={styles.section}>
+              <Text
+                size="sm"
+                weight="semibold"
+                tone="secondary"
+                style={styles.sectionTitle}
+              >
+                Goal Progress
+              </Text>
+              <NutritionGoalProgress
+                overallScore={nutritionGoalProgress.overallScore}
+                caloriesProgress={nutritionGoalProgress.caloriesProgress}
+                proteinProgress={nutritionGoalProgress.proteinProgress}
+                carbsProgress={nutritionGoalProgress.carbsProgress}
+                fatProgress={nutritionGoalProgress.fatProgress}
+              />
+            </View>
+          )}
+        </View>
+      ) : null}
+    </View>
+  );
+};
+
+NutritionSummaryCard.displayName = 'NutritionSummaryCard';
+
+const styles = StyleSheet.create(theme => ({
+  container: {},
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.sm,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  chevron: {
+    color: theme.colors.textTertiary,
+  },
+  body: {
+    gap: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
+  },
+  section: {
+    gap: theme.spacing.sm,
+  },
+  sectionTitle: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  macroRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xs,
+  },
+}));
+
+const statStyles = StyleSheet.create(theme => ({
+  container: {
+    alignItems: 'center',
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.md,
+    marginHorizontal: 2,
+  },
+  label: {
+    marginTop: 2,
+  },
+}));

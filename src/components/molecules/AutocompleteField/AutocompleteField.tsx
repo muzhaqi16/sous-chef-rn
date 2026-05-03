@@ -1,9 +1,10 @@
 import React from 'react';
-import { Text } from 'react-native';
+
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { InlineAutocomplete } from '../InlineAutocomplete';
 import { BottomSheetAutocompleteInput } from '../BottomSheetAutocompleteInput';
+import { Text } from '#components/atoms/Text';
 
 interface SharedProps<TItem> {
   label?: string;
@@ -63,8 +64,18 @@ function AddNewFooter({
         pressed && footerStyles.pressed,
       ]}
     >
-      <Text style={footerStyles.icon}>+</Text>
-      <Text style={footerStyles.label}>{label}</Text>
+      <Text
+        size="xl"
+        weight="semibold"
+        tone="accent"
+        align="center"
+        style={footerStyles.icon}
+      >
+        +
+      </Text>
+      <Text size="md" weight="semibold" tone="accent">
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -82,16 +93,7 @@ const footerStyles = StyleSheet.create(theme => ({
     opacity: theme.opacity.pressed,
   },
   icon: {
-    fontSize: theme.typography.fontSize.xl,
     width: 32,
-    textAlign: 'center',
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  label: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
   },
 }));
 

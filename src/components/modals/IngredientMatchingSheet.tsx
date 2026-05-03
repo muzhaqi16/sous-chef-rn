@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import {
@@ -12,7 +12,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import { IngredientMatchRow } from '#components/recipe/IngredientMatchRow';
+import { IngredientMatchRow } from '#features/recipes/components/IngredientMatchRow';
 import {
   IngredientMatchingProvider,
   useIngredientMatchingActions,
@@ -20,7 +20,8 @@ import {
 import type {
   EditableMatch,
   MatchSummary,
-} from '#hooks/recipe/useRecipeIngredientMatching';
+} from '#features/recipes/hooks/useRecipeIngredientMatching';
+import { Text } from '#components/atoms/Text';
 
 const keyExtractor = (item: EditableMatch) => item.match.ingredient.id;
 
@@ -113,7 +114,7 @@ export const IngredientMatchingSheet: React.FC<
             count={matchSummary.missing}
             color={theme.colors.error}
           />
-          <Text style={styles.includedText}>
+          <Text size="xs" tone="secondary" style={styles.includedText}>
             {matchSummary.included}/{matchSummary.total} included
           </Text>
         </View>
@@ -141,7 +142,9 @@ export const IngredientMatchingSheet: React.FC<
               pressed && styles.buttonPressed,
             ]}
           >
-            <Text style={styles.skipText}>Skip Review</Text>
+            <Text size="base" weight="medium" tone="secondary">
+              Skip Review
+            </Text>
           </Pressable>
           <Pressable
             onPress={onConfirm}
@@ -156,7 +159,7 @@ export const IngredientMatchingSheet: React.FC<
             {confirmLoading ? (
               <ActivityIndicator size="small" color={theme.colors.white} />
             ) : (
-              <Text style={styles.confirmText}>
+              <Text size="base" weight="semibold" style={styles.confirmText}>
                 Confirm & Deduct ({matchSummary.included})
               </Text>
             )}
@@ -173,7 +176,7 @@ const SummaryPill: React.FC<{
   color: string;
 }> = ({ label, count, color }) => (
   <View style={[styles.pill, { backgroundColor: color + '20' }]}>
-    <Text style={[styles.pillText, { color }]}>
+    <Text size="xs" weight="semibold" style={{ color }}>
       {count} {label}
     </Text>
   </View>
@@ -196,13 +199,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: 3,
     borderRadius: theme.radii.sm,
   },
-  pillText: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
-  },
   includedText: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary,
     marginLeft: 'auto',
   },
   list: {
@@ -221,11 +218,6 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     alignItems: 'center',
   },
-  skipText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
   confirmButton: {
     flex: 2,
     paddingVertical: theme.spacing.md,
@@ -235,8 +227,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   confirmText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.white,
   },
   buttonPressed: {

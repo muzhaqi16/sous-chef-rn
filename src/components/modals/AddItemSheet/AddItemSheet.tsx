@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { ItemSuggestion } from '../../../graphql/generated/schemaTypes';
+import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
 import {
   BottomSheetSearchBar,
@@ -19,6 +19,7 @@ import type {
   SuggestionGroupConfig,
 } from './types';
 import { useAddItemSheetState } from './useAddItemSheetState';
+import { Text } from '#components/atoms/Text';
 
 /**
  * Generic AddItemSheet component.
@@ -43,6 +44,7 @@ export function AddItemSheet({
   isMutating,
   onAddManually,
   onScanPress,
+  onIdentifyPress,
   exitingItems: externalExitingItems,
   onExitComplete,
   initialSearchQuery = '',
@@ -159,7 +161,14 @@ export function AddItemSheet({
 
     return (
       <View key={groupConfig.key} style={styles.suggestionSection}>
-        <Text style={styles.sectionTitle}>{groupConfig.title}</Text>
+        <Text
+          size="sm"
+          weight="semibold"
+          tone="secondary"
+          style={styles.sectionTitle}
+        >
+          {groupConfig.title}
+        </Text>
         <View style={styles.suggestionList}>
           {items.map(renderSuggestionItem)}
         </View>
@@ -186,7 +195,9 @@ export function AddItemSheet({
             keyboardShouldPersistTaps="handled"
           >
             {/* Header */}
-            <Text style={styles.title}>{config.title}</Text>
+            <Text size="xl" weight="bold" style={styles.title}>
+              {config.title}
+            </Text>
 
             {/* Search Input */}
             <BottomSheetSearchBar
@@ -228,6 +239,14 @@ export function AddItemSheet({
                   label="Scan Barcode"
                   onPress={onScanPress}
                 />
+                {!!onIdentifyPress && (
+                  <ActionCard
+                    icon="camera-outline"
+                    label="Identify"
+                    onPress={onIdentifyPress}
+                    testID={`${config.testIDPrefix}-identify-button`}
+                  />
+                )}
                 <ActionCard
                   icon="add"
                   label="Add Manually"
@@ -252,10 +271,15 @@ export function AddItemSheet({
                   </View>
                 ) : !suggestions.hasSuggestions ? (
                   <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>
+                    <Text
+                      size="base"
+                      weight="medium"
+                      tone="secondary"
+                      style={styles.emptyText}
+                    >
                       {config.emptyStateMessage}
                     </Text>
-                    <Text style={styles.emptySubtext}>
+                    <Text size="sm" tone="tertiary" align="center">
                       {config.emptyStateSubtext}
                     </Text>
                   </View>
@@ -302,9 +326,6 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
   },
   title: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.lg,
   },
   actionButtons: {
@@ -313,9 +334,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xl,
   },
   sectionTitle: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
     letterSpacing: 1,
     marginBottom: theme.spacing.md,
   },
@@ -328,15 +346,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
-  },
-  emptySubtext: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textTertiary,
-    textAlign: 'center',
   },
   suggestionSection: {
     marginBottom: theme.spacing.lg,

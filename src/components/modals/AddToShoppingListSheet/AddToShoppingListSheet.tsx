@@ -4,7 +4,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useShoppingListSuggestions,
   ShoppingListSuggestionItem,
-} from '#hooks/shoppingList/useShoppingListSuggestions';
+} from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import { toastService } from '#/services/toastService';
 import {
   AddItemToShoppingListDocument,
@@ -12,17 +12,17 @@ import {
   type GetShoppingListSuggestionsQuery,
   type AddItemToShoppingListMutation,
   type AddItemToShoppingListMutationVariables,
-} from '../../../graphql/operations/shoppingList/shoppingList.generated';
-import { ItemSuggestion } from '../../../graphql/generated/schemaTypes';
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { createOptimisticShoppingListItem } from '#/hooks/shoppingList/mutations/utils';
+import { createOptimisticShoppingListItem } from '#features/shoppingList/hooks/mutations/utils';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import {
   useShoppingListTutorial,
   ShoppingListTutorialStep,
-} from '#/context/ShoppingListTutorialContext';
+} from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { SheetTutorialHint } from '#components/molecules/SheetTutorialHint';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';

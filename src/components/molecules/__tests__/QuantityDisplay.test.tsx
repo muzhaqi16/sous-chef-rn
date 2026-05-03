@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { QuantityDisplay } from '../QuantityDisplay';
-import { DisplayFormat } from '../../../graphql/generated/schemaTypes';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 
 describe('QuantityDisplay', () => {
   it('renders a dash when quantity is null', () => {

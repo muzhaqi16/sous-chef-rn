@@ -3,7 +3,7 @@ import {
   isBuiltInFilter,
   sortOptionToOrderBy,
 } from '../pantryFilters';
-import { StorageState, SortOrder } from '../../graphql/generated/schemaTypes';
+import { StorageState, SortOrder } from '#/graphql/generated/schemaTypes';
 
 describe('isBuiltInFilter', () => {
   it('returns true for "all"', () => {

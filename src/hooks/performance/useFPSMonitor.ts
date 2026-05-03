@@ -306,6 +306,7 @@ export function useSimpleFPS(): number {
     if (!__DEV__) return;
 
     let cancelled = false;
+    let rafId: number | null = null;
     let frames = 0;
     let lastTime = Date.now();
 
@@ -318,12 +319,13 @@ export function useSimpleFPS(): number {
         frames = 0;
         lastTime = now;
       }
-      requestAnimationFrame(countFrame);
+      rafId = requestAnimationFrame(countFrame);
     };
 
-    requestAnimationFrame(countFrame);
+    rafId = requestAnimationFrame(countFrame);
     return () => {
       cancelled = true;
+      if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, []);
 

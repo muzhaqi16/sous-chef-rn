@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '#/store/useAppStore';
-import { useAppSettings } from '#hooks/profile/useAppSettings';
+import { useAppSettings } from '#features/profile/hooks/useAppSettings';
 import { storage } from '#/storage/mmkv';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 

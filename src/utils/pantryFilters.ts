@@ -3,7 +3,7 @@ import {
   SortOrder,
   type PantryItemFilters,
   type PantryItemOrderBy,
-} from '../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
 import type {
   PantrySortOption,
   PantrySortDirection,

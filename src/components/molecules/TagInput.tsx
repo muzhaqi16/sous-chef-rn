@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Keyboard, ScrollView } from 'react-native';
+import { View, Keyboard, ScrollView } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 export interface TagInputProps {
   tags: string[];
@@ -81,7 +82,9 @@ export const TagInput: React.FC<TagInputProps> = ({
       <View style={styles.tagsContainer}>
         {tags.map((tag, index) => (
           <View key={`${tag}-${index}`} style={styles.tagChip}>
-            <Text style={styles.tagText}>{tag}</Text>
+            <Text size="sm" tone="accent" weight="medium">
+              {tag}
+            </Text>
             {!!editable && (
               <Pressable
                 onPress={() => handleRemoveTag(tag)}
@@ -128,7 +131,9 @@ export const TagInput: React.FC<TagInputProps> = ({
 
       {/* Tag limit indicator */}
       {!!editable && tags.length >= maxTags && (
-        <Text style={styles.limitText}>Maximum {maxTags} tags reached</Text>
+        <Text size="sm" tone="secondary" align="right">
+          Maximum {maxTags} tags reached
+        </Text>
       )}
 
       {/* Suggestions dropdown */}
@@ -151,7 +156,9 @@ export const TagInput: React.FC<TagInputProps> = ({
                   Keyboard.dismiss();
                 }}
               >
-                <Text style={styles.suggestionText}>{suggestion}</Text>
+                <Text size="sm" tone="secondary">
+                  {suggestion}
+                </Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -187,11 +194,6 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
     gap: theme.spacing.xs,
   },
-  tagText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
   input: {
     flex: 1,
     minWidth: 80,
@@ -199,11 +201,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: 0,
-  },
-  limitText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'right',
   },
   suggestionsContainer: {
     paddingVertical: theme.spacing.sm,
@@ -216,10 +213,6 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
-  },
-  suggestionText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

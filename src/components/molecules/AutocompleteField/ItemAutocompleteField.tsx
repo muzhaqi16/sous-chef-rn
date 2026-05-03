@@ -1,5 +1,5 @@
 import React from 'react';
-import { ItemSuggestion } from '../../../graphql/generated/schemaTypes';
+import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { useItemAutocomplete } from '#hooks/autocomplete/useItemAutocomplete';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { AutocompleteField } from './AutocompleteField';

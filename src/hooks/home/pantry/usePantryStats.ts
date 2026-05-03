@@ -8,7 +8,7 @@
  * falls back to client-side single-pass algorithm (O(n))
  */
 
-import { StorageState } from '../../../graphql/generated/schemaTypes';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 import type { LocationCounts } from './types';
 
 interface UsePantryStatsOptions {

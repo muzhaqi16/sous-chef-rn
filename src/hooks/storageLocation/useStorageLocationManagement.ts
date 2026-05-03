@@ -7,8 +7,8 @@ import {
   UpdateStorageLocationDocument,
   DeleteStorageLocationDocument,
   SetDefaultStorageLocationDocument,
-} from '../../graphql/operations/storageLocation/storageLocation.generated';
-import { type UpdateStorageLocationInput } from '../../graphql/generated/schemaTypes';
+} from '#operations/storageLocation/storageLocation.generated';
+import { type UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { extractNodes } from '#/utils/connectionUtils';
 import {

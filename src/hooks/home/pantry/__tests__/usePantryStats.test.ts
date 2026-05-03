@@ -1,7 +1,7 @@
 'use no memo';
 
 import { usePantryStats } from '../usePantryStats';
-import { StorageState } from '../../../../graphql/generated/schemaTypes';
+import { StorageState } from '#/graphql/generated/schemaTypes';
 
 describe('usePantryStats', () => {
   describe('client-side fallback (no storageStateCounts)', () => {

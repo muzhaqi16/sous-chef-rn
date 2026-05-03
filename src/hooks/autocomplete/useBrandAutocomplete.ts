@@ -1,5 +1,5 @@
 import { useLazyQuery } from '@apollo/client/react';
-import { SearchBrandsDocument } from '../../graphql/operations/item/item.generated';
+import { SearchBrandsDocument } from '#operations/item/item.generated';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
 interface SuggestedBrand {

@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { formatQuantityAsFraction } from '#/utils/formatQuantity';
+import { Text } from '#components/atoms/Text';
 
 interface FractionQuickSelectProps {
   /** Numeric fraction values, e.g. [0.25, 0.5, 0.75] */
@@ -56,7 +57,9 @@ export const FractionQuickSelect: React.FC<FractionQuickSelectProps> = ({
               onPress={() => onSelect(value)}
             >
               <Text
-                style={[styles.chipText, isSelected && styles.chipTextSelected]}
+                size="sm"
+                tone={isSelected ? 'accent' : 'secondary'}
+                weight={isSelected ? 'semibold' : undefined}
               >
                 {chipLabel}
               </Text>
@@ -94,13 +97,5 @@ const styles = StyleSheet.create(theme => ({
   },
   chipPressed: {
     opacity: 0.7,
-  },
-  chipText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  chipTextSelected: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
   },
 }));

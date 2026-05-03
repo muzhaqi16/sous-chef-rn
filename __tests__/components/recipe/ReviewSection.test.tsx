@@ -2,18 +2,18 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { ReviewSection } from '../../../src/components/recipe/ReviewSection';
+import { ReviewSection } from '../../../src/features/recipes/components/ReviewSection';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../src/components/recipe/RatingBreakdown', () => ({
+jest.mock('../../../src/features/recipes/components/RatingBreakdown', () => ({
   RatingBreakdown: () => 'RatingBreakdown',
 }));
-jest.mock('../../../src/components/recipe/ReviewCard', () => ({
+jest.mock('../../../src/features/recipes/components/ReviewCard', () => ({
   ReviewCard: () => 'ReviewCard',
 }));
-jest.mock('../../../src/components/recipe/WriteReviewSheet', () => ({
+jest.mock('../../../src/features/recipes/components/WriteReviewSheet', () => ({
   WriteReviewSheet: () => null,
 }));
 

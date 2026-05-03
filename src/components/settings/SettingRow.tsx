@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Pressable } from 'react-native-gesture-handler';
+import { Text } from '#components/atoms/Text';
 
 interface SettingRowProps {
   title: string;
@@ -41,11 +42,16 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       )}
 
       <View style={styles.contentContainer}>
-        <Text style={[styles.title, disabled && styles.titleDisabled]}>
+        <Text
+          size="base"
+          style={[styles.title, disabled && styles.titleDisabled]}
+        >
           {title}
         </Text>
         {!!description && (
           <Text
+            size="sm"
+            lineHeight="tight"
             style={[styles.description, disabled && styles.descriptionDisabled]}
           >
             {description}
@@ -53,7 +59,11 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         )}
       </View>
 
-      {value ? <Text style={styles.value}>{value}</Text> : null}
+      {value ? (
+        <Text size="sm" tone="secondary" style={styles.value}>
+          {value}
+        </Text>
+      ) : null}
 
       {!!showArrow && (
         <Icon
@@ -85,7 +95,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   title: {
-    fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
@@ -93,16 +102,12 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textTertiary,
   },
   description: {
-    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    lineHeight: 20,
   },
   descriptionDisabled: {
     color: theme.colors.textTertiary,
   },
   value: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
     marginRight: theme.spacing.xs,
   },
   pressed: {

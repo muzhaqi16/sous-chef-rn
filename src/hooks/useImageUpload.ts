@@ -7,9 +7,9 @@ import {
   ConfirmProfileImageUploadDocument,
   ConfirmItemImageUploadDocument,
   UpdateItemImageDocument,
-} from '../graphql/operations/image/imageUpload.generated';
-import { UpdateUserProfileDocument } from '../graphql/operations/auth/user.generated';
-import { ImageUploadPurpose } from '../graphql/generated/schemaTypes';
+} from '#operations/image/imageUpload.generated';
+import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
+import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import { useStore } from '#store';
 import { executeMutation } from '#/utils/compilerSafeWrappers';

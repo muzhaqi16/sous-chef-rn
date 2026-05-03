@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { Text, View, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
+import { Text } from '#components/atoms/Text';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { StyleSheet } from 'react-native-unistyles';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useSelectableItems } from '#hooks/useSelectableItems';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { GetOnboardingItemsDocument } from '../../graphql/operations/item/item.generated';
+import { GetOnboardingItemsDocument } from '#operations/item/item.generated';
 import {
   GetPantryDocument,
   CreatePantryItemDocument,
   DeletePantryItemDocument,
-} from '#operations/pantry/pantry.generated';
+} from '#features/pantry/graphql/pantry.generated';
 import {
   StorageState,
   ItemCondition,
@@ -126,7 +127,7 @@ export const SelectPantryItems = () => {
         onSkip={() => navigateToNextStep('SelectPantryItems')}
       >
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
+          <Text tone="error" align="center" style={styles.errorText}>
             Unable to load items. Please try again.
           </Text>
           <Button onPress={() => refetch()} variant="primary">
@@ -215,7 +216,14 @@ export const SelectPantryItems = () => {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.helperText}>{selectedItems.length} selected</Text>
+        <Text
+          size="sm"
+          tone="secondary"
+          align="center"
+          style={styles.helperText}
+        >
+          {selectedItems.length} selected
+        </Text>
         <View style={styles.chipContainer}>
           {items.map(item => (
             <AnimatedChip
@@ -256,10 +264,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing['3'],
   },
   helperText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.md,
-    textAlign: 'center',
   },
   listContent: {
     paddingBottom: theme.spacing.md,
@@ -278,8 +283,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
   },
   errorText: {
-    color: theme.colors.error,
-    textAlign: 'center',
     marginBottom: theme.spacing.lg,
   },
   loader: {

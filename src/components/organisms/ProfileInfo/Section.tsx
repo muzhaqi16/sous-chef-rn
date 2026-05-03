@@ -1,7 +1,8 @@
 import React, { ReactNode } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Row, RowProps } from './Row';
 import { StyleSheet } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 export interface SectionProps {
   title: string;
@@ -16,7 +17,14 @@ export const Section: React.FC<SectionProps> = ({
 }) => {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text
+        size="xs"
+        weight="semibold"
+        tone="secondary"
+        style={styles.sectionTitle}
+      >
+        {title}
+      </Text>
       <View style={styles.sectionBody}>
         {children
           ? children
@@ -36,9 +44,6 @@ export const Section: React.FC<SectionProps> = ({
 const styles = StyleSheet.create(theme => ({
   section: { marginBottom: theme.spacing.lg },
   sectionTitle: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     marginBottom: theme.spacing.sm,
   },

@@ -61,7 +61,7 @@ jest.mock('../PantryActionModal', () => ({
     );
   },
 }));
-jest.mock('#hooks/pantry/useConversionPreview', () => ({
+jest.mock('#features/pantry/hooks/useConversionPreview', () => ({
   useConversionPreview: () => ({
     previewText: null,
     availableInSelectedUnit: null,

@@ -1,4 +1,4 @@
-import { StorageLocation } from '../../graphql/generated/schemaTypes';
+import { StorageLocation } from '#/graphql/generated/schemaTypes';
 
 interface UseStorageLocationAutocompleteOptions {
   storageLocations: StorageLocation[];

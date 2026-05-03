@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 export interface ActionCardProps {
   icon: string;
@@ -49,7 +50,10 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         />
       </View>
       <Text
-        style={[styles.label, disabled && styles.labelDisabled]}
+        size="base"
+        weight="medium"
+        align="center"
+        tone={disabled ? 'tertiary' : undefined}
         numberOfLines={2}
       >
         {label}
@@ -77,15 +81,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.sm,
-  },
-  label: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-  },
-  labelDisabled: {
-    color: theme.colors.textTertiary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

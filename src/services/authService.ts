@@ -26,17 +26,17 @@ import {
   type LoginMutationVariables,
   type RegisterMutation,
   type RegisterMutationVariables,
-} from '../graphql/operations/auth/auth.generated';
+} from '#operations/auth/auth.generated';
 import {
   RegisterDeviceDocument,
   type RegisterDeviceMutation,
   type RegisterDeviceMutationVariables,
-} from '../graphql/operations/auth/device.generated';
+} from '#operations/auth/device.generated';
 import {
   type LoginInput,
   type RegisterInput,
   type DeviceRegistrationInput,
-} from '../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
 import {
   loadCredentials,
   loadCredentialsForAccount,

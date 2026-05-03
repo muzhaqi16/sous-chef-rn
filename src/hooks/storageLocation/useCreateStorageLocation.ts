@@ -1,6 +1,6 @@
 import { useMutation } from '@apollo/client/react';
-import { CreateStorageLocationDocument } from '../../graphql/operations/storageLocation/storageLocation.generated';
-import { type CreateStorageLocationInput } from '../../graphql/generated/schemaTypes';
+import { CreateStorageLocationDocument } from '#operations/storageLocation/storageLocation.generated';
+import { type CreateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
   createAddToQueryConnectionUpdater,

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Modal, Pressable } from 'react-native';
+import { View, Modal, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 export const RememberMeModal: React.FC<{
   visible: boolean;
@@ -28,8 +29,16 @@ export const RememberMeModal: React.FC<{
             color={theme.colors.primary}
           />
 
-          <Text style={styles.modalTitle}>Remember login info?</Text>
-          <Text style={styles.modalSubtitle}>
+          <Text size="xl" weight="semibold" style={styles.modalTitle}>
+            Remember login info?
+          </Text>
+          <Text
+            size="sm"
+            tone="secondary"
+            align="center"
+            lineHeight="normal"
+            style={styles.modalSubtitle}
+          >
             We'll securely save your login info for {email} on this device, so
             you won't need to enter it next time.
           </Text>
@@ -42,7 +51,9 @@ export const RememberMeModal: React.FC<{
               ]}
               onPress={onDecline}
             >
-              <Text style={styles.modalButtonSecondaryText}>Not Now</Text>
+              <Text size="md" weight="semibold">
+                Not Now
+              </Text>
             </Pressable>
 
             <Pressable
@@ -52,7 +63,13 @@ export const RememberMeModal: React.FC<{
               ]}
               onPress={onAccept}
             >
-              <Text style={styles.modalButtonPrimaryText}>Remember</Text>
+              <Text
+                size="md"
+                weight="semibold"
+                style={styles.modalButtonPrimaryText}
+              >
+                Remember
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -79,17 +96,10 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   modalTitle: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   modalSubtitle: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
     marginBottom: theme.spacing.xl,
-    lineHeight: theme.typography.lineHeight.normal,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -114,12 +124,5 @@ const styles = StyleSheet.create(theme => ({
   },
   modalButtonPrimaryText: {
     color: theme.colors.white,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  modalButtonSecondaryText: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
 }));

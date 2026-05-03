@@ -25,7 +25,7 @@ import { useHomeMutations } from './useHomeMutations';
 import { useHomeInvitations } from './useHomeInvitations';
 
 // MembershipRole is available from '#generated' directly
-// import { MembershipRole } from '../../../graphql/generated/schemaTypes';
+// import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 export function useHomeManagement() {
   // Query hook - fetches homes and computes stats

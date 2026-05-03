@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { InviteUserModal } from '#components/organisms/InviteUserModal';
-import { MembershipRole } from '../graphql/generated/schemaTypes';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 export const useInviteUserModal = () => {
   const [visible, setVisible] = useState(false);

@@ -1,5 +1,5 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
@@ -7,13 +7,14 @@ import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Icon } from '#utils/iconUtils';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { useMutation } from '@apollo/client/react';
-import { CollaboratorRole } from '../../graphql/generated/schemaTypes';
-import { type ShoppingListCollaboratorFragment } from '#operations/shoppingList/shoppingListFragments.generated';
-import { UpdateCollaboratorRoleDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
+import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
+import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { UpdateCollaboratorRoleDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { ROLE_PERMISSIONS } from '#/constants/collaboratorRoles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
+import { Text } from '#components/atoms/Text';
 
 interface CollaboratorPermissionsBottomSheetProps {
   shoppingListId: string;
@@ -128,12 +129,14 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerBlock}>
-          <Text style={styles.subtitle}>
+          <Text size="md" weight="semibold">
             {getCollaboratorDisplayName(collaborator)}
           </Text>
           {!!collaborator.email &&
             collaborator.email !== getCollaboratorDisplayName(collaborator) && (
-              <Text style={styles.emailCaption}>{collaborator.email}</Text>
+              <Text size="sm" tone="secondary" style={styles.emailCaption}>
+                {collaborator.email}
+              </Text>
             )}
         </View>
 
@@ -158,10 +161,16 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
               >
                 <View style={styles.roleHeader}>
                   <View style={styles.roleTitle}>
-                    <Text style={styles.roleIcon}>{roleInfo.icon}</Text>
+                    <Text size="xl">{roleInfo.icon}</Text>
                     <View>
-                      <Text style={styles.roleLabel}>{roleInfo.label}</Text>
-                      <Text style={styles.roleDescription}>
+                      <Text size="md" weight="semibold">
+                        {roleInfo.label}
+                      </Text>
+                      <Text
+                        size="sm"
+                        tone="secondary"
+                        style={styles.roleDescription}
+                      >
                         {roleInfo.description}
                       </Text>
                     </View>
@@ -188,7 +197,13 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                 {/* Show permissions preview for selected role */}
                 {!!isSelected && (
                   <View style={styles.permissionsContainer}>
-                    <Text style={styles.permissionsTitle}>Permissions:</Text>
+                    <Text
+                      size="sm"
+                      weight="semibold"
+                      style={styles.permissionsTitle}
+                    >
+                      Permissions:
+                    </Text>
                     <View style={styles.permissionsList}>
                       {roleInfo.permissions.map((permission, index) => (
                         <View key={index} style={styles.permissionItem}>
@@ -202,10 +217,10 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                             }
                           />
                           <Text
-                            style={[
-                              styles.permissionLabel,
-                              !permission.granted && styles.permissionDenied,
-                            ]}
+                            size="sm"
+                            style={
+                              !permission.granted && styles.permissionDenied
+                            }
                           >
                             {permission.label}
                           </Text>
@@ -233,14 +248,7 @@ const styles = StyleSheet.create(theme => ({
   headerBlock: {
     marginBottom: theme.spacing.lg,
   },
-  subtitle: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
   emailCaption: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: 2,
   },
   rolesContainer: {
@@ -265,17 +273,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     gap: theme.spacing.sm,
   },
-  roleIcon: {
-    fontSize: theme.typography.fontSize.xl,
-  },
-  roleLabel: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   roleDescription: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: 2,
   },
   radioOuter: {
@@ -299,9 +297,6 @@ const styles = StyleSheet.create(theme => ({
     borderTopColor: theme.colors.border,
   },
   permissionsTitle: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   permissionsList: {
@@ -311,10 +306,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-  },
-  permissionLabel: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textPrimary,
   },
   permissionDenied: {
     color: theme.colors.textSecondary,

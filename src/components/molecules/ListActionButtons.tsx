@@ -1,8 +1,9 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, IconLibrary } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 interface ActionButton {
   icon: string;
@@ -39,6 +40,8 @@ export const ListActionButtons: React.FC<ListActionButtonsProps> = ({
             library={action.iconLibrary}
           />
           <Text
+            size="md"
+            weight="medium"
             style={[
               styles.actionButtonText,
               { color: action.color || theme.colors.primary },
@@ -69,8 +72,6 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
   },
   actionButtonText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
     marginLeft: theme.spacing['3'],
     flex: 1,
   },

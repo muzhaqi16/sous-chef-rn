@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable, TextInput } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
@@ -13,6 +13,7 @@ import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/
 import Chip from '#/components/atoms/Chip';
 import { Icon } from '#utils/iconUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
+import { Text } from '#components/atoms/Text';
 
 interface ItemUnit {
   id: string;
@@ -258,7 +259,10 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
         {/* Quantity Section */}
         <View style={styles.section}>
           <Text
-            style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}
+            size="sm"
+            weight="medium"
+            tone="secondary"
+            style={styles.sectionLabel}
           >
             Quantity
           </Text>
@@ -317,12 +321,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                   maxLength={10}
                 />
               ) : (
-                <Text
-                  style={[
-                    styles.quantityText,
-                    { color: theme.colors.textPrimary },
-                  ]}
-                >
+                <Text size="5xl" weight="semibold">
                   {quantityInput || '0'}
                 </Text>
               )}
@@ -345,7 +344,10 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
         {/* Unit Section */}
         <View style={styles.section}>
           <Text
-            style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}
+            size="sm"
+            weight="medium"
+            tone="secondary"
+            style={styles.sectionLabel}
           >
             Unit
           </Text>
@@ -409,8 +411,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   sectionLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.medium,
     marginBottom: theme.spacing.sm,
   },
   chipsContainer: {
@@ -444,10 +444,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.lg,
-  },
-  quantityText: {
-    fontSize: theme.typography.fontSize['5xl'],
-    fontWeight: theme.fonts.weight.semibold,
   },
   quantityInput: {
     fontSize: theme.typography.fontSize['5xl'],

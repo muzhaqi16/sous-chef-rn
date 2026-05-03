@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ViewStyle } from 'react-native';
+import { View, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { NutritionsData, NutrientCategory } from '#/types/nutrition';
 import {
@@ -11,6 +11,7 @@ import {
   formatServingSize,
   hasNutritionData,
 } from '#utils/nutritionUtils';
+import { Text } from '#components/atoms/Text';
 
 interface NutritionDetailListProps {
   /** Raw nutritions JSON from API or parsed NutritionsData */
@@ -44,7 +45,9 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
     return (
       <View style={[styles.container, style]}>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No nutrition data available</Text>
+          <Text size="sm" tone="secondary" style={styles.emptyText}>
+            No nutrition data available
+          </Text>
         </View>
       </View>
     );
@@ -63,8 +66,12 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
       {/* Serving size header */}
       {!!displayServingSize && (
         <View style={styles.servingHeader}>
-          <Text style={styles.servingLabel}>Serving Size</Text>
-          <Text style={styles.servingValue}>{displayServingSize}</Text>
+          <Text size="sm" weight="medium" tone="secondary">
+            Serving Size
+          </Text>
+          <Text size="sm" weight="semibold">
+            {displayServingSize}
+          </Text>
         </View>
       )}
 
@@ -75,7 +82,7 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
 
         return (
           <View key={category} style={styles.section}>
-            <Text style={styles.sectionTitle}>
+            <Text size="sm" weight="semibold" style={styles.sectionTitle}>
               {getCategoryLabel(category)}
             </Text>
 
@@ -87,8 +94,10 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
                   index === categoryEntries.length - 1 && styles.lastRow,
                 ]}
               >
-                <Text style={styles.nutrientName}>{entry.name}</Text>
-                <Text style={styles.nutrientValue}>
+                <Text size="sm" tone="secondary" style={styles.nutrientName}>
+                  {entry.name}
+                </Text>
+                <Text size="sm" weight="medium">
                   {formatNutritionValue(entry.amount, entry.unit)}
                 </Text>
               </View>
@@ -117,24 +126,11 @@ const styles = StyleSheet.create(theme => ({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  servingLabel: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
-  servingValue: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   section: {
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
   sectionTitle: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
@@ -155,21 +151,12 @@ const styles = StyleSheet.create(theme => ({
   },
   nutrientName: {
     flex: 1,
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  nutrientValue: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
   },
   emptyState: {
     padding: theme.spacing.xl,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     fontStyle: 'italic',
   },
 }));

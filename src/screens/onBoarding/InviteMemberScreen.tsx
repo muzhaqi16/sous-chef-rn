@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
@@ -7,17 +7,18 @@ import { Button } from '#components/base/Button';
 import { EmailInput } from '#components/atoms/EmailInput';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMutation } from '@apollo/client/react';
-import { InviteToHomeDocument } from '../../graphql/operations/home/home.generated';
-import { AddCollaboratorDocument } from '../../graphql/operations/shoppingList/shoppingList.generated';
+import { InviteToHomeDocument } from '#operations/home/home.generated';
+import { AddCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   CollaboratorRole,
   MembershipRole,
-} from '../../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useUser } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { Text } from '#components/atoms/Text';
 
 type InviteEntry = {
   id: string;
@@ -179,8 +180,10 @@ export const InviteMemberScreen = () => {
       >
         <View style={styles.container}>
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>Nothing to share yet</Text>
-            <Text style={styles.emptyStateSubtext}>
+            <Text size="md" tone="secondary" style={styles.emptyStateText}>
+              Nothing to share yet
+            </Text>
+            <Text size="sm" tone="secondary">
               You need to create a home or shopping list first to invite others.
               You can invite people later from settings.
             </Text>
@@ -223,22 +226,24 @@ export const InviteMemberScreen = () => {
         <View style={styles.invitesList}>
           {invites.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
+              <Text size="md" tone="secondary" style={styles.emptyStateText}>
                 No invitations added yet
               </Text>
-              <Text style={styles.emptyStateSubtext}>
+              <Text size="sm" tone="secondary">
                 Add email addresses above to invite members
               </Text>
             </View>
           ) : (
             <>
-              <Text style={styles.listHeader}>
+              <Text size="sm" tone="secondary" style={styles.listHeader}>
                 Inviting {invites.length}{' '}
                 {invites.length === 1 ? 'person' : 'people'}:
               </Text>
               {invites.map(invite => (
                 <View key={invite.id} style={styles.inviteItem}>
-                  <Text style={styles.inviteEmail}>{invite.email}</Text>
+                  <Text size="md" style={styles.inviteEmail}>
+                    {invite.email}
+                  </Text>
                   <Pressable
                     onPress={() => removeInvite(invite.id)}
                     style={({ pressed }) => [
@@ -246,7 +251,9 @@ export const InviteMemberScreen = () => {
                       pressed && styles.pressed,
                     ]}
                   >
-                    <Text style={styles.removeButtonText}>✕</Text>
+                    <Text size="xl" tone="tertiary">
+                      ✕
+                    </Text>
                   </Pressable>
                 </View>
               ))}
@@ -255,7 +262,12 @@ export const InviteMemberScreen = () => {
         </View>
 
         <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
+          <Text
+            tone="secondary"
+            lineHeight="tight"
+            align="center"
+            style={styles.infoText}
+          >
             💡 Tip: You can always invite more people later from your settings
           </Text>
         </View>
@@ -300,17 +312,9 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['2xl'],
   },
   emptyStateText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
-  emptyStateSubtext: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-  },
   listHeader: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing['3'],
   },
   inviteItem: {
@@ -325,18 +329,12 @@ const styles = StyleSheet.create(theme => ({
   },
   inviteEmail: {
     flex: 1,
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
   },
   removeButton: {
     width: 32,
     height: 32,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  removeButtonText: {
-    fontSize: theme.typography.fontSize.xl,
-    color: theme.colors.textTertiary,
   },
   infoBox: {
     backgroundColor: theme.colors.info + '20',
@@ -346,9 +344,6 @@ const styles = StyleSheet.create(theme => ({
   },
   infoText: {
     fontSize: theme.typography.fontSize.sm - 1,
-    color: theme.colors.textSecondary,
-    lineHeight: theme.typography.lineHeight.tight,
-    textAlign: 'center',
   },
   pressed: {
     opacity: theme.opacity.pressed,

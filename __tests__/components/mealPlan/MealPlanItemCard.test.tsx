@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { fireEvent } from '@testing-library/react-native';
-import { MealPlanItemCard } from '../../../src/components/mealPlan/MealPlanItemCard';
-import { renderWithApollo } from '../../helpers/apolloMockProvider';
+import { MealPlanItemCard } from '#features/mealPlan/components/MealPlanItemCard';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 
-jest.mock('../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../src/apollo/links/refreshToken');
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
-jest.mock('../../../src/components/atoms/CachedImage', () => ({
+jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => null,
 }));
 

@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Image } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { ImagePicker, ImageFile } from './ImagePicker';
+import { Text } from '#components/atoms/Text';
 
 // ImageFile type should be imported from ImagePicker.tsx directly
 
@@ -28,7 +29,9 @@ export const ProductImagePicker: React.FC<ProductImagePickerProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text size="base" weight="medium" style={styles.label}>
+        {label}
+      </Text>
       <View style={styles.imageContainer}>
         {selectedImage ? (
           <View style={styles.imagePreview}>
@@ -61,7 +64,9 @@ export const ProductImagePicker: React.FC<ProductImagePickerProps> = ({
                 size={32}
                 color={theme.colors.textSecondary}
               />
-              <Text style={styles.placeholderText}>Take or select a photo</Text>
+              <Text size="base" tone="secondary" align="center">
+                Take or select a photo
+              </Text>
             </View>
           </ImagePicker>
         )}
@@ -75,9 +80,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
   },
   label: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   imageContainer: {
@@ -117,11 +119,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     gap: theme.spacing.sm,
     minHeight: 120,
-  },
-  placeholderText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
   },
   pressed: {
     opacity: theme.opacity.pressed,

@@ -12,7 +12,7 @@ jest.mock('#/constants/animations', () => ({
   TIMING: { STANDARD: 200, FAST: 100 },
 }));
 
-jest.mock('../../organisms/SortableShoppingList/SortableList', () => ({
+jest.mock('#features/shoppingList/components/SortableShoppingList/SortableList', () => ({
   SortableShoppingList: ({ items }: any) => {
     const { View, Text } = require('react-native');
     const R = require('react');

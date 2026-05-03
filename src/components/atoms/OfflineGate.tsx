@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleProp, ViewStyle } from 'react-native';
+import { View, StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { Icon } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 interface OfflineGateProps {
   children: React.ReactNode;
@@ -67,7 +68,9 @@ export const OfflineGate: React.FC<OfflineGateProps> = ({
     return (
       <View style={[styles.compactContainer, style]}>
         <Icon name="cloud-offline-outline" size={16} />
-        <Text style={styles.compactText}>{message}</Text>
+        <Text size="sm" tone="secondary">
+          {message}
+        </Text>
       </View>
     );
   }
@@ -76,9 +79,18 @@ export const OfflineGate: React.FC<OfflineGateProps> = ({
   return (
     <View style={[styles.container, style]}>
       <Icon name="cloud-offline-outline" size={48} />
-      <Text style={styles.message}>{message}</Text>
+      <Text size="lg" weight="semibold" tone="secondary" align="center">
+        {message}
+      </Text>
       {description ? (
-        <Text style={styles.description}>{description}</Text>
+        <Text
+          size="sm"
+          tone="secondary"
+          align="center"
+          style={styles.description}
+        >
+          {description}
+        </Text>
       ) : null}
     </View>
   );
@@ -92,16 +104,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xl,
     gap: theme.spacing.md,
   },
-  message: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
   description: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
     lineHeight: theme.typography.fontSize.sm * 1.5,
   },
   compactContainer: {
@@ -110,9 +113,5 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     padding: theme.spacing.sm,
     gap: theme.spacing.xs,
-  },
-  compactText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
   },
 }));

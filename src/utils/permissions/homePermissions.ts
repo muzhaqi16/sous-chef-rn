@@ -1,4 +1,4 @@
-import { MembershipRole } from '../../graphql/generated/schemaTypes';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 /**
  * Get the roles that a user can invite to a home based on their own role

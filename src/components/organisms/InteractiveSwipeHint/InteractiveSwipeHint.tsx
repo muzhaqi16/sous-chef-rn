@@ -5,7 +5,7 @@ import React, {
   useLayoutEffect,
   ComponentRef,
 } from 'react';
-import { View, Text, Modal } from 'react-native';
+import { View, Modal } from 'react-native';
 import {
   GestureHandlerRootView,
   Pressable,
@@ -27,6 +27,7 @@ import { RightActions } from '#/components/molecules/SwipeableItem/RightActions'
 import { styles as swipeStyles } from '#/components/molecules/SwipeableItem/styles';
 import { MockItemCard } from './MockItemCard';
 import { SwipeHandIndicator } from './SwipeHandIndicator';
+import { Text } from '#components/atoms/Text';
 
 export interface InteractiveSwipeHintProps {
   mode: 'pantry' | 'shopping';
@@ -208,7 +209,9 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
                 size={64}
                 color={theme.colors.success}
               />
-              <Text style={styles.completedText}>You got it!</Text>
+              <Text size="lg" weight="semibold" style={styles.completedText}>
+                You got it!
+              </Text>
             </Animated.View>
           </View>
         </GestureHandlerRootView>
@@ -238,11 +241,20 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Skip tutorial"
           >
-            <Text style={styles.skipText}>Skip</Text>
+            <Text size="md" weight="medium" tone="tertiary">
+              Skip
+            </Text>
           </Pressable>
 
           {/* Instruction text */}
-          <Text style={styles.instruction}>{step?.instruction}</Text>
+          <Text
+            size="lg"
+            weight="semibold"
+            align="center"
+            style={styles.instruction}
+          >
+            {step?.instruction}
+          </Text>
 
           {/* Card area — Swipeable for swipe steps, plain card for tap steps */}
           <View style={styles.cardArea}>
@@ -324,16 +336,8 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
   },
-  skipText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textTertiary,
-  },
   instruction: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.white,
-    textAlign: 'center',
     marginBottom: theme.spacing.xl,
   },
   cardArea: {
@@ -353,8 +357,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   completedText: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.white,
     marginTop: theme.spacing.md,
   },

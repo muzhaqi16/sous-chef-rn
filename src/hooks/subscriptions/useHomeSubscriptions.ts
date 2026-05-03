@@ -16,12 +16,12 @@ import { useSubscription } from '@apollo/client/react';
 import {
   MembershipChangesDocument,
   type MembershipChangesSubscription,
-} from '../../graphql/operations/home/membership.generated';
+} from '#operations/home/membership.generated';
 import {
   HomeInviteChangedDocument,
   type HomeInviteChangedSubscription,
-} from '../../graphql/operations/home/home.generated';
-import { HomeInviteMutationType } from '../../graphql/generated/schemaTypes';
+} from '#operations/home/home.generated';
+import { HomeInviteMutationType } from '#/graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   CacheStrategy,

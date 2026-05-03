@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Switch } from 'react-native';
+import { View, Switch } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -8,6 +8,7 @@ import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { parseFractionalInput } from '#/utils/fractionUtils';
+import { Text } from '#components/atoms/Text';
 
 interface MarkCookedModalProps {
   visible: boolean;
@@ -96,7 +97,9 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
 
         {/* Recipe Info */}
         <View style={styles.recipeInfo}>
-          <Text style={styles.recipeName}>{recipeName}</Text>
+          <Text size="lg" weight="semibold" align="center">
+            {recipeName}
+          </Text>
         </View>
 
         {/* Servings Input */}
@@ -113,8 +116,10 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         {/* Deduct from Pantry Toggle */}
         <View style={styles.toggleSection}>
           <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>Deduct from Pantry</Text>
-            <Text style={styles.toggleDescription}>
+            <Text size="base" weight="medium">
+              Deduct from Pantry
+            </Text>
+            <Text size="sm" tone="secondary" style={styles.toggleDescription}>
               Automatically reduce ingredient quantities in your pantry
             </Text>
           </View>
@@ -133,8 +138,10 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         {!!deductFromPantry && !!hasPantry && (
           <View style={styles.toggleSection}>
             <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>Smart Deduction</Text>
-              <Text style={styles.toggleDescription}>
+              <Text size="base" weight="medium">
+                Smart Deduction
+              </Text>
+              <Text size="sm" tone="secondary" style={styles.toggleDescription}>
                 Review and adjust ingredient quantities before deducting
               </Text>
             </View>
@@ -180,12 +187,6 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     alignItems: 'center',
   },
-  recipeName: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-  },
   section: {
     marginBottom: theme.spacing.lg,
   },
@@ -203,14 +204,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     marginRight: theme.spacing.md,
   },
-  toggleLabel: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
   toggleDescription: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
 }));

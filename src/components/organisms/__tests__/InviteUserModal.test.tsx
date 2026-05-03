@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { InviteUserModal } from '../InviteUserModal';
-import { MembershipRole } from '../../../graphql/generated/schemaTypes';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#hooks/settings/useOfflineMode', () => ({
   useIsEffectivelyOffline: jest.fn(() => false),

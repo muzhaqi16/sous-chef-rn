@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, ViewStyle } from 'react-native';
+import { View, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 interface FormFieldWrapperProps {
   label: string;
@@ -29,12 +30,16 @@ export const FormFieldWrapper: React.FC<FormFieldWrapperProps> = ({
       accessibilityLabel={accessibilityLabel || label}
       accessibilityRole="none"
     >
-      <Text style={styles.label}>
+      <Text size="base" weight="semibold" style={styles.label}>
         {label}
-        {!!required && <Text style={styles.required}> *</Text>}
+        {!!required && <Text tone="error"> *</Text>}
       </Text>
       {children}
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? (
+        <Text size="sm" tone="error" style={styles.errorText}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 };
@@ -44,17 +49,9 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   label: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
-  required: {
-    color: theme.colors.error,
-  },
   errorText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.error,
     marginTop: theme.spacing.xs,
   },
 }));

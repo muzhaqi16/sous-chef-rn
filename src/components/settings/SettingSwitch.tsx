@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, ViewStyle } from 'react-native';
+import { View, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/base/BaseSwitch';
+import { Text } from '#components/atoms/Text';
 
 interface SettingSwitchProps {
   title: string;
@@ -34,11 +35,16 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
       ]}
     >
       <View style={styles.textContainer}>
-        <Text style={[styles.title, disabled && styles.titleDisabled]}>
+        <Text
+          size="md"
+          style={[styles.title, disabled && styles.titleDisabled]}
+        >
           {title}
         </Text>
         {!!description && (
           <Text
+            size="sm"
+            lineHeight="tight"
             style={[styles.description, disabled && styles.descriptionDisabled]}
           >
             {description}
@@ -74,7 +80,6 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.md,
   },
   title: {
-    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
@@ -82,9 +87,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textTertiary,
   },
   description: {
-    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    lineHeight: theme.typography.lineHeight.tight,
   },
   descriptionDisabled: {
     color: theme.colors.textTertiary,

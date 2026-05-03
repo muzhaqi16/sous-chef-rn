@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, Image, ScrollView } from 'react-native';
+import { View, Image, ScrollView } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { getPerspectiveLabel } from '#utils/imageUtils';
 import { ImagePicker, type ImageFile } from './ImagePicker';
 import { ModalPicker } from './ModalPicker';
+import { Text } from '#components/atoms/Text';
 
 export interface SelectedImage extends ImageFile {
   perspective: string;
@@ -107,7 +108,9 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
   if (images.length === 0) {
     return (
       <View style={styles.container}>
-        <Text style={styles.label}>{label}</Text>
+        <Text size="base" weight="medium" style={styles.label}>
+          {label}
+        </Text>
         <ImagePicker
           onImageSelected={handleSingleImageSelected}
           onMultiImageSelected={handleMultiImagesSelected}
@@ -122,8 +125,10 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
               size={32}
               color={theme.colors.textSecondary}
             />
-            <Text style={styles.placeholderText}>Add Photos</Text>
-            <Text style={styles.placeholderSubtext}>
+            <Text size="base" tone="secondary" align="center">
+              Add Photos
+            </Text>
+            <Text size="sm" tone="secondary" align="center">
               Select up to {maxImages} images
             </Text>
           </View>
@@ -134,7 +139,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>
+      <Text size="base" weight="medium" style={styles.label}>
         {label} ({images.length}/{maxImages})
       </Text>
       <ScrollView
@@ -174,7 +179,12 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
               accessibilityRole="button"
               accessibilityLabel="Change image perspective"
             >
-              <Text style={styles.perspectiveText} numberOfLines={1}>
+              <Text
+                size="xs"
+                weight="medium"
+                style={styles.perspectiveText}
+                numberOfLines={1}
+              >
                 {getPerspectiveLabel(image.perspective)}
               </Text>
               <Icon
@@ -201,7 +211,9 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 size={24}
                 color={theme.colors.primary}
               />
-              <Text style={styles.addMoreText}>Add More</Text>
+              <Text size="xs" weight="medium" tone="accent">
+                Add More
+              </Text>
             </View>
           </ImagePicker>
         )}
@@ -231,9 +243,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
   },
   label: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   placeholderContainer: {
@@ -248,16 +257,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     gap: theme.spacing.sm,
     minHeight: 120,
-  },
-  placeholderText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
-  placeholderSubtext: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
   },
   scrollContent: {
     gap: theme.spacing.md,
@@ -301,9 +300,6 @@ const styles = StyleSheet.create(theme => ({
     maxWidth: 120,
   },
   perspectiveText: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
     flexShrink: 1,
   },
   addMoreButton: {
@@ -316,11 +312,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.xs,
-  },
-  addMoreText: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.primary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

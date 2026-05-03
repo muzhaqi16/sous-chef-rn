@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import Config from 'react-native-config';
+import { appConfig } from '#/config/appConfig';
 
 // justified: react-native-config doesn't provide typed keys — dynamic string access requires `as any`
 const getConfigValue = (key: string, fallback: any = undefined) => {
@@ -10,7 +11,7 @@ const getConfigValue = (key: string, fallback: any = undefined) => {
  * Get web app URL for external links (privacy policy, terms, etc.)
  */
 export const getWebAppUrl = (path: string = ''): string => {
-  const baseUrl = getConfigValue('WEB_APP_URL', 'https://souschef.dev');
+  const baseUrl = getConfigValue('WEB_APP_URL', appConfig.identity.webAppUrl);
   return `${baseUrl}${path}`;
 };
 

@@ -1,4 +1,4 @@
-import { MembershipRole } from '../../../graphql/generated/schemaTypes';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import {
   isMealPlanCreator,
   isPersonalPlan,

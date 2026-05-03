@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Control, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -12,7 +12,8 @@ import { DatePickerField } from '#components/molecules/DatePickerField';
 import {
   StorageState,
   StorageLocation,
-} from '../../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
+import { Text } from '#components/atoms/Text';
 
 const STORAGE_STATES = Object.values(StorageState);
 
@@ -68,7 +69,9 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Storage Details</Text>
+      <Text size="lg" weight="semibold" style={styles.sectionTitle}>
+        Storage Details
+      </Text>
 
       {/* Storage State - using reusable SegmentedControl molecule */}
       <SegmentedControl
@@ -108,9 +111,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   sectionTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,

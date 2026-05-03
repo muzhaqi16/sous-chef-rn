@@ -1,5 +1,5 @@
 import React, { useLayoutEffect } from 'react';
-import { Text } from 'react-native';
+
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -13,6 +13,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 interface SwipeHandIndicatorProps {
   direction: 'left' | 'right';
@@ -66,7 +67,7 @@ export const SwipeHandIndicator: React.FC<SwipeHandIndicatorProps> = ({
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
-      <Text style={styles.emoji}>{emoji}</Text>
+      <Text size="4xl">{emoji}</Text>
     </Animated.View>
   );
 };
@@ -76,8 +77,5 @@ const styles = StyleSheet.create(() => ({
     position: 'absolute',
     bottom: 100,
     alignSelf: 'center',
-  },
-  emoji: {
-    fontSize: 36,
   },
 }));

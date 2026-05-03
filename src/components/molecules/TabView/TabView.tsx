@@ -1,10 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  useWindowDimensions,
-  ActivityIndicator,
-  Text,
-} from 'react-native';
+import { View, useWindowDimensions, ActivityIndicator } from 'react-native';
 import {
   TabView as RNTabView,
   TabBar,
@@ -13,6 +8,7 @@ import {
   Route,
 } from 'react-native-tab-view';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 export interface TabRoute extends Route {
   key: string;
@@ -39,9 +35,7 @@ const DefaultLazyPlaceholder: React.FC<{ route: TabRoute }> = ({ route }) => {
   return (
     <View style={styles.placeholder}>
       <ActivityIndicator size="large" color={theme.colors.primary} />
-      <Text
-        style={[styles.placeholderText, { color: theme.colors.textSecondary }]}
-      >
+      <Text size="md" tone="secondary">
         Loading {route.title}...
       </Text>
     </View>
@@ -139,9 +133,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.md,
-  },
-  placeholderText: {
-    fontSize: theme.typography.fontSize.md,
   },
   tabBarContainer: {
     paddingHorizontal: theme.spacing.md,

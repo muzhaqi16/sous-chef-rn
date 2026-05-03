@@ -4,7 +4,7 @@ import { HomeCard } from '../HomeCard';
 import {
   MembershipRole,
   MembershipStatus,
-} from '../../../../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
 
 jest.mock('#utils/iconUtils', () => ({
   Icon: 'Icon',

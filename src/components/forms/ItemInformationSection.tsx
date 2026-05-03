@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Control, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -7,7 +7,8 @@ import {
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
 import { FormInput } from '#components/molecules/FormInput';
-import { ItemSuggestion } from '../../graphql/generated/schemaTypes';
+import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import { Text } from '#components/atoms/Text';
 
 type SuggestedBrand = {
   id: string;
@@ -91,7 +92,9 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Item Information</Text>
+      <Text size="lg" weight="semibold" style={styles.sectionTitle}>
+        Item Information
+      </Text>
       <DynamicFormFields
         fields={getFields()}
         control={control}
@@ -106,9 +109,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   sectionTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,

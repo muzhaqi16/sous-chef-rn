@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput } from 'react-native';
+import { View, TextInput } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
@@ -13,6 +13,7 @@ import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { useAppStore } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { Text } from '#components/atoms/Text';
 
 const AutocompleteSeparator = () => <View style={styles.separator} />;
 
@@ -196,8 +197,15 @@ export function BottomSheetAutocompleteInput<T>({
       return (
         <BottomSheetView style={styles.messageContainer}>
           <Icon name="cloud-offline-outline" size={48} />
-          <Text style={styles.emptyText}>Search unavailable offline</Text>
-          <Text style={styles.emptySubtext}>
+          <Text
+            size="base"
+            weight="semibold"
+            tone="secondary"
+            style={styles.emptyText}
+          >
+            Search unavailable offline
+          </Text>
+          <Text size="sm" tone="secondary" align="center">
             You can still type a custom value and press done
           </Text>
         </BottomSheetView>
@@ -206,9 +214,18 @@ export function BottomSheetAutocompleteInput<T>({
 
     return (
       <BottomSheetView style={styles.messageContainer}>
-        <Text style={styles.emptyText}>{emptyText}</Text>
+        <Text
+          size="base"
+          weight="semibold"
+          tone="secondary"
+          style={styles.emptyText}
+        >
+          {emptyText}
+        </Text>
         {emptySubtext ? (
-          <Text style={styles.emptySubtext}>{emptySubtext}</Text>
+          <Text size="sm" tone="secondary" align="center">
+            {emptySubtext}
+          </Text>
         ) : null}
       </BottomSheetView>
     );
@@ -227,7 +244,9 @@ export function BottomSheetAutocompleteInput<T>({
 
   const defaultLoadingComponent = () => (
     <BottomSheetView style={styles.messageContainer}>
-      <Text style={styles.loadingText}>Loading...</Text>
+      <Text size="base" tone="secondary">
+        Loading...
+      </Text>
     </BottomSheetView>
   );
 
@@ -253,7 +272,14 @@ export function BottomSheetAutocompleteInput<T>({
       >
         <BottomSheetView style={{ flex: 1 }}>
           <View style={styles.headerSection}>
-            <Text style={styles.autocompleteTitle}>{title}</Text>
+            <Text
+              size="base"
+              weight="semibold"
+              align="center"
+              style={styles.autocompleteTitle}
+            >
+              {title}
+            </Text>
 
             <BottomSheetTextInput
               style={styles.bottomSheetInput}
@@ -312,11 +338,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
   },
   autocompleteTitle: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
-    textAlign: 'center',
   },
   bottomSheetInput: {
     marginBottom: theme.spacing.md,
@@ -343,18 +365,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
   },
   emptyText: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
-  },
-  emptySubtext: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
-  loadingText: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textSecondary,
   },
 }));

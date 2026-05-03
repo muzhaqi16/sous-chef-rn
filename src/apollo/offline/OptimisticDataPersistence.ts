@@ -37,7 +37,7 @@ interface OptimisticFieldUpdate {
  * ```
  */
 class OptimisticDataPersistence {
-  private batchTimeout: NodeJS.Timeout | null = null;
+  private flushScheduled = false;
   private pendingUpdates: Record<string, any> = {};
 
   // PERFORMANCE: In-memory cache to avoid repeated MMKV reads and JSON parsing
@@ -74,18 +74,28 @@ class OptimisticDataPersistence {
         );
       }
 
-      // PERFORMANCE: Batch multiple saves into single storage write
-      // Schedule flush after 100ms of inactivity
-      if (this.batchTimeout) {
-        clearTimeout(this.batchTimeout);
+      // PERFORMANCE: Coalesce synchronous saves into a single storage write
+      // by flushing on the next microtask. This batches all saves within the
+      // current tick without leaving a pending timer across async boundaries.
+      if (!this.flushScheduled) {
+        this.flushScheduled = true;
+        queueMicrotask(() => {
+          this.flushScheduled = false;
+          this.flushPendingUpdates();
+        });
       }
-
-      this.batchTimeout = setTimeout(() => {
-        this.flushPendingUpdates();
-      }, 100);
     } catch (error) {
       console.error('Failed to save optimistic data:', error);
     }
+  }
+
+  /**
+   * Synchronously drain any pending batched updates to storage.
+   * Useful for tests and for code paths that need a guaranteed write
+   * before reading (e.g., logout flows).
+   */
+  flush(): void {
+    this.flushPendingUpdates();
   }
 
   /**
@@ -112,7 +122,6 @@ class OptimisticDataPersistence {
       this.cache = merged;
 
       this.pendingUpdates = {};
-      this.batchTimeout = null;
     } catch (error) {
       console.error('Failed to flush optimistic data:', error);
     }
@@ -292,11 +301,7 @@ class OptimisticDataPersistence {
    */
   clearAll(): void {
     try {
-      // Cancel any pending batch flush
-      if (this.batchTimeout) {
-        clearTimeout(this.batchTimeout);
-        this.batchTimeout = null;
-      }
+      // Drop any pending batch flush
       this.pendingUpdates = {};
 
       storage.remove(OPTIMISTIC_DATA_KEY);

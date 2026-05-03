@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -9,6 +9,7 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { Text } from '#components/atoms/Text';
 
 interface NumberInputSheetProps {
   visible: boolean;
@@ -111,9 +112,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
 
         <View style={styles.inputContainer}>
           {!!rangeText && (
-            <Text
-              style={[styles.rangeText, { color: theme.colors.textSecondary }]}
-            >
+            <Text size="sm" tone="secondary" style={styles.rangeText}>
               {rangeText}
             </Text>
           )}
@@ -140,7 +139,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
           />
 
           {!!error && (
-            <Text style={[styles.errorText, { color: theme.colors.error }]}>
+            <Text size="sm" tone="error" style={styles.errorText}>
               {error}
             </Text>
           )}
@@ -158,7 +157,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   rangeText: {
-    fontSize: theme.typography.fontSize.sm,
     marginBottom: theme.spacing.sm,
   },
   input: {
@@ -172,7 +170,6 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
   },
   errorText: {
-    fontSize: theme.typography.fontSize.sm,
     marginTop: theme.spacing.xs,
   },
 }));

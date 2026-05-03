@@ -4,11 +4,11 @@ import { useMutation } from '@apollo/client/react';
 import {
   LoginDocument,
   RegisterDocument,
-} from '../../graphql/operations/auth/auth.generated';
+} from '#operations/auth/auth.generated';
 import {
   type LoginInput,
   type RegisterInput,
-} from '../../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { useErrorService } from '#/services/errorService';
 import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';

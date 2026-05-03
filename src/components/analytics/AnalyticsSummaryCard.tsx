@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
+import { Text } from '#components/atoms/Text';
 
 interface AnalyticsSummaryCardProps {
   title: string;
@@ -69,27 +70,28 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
           </View>
         )}
         <Text
-          style={[styles.title, { color: theme.colors.textSecondary }]}
+          size="xs"
+          weight="medium"
+          tone="secondary"
+          style={styles.title}
           numberOfLines={1}
         >
           {title}
         </Text>
       </View>
-      <Text style={[styles.value, { color: theme.colors.textPrimary }]}>
+      <Text size="2xl" weight="bold">
         {value}
       </Text>
       <View style={styles.footer}>
         {!!subtitle && (
-          <Text
-            style={[styles.subtitle, { color: theme.colors.textSecondary }]}
-          >
+          <Text size="xs" tone="secondary">
             {subtitle}
           </Text>
         )}
         {!!trend && !!trendValue && (
           <View style={styles.trendContainer}>
             <Icon name={getTrendIcon()} size={14} color={getTrendColor()} />
-            <Text style={[styles.trendText, { color: getTrendColor() }]}>
+            <Text size="xs" weight="medium" style={{ color: getTrendColor() }}>
               {trendValue}
             </Text>
           </View>
@@ -121,13 +123,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.sm,
   },
   title: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.medium,
     flex: 1,
-  },
-  value: {
-    fontSize: theme.fonts.size['2xl'],
-    fontWeight: theme.fonts.weight.bold,
   },
   footer: {
     flexDirection: 'row',
@@ -135,16 +131,9 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     marginTop: theme.spacing.xs,
   },
-  subtitle: {
-    fontSize: theme.fonts.size.xs,
-  },
   trendContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-  },
-  trendText: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.medium,
   },
 }));
