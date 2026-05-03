@@ -206,7 +206,7 @@ const styles = StyleSheet.create(theme => ({
   dot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.border,
   },
   dotActive: {

@@ -2,11 +2,11 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { RecipeCategoryFields } from '../../../../../src/screens/recipe/RecipeForm/components/RecipeCategoryFields';
-import { Difficulty, RecipeStatus } from '../../../../../src/graphql/generated/schemaTypes';
+import { RecipeCategoryFields } from '#features/recipes/screens/RecipeForm/components/RecipeCategoryFields';
+import { Difficulty, RecipeStatus } from '#/graphql/generated/schemaTypes';
 
-jest.mock('../../../../../src/apollo/links/tokenScheduler');
-jest.mock('../../../../../src/apollo/links/refreshToken');
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('../../../../../src/components/molecules/FormInput', () => ({
   FormInput: (props: any) => {

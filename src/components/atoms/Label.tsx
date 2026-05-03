@@ -1,13 +1,17 @@
 import React from 'react';
-import { Text, TextStyle } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import type { StyleProp, TextStyle } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { Text, type TextSize, type TextWeight } from './Text';
+
+type LabelSize = Extract<TextSize, 'sm' | 'md' | 'lg'>;
+type LabelWeight = Extract<TextWeight, 'regular' | 'medium' | 'semibold'>;
 
 interface LabelProps {
   children: React.ReactNode;
   required?: boolean;
-  size?: 'sm' | 'md' | 'lg';
-  weight?: 'regular' | 'medium' | 'semibold';
-  style?: TextStyle;
+  size?: LabelSize;
+  weight?: LabelWeight;
+  style?: StyleProp<TextStyle>;
 }
 
 export const Label: React.FC<LabelProps> = ({
@@ -17,40 +21,21 @@ export const Label: React.FC<LabelProps> = ({
   weight = 'medium',
   style,
 }) => {
-  const { theme } = useUnistyles();
-
-  const sizeMap = {
-    sm: theme.fonts.size.sm,
-    md: theme.fonts.size.md,
-    lg: theme.fonts.size.lg,
-  };
-
-  const weightMap = {
-    regular: theme.fonts.weight.regular,
-    medium: theme.fonts.weight.medium,
-    semibold: theme.fonts.weight.semibold,
-  };
-
   return (
     <Text
-      style={[
-        styles.text,
-        { fontSize: sizeMap[size], fontWeight: weightMap[weight] },
-        style,
-      ]}
+      variant="label"
+      size={size}
+      weight={weight}
+      style={[styles.container, style]}
     >
       {children}
-      {!!required && <Text style={styles.required}> *</Text>}
+      {!!required && <Text tone="error"> *</Text>}
     </Text>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  text: {
-    color: theme.colors.textPrimary,
+  container: {
     marginBottom: theme.spacing.sm,
-  },
-  required: {
-    color: theme.colors.error,
   },
 }));

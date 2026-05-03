@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextStyle } from 'react-native';
+import { View, TextStyle } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -9,9 +9,10 @@ import { SLIDE_PRESETS } from '#/constants/animations';
 import { Counter } from './Counter';
 import { QuantityDisplay } from './QuantityDisplay';
 import { Icon } from '#/utils/iconUtils';
-import { DisplayFormat } from '../../graphql/generated/schemaTypes';
+import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { Text } from '#components/atoms/Text';
 
 interface ShoppingListItemProps {
   id: string;

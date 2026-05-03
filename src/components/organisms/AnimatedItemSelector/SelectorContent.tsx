@@ -1,10 +1,11 @@
 import React from 'react';
-import { Text, ActivityIndicator, ScrollView } from 'react-native';
+import { ActivityIndicator, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { SelectorItem } from './SelectorItem';
 import { ActionButtons } from './ActionButtons';
 import type { SelectorConfig, SelectableItem } from './types';
+import { Text } from '#components/atoms/Text';
 
 interface SelectorContentProps<T extends SelectableItem> {
   config: SelectorConfig<T>;
@@ -15,14 +16,18 @@ const LoadingState = () => {
   return (
     <Animated.View entering={FadeIn} style={styles.loadingContainer}>
       <ActivityIndicator size="large" color={theme.colors.primary} />
-      <Text style={styles.loadingText}>Loading...</Text>
+      <Text size="md" tone="secondary" style={styles.loadingText}>
+        Loading...
+      </Text>
     </Animated.View>
   );
 };
 
 const EmptyState: React.FC<{ message: string }> = ({ message }) => (
   <Animated.View entering={FadeIn} style={styles.emptyContainer}>
-    <Text style={styles.emptyText}>{message}</Text>
+    <Text size="md" tone="secondary" align="center">
+      {message}
+    </Text>
   </Animated.View>
 );
 
@@ -119,18 +124,11 @@ const styles = StyleSheet.create(theme => ({
   },
   loadingText: {
     marginTop: theme.spacing.md,
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: theme.spacing.xl,
-  },
-  emptyText: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
   },
 }));

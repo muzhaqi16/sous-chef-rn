@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -12,6 +12,7 @@ import { IconButton } from '../atoms/IconButton';
 import { BackButton } from '../atoms/BackButton';
 import { Icon } from '#/utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { Text } from '#components/atoms/Text';
 
 const AVATAR_SIZE = 80;
 const AVATAR_SCALE_MIN = 0.55; // 80 * 0.55 = 44
@@ -152,8 +153,16 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           collapsable={false}
           style={[styles.userInfo, userInfoStyle]}
         >
-          {!!name && <Text style={styles.nameText}>{name}</Text>}
-          {!!subtitle && <Text style={styles.subtitleText}>{subtitle}</Text>}
+          {!!name && (
+            <Text size="lg" weight="bold" style={styles.nameText}>
+              {name}
+            </Text>
+          )}
+          {!!subtitle && (
+            <Text size="sm" tone="secondary" style={styles.subtitleText}>
+              {subtitle}
+            </Text>
+          )}
         </Animated.View>
       )}
     </View>
@@ -216,14 +225,9 @@ const styles = StyleSheet.create(theme => ({
     transformOrigin: 'top',
   },
   nameText: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-    marginTop: 8,
+    marginTop: theme.spacing.sm,
   },
   subtitleText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: 2,
   },
 }));

@@ -3,7 +3,7 @@ import { useLazyQuery, useQuery } from '@apollo/client/react';
 import {
   SearchUnitsDocument,
   GetCommonUnitsDocument,
-} from '../../graphql/operations/item/unit.generated';
+} from '#operations/item/unit.generated';
 import { useAppStore } from '#store/useAppStore';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 

@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, TextStyle } from 'react-native';
+import { View, TextStyle } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Badge } from '../base/Badge';
-import type { SortableListThemeColors } from '#/components/organisms/SortableShoppingList/SortableListThemeContext';
+import type { SortableListThemeColors } from '#features/shoppingList/components/SortableShoppingList/SortableListThemeContext';
+import { Text } from '#components/atoms/Text';
 
 interface ListItemProps {
   children?: React.ReactNode;

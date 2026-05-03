@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
@@ -8,7 +8,8 @@ import {
 } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { StorageType } from '../../../graphql/generated/schemaTypes';
+import { StorageType } from '#/graphql/generated/schemaTypes';
+import { Text } from '#components/atoms/Text';
 
 /** Module-level async wrapper to keep try-catch out of the component body (React Compiler). */
 async function executeCreateLocation(
@@ -126,14 +127,12 @@ export const AddStorageLocationSheet: React.FC<
             accessibilityRole="button"
             accessibilityLabel="Cancel"
           >
-            <Text
-              style={[styles.cancelText, { color: theme.colors.textSecondary }]}
-            >
+            <Text size="md" tone="secondary">
               Cancel
             </Text>
           </Pressable>
 
-          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+          <Text size="lg" weight="semibold" align="center" style={styles.title}>
             Add Location
           </Text>
 
@@ -151,14 +150,14 @@ export const AddStorageLocationSheet: React.FC<
               <ActivityIndicator size="small" color={theme.colors.primary} />
             ) : (
               <Text
-                style={[
-                  styles.saveText,
-                  {
-                    color: isCreateDisabled
-                      ? theme.colors.textTertiary
-                      : theme.colors.primary,
-                  },
-                ]}
+                size="md"
+                weight="semibold"
+                align="right"
+                style={{
+                  color: isCreateDisabled
+                    ? theme.colors.textTertiary
+                    : theme.colors.primary,
+                }}
               >
                 Create
               </Text>
@@ -173,7 +172,7 @@ export const AddStorageLocationSheet: React.FC<
 
         {/* Input Field */}
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+          <Text size="sm" weight="medium" tone="secondary" style={styles.label}>
             Location Name
           </Text>
 
@@ -198,12 +197,12 @@ export const AddStorageLocationSheet: React.FC<
             onSubmitEditing={handleCreate}
           />
           {!!error && (
-            <Text style={[styles.errorText, { color: theme.colors.error }]}>
+            <Text size="sm" tone="error" style={styles.errorText}>
               {error}
             </Text>
           )}
 
-          <Text style={[styles.hint, { color: theme.colors.textTertiary }]}>
+          <Text size="xs" tone="tertiary" style={styles.hint}>
             You can edit details later in Settings &gt; Storage Locations
           </Text>
         </View>
@@ -228,18 +227,7 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 60,
   },
   title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'center',
     flex: 1,
-  },
-  cancelText: {
-    fontSize: theme.typography.fontSize.md,
-  },
-  saveText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'right',
   },
   divider: {
     height: 1,
@@ -249,8 +237,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   label: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.medium,
     marginBottom: theme.spacing.sm,
   },
   input: {
@@ -261,11 +247,9 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
   },
   errorText: {
-    fontSize: theme.typography.fontSize.sm,
     marginTop: theme.spacing.xs,
   },
   hint: {
-    fontSize: theme.typography.fontSize.xs,
     marginTop: theme.spacing.sm,
   },
   pressed: {

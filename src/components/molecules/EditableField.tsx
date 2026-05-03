@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from './FormInput';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { Text } from '#components/atoms/Text';
 
 interface EditableFieldProps {
   label: string;
@@ -89,7 +90,9 @@ export const EditableField: React.FC<EditableFieldProps> = ({
             onPress={handleCancel}
             disabled={saving}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text weight="semibold" tone="secondary">
+              Cancel
+            </Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [
@@ -102,7 +105,9 @@ export const EditableField: React.FC<EditableFieldProps> = ({
             {saving ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.saveButtonText}>Save</Text>
+              <Text weight="semibold" style={styles.saveButtonText}>
+                Save
+              </Text>
             )}
           </Pressable>
         </View>
@@ -113,8 +118,12 @@ export const EditableField: React.FC<EditableFieldProps> = ({
   return (
     <View style={styles.nameRow}>
       <View style={styles.nameContainer}>
-        <Text style={styles.nameLabel}>{label}</Text>
-        <Text style={styles.nameValue}>{value}</Text>
+        <Text size="sm" tone="secondary" style={styles.nameLabel}>
+          {label}
+        </Text>
+        <Text size="lg" weight="semibold">
+          {value}
+        </Text>
       </View>
       {!readOnly && (
         <Pressable
@@ -142,14 +151,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   nameLabel: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
-  },
-  nameValue: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
   },
   editIconButton: {
     padding: theme.spacing.sm,
@@ -170,10 +172,6 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  cancelButtonText: {
-    color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
   saveButton: {
     flex: 1,
     paddingVertical: theme.spacing.sm,
@@ -185,6 +183,5 @@ const styles = StyleSheet.create(theme => ({
   },
   saveButtonText: {
     color: theme.colors.neutral[0],
-    fontWeight: theme.fonts.weight.semibold,
   },
 }));

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { FractionInput } from '#components/molecules/FractionInput';
@@ -9,14 +9,15 @@ import { ConversionPreview } from '#components/atoms/ConversionPreview';
 import { FractionQuickSelect } from '#components/atoms/FractionQuickSelect';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
-import { useConversionPreview } from '#hooks/pantry/useConversionPreview';
-import { type PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
+import { useConversionPreview } from '#features/pantry/hooks/useConversionPreview';
+import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
-import { PantryOperation } from '#hooks/pantry/useOperationUnits';
+import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import {
   PantryActionModal,
   type PantryActionSharedState,
 } from './PantryActionModal';
+import { Text } from '#components/atoms/Text';
 
 interface RestockPantryItemModalProps {
   visible: boolean;
@@ -190,7 +191,12 @@ const RestockActionFields: React.FC<{
         {newQuantity !== null || shared.isConvertedUnit ? (
           <View style={commonStyles.bottomSheetInfoRow}>
             {newQuantity !== null ? (
-              <Text style={[styles.newQuantityText, { marginTop: 0 }]}>
+              <Text
+                size="sm"
+                weight="medium"
+                tone="accent"
+                style={[styles.newQuantityText, { marginTop: 0 }]}
+              >
                 New quantity: {formatQuantity(newQuantity)} {newQuantitySymbol}
               </Text>
             ) : null}
@@ -278,10 +284,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   newQuantityText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.primary,
     marginTop: theme.spacing.xs,
-    fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
     opacity: theme.opacity.pressed,

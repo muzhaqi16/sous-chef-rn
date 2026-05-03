@@ -1,4 +1,4 @@
-import { NotificationType } from '../../graphql/generated/schemaTypes';
+import { NotificationType } from '#/graphql/generated/schemaTypes';
 import { Icon } from '#utils/iconUtils';
 
 type IconProps = React.ComponentProps<typeof Icon>;

@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react';
 import { NetworkStatus } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
-import { GetPantryDocument } from '#operations/pantry/pantry.generated';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import type {
   PantryItemFilters,
   PantryItemOrderBy,

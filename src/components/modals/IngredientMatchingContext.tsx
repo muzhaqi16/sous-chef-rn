@@ -5,7 +5,7 @@ import React, {
   useRef,
   type ReactNode,
 } from 'react';
-import type { EditableMatch } from '#hooks/recipe/useRecipeIngredientMatching';
+import type { EditableMatch } from '#features/recipes/hooks/useRecipeIngredientMatching';
 
 interface IngredientMatchingContextValue {
   onUpdate: (

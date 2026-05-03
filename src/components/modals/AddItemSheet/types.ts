@@ -1,7 +1,7 @@
 import type { RefObject } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import type { BottomSheetSearchBarRef } from '#components/molecules/BottomSheetSearchBar';
-import { type ItemSuggestion } from '../../../graphql/generated/schemaTypes';
+import { type ItemSuggestion } from '#/graphql/generated/schemaTypes';
 
 /**
  * Base interface for suggestion items that can be displayed in the sheet.
@@ -120,6 +120,9 @@ export interface AddItemSheetProps {
   onAddManually: (searchValue: string) => void;
   /** Handler for barcode scan button */
   onScanPress: () => void;
+  /** Optional: Handler for "Identify with camera" (OCR) button. When provided,
+   *  a third action card is rendered alongside Scan Barcode / Add Manually. */
+  onIdentifyPress?: () => void;
   /** Optional: Items currently animating out (for exit animations) */
   exitingItems?: Set<string>;
   /** Optional: Callback when exit animation completes */

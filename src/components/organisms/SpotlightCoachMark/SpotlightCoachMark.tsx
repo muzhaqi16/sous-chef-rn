@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { View, Text, Modal, useWindowDimensions } from 'react-native';
+import { View, Modal, useWindowDimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useDerivedValue,
@@ -27,6 +27,7 @@ import {
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SPRING, TIMING, standardEasing } from '#constants/animations';
+import { Text } from '#components/atoms/Text';
 
 export interface TargetRect {
   x: number;
@@ -364,9 +365,13 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
             ]}
           />
 
-          <Text style={styles.tooltipTitle}>{title}</Text>
+          <Text size="lg" weight="bold" style={styles.tooltipTitle}>
+            {title}
+          </Text>
           {subtitle ? (
-            <Text style={styles.tooltipSubtitle}>{subtitle}</Text>
+            <Text size="md" tone="secondary">
+              {subtitle}
+            </Text>
           ) : null}
           {totalSteps != null && stepIndex != null && totalSteps > 1 ? (
             <View style={styles.stepIndicator}>
@@ -394,11 +399,15 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
               style={styles.nextButton}
               hitSlop={8}
             >
-              <Text style={styles.nextButtonText}>Done</Text>
+              <Text size="md" weight="medium" tone="accent">
+                Done
+              </Text>
             </Pressable>
           ) : onNext ? (
             <Pressable onPress={onNext} style={styles.nextButton} hitSlop={8}>
-              <Text style={styles.nextButtonText}>Next ›</Text>
+              <Text size="md" weight="medium" tone="accent">
+                Next ›
+              </Text>
             </Pressable>
           ) : null}
         </Animated.View>
@@ -419,7 +428,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Skip tutorial"
         >
-          <Text style={styles.skipText}>
+          <Text size="md" weight="medium" style={styles.skipText}>
             {totalSteps != null && totalSteps > 1 ? 'Skip all' : 'Skip'}
           </Text>
         </Pressable>
@@ -499,14 +508,7 @@ const styles = StyleSheet.create(theme => ({
     transform: [{ rotate: '45deg' }],
   },
   tooltipTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
-  },
-  tooltipSubtitle: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
   },
   stepIndicator: {
     flexDirection: 'row',
@@ -520,15 +522,10 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
   },
-  nextButtonText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.primary,
-  },
   stepDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: theme.radii.sm,
   },
   skipButton: {
     position: 'absolute',
@@ -539,8 +536,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
   },
   skipText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.white,
   },
 }));

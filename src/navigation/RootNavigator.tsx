@@ -23,44 +23,48 @@ import { OnboardingStack } from './stacks/OnboardingStack';
 import { HomeTabs } from './stacks/HomeTabs';
 import { BarcodeStack } from './stacks/BarcodeStack';
 import { NotificationStack } from './stacks/NotificationStack';
-import { ProfileScreen } from '#screens/profile/ProfileScreen';
+import { ProfileScreen } from '#features/profile/screens/ProfileScreen';
 import { HomeManagement } from '#screens/home/HomeManagement';
 import { HomeDetailScreen } from '#screens/home/HomeDetailScreen';
 import { StorageLocationsScreen } from '#screens/home/StorageLocationsScreen';
 import { CodeVerificationScreen } from '#screens/auth/CodeVerificationScreen';
 import { EmailVerificationDeepLinkScreen } from '#screens/auth/EmailVerificationDeepLinkScreen';
 import { ResetPasswordScreen } from '#screens/auth/ResetPasswordScreen';
-import { AcceptInvite } from '#screens/shoppingList/AcceptInvite';
-import { JoinByShareCodeScreen } from '#screens/shoppingList/JoinByShareCodeScreen';
+import { FEATURE_DEEP_LINK_SCREENS } from '#features/registry';
 
 // Lazy-loaded screens (infrequently visited, reduces cold start JS parsing)
 const ProfilePhotoUploadScreen = React.lazy(
-  () => import('#screens/profile/ProfilePhotoUploadScreen'),
+  () => import('#features/profile/screens/ProfilePhotoUploadScreen'),
 );
 const ImageCropScreen = React.lazy(
-  () => import('#screens/profile/ImageCropScreen'),
+  () => import('#features/profile/screens/ImageCropScreen'),
 );
 const DeleteAccountScreen = React.lazy(
-  () => import('#screens/profile/DeleteAccountScreen'),
+  () => import('#features/profile/screens/DeleteAccountScreen'),
 );
 const DietaryProfileScreen = React.lazy(
-  () => import('#screens/profile/DietaryProfileScreen'),
+  () => import('#features/profile/screens/DietaryProfileScreen'),
 );
 const AppSettingsScreen = React.lazy(
-  () => import('#screens/profile/AppSettingsScreen'),
+  () => import('#features/profile/screens/AppSettingsScreen'),
 );
 const PersonalInformationScreen = React.lazy(
-  () => import('#screens/profile/PersonalInformationScreen'),
+  () => import('#features/profile/screens/PersonalInformationScreen'),
 );
 const PerformanceDashboard = React.lazy(
-  () => import('#screens/profile/PerformanceDashboard'),
+  () => import('#features/profile/screens/PerformanceDashboard'),
 );
-const DebugInfo = React.lazy(() => import('#screens/profile/DebugInfo'));
+const DebugInfo = React.lazy(
+  () => import('#features/profile/screens/DebugInfo'),
+);
 const ChangePasswordScreen = React.lazy(
-  () => import('#screens/profile/ChangePasswordScreen'),
+  () => import('#features/profile/screens/ChangePasswordScreen'),
 );
 const NotificationSettingsScreen = React.lazy(
-  () => import('#screens/notifications/NotificationSettingsScreen'),
+  () => import('#features/notifications/screens/NotificationSettingsScreen'),
+);
+const AppearanceScreen = React.lazy(
+  () => import('#features/profile/screens/AppearanceScreen'),
 );
 
 import {
@@ -77,6 +81,20 @@ import {
 } from '#hooks/navigation/useNavigationGuards';
 import { navigationRef } from '#services/NavigationService';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { appConfig } from '#/config/appConfig';
+
+const DEEP_LINK_PREFIXES = [
+  `${appConfig.identity.deepLink.scheme}://`,
+  ...appConfig.identity.deepLink.hosts.map(h => `https://${h}`),
+];
+
+// Build deep-link screens from the feature registry (module scope).
+const featureDeepLinkScreens = Object.fromEntries(
+  FEATURE_DEEP_LINK_SCREENS.map(({ name, screen, linking, options }) => [
+    name,
+    createNativeStackScreen({ screen, linking, options }),
+  ]),
+);
 
 function RootLayout({ children }: { children: React.ReactNode }) {
   useDeepLinkRouter();
@@ -194,12 +212,17 @@ const RootStack = createNativeStackNavigator({
           screen: ChangePasswordScreen,
           options: { animation: 'fade', animationDuration: 150 },
         }),
+        Appearance: createNativeStackScreen({
+          screen: AppearanceScreen,
+          options: { animation: 'fade', animationDuration: 150 },
+        }),
       },
     },
     // Always-available deep link screens — placed last so the active
     // conditional group's first screen is the initial route.
     DeepLinks: {
       screens: {
+        // Core deep-link screens (auth lifecycle)
         EmailVerification: createNativeStackScreen({
           screen: EmailVerificationDeepLinkScreen,
           linking: 'verify-email',
@@ -208,14 +231,9 @@ const RootStack = createNativeStackNavigator({
           screen: ResetPasswordScreen,
           linking: 'reset-password',
         }),
-        AcceptInvitation: createNativeStackScreen({
-          screen: AcceptInvite,
-          linking: 'accept-invitation',
-        }),
-        JoinByShareCode: createNativeStackScreen({
-          screen: JoinByShareCodeScreen,
-          linking: 'join-list/:shareCode',
-        }),
+        // Feature-contributed deep-link screens (from registry)
+        ...featureDeepLinkScreens,
+        // Catch-all (must be last)
         NotFound: createNativeStackScreen({
           screen: NotFoundScreen,
           linking: '*',
@@ -353,7 +371,7 @@ export function Navigation() {
           ref={navigationRef}
           theme={navigationTheme}
           linking={{
-            prefixes: ['souschef://', 'https://app.souschef.dev'],
+            prefixes: DEEP_LINK_PREFIXES,
           }}
         />
       </Suspense>

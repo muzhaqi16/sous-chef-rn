@@ -3,7 +3,7 @@ import { useStorageLocationAutocomplete } from '../useStorageLocationAutocomplet
 import {
   StorageLocation,
   StorageType,
-} from '../../../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
 
 const makeLocation = (
   overrides: Partial<StorageLocation> = {},

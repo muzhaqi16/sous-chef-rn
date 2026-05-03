@@ -6,7 +6,7 @@ import { useStore } from '#store';
 import {
   RefreshTokenDocument,
   type RefreshTokenMutation,
-} from '../../graphql/operations/auth/auth.generated';
+} from '#operations/auth/auth.generated';
 import { reconnectWebSocket, isWebSocketReconnecting } from './wsLink';
 import { client } from '../client';
 

@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, type LayoutChangeEvent } from 'react-native';
+import { View, type LayoutChangeEvent } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import type { FilterTabConfig } from './types';
+import { Text } from '#components/atoms/Text';
 
 /** Icon names are ASCII-only (e.g. "snow-outline"); emojis contain non-ASCII. */
 function isEmoji(value: string): boolean {
@@ -77,9 +78,7 @@ function FilterTabsItemComponent<T extends string>({
           : tab.iconElement
         : !!tab.icon &&
           (isEmoji(tab.icon) ? (
-            <Text style={isCompact ? styles.tabIconCompact : styles.tabIcon}>
-              {tab.icon}
-            </Text>
+            <Text size={isCompact ? 'xs' : 'sm'}>{tab.icon}</Text>
           ) : (
             <Icon
               name={tab.icon}
@@ -155,12 +154,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs + 2,
     borderRadius: theme.radii.lg,
     gap: theme.spacing.xs,
-  },
-  tabIcon: {
-    fontSize: theme.typography.fontSize.sm,
-  },
-  tabIconCompact: {
-    fontSize: theme.typography.fontSize.xs,
   },
   tabLabel: {
     fontSize: theme.typography.fontSize.sm - 1,

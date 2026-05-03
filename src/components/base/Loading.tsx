@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   View,
-  Text,
   ActivityIndicator,
   Modal,
   StyleProp,
@@ -9,6 +8,7 @@ import {
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SousChefLoader } from './SousChefLoader';
+import { Text } from '#components/atoms/Text';
 
 export interface LoadingProps {
   /** Primary loading message */
@@ -77,13 +77,22 @@ export const Loading: React.FC<LoadingProps> = ({
         style={styles.spinner}
       />
       {!!message && (
-        <Text style={[styles.message, { color: theme.colors.textPrimary }]}>
+        <Text
+          size="md"
+          weight="medium"
+          align="center"
+          tone="primary"
+          style={styles.message}
+        >
           {message}
         </Text>
       )}
       {!!submessage && (
         <Text
-          style={[styles.submessage, { color: theme.colors.textSecondary }]}
+          size="sm"
+          align="center"
+          tone="secondary"
+          style={styles.submessage}
         >
           {submessage}
         </Text>
@@ -107,7 +116,10 @@ export const Loading: React.FC<LoadingProps> = ({
         />
         {!!submessage && (
           <Text
-            style={[styles.submessage, { color: theme.colors.textSecondary }]}
+            size="sm"
+            align="center"
+            tone="secondary"
+            style={styles.submessage}
           >
             {submessage}
           </Text>
@@ -158,13 +170,22 @@ export const Loading: React.FC<LoadingProps> = ({
             style={styles.spinner}
           />
           {!!message && (
-            <Text style={[styles.message, { color: theme.colors.textPrimary }]}>
+            <Text
+              size="md"
+              weight="medium"
+              align="center"
+              tone="primary"
+              style={styles.message}
+            >
               {message}
             </Text>
           )}
           {!!submessage && (
             <Text
-              style={[styles.submessage, { color: theme.colors.textSecondary }]}
+              size="sm"
+              align="center"
+              tone="secondary"
+              style={styles.submessage}
             >
               {submessage}
             </Text>
@@ -230,15 +251,10 @@ const styles = StyleSheet.create(theme => ({
   },
 
   message: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium,
-    textAlign: 'center',
     marginBottom: theme.spacing.xs,
   },
 
   submessage: {
-    fontSize: theme.typography.fontSize.sm,
-    textAlign: 'center',
     fontFamily: 'monospace',
   },
 }));

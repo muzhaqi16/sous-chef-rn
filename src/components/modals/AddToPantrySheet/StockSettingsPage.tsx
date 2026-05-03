@@ -1,8 +1,9 @@
 import React from 'react';
-import { Text } from 'react-native';
+
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { FormInput } from '#components/molecules/FormInput';
+import { Text } from '#components/atoms/Text';
 
 export interface StockSettingsPageProps {
   minQuantity: string;
@@ -31,8 +32,10 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
       keyboardShouldPersistTaps="handled"
       bottomOffset={16}
     >
-      <Text style={styles.sectionTitle}>Low Stock Settings</Text>
-      <Text style={styles.sectionDescription}>
+      <Text size="lg" weight="semibold" style={styles.sectionTitle}>
+        Low Stock Settings
+      </Text>
+      <Text size="sm" tone="secondary" style={styles.sectionDescription}>
         Get notified when this item is running low.
       </Text>
 
@@ -54,7 +57,7 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
         useBottomSheetInput
       />
 
-      <Text style={styles.helpText}>
+      <Text size="sm" tone="secondary" style={styles.helpText}>
         Leave empty to disable low stock alerts for this item.
       </Text>
     </BottomSheetKeyboardAwareScrollView>
@@ -73,19 +76,12 @@ const styles = StyleSheet.create(theme => ({
     flexGrow: 1,
   },
   sectionTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
   sectionDescription: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.md,
   },
   helpText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
     fontStyle: 'italic',
   },

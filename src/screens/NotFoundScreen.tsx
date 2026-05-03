@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { Button } from '#/components/base/Button';
+import { Text } from '#components/atoms/Text';
 
 export const NotFoundScreen = () => {
   const navigation = useNavigation();
@@ -18,7 +19,7 @@ export const NotFoundScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>
+      <Text size="md" align="center" style={styles.text}>
         This screen doesn't exist. Please check the URL or navigate back to a
         valid screen.
       </Text>
@@ -40,9 +41,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
   },
   text: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.typography.fontSize.md,
-    textAlign: 'center',
     marginBottom: theme.spacing.lg,
   },
   buttonContainer: {

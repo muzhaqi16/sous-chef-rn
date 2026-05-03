@@ -1,5 +1,5 @@
 import React, { useLayoutEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -14,6 +14,7 @@ import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { Pressable } from 'react-native-gesture-handler';
 import type { Member } from '#/utils/formatters/memberFormatters';
+import { Text } from '#components/atoms/Text';
 
 export type PartialHome = {
   id: string;
@@ -120,9 +121,11 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           disabled={!onPress}
         >
           <View style={styles.homeInfo}>
-            <Text style={styles.homeName}>{home.name}</Text>
+            <Text size="lg" weight="semibold">
+              {home.name}
+            </Text>
 
-            <Text style={styles.homeDetails}>
+            <Text size="sm" tone="secondary" style={styles.homeDetails}>
               {home.membersTotalCount ?? home.members?.length ?? 0}{' '}
               {(home.membersTotalCount ?? home.members?.length ?? 0) === 1
                 ? 'member'
@@ -135,7 +138,9 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           </View>
           {!!isDefault && (
             <View style={styles.defaultBadge}>
-              <Text style={styles.defaultText}>Default</Text>
+              <Text size="xs" weight="semibold" tone="accent">
+                Default
+              </Text>
             </View>
           )}
           {!!onPress && (
@@ -203,14 +208,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     gap: theme.spacing.xs,
   },
-  homeName: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   homeDetails: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
   defaultBadge: {
@@ -218,11 +216,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
-  },
-  defaultText: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
     opacity: theme.opacity.pressed,

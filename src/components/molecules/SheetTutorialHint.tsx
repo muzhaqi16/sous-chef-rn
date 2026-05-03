@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 interface SheetTutorialHintProps {
   /** The hint text displayed to the user */
@@ -39,10 +40,14 @@ export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
         style={styles.handleContainer}
       >
         <Icon name="chevron-down" size={20} color={theme.colors.primary} />
-        <Text style={styles.handleText}>{text}</Text>
+        <Text size="sm" weight="medium" tone="accent">
+          {text}
+        </Text>
         {!!onSkip && (
           <Pressable onPress={onSkip} hitSlop={8} style={styles.skipButton}>
-            <Text style={styles.skipText}>Skip</Text>
+            <Text size="sm" weight="medium" tone="tertiary">
+              Skip
+            </Text>
           </Pressable>
         )}
       </Animated.View>
@@ -60,11 +65,15 @@ export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
         <View style={styles.iconCircle}>
           <Icon name="hand-left-outline" size={16} color={theme.colors.white} />
         </View>
-        <Text style={styles.inlineText}>{text}</Text>
+        <Text size="sm" weight="medium" style={styles.inlineText}>
+          {text}
+        </Text>
       </View>
       {!!onSkip && (
         <Pressable onPress={onSkip} hitSlop={8} style={styles.skipButton}>
-          <Text style={styles.skipText}>Skip</Text>
+          <Text size="sm" weight="medium" tone="tertiary">
+            Skip
+          </Text>
         </Pressable>
       )}
     </Animated.View>
@@ -82,12 +91,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
-  handleText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.primary,
-  },
-
   // ── Inline variant ──
   inlineContainer: {
     flexDirection: 'row',
@@ -114,9 +117,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   inlineText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
     flex: 1,
   },
 
@@ -124,10 +124,5 @@ const styles = StyleSheet.create(theme => ({
   skipButton: {
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
-  },
-  skipText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textTertiary,
   },
 }));

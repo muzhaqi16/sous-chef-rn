@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { HomeInviteCard } from '../HomeInviteCard';
-import { InviteStatus } from '../../../../graphql/generated/schemaTypes';
+import { InviteStatus } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');

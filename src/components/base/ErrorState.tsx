@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleProp, ViewStyle } from 'react-native';
+import { View, StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Button } from './Button';
 import { IconName, Icon } from '#/utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 export interface ErrorStateProps {
   /** Icon to display (can be IconName or emoji string) */
@@ -84,14 +85,25 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   return (
     <View style={[styles.container, { justifyContent: alignment }, style]}>
       {renderIcon()}
-      <Text style={[styles.title, { color: severityColors[severity] }]}>
+      <Text
+        size="xl"
+        weight="semibold"
+        align="center"
+        style={[styles.title, { color: severityColors[severity] }]}
+      >
         {title}
       </Text>
-      <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
+      <Text
+        size="md"
+        align="center"
+        tone="secondary"
+        lineHeight="normal"
+        style={styles.message}
+      >
         {message}
       </Text>
       {!!details && (
-        <Text style={[styles.details, { color: theme.colors.textTertiary }]}>
+        <Text size="sm" align="center" tone="tertiary" style={styles.details}>
           {details}
         </Text>
       )}
@@ -132,22 +144,14 @@ const styles = StyleSheet.create(theme => ({
   },
 
   title: {
-    fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'center',
     marginBottom: theme.spacing.xs,
   },
 
   message: {
-    fontSize: theme.typography.fontSize.md,
-    textAlign: 'center',
     marginBottom: theme.spacing.md,
-    lineHeight: theme.typography.lineHeight.normal,
   },
 
   details: {
-    fontSize: theme.typography.fontSize.sm,
-    textAlign: 'center',
     marginBottom: theme.spacing.lg,
     fontFamily: 'monospace',
   },

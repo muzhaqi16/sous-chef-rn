@@ -13,8 +13,8 @@ import {
   InviteToHomeDocument,
   JoinHomeByCodeDocument,
   GetHomeByJoinCodeDocument,
-} from '../../../graphql/operations/home/home.generated';
-import { MembershipRole } from '../../../graphql/generated/schemaTypes';
+} from '#operations/home/home.generated';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useErrorService } from '#/services/errorService';
 import { normalizeHome } from '#/utils/connectionUtils';
 import {
@@ -201,4 +201,4 @@ export function useHomeInvitations({
 }
 
 // MembershipRole is available from '#generated' directly
-// import { MembershipRole } from '../../../graphql/generated/schemaTypes';
+// import { MembershipRole } from '#/graphql/generated/schemaTypes';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+
 import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import {
@@ -19,6 +19,7 @@ import {
 import { useBottomSheetModal } from '#hooks/useBottomSheetModal';
 import { usePermission } from '#hooks/permissions/usePermission';
 import { ImagePickerSheet } from './ImagePickerSheet';
+import { Text } from '#components/atoms/Text';
 
 export interface ImageFile {
   uri: string;
@@ -188,7 +189,9 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
         disabled={disabled}
       >
         <Icon name="camera-outline" size={24} color={theme.colors.primary} />
-        <Text style={styles.pickerButtonText}>Add Photo</Text>
+        <Text size="base" weight="medium" tone="accent">
+          Add Photo
+        </Text>
       </Pressable>
       {renderSheet()}
     </>
@@ -212,11 +215,6 @@ const styles = StyleSheet.create(theme => ({
   pickerButtonDisabled: {
     opacity: theme.opacity.disabled,
     borderColor: theme.colors.border,
-  },
-  pickerButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.primary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

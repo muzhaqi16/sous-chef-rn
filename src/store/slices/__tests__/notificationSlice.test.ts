@@ -2,7 +2,7 @@ import { createTestStore } from '#/test-utils/createTestStore';
 import {
   NotificationCategory,
   NotificationType,
-} from '../../../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
 import { NotificationPriority, NotificationItem } from '../notificationSlice';
 
 // Mock authSlice dependencies

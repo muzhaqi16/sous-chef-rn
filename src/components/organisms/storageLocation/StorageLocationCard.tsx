@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import { commonStyles } from '#/styles/commonStyles';
 import { Badge } from '#components/base/Badge';
+import { Text } from '#components/atoms/Text';
 
 const TEMPERATURE_LABELS: Record<string, string> = {
   REFRIGERATED: 'Refrigerated',
@@ -87,14 +88,19 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                     </Text>
                   ) : null}
                   {!!location.parentLocation?.name && (
-                    <Text style={styles.parentInfo}>
+                    <Text tone="secondary" style={styles.parentInfo}>
                       {' '}
                       • Inside {location.parentLocation.name}
                     </Text>
                   )}
                 </Text>
                 {!!location.description && (
-                  <Text style={styles.description} numberOfLines={1}>
+                  <Text
+                    size="xs"
+                    tone="secondary"
+                    style={styles.description}
+                    numberOfLines={1}
+                  >
                     {location.description}
                   </Text>
                 )}
@@ -113,7 +119,9 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                 onPress={onSetDefault}
               >
                 <Icon name="star-outline" size={18} />
-                <Text style={styles.actionText}>Set Default</Text>
+                <Text size="sm" weight="medium">
+                  Set Default
+                </Text>
               </Pressable>
             )}
             <Pressable
@@ -125,7 +133,9 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               onPress={onEdit}
             >
               <Icon name="create-outline" size={18} />
-              <Text style={styles.actionText}>Edit</Text>
+              <Text size="sm" weight="medium">
+                Edit
+              </Text>
             </Pressable>
             <Pressable
               style={({ pressed }) => [
@@ -136,7 +146,9 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               onPress={onDelete}
             >
               <Icon name="trash-outline" size={18} color={theme.colors.error} />
-              <Text style={styles.deleteText}>Delete</Text>
+              <Text size="sm" weight="medium" tone="error">
+                Delete
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -183,14 +195,11 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
   },
   description: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
     fontStyle: 'italic',
   },
   parentInfo: {
     fontStyle: 'italic',
-    color: theme.colors.textSecondary,
   },
   actions: {
     gap: theme.spacing.sm,
@@ -205,12 +214,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
-    gap: 4,
-  },
-  actionText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.medium,
+    gap: theme.spacing.xs,
   },
   deleteActionButton: {
     flex: 1,
@@ -219,11 +223,6 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.sm,
     backgroundColor: 'transparent',
     justifyContent: 'center',
-    gap: 4,
-  },
-  deleteText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.error,
-    fontWeight: theme.fonts.weight.medium,
+    gap: theme.spacing.xs,
   },
 }));

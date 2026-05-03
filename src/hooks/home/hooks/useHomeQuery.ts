@@ -9,7 +9,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@apollo/client/react';
-import { GetHomesDocument } from '../../../graphql/operations/home/home.generated';
+import { GetHomesDocument } from '#operations/home/home.generated';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
 

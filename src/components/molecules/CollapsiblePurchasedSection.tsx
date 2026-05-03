@@ -1,5 +1,5 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import Animated, {
@@ -12,8 +12,9 @@ import Animated, {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { SPRING, TIMING } from '#/constants/animations';
-import type { SortableShoppingListItem } from '../organisms/SortableShoppingList/types';
-import { SortableShoppingList } from '../organisms/SortableShoppingList/SortableList';
+import type { SortableShoppingListItem } from '#features/shoppingList/components/SortableShoppingList/types';
+import { SortableShoppingList } from '#features/shoppingList/components/SortableShoppingList/SortableList';
+import { Text } from '#components/atoms/Text';
 
 interface CollapsiblePurchasedSectionProps {
   purchasedItems: SortableShoppingListItem[];
@@ -146,7 +147,9 @@ export const CollapsiblePurchasedSection: React.FC<
             color={theme.colors.success}
           />
           <Text
-            style={[styles.headerText, { color: theme.colors.textPrimary }]}
+            size="md"
+            weight="semibold"
+            style={{ color: theme.colors.textPrimary }}
           >
             {purchasedItems.length} Purchased
           </Text>
@@ -165,7 +168,9 @@ export const CollapsiblePurchasedSection: React.FC<
               }}
             >
               <Text
-                style={[styles.clearButtonText, { color: theme.colors.error }]}
+                size="sm"
+                weight="semibold"
+                style={{ color: theme.colors.error }}
               >
                 Clear All
               </Text>
@@ -226,10 +231,6 @@ const styles = StyleSheet.create(theme => ({
   checkIcon: {
     marginRight: theme.spacing.sm,
   },
-  headerText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -239,10 +240,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.xs + 2,
     borderRadius: theme.radii.sm,
-  },
-  clearButtonText: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
     opacity: theme.opacity.pressed,

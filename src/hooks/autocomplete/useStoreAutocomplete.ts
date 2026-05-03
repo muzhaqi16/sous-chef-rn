@@ -1,5 +1,5 @@
 import { useLazyQuery } from '@apollo/client/react';
-import { SearchStoresDocument } from '../../graphql/operations/store/store.generated';
+import { SearchStoresDocument } from '#operations/store/store.generated';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
 export type StoreItem = {

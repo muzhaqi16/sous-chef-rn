@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, ActivityIndicator, Modal } from 'react-native';
+import { View, ActivityIndicator, Modal } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 interface LoadingOverlayProps {
   visible: boolean;
@@ -56,7 +57,12 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
             style={styles.spinner}
           />
           {!!message && (
-            <Text style={[styles.message, { color: theme.colors.textPrimary }]}>
+            <Text
+              size="md"
+              weight="medium"
+              align="center"
+              style={{ color: theme.colors.textPrimary }}
+            >
               {message}
             </Text>
           )}
@@ -108,10 +114,5 @@ const styles = StyleSheet.create(theme => ({
   },
   spinner: {
     marginBottom: theme.spacing.md,
-  },
-  message: {
-    fontSize: theme.typography.fontSize.md,
-    textAlign: 'center',
-    fontWeight: theme.fonts.weight.medium,
   },
 }));

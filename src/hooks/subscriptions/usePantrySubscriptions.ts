@@ -19,8 +19,8 @@ import {
   ExpirationNotificationChangedDocument,
   type PantryChangesSubscription,
   type ExpirationNotificationChangedSubscription,
-} from '#operations/pantry/pantry.generated';
-import { PantryItemDisplayFragmentDoc } from '#operations/pantry/pantryFragments.generated';
+} from '#features/pantry/graphql/pantry.generated';
+import { PantryItemDisplayFragmentDoc } from '#features/pantry/graphql/pantryFragments.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   CacheStrategy,

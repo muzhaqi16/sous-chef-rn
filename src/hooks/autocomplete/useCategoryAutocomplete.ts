@@ -1,9 +1,9 @@
 import { useLazyQuery } from '@apollo/client/react';
-import { AutocompleteCategoriesDocument } from '../../graphql/operations/item/item.generated';
+import { AutocompleteCategoriesDocument } from '#operations/item/item.generated';
 import {
   CategorySuggestion,
   CategoryType,
-} from '../../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
 interface UseCategoryAutocompleteOptions {

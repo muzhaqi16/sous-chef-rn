@@ -1,4 +1,4 @@
-import { MembershipRole } from '../../graphql/generated/schemaTypes';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 /** Mirrors the API's PermissionLevel from HomeLinkedResourceAccessControl */
 export type PermissionLevel = 'owner' | 'admin' | 'editor' | 'viewer' | 'none';

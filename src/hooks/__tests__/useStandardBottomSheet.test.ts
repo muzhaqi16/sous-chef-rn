@@ -1,4 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useStandardBottomSheet } from '../useStandardBottomSheet';
 
 // Track present/dismiss calls on the BottomSheetModal ref
@@ -17,6 +18,10 @@ jest.mock('#hooks/useBottomSheetBackHandler', () => ({
 jest.mock('#components/atoms/DismissBackdrop', () => ({
   DismissBackdrop: 'DismissBackdrop',
 }));
+
+const mockedUseFocusEffect = useFocusEffect as jest.MockedFunction<
+  typeof useFocusEffect
+>;
 
 beforeEach(() => {
   mockPresent.mockClear();
@@ -169,6 +174,122 @@ describe('useStandardBottomSheet', () => {
       };
 
       // visible is not provided, so effect should not call present/dismiss
+      expect(mockPresent).not.toHaveBeenCalled();
+      expect(mockDismiss).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('dismissOnBlur (navigation focus lifecycle)', () => {
+    // Helper: capture the useFocusEffect callback so the test can drive blur.
+    const installFocusCapture = () => {
+      let captured: (() => void | (() => void)) | null = null;
+      mockedUseFocusEffect.mockImplementation(cb => {
+        captured = cb as () => void | (() => void);
+      });
+      return {
+        focus: () => captured?.(),
+        blur: () => {
+          const cleanup = captured?.() as (() => void) | undefined;
+          cleanup?.();
+        },
+        getCleanup: () => captured?.() as (() => void) | undefined,
+      };
+    };
+
+    afterEach(() => {
+      // Restore the default mock (`cb => cb()`) for other test blocks.
+      mockedUseFocusEffect.mockImplementation(cb => cb() as any);
+    });
+
+    it('re-presents the sheet on focus when visible is true', () => {
+      const fx = installFocusCapture();
+      const { result } = renderHook(() =>
+        useStandardBottomSheet({ ...defaultOptions, visible: true }),
+      );
+
+      (result.current.ref as any).current = {
+        present: mockPresent,
+        dismiss: mockDismiss,
+      };
+
+      fx.focus();
+
+      expect(mockPresent).toHaveBeenCalled();
+    });
+
+    it('dismisses the sheet on blur when visible is true', () => {
+      const fx = installFocusCapture();
+      const { result } = renderHook(() =>
+        useStandardBottomSheet({ ...defaultOptions, visible: true }),
+      );
+
+      (result.current.ref as any).current = {
+        present: mockPresent,
+        dismiss: mockDismiss,
+      };
+
+      fx.blur();
+
+      expect(mockDismiss).toHaveBeenCalled();
+    });
+
+    it('does not present or dismiss on focus/blur when visible is false', () => {
+      const fx = installFocusCapture();
+      const { result } = renderHook(() =>
+        useStandardBottomSheet({ ...defaultOptions, visible: false }),
+      );
+
+      (result.current.ref as any).current = {
+        present: mockPresent,
+        dismiss: mockDismiss,
+      };
+
+      fx.focus();
+      expect(mockPresent).not.toHaveBeenCalled();
+
+      const cleanup = fx.getCleanup();
+      cleanup?.();
+      expect(mockDismiss).not.toHaveBeenCalled();
+    });
+
+    it('does not touch the sheet on focus/blur when visible is undefined (manual)', () => {
+      const fx = installFocusCapture();
+      const { result } = renderHook(() =>
+        useStandardBottomSheet(defaultOptions),
+      );
+
+      (result.current.ref as any).current = {
+        present: mockPresent,
+        dismiss: mockDismiss,
+      };
+
+      fx.focus();
+      const cleanup = fx.getCleanup();
+      cleanup?.();
+
+      expect(mockPresent).not.toHaveBeenCalled();
+      expect(mockDismiss).not.toHaveBeenCalled();
+    });
+
+    it('does not touch the sheet on blur when dismissOnBlur is false', () => {
+      const fx = installFocusCapture();
+      const { result } = renderHook(() =>
+        useStandardBottomSheet({
+          ...defaultOptions,
+          visible: true,
+          dismissOnBlur: false,
+        }),
+      );
+
+      (result.current.ref as any).current = {
+        present: mockPresent,
+        dismiss: mockDismiss,
+      };
+
+      fx.focus();
+      const cleanup = fx.getCleanup();
+      cleanup?.();
+
       expect(mockPresent).not.toHaveBeenCalled();
       expect(mockDismiss).not.toHaveBeenCalled();
     });

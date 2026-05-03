@@ -6,7 +6,7 @@ import { EmailInput } from '../../components/atoms/EmailInput';
 import { getForgotPasswordValidationSchema } from '#utils/validation/auth';
 import { AuthWrapper } from '../../components/templates/AuthWrapper';
 import { useMutation } from '@apollo/client/react';
-import { ForgotPasswordDocument } from '../../graphql/operations/auth/auth.generated';
+import { ForgotPasswordDocument } from '#operations/auth/auth.generated';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { errorService } from '#/services/errorService';
 

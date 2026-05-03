@@ -26,22 +26,15 @@ function seedData(
       entry.value,
     );
   }
-  // Flush the batch
-  jest.advanceTimersByTime(100);
+  // Drain the batched microtask synchronously
+  optimisticDataPersistence.flush();
 }
 
 describe('OptimisticDataPersistence', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
-    // Flush any pending batch timers from previous tests
-    jest.runOnlyPendingTimers();
     // Clear underlying MMKV store and reset singleton state
     storage.clearAll();
     optimisticDataPersistence.clearAll();
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
   });
 
   describe('save (batched)', () => {
@@ -55,14 +48,14 @@ describe('OptimisticDataPersistence', () => {
       expect(storage.getString(DATA_KEY)).toBeUndefined();
     });
 
-    it('flushes to storage after batch timeout (100ms)', () => {
+    it('flushes to storage on the next microtask', async () => {
       optimisticDataPersistence.save(
         'ShoppingListItem',
         '123',
         'sortOrder',
         'a5',
       );
-      jest.advanceTimersByTime(100);
+      await Promise.resolve();
 
       const stored = JSON.parse(storage.getString(DATA_KEY)!);
       expect(stored['ShoppingListItem:123:sortOrder']).toMatchObject({
@@ -76,7 +69,7 @@ describe('OptimisticDataPersistence', () => {
       );
     });
 
-    it('batches multiple saves into a single storage write', () => {
+    it('batches multiple saves into a single storage write', async () => {
       // Track how many times storage.set is called for the data key
       let dataKeySetCount = 0;
       const originalSet = storage.set.bind(storage);
@@ -100,7 +93,7 @@ describe('OptimisticDataPersistence', () => {
       );
       optimisticDataPersistence.save('PantryItem', '3', 'quantity', 5);
 
-      jest.advanceTimersByTime(100);
+      await Promise.resolve();
 
       // Only one set call for the data key
       expect(dataKeySetCount).toBe(1);
@@ -112,7 +105,7 @@ describe('OptimisticDataPersistence', () => {
       storage.set = originalSet as any;
     });
 
-    it('merges with existing data in storage', () => {
+    it('merges with existing data in storage', async () => {
       seedData([
         {
           entityType: 'ShoppingListItem',
@@ -128,14 +121,14 @@ describe('OptimisticDataPersistence', () => {
         'sortOrder',
         'a1',
       );
-      jest.advanceTimersByTime(100);
+      await Promise.resolve();
 
       const stored = JSON.parse(storage.getString(DATA_KEY)!);
       expect(stored['ShoppingListItem:old:field']).toBeDefined();
       expect(stored['ShoppingListItem:new:sortOrder']).toBeDefined();
     });
 
-    it('overwrites existing field for same entity', () => {
+    it('overwrites existing field for same entity', async () => {
       seedData([
         {
           entityType: 'ShoppingListItem',
@@ -151,7 +144,7 @@ describe('OptimisticDataPersistence', () => {
         'sortOrder',
         'b2',
       );
-      jest.advanceTimersByTime(100);
+      await Promise.resolve();
 
       const stored = JSON.parse(storage.getString(DATA_KEY)!);
       expect(stored['ShoppingListItem:1:sortOrder'].value).toBe('b2');

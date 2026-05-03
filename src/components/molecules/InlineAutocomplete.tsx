@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Pressable, ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Label } from '#components/atoms/Label';
+import { Text } from '#components/atoms/Text';
 
 export interface InlineAutocompleteProps<T> {
   // Core
@@ -163,7 +164,11 @@ export function InlineAutocomplete<T>({
           />
         )}
       </View>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? (
+        <Text size="sm" tone="error" style={styles.errorText}>
+          {error}
+        </Text>
+      ) : null}
 
       {!!shouldShowDropdown &&
         !!(slicedItems.length > 0 || footerComponent) && (
@@ -223,8 +228,6 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.error,
   },
   errorText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.error,
     marginTop: theme.spacing.xs,
   },
   loadingIndicator: {

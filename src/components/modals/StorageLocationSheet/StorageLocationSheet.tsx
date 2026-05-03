@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
@@ -8,6 +8,7 @@ import {
   StorageLocationForm,
   type StorageLocationFormRef,
 } from '#components/organisms/storageLocation/StorageLocationForm';
+import { Text } from '#components/atoms/Text';
 
 interface StorageLocationData {
   name: string;
@@ -22,7 +23,7 @@ interface StorageLocationData {
   isDefault?: boolean | null;
 }
 
-import { StorageLocation } from '../../../graphql/generated/schemaTypes';
+import { StorageLocation } from '#/graphql/generated/schemaTypes';
 
 interface StorageLocationSheetProps {
   visible: boolean;
@@ -83,14 +84,12 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
             accessibilityLabel="Cancel"
             disabled={isSubmitting}
           >
-            <Text
-              style={[styles.cancelText, { color: theme.colors.textSecondary }]}
-            >
+            <Text size="md" tone="secondary">
               Cancel
             </Text>
           </Pressable>
 
-          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+          <Text size="lg" weight="semibold" align="center" style={styles.title}>
             {title}
           </Text>
 
@@ -107,7 +106,7 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
             {isSubmitting ? (
               <ActivityIndicator size="small" color={theme.colors.primary} />
             ) : (
-              <Text style={[styles.saveText, { color: theme.colors.primary }]}>
+              <Text size="md" weight="semibold" align="right" tone="accent">
                 {saveText}
               </Text>
             )}
@@ -151,18 +150,7 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 60,
   },
   title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'center',
     flex: 1,
-  },
-  cancelText: {
-    fontSize: theme.typography.fontSize.md,
-  },
-  saveText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'right',
   },
   divider: {
     height: 1,

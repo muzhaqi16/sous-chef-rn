@@ -26,7 +26,7 @@ jest.mock('#hooks/useImageUpload', () => ({
   }),
 }));
 
-jest.mock('#hooks/profile/useProfileData', () => ({
+jest.mock('#features/profile/hooks/useProfileData', () => ({
   useProfileData: () => ({ profile: { avatar: null }, loading: false }),
 }));
 

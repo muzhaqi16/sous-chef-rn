@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 export type SectionHeaderVariant = 'warning' | 'default' | 'info' | 'success';
 
@@ -62,8 +63,11 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   return (
     <View style={styles.container} testID={testID}>
       <View style={styles.leftContent}>
-        {icon ? <Text style={styles.icon}>{icon}</Text> : null}
-        <Text style={[styles.title, { color: getTitleColor() }]}>
+        {icon ? <Text size="sm">{icon}</Text> : null}
+        <Text
+          weight="semibold"
+          style={[styles.title, { color: getTitleColor() }]}
+        >
           {title}
           {count !== undefined ? ` (${count})` : ''}
         </Text>
@@ -71,7 +75,9 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
 
       {!!actionLabel && !!onActionPress && (
         <Pressable onPress={onActionPress} hitSlop={8}>
-          <Text style={styles.actionLabel}>{actionLabel}</Text>
+          <Text weight="semibold" style={styles.actionLabel}>
+            {actionLabel}
+          </Text>
         </Pressable>
       )}
     </View>
@@ -92,18 +98,13 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.sm,
   },
-  icon: {
-    fontSize: theme.typography.fontSize.sm,
-  },
   title: {
     fontSize: theme.typography.fontSize.sm - 1,
-    fontWeight: theme.fonts.weight.semibold,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   actionLabel: {
     fontSize: theme.typography.fontSize.sm - 1,
-    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.sectionHeader.actionText,
   },
 }));

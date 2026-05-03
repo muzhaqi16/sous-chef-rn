@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
@@ -12,6 +12,7 @@ import { BottomSheetHeader } from '#/components/atoms/BottomSheetHeader';
 import { AnimatedChip } from '#/components/atoms/AnimatedChip';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { Text } from '#components/atoms/Text';
 
 export interface MultiSelectChipSheetItem<T extends string = string> {
   id: T;
@@ -115,7 +116,7 @@ export function MultiSelectChipSheet<T extends string = string>({
 
         {/* Selection Counter / Clear All */}
         <View style={styles.selectionRow}>
-          <Text style={styles.selectionText}>
+          <Text size="sm" tone="secondary">
             {selectedItems.length === 0
               ? 'No items selected'
               : `${selectedItems.length} selected`}
@@ -125,7 +126,9 @@ export function MultiSelectChipSheet<T extends string = string>({
               onPress={handleClearAll}
               style={({ pressed }) => pressed && styles.pressed}
             >
-              <Text style={styles.clearText}>Clear all</Text>
+              <Text size="sm" tone="accent" weight="medium">
+                Clear all
+              </Text>
             </Pressable>
           )}
         </View>
@@ -133,7 +136,9 @@ export function MultiSelectChipSheet<T extends string = string>({
         {/* Chip Grid */}
         {loading ? (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading...</Text>
+            <Text size="base" tone="secondary">
+              Loading...
+            </Text>
           </View>
         ) : filteredItems.length > 0 ? (
           <BottomSheetScrollView
@@ -153,11 +158,15 @@ export function MultiSelectChipSheet<T extends string = string>({
           </BottomSheetScrollView>
         ) : items.length > 0 && searchQuery ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No items match "{searchQuery}"</Text>
+            <Text size="base" tone="secondary" align="center">
+              No items match "{searchQuery}"
+            </Text>
           </View>
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No items available</Text>
+            <Text size="base" tone="secondary" align="center">
+              No items available
+            </Text>
           </View>
         )}
       </BottomSheetView>
@@ -192,15 +201,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     marginBottom: theme.spacing.sm,
   },
-  selectionText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-  },
-  clearText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
   scrollContent: {
     paddingBottom: theme.spacing.md,
   },
@@ -214,18 +214,9 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.lg,
     alignItems: 'center',
   },
-  loadingText: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textSecondary,
-  },
   emptyContainer: {
     paddingVertical: theme.spacing.lg,
     alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
   },
   pressed: {
     opacity: theme.opacity.pressed,

@@ -13,7 +13,7 @@ import { useMutation } from '@apollo/client/react';
 import {
   SetDefaultHomeDocument,
   type SetDefaultHomeMutation,
-} from '../../../graphql/operations/home/userSettings.generated';
+} from '#operations/home/userSettings.generated';
 import {
   useAppStore,
   useSelectedHomeId,

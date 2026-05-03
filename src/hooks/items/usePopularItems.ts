@@ -1,5 +1,5 @@
 import { useQuery } from '@apollo/client/react';
-import { GetPopularItemsDocument } from '../../graphql/operations/item/item.generated';
+import { GetPopularItemsDocument } from '#operations/item/item.generated';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 
 export interface PopularItem {

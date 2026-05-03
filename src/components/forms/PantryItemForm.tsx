@@ -15,27 +15,26 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useNavigation } from '@react-navigation/native';
 import { commonStyles } from '#/styles/commonStyles';
 import { useSelectedPantryId, useSelectedHomeId } from '#store/useAppStore';
-import { normalizeHome } from '#/utils/connectionUtils';
+import { normalizeHome, normalizePantry } from '#/utils/connectionUtils';
 import { useQuery } from '@apollo/client/react';
-import { GetHomeDocument } from '../../graphql/operations/home/home.generated';
+import { GetHomeDocument } from '#operations/home/home.generated';
 import {
   GetPantryDocument,
   GetPantryItemDocument,
-} from '#operations/pantry/pantry.generated';
+} from '#features/pantry/graphql/pantry.generated';
 import {
   StorageState,
   type ItemSuggestion,
 } from '#/graphql/generated/schemaTypes';
-import { useCreatePantryItem } from '#hooks/pantry/mutations/useCreatePantryItem';
-import { useUpdatePantryItem } from '#hooks/pantry/mutations/useUpdatePantryItem';
-import { useUpdatePantryItemQuantity } from '#hooks/pantry/mutations/useUpdatePantryItemQuantity';
-import { useResolveUnit } from '#hooks/pantry/mutations/useResolveUnit';
+import { useCreatePantryItem } from '#features/pantry/hooks/mutations/useCreatePantryItem';
+import { useUpdatePantryItem } from '#features/pantry/hooks/mutations/useUpdatePantryItem';
+import { useUpdatePantryItemQuantity } from '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity';
+import { useResolveUnit } from '#features/pantry/hooks/mutations/useResolveUnit';
 import {
   emptyUnitSelection,
   type UnitSelection,
-} from '#hooks/pantry/mutations/types';
+} from '#features/pantry/hooks/mutations/types';
 import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
-import { normalizePantry } from '#/utils/connectionUtils';
 import {
   DynamicFormFields,
   FieldDef,
@@ -44,10 +43,31 @@ import { FormInput } from '#components/molecules/FormInput';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { Header } from '#components/molecules/Header';
+import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
+import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { ItemInformationSection } from './ItemInformationSection';
 import { QuantitySection } from './QuantitySection';
 import { StorageDetailsSection } from './StorageDetailsSection';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+
+type PageName = 'Basics' | 'Product' | 'Storage' | 'Inventory';
+const PAGES: readonly PageName[] = [
+  'Basics',
+  'Product',
+  'Storage',
+  'Inventory',
+];
+
+// Maps each tab to the form field names it owns — drives per-tab error
+// indicators on PageIndicator. Tags lives inside the Inventory "More options"
+// expander.
+const TAB_FIELDS: Record<PageName, readonly string[]> = {
+  Basics: ['itemName', 'brand', 'category'],
+  Product: ['netWeight', 'netWeightUnit'],
+  Storage: ['storageState', 'location', 'expirationDate', 'notes'],
+  Inventory: ['quantityInput', 'unit', 'minQuantity', 'restockQuantity'],
+};
+const INVENTORY_ADVANCED_FIELDS: readonly string[] = ['tags'];
 
 interface PantryItemFormData {
   // Item information (add mode)
@@ -147,6 +167,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   >([]);
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
   const [netWeightUnitId, setNetWeightUnitId] = useState<string | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(0);
+  const [tagsExpanded, setTagsExpanded] = useState(false);
 
   const selectedPantryId = useSelectedPantryId();
   // Get selectedHomeId from Zustand (no GraphQL query triggered)
@@ -575,6 +598,25 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const formTestID =
     mode === 'add' ? 'add-pantry-item-modal' : 'edit-pantry-item-modal';
 
+  // Per-tab error detection — drives the red dot on PageIndicator and
+  // auto-expansion of "More options" when an errored field lives inside it.
+  const fieldHasError = (name: string) =>
+    !!(errors as Record<string, unknown>)[name];
+  const tabHasError = (page: PageName) => {
+    const fields =
+      page === 'Inventory'
+        ? [...TAB_FIELDS.Inventory, ...INVENTORY_ADVANCED_FIELDS]
+        : TAB_FIELDS[page];
+    return fields.some(fieldHasError);
+  };
+  const inventoryAdvancedHasError =
+    INVENTORY_ADVANCED_FIELDS.some(fieldHasError);
+  const showTags = tagsExpanded || inventoryAdvancedHasError;
+  const indicatorPages = PAGES.map(page => ({
+    label: page,
+    hasError: tabHasError(page),
+  }));
+
   return (
     <View testID={formTestID} style={styles.container}>
       <KeyboardAvoidingView
@@ -598,132 +640,148 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           ]}
         />
 
+        <PageIndicator
+          pages={indicatorPages}
+          currentPage={currentPage}
+          onPagePress={setCurrentPage}
+        />
+
         <ScrollView
           style={commonStyles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           <View style={commonStyles.padding}>
-            {/* Item Information Section */}
-            {mode === 'add' ? (
-              <ItemInformationSection
+            {currentPage === 0 &&
+              (mode === 'add' ? (
+                <ItemInformationSection
+                  control={control}
+                  errors={errors}
+                  mode="add"
+                  onSelectItem={handleItemSelect}
+                  suggestedBrands={suggestedBrands}
+                  testID="add-pantry-item-name-input"
+                  onCategorySelected={handleCategorySelect}
+                />
+              ) : (
+                <ItemInformationSection
+                  control={control}
+                  errors={errors}
+                  mode="edit"
+                  suggestedBrands={suggestedBrands}
+                  onBrandSelected={setSelectedBrandId}
+                  onCategorySelected={handleCategorySelect}
+                />
+              ))}
+
+            {currentPage === 1 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Net Weight</Text>
+                <Text style={styles.sectionDescription}>
+                  Net weight is used for consumption tracking and is optional.
+                </Text>
+                <View
+                  pointerEvents={isWeightLocked ? 'none' : 'auto'}
+                  style={isWeightLocked ? styles.lockedSection : undefined}
+                >
+                  <FieldRow>
+                    <Controller
+                      control={control}
+                      name="netWeight"
+                      render={({ field: { onChange, onBlur, value } }) => (
+                        <FormInput
+                          label="Net Weight"
+                          value={value || ''}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                          placeholder="e.g., 14.5"
+                          keyboardType="decimal-pad"
+                          editable={!isWeightLocked}
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="netWeightUnit"
+                      render={({ field: { onChange, value } }) => (
+                        <UnitAutocompleteField
+                          variant="modal"
+                          label="Unit"
+                          value={value || ''}
+                          onChangeText={onChange}
+                          onUnitSelected={handleNetWeightUnitSelected}
+                          placeholder="oz, g, ml"
+                        />
+                      )}
+                    />
+                  </FieldRow>
+                </View>
+                {!!isWeightLocked && (
+                  <Text style={styles.lockedHint}>
+                    Weight locked after use — correct from item details
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {currentPage === 2 && (
+              <StorageDetailsSection
                 control={control}
                 errors={errors}
-                mode="add"
-                onSelectItem={handleItemSelect}
-                suggestedBrands={suggestedBrands}
-                testID="add-pantry-item-name-input"
-                onCategorySelected={handleCategorySelect}
-              />
-            ) : (
-              <ItemInformationSection
-                control={control}
-                errors={errors}
-                mode="edit"
-                suggestedBrands={suggestedBrands}
-                onBrandSelected={setSelectedBrandId}
-                onCategorySelected={handleCategorySelect}
+                mode={mode}
+                storageState={
+                  watchedValues.storageState ?? StorageState.Ambient
+                }
+                expirationDate={watchedValues.expirationDate}
+                onStorageStateChange={state =>
+                  setValue('storageState', state, { shouldDirty: true })
+                }
+                onDateChange={date => {
+                  setValue('expirationDate', date ?? undefined, {
+                    shouldDirty: true,
+                  });
+                }}
+                storageLocations={storageLocations}
+                onStorageLocationSelected={handleStorageLocationSelect}
+                onAddNewLocation={handleAddNewLocation}
               />
             )}
 
-            {/* Quantity Section */}
-            <QuantitySection
-              control={control}
-              errors={errors}
-              mode={mode}
-              onUnitSelected={handleUnitSelected}
-              testID={
-                mode === 'add'
-                  ? 'add-pantry-item-quantity-input'
-                  : 'edit-pantry-item-quantity-input'
-              }
-              unitTestID={
-                mode === 'add'
-                  ? 'add-pantry-item-unit-picker'
-                  : 'edit-pantry-item-unit-picker'
-              }
-              // Edit mode stock info (read-only display)
-              unitSymbol={item?.unit?.symbol}
-            />
-
-            {/* Net Weight Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Net Weight</Text>
-              <Text style={styles.sectionDescription}>
-                Net weight is used for consumption tracking and is optional.
-              </Text>
-              <View
-                pointerEvents={isWeightLocked ? 'none' : 'auto'}
-                style={isWeightLocked ? styles.lockedSection : undefined}
-              >
-                <FieldRow>
-                  <Controller
-                    control={control}
-                    name="netWeight"
-                    render={({ field: { onChange, onBlur, value } }) => (
-                      <FormInput
-                        label="Net Weight"
-                        value={value || ''}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        placeholder="e.g., 14.5"
-                        keyboardType="decimal-pad"
-                        editable={!isWeightLocked}
-                      />
-                    )}
-                  />
-                  <Controller
-                    control={control}
-                    name="netWeightUnit"
-                    render={({ field: { onChange, value } }) => (
-                      <UnitAutocompleteField
-                        variant="modal"
-                        label="Unit"
-                        value={value || ''}
-                        onChangeText={onChange}
-                        onUnitSelected={handleNetWeightUnitSelected}
-                        placeholder="oz, g, ml"
-                      />
-                    )}
-                  />
-                </FieldRow>
-              </View>
-              {!!isWeightLocked && (
-                <Text style={styles.lockedHint}>
-                  Weight locked after use — correct from item details
-                </Text>
-              )}
-            </View>
-
-            {/* Storage Details Section */}
-            <StorageDetailsSection
-              control={control}
-              errors={errors}
-              mode={mode}
-              storageState={watchedValues.storageState ?? StorageState.Ambient}
-              expirationDate={watchedValues.expirationDate}
-              onStorageStateChange={state =>
-                setValue('storageState', state, { shouldDirty: true })
-              }
-              onDateChange={date => {
-                setValue('expirationDate', date ?? undefined, {
-                  shouldDirty: true,
-                });
-              }}
-              storageLocations={storageLocations}
-              onStorageLocationSelected={handleStorageLocationSelect}
-              onAddNewLocation={handleAddNewLocation}
-            />
-
-            {/* Tags Section (Edit mode only) */}
-            {mode === 'edit' && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Tags</Text>
-                <DynamicFormFields
-                  fields={tagsFields}
+            {currentPage === 3 && (
+              <>
+                <QuantitySection
                   control={control}
                   errors={errors}
+                  mode={mode}
+                  onUnitSelected={handleUnitSelected}
+                  testID={
+                    mode === 'add'
+                      ? 'add-pantry-item-quantity-input'
+                      : 'edit-pantry-item-quantity-input'
+                  }
+                  unitTestID={
+                    mode === 'add'
+                      ? 'add-pantry-item-unit-picker'
+                      : 'edit-pantry-item-unit-picker'
+                  }
+                  unitSymbol={item?.unit?.symbol}
                 />
-              </View>
+
+                {mode === 'edit' && (
+                  <CollapsibleSection
+                    title="More options"
+                    expanded={showTags}
+                    onToggle={() => setTagsExpanded(prev => !prev)}
+                  >
+                    <View style={styles.advancedContent}>
+                      <DynamicFormFields
+                        fields={tagsFields}
+                        control={control}
+                        errors={errors}
+                      />
+                    </View>
+                  </CollapsibleSection>
+                )}
+              </>
             )}
           </View>
         </ScrollView>
@@ -766,5 +824,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textTertiary,
     fontStyle: 'italic',
+  },
+  advancedContent: {
+    paddingTop: theme.spacing.md,
   },
 }));

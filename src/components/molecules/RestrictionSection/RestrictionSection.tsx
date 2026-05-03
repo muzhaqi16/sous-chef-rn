@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
+import { Text } from '#components/atoms/Text';
 
 export interface RestrictionSectionItem {
   id: string;
@@ -65,7 +66,9 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
           ))}
         </View>
       ) : (
-        <Text style={styles.emptyText}>{emptyMessage}</Text>
+        <Text size="sm" tone="secondary">
+          {emptyMessage}
+        </Text>
       )}
     </View>
   );
@@ -120,10 +123,6 @@ const styles = StyleSheet.create(theme => ({
     right: -theme.spacing.xs,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.full,
-  },
-  emptyText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

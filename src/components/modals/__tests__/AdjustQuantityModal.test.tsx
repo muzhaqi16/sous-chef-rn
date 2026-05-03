@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { AdjustQuantityModal } from '../AdjustQuantityModal';
-import { type PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
+import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -104,7 +104,7 @@ jest.mock('#/styles/commonStyles', () => ({
   },
 }));
 
-jest.mock('#hooks/pantry/usePantryItemTransformation', () => ({
+jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
   formatNetWeightDisplay: (weight: any, unit: any) =>
     weight != null ? `${weight} ${unit?.symbol || ''}` : '',
 }));

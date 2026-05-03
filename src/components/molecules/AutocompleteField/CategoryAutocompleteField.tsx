@@ -2,7 +2,7 @@ import React from 'react';
 import {
   CategorySuggestion,
   CategoryType,
-} from '../../../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
 import { useCategoryAutocomplete } from '#hooks/autocomplete/useCategoryAutocomplete';
 import { AutocompleteField } from './AutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';

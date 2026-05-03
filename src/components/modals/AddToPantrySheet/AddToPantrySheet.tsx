@@ -4,7 +4,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   usePantryItemSuggestions,
   type PantryItemSuggestion,
-} from '#hooks/pantry/usePantryItemSuggestions';
+} from '#features/pantry/hooks/usePantryItemSuggestions';
 import { toastService } from '#/services/toastService';
 import {
   CreatePantryItemDocument,
@@ -13,7 +13,7 @@ import {
   type GetPantryQuery,
   GetPantryItemSuggestionsDocument,
   type GetPantryItemSuggestionsQuery,
-} from '#operations/pantry/pantry.generated';
+} from '#features/pantry/graphql/pantry.generated';
 import type {
   ItemSuggestion,
   StorageLocation,
@@ -143,10 +143,20 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     );
   };
 
-  // Handle scan barcode press
+  // Keep the sheet "open" across the barcode / identify navigation so the
+  // user lands back on it if they cancel. useStandardBottomSheet's
+  // dismissOnBlur (default true) dismisses the underlying BottomSheetModal
+  // on screen blur and re-presents it on refocus, keeping the global
+  // backdrop's ref-count clean.
   const handleScanPress = () => {
-    onClose();
     navigateTo.barcode({
+      source: 'pantry',
+      pantryId,
+    });
+  };
+
+  const handleIdentifyPress = () => {
+    navigateTo.identifyItem({
       source: 'pantry',
       pantryId,
     });
@@ -307,6 +317,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       isMutating={false}
       onAddManually={handleAddManually}
       onScanPress={handleScanPress}
+      onIdentifyPress={handleIdentifyPress}
       exitingItems={state.exitingItems}
       onExitComplete={handleExitComplete}
       shouldFetch={state.shouldFetch}

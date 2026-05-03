@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Text } from '#components/atoms/Text';
 
 interface BottomSheetHeaderProps {
   title: string;
@@ -55,14 +56,15 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           accessibilityRole="button"
           accessibilityLabel={cancelLabel}
         >
-          <Text
-            style={[styles.cancelText, { color: theme.colors.textSecondary }]}
-          >
+          <Text size="md" style={{ color: theme.colors.textSecondary }}>
             {cancelLabel}
           </Text>
         </Pressable>
 
         <Text
+          size="lg"
+          weight="semibold"
+          align="center"
           style={[styles.title, { color: theme.colors.textPrimary }]}
           numberOfLines={1}
         >
@@ -77,7 +79,12 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           accessibilityLabel={confirmLabel}
           accessibilityState={{ disabled: confirmDisabled }}
         >
-          <Text style={[styles.confirmText, { color: getConfirmColor() }]}>
+          <Text
+            size="md"
+            weight="semibold"
+            align="right"
+            style={{ color: getConfirmColor() }}
+          >
             {confirmLabel}
           </Text>
         </Pressable>
@@ -106,18 +113,7 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 70,
   },
   title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'center',
     flex: 1,
-  },
-  cancelText: {
-    fontSize: theme.typography.fontSize.md,
-  },
-  confirmText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'right',
   },
   divider: {
     height: 1,

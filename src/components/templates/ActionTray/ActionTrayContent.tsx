@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
 import type { ActionTrayContentProps } from './types';
+import { Text } from '#components/atoms/Text';
 
 export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
   children,
@@ -28,7 +29,11 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
     >
       {!!(title || showCloseButton) && (
         <View style={styles.header}>
-          {title ? <Text style={styles.title}>{title}</Text> : null}
+          {title ? (
+            <Text size="lg" weight="semibold" tone="primary">
+              {title}
+            </Text>
+          ) : null}
           <View style={styles.fill} />
           {!!headerRight && headerRight}
           {!!showCloseButton && !!onClose && (
@@ -59,11 +64,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
-  },
-  title: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
   },
   fill: {
     flex: 1,

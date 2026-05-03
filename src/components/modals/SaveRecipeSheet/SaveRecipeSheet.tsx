@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
@@ -10,6 +10,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { TagInput } from '#components/molecules/TagInput';
 import { Icon } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 export interface SaveRecipeSheetProps {
   visible: boolean;
@@ -113,9 +114,16 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.title}>Save Recipe</Text>
+            <Text size="lg" weight="semibold">
+              Save Recipe
+            </Text>
             {!!recipeName && (
-              <Text style={styles.recipeName} numberOfLines={1}>
+              <Text
+                size="sm"
+                tone="secondary"
+                style={styles.recipeName}
+                numberOfLines={1}
+              >
                 {recipeName}
               </Text>
             )}
@@ -144,7 +152,14 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
         </View>
 
         {/* Folder Selection */}
-        <Text style={styles.sectionLabel}>Folder</Text>
+        <Text
+          size="sm"
+          weight="semibold"
+          tone="secondary"
+          style={styles.sectionLabel}
+        >
+          Folder
+        </Text>
         <View style={styles.folderList}>
           {[null, ...displayFolders].map(folder => {
             const isSelected =
@@ -230,12 +245,21 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
             onPress={() => setShowNewFolder(true)}
           >
             <Icon name="add" size={18} color={theme.colors.primary} />
-            <Text style={styles.newFolderButtonText}>Create New Folder</Text>
+            <Text size="base" weight="medium" tone="accent">
+              Create New Folder
+            </Text>
           </Pressable>
         )}
 
         {/* Tags */}
-        <Text style={styles.sectionLabel}>Tags (optional)</Text>
+        <Text
+          size="sm"
+          weight="semibold"
+          tone="secondary"
+          style={styles.sectionLabel}
+        >
+          Tags (optional)
+        </Text>
         <TagInput
           tags={tags}
           onTagsChange={setTags}
@@ -245,7 +269,14 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
         />
 
         {/* Notes */}
-        <Text style={styles.sectionLabel}>Notes (optional)</Text>
+        <Text
+          size="sm"
+          weight="semibold"
+          tone="secondary"
+          style={styles.sectionLabel}
+        >
+          Notes (optional)
+        </Text>
         <BottomSheetTextInput
           style={styles.notesInput}
           placeholder="Add any notes about this recipe..."
@@ -284,20 +315,10 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.md,
   },
-  title: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   recipeName: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
   sectionLabel: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     marginTop: theme.spacing.md,
   },
@@ -330,11 +351,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.sm,
     marginTop: theme.spacing.sm,
-  },
-  newFolderButtonText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
   newFolderContainer: {
     flexDirection: 'row',

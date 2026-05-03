@@ -1,7 +1,7 @@
 'use no memo';
 
 import { renderHook } from '@testing-library/react-native';
-import { ShoppingListChangeType } from '../../../graphql/generated/schemaTypes';
+import { ShoppingListChangeType } from '#/graphql/generated/schemaTypes';
 import { useShoppingListSubscriptions } from '../useShoppingListSubscriptions';
 
 jest.mock('../../../apollo/links/tokenScheduler');

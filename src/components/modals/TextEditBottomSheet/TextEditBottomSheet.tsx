@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -11,6 +11,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type AnyObjectSchema } from 'yup';
 import { Button } from '#components/base/Button';
+import { Text } from '#components/atoms/Text';
 
 interface TextEditBottomSheetProps {
   visible: boolean;
@@ -102,7 +103,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
             Cancel
           </Button>
 
-          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+          <Text size="lg" weight="semibold" align="center" style={styles.title}>
             {title}
           </Text>
 
@@ -124,7 +125,12 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
         {/* Input Field */}
         <View style={styles.inputContainer}>
           {!!label && (
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+            <Text
+              size="sm"
+              weight="medium"
+              tone="secondary"
+              style={styles.label}
+            >
               {label}
             </Text>
           )}
@@ -158,9 +164,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
                   textAlignVertical={multiline ? 'top' : 'center'}
                 />
                 {!!fieldState.error && (
-                  <Text
-                    style={[styles.errorText, { color: theme.colors.error }]}
-                  >
+                  <Text size="sm" tone="error" style={styles.errorText}>
                     {fieldState.error.message}
                   </Text>
                 )}
@@ -184,9 +188,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
   },
   title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'center',
     flex: 1,
   },
   divider: {
@@ -197,8 +198,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   label: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.medium,
     marginBottom: theme.spacing.sm,
   },
   input: {
@@ -213,7 +212,6 @@ const styles = StyleSheet.create(theme => ({
     paddingTop: theme.spacing.md,
   },
   errorText: {
-    fontSize: theme.typography.fontSize.sm,
     marginTop: theme.spacing.xs,
   },
 }));

@@ -21,6 +21,9 @@ export enum ThemePreference {
   SYSTEM = 'SYSTEM',
 }
 
+export type DensityPreference = 'compact' | 'comfortable' | 'spacious';
+export type FontScalePreference = 'system' | 'sm' | 'md' | 'lg' | 'xl';
+
 export interface PreferencesState {
   // Theme
   theme: ThemePreference;
@@ -60,6 +63,16 @@ export interface PreferencesState {
   getUserPreferences: (userId: string) => UserPreferences;
   resetUserPreferences: (userId: string) => void;
 
+  // Appearance customization
+  primaryColorOverride: string | null;
+  densityPreference: DensityPreference;
+  fontScalePreference: FontScalePreference;
+  highContrast: boolean;
+  setPrimaryColorOverride: (color: string | null) => void;
+  setDensityPreference: (density: DensityPreference) => void;
+  setFontScalePreference: (scale: FontScalePreference) => void;
+  setHighContrast: (enabled: boolean) => void;
+
   // Reset
   resetPreferences: () => void;
 }
@@ -74,6 +87,10 @@ const initialPreferencesState = {
   showNavigationLabels: true, // Enabled by default
   pantrySortOption: 'recent' as PantrySortOption,
   pantrySortDirection: 'desc' as PantrySortDirection, // Newest first
+  primaryColorOverride: null as string | null,
+  densityPreference: 'comfortable' as DensityPreference,
+  fontScalePreference: 'system' as FontScalePreference,
+  highContrast: false,
 };
 
 export const createPreferencesSlice: StateCreator<
@@ -130,6 +147,11 @@ export const createPreferencesSlice: StateCreator<
       state.userPreferences[userId] = { ...defaultUserPreferences };
     });
   },
+
+  setPrimaryColorOverride: color => set({ primaryColorOverride: color }),
+  setDensityPreference: density => set({ densityPreference: density }),
+  setFontScalePreference: scale => set({ fontScalePreference: scale }),
+  setHighContrast: enabled => set({ highContrast: enabled }),
 
   resetPreferences: () => set(initialPreferencesState),
 });

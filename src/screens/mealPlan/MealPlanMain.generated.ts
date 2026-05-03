@@ -1,6 +1,0 @@
-import type * as Types from '../../graphql/generated/schemaTypes';
-
-import type { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/core';
-export type MealPlanMain_ItemFragment = { __typename: 'MealPlanItem', id: string, servings: number | null, customMealName: string | null, recipe: { __typename: 'Recipe', id: string, name: string, servings: number } | null };
-
-export const MealPlanMain_ItemFragmentDoc = /*#__PURE__*/ {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanMain_item"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MealPlanItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"customMealName"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}}]}}]}}]} as unknown as DocumentNode<MealPlanMain_ItemFragment, unknown>;

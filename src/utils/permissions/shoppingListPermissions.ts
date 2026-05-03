@@ -1,7 +1,7 @@
 import {
   MembershipRole,
   CollaboratorStatus,
-} from '../../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
 
 /**
  * Permission flags for shopping list item operations

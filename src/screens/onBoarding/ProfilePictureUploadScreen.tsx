@@ -33,10 +33,10 @@ import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigati
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
-import { ImageUploadPurpose } from '../../graphql/generated/schemaTypes';
+import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { useFocusEffect } from '@react-navigation/native';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { useProfileData } from '#hooks/profile/useProfileData';
+import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { CachedImage } from '#components/atoms/CachedImage';
 import {
   executeWithLoadingState,
@@ -589,7 +589,7 @@ const styles = StyleSheet.create(theme => ({
   },
   nextText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: 'bold',
+    fontWeight: theme.fonts.weight.bold,
   },
   pressed: {
     opacity: theme.opacity.pressed,

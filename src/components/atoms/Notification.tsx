@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { TIMING } from '#constants/animations';
 import { Pressable } from 'react-native-gesture-handler';
@@ -12,6 +12,7 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+import { Text } from '#components/atoms/Text';
 
 interface NotificationBannerProps {
   title?: string;
@@ -80,13 +81,19 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
   return (
     <Animated.View style={[styles.bannerContainer, animatedStyle]}>
       <View style={styles.bannerInner}>
-        {title ? <Text style={styles.bannerTitle}>{title}</Text> : null}
+        {title ? (
+          <Text weight="bold" style={styles.bannerTitle}>
+            {title}
+          </Text>
+        ) : null}
         <Text style={styles.bannerMessage}>{message}</Text>
         <Pressable
           onPress={slideOut}
           style={({ pressed }) => pressed && styles.pressed}
         >
-          <Text style={styles.bannerClose}>×</Text>
+          <Text size="lg" style={styles.bannerClose}>
+            ×
+          </Text>
         </Pressable>
       </View>
     </Animated.View>
@@ -112,7 +119,6 @@ const styles = StyleSheet.create(theme => ({
   },
   bannerTitle: {
     color: theme.colors.white,
-    fontWeight: 'bold',
     marginRight: theme.spacing.sm,
     flexShrink: 1,
   },
@@ -122,7 +128,6 @@ const styles = StyleSheet.create(theme => ({
   },
   bannerClose: {
     color: theme.colors.white,
-    fontSize: theme.typography.fontSize.lg,
     paddingHorizontal: theme.spacing.sm,
   },
   pressed: {

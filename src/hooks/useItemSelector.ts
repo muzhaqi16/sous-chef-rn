@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@apollo/client/react';
-import { GetShoppingListsLiteDocument } from '../graphql/operations/shoppingList/shoppingList.generated';
-import { GetHomesDocument } from '../graphql/operations/home/home.generated';
-import { GetPantriesDocument } from '../graphql/operations/pantry/pantry.generated';
+import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { GetHomesDocument } from '#operations/home/home.generated';
+import { GetPantriesDocument } from '#features/pantry/graphql/pantry.generated';
 import { usePreservedArrayData } from './apollo/usePreservedQueryData';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';

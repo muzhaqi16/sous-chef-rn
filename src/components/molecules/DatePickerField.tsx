@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Platform } from 'react-native';
+import { View, Platform } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -7,6 +7,7 @@ import DateTimePicker, {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Label } from '#components/atoms/Label';
+import { Text } from '#components/atoms/Text';
 
 interface DatePickerFieldProps {
   label?: string;
@@ -84,11 +85,15 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
           size={20}
           color={theme.colors.textSecondary}
         />
-        <Text style={[styles.dateText, !value && styles.placeholder]}>
+        <Text size="md" style={[styles.dateText, !value && styles.placeholder]}>
           {value ? formatDate(value) : placeholder}
         </Text>
       </Pressable>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? (
+        <Text size="sm" tone="error" style={styles.errorText}>
+          {error}
+        </Text>
+      ) : null}
 
       {!!showPicker && (
         <DateTimePicker
@@ -134,15 +139,12 @@ const styles = StyleSheet.create(theme => ({
   },
   dateText: {
     flex: 1,
-    fontSize: theme.fonts.size.md,
     color: theme.colors.inputText,
   },
   placeholder: {
     color: theme.colors.textSecondary,
   },
   errorText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.error,
     marginTop: theme.spacing.xs,
   },
   calendarPicker: {

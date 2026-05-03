@@ -180,13 +180,12 @@ describe('AddItemForm', () => {
     expect(screen.getByText('EAN13')).toBeTruthy();
   });
 
-  it('renders form section titles', () => {
+  it('renders all four tab labels', () => {
     render(<AddItemForm {...defaultProps} />);
-    expect(screen.getByText('Basic Information')).toBeTruthy();
-    expect(screen.getByText('Product Details')).toBeTruthy();
-    expect(screen.getByText('Brand & Vendor')).toBeTruthy();
-    expect(screen.getByText('Tags & Metadata')).toBeTruthy();
-    expect(screen.getByText('Item Flags')).toBeTruthy();
+    expect(screen.getByText('Basics')).toBeTruthy();
+    expect(screen.getByText('Product')).toBeTruthy();
+    expect(screen.getByText('Storage')).toBeTruthy();
+    expect(screen.getByText('Inventory')).toBeTruthy();
   });
 
   it('renders the multi-image picker', () => {
@@ -285,13 +284,15 @@ describe('AddItemForm', () => {
     expect(screen.getAllByText('SKU').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders unit entry list', () => {
+  it('renders unit entry list on the Inventory tab', () => {
     render(<AddItemForm {...defaultProps} />);
+    fireEvent.press(screen.getByText('Inventory'));
     expect(screen.getByTestId('unit-entry-list')).toBeTruthy();
   });
 
-  it('renders net weight entry list', () => {
+  it('renders net weight entry list on the Inventory tab', () => {
     render(<AddItemForm {...defaultProps} />);
+    fireEvent.press(screen.getByText('Inventory'));
     expect(screen.getByTestId('net-weight-entry-list')).toBeTruthy();
   });
 
@@ -384,17 +385,32 @@ describe('AddItemForm', () => {
   });
 
   describe('getFormSections field configuration', () => {
-    it('includes all expected form field labels', () => {
+    it('includes all expected form field labels across tabs and advanced sections', () => {
       render(<AddItemForm {...defaultProps} />);
+
+      // Basics tab (default active)
       expect(screen.getByText('Item Name')).toBeTruthy();
       expect(screen.getByText('Description')).toBeTruthy();
+      expect(screen.getByText('Brand/Vendor')).toBeTruthy();
+
+      // Product tab
+      fireEvent.press(screen.getByText('Product'));
       expect(screen.getByText('Item Type')).toBeTruthy();
+      fireEvent.press(screen.getByText('More options'));
+      expect(screen.getByText('SKU')).toBeTruthy();
+
+      // Storage tab
+      fireEvent.press(screen.getByText('Storage'));
       expect(screen.getByText('Storage State')).toBeTruthy();
       expect(screen.getByText('Shelf Life (Days)')).toBeTruthy();
+      fireEvent.press(screen.getByText('More options'));
       expect(screen.getByText('Base Dimension')).toBeTruthy();
+
+      // Inventory tab — expand its "More options" to reach the advanced fields
+      fireEvent.press(screen.getByText('Inventory'));
+      fireEvent.press(screen.getByText('More options'));
       expect(screen.getByText('Default Consume Increment')).toBeTruthy();
       expect(screen.getByText('Default Consume Unit')).toBeTruthy();
-      expect(screen.getByText('Brand/Vendor')).toBeTruthy();
       expect(screen.getByText('Tags')).toBeTruthy();
       expect(screen.getByText('Food Stamp Eligible')).toBeTruthy();
       expect(screen.getByText('FSA Eligible')).toBeTruthy();
@@ -403,10 +419,9 @@ describe('AddItemForm', () => {
 
   describe('renderValue and transformValue in Tags field', () => {
     it('renderValue converts array to comma-separated string', () => {
-      // Access the field definition by rendering with DynamicFormFields that exposes fields
       render(<AddItemForm {...defaultProps} />);
-      // Just verify Tags field is present; the renderValue/transformValue
-      // logic is internal to getFormSections
+      fireEvent.press(screen.getByText('Inventory'));
+      fireEvent.press(screen.getByText('More options'));
       expect(screen.getByText('Tags')).toBeTruthy();
     });
   });

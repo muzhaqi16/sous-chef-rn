@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
@@ -11,6 +11,7 @@ import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { Text } from '#components/atoms/Text';
 
 const TagListSeparator = () => <View style={styles.tagSeparator} />;
 
@@ -92,7 +93,10 @@ export const TagPicker: React.FC<TagPickerProps> = ({
           color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
         />
         <Text
-          style={[styles.tagName, isSelected && styles.tagNameSelected]}
+          size="base"
+          weight={isSelected ? 'semibold' : 'regular'}
+          tone={isSelected ? 'accent' : 'primary'}
+          style={styles.tagName}
           numberOfLines={1}
         >
           {item}
@@ -110,7 +114,9 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         style={[styles.bottomSheetContent, contentContainerStyle]}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Filter by Tags</Text>
+          <Text size="lg" weight="semibold">
+            Filter by Tags
+          </Text>
         </View>
 
         {/* Search Input */}
@@ -130,7 +136,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
 
         {/* Clear All / Selected Count */}
         <View style={styles.selectionRow}>
-          <Text style={styles.selectionText}>
+          <Text size="sm" tone="secondary">
             {selectedTags.length === 0
               ? 'No tags selected'
               : `${selectedTags.length} tag${
@@ -142,7 +148,9 @@ export const TagPicker: React.FC<TagPickerProps> = ({
               onPress={handleClearAll}
               style={({ pressed }) => pressed && styles.pressed}
             >
-              <Text style={styles.clearText}>Clear all</Text>
+              <Text size="sm" weight="medium" tone="accent">
+                Clear all
+              </Text>
             </Pressable>
           )}
         </View>
@@ -153,7 +161,9 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         {/* Tags List */}
         {loading ? (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading tags...</Text>
+            <Text size="base" tone="secondary">
+              Loading tags...
+            </Text>
           </View>
         ) : filteredTags.length > 0 ? (
           <FlashList
@@ -169,11 +179,15 @@ export const TagPicker: React.FC<TagPickerProps> = ({
           />
         ) : tags.length > 0 && searchQuery ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No tags match "{searchQuery}"</Text>
+            <Text size="base" tone="secondary" align="center">
+              No tags match "{searchQuery}"
+            </Text>
           </View>
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No tags available</Text>
+            <Text size="base" tone="secondary" align="center">
+              No tags available
+            </Text>
           </View>
         )}
       </BottomSheetView>
@@ -188,11 +202,6 @@ const styles = StyleSheet.create(theme => ({
   header: {
     alignItems: 'center',
     marginBottom: theme.spacing.md,
-  },
-  title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -215,15 +224,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     paddingVertical: theme.spacing.xs,
   },
-  selectionText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-  },
-  clearText: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
   tagItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -237,12 +237,6 @@ const styles = StyleSheet.create(theme => ({
   },
   tagName: {
     flex: 1,
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textPrimary,
-  },
-  tagNameSelected: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
   },
   divider: {
     height: 1,
@@ -262,18 +256,9 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.lg,
     alignItems: 'center',
   },
-  loadingText: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textSecondary,
-  },
   emptyContainer: {
     paddingVertical: theme.spacing.lg,
     alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
   },
   pressed: {
     opacity: theme.opacity.pressed,

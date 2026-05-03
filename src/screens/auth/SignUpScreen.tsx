@@ -9,7 +9,7 @@ import { EmailInput } from '#components/atoms/EmailInput';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { NameInput } from '#components/atoms/NameInput';
 import { getSignUpValidationSchema } from '#/utils/validation/auth';
-import { type RegisterInput } from '../../graphql/generated/schemaTypes';
+import { type RegisterInput } from '#/graphql/generated/schemaTypes';
 import { authService } from '#/services/authService';
 import { useAppStore } from '#store/useAppStore';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';

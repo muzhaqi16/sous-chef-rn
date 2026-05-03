@@ -6,7 +6,7 @@ import {
 import {
   NotificationCategory,
   NotificationType,
-} from '../../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
 import {
   NotificationPriority,
   NotificationItem,

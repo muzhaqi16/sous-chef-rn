@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { TemplateBrowserSheet } from '../../../src/components/mealPlan/TemplateBrowserSheet';
+import { TemplateBrowserSheet } from '../../../src/features/mealPlan/components/TemplateBrowserSheet';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
@@ -24,7 +24,7 @@ jest.mock('../../../src/hooks/useStandardBottomSheet', () => ({
     },
   }),
 }));
-jest.mock('../../../src/hooks/mealPlan/useMealTemplates', () => ({
+jest.mock('../../../src/features/mealPlan/hooks/useMealTemplates', () => ({
   useMealTemplates: () => ({
     state: {
       templates: [],
@@ -43,7 +43,7 @@ jest.mock('../../../src/hooks/mealPlan/useMealTemplates', () => ({
     },
   }),
 }));
-jest.mock('../../../src/components/mealPlan/TemplateCard', () => ({
+jest.mock('../../../src/features/mealPlan/components/TemplateCard', () => ({
   TemplateCard: () => null,
 }));
 jest.mock('../../../src/components/atoms/ChipScrollRow', () => ({

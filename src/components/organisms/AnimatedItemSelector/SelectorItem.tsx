@@ -1,9 +1,9 @@
-import { Text } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { LinearTransition, FadeInUp } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
 import type { SelectorItemProps, SelectableItem } from './types';
+import { Text } from '#components/atoms/Text';
 
 const SelectorItemComponent = <T extends SelectableItem>({
   item,
@@ -34,7 +34,11 @@ const SelectorItemComponent = <T extends SelectableItem>({
         ]}
         onPress={handlePress}
       >
-        <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
+        <Text
+          size="md"
+          weight={isSelected ? 'semibold' : 'medium'}
+          style={[styles.itemText, isSelected && styles.selectedItemText]}
+        >
           {String(item[displayProperty])}
         </Text>
         {!!isSelected && (
@@ -71,13 +75,9 @@ const styles = StyleSheet.create(theme => ({
   },
   itemText: {
     flex: 1,
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.medium,
   },
   selectedItemText: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
   },
   checkIcon: {
     marginLeft: theme.spacing.sm,

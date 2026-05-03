@@ -8,7 +8,7 @@ jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#hooks/pantry/usePantryItemSuggestions', () => ({
+jest.mock('#features/pantry/hooks/usePantryItemSuggestions', () => ({
   usePantryItemSuggestions: jest.fn(() => ({
     grouped: [],
     loading: false,
@@ -120,7 +120,7 @@ describe('AddToPantrySheet', () => {
 
   it('renders with suggestions available', () => {
     const { usePantryItemSuggestions } = jest.requireMock(
-      '#hooks/pantry/usePantryItemSuggestions',
+      '#features/pantry/hooks/usePantryItemSuggestions',
     );
     usePantryItemSuggestions.mockReturnValue({
       grouped: [{ title: 'Recent', items: [{ id: '1', name: 'Milk' }] }],
@@ -135,7 +135,7 @@ describe('AddToPantrySheet', () => {
 
   it('renders with suggestions loading', () => {
     const { usePantryItemSuggestions } = jest.requireMock(
-      '#hooks/pantry/usePantryItemSuggestions',
+      '#features/pantry/hooks/usePantryItemSuggestions',
     );
     usePantryItemSuggestions.mockReturnValue({
       grouped: [],

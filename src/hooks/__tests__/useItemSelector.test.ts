@@ -1,11 +1,11 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { createApolloWrapper } from '../../../__tests__/helpers/apolloMockProvider';
+import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useItemSelector } from '../useItemSelector';
 
 // All tests in this file use type: 'custom', so every GraphQL query is skipped.
 // The MockedProvider wrapper supplies the Apollo client context so useQuery
 // hooks don't throw "no client" errors even though they never fire a request.
-const wrapper = createApolloWrapper([]);
+const wrapper = createApolloTestWrapper();
 
 // Legacy non-pantry hooks (shopping list, home) still come through #generated
 // during incremental migration. Their queries are skipped by type:'custom' too.

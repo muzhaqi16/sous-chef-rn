@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { Button } from '#components/base/Button';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { Pressable } from 'react-native-gesture-handler';
+import { Text } from '#components/atoms/Text';
 
 export interface ModalPickerProps {
   label: string;
@@ -66,7 +67,9 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
               }
             }}
           >
-            <Text style={styles.optionText}>{opt.label}</Text>
+            <Text size="base" style={styles.optionText}>
+              {opt.label}
+            </Text>
             {activeValue === opt.value && (
               <Icon name="checkmark" size={20} color={theme.colors.primary} />
             )}
@@ -97,8 +100,6 @@ const styles = StyleSheet.create(theme => ({
   },
   optionText: {
     flex: 1,
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textPrimary,
   },
   pressed: {
     opacity: theme.opacity.pressed,

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { Text } from './Text';
 
 interface ErrorMessageProps {
   message: string;
@@ -9,7 +10,9 @@ interface ErrorMessageProps {
 const ErrorMessage: React.FC<ErrorMessageProps> = ({ message }) => {
   return (
     <View style={styles.errorContainer}>
-      <Text style={styles.errorText}>{message}</Text>
+      <Text tone="accent" align="center" style={styles.errorText}>
+        {message}
+      </Text>
     </View>
   );
 };
@@ -21,9 +24,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   errorText: {
-    color: theme.colors.primary,
-    fontSize: theme.typography.fontSize.base,
-    textAlign: 'center',
     margin: theme.spacing.md,
   },
 }));

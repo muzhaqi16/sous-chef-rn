@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BackButton } from '#components/atoms/BackButton';
+import { Text } from '#components/atoms/Text';
 
 interface ScreenHeaderProps {
   title: string;
@@ -30,7 +31,9 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
         color={backButtonColor ?? theme.colors.textPrimary}
         disabled={backButtonDisabled}
       />
-      <Text style={styles.title}>{title}</Text>
+      <Text size="lg" weight="semibold" align="center" style={styles.title}>
+        {title}
+      </Text>
       {rightElement ?? <View style={styles.placeholder} />}
     </View>
   );
@@ -47,10 +50,6 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     flex: 1,
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
   },
   placeholder: {
     width: 24,

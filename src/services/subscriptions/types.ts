@@ -7,7 +7,7 @@
  */
 
 import type { ApolloClient } from '@apollo/client';
-import { type MutationType } from '../../graphql/generated/schemaTypes';
+import { type MutationType } from '#/graphql/generated/schemaTypes';
 
 /**
  * Apollo client passed to subscription customOnData handlers.

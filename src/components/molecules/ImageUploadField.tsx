@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, Image, ActivityIndicator } from 'react-native';
+import { View, Image, ActivityIndicator } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { ImagePicker, ImageFile } from './ImagePicker';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { commonStyles } from '#/styles/commonStyles';
-import { ImageUploadPurpose } from '../../graphql/generated/schemaTypes';
+import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
+import { Text } from '#components/atoms/Text';
 
 interface ImageUploadFieldProps {
   label?: string;
@@ -114,7 +115,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
             {!!uploading && (
               <View style={styles.uploadOverlay}>
                 <ActivityIndicator size="large" color={theme.colors.white} />
-                <Text style={styles.progressText}>
+                <Text size="sm" weight="medium" style={styles.progressText}>
                   {uploadProgress > 0
                     ? `${Math.round(uploadProgress)}%`
                     : 'Uploading...'}
@@ -169,7 +170,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
                 size={32}
                 color={theme.colors.textSecondary}
               />
-              <Text style={styles.placeholderText}>
+              <Text size="base" tone="secondary" align="center">
                 {uploading ? 'Uploading...' : placeholder}
               </Text>
               {!!uploading && (
@@ -178,7 +179,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
                     size="small"
                     color={theme.colors.primary}
                   />
-                  <Text style={styles.progressText}>
+                  <Text size="sm" weight="medium" style={styles.progressText}>
                     {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : ''}
                   </Text>
                 </View>
@@ -245,20 +246,13 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
     minHeight: 120,
   },
-  placeholderText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
   },
   progressText: {
-    fontSize: theme.fonts.size.sm,
     color: theme.colors.white,
-    fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
     opacity: theme.opacity.pressed,

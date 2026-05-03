@@ -1,10 +1,10 @@
 import type { StaticParamList } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { RecipeMain } from '#screens/recipe/RecipeMain';
-import { RecipeDetail } from '#screens/recipe/RecipeDetail';
-import { RecipeFormScreen } from '#screens/recipe/RecipeForm';
-import { SavedRecipes } from '#screens/recipe/SavedRecipes';
-import { MyRecipes } from '#screens/recipe/MyRecipes';
+import { RecipeMain } from '#features/recipes/screens/RecipeMain';
+import { RecipeDetail } from '#features/recipes/screens/RecipeDetail';
+import { RecipeFormScreen } from '#features/recipes/screens/RecipeForm';
+import { SavedRecipes } from '#features/recipes/screens/SavedRecipes';
+import { MyRecipes } from '#features/recipes/screens/MyRecipes';
 
 export const RecipeStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { EditCustomMealSheet } from '../../../src/components/mealPlan/EditCustomMealSheet';
+import { EditCustomMealSheet } from '../../../src/features/mealPlan/components/EditCustomMealSheet';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');

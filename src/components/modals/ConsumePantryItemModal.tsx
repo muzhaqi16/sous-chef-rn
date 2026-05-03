@@ -1,23 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { CollapsibleChipPicker } from '#components/molecules/CollapsibleChipPicker';
 import { QuantityInputFeedback } from '#components/molecules/QuantityInputFeedback';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { validateDeductionQuantity } from '#/utils/validateDeductionQuantity';
-import { useQuantityFeedback } from '#hooks/pantry/useQuantityFeedback';
-import { UsagePurpose } from '../../graphql/generated/schemaTypes';
-import { type PantryItemFragment } from '#operations/pantry/pantryFragments.generated';
+import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
+import { UsagePurpose } from '#/graphql/generated/schemaTypes';
+import { type PantryItemFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { commonStyles } from '#/styles/commonStyles';
 import {
   PantryOperation,
   type SelectedUnitInfo,
-} from '#hooks/pantry/useOperationUnits';
+} from '#features/pantry/hooks/useOperationUnits';
 import {
   PantryActionModal,
   type PantryActionSharedState,
 } from './PantryActionModal';
+import { Text } from '#components/atoms/Text';
 
 interface ConsumePantryItemModalProps {
   visible: boolean;

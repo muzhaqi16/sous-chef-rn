@@ -1,4 +1,4 @@
-import { Cuisine } from '../../graphql/generated/schemaTypes';
+import { Cuisine } from '#/graphql/generated/schemaTypes';
 import {
   POPULAR_CUISINES,
   getCuisineLabel,

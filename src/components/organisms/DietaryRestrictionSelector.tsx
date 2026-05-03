@@ -9,7 +9,7 @@ import {
   Intolerance,
   HealthGoal,
   RestrictionSeverity,
-} from '../../graphql/generated/schemaTypes';
+} from '#/graphql/generated/schemaTypes';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 
 // Lifestyle dietary choices

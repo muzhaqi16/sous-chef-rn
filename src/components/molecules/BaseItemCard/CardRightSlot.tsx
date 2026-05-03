@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { CardRightSlotProps } from './types';
+import { Text } from '#components/atoms/Text';
 
 /**
  * Lightweight meta slot — no useUnistyles, all colors from stylesheet
@@ -12,9 +13,21 @@ const MetaSlot: React.FC<
   Pick<CardRightSlotProps, 'primary' | 'secondary' | 'tertiary'>
 > = ({ primary, secondary, tertiary }) => (
   <View style={styles.metaContainer}>
-    {primary ? <Text style={styles.primary}>{primary}</Text> : null}
-    {secondary ? <Text style={styles.secondary}>{secondary}</Text> : null}
-    {tertiary ? <Text style={styles.secondary}>{tertiary}</Text> : null}
+    {primary ? (
+      <Text size="base" weight="semibold">
+        {primary}
+      </Text>
+    ) : null}
+    {secondary ? (
+      <Text size="xs" tone="tertiary" style={styles.secondary}>
+        {secondary}
+      </Text>
+    ) : null}
+    {tertiary ? (
+      <Text size="xs" tone="tertiary" style={styles.secondary}>
+        {tertiary}
+      </Text>
+    ) : null}
   </View>
 );
 
@@ -71,8 +84,14 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
         />
       </Pressable>
       <View style={styles.counterValue}>
-        <Text style={styles.counterText}>{quantity || 0}</Text>
-        {unit ? <Text style={styles.counterUnit}>{unit}</Text> : null}
+        <Text size="md" weight="semibold">
+          {quantity || 0}
+        </Text>
+        {unit ? (
+          <Text tone="secondary" style={styles.counterUnit}>
+            {unit}
+          </Text>
+        ) : null}
       </View>
       <Pressable
         onPress={onIncrement}
@@ -119,14 +138,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'flex-end',
     marginLeft: theme.spacing['3'],
   },
-  primary: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   secondary: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.textTertiary,
     marginTop: theme.spacing.xs,
   },
   counterContainer: {
@@ -150,14 +162,8 @@ const styles = StyleSheet.create(theme => ({
     minWidth: theme.sizes.button.md,
     marginHorizontal: theme.spacing.xs,
   },
-  counterText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   counterUnit: {
     fontSize: theme.typography.fontSize.xs - 1,
-    color: theme.colors.textSecondary,
   },
   dragHandle: {
     padding: theme.spacing.sm,

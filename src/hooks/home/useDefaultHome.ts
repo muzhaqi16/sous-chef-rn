@@ -5,8 +5,8 @@ import {
   useMutation,
 } from '@apollo/client/react';
 import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
-import { GetHomesDocument } from '../../graphql/operations/home/home.generated';
-import { SetDefaultHomeDocument } from '../../graphql/operations/home/userSettings.generated';
+import { GetHomesDocument } from '#operations/home/home.generated';
+import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
 import {
   usePantryState,
   useIsHomeSelectionReady,

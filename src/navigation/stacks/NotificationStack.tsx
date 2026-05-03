@@ -3,9 +3,9 @@ import {
   createNativeStackNavigator,
   createNativeStackScreen,
 } from '@react-navigation/native-stack';
-import { NotificationListScreen } from '#screens/notifications/NotificationListScreen';
-import { NotificationDetailScreen } from '#screens/notifications/NotificationDetailScreen';
-import { NotificationSettingsScreen } from '#screens/notifications/NotificationSettingsScreen';
+import { NotificationListScreen } from '#features/notifications/screens/NotificationListScreen';
+import { NotificationDetailScreen } from '#features/notifications/screens/NotificationDetailScreen';
+import { NotificationSettingsScreen } from '#features/notifications/screens/NotificationSettingsScreen';
 
 export const NotificationStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({

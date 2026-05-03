@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -22,6 +22,7 @@ import { Button } from '#components/base/Button';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { Text } from '#components/atoms/Text';
 
 type RouteParams = {
   homeId: string;
@@ -179,8 +180,12 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
           {canManage && !!home.allowJoinCode && !!home.joinCode ? (
             <View style={styles.joinCodeRow}>
               <View style={styles.joinCodeContent}>
-                <Text style={styles.joinCodeLabel}>Join Code</Text>
-                <Text style={styles.joinCodeValue}>{home.joinCode}</Text>
+                <Text size="sm" tone="secondary" style={styles.joinCodeLabel}>
+                  Join Code
+                </Text>
+                <Text size="lg" weight="semibold" style={styles.joinCodeValue}>
+                  {home.joinCode}
+                </Text>
               </View>
               <Pressable
                 style={({ pressed }) => [
@@ -235,7 +240,11 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
             title: 'Danger Zone',
             content: (
               <View style={styles.leaveHomeSection}>
-                <Text style={styles.leaveHomeDescription}>
+                <Text
+                  size="sm"
+                  tone="secondary"
+                  style={styles.leaveHomeDescription}
+                >
                   Leaving this home will remove your access to all shared
                   pantries, shopping lists, meal plans, and templates.
                 </Text>
@@ -294,14 +303,9 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   joinCodeLabel: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
   },
   joinCodeValue: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
     letterSpacing: 2,
   },
   copyButton: {
@@ -316,8 +320,6 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
   },
   leaveHomeDescription: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     lineHeight: theme.fonts.size.sm * 1.5,
   },
   pressed: {

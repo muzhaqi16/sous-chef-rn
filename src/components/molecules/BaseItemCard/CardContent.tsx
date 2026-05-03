@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CardContentProps } from './types';
+import { Text } from '#components/atoms/Text';
 
 /**
  * Content slot component for BaseItemCard
@@ -24,7 +25,7 @@ export const CardContent: React.FC<CardContentProps> = ({
       </Text>
       {!!subtitle &&
         (typeof subtitle === 'string' ? (
-          <Text style={styles.subtitle} numberOfLines={1}>
+          <Text size="sm" tone="secondary" numberOfLines={1}>
             {subtitle}
           </Text>
         ) : (
@@ -57,9 +58,5 @@ const styles = StyleSheet.create(theme => ({
   },
   purchasedTitle: {
     textDecorationLine: 'line-through',
-  },
-  subtitle: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
   },
 }));

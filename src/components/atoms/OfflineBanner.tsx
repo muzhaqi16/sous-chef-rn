@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAppStore } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 /**
  * Persistent banner displayed when the app is offline.
@@ -33,7 +34,12 @@ export const OfflineBanner: React.FC = () => {
       accessibilityLiveRegion="polite"
     >
       <Icon name={iconName} size={16} color={styles.text.color} />
-      <Text maxFontSizeMultiplier={1.5} style={styles.text}>
+      <Text
+        size="xs"
+        weight="medium"
+        maxFontSizeMultiplier={1.5}
+        style={styles.text}
+      >
         {message}
       </Text>
     </View>
@@ -53,8 +59,6 @@ const styles = StyleSheet.create(theme => ({
     borderBottomColor: theme.colors.alertBanner.warning.border,
   },
   text: {
-    fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.alertBanner.warning.text,
   },
 }));

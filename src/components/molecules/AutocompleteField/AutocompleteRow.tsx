@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { Text } from '#components/atoms/Text';
 
 interface AutocompleteRowProps {
   icon?: string;
@@ -30,7 +31,9 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
     {iconElement != null ? (
       <View style={styles.iconContainer}>{iconElement}</View>
     ) : icon != null ? (
-      <Text style={styles.icon}>{icon}</Text>
+      <Text size="xl" align="center" style={styles.icon}>
+        {icon}
+      </Text>
     ) : null}
     {image !== undefined &&
       (image ? (
@@ -38,20 +41,34 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
       ) : (
         <View style={styles.imagePlaceholder} />
       ))}
-    {symbolText != null && <Text style={styles.symbolText}>{symbolText}</Text>}
+    {symbolText != null && (
+      <Text size="md" weight="semibold" tone="accent" style={styles.symbolText}>
+        {symbolText}
+      </Text>
+    )}
     <View style={styles.content}>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>{title}</Text>
+        <Text size="md" weight="semibold">
+          {title}
+        </Text>
         {!!badge && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{badge}</Text>
+            <Text size="xs" weight="semibold" tone="accent">
+              {badge}
+            </Text>
           </View>
         )}
       </View>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      {subtitle ? (
+        <Text size="sm" tone="secondary" style={styles.subtitle}>
+          {subtitle}
+        </Text>
+      ) : null}
     </View>
     {trailingText ? (
-      <Text style={styles.trailingText}>{trailingText}</Text>
+      <Text size="sm" tone="secondary" style={styles.trailingText}>
+        {trailingText}
+      </Text>
     ) : null}
   </View>
 );
@@ -69,9 +86,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surfaceVariant,
   },
   icon: {
-    fontSize: theme.typography.fontSize.xl,
     width: 32,
-    textAlign: 'center',
   },
   iconContainer: {
     width: 32,
@@ -89,9 +104,6 @@ const styles = StyleSheet.create(theme => ({
     height: 44,
   },
   symbolText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
     minWidth: 40,
   },
   content: {
@@ -102,14 +114,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
   },
-  title: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   subtitle: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     fontStyle: 'italic',
     marginTop: theme.spacing.xs,
   },
@@ -119,14 +124,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.primaryLight,
   },
-  badgeText: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
-  },
   trailingText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     fontStyle: 'italic',
   },
 }));

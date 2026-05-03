@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { Text } from '#components/atoms/Text';
 
 interface MockItemCardProps {
   mode: 'pantry' | 'shopping';
@@ -70,17 +71,24 @@ export const MockItemCard: React.FC<MockItemCardProps> = ({
           { backgroundColor: theme.colors.primaryLight },
         ]}
       >
-        <Text style={styles.emoji}>{data.emoji}</Text>
+        <Text size="xl">{data.emoji}</Text>
       </View>
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text size="md" weight="semibold" numberOfLines={1}>
           {data.title}
         </Text>
-        <Text style={styles.subtitle} numberOfLines={1}>
+        <Text
+          size="sm"
+          tone="secondary"
+          style={styles.subtitle}
+          numberOfLines={1}
+        >
           {data.subtitle}
         </Text>
       </View>
-      <Text style={styles.meta}>{data.meta}</Text>
+      <Text size="sm" weight="medium" tone="secondary">
+        {data.meta}
+      </Text>
     </View>
   );
 };
@@ -119,25 +127,10 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
     flexShrink: 0,
   },
-  emoji: {
-    fontSize: 20,
-  },
   content: {
     flex: 1,
   },
-  title: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   subtitle: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
     marginTop: 2,
-  },
-  meta: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
   },
 }));

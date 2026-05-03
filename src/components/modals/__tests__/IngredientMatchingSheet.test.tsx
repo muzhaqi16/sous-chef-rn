@@ -42,7 +42,7 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
   },
 }));
 
-jest.mock('#components/recipe/IngredientMatchRow', () => ({
+jest.mock('#features/recipes/components/IngredientMatchRow', () => ({
   IngredientMatchRow: ({ editableMatch }: any) => {
     const { Text } = require('react-native');
     return require('react').createElement(

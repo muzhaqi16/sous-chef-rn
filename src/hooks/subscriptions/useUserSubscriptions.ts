@@ -11,7 +11,7 @@
  */
 
 import { useSubscription } from '@apollo/client/react';
-import { UserChangesDocument } from '../../graphql/operations/auth/user.generated';
+import { UserChangesDocument } from '#operations/auth/user.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { CacheStrategy } from '#/services/subscriptions/types';
 
