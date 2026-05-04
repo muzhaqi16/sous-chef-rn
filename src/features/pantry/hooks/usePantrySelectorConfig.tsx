@@ -1,12 +1,12 @@
 import React, { RefObject } from 'react';
 
-import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector/types';
+import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelector/SelectorItemContainer';
 import { Text } from '#components/atoms/Text';
 
 interface UsePantrySelectorConfigOptions {
@@ -40,12 +40,8 @@ export function usePantrySelectorConfig(
     onPress: () => void,
   ) => {
     return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.itemContainer,
-          isSelected && styles.itemSelected,
-          pressed && styles.pressed,
-        ]}
+      <SelectorItemContainer
+        state={isSelected ? 'selected' : 'default'}
         onPress={onPress}
       >
         <Text size="md" weight="semibold" style={styles.itemName}>
@@ -54,7 +50,7 @@ export function usePantrySelectorConfig(
         {!!isSelected && (
           <Icon name="checkmark" size={20} color={colors.primary} />
         )}
-      </Pressable>
+      </SelectorItemContainer>
     );
   };
 
@@ -105,27 +101,8 @@ export function usePantrySelectorConfig(
   };
 }
 
-const styles = StyleSheet.create(theme => ({
-  itemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 48,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  itemSelected: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
+const styles = StyleSheet.create(() => ({
   itemName: {
     flex: 1,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

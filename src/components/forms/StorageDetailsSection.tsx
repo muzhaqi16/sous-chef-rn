@@ -9,10 +9,7 @@ import {
 import { FormTextArea } from '#components/molecules/FormTextArea';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { DatePickerField } from '#components/molecules/DatePickerField';
-import {
-  StorageState,
-  StorageLocation,
-} from '#/graphql/generated/schemaTypes';
+import { StorageState, StorageLocation } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 
 const STORAGE_STATES = Object.values(StorageState);

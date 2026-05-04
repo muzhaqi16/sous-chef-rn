@@ -1,10 +1,7 @@
 import React from 'react';
 import { FormInput } from '#components/molecules/FormInput';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import {
-  Difficulty,
-  RecipeStatus,
-} from '#/graphql/generated/schemaTypes';
+import { Difficulty, RecipeStatus } from '#/graphql/generated/schemaTypes';
 import type { RecipeFormState } from '../useRecipeForm';
 
 interface RecipeCategoryFieldsProps {

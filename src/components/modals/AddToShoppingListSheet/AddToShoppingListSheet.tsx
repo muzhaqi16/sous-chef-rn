@@ -146,9 +146,13 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     },
   );
 
-  // Handle scan barcode press
+  // Keep the sheet "open" across the barcode navigation so the user lands
+  // back on it if they cancel. useStandardBottomSheet's dismissOnBlur
+  // (default true) dismisses the underlying BottomSheetModal on screen blur
+  // and re-presents it on refocus, keeping the global backdrop's ref-count
+  // clean. Calling onClose() here would flip visible to false before blur,
+  // short-circuiting that cleanup and leaving the backdrop stuck on return.
   const handleScanPress = () => {
-    onClose();
     navigateTo.barcode({
       source: 'shoppingList',
       shoppingListId,

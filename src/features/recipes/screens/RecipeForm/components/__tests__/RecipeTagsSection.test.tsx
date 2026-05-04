@@ -3,11 +3,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { RecipeTagsSection } from '../RecipeTagsSection';
-import {
-  Diet,
-  HealthGoal,
-  Intolerance,
-} from '#/graphql/generated/schemaTypes';
+import { Diet, HealthGoal, Intolerance } from '#/graphql/generated/schemaTypes';
 
 jest.mock(
   '#components/molecules/MultiSelectChipSheet/MultiSelectChipSheet',

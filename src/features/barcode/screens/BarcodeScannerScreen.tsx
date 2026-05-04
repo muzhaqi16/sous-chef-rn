@@ -1,11 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Dimensions, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import {
-  Camera,
-  useCameraDevices,
-  useCodeScanner,
-} from 'react-native-vision-camera';
+import { Camera, useCameraDevices } from 'react-native-vision-camera';
+import { useBarcodeScannerOutput } from 'react-native-vision-camera-barcode-scanner';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -87,20 +84,22 @@ export const BarcodeScannerScreen: React.FC<
     };
   });
 
-  // 3) Set up the VisionCamera code‐scanner callback
-  // PERFORMANCE: Limited to most common barcode types for grocery items
-  // QR codes (quick response codes), EAN-13 (European), UPC-A/E (US standard)
-  const codeScanner = useCodeScanner({
-    codeTypes: [
-      'qr', // QR codes - common for product info, coupons
+  // 3) Set up the VisionCamera barcode-scanner output (MLKit on Android, Vision on iOS)
+  // PERFORMANCE: Limited to most common barcode types for grocery items.
+  const barcodeOutput = useBarcodeScannerOutput({
+    barcodeFormats: [
+      'qr-code', // QR codes - common for product info, coupons
       'ean-13', // European Article Number - most common grocery barcode
       'upc-a', // Universal Product Code - US standard
       'upc-e', // UPC compressed format
     ],
-    onCodeScanned: codes => {
-      if (!isActive || hasNavigatedRef.current || !codes.length) return;
+    onBarcodeScanned: barcodes => {
+      if (!isActive || hasNavigatedRef.current || !barcodes.length) return;
 
-      const { value, type } = codes[0];
+      const { rawValue: value, format } = barcodes[0];
+      // Map 'qr-code' back to 'qr' so downstream consumers (UpcFormat mapping,
+      // navigation params) receive the format string they were written for.
+      const type = format === 'qr-code' ? 'qr' : format;
       if (value) {
         hasNavigatedRef.current = true;
         setHasScanned(true);
@@ -126,6 +125,9 @@ export const BarcodeScannerScreen: React.FC<
           shoppingListId,
         });
       }
+    },
+    onError: error => {
+      console.warn('Barcode scanner error:', error);
     },
   });
 
@@ -203,9 +205,9 @@ export const BarcodeScannerScreen: React.FC<
         style={styles.camera}
         device={device}
         isActive={isActive}
-        codeScanner={codeScanner}
-        torch={flashEnabled ? 'on' : 'off'}
-        enableZoomGesture
+        outputs={[barcodeOutput]}
+        torchMode={flashEnabled ? 'on' : 'off'}
+        enableNativeZoomGesture
       />
 
       <BarcodeMask

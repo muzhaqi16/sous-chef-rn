@@ -24,8 +24,9 @@ export function useMealPlanActions() {
     },
   );
 
-  const [updateMealPlanMutation, { loading: updating }] =
-    useMutation(UpdateMealPlanDocument);
+  const [updateMealPlanMutation, { loading: updating }] = useMutation(
+    UpdateMealPlanDocument,
+  );
 
   const [deleteMealPlanMutation, { loading: deleting }] = useMutation(
     DeleteMealPlanDocument,

@@ -28,7 +28,6 @@ interface AddDetailsSheetProps {
   onSuccess: () => void;
 }
 
-
 // Page Indicator Component
 const PageIndicator: React.FC<{
   pages: readonly string[];

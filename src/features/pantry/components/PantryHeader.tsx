@@ -56,7 +56,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
       <View style={styles.greetingContent}>
         <Text weight="bold" style={styles.greeting}>
           Hello,{' '}
-          <Text weight="bold" tone="accent">
+          <Text weight="bold" tone="accent" size="2xl">
             {userName}
           </Text>
           !

@@ -1,9 +1,6 @@
 import { renderHook } from '@testing-library/react-native';
 import { useStorageLocationAutocomplete } from '../useStorageLocationAutocomplete';
-import {
-  StorageLocation,
-  StorageType,
-} from '#/graphql/generated/schemaTypes';
+import { StorageLocation, StorageType } from '#/graphql/generated/schemaTypes';
 
 const makeLocation = (
   overrides: Partial<StorageLocation> = {},

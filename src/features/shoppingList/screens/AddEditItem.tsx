@@ -6,10 +6,7 @@ import {
   UpdateShoppingListItemDocument,
   GetShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  ItemSuggestion,
-  CategoryType,
-} from '#/graphql/generated/schemaTypes';
+import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
 import { ShoppingListItemDisplayFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { FormModal } from '#components/organisms/FormModal';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';

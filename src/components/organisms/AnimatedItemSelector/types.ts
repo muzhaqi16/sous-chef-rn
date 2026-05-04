@@ -49,16 +49,3 @@ export interface ItemSelectorRef {
   isActive: () => boolean;
   toggle: () => void;
 }
-
-export interface SelectorItemProps<T extends SelectableItem> {
-  item: T;
-  isSelected: boolean;
-  onSelect: (id: string, item: T) => void;
-  displayProperty: keyof T;
-  renderCustomItem?: (
-    item: T,
-    isSelected: boolean,
-    onPress: () => void,
-  ) => React.ReactElement;
-  extraData?: any;
-}

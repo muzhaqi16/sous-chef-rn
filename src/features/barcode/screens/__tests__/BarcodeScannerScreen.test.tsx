@@ -34,7 +34,10 @@ jest.mock('../../hooks/useBarcodeScanner', () => ({
 jest.mock('react-native-vision-camera', () => ({
   Camera: () => null,
   useCameraDevices: jest.fn(() => []),
-  useCodeScanner: jest.fn(() => ({})),
+}));
+
+jest.mock('react-native-vision-camera-barcode-scanner', () => ({
+  useBarcodeScannerOutput: jest.fn(() => ({})),
 }));
 
 jest.mock('#components/organisms/BarcodeMask', () => 'BarcodeMask');

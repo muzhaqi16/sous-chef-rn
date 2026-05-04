@@ -1,8 +1,13 @@
 import React from 'react';
 import { ActivityIndicator, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
-import { SelectorItem } from './SelectorItem';
+import Animated, {
+  FadeIn,
+  FadeInUp,
+  LinearTransition,
+} from 'react-native-reanimated';
+import { Icon } from '#utils/iconUtils';
+import { SelectorItemContainer } from './SelectorItemContainer';
 import { ActionButtons } from './ActionButtons';
 import type { SelectorConfig, SelectableItem } from './types';
 import { Text } from '#components/atoms/Text';
@@ -34,6 +39,7 @@ const EmptyState: React.FC<{ message: string }> = ({ message }) => (
 export const SelectorContent = <T extends SelectableItem>({
   config,
 }: SelectorContentProps<T>) => {
+  const { theme } = useUnistyles();
   const {
     data,
     selectedId,
@@ -44,20 +50,37 @@ export const SelectorContent = <T extends SelectableItem>({
     keyExtractor,
     renderCustomItem,
     actions,
-    extraData,
     maxVisibleItems,
   } = config;
 
-  const renderItem = ({ item }: { item: T }) => (
-    <SelectorItem
-      item={item}
-      isSelected={item.id === selectedId}
-      onSelect={onSelect}
-      displayProperty={displayProperty}
-      renderCustomItem={renderCustomItem}
-      extraData={extraData}
-    />
-  );
+  const renderItem = (item: T) => {
+    const isSelected = item.id === selectedId;
+    const handlePress = () => onSelect(item.id, item);
+
+    if (renderCustomItem) {
+      return renderCustomItem(item, isSelected, handlePress);
+    }
+
+    return (
+      <SelectorItemContainer
+        state={isSelected ? 'selected' : 'default'}
+        onPress={handlePress}
+      >
+        <Text
+          size="md"
+          weight={isSelected ? 'semibold' : 'medium'}
+          style={[styles.defaultItemText, isSelected && styles.selectedText]}
+        >
+          {String(item[displayProperty])}
+        </Text>
+        {!!isSelected && (
+          <Animated.View entering={FadeInUp.duration(200).springify()}>
+            <Icon name="checkmark" size={18} color={theme.colors.primary} />
+          </Animated.View>
+        )}
+      </SelectorItemContainer>
+    );
+  };
 
   if (loading) {
     return <LoadingState />;
@@ -89,7 +112,7 @@ export const SelectorContent = <T extends SelectableItem>({
         >
           {data.map(item => (
             <React.Fragment key={keyExtractor ? keyExtractor(item) : item.id}>
-              {renderItem({ item })}
+              {renderItem(item)}
             </React.Fragment>
           ))}
         </ScrollView>
@@ -104,17 +127,16 @@ export const SelectorContent = <T extends SelectableItem>({
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    // Height is now controlled by ActionTray's maxHeight prop
   },
   listContainer: {
     flex: 1,
     minHeight: 100,
   },
   actionsWrapper: {
-    flexShrink: 0, // Prevent ActionButtons from being compressed/hidden
+    flexShrink: 0,
   },
   listContent: {
-    paddingBottom: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
   },
   loadingContainer: {
     flex: 1,
@@ -130,5 +152,11 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: theme.spacing.xl,
+  },
+  defaultItemText: {
+    flex: 1,
+  },
+  selectedText: {
+    color: theme.colors.primary,
   },
 }));

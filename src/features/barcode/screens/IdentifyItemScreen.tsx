@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   Camera,
   useCameraDevices,
-  type PhotoFile,
+  usePhotoOutput,
 } from 'react-native-vision-camera';
 import { useFocusEffect } from '@react-navigation/native';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -64,14 +64,14 @@ export const IdentifyItemScreen: React.FC<
   const devices = useCameraDevices();
   const device = devices.find(d => d.position === 'back');
 
+  const photoOutput = usePhotoOutput();
+
   const {
     isGranted: hasPermission,
     isBlocked,
     request: requestPermission,
     openSettings,
   } = usePermission('camera');
-
-  const cameraRef = useRef<Camera>(null);
 
   useHiddenStatusBar();
 
@@ -123,18 +123,17 @@ export const IdentifyItemScreen: React.FC<
   };
 
   const handleShutter = async () => {
-    if (!cameraRef.current || isCapturing) return;
+    if (isCapturing) return;
     setIsCapturing(true);
-    // NOTE: vision-camera v4 doesn't expose qualityPrioritization; revisit
-    // after the v5 upgrade to cap capture resolution for faster OCR.
-    const photo = await executeQuery<PhotoFile>(
-      () => cameraRef.current!.takePhoto({ flash: 'off' }),
+    const photo = await executeQuery(
+      () => photoOutput.capturePhotoToFile({ flashMode: 'off' }, {}),
       'IdentifyItemScreen.takePhoto',
     );
     setIsCapturing(false);
     if (!photo) return;
 
-    const uri = Platform.OS === 'android' ? `file://${photo.path}` : photo.path;
+    const uri =
+      Platform.OS === 'android' ? `file://${photo.filePath}` : photo.filePath;
     setPhotoUri(uri);
     setIsActive(false);
     HapticService.success();
@@ -235,11 +234,10 @@ export const IdentifyItemScreen: React.FC<
       ) : (
         <>
           <Camera
-            ref={cameraRef}
             style={styles.camera}
             device={device}
             isActive={isActive}
-            photo
+            outputs={[photoOutput]}
           />
           <BarcodeMask
             width={FRAME_WIDTH}

@@ -24,6 +24,7 @@ import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector/types';
+import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelector/SelectorItemContainer';
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 import { Text } from '#components/atoms/Text';
 
@@ -313,13 +314,15 @@ export function useShoppingListSelectorModal({
       const canDelete = !!list._isOwner;
 
       return (
-        <Pressable
-          style={({ pressed }) => [
-            styles.selectorItemContainer,
-            isSelectedForDelete && styles.selectorItemDeleteSelected,
-            !canDelete && styles.selectorItemDisabled,
-            pressed && canDelete && styles.pressed,
-          ]}
+        <SelectorItemContainer
+          state={
+            isSelectedForDelete
+              ? 'delete-selected'
+              : !canDelete
+              ? 'disabled'
+              : 'default'
+          }
+          compact
           onPress={() => toggleDeleteSelection(list)}
           disabled={!canDelete}
         >
@@ -339,18 +342,15 @@ export function useShoppingListSelectorModal({
               </Text>
             )}
           </View>
-        </Pressable>
+        </SelectorItemContainer>
       );
     }
 
     // Normal mode rendering
     return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.selectorItemContainer,
-          isSelected && styles.selectorItemSelected,
-          pressed && styles.pressed,
-        ]}
+      <SelectorItemContainer
+        state={isSelected ? 'selected' : 'default'}
+        compact
         onPress={onPress}
         onLongPress={() => handleLongPress(list)}
       >
@@ -377,7 +377,7 @@ export function useShoppingListSelectorModal({
         {!!isSelected && (
           <Icon name="checkmark" size={20} color={colors.primary} />
         )}
-      </Pressable>
+      </SelectorItemContainer>
     );
   };
 
@@ -462,30 +462,6 @@ export function useShoppingListSelectorModal({
 
 // Styles for the selector items
 const styles = StyleSheet.create(theme => ({
-  selectorItemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 48,
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  selectorItemSelected: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
-  selectorItemDeleteSelected: {
-    backgroundColor: theme.colors.errorLight,
-    borderColor: theme.colors.error,
-  },
-  selectorItemDisabled: {
-    opacity: 0.5,
-  },
   selectorItemInfo: {
     flex: 1,
     gap: 2,
@@ -495,7 +471,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
     paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xs,
     marginTop: theme.spacing.xs,
   },
   sectionHeaderText: {
@@ -522,8 +498,5 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

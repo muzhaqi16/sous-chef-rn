@@ -97,7 +97,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.spacing.md,
+    borderRadius: theme.radii.md,
     borderWidth: 1,
   },
   primaryButton: {

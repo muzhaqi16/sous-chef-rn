@@ -2,10 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { PantryContent } from '../PantryContent';
-import {
-  PantryItem,
-  StorageState,
-} from '#/graphql/generated/schemaTypes';
+import { PantryItem, StorageState } from '#/graphql/generated/schemaTypes';
 
 type DeepPartial<T> = T extends object
   ? { [P in keyof T]?: DeepPartial<T[P]> }

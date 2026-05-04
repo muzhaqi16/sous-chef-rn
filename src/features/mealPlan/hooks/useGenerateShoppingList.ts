@@ -22,7 +22,8 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       onError: error => {
         toastService.error(error.message || 'Failed to generate shopping list');
       },
-    });
+    },
+  );
 
   const generateShoppingList = async (
     input: Omit<GenerateShoppingListFromMealPlanInput, 'mealPlanId'>,

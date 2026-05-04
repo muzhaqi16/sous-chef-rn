@@ -72,6 +72,7 @@ module.exports = {
       'react-native-draggable-flatlist|' +
       'react-native-permissions|' +
       'react-native-vision-camera|' +
+      'react-native-vision-camera-barcode-scanner|' +
       'react-native-image-picker|' +
       'react-native-keychain|' +
       'react-native-mmkv|' +
