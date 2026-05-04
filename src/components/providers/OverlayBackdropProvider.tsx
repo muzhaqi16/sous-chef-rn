@@ -1,31 +1,35 @@
-import React, { createContext, useContext, useRef, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import { SHEET } from '#constants/animations';
 import { Pressable } from 'react-native-gesture-handler';
+import { navigationRef } from '#services/NavigationService';
 
-interface ShowBackdropOptions {
+export interface BackdropClaimOptions {
   opacity?: number;
   onPress?: () => void;
 }
 
 interface OverlayBackdropContextType {
-  showBackdrop: (options?: ShowBackdropOptions) => void;
-  hideBackdrop: () => void;
+  claim: (opts?: BackdropClaimOptions) => string;
+  release: (id: string) => void;
 }
 
-// Internal context for GlobalBackdrop — separated so public consumers
-// (useOverlayBackdrop) don't re-render when isVisible changes.
 interface OverlayBackdropInternalContextType {
   opacity: SharedValue<number>;
   isVisible: boolean;
-  onPressCallbackRef: React.RefObject<(() => void) | null>;
+  onPressRef: React.RefObject<(() => void) | null>;
 }
 
 const OverlayBackdropContext = createContext<OverlayBackdropContextType | null>(
@@ -44,61 +48,128 @@ export const useOverlayBackdrop = (): OverlayBackdropContextType => {
   return context;
 };
 
+/**
+ * Declarative backdrop claim. While `active` is true, the overlay is
+ * painted; unmounting the consumer (for any reason — conditional render,
+ * screen unmount, parent re-render) releases the claim via useEffect
+ * cleanup. There is no manual decrement to leak.
+ *
+ * onPress is wrapped in a stable closure so updates to the prop don't
+ * release/re-claim. opacity is captured at claim-time.
+ */
+export function useBackdropClaim(
+  active: boolean,
+  opts?: BackdropClaimOptions,
+): void {
+  const { claim, release } = useOverlayBackdrop();
+  const onPressRef = useRef(opts?.onPress);
+  useEffect(() => {
+    onPressRef.current = opts?.onPress;
+  });
+  const [stableOnPress] = useState<() => void>(
+    () => () => onPressRef.current?.(),
+  );
+
+  const opacityValue = opts?.opacity;
+  useEffect(() => {
+    if (!active) return;
+    const id = claim({ opacity: opacityValue, onPress: stableOnPress });
+    return () => release(id);
+  }, [active, opacityValue, claim, release, stableOnPress]);
+}
+
 interface OverlayBackdropProviderProps {
   children: React.ReactNode;
 }
 
+interface BackdropHandlers {
+  publicValue: OverlayBackdropContextType;
+  onNavigationState: () => void;
+}
+
 /**
- * Context provider for the global overlay backdrop.
- * Split into public (callbacks) and internal (animation state) contexts
- * so consumers using only showBackdrop/hideBackdrop don't re-render
- * when backdrop visibility changes.
+ * Tracks backdrop "claims" in a Map keyed by id. Visibility, opacity, and
+ * the active onPress are derived from the registry whenever it changes.
+ * The registry lives in a ref so claim/release don't re-render the
+ * provider tree — only the `isVisible` flag (used to gate pointerEvents
+ * on the paint surface) is React state.
  */
 export const OverlayBackdropProvider: React.FC<
   OverlayBackdropProviderProps
 > = ({ children }) => {
-  // Use shared values only for animation-related values
   const opacity = useSharedValue(0);
-
-  // Use regular React state/refs for non-animation values
+  const claimsRef = useRef<Map<string, BackdropClaimOptions>>(new Map());
+  const nextIdRef = useRef(0);
+  const onPressRef = useRef<(() => void) | null>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const onPressCallbackRef = useRef<(() => void) | null>(null);
-  const activeCountRef = useRef(0);
 
-  const showBackdrop = (options?: ShowBackdropOptions) => {
-    activeCountRef.current += 1;
-    const targetOpacity = options?.opacity ?? 0.5;
-    onPressCallbackRef.current = options?.onPress ?? null;
-    setIsVisible(true);
-    opacity.set(
-      withTiming(targetOpacity, { duration: SHEET.BACKDROP_FADE_IN }),
-    );
-  };
+  // All handlers are defined once via useState lazy init. They close over
+  // only stable inputs (ref objects, useState's stable setter, useSharedValue's
+  // stable instance), so first-render instances behave identically to any
+  // later render's would. Stable identity → consumer useEffect deps don't
+  // churn on provider re-renders.
+  const [{ publicValue, onNavigationState }] = useState<BackdropHandlers>(
+    () => {
+      const recompute = () => {
+        const claims = Array.from(claimsRef.current.values());
+        const isActive = claims.length > 0;
+        const target = isActive
+          ? Math.max(...claims.map(c => c.opacity ?? 0.5))
+          : 0;
+        onPressRef.current = isActive
+          ? claims[claims.length - 1].onPress ?? null
+          : null;
+        setIsVisible(isActive);
+        opacity.set(
+          withTiming(target, {
+            duration: isActive
+              ? SHEET.BACKDROP_FADE_IN
+              : SHEET.BACKDROP_FADE_OUT,
+          }),
+        );
+      };
 
-  const hideBackdrop = () => {
-    if (activeCountRef.current <= 0) return;
-    activeCountRef.current -= 1;
-    if (activeCountRef.current === 0) {
-      onPressCallbackRef.current = null;
-      opacity.set(
-        withTiming(0, { duration: SHEET.BACKDROP_FADE_OUT }, finished => {
-          if (finished) {
-            scheduleOnRN(setIsVisible, false);
-          }
-        }),
-      );
-    }
-  };
+      const claim = (opts?: BackdropClaimOptions): string => {
+        const id = String(nextIdRef.current);
+        nextIdRef.current += 1;
+        claimsRef.current.set(id, opts ?? {});
+        recompute();
+        return id;
+      };
 
-  const publicValue: OverlayBackdropContextType = {
-    showBackdrop,
-    hideBackdrop,
-  };
+      const release = (id: string): void => {
+        if (!claimsRef.current.delete(id)) return;
+        recompute();
+      };
+
+      return {
+        publicValue: { claim, release },
+        onNavigationState: () => {
+          if (claimsRef.current.size === 0) return;
+          claimsRef.current.clear();
+          recompute();
+        },
+      };
+    },
+  );
+
+  // Defense in depth: react-native-screens v4 freezes blurred screens via
+  // <Activity mode="hidden">, which defers effect cleanups for the duration
+  // of the visit. A consumer mounted on a screen the user has navigated
+  // away from could keep its claim alive past its perceptual lifetime.
+  // Wiping claims on every navigation state change ties the backdrop's
+  // invariant to "what the active route's tree currently wants" — anything
+  // still legitimately wanting it re-claims via its own effect on the next
+  // render of the now-focused screen.
+  useEffect(() => {
+    const unsub = navigationRef.addListener('state', onNavigationState);
+    return unsub;
+  }, [onNavigationState]);
 
   const internalValue: OverlayBackdropInternalContextType = {
     opacity,
     isVisible,
-    onPressCallbackRef,
+    onPressRef,
   };
 
   return (
@@ -111,27 +182,23 @@ export const OverlayBackdropProvider: React.FC<
 };
 
 /**
- * Global backdrop component that should be rendered inside BottomSheetModalProvider.
- * This allows the backdrop to be in the same stacking context as bottom sheet modals,
- * ensuring modals render on top of the backdrop.
+ * Global backdrop component, rendered once at App level inside
+ * BottomSheetModalProvider so bottom sheet portals stack above it.
  */
 export const GlobalBackdrop: React.FC = () => {
   const internal = useContext(OverlayBackdropInternalContext);
-
-  // Get values from context (may be undefined if no provider)
   const opacity = internal?.opacity;
   const isVisible = internal?.isVisible ?? false;
-  const onPressCallbackRef = internal?.onPressCallbackRef;
+  const onPressRef = internal?.onPressRef;
 
   const handlePress = () => {
-    onPressCallbackRef?.current?.();
+    onPressRef?.current?.();
   };
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity?.get() ?? 0,
   }));
 
-  // If used outside provider, render nothing
   if (!internal) {
     return null;
   }
@@ -154,7 +221,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'black',
-    // No zIndex - relies on render order. Must be rendered after content but before modal portals.
   },
   pressable: {
     flex: 1,

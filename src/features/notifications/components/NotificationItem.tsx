@@ -70,15 +70,17 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
         >
           {notification.title}
         </Text>
-        <Text
-          size="sm"
-          tone="secondary"
-          lineHeight="tight"
-          style={styles.message}
-          numberOfLines={2}
-        >
-          {notification.message}
-        </Text>
+        {!!notification.message && (
+          <Text
+            size="sm"
+            tone="secondary"
+            lineHeight="tight"
+            style={styles.message}
+            numberOfLines={2}
+          >
+            {notification.message}
+          </Text>
+        )}
         <Text size="xs" tone="tertiary">
           {formattedTimestamp}
         </Text>

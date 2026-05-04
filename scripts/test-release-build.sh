@@ -83,12 +83,26 @@ fi
 info "Cleaning Android build cache..."
 cd android && ./gradlew clean && cd ..
 
-info "Building staging APK (with debug signing)..."
+# Choice 1 (production HTTPS) → staging variant
+# Choice 2 (local HTTP) → localRelease variant (allows cleartext)
+if [ "$ENV_CHOICE" = "2" ]; then
+    BUILD_VARIANT="localRelease"
+    GRADLE_TASK="assembleLocalRelease"
+    APK_DIR="localRelease"
+    APK_SUFFIX="localRelease"
+else
+    BUILD_VARIANT="staging"
+    GRADLE_TASK="assembleStaging"
+    APK_DIR="staging"
+    APK_SUFFIX="staging"
+fi
+
+info "Building $BUILD_VARIANT APK (with debug signing)..."
 info "Note: This has all release optimizations but uses debug keystore"
-cd android && ./gradlew assembleStaging && cd ..
+cd android && ./gradlew "$GRADLE_TASK" && cd ..
 
 # Step 6: Install APK
-APK_PATH="android/app/build/outputs/apk/staging/app-universal-staging.apk"
+APK_PATH="android/app/build/outputs/apk/${APK_DIR}/app-universal-${APK_SUFFIX}.apk"
 
 if [ ! -f "$APK_PATH" ]; then
     error "APK not found at $APK_PATH"
@@ -105,9 +119,9 @@ echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  Build Complete!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
-info "Staging APK installed successfully"
+info "$BUILD_VARIANT APK installed successfully"
 echo ""
-info "Build info: staging variant (ProGuard enabled, debug signed)"
+info "Build info: $BUILD_VARIANT variant (ProGuard enabled, debug signed)"
 echo ""
 echo "To view debug logs, run:"
 echo "  ${YELLOW}adb logcat | grep -E '(Auth:|Network:|Queue Link:|Store:)'${NC}"

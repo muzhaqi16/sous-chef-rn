@@ -5,7 +5,6 @@
 // ============================================
 
 import { StateCreator } from 'zustand';
-import { AppState, AppStateStatus } from 'react-native';
 import { jwtDecode } from 'jwt-decode';
 import { RootState } from '../index';
 import {
@@ -36,53 +35,27 @@ const isTokenExpiredOrExpiring = (accessToken: string | null): boolean => {
   }
 };
 
-let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null =
-  null;
-let lastAppState: AppStateStatus = AppState.currentState;
-
 /**
- * Initialize AppState listener for token refresh on app resume
- * Call this once at app startup (e.g., in App.tsx)
+ * Refresh the access token if it's expired or expiring. Call this on
+ * background → active transitions from the single AppState listener
+ * owned by useAppStateLifecycle. Module-scope so the try-catch is safe
+ * — React Compiler doesn't apply outside hook bodies.
  */
-export const initAppStateTokenRefresh = (
+export const handleTokenRefreshOnResume = async (
   getAccessToken: () => string | null,
-) => {
-  if (appStateSubscription) return; // Already initialized
+): Promise<void> => {
+  const accessToken = getAccessToken();
+  if (!accessToken || !isTokenExpiredOrExpiring(accessToken)) return;
 
-  appStateSubscription = AppState.addEventListener(
-    'change',
-    async (nextAppState: AppStateStatus) => {
-      // App coming to foreground from background
-      if (
-        lastAppState.match(/inactive|background/) &&
-        nextAppState === 'active'
-      ) {
-        const accessToken = getAccessToken();
-        if (accessToken && isTokenExpiredOrExpiring(accessToken)) {
-          console.log(
-            '[AuthSlice] Token expired/expiring on app resume, refreshing...',
-          );
-          try {
-            await proactiveTokenRefresh();
-          } catch {
-            console.warn(
-              '[AuthSlice] Token refresh on resume failed, reactive refresh will handle',
-            );
-          }
-        }
-      }
-      lastAppState = nextAppState;
-    },
+  console.log(
+    '[AuthSlice] Token expired/expiring on app resume, refreshing...',
   );
-};
-
-/**
- * Cleanup AppState listener (call on app unmount)
- */
-export const cleanupAppStateTokenRefresh = () => {
-  if (appStateSubscription) {
-    appStateSubscription.remove();
-    appStateSubscription = null;
+  try {
+    await proactiveTokenRefresh();
+  } catch {
+    console.warn(
+      '[AuthSlice] Token refresh on resume failed, reactive refresh will handle',
+    );
   }
 };
 

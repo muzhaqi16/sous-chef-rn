@@ -55,5 +55,5 @@ export const ThemedStatusBar = () => {
   // Before hydration, render nothing — AppDelegate's native setup persists.
   if (!isHydrated) return null;
 
-  return <SystemBars style={barStyle} />;
+  return <SystemBars style={barStyle} hidden={false} />;
 };

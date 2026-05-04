@@ -22,6 +22,51 @@ export const getNotificationAction = (
   }
 };
 
+// Per-type label fallback for when the server sends a null `title`.
+// Server-generated `title` is always preferred — this only fills the gap so
+// list rows don't read literally "Notification". Sentence-level message text
+// (e.g. "Tani invited you to Weekly Groceries") is intentionally NOT mirrored
+// here: that belongs on the server alongside push/email payloads.
+export const getNotificationTitle = (type: NotificationType): string => {
+  switch (type) {
+    case NotificationType.HomeInvitation:
+    case NotificationType.MembershipInvite:
+      return 'Home Invitation';
+    case NotificationType.HomeJoined:
+      return 'Joined Home';
+    case NotificationType.CollaborationInvite:
+      return 'Shopping List Invitation';
+    case NotificationType.CollaborationAccepted:
+      return 'Invitation Accepted';
+    case NotificationType.CollaborationDeclined:
+      return 'Invitation Declined';
+    case NotificationType.CollaboratorRemoved:
+      return 'Collaborator Removed';
+    case NotificationType.CollaboratorRoleChanged:
+      return 'Role Changed';
+    case NotificationType.CollaboratorPermissionsUpdated:
+      return 'Permissions Updated';
+    case NotificationType.ExpiryReminder:
+      return 'Items Expiring Soon';
+    case NotificationType.LowStock:
+      return 'Low Stock';
+    case NotificationType.NewItemAdded:
+      return 'New Item Added';
+    case NotificationType.ItemUpdated:
+      return 'Item Updated';
+    case NotificationType.ItemDeleted:
+      return 'Item Removed';
+    case NotificationType.ListUpdated:
+      return 'Shopping List Updated';
+    case NotificationType.RecipeCooked:
+      return 'Recipe Cooked';
+    case NotificationType.RecipeSaved:
+      return 'Recipe Saved';
+    default:
+      return 'Notification';
+  }
+};
+
 export const getNotificationIcon = (
   type: NotificationType,
 ): IconProps['name'] => {

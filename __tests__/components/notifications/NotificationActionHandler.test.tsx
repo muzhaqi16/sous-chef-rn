@@ -21,6 +21,14 @@ jest.mock('../../../src/features/notifications/hooks/useExpirationNotificationSy
     syncMarkRead: jest.fn(),
   }),
 }));
+jest.mock('../../../src/features/notifications/hooks/useNotificationSync', () => ({
+  useNotificationSync: () => ({
+    syncMarkAsRead: jest.fn(),
+    syncMarkUnread: jest.fn(),
+    syncDelete: jest.fn(),
+    syncMarkAllAsRead: jest.fn(),
+  }),
+}));
 jest.mock('../../../src/hooks/navigation/useAppNavigation');
 jest.mock('../../../src/store/useAppStore', () => ({
   useAppStore: (selector: any) =>

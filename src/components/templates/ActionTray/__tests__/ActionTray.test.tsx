@@ -5,10 +5,7 @@ import { render, screen, act } from '@testing-library/react-native';
 import { ActionTray } from '../ActionTray';
 
 jest.mock('#components/providers/OverlayBackdropProvider', () => ({
-  useOverlayBackdrop: jest.fn(() => ({
-    showBackdrop: jest.fn(),
-    hideBackdrop: jest.fn(),
-  })),
+  useBackdropClaim: jest.fn(),
 }));
 
 jest.mock('../ActionTrayContent', () => ({

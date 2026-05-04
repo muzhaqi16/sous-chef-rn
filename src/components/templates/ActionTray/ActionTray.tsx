@@ -9,7 +9,7 @@ import { useWindowDimensions } from 'react-native';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
 import { ActionTrayContent } from './ActionTrayContent';
-import { useOverlayBackdrop } from '#components/providers/OverlayBackdropProvider';
+import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
 import type { ActionTrayProps, ActionTrayRef } from './types';
 
 // Null backdrop component - we use GlobalBackdrop instead
@@ -32,19 +32,25 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const [mounted, setMounted] = useState(false);
     const { height } = useWindowDimensions();
-    const { showBackdrop, hideBackdrop } = useOverlayBackdrop();
 
-    // Present the sheet once mounted, hide backdrop on unmount
+    // Backdrop lifetime tied directly to `mounted && enableBackdrop`.
+    // useBackdropClaim handles cleanup automatically — the previous
+    // imperative show/hide pair (which had to coordinate with both the
+    // useEffect cleanup AND the dismiss path) is gone.
+    const handleBackdropPress = () => {
+      bottomSheetRef.current?.dismiss();
+    };
+    useBackdropClaim(mounted && enableBackdrop, {
+      opacity: 0.5,
+      onPress: handleBackdropPress,
+    });
+
+    // Present the sheet once mounted.
     useEffect(() => {
       if (mounted) {
         bottomSheetRef.current?.present();
       }
-      return () => {
-        if (mounted && enableBackdrop) {
-          hideBackdrop();
-        }
-      };
-    }, [mounted, enableBackdrop, hideBackdrop]);
+    }, [mounted]);
 
     const handleSheetChanges = (index: number) => {
       if (index < 0) {
@@ -58,17 +64,11 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       ref,
       () => {
         const dismiss = () => {
-          if (enableBackdrop) {
-            hideBackdrop();
-          }
           bottomSheetRef.current?.dismiss();
         };
         return {
           open: () => {
             if (mounted) return;
-            if (enableBackdrop) {
-              showBackdrop({ opacity: 0.5, onPress: dismiss });
-            }
             onOpen?.();
             setMounted(true);
           },
@@ -77,9 +77,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
             if (mounted) {
               dismiss();
             } else {
-              if (enableBackdrop) {
-                showBackdrop({ opacity: 0.5, onPress: dismiss });
-              }
               onOpen?.();
               setMounted(true);
             }
@@ -87,13 +84,10 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
           isActive: () => mounted,
         };
       },
-      [mounted, enableBackdrop, showBackdrop, hideBackdrop, onOpen],
+      [mounted, onOpen],
     );
 
     const handleDismiss = () => {
-      if (enableBackdrop) {
-        hideBackdrop();
-      }
       bottomSheetRef.current?.dismiss();
     };
 

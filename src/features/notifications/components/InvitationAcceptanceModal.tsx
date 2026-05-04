@@ -63,11 +63,15 @@ interface InvitationAcceptanceModalProps {
   onClose: () => void;
   onAccept?: (invitation: InvitationData) => void;
   onReject?: (invitation: InvitationData) => void;
+  onInvalidate?: (invitation: InvitationData) => void;
 }
+
+const INVITATION_UNAVAILABLE_MSG =
+  'This invitation is no longer available. It may have been used, declined, or expired.';
 
 export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
-> = ({ visible, invitation, onClose, onAccept, onReject }) => {
+> = ({ visible, invitation, onClose, onAccept, onReject, onInvalidate }) => {
   const { theme } = useUnistyles();
   const client = useApolloClient();
   const [accepting, setAccepting] = useState(false);
@@ -128,10 +132,9 @@ export const InvitationAcceptanceModal: React.FC<
         const token = await resolveToken();
 
         if (!token) {
+          onInvalidate?.(invitation);
           onClose();
-          toastService.error(
-            'Unable to find invitation. It may have expired or been cancelled.',
-          );
+          toastService.error(INVITATION_UNAVAILABLE_MSG);
           setAccepting(false);
           return;
         }
@@ -222,10 +225,9 @@ export const InvitationAcceptanceModal: React.FC<
                 const token = await resolveToken();
 
                 if (!token) {
+                  onInvalidate?.(invitation);
                   onClose();
-                  toastService.error(
-                    'Unable to find invitation. It may have expired or been cancelled.',
-                  );
+                  toastService.error(INVITATION_UNAVAILABLE_MSG);
                   setRejecting(false);
                   return;
                 }
@@ -262,19 +264,11 @@ export const InvitationAcceptanceModal: React.FC<
                   }
                 }
 
-                alertService.alert(
-                  'Invitation Declined',
-                  `You have declined the invitation to ${invitation.entityName}`,
-                  [
-                    {
-                      text: 'OK',
-                      onPress: () => {
-                        onReject?.(invitation);
-                        onClose();
-                      },
-                    },
-                  ],
+                toastService.success(
+                  `Declined invitation to ${invitation.entityName}`,
                 );
+                onReject?.(invitation);
+                onClose();
               },
               () => setRejecting(false),
               (error: unknown) => {

@@ -31,7 +31,10 @@ import {
 } from '#store/slices/notificationSlice';
 import { useDeferredCallback } from '#hooks/performance/useDeferredCallback';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { getNotificationAction } from '#utils/notifications/notificationHelpers';
+import {
+  getNotificationAction,
+  getNotificationTitle,
+} from '#utils/notifications/notificationHelpers';
 
 export function useNotificationsOnLaunch(userId?: string) {
   const addMultipleNotifications = useAppStore(
@@ -99,7 +102,7 @@ export function useNotificationsOnLaunch(userId?: string) {
         return {
           id: n.id,
           type,
-          title: n.title ?? 'Notification',
+          title: n.title ?? getNotificationTitle(type),
           message: n.message ?? '',
           category: n.category ?? NotificationCategory.System,
           priority,

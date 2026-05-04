@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import {
   InvitationAcceptanceModal,
@@ -10,6 +11,7 @@ import { NotificationItem } from '#store/slices/notificationSlice';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAppStore } from '#store/useAppStore';
 import { useExpirationNotificationSync } from '#features/notifications/hooks/useExpirationNotificationSync';
+import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 
 interface NotificationActionHandlerProps {
   children: (props: {
@@ -37,6 +39,7 @@ export const NotificationActionHandler: React.FC<
   const { navigateTo, navigate } = useAppNavigation();
   const setHomeAndPantry = useAppStore(state => state.setHomeAndPantry);
   const removeNotification = useAppStore(state => state.removeNotification);
+  const { syncDelete } = useNotificationSync();
   const showInvitationModal = (notification: NotificationItem) => {
     if (
       notification.actionType === 'ACCEPT_HOME_INVITE' ||
@@ -145,27 +148,14 @@ export const NotificationActionHandler: React.FC<
           navigateTo.pantryMain();
         });
       } else {
-        // Fallback if homeId not provided
-        alertService.alert('Success', `Welcome to ${invitation.entityName}!`, [
-          {
-            text: 'OK',
-            onPress: () => navigateTo.pantryMain(),
-          },
-        ]);
+        toastService.success(`Welcome to ${invitation.entityName}!`);
+        navigateTo.pantryMain();
       }
     } else {
-      // Shopping list invitation accepted
-      alertService.alert(
-        'Success',
+      toastService.success(
         `You can now collaborate on ${invitation.entityName}`,
-        [
-          {
-            text: 'View List',
-            onPress: () => navigateTo.shoppingListMain,
-          },
-          { text: 'OK' },
-        ],
       );
+      navigateTo.shoppingListMain();
     }
   };
 
@@ -173,10 +163,15 @@ export const NotificationActionHandler: React.FC<
     if (currentNotificationId) {
       removeNotification(currentNotificationId);
     }
-    alertService.alert(
-      'Invitation Rejected',
-      'The invitation has been declined.',
-    );
+  };
+
+  const handleInvitationInvalidate = () => {
+    // Underlying server invite is gone — permanently delete the notification
+    // (server delete + optimistic local removal) so it stops reappearing on
+    // every cold start / foreground refresh.
+    if (currentNotificationId) {
+      syncDelete(currentNotificationId);
+    }
   };
 
   return (
@@ -197,6 +192,7 @@ export const NotificationActionHandler: React.FC<
         }}
         onAccept={handleInvitationAccept}
         onReject={handleInvitationReject}
+        onInvalidate={handleInvitationInvalidate}
       />
 
       <ExpirationActionSheet

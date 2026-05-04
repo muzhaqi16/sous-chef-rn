@@ -6,6 +6,7 @@ module.exports = {
     'e2e/**/*',
     'src/graphql/generated/**/*',
     'src/**/*.generated.ts',
+    'coverage/**/*',
   ],
   env: {
     jest: true,
