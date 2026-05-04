@@ -25,3 +25,11 @@
 # React Native Device Info - Device information native module
 # Required to prevent obfuscation of device info methods
 -keep class com.learnium.RNDeviceInfo.** { *; }
+
+# react-native-nitro-modules + react-native-vision-camera + vision-camera-barcode-scanner
+# Nitro instantiates Hybrid* classes via reflection by FQCN
+# (e.g. com.margelo.nitro.camera.HybridFrameConverter). Without these rules R8
+# strips/renames them and NitroModulesProxy.createHybridObject throws
+# ClassNotFoundException at runtime in release builds.
+-keep class com.margelo.nitro.** { *; }
+-keepclassmembers class com.margelo.nitro.** { *; }
