@@ -122,15 +122,15 @@ export function PantryModalsProvider({
 
   // Force-close pantry-bound sheets when pantryId vanishes (e.g. last pantry
   // deleted locally, remote deletion in a shared home, or home switch with
-  // no pantries). Use the "adjusting state during render" pattern so the
-  // close happens in the same commit as the pantryId loss.
+  // no pantries). Adjusting state during render closes them in the same
+  // commit as the pantryId loss.
   const [prevPantryId, setPrevPantryId] = useState(pantryId);
   if (prevPantryId !== pantryId) {
     setPrevPantryId(pantryId);
     if (prevPantryId && !pantryId) {
-      if (addSheetVisible) setAddSheetVisible(false);
-      if (addLocationSheetVisible) setAddLocationSheetVisible(false);
-      if (itemsAdded) setItemsAdded(false);
+      setAddSheetVisible(false);
+      setAddLocationSheetVisible(false);
+      setItemsAdded(false);
     }
   }
 

@@ -91,34 +91,25 @@ export function useCurrentPantry() {
     return null;
   })();
 
-  // Auto-select default if none selected (only when ready)
+  // Keep selectedPantryId valid for the current home in a single update —
+  // covers both initial auto-select and clearing a stale id when the
+  // selected pantry has been deleted (locally or remotely). Stale → default
+  // (or null) in one render, no intermediate "no pantry" flicker.
   useEffect(() => {
-    if (isHomeSelectionReady && !selectedPantryId && defaultPantry?.id) {
-      setSelectedPantryId(defaultPantry.id);
-    }
-  }, [
-    isHomeSelectionReady,
-    selectedPantryId,
-    defaultPantry?.id,
-    setSelectedPantryId,
-  ]);
-
-  // Clear stale selectedPantryId pointing to a deleted/missing pantry.
-  // After this clears, the auto-select effect above picks a new default
-  // (or leaves it null when no pantries remain).
-  useEffect(() => {
-    if (
-      isHomeSelectionReady &&
+    if (!isHomeSelectionReady || !currentHome) return;
+    const isValid =
       selectedPantryId &&
-      currentHome &&
-      !currentHome.pantries?.find((p: any) => p.id === selectedPantryId)
-    ) {
-      setSelectedPantryId(null);
+      currentHome.pantries?.some((p: any) => p.id === selectedPantryId);
+    if (isValid) return;
+    const next = defaultPantry?.id ?? null;
+    if (next !== selectedPantryId) {
+      setSelectedPantryId(next);
     }
   }, [
     isHomeSelectionReady,
     selectedPantryId,
     currentHome,
+    defaultPantry?.id,
     setSelectedPantryId,
   ]);
 
