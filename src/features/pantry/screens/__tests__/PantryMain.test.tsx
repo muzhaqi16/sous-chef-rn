@@ -62,6 +62,7 @@ const defaultPantryScreen = {
   isReady: true,
   noHomeSelected: false,
   noHomes: false,
+  noPantries: false,
 
   // Store state
   showBiometricSetup: false,
@@ -415,6 +416,25 @@ describe('PantryMain', () => {
       expect(capturedPantryContentProps.noHomeSelected).toBe(false);
       expect(capturedPantryContentProps.noHomes).toBe(false);
       expect(capturedPantryContentProps.householdName).toBe('My Home');
+    });
+
+    it('passes noPantries=true and onCreatePantry when home has no pantries', () => {
+      mockPantryScreen({
+        pantry: null as any,
+        pantries: [],
+        currentHome: { name: 'My Home' },
+        selectedHomeId: 'h1',
+        homeCount: 1,
+        isReady: true,
+        noHomeSelected: false,
+        noHomes: false,
+        noPantries: true,
+      });
+      render(<PantryMain />);
+      expect(capturedPantryContentProps.noPantries).toBe(true);
+      expect(typeof capturedPantryContentProps.onCreatePantry).toBe('function');
+      // Add CTA must NOT appear when there's nowhere to add to
+      expect(capturedPantryContentProps.onAddItem).toBeUndefined();
     });
   });
 

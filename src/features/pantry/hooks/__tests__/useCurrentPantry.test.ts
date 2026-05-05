@@ -168,6 +168,35 @@ describe('useCurrentPantry', () => {
     expect(result.current.pantry).toBeNull();
   });
 
+  it('returns null (not a phantom) when selectedPantryId points to a deleted pantry', () => {
+    mockStoreState.isHomeSelectionReady = true;
+    mockStoreState.selectedHomeId = 'home-1';
+    mockStoreState.selectedPantryId = 'deleted-pantry';
+
+    // Home loaded, but the selected pantry is gone (e.g. just deleted)
+    mockHomesQueryResult.data = createHomesData([
+      { id: 'home-1', pantries: [] },
+    ]);
+
+    const { result } = renderHook(() => useCurrentPantry());
+
+    expect(result.current.pantry).toBeNull();
+  });
+
+  it('clears stale selectedPantryId pointing to a missing pantry', () => {
+    mockStoreState.isHomeSelectionReady = true;
+    mockStoreState.selectedHomeId = 'home-1';
+    mockStoreState.selectedPantryId = 'deleted-pantry';
+
+    mockHomesQueryResult.data = createHomesData([
+      { id: 'home-1', pantries: [] },
+    ]);
+
+    renderHook(() => useCurrentPantry());
+
+    expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(null);
+  });
+
   it('returns all pantries from current home', () => {
     mockStoreState.isHomeSelectionReady = true;
     mockStoreState.selectedHomeId = 'home-1';

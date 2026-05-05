@@ -221,6 +221,7 @@ export function usePantryScreen() {
   // -------------------------------------------------------------------------
   const noHomeSelected = isReady && !selectedHomeId && homeCount > 0;
   const noHomes = isReady && !selectedHomeId && homeCount === 0;
+  const noPantries = isReady && !!selectedHomeId && pantries.length === 0;
 
   const isLoadingInitial =
     (!isReady || loading) && !pantryError && pantryItems.length === 0;
@@ -296,6 +297,7 @@ export function usePantryScreen() {
     isReady,
     noHomeSelected,
     noHomes,
+    noPantries,
 
     // Store state
     showBiometricSetup,

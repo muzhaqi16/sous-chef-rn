@@ -30,7 +30,6 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
   const top = centerY - height / 2;
 
   const cornerOffset = 4; // Consistent offset for corners
-  const cornerSize = 40; // Larger corner size for better visibility
 
   return (
     <View style={styles.container}>
@@ -87,7 +86,7 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
           styles.corner,
           {
             left: left - cornerOffset,
-            bottom: screenHeight - top - height - cornerOffset - cornerSize,
+            bottom: screenHeight - top - height - cornerOffset,
             borderLeftColor: edgeColor,
             borderBottomColor: edgeColor,
           },
@@ -99,7 +98,7 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
           styles.corner,
           {
             right: screenWidth - left - width - cornerOffset,
-            bottom: screenHeight - top - height - cornerOffset - cornerSize,
+            bottom: screenHeight - top - height - cornerOffset,
             borderRightColor: edgeColor,
             borderBottomColor: edgeColor,
           },

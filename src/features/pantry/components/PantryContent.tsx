@@ -114,7 +114,9 @@ export const PantryContent = React.forwardRef<
       loading = false,
       noHomeSelected,
       noHomes,
+      noPantries,
       onSelectHome,
+      onCreatePantry,
       onHomeBadgeLayout,
       onSettingsIconLayout,
       scrollHandler,
@@ -436,7 +438,9 @@ export const PantryContent = React.forwardRef<
                         onAddItem={onAddItem}
                         noHomeSelected={noHomeSelected}
                         noHomes={noHomes}
+                        noPantries={noPantries}
                         onSelectHome={onSelectHome}
+                        onCreatePantry={onCreatePantry}
                         overallItemCount={locationCounts.all ?? 0}
                       />
                     ) : (

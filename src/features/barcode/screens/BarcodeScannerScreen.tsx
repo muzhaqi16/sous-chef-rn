@@ -327,17 +327,22 @@ const styles = StyleSheet.create(theme => ({
   instructionsContainer: {
     position: 'absolute',
     top: screenHeight * 0.25,
-    left: theme.spacing.lg,
-    right: theme.spacing.lg,
+    alignSelf: 'center',
+    maxWidth: '90%',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radii.lg,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     alignItems: 'center',
     zIndex: 1,
   },
   instructionsText: {
     color: theme.colors.white,
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   subInstructionsText: {
-    color: theme.colors.overlays.light,
+    color: theme.colors.white,
+    opacity: 0.85,
   },
   bottomControls: {
     position: 'absolute',

@@ -51,9 +51,13 @@ export function useQuantityFeedback(
   let remainingUnitSymbol = shared.activeUnitSymbol;
 
   if (!shared.isConvertedUnit) {
-    // Tracking unit selected — simple subtraction
-    availableInUnit = shared.trackingQuantity;
-    remaining = hasInput ? shared.trackingQuantity - inputQuantity : null;
+    // Tracking unit selected — prefer the converter's cap when available
+    // (handles dual-tracked items where tracking unit matches net-weight unit).
+    availableInUnit = Math.max(
+      shared.availableInSelectedUnit ?? 0,
+      shared.trackingQuantity,
+    );
+    remaining = hasInput ? availableInUnit - inputQuantity : null;
   } else if (shared.isDualTracked && conversion.convertedValue != null) {
     // API converted input to net weight — subtract directly
     availableInUnit = shared.remainingNetWeight!;

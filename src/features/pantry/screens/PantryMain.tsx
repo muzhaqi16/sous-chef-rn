@@ -170,6 +170,8 @@ const PantryMainInner: React.FC = () => {
   const handleExpiringNavigate = () =>
     navigate('FilteredPantryItems', { mode: 'expiring' });
   const handleSelectHome = () => navigate('HomeManagement', {});
+  const handleCreatePantry = () =>
+    navigate('PantrySettings', { pantryId: undefined });
   const stableNavigateTo = {
     pantryItem: (params: { itemId: string }) => navigateTo.pantryItem(params),
   };
@@ -200,6 +202,7 @@ const PantryMainInner: React.FC = () => {
         onLowStockNavigate={handleLowStockNavigate}
         onExpiringNavigate={handleExpiringNavigate}
         onSelectHome={handleSelectHome}
+        onCreatePantry={handleCreatePantry}
         onOverlayOpen={handleOverlayOpen}
         onOverlayClose={handleOverlayClose}
         canStartTutorial={canStartTutorial}
@@ -230,6 +233,7 @@ interface PantryMainContentProps {
   onLowStockNavigate: () => void;
   onExpiringNavigate: () => void;
   onSelectHome: () => void;
+  onCreatePantry: () => void;
   onOverlayOpen: () => void;
   onOverlayClose: () => void;
   canStartTutorial: boolean;
@@ -256,6 +260,7 @@ function PantryMainContent({
   onLowStockNavigate,
   onExpiringNavigate,
   onSelectHome,
+  onCreatePantry,
   onOverlayOpen,
   onOverlayClose,
   canStartTutorial,
@@ -313,21 +318,23 @@ function PantryMainContent({
     },
   };
 
+  const canAdd =
+    !screen.noHomeSelected &&
+    !screen.noHomes &&
+    !screen.noPantries &&
+    permissions.canAddItems;
+
   // Register add button action via tab bar
   useTabBarAddButton(
-    screen.noHomeSelected || screen.noHomes || !permissions.canAddItems
-      ? undefined
-      : () => {
+    canAdd
+      ? () => {
           Telemetry.trackEvent('add_pantry_item_clicked');
           setAddSheetVisible(true);
-        },
+        }
+      : undefined,
   );
 
-  const handleAddItem = permissions.canAddItems
-    ? () => {
-        setAddSheetVisible(true);
-      }
-    : undefined;
+  const handleAddItem = canAdd ? () => setAddSheetVisible(true) : undefined;
 
   const handleAddLocationPress = () => {
     setAddLocationSheetVisible(true);
@@ -370,7 +377,9 @@ function PantryMainContent({
         totalCount={screen.totalCount}
         noHomeSelected={screen.noHomeSelected}
         noHomes={screen.noHomes}
+        noPantries={screen.noPantries}
         onSelectHome={onSelectHome}
+        onCreatePantry={onCreatePantry}
         onAddItem={handleAddItem}
         onRefresh={screen.handleRefresh}
         onEndReached={

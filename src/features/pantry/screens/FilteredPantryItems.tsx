@@ -408,7 +408,6 @@ const styles = StyleSheet.create(theme => ({
   },
   scrollContent: {
     padding: theme.spacing.md,
-    gap: theme.spacing.sm,
   },
   emptyState: {
     padding: theme.spacing['2xl'],
@@ -425,7 +424,6 @@ const styles = StyleSheet.create(theme => ({
   },
   itemCard: {
     ...commonStyles.rowSpaceBetween,
-    marginBottom: 0,
   },
   itemInfo: {
     flex: 1,

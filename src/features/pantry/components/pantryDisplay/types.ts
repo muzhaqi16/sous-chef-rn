@@ -105,7 +105,9 @@ export interface PantryContentProps {
   // No-home states
   noHomeSelected?: boolean;
   noHomes?: boolean;
+  noPantries?: boolean;
   onSelectHome?: () => void;
+  onCreatePantry?: () => void;
 
   // Pagination
   isLoadingMore?: boolean;
@@ -148,6 +150,8 @@ export interface PantryEmptyStateProps {
   onAddItem?: () => void;
   noHomeSelected?: boolean;
   noHomes?: boolean;
+  noPantries?: boolean;
   onSelectHome?: () => void;
+  onCreatePantry?: () => void;
   overallItemCount: number;
 }
