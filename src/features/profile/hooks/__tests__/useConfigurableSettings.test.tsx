@@ -33,14 +33,6 @@ jest.mock('#store/useAppStore', () => ({
   })),
 }));
 
-const mockSetTheme = jest.fn();
-jest.mock('#hooks/useTheme', () => ({
-  useTheme: jest.fn(() => ({
-    userThemePreference: 'SYSTEM',
-    setTheme: mockSetTheme,
-  })),
-}));
-
 const mockCheckStoredCredentials = jest.fn().mockResolvedValue(false);
 const mockGetBiometricInfo = jest.fn().mockResolvedValue({
   isAvailable: false,
@@ -93,8 +85,7 @@ jest.mock('#/config/settingsConfig', () => ({
     {
       title: 'Appearance',
       items: [
-        { key: 'theme', label: 'Theme', type: 'modal' },
-        { key: 'darkMode', label: 'Dark Mode', type: 'switch' },
+        { key: 'appearance', label: 'Appearance', type: 'navigation' },
         { key: 'language', label: 'Language', type: 'modal' },
       ],
     },
@@ -185,34 +176,16 @@ describe('useConfigurableSettings', () => {
     });
   });
 
-  it('creates theme setting as modal with options', () => {
+  it('creates appearance navigation entry', () => {
     const { result } = renderHook(() => useConfigurableSettings(mockProfile));
 
     const appearanceSection = result.current.sections[1];
-    const themeItem = appearanceSection.items.find(
-      (i: any) => i.key === 'theme',
+    const appearanceItem = appearanceSection.items.find(
+      (i: any) => i.key === 'appearance',
     );
 
-    expect(themeItem).toBeDefined();
-    expect(themeItem.value).toBe('SYSTEM');
-    expect(themeItem.options).toBeDefined();
-  });
-
-  it('calls setTheme and updateSettings when theme is saved', () => {
-    const { result } = renderHook(() => useConfigurableSettings(mockProfile));
-
-    const themeItem = result.current.sections[1].items.find(
-      (i: any) => i.key === 'theme',
-    );
-
-    act(() => {
-      themeItem.onSave('DARK');
-    });
-
-    expect(mockSetTheme).toHaveBeenCalledWith('DARK');
-    expect(mockUpdateSettingsMutation).toHaveBeenCalledWith({
-      variables: { input: { ui: { theme: 'DARK' } } },
-    });
+    expect(appearanceItem).toBeDefined();
+    expect(appearanceItem.type).toBe('navigation');
   });
 
   it('calls logout when logout action is pressed', () => {
@@ -240,23 +213,6 @@ describe('useConfigurableSettings', () => {
 
     expect(biometricItem).toBeDefined();
     expect(biometricItem.disabled).toBe(true);
-  });
-
-  it('creates darkMode switch that toggles theme', () => {
-    const { result } = renderHook(() => useConfigurableSettings(mockProfile));
-
-    const darkModeItem = result.current.sections[1].items.find(
-      (i: any) => i.key === 'darkMode',
-    );
-
-    expect(darkModeItem).toBeDefined();
-    expect(darkModeItem.value).toBe(false); // SYSTEM is not DARK
-
-    act(() => {
-      darkModeItem.onPress();
-    });
-
-    expect(mockSetTheme).toHaveBeenCalledWith('DARK');
   });
 
   it('handles empty profile gracefully', () => {
@@ -332,24 +288,6 @@ describe('useConfigurableSettings', () => {
     expect(mockUpdateSettingsMutation).toHaveBeenCalledWith({
       variables: { input: { regional: { language: 'es' } } },
     });
-  });
-
-  it('darkMode switch toggles from DARK to LIGHT', () => {
-    const { useTheme } = require('#hooks/useTheme');
-    useTheme.mockReturnValue({
-      userThemePreference: 'DARK',
-      setTheme: mockSetTheme,
-    });
-
-    const { result } = renderHook(() => useConfigurableSettings(mockProfile));
-    const darkModeItem = result.current.sections[1].items.find(
-      (i: any) => i.key === 'darkMode',
-    );
-    expect(darkModeItem.value).toBe(true);
-    act(() => {
-      darkModeItem.onPress();
-    });
-    expect(mockSetTheme).toHaveBeenCalledWith('LIGHT');
   });
 
   it('biometric setting shows modal when enabled from disabled state', async () => {

@@ -92,17 +92,12 @@ export const PROFILE_SETTINGS_CONFIG = [
     ],
   },
   {
-    title: 'Theme & Language',
+    title: 'Appearance & Language',
     items: [
       {
-        key: 'theme',
-        label: 'Theme',
-        type: 'modal',
-        options: [
-          { label: '☀️ Light', value: 'LIGHT' },
-          { label: '🌙 Dark', value: 'DARK' },
-          { label: '📱 System', value: 'SYSTEM' },
-        ],
+        key: 'appearance',
+        label: 'Appearance',
+        type: 'navigation',
       },
       {
         key: 'language',
