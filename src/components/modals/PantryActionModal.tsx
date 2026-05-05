@@ -284,7 +284,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                   }
                   displayAsFraction={
                     isSingleUnitDualTracked
-                      ? pantryItem.netWeightUnit?.displayAsFraction
+                      ? undefined
                       : pantryItem.unit?.displayAsFraction
                   }
                   unitSymbol={
