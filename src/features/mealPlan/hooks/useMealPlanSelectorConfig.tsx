@@ -1,6 +1,6 @@
 import React, { RefObject } from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
@@ -44,10 +44,6 @@ export function useMealPlanSelectorConfig(
     onCreateFromTemplate,
   } = options;
 
-  const {
-    theme: { colors },
-  } = useUnistyles();
-
   const renderMealPlanItem = (
     item: MealPlanDisplayFragment,
     isSelected: boolean,
@@ -68,9 +64,7 @@ export function useMealPlanSelectorConfig(
             {` · ${item.home?.name ?? 'Personal'}`}
           </Text>
         </View>
-        {!!isSelected && (
-          <Icon name="checkmark" size={20} color={colors.primary} />
-        )}
+        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
       </SelectorItemContainer>
     );
   };

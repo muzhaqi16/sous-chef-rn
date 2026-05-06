@@ -147,7 +147,7 @@ const styles = StyleSheet.create(theme => ({
   },
   greeting: {
     fontSize: theme.typography.fontSize['2xl'] + 2,
-    color: theme.colors.secondaryDark,
+    color: theme.colors.textPrimary,
   },
   householdBadge: {
     marginTop: theme.spacing.xs,

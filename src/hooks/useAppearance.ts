@@ -40,15 +40,17 @@ function withAlpha(hex: string, alpha: string): string {
 }
 
 /**
- * Subscribes the calling component to appearance preference changes
- * (brand color, density, font scale, high contrast). Returns a stable string
- * that changes whenever any pref changes — the consumer re-renders on change,
- * which re-evaluates inline `theme.colors.X` reads in JSX props that Unistyles'
- * native style updates can't reach (Icon `color`, action button `color`, etc.).
+ * LAST-RESORT WORKAROUND. Prefer the canonical Unistyles v3 patterns:
  *
- * Use in shared screen-lifecycle hooks (e.g. useTabScreenLifecycle) so every
- * tab/stack screen built on top of them updates immediately on brand-color
- * change without waiting for re-mount.
+ *   1. `StyleSheet.create(theme => ...)`  — native ShadowTree updates, zero re-renders
+ *   2. `withUnistyles(Component)` + `uniProps` — for third-party components that
+ *      take theme-derived props (icon `color`, etc.) without re-rendering parents
+ *   3. `useUnistyles()` — migration aid; subscribes the calling component
+ *
+ * Only reach for this hook when none of the above are applicable — for example,
+ * when a hook (not a component) needs to recompute on appearance changes.
+ * Forcing re-renders this way is wasteful at scale; the per-component approach
+ * lets Unistyles' native bindings update styles without React work.
  */
 export function useAppearanceSubscription(): string {
   const primaryColorOverride = useAppStore(s => s.primaryColorOverride);

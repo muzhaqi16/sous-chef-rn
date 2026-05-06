@@ -327,14 +327,23 @@ const styles = StyleSheet.create(theme => ({
   instructionsContainer: {
     position: 'absolute',
     top: screenHeight * 0.25,
-    alignSelf: 'center',
-    maxWidth: '90%',
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.lg,
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
     alignItems: 'center',
     zIndex: 1,
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 12,
+        spreadDistance: 0,
+        color: 'rgba(0, 0, 0, 0.3)',
+      },
+    ],
   },
   instructionsText: {
     color: theme.colors.white,

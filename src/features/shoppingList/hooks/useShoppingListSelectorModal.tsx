@@ -374,9 +374,7 @@ export function useShoppingListSelectorModal({
             {list.totalItems - list.completedItems} of {list.totalItems}
           </Text>
         )}
-        {!!isSelected && (
-          <Icon name="checkmark" size={20} color={colors.primary} />
-        )}
+        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
       </SelectorItemContainer>
     );
   };

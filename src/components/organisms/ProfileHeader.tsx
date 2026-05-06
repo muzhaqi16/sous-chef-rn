@@ -70,8 +70,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     return { opacity, transform: [{ scale }] };
   });
 
-  // User info: collapse via GPU-composited scaleY + translateY + opacity
-  // (avoids Yoga layout recalculation every scroll frame)
+  // User info: collapse height + scaleY + opacity in a single worklet so the
+  // ScrollView reclaims layout space as the content fades.
   const userInfoStyle = useAnimatedStyle(() => {
     if (!progress) return {};
     const scaleY = interpolate(
@@ -80,21 +80,22 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       [1, 0],
       Extrapolation.CLAMP,
     );
-    const translateY = interpolate(
-      progress.get(),
-      [0, 1],
-      [0, -USER_INFO_HEIGHT / 2],
-      Extrapolation.CLAMP,
-    );
     const opacity = interpolate(
       progress.get(),
       [0, 0.5],
       [1, 0],
       Extrapolation.CLAMP,
     );
+    const height = interpolate(
+      progress.get(),
+      [0, 1],
+      [USER_INFO_HEIGHT, 0],
+      Extrapolation.CLAMP,
+    );
     return {
-      transform: [{ translateY }, { scaleY }],
+      height,
       opacity,
+      transform: [{ scaleY }],
     };
   });
 
@@ -215,7 +216,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   userInfo: {
-    height: USER_INFO_HEIGHT,
     alignItems: 'center',
     overflow: 'hidden',
     transformOrigin: 'top',

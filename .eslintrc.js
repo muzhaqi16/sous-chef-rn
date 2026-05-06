@@ -1,6 +1,6 @@
 module.exports = {
   root: true,
-  extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
+  extends: ['@react-native', 'plugin:react-hooks/recommended'],
   plugins: ['no-barrel-files', 'react-compiler'],
   ignorePatterns: [
     'e2e/**/*',

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
@@ -18,7 +18,9 @@ import { Telemetry } from '#services/telemetry';
 import { Text } from '#components/atoms/Text';
 
 export const AppSettingsScreen: React.FC = () => {
-  const theme = UnistylesRuntime.getTheme();
+  // useUnistyles subscribes the screen to theme/brand-color changes so inline
+  // theme reads below stay in sync without waiting for a re-mount.
+  const { theme } = useUnistyles();
   const [updating, setUpdating] = useState<string | null>(null);
 
   const { settings, loading, updateAppSetting, resetToDefaults } =

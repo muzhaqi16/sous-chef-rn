@@ -132,7 +132,6 @@ type LayoutRect = { x: number; y: number; width: number; height: number };
 
 interface FilteredRenderItemProps {
   item: FilteredItem;
-  primaryColor: string;
   subtitleFn: (item: FilteredItem) => string;
   showCart: boolean;
   onCartMeasure?: (rect: LayoutRect) => void;
@@ -140,7 +139,6 @@ interface FilteredRenderItemProps {
 
 const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
   item,
-  primaryColor,
   subtitleFn,
   showCart,
   onCartMeasure,
@@ -157,7 +155,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
           pressed && styles.pressed,
         ]}
       >
-        <Icon name="cart-outline" size={20} color={primaryColor} />
+        <Icon name="cart-outline" size={20} tone="primary" />
       </Pressable>
     ) : null;
 
@@ -376,7 +374,6 @@ export const FilteredPantryItems: React.FC<
           }) => (
             <FilteredRenderItem
               item={item}
-              primaryColor={theme.colors.primary}
               subtitleFn={config.subtitle}
               showCart={showCart}
               onCartMeasure={index === 0 ? setItemCartRect : undefined}

@@ -1,6 +1,6 @@
 import React, { RefObject } from 'react';
 
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type {
   SelectorConfig,
@@ -30,10 +30,6 @@ export function usePantrySelectorConfig(
     navigate,
   } = options;
 
-  const {
-    theme: { colors },
-  } = useUnistyles();
-
   const renderPantryItem = (
     item: any,
     isSelected: boolean,
@@ -47,9 +43,7 @@ export function usePantrySelectorConfig(
         <Text size="md" weight="semibold" style={styles.itemName}>
           {item.name}
         </Text>
-        {!!isSelected && (
-          <Icon name="checkmark" size={20} color={colors.primary} />
-        )}
+        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
       </SelectorItemContainer>
     );
   };

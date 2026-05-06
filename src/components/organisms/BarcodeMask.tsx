@@ -42,8 +42,6 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
               transform={`translate(${left}, ${top})`}
               width={width}
               height={height}
-              rx={8}
-              ry={8}
               fill="black"
             />
           </Mask>

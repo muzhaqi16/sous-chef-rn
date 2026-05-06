@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import type { FilterTabConfig } from './types';
@@ -24,13 +24,6 @@ interface FilterTabsItemProps<T extends string> {
   onLayout?: (event: LayoutChangeEvent) => void;
 }
 
-function getIconColor(isActive: boolean, isFiltered: boolean): string {
-  const theme = UnistylesRuntime.getTheme();
-  if (isActive) return theme.colors.filterTab.activeText;
-  if (isFiltered) return theme.colors.filterTab.filteredText;
-  return theme.colors.filterTab.inactiveText;
-}
-
 function FilterTabsItemComponent<T extends string>({
   tab,
   isActive,
@@ -42,10 +35,18 @@ function FilterTabsItemComponent<T extends string>({
   testID,
   onLayout,
 }: FilterTabsItemProps<T>): React.ReactElement {
+  // Subscribe to theme so iconColor recomputes when the user switches the
+  // brand color or theme. Using UnistylesRuntime.getTheme() here is a
+  // non-subscribing snapshot read and leaves the icon stuck on the previous color.
+  const { theme } = useUnistyles();
   const hasCount = showCounts && count !== undefined;
   const iconColor = tab.isAction
-    ? UnistylesRuntime.getTheme().colors.primary
-    : getIconColor(isActive, isFiltered);
+    ? theme.colors.primary
+    : isActive
+    ? theme.colors.filterTab.activeText
+    : isFiltered
+    ? theme.colors.filterTab.filteredText
+    : theme.colors.filterTab.inactiveText;
 
   const handlePress = () => {
     HapticService.selection();
