@@ -473,7 +473,7 @@ export const PantrySettings: React.FC<
               ]}
               onPress={handleDelete}
             >
-              <Icon name="trash-outline" size={20} color={theme.colors.error} />
+              <Icon name="trash-outline" size={20} tone="error" />
               <Text
                 size="md"
                 weight="semibold"

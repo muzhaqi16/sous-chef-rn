@@ -54,6 +54,7 @@ const AlertCard: React.FC<AlertCardProps> = ({
     // Animate out then remove
     scale.set(
       withTiming(ALERT.EXIT_SCALE_TO, { duration: TIMING.FAST }, finished => {
+        'worklet';
         if (finished) {
           scheduleOnRN(handleDismissEntry);
         }

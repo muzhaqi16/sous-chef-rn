@@ -235,7 +235,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         <Icon
           name="folder-outline"
           size={20}
-          color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+          tone={isSelected ? 'primary' : 'textSecondary'}
         />
         <Text
           size="base"
@@ -246,9 +246,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         >
           {item}
         </Text>
-        {!!isSelected && (
-          <Icon name="checkmark" size={20} color={theme.colors.primary} />
-        )}
+        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
       </Pressable>
     );
   };
@@ -268,18 +266,14 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               onPress={handleCancel}
               style={({ pressed }) => pressed && styles.pressed}
             >
-              <Icon name="close" size={24} color={theme.colors.textPrimary} />
+              <Icon name="close" size={24} tone="textPrimary" />
             </Pressable>
           </View>
 
           {/* Search Input */}
           {folders.length > 5 && (
             <View style={styles.searchContainer}>
-              <Icon
-                name="search"
-                size={18}
-                color={theme.colors.textSecondary}
-              />
+              <Icon name="search" size={18} tone="textSecondary" />
               <BottomSheetTextInput
                 style={styles.searchInput}
                 placeholder="Search folders..."
@@ -303,11 +297,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             <Icon
               name="mail-outline"
               size={20}
-              color={
-                !selectedFolder
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary
-              }
+              tone={!selectedFolder ? 'primary' : 'textSecondary'}
             />
             <Text
               size="base"
@@ -318,7 +308,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               No Folder
             </Text>
             {!selectedFolder && (
-              <Icon name="checkmark" size={20} color={theme.colors.primary} />
+              <Icon name="checkmark" size={20} tone="primary" />
             )}
           </Pressable>
 
@@ -368,7 +358,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                 ]}
                 onPress={() => setShowNewFolder(true)}
               >
-                <Icon name="add" size={20} color={theme.colors.primary} />
+                <Icon name="add" size={20} tone="primary" />
                 <Text size="base" weight="medium" tone="accent">
                   Create New Folder
                 </Text>
@@ -449,17 +439,13 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={({ pressed }) => pressed && styles.pressed}
             >
-              <Icon name="close" size={24} color={theme.colors.textPrimary} />
+              <Icon name="close" size={24} tone="textPrimary" />
             </Pressable>
           </View>
 
           {/* Current folder name */}
           <View style={styles.currentFolderContainer}>
-            <Icon
-              name="folder-outline"
-              size={20}
-              color={theme.colors.primary}
-            />
+            <Icon name="folder-outline" size={20} tone="primary" />
             <Text size="base" weight="semibold" tone="accent">
               {managingFolder}
             </Text>
@@ -468,11 +454,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           {/* Delete Confirmation View */}
           {showDeleteConfirm ? (
             <View style={styles.deleteConfirmContainer}>
-              <Icon
-                name="warning-outline"
-                size={32}
-                color={theme.colors.error}
-              />
+              <Icon name="warning-outline" size={32} tone="error" />
               <Text
                 size="lg"
                 weight="semibold"
@@ -600,11 +582,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                     onPress={() => setShowDeleteConfirm(true)}
                     disabled={folderActionLoading}
                   >
-                    <Icon
-                      name="trash-outline"
-                      size={18}
-                      color={theme.colors.error}
-                    />
+                    <Icon name="trash-outline" size={18} tone="error" />
                     <Text size="base" weight="medium" tone="error">
                       Delete Folder
                     </Text>

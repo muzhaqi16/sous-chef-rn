@@ -102,7 +102,7 @@ export function MultiSelectChipSheet<T extends string = string>({
         {/* Search Input */}
         {!!showSearch && (
           <View style={styles.searchContainer}>
-            <Icon name="search" size={18} color={theme.colors.textSecondary} />
+            <Icon name="search" size={18} tone="textSecondary" />
             <BottomSheetTextInput
               style={styles.searchInput}
               placeholder="Search..."

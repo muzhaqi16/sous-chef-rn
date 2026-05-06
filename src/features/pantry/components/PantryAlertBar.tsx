@@ -49,11 +49,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
               disabled={!onExpiringNavigate}
               style={styles.statLink}
             >
-              <Icon
-                name="time-outline"
-                size={14}
-                color={theme.colors.warning}
-              />
+              <Icon name="time-outline" size={14} tone="warning" />
               <Text size="sm" weight="medium" tone="warning">
                 {stats.expiringCount} expiring
               </Text>
@@ -65,11 +61,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
               disabled={!onLowStockNavigate}
               style={styles.statLink}
             >
-              <Icon
-                name="trending-down-outline"
-                size={14}
-                color={theme.colors.danger}
-              />
+              <Icon name="trending-down-outline" size={14} tone="danger" />
               <Text
                 size="sm"
                 weight="medium"
@@ -91,11 +83,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             accessibilityRole="button"
             accessibilityLabel="View analytics"
           >
-            <Icon
-              name="bar-chart-outline"
-              size={18}
-              color={theme.colors.textTertiary}
-            />
+            <Icon name="bar-chart-outline" size={18} tone="textTertiary" />
           </Pressable>
         )}
         {!!sortLabel && !!onSortPress && (

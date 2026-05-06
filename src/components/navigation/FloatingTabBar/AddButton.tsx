@@ -4,7 +4,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import { SPRING } from '#/constants/animations';
@@ -19,7 +19,6 @@ export const AddButton: React.FC<AddButtonProps> = ({
   iconLibrary,
   disabled = false,
 }) => {
-  const { theme } = useUnistyles();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -54,12 +53,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
       accessibilityState={{ disabled }}
       disabled={disabled}
     >
-      <Icon
-        name={icon}
-        size={28}
-        color={theme.colors.iconOnPrimary}
-        library={iconLibrary}
-      />
+      <Icon name={icon} size={28} tone="iconOnPrimary" library={iconLibrary} />
     </AnimatedPressable>
   );
 };

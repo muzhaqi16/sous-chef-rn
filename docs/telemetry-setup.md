@@ -20,14 +20,16 @@ React Native App
 
 | Variable | Description |
 |----------|-------------|
-| `OTLP_METRICS_ENDPOINT` | Base URL for the metrics OTLP receiver. App appends `/v1/metrics`. |
-| `OTLP_METRICS_AUTH_USERNAME` | Basic auth username (instance ID for Grafana Cloud). Leave empty for no auth. |
-| `OTLP_METRICS_AUTH_PASSWORD` | Basic auth password (API token for Grafana Cloud). |
-| `OTLP_LOGS_ENDPOINT` | Base URL for the logs OTLP receiver. App appends `/v1/logs`. |
-| `OTLP_LOGS_AUTH_USERNAME` | Basic auth username for logs endpoint. |
-| `OTLP_LOGS_AUTH_PASSWORD` | Basic auth password for logs endpoint. |
+| `OTLP_METRICS_ENDPOINT` | Base URL for the metrics OTLP receiver (Prometheus / Mimir). App appends `/v1/metrics`. |
+| `OTLP_METRICS_AUTH_USERNAME` | Basic auth username for the metrics endpoint (instance ID for Grafana Cloud). Leave empty for no auth. |
+| `OTLP_METRICS_AUTH_PASSWORD` | Basic auth password for the metrics endpoint (API token for Grafana Cloud). |
+| `OTLP_LOGS_ENDPOINT` | Base URL for the logs OTLP receiver (Loki). App appends `/v1/logs`. |
+| `OTLP_LOGS_AUTH_USERNAME` | Basic auth username for the logs endpoint. |
+| `OTLP_LOGS_AUTH_PASSWORD` | Basic auth password for the logs endpoint. |
 
 Auth is **credential-presence-based**: if username + password are set, Basic auth headers are sent. If either is empty, no auth header is attached. This works for both cloud (auth required) and self-hosted (auth often not needed) setups.
+
+Prometheus and Loki on Grafana Cloud are separate stacks with their own **numeric instance IDs and `glc_` tokens** — set `OTLP_METRICS_AUTH_*` and `OTLP_LOGS_AUTH_*` independently. Self-hosted deployments behind a single OTLP collector can reuse the same credential pair on both sides.
 
 **Important:** `react-native-config` bakes env vars into the native binary at build time. After changing any `OTLP_*` variable, you must do a **full native rebuild** (`npx react-native run-android` / `run-ios`). A Metro reload alone will not pick up the changes.
 
@@ -51,18 +53,21 @@ Go to **Grafana Cloud > Access Policies**:
 
 ### 3. Configure env vars
 
-Both metrics and logs go through the same OTLP gateway:
+Each stack (Prometheus / Loki) has its own OTLP receiver, instance ID, and token:
 
 ```bash
-# .env
-OTLP_METRICS_ENDPOINT=https://otlp-gateway-prod-us-east-2.grafana.net/otlp
-OTLP_METRICS_AUTH_USERNAME=1564351
-OTLP_METRICS_AUTH_PASSWORD=glc_your_token_here
+# .env — Prometheus / Mimir stack
+OTLP_METRICS_ENDPOINT=https://prometheus-prod-XX-prod-us-east-2.grafana.net/api/prom
+OTLP_METRICS_AUTH_USERNAME=1564351            # Prometheus stack instance ID
+OTLP_METRICS_AUTH_PASSWORD=glc_prom_token_here
 
-OTLP_LOGS_ENDPOINT=https://otlp-gateway-prod-us-east-2.grafana.net/otlp
-OTLP_LOGS_AUTH_USERNAME=1564351
-OTLP_LOGS_AUTH_PASSWORD=glc_your_token_here
+# .env — Loki stack (separate instance + token)
+OTLP_LOGS_ENDPOINT=https://logs-prod-036.grafana.net
+OTLP_LOGS_AUTH_USERNAME=1522140               # Loki stack instance ID
+OTLP_LOGS_AUTH_PASSWORD=glc_loki_token_here
 ```
+
+If you instead use the **shared OTLP gateway** (`https://otlp-gateway-prod-us-east-2.grafana.net/otlp`) with a single composite token, point both endpoints at the gateway and set the same `OTLP_*_AUTH_USERNAME` / `OTLP_*_AUTH_PASSWORD` on both sides.
 
 ### 4. Import dashboards
 
@@ -97,16 +102,16 @@ OTLP_LOGS_AUTH_PASSWORD=
 
 ### Option B: Direct to Mimir + Loki
 
-Point each endpoint at its own backend:
+Point each endpoint at its own backend with its own credential pair:
 
 ```bash
 OTLP_METRICS_ENDPOINT=https://mimir.your-infra.com/otlp
-OTLP_METRICS_AUTH_USERNAME=
-OTLP_METRICS_AUTH_PASSWORD=
+OTLP_METRICS_AUTH_USERNAME=mimir-user
+OTLP_METRICS_AUTH_PASSWORD=mimir-token
 
 OTLP_LOGS_ENDPOINT=https://loki.your-infra.com/otlp
-OTLP_LOGS_AUTH_USERNAME=
-OTLP_LOGS_AUTH_PASSWORD=
+OTLP_LOGS_AUTH_USERNAME=loki-user
+OTLP_LOGS_AUTH_PASSWORD=loki-token
 ```
 
 Mimir supports OTLP ingestion natively. For Loki, ensure you're running Loki 3.0+ which supports the OTLP `/v1/logs` endpoint.
@@ -205,7 +210,7 @@ Histogram bucket boundaries: `[10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 1000
 | HTTP 401 on metrics | Wrong instance ID or expired token | Check OTLP instance ID (not Prometheus ID) and regenerate token |
 | HTTP 400 "invalid temporality" | Backend expects CUMULATIVE | Ensure `aggregationTemporality: 2` in HttpTransport |
 | Dashboards show "No data" | Metrics not ingested or wrong `service_name` label | Query `{service_name="sous-chef-app"}` in Explore to verify |
-| Logs not appearing | Logs endpoint not configured or token missing `logs:write` scope | Check `OTLP_LOGS_ENDPOINT` is set and token has correct scopes |
+| Logs not appearing | Logs endpoint not configured or token missing `logs:write` scope | Check `OTLP_LOGS_ENDPOINT` is set and `OTLP_LOGS_AUTH_*` token has the correct scopes |
 
 ## Code Structure
 

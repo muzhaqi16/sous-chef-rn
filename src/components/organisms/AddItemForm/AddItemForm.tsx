@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Pressable } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
+import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#/components/base/Button';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -98,7 +99,6 @@ const detectScanType = (value: string): 'barcode' | 'sku' => {
 };
 
 const ScanUpcButton: React.FC<{ onPress: () => void }> = ({ onPress }) => {
-  const { theme } = useUnistyles();
   return (
     <Pressable
       onPress={onPress}
@@ -110,7 +110,7 @@ const ScanUpcButton: React.FC<{ onPress: () => void }> = ({ onPress }) => {
         pressed && scanButtonStyles.pressed,
       ]}
     >
-      <Icon name="barcode-outline" size={22} color={theme.colors.primary} />
+      <Icon name="barcode-outline" size={22} tone="primary" />
     </Pressable>
   );
 };

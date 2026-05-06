@@ -64,7 +64,7 @@ export const ImagePickerSheet = forwardRef<
             onPress={handleCamera}
           >
             <View style={styles.iconContainer}>
-              <Icon name="camera" size={24} color={theme.colors.primary} />
+              <Icon name="camera" size={24} tone="primary" />
             </View>
             <Text size="md" weight="medium">
               Take Photo
@@ -75,7 +75,7 @@ export const ImagePickerSheet = forwardRef<
             onPress={handleLibrary}
           >
             <View style={styles.iconContainer}>
-              <Icon name="image" size={24} color={theme.colors.primary} />
+              <Icon name="image" size={24} tone="primary" />
             </View>
             <Text size="md" weight="medium">
               Choose from Library

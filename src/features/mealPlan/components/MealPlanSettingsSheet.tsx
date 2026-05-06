@@ -66,11 +66,7 @@ function ActionItem({
           </Text>
         )}
       </View>
-      <Icon
-        name="chevron-forward"
-        size={18}
-        color={theme.colors.textTertiary}
-      />
+      <Icon name="chevron-forward" size={18} tone="textTertiary" />
     </Pressable>
   );
 }
@@ -228,11 +224,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
               <View style={styles.actionsCard}>
                 {mealPlan.generatedShoppingLists.map(list => (
                   <View key={list.id} style={styles.listRow}>
-                    <Icon
-                      name="list-outline"
-                      size={18}
-                      color={theme.colors.textSecondary}
-                    />
+                    <Icon name="list-outline" size={18} tone="textSecondary" />
                     <Text size="sm" style={styles.listName}>
                       {list.name}
                     </Text>

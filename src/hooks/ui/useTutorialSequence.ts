@@ -6,14 +6,14 @@ import type { TargetRect } from '#components/organisms/SpotlightCoachMark/Spotli
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
 // Same prefix used by useFeatureHint — keeps storage compatible with
-// resetAllFeatureHints() and hasFeatureHintBeenShown().
+// resetAllFeatureHints() and hasFeatureHintBeenShown(). Per-account scoping
+// so tutorials reset and re-show when a different user logs in.
 const HINT_PREFIX = 'feature_hint_shown_';
 
-function buildStorageKey(userId: string | undefined, featureId: string) {
-  return userId
+const buildStorageKey = (userId: string | undefined, featureId: string) =>
+  userId
     ? `${HINT_PREFIX}${userId}_${featureId}`
     : `${HINT_PREFIX}${featureId}`;
-}
 
 // ── Public types ──
 
@@ -131,8 +131,7 @@ export const useTutorialSequence = ({
   const advance = () => {
     if (activeStepIndex === -1) return;
     const step = stepsRef.current[activeStepIndex];
-    const key = buildStorageKey(userIdRef.current, step.featureId);
-    storage.set(key, true);
+    storage.set(buildStorageKey(userIdRef.current, step.featureId), true);
     setGeneration(g => g + 1);
     setIsTransitioning(true);
     if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
@@ -145,15 +144,13 @@ export const useTutorialSequence = ({
   const advanceInPlace = () => {
     if (activeStepIndex === -1) return;
     const step = stepsRef.current[activeStepIndex];
-    const key = buildStorageKey(userIdRef.current, step.featureId);
-    storage.set(key, true);
+    storage.set(buildStorageKey(userIdRef.current, step.featureId), true);
     setGeneration(g => g + 1);
   };
 
   const skipAll = () => {
     for (const step of stepsRef.current) {
-      const key = buildStorageKey(userIdRef.current, step.featureId);
-      storage.set(key, true);
+      storage.set(buildStorageKey(userIdRef.current, step.featureId), true);
     }
     setGeneration(g => g + 1);
   };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
 interface CalendarToggleBarProps {
@@ -13,8 +13,6 @@ export const CalendarToggleBar: React.FC<CalendarToggleBarProps> = ({
   isExpanded,
   onToggle,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <Pressable
       onPress={onToggle}
@@ -29,7 +27,7 @@ export const CalendarToggleBar: React.FC<CalendarToggleBarProps> = ({
       <Icon
         name={isExpanded ? 'chevron-up' : 'chevron-down'}
         size={16}
-        color={theme.colors.textTertiary}
+        tone="textTertiary"
       />
       <View style={styles.line} />
     </Pressable>

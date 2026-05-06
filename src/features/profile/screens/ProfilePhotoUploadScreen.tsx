@@ -247,11 +247,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
                 resizeMode="cover"
               />
             ) : (
-              <Icon
-                color={theme.colors.textSecondary}
-                name="person"
-                size={100}
-              />
+              <Icon tone="textSecondary" name="person" size={100} />
             )}
           </View>
 
@@ -266,7 +262,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               ]}
               disabled={isUploading}
             >
-              <Icon color={theme.colors.background} name="crop" size={20} />
+              <Icon tone="background" name="crop" size={20} />
             </Pressable>
           )}
         </View>

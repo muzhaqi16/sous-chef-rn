@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
   FadeInUp,
@@ -20,7 +20,6 @@ const ActionButton: React.FC<{
   action: ActionButtonConfig;
   index: number;
 }> = ({ action, index }) => {
-  const { theme } = useUnistyles();
   const variant = action.variant || 'secondary';
 
   return (
@@ -41,12 +40,8 @@ const ActionButton: React.FC<{
         <Icon
           name={action.icon}
           size={20}
-          color={
-            action.color ||
-            (variant === 'primary'
-              ? theme.colors.onPrimary
-              : theme.colors.secondary)
-          }
+          color={action.color}
+          tone={variant === 'primary' ? 'onPrimary' : 'secondary'}
           library={action.iconLibrary}
         />
         <Text

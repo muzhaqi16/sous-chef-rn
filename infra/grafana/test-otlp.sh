@@ -23,7 +23,7 @@ if [ -z "$AUTH_PASSWORD" ]; then
   echo "Usage: AUTH_PASSWORD=glc_xxx ./infra/grafana/test-otlp.sh"
   echo ""
   echo "Or source from .env:"
-  echo "  source .env && AUTH_PASSWORD=\$TELEMETRY_AUTH_PASSWORD ./infra/grafana/test-otlp.sh"
+  echo "  source .env && AUTH_PASSWORD=\$OTLP_METRICS_AUTH_PASSWORD ./infra/grafana/test-otlp.sh"
   exit 1
 fi
 

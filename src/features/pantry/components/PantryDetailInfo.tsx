@@ -76,11 +76,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
                 pressed && styles.pressed,
               ]}
             >
-              <Icon
-                name="create-outline"
-                size={16}
-                color={theme.colors.primary}
-              />
+              <Icon name="create-outline" size={16} tone="primary" />
             </Pressable>
           )}
         </InfoRow>
@@ -308,11 +304,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {!!item.storageNotes && (
         <View style={styles.notesSection}>
           <View style={styles.notesHeader}>
-            <Icon
-              name="document-text-outline"
-              size={16}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="document-text-outline" size={16} tone="textSecondary" />
             <Text
               size="sm"
               weight="medium"

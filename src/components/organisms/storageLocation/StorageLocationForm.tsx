@@ -433,11 +433,7 @@ export const StorageLocationForm = forwardRef<
             Advanced Settings
           </Text>
           <Animated.View style={animatedChevronStyle}>
-            <Icon
-              name="chevron-down"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="chevron-down" size={20} tone="textSecondary" />
           </Animated.View>
         </Pressable>
 

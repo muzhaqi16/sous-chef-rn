@@ -105,11 +105,7 @@ export const PostLoginBiometricPrompt = ({
         >
           <View style={styles.iconContainer}>
             <View style={styles.iconBackground}>
-              <Icon
-                name={getBiometricIcon()}
-                size={40}
-                color={theme.colors.primary}
-              />
+              <Icon name={getBiometricIcon()} size={40} tone="primary" />
             </View>
           </View>
 

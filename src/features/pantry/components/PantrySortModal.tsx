@@ -6,7 +6,7 @@ import {
   TouchableWithoutFeedback,
   Pressable,
 } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { SortOption, SortDirection } from './pantryDisplay/types';
 
@@ -67,8 +67,6 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
   onSelect,
   onClose,
 }) => {
-  const { theme } = useUnistyles();
-
   return (
     <Modal
       visible={visible}
@@ -97,7 +95,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
                     name={option.icon}
                     size={18}
                     library={option.library}
-                    color={theme.colors.primary}
+                    tone="primary"
                   />
                   <Text
                     style={[
@@ -111,7 +109,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
                     <Icon
                       name={sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'}
                       size={18}
-                      color={theme.colors.primary}
+                      tone="primary"
                     />
                   )}
                 </Pressable>

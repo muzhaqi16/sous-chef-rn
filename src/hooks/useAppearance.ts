@@ -34,6 +34,32 @@ function scaleObject<T extends Record<string, number>>(
   return scaled as T;
 }
 
+// Append a 2-digit hex alpha to a #RRGGBB color produced by chroma-js.
+function withAlpha(hex: string, alpha: string): string {
+  return `${hex}${alpha}`;
+}
+
+/**
+ * Subscribes the calling component to appearance preference changes
+ * (brand color, density, font scale, high contrast). Returns a stable string
+ * that changes whenever any pref changes — the consumer re-renders on change,
+ * which re-evaluates inline `theme.colors.X` reads in JSX props that Unistyles'
+ * native style updates can't reach (Icon `color`, action button `color`, etc.).
+ *
+ * Use in shared screen-lifecycle hooks (e.g. useTabScreenLifecycle) so every
+ * tab/stack screen built on top of them updates immediately on brand-color
+ * change without waiting for re-mount.
+ */
+export function useAppearanceSubscription(): string {
+  const primaryColorOverride = useAppStore(s => s.primaryColorOverride);
+  const densityPreference = useAppStore(s => s.densityPreference);
+  const fontScalePreference = useAppStore(s => s.fontScalePreference);
+  const highContrast = useAppStore(s => s.highContrast);
+  return `${primaryColorOverride ?? ''}|${densityPreference ?? ''}|${
+    fontScalePreference ?? ''
+  }|${highContrast ? 1 : 0}`;
+}
+
 /**
  * Applies user appearance preferences (brand color, density, font scale,
  * high contrast) to both light and dark themes via UnistylesRuntime.updateTheme.
@@ -63,15 +89,32 @@ export function useAppearance() {
         // Brand color override
         if (primaryColorOverride) {
           const palette = derivePalette(primaryColorOverride);
+          const isDark = themeName === 'dark';
           updated.colors = {
             ...updated.colors,
             primary: palette['400'],
-            primaryLight:
-              themeName === 'dark' ? palette['400'] + '20' : palette['100'],
-            primaryDark: themeName === 'dark' ? palette['600'] : palette['700'],
-            iconPrimary: themeName === 'dark' ? palette['400'] : palette['500'],
-            chipSelectedBackground:
-              themeName === 'dark' ? palette['400'] : palette['300'],
+            primaryLight: isDark ? palette['400'] + '20' : palette['100'],
+            primaryDark: isDark ? palette['600'] : palette['700'],
+            iconPrimary: isDark ? palette['400'] : palette['500'],
+            chipSelectedBackground: isDark ? palette['400'] : palette['300'],
+            filterTab: {
+              ...updated.colors.filterTab,
+              activeBg: palette['500'],
+              filteredBg: isDark
+                ? withAlpha(palette['400'], '26')
+                : palette['50'],
+              filteredText: isDark ? palette['300'] : palette['600'],
+            },
+            sectionHeader: {
+              ...updated.colors.sectionHeader,
+              actionText: isDark ? palette['400'] : palette['500'],
+            },
+            avatar: {
+              ...updated.colors.avatar,
+              gradientStart: palette['500'],
+              gradientEnd: palette['400'],
+              shadow: withAlpha(palette['500'], '4D'),
+            },
           };
         }
 

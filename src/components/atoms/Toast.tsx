@@ -189,6 +189,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const panGesture = Gesture.Pan()
+    .minDistance(10)
     .onUpdate(event => {
       // Allow upward swipe (negative Y) for top-positioned toast
       if (event.translationY < 0) {

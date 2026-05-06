@@ -145,7 +145,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   onSuccess,
 }) => {
   const { theme } = useUnistyles();
-  const navigation = useNavigation();
+  const { goBack } = useNavigation();
 
   // Consolidated unit state using UnitSelection type
   const [trackingUnit, setTrackingUnit] =
@@ -626,7 +626,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         <Header
           variant="form"
           title={mode === 'add' ? 'Add Pantry Item' : 'Edit Pantry Item'}
-          onClose={() => navigation.goBack()}
+          onClose={() => goBack()}
           rightActions={[
             {
               icon: 'checkmark',

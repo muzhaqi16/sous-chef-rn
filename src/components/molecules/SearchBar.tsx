@@ -182,7 +182,7 @@ export const SearchBar: FC<SearchBarProps> = ({
         onClear={() => onChangeText('')}
         leftIcon={
           showSearchIcon ? (
-            <Icon name="search" size={16} color={theme.colors.textTertiary} />
+            <Icon name="search" size={16} tone="textTertiary" />
           ) : undefined
         }
         rightIcon={!value ? innerRightIcon : undefined}

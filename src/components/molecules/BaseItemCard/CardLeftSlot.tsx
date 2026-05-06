@@ -77,7 +77,7 @@ const ThemedSlot: React.FC<CardLeftSlotProps> = ({
         <Icon
           name={icon}
           size={theme.sizes.icon.md}
-          color={theme.colors.textPrimary}
+          tone="textPrimary"
           library={iconLibrary}
         />
       </View>

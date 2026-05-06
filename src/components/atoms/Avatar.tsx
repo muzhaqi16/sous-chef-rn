@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#utils/iconUtils';
 import { getInitials } from '#utils/ownershipHelpers';
@@ -38,8 +38,6 @@ export const Avatar: React.FC<AvatarProps> = ({
   backgroundColor,
   textColor,
 }) => {
-  const { theme } = useUnistyles();
-
   const containerStyle = {
     width: size,
     height: size,
@@ -99,7 +97,8 @@ export const Avatar: React.FC<AvatarProps> = ({
       <Icon
         name={fallbackIcon}
         size={size * 0.6}
-        color={textColor || theme.colors.textSecondary}
+        color={textColor}
+        tone="textSecondary"
         library={fallbackIconLibrary}
       />
     </View>

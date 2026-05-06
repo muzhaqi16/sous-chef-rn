@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, ScrollView } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { Button } from '#components/base/Button';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
@@ -28,7 +28,6 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
   onCancel,
   confirmLabel,
 }) => {
-  const { theme } = useUnistyles();
   const trayRef = useRef<ActionTrayRef>(null);
 
   // Local pending selection for confirm mode
@@ -71,7 +70,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
               {opt.label}
             </Text>
             {activeValue === opt.value && (
-              <Icon name="checkmark" size={20} color={theme.colors.primary} />
+              <Icon name="checkmark" size={20} tone="primary" />
             )}
           </Pressable>
         ))}

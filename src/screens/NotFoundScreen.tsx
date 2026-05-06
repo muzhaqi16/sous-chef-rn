@@ -6,10 +6,10 @@ import { Button } from '#/components/base/Button';
 import { Text } from '#components/atoms/Text';
 
 export const NotFoundScreen = () => {
-  const navigation = useNavigation();
+  const { dispatch } = useNavigation();
 
   const handleGoHome = () => {
-    navigation.dispatch(
+    dispatch(
       CommonActions.reset({
         index: 0,
         routes: [{ name: 'Home' }],

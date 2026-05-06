@@ -217,10 +217,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       <Icon
                         name="cube-outline"
                         size={20}
-                        color={
-                          pantryId === pantry.id
-                            ? theme.colors.white
-                            : theme.colors.textSecondary
+                        tone={
+                          pantryId === pantry.id ? 'white' : 'textSecondary'
                         }
                       />
                       <Text
@@ -332,7 +330,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   <Icon
                     name="calendar-outline"
                     size={20}
-                    color={theme.colors.textSecondary}
+                    tone="textSecondary"
                   />
                   <Text style={styles.dateText}>
                     {expirationDate
@@ -348,11 +346,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     ]}
                     onPress={clearExpirationDate}
                   >
-                    <Icon
-                      name="close"
-                      size={20}
-                      color={theme.colors.textSecondary}
-                    />
+                    <Icon name="close" size={20} tone="textSecondary" />
                   </Pressable>
                 )}
               </View>

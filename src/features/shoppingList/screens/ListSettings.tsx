@@ -341,7 +341,7 @@ export const ListSettings: React.FC<
                     <Icon
                       name="log-out-outline"
                       size={20}
-                      color={theme.colors.textSecondary}
+                      tone="textSecondary"
                     />
                     <Text
                       size="md"
@@ -371,11 +371,7 @@ export const ListSettings: React.FC<
                     onPress={handleLeaveList}
                     disabled={leaving}
                   >
-                    <Icon
-                      name="log-out-outline"
-                      size={20}
-                      color={theme.colors.error}
-                    />
+                    <Icon name="log-out-outline" size={20} tone="error" />
                     <Text
                       size="md"
                       weight="semibold"
@@ -426,11 +422,7 @@ export const ListSettings: React.FC<
                     {homes?.find(h => h.id === selectedHomeId)?.name ||
                       'Personal (No Home)'}
                   </Text>
-                  <Icon
-                    name="chevron-down"
-                    size={20}
-                    color={theme.colors.textSecondary}
-                  />
+                  <Icon name="chevron-down" size={20} tone="textSecondary" />
                 </Pressable>
               </View>
             )}
@@ -463,15 +455,11 @@ export const ListSettings: React.FC<
               ]}
               onPress={() => navigate('ShareList', { listId: listId! })}
             >
-              <Icon name="person-add" size={20} color={theme.colors.primary} />
+              <Icon name="person-add" size={20} tone="primary" />
               <Text size="md" tone="accent" style={styles.actionText}>
                 Manage Members
               </Text>
-              <Icon
-                name="chevron-forward"
-                size={20}
-                color={theme.colors.textSecondary}
-              />
+              <Icon name="chevron-forward" size={20} tone="textSecondary" />
             </Pressable>
 
             {!!isShared && (
@@ -494,7 +482,7 @@ export const ListSettings: React.FC<
               ]}
               onPress={handleDelete}
             >
-              <Icon name="trash-outline" size={20} color={theme.colors.error} />
+              <Icon name="trash-outline" size={20} tone="error" />
               <Text
                 size="md"
                 weight="semibold"

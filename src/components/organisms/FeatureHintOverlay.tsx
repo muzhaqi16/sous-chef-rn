@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Modal, Pressable } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
 import { Icon } from '#utils/iconUtils';
@@ -32,7 +32,6 @@ interface FeatureHintOverlayProps {
 export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
   config,
 }) => {
-  const { theme } = useUnistyles();
   const {
     title,
     subtitle,
@@ -70,7 +69,7 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
                   <Icon
                     name={icon.name}
                     size={icon.size || 32}
-                    color={theme.colors.primary}
+                    tone="primary"
                     library={icon.library}
                   />
                 </View>

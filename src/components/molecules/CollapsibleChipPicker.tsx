@@ -8,7 +8,7 @@ import Animated, {
   FadeIn,
   FadeOut,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { SPRING, TIMING } from '#/constants/animations';
@@ -27,7 +27,6 @@ export const CollapsibleChipPicker = <T extends string>({
   selectedValue,
   onSelect,
 }: CollapsibleChipPickerProps<T>) => {
-  const { theme } = useUnistyles();
   const [expanded, setExpanded] = useState(false);
 
   // Chevron rotation animation
@@ -70,11 +69,7 @@ export const CollapsibleChipPicker = <T extends string>({
             </Text>
           ) : null}
           <Animated.View style={animatedChevronStyle}>
-            <Icon
-              name="chevron-down"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="chevron-down" size={20} tone="textSecondary" />
           </Animated.View>
         </View>
       </Pressable>
@@ -108,11 +103,7 @@ export const CollapsibleChipPicker = <T extends string>({
                     {option.label}
                   </Text>
                   {selected ? (
-                    <Icon
-                      name="checkmark"
-                      size={16}
-                      color={theme.colors.primary}
-                    />
+                    <Icon name="checkmark" size={16} tone="primary" />
                   ) : null}
                 </Pressable>
               );

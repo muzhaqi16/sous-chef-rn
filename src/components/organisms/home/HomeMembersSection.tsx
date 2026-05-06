@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import {
   getMemberDisplayName,
@@ -41,8 +41,6 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
   onRemove,
   onRevokeInvite,
 }) => {
-  const { theme } = useUnistyles();
-
   // Filter pending invites
   const pendingInvites = invites.filter(
     inv => inv.status !== InviteStatus.Accepted,
@@ -72,11 +70,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
         })
       ) : (
         <View style={styles.emptyContainer}>
-          <Icon
-            name="people-outline"
-            size={48}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="people-outline" size={48} tone="textSecondary" />
           <Text size="md" tone="secondary" style={styles.emptyText}>
             No members
           </Text>

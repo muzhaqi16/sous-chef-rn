@@ -213,8 +213,6 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
   icon,
   message,
 }) => {
-  const { theme } = useUnistyles();
-
   if (loading || !hasItems) {
     return (
       <View style={styles.skeletonContainer}>
@@ -227,7 +225,7 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
 
   return (
     <View style={[commonStyles.center, styles.emptyState]}>
-      <Icon name={icon} size={64} color={theme.colors.success} />
+      <Icon name={icon} size={64} tone="success" />
       <Text align="center" style={[commonStyles.body, styles.emptyText]}>
         {message}
       </Text>

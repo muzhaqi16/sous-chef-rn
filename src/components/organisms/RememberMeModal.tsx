@@ -23,11 +23,7 @@ export const RememberMeModal: React.FC<{
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Icon
-            name="lock-closed-outline"
-            size={48}
-            color={theme.colors.primary}
-          />
+          <Icon name="lock-closed-outline" size={48} tone="primary" />
 
           <Text size="xl" weight="semibold" style={styles.modalTitle}>
             Remember login info?

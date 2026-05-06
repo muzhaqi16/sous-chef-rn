@@ -17,61 +17,6 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-// Add Gesture.Pinch mock not included in global setup
-jest.mock('react-native-gesture-handler', () => {
-  const View = require('react-native').View;
-  const gestureChain = () => ({
-    onStart: jest.fn().mockReturnThis(),
-    onUpdate: jest.fn().mockReturnThis(),
-    onEnd: jest.fn().mockReturnThis(),
-    onFinalize: jest.fn().mockReturnThis(),
-    minDistance: jest.fn().mockReturnThis(),
-    enabled: jest.fn().mockReturnThis(),
-    averageTouches: jest.fn().mockReturnThis(),
-    maxPointers: jest.fn().mockReturnThis(),
-    minPointers: jest.fn().mockReturnThis(),
-  });
-  return {
-    Pressable: require('react-native').Pressable,
-    Swipeable: View,
-    DrawerLayout: View,
-    State: {},
-    ScrollView: View,
-    Slider: View,
-    Switch: View,
-    TextInput: View,
-    ToolbarAndroid: View,
-    ViewPagerAndroid: View,
-    DrawerLayoutAndroid: View,
-    WebView: View,
-    NativeViewGestureHandler: View,
-    TapGestureHandler: View,
-    FlingGestureHandler: View,
-    ForceTouchGestureHandler: View,
-    LongPressGestureHandler: View,
-    PanGestureHandler: View,
-    PinchGestureHandler: View,
-    RotationGestureHandler: View,
-    RawButton: View,
-    BaseButton: View,
-    RectButton: View,
-    BorderlessButton: View,
-    FlatList: require('react-native').FlatList,
-    gestureHandlerRootHOC: jest.fn((c: any) => c),
-    Directions: {},
-    GestureHandlerRootView: View,
-    Gesture: {
-      Pinch: jest.fn(gestureChain),
-      Pan: jest.fn(gestureChain),
-      Tap: jest.fn(gestureChain),
-      Simultaneous: jest.fn((...gestures: any[]) => gestures),
-      Exclusive: jest.fn((...gestures: any[]) => gestures),
-      Race: jest.fn((...gestures: any[]) => gestures),
-    },
-    GestureDetector: View,
-  };
-});
-
 jest.mock('#components/molecules/Header', () => ({
   Header: ({ title, onBack }: any) => {
     const { View, Text, Pressable } = require('react-native');

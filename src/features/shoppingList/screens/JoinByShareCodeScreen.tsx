@@ -18,7 +18,7 @@ import { Text } from '#components/atoms/Text';
 export const JoinByShareCodeScreen: React.FC<
   StaticScreenProps<{ shareCode?: string }>
 > = ({ route }) => {
-  const navigation = useNavigation();
+  const { goBack } = useNavigation();
   const { navigate } = useAppNavigation();
   const initialCode = route.params?.shareCode ?? '';
 
@@ -53,7 +53,7 @@ export const JoinByShareCodeScreen: React.FC<
         }
 
         useStore.getState().setSelectedShoppingListId(listId);
-        navigation.goBack();
+        goBack();
         navigate('ShoppingListMain', {});
         toastService.success(`Joined "${listName || 'Shopping List'}"`);
       },
@@ -68,11 +68,7 @@ export const JoinByShareCodeScreen: React.FC<
 
   return (
     <View style={styles.container}>
-      <Header
-        title="Join Shopping List"
-        onBack={() => navigation.goBack()}
-        centerTitle
-      />
+      <Header title="Join Shopping List" onBack={() => goBack()} centerTitle />
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>

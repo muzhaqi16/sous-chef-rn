@@ -36,7 +36,8 @@ export const ListActionButtons: React.FC<ListActionButtonsProps> = ({
           <Icon
             name={action.icon}
             size={20}
-            color={action.color || theme.colors.primary}
+            color={action.color}
+            tone="primary"
             library={action.iconLibrary}
           />
           <Text

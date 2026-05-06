@@ -105,7 +105,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   route,
 }) => {
   const { theme } = useUnistyles();
-  const navigation = useNavigation();
+  const { goBack } = useNavigation();
   const { navigate } = useAppNavigation();
   const { listId } = route.params;
 
@@ -318,7 +318,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                     );
                   },
                 });
-                navigation.goBack();
+                goBack();
               },
               setLeaving,
               () => {
@@ -340,11 +340,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 
   return (
     <View style={styles.container}>
-      <Header
-        title="Share List"
-        onBack={() => navigation.goBack()}
-        centerTitle
-      />
+      <Header title="Share List" onBack={() => goBack()} centerTitle />
 
       <OfflineGate
         message="Sharing not available offline"
@@ -403,11 +399,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                     <Icon
                       name={isPublic ? 'link-outline' : 'lock-closed-outline'}
                       size={20}
-                      color={
-                        isPublic
-                          ? theme.colors.primary
-                          : theme.colors.textSecondary
-                      }
+                      tone={isPublic ? 'primary' : 'textSecondary'}
                     />
                     <Text style={styles.shareCodeToggleText}>
                       {isPublic
@@ -452,9 +444,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                         <Icon
                           name={copied ? 'checkmark' : 'copy-outline'}
                           size={18}
-                          color={
-                            copied ? theme.colors.success : theme.colors.primary
-                          }
+                          tone={copied ? 'success' : 'primary'}
                         />
                         <Text
                           style={[
@@ -579,11 +569,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                         }}
                         style={({ pressed }) => pressed && styles.pressed}
                       >
-                        <Icon
-                          name="close"
-                          size={20}
-                          color={theme.colors.error}
-                        />
+                        <Icon name="close" size={20} tone="error" />
                       </Pressable>
                     )}
                   </Pressable>

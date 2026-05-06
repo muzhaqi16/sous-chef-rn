@@ -88,13 +88,13 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
             Browse Templates
           </Text>
           <Pressable onPress={onClose} hitSlop={8}>
-            <Icon name="close" size={24} color={theme.colors.textSecondary} />
+            <Icon name="close" size={24} tone="textSecondary" />
           </Pressable>
         </View>
 
         {/* Search bar */}
         <View style={styles.searchContainer}>
-          <Icon name="search" size={18} color={theme.colors.textTertiary} />
+          <Icon name="search" size={18} tone="textTertiary" />
           <BottomSheetTextInput
             style={styles.searchInput}
             placeholder="Search templates..."
@@ -120,11 +120,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
           </View>
         ) : templates.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Icon
-              name="document-text-outline"
-              size={48}
-              color={theme.colors.textTertiary}
-            />
+            <Icon name="document-text-outline" size={48} tone="textTertiary" />
             <Text size="base" tone="secondary">
               No templates found
             </Text>

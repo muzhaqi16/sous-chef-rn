@@ -9,6 +9,7 @@ import {
   withSequence,
   withTiming,
   cancelAnimation,
+  useReducedMotion,
   Easing,
 } from 'react-native-reanimated';
 
@@ -83,9 +84,11 @@ export const ShoppingEmptyIllustration: React.FC<
 
   // Animation shared values
   const bobY = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
 
   // Start bob animation on mount
   useLayoutEffect(() => {
+    if (reducedMotion) return;
     // Gentle continuous bob animation for empty cart
     bobY.set(
       withRepeat(
@@ -101,7 +104,7 @@ export const ShoppingEmptyIllustration: React.FC<
     return () => {
       cancelAnimation(bobY);
     };
-  }, [bobY]);
+  }, [bobY, reducedMotion]);
 
   // Derived transforms
   const bobTransform = useDerivedValue(() => [

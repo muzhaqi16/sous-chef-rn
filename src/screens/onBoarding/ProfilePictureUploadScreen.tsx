@@ -254,11 +254,7 @@ export const ProfilePictureUploadScreen = () => {
                 ]}
                 disabled={isUploading}
               >
-                <Icon
-                  color={theme.colors.error}
-                  name="close-circle"
-                  size={24}
-                />
+                <Icon tone="error" name="close-circle" size={24} />
               </Pressable>
             </>
           ) : hasExistingAvatar ? (
@@ -275,11 +271,7 @@ export const ProfilePictureUploadScreen = () => {
                   pressed && styles.pressed,
                 ]}
               >
-                <Icon
-                  color={theme.colors.error}
-                  name="close-circle"
-                  size={24}
-                />
+                <Icon tone="error" name="close-circle" size={24} />
               </Pressable>
             </>
           ) : profileLoading ? (
@@ -288,11 +280,7 @@ export const ProfilePictureUploadScreen = () => {
             </View>
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Icon
-                color={theme.colors.textSecondary}
-                name="person"
-                size={52}
-              />
+              <Icon tone="textSecondary" name="person" size={52} />
             </View>
           )}
         </View>
@@ -333,7 +321,7 @@ export const ProfilePictureUploadScreen = () => {
               disabled={isUploading}
             >
               <View style={styles.uploadOptionIcon}>
-                <Icon color={theme.colors.primary} name="images" size={24} />
+                <Icon tone="primary" name="images" size={24} />
               </View>
 
               <View style={styles.uploadOptionContent}>
@@ -356,11 +344,7 @@ export const ProfilePictureUploadScreen = () => {
                 </Text>
               </View>
 
-              <Icon
-                color={theme.colors.textSecondary}
-                name="chevron-forward"
-                size={20}
-              />
+              <Icon tone="textSecondary" name="chevron-forward" size={20} />
             </Pressable>
 
             <Pressable
@@ -372,7 +356,7 @@ export const ProfilePictureUploadScreen = () => {
               disabled={isUploading}
             >
               <View style={styles.uploadOptionIcon}>
-                <Icon color={theme.colors.primary} name="camera" size={24} />
+                <Icon tone="primary" name="camera" size={24} />
               </View>
 
               <View style={styles.uploadOptionContent}>
@@ -395,11 +379,7 @@ export const ProfilePictureUploadScreen = () => {
                 </Text>
               </View>
 
-              <Icon
-                color={theme.colors.textSecondary}
-                name="chevron-forward"
-                size={20}
-              />
+              <Icon tone="textSecondary" name="chevron-forward" size={20} />
             </Pressable>
           </View>
         )}

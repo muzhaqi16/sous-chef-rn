@@ -168,7 +168,7 @@ const renderSettings = (
   ));
 
 export const NotificationSettingsScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const { addListener } = useNavigation();
   const [updating, setUpdating] = useState<string | null>(null);
   const [frequencyPickerVisible, setFrequencyPickerVisible] = useState(false);
   const [thresholdPickerVisible, setThresholdPickerVisible] = useState(false);
@@ -187,12 +187,12 @@ export const NotificationSettingsScreen: React.FC = () => {
 
   // Check permission status when screen comes into focus
   useEffect(() => {
-    const checkPermsOnFocus = navigation.addListener('focus', () => {
+    const checkPermsOnFocus = addListener('focus', () => {
       checkPermissions();
     });
 
     return checkPermsOnFocus;
-  }, [navigation, checkPermissions]);
+  }, [addListener, checkPermissions]);
 
   // Re-check permissions when returning from device settings (background -> active)
   useEffect(() => {

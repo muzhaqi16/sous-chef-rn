@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "3.4.5",
+  "version": "3.4.6",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -133,7 +133,7 @@
     "react-native-tab-view": "^4.2.1",
     "react-native-turbo-image": "^1.24.1",
     "react-native-unistyles": "^3.2.4",
-    "react-native-vision-camera": "^5.0.8",
+    "react-native-vision-camera": "^5.0.9",
     "react-native-vision-camera-barcode-scanner": "^5.0.8",
     "react-native-worklets": "^0.8.1",
     "uuid": "^14.0.0",

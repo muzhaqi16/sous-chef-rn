@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { Header } from '#components/molecules/Header';
@@ -69,7 +69,6 @@ async function performChangePassword(
 
 export const ChangePasswordScreen: React.FC = () => {
   const { goBack } = useAppNavigation();
-  const { theme } = useUnistyles();
   const toast = useToast();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -119,11 +118,7 @@ export const ChangePasswordScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.iconContainer}>
-            <Icon
-              name="lock-closed-outline"
-              size={64}
-              color={theme.colors.primary}
-            />
+            <Icon name="lock-closed-outline" size={64} tone="primary" />
           </View>
 
           <Text style={styles.subtitle}>

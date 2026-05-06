@@ -14,6 +14,7 @@ import { Icon } from '#/utils/iconUtils';
 import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet/TextEditBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Pressable } from 'react-native-gesture-handler';
+import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
 
 export interface SettingRowProps {
@@ -123,6 +124,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         testID={item.testID || `profile-${item.key}-button`}
         onPress={item.type === 'info' ? undefined : handlePress}
         disabled={item.type === 'info'}
+        android_ripple={item.type === 'info' ? null : RIPPLE.SUBTLE}
         style={({ pressed }) => [
           styles.rowWrapper,
           isFirst && styles.rowFirst,
@@ -148,11 +150,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           {item.type === 'text' && (
             <>
               <ValueText>{item.value as string}</ValueText>
-              <Icon
-                name="pencil"
-                size={16}
-                color={theme.colors.textSecondary}
-              />
+              <Icon name="pencil" size={16} tone="textSecondary" />
             </>
           )}
 
@@ -191,28 +189,16 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                 {item.options?.find((opt: any) => opt.value === item.value)
                   ?.label || 'Select'}
               </Text>
-              <Icon
-                name="chevron-forward"
-                size={20}
-                color={theme.colors.textSecondary}
-              />
+              <Icon name="chevron-forward" size={20} tone="textSecondary" />
             </View>
           )}
 
           {item.type === 'action' && (
-            <Icon
-              name="chevron-forward"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="chevron-forward" size={20} tone="textSecondary" />
           )}
 
           {item.type === 'navigation' && (
-            <Icon
-              name="chevron-forward"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="chevron-forward" size={20} tone="textSecondary" />
           )}
         </View>
       </Pressable>
@@ -258,6 +244,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                   pressed && styles.pressed,
                 ]}
                 onPress={handleModalOptionPress(opt.value)}
+                android_ripple={RIPPLE.SUBTLE}
                 accessibilityRole="button"
                 accessibilityLabel={opt.label}
                 accessibilityHint={`Select ${opt.label}`}
@@ -267,11 +254,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                   {opt.label}
                 </Text>
                 {item.value === opt.value && (
-                  <Icon
-                    name="checkmark"
-                    size={20}
-                    color={theme.colors.primary}
-                  />
+                  <Icon name="checkmark" size={20} tone="primary" />
                 )}
               </Pressable>
             ))}

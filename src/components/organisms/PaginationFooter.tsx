@@ -51,6 +51,7 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   skeletonContainer: {
+    marginTop: theme.spacing.xs,
     gap: theme.spacing.sm,
   },
   footerLoader: {

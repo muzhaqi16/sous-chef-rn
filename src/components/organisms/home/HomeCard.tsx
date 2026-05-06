@@ -144,11 +144,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
             </View>
           )}
           {!!onPress && (
-            <Icon
-              name="chevron-forward"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="chevron-forward" size={20} tone="textSecondary" />
           )}
         </Pressable>
 

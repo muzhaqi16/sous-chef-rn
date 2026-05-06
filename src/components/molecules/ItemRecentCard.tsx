@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
@@ -36,7 +36,6 @@ export function ItemRecentCard<T extends RecentItem>({
   placeholderIcon = 'cube-outline',
 }: ItemRecentCardProps<T>) {
   useRenderTime('ItemRecentCard');
-  const { theme } = useUnistyles();
 
   // Format the time since the item was added
   const timeAgo = item.createdAt
@@ -56,11 +55,7 @@ export function ItemRecentCard<T extends RecentItem>({
           <CachedImage uri={imageUrl} style={styles.image} displaySize={48} />
         ) : (
           <View style={styles.imagePlaceholder}>
-            <Icon
-              name={placeholderIcon}
-              size={24}
-              color={theme.colors.primary}
-            />
+            <Icon name={placeholderIcon} size={24} tone="primary" />
           </View>
         )}
       </View>
@@ -90,7 +85,7 @@ export function ItemRecentCard<T extends RecentItem>({
         onPress={() => onQuickAdd(item)}
         disabled={disabled}
       >
-        <Icon name="add" size={20} color={theme.colors.primary} />
+        <Icon name="add" size={20} tone="primary" />
       </Pressable>
     </View>
   );

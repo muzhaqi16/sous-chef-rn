@@ -537,11 +537,7 @@ export const PantryItemDetail: React.FC<
         {/* Category Badge with Storage Location */}
         {!!(categoryName || storageStateDisplay) && (
           <View style={styles.categoryBadge}>
-            <Icon
-              name="restaurant-outline"
-              size={16}
-              color={theme.colors.primary}
-            />
+            <Icon name="restaurant-outline" size={16} tone="primary" />
             <Text style={styles.categoryText}>
               {categoryName || 'Item'}
               {storageStateDisplay ? ` in ${storageStateDisplay}` : ''}

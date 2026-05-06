@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 
 // Components
@@ -97,7 +97,6 @@ export const ShoppingListMainContent: React.FC<
   const { navigate, navigateTo } = useAppNavigation();
   const { setScannerProps, scrollTabBarHidden } = useTabBarSetters();
   const { addButtonRect, isOverlayOpen } = useTabBarState();
-  const { theme } = useUnistyles();
 
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
   const {
@@ -233,7 +232,7 @@ export const ShoppingListMainContent: React.FC<
       accessibilityRole="button"
       accessibilityLabel="Switch shopping list"
     >
-      <Icon name="list" size={24} color={theme.colors.textSecondary} />
+      <Icon name="list" size={24} tone="textSecondary" />
     </Pressable>
   );
 

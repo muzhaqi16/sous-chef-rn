@@ -45,6 +45,7 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
         withDelay(
           duration,
           withTiming(-100, { duration: TIMING.SLOW }, finished => {
+            'worklet';
             if (finished) {
               scheduleOnRN(handleAutoDismiss);
             }
@@ -65,6 +66,7 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
     cancelAnimation(slide);
     slide.set(
       withTiming(-100, { duration: TIMING.SLOW }, finished => {
+        'worklet';
         if (finished) {
           scheduleOnRN(handleManualDismiss);
         }

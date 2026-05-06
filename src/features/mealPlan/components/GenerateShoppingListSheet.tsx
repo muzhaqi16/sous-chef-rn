@@ -90,11 +90,7 @@ export const GenerateShoppingListSheet: React.FC<
         {/* Home sharing info */}
         {!!homeName && (
           <View style={styles.infoNote}>
-            <Icon
-              name="information-circle-outline"
-              size={18}
-              color={theme.colors.primary}
-            />
+            <Icon name="information-circle-outline" size={18} tone="primary" />
             <Text size="sm" tone="accent" style={styles.infoNoteText}>
               The shopping list will be shared with {homeName}
             </Text>
@@ -130,11 +126,7 @@ export const GenerateShoppingListSheet: React.FC<
               <Icon
                 name="add-circle-outline"
                 size={20}
-                color={
-                  mode === 'new'
-                    ? theme.colors.white
-                    : theme.colors.textSecondary
-                }
+                tone={mode === 'new' ? 'white' : 'textSecondary'}
               />
               <Text
                 size="sm"
@@ -157,11 +149,7 @@ export const GenerateShoppingListSheet: React.FC<
               <Icon
                 name="list-outline"
                 size={20}
-                color={
-                  mode === 'existing'
-                    ? theme.colors.white
-                    : theme.colors.textSecondary
-                }
+                tone={mode === 'existing' ? 'white' : 'textSecondary'}
               />
               <Text
                 size="sm"
@@ -219,10 +207,8 @@ export const GenerateShoppingListSheet: React.FC<
                         : 'radio-button-off'
                     }
                     size={20}
-                    color={
-                      selectedListId === list.id
-                        ? theme.colors.primary
-                        : theme.colors.textTertiary
+                    tone={
+                      selectedListId === list.id ? 'primary' : 'textTertiary'
                     }
                   />
                   <View style={styles.listItemContent}>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Image, ScrollView } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { getPerspectiveLabel } from '#utils/imageUtils';
 import { ImagePicker, type ImageFile } from './ImagePicker';
@@ -55,8 +55,6 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
   maxImages = 6,
   label = 'Product Images',
 }) => {
-  const { theme } = useUnistyles();
-
   const handleMultiImagesSelected = (newFiles: ImageFile[]) => {
     const remaining = maxImages - images.length;
     const filesToAdd = newFiles.slice(0, remaining);
@@ -120,11 +118,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
           isProfile={false}
         >
           <View style={styles.placeholderContainer}>
-            <Icon
-              name="camera-outline"
-              size={32}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="camera-outline" size={32} tone="textSecondary" />
             <Text size="base" tone="secondary" align="center">
               Add Photos
             </Text>
@@ -166,7 +160,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel="Remove image"
               >
-                <Icon name="close" size={14} color={theme.colors.white} />
+                <Icon name="close" size={14} tone="white" />
               </Pressable>
             </View>
             <Pressable
@@ -187,11 +181,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
               >
                 {getPerspectiveLabel(image.perspective)}
               </Text>
-              <Icon
-                name="chevron-down"
-                size={14}
-                color={theme.colors.textSecondary}
-              />
+              <Icon name="chevron-down" size={14} tone="textSecondary" />
             </Pressable>
           </View>
         ))}
@@ -206,11 +196,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
             isProfile={false}
           >
             <View style={styles.addMoreButton}>
-              <Icon
-                name="camera-outline"
-                size={24}
-                color={theme.colors.primary}
-              />
+              <Icon name="camera-outline" size={24} tone="primary" />
               <Text size="xs" weight="medium" tone="accent">
                 Add More
               </Text>

@@ -133,6 +133,7 @@ export function useSlideAnimation({
 
     translateX.set(
       withTiming(direction * slideDistance, timingConfig, finished => {
+        'worklet';
         isAnimatingShared.set(false);
         if (finished && onComplete) {
           scheduleOnRN(executeOnComplete);

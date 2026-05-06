@@ -306,7 +306,7 @@ export const InvitationAcceptanceModal: React.FC<
               <Icon
                 name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
                 size={32}
-                color={theme.colors.primary}
+                tone="primary"
               />
             </View>
             <Text size="lg" weight="semibold" style={styles.title}>
@@ -319,7 +319,7 @@ export const InvitationAcceptanceModal: React.FC<
               ]}
               onPress={onClose}
             >
-              <Icon name="close" size={24} color={theme.colors.textSecondary} />
+              <Icon name="close" size={24} tone="textSecondary" />
             </Pressable>
           </View>
 
@@ -331,11 +331,7 @@ export const InvitationAcceptanceModal: React.FC<
 
             {!!invitation.inviterName && (
               <View style={styles.inviterContainer}>
-                <Icon
-                  name="person"
-                  size={16}
-                  color={theme.colors.textSecondary}
-                />
+                <Icon name="person" size={16} tone="textSecondary" />
                 <Text size="sm" tone="secondary" style={styles.inviterText}>
                   Invited by {invitation.inviterName}
                 </Text>
@@ -346,7 +342,7 @@ export const InvitationAcceptanceModal: React.FC<
               <Icon
                 name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
                 size={16}
-                color={theme.colors.textSecondary}
+                tone="textSecondary"
               />
               <Text
                 size="sm"
@@ -373,7 +369,7 @@ export const InvitationAcceptanceModal: React.FC<
                 <ActivityIndicator color={theme.colors.error} />
               ) : (
                 <>
-                  <Icon name="close" size={20} color={theme.colors.error} />
+                  <Icon name="close" size={20} tone="error" />
                   <Text size="md" weight="semibold" tone="error">
                     Reject
                   </Text>
@@ -393,7 +389,7 @@ export const InvitationAcceptanceModal: React.FC<
                 <ActivityIndicator color={theme.colors.white} />
               ) : (
                 <>
-                  <Icon name="checkmark" size={20} color={theme.colors.white} />
+                  <Icon name="checkmark" size={20} tone="white" />
                   <Text size="md" weight="semibold" style={styles.acceptText}>
                     Accept
                   </Text>

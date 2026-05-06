@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { AnimatedChip } from '#/components/atoms/AnimatedChip';
 import { POPULAR_CUISINES, getAllCuisineOptions } from '#/constants/cuisines';
@@ -21,7 +21,6 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
   onAdd,
   onRemove,
 }) => {
-  const { theme } = useUnistyles();
   const [showAllCuisines, setShowAllCuisines] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -71,11 +70,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
             ]}
             onPress={() => setShowAllCuisines(true)}
           >
-            <Icon
-              name="add-circle-outline"
-              size={18}
-              color={theme.colors.primary}
-            />
+            <Icon name="add-circle-outline" size={18} tone="primary" />
             <Text
               size="base"
               weight="semibold"
@@ -95,11 +90,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
             ]}
             onPress={() => setShowAllCuisines(false)}
           >
-            <Icon
-              name="remove-circle-outline"
-              size={18}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="remove-circle-outline" size={18} tone="textSecondary" />
             <Text style={styles.showMoreText}>Show Less</Text>
           </Pressable>
         )}

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, TextStyle } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from './SwipeableItem/SwipeableItem';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { SLIDE_PRESETS } from '#/constants/animations';
@@ -48,7 +48,6 @@ export const ShoppingListItem = ({
   screenWidth = 375,
 }: ShoppingListItemProps) => {
   useRenderTime('ShoppingListItem');
-  const { theme } = useUnistyles();
   const [isEditingQuantity, setIsEditingQuantity] = useState(false);
   const [localQuantity, setLocalQuantity] = useState(quantity);
 
@@ -94,7 +93,7 @@ export const ShoppingListItem = ({
             accessibilityHint={`Save new quantity of ${localQuantity}`}
             style={({ pressed }) => pressed && styles.pressed}
           >
-            <Icon name="checkmark" size={20} color={theme.colors.primary} />
+            <Icon name="checkmark" size={20} tone="primary" />
           </Pressable>
         </View>
       );
@@ -134,11 +133,7 @@ export const ShoppingListItem = ({
           displayAsFraction={displayAsFraction}
           style={styles.quantityText}
         />
-        <Icon
-          name="create-outline"
-          size={14}
-          color={theme.colors.textSecondary}
-        />
+        <Icon name="create-outline" size={14} tone="textSecondary" />
       </Pressable>
     );
   };

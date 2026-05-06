@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useQuery } from '@apollo/client/react';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -27,7 +27,6 @@ export const ShoppingListItemDetail: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
   useScreenTransition('ShoppingListItemDetail');
-  const { theme } = useUnistyles();
   const { navigate, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
 
@@ -100,11 +99,7 @@ export const ShoppingListItemDetail: React.FC<
               />
             ) : (
               <View style={styles.imagePlaceholder}>
-                <Icon
-                  name="basket-outline"
-                  size={48}
-                  color={theme.colors.textSecondary}
-                />
+                <Icon name="basket-outline" size={48} tone="textSecondary" />
               </View>
             )}
           </View>
@@ -124,11 +119,7 @@ export const ShoppingListItemDetail: React.FC<
           {/* Status Badge */}
           {item.purchaseInfo?.isPurchased ? (
             <View style={styles.statusBadge}>
-              <Icon
-                name="checkmark-circle"
-                size={20}
-                color={theme.colors.success}
-              />
+              <Icon name="checkmark-circle" size={20} tone="success" />
               <Text
                 size="md"
                 weight="semibold"

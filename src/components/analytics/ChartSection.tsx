@@ -35,11 +35,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     if (error) {
       return (
         <View style={styles.stateContainer}>
-          <Icon
-            name="alert-circle-outline"
-            size={40}
-            color={theme.colors.error}
-          />
+          <Icon name="alert-circle-outline" size={40} tone="error" />
           <Text size="sm" align="center" tone="error">
             {error}
           </Text>
@@ -50,11 +46,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     if (isEmpty) {
       return (
         <View style={styles.stateContainer}>
-          <Icon
-            name="bar-chart-outline"
-            size={40}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="bar-chart-outline" size={40} tone="textSecondary" />
           <Text size="sm" align="center" tone="secondary">
             {emptyMessage}
           </Text>

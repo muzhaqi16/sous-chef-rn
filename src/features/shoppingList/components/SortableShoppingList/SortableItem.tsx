@@ -21,7 +21,8 @@ import {
 } from '#constants/animations';
 import { useStaggeredEntry } from '#context/StaggeredEntryContext';
 import {
-  useShoppingListTutorial,
+  useShoppingListTutorialState,
+  useShoppingListTutorialActions,
   ShoppingListTutorialStep,
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
@@ -96,7 +97,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   } = permissions;
 
   // ── Interactive tutorial (only active for first item during relevant steps) ──
-  const tutorial = useShoppingListTutorial();
+  const tutorial = useShoppingListTutorialState();
+  const tutorialActions = useShoppingListTutorialActions();
   const itemCardRef = useRef<View>(null);
   const checkboxRef = useRef<View>(null);
   const archiveIconRef = useRef<View>(null);
@@ -137,7 +139,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     requestAnimationFrame(() => {
       checkboxRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
         if (w > 0 && h > 0) {
-          tutorial?.registerRect('checkbox', {
+          tutorialActions?.registerRect('checkbox', {
             x: pageX,
             y: pageY,
             width: w,
@@ -154,7 +156,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     requestAnimationFrame(() => {
       archiveIconRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
         if (w > 0 && h > 0) {
-          tutorial?.registerRect('archiveIcon', {
+          tutorialActions?.registerRect('archiveIcon', {
             x: pageX,
             y: pageY,
             width: w,
@@ -171,7 +173,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     requestAnimationFrame(() => {
       itemCardRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
         if (w > 0 && h > 0) {
-          tutorial?.registerRect('itemCard', {
+          tutorialActions?.registerRect('itemCard', {
             x: pageX,
             y: pageY,
             width: w,
@@ -200,7 +202,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           <Pressable
             onPress={() => {
               onMoveToPantry(item.id);
-              tutorial?.notifyMoveToPantryTapped();
+              tutorialActions?.notifyMoveToPantryTapped();
             }}
             style={({ pressed }) => [
               styles.moveToPantryButton,
@@ -273,7 +275,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           // Trigger slide animation with callback for state change AFTER animation
           triggerSlide(direction, () => {
             onTogglePurchase(item.id);
-            tutorial?.notifyCheckboxTapped();
+            tutorialActions?.notifyCheckboxTapped();
           });
         }}
         size={28}
@@ -331,7 +333,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           onSwipeableWillOpen?.(ref);
           // Detect swipe during tutorial swipe step → advance tutorial
           if (isTutorialSwipeTarget) {
-            tutorial?.notifySwipeActionsSeen();
+            tutorialActions?.notifySwipeActionsSeen();
           }
         }}
         onSwipeableClose={onSwipeableClose}

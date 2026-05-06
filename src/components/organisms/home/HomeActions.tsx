@@ -39,11 +39,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
           ]}
           onPress={() => onSetDefault(homeId)}
         >
-          <Icon
-            name="star-outline"
-            size={20}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="star-outline" size={20} tone="textSecondary" />
           <Text size="sm" tone="secondary" style={styles.actionText}>
             Set Default
           </Text>
@@ -58,11 +54,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
           ]}
           onPress={() => onInvite(homeId)}
         >
-          <Icon
-            name="person-add"
-            size={20}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="person-add" size={20} tone="textSecondary" />
           <Text size="sm" tone="secondary" style={styles.actionText}>
             Invite
           </Text>
@@ -77,7 +69,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
           ]}
           onPress={() => onDelete(homeId)}
         >
-          <Icon name="trash-outline" size={20} color={theme.colors.error} />
+          <Icon name="trash-outline" size={20} tone="error" />
           <Text
             size="sm"
             style={[styles.actionText, { color: theme.colors.error }]}

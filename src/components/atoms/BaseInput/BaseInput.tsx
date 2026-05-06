@@ -97,7 +97,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Clear input"
           >
-            <Icon name="close" size={18} color={theme.colors.textSecondary} />
+            <Icon name="close" size={18} tone="textSecondary" />
           </Pressable>
         )}
         {rightIcon != null && (

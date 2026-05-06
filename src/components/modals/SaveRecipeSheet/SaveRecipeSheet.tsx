@@ -138,7 +138,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               {saving ? (
                 <ActivityIndicator size="small" color={theme.colors.primary} />
               ) : (
-                <Icon name="checkmark" size={24} color={theme.colors.primary} />
+                <Icon name="checkmark" size={24} tone="primary" />
               )}
             </Pressable>
             <Pressable
@@ -146,7 +146,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={({ pressed }) => pressed && styles.pressed}
             >
-              <Icon name="close" size={24} color={theme.colors.textPrimary} />
+              <Icon name="close" size={24} tone="textPrimary" />
             </Pressable>
           </View>
         </View>
@@ -178,11 +178,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                 <Icon
                   name={isNoFolder ? 'folder-outline' : 'folder'}
                   size={18}
-                  color={
-                    isSelected
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary
-                  }
+                  tone={isSelected ? 'primary' : 'textSecondary'}
                 />
                 <Text
                   style={[
@@ -193,11 +189,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                   {isNoFolder ? 'No Folder' : folder}
                 </Text>
                 {!!isSelected && (
-                  <Icon
-                    name="checkmark"
-                    size={18}
-                    color={theme.colors.primary}
-                  />
+                  <Icon name="checkmark" size={18} tone="primary" />
                 )}
               </Pressable>
             );
@@ -244,7 +236,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
             ]}
             onPress={() => setShowNewFolder(true)}
           >
-            <Icon name="add" size={18} color={theme.colors.primary} />
+            <Icon name="add" size={18} tone="primary" />
             <Text size="base" weight="medium" tone="accent">
               Create New Folder
             </Text>

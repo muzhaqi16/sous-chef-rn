@@ -145,7 +145,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               ]}
               onPress={onDelete}
             >
-              <Icon name="trash-outline" size={18} color={theme.colors.error} />
+              <Icon name="trash-outline" size={18} tone="error" />
               <Text size="sm" weight="medium" tone="error">
                 Delete
               </Text>

@@ -87,7 +87,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
             <Icon
               size={theme.typography.fontSize.lg}
               name="swap-horizontal-outline"
-              color={theme.colors.primary}
+              tone="primary"
             />
             <Text size="sm" tone="secondary">
               {householdName}
@@ -95,7 +95,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
             <Icon
               name="chevron-forward"
               size={theme.typography.fontSize.lg}
-              color={theme.colors.textTertiary}
+              tone="textTertiary"
             />
           </View>
         </Pressable>
@@ -110,11 +110,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Notifications"
         >
-          <Icon
-            name="notifications-outline"
-            size={24}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="notifications-outline" size={24} tone="textSecondary" />
           {notificationCount > 0 && <View style={styles.notificationDot} />}
         </Pressable>
       )}
@@ -129,7 +125,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
           />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Icon name="person" size={24} color={theme.colors.textSecondary} />
+            <Icon name="person" size={24} tone="textSecondary" />
           </View>
         )}
       </Pressable>

@@ -167,7 +167,8 @@ export const Header: React.FC<HeaderProps> = ({
           <Icon
             name={action.icon}
             size={action.size || 24}
-            color={action.disabled ? theme.colors.textTertiary : iconColor}
+            color={action.disabled ? undefined : iconColor}
+            tone={action.disabled ? 'textTertiary' : undefined}
             library={action.library}
           />
         )}
@@ -207,7 +208,7 @@ export const Header: React.FC<HeaderProps> = ({
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="header-close-button"
           >
-            <Icon name="close" size={24} color={theme.colors.textPrimary} />
+            <Icon name="close" size={24} tone="textPrimary" />
           </Pressable>
         )}
         {!!showBackButton && (
@@ -217,11 +218,7 @@ export const Header: React.FC<HeaderProps> = ({
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="header-back-button"
           >
-            <Icon
-              name="arrow-back"
-              size={24}
-              color={theme.colors.textPrimary}
-            />
+            <Icon name="arrow-back" size={24} tone="textPrimary" />
           </Pressable>
         )}
         {leftActions.map(renderAction)}

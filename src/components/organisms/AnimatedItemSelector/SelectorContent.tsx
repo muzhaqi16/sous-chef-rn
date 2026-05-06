@@ -39,7 +39,6 @@ const EmptyState: React.FC<{ message: string }> = ({ message }) => (
 export const SelectorContent = <T extends SelectableItem>({
   config,
 }: SelectorContentProps<T>) => {
-  const { theme } = useUnistyles();
   const {
     data,
     selectedId,
@@ -75,7 +74,7 @@ export const SelectorContent = <T extends SelectableItem>({
         </Text>
         {!!isSelected && (
           <Animated.View entering={FadeInUp.duration(200).springify()}>
-            <Icon name="checkmark" size={18} color={theme.colors.primary} />
+            <Icon name="checkmark" size={18} tone="primary" />
           </Animated.View>
         )}
       </SelectorItemContainer>

@@ -179,7 +179,7 @@ export const BottomSheetSearchBar = forwardRef<
 
     return (
       <View style={styles.container}>
-        <Icon name="search" size={20} color={theme.colors.textSecondary} />
+        <Icon name="search" size={20} tone="textSecondary" />
         <BottomSheetTextInput
           ref={inputRef}
           style={styles.input}
@@ -207,7 +207,7 @@ export const BottomSheetSearchBar = forwardRef<
             onPress={handleClear}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Icon name="close" size={20} color={theme.colors.textSecondary} />
+            <Icon name="close" size={20} tone="textSecondary" />
           </Pressable>
         )}
         {rightActions?.map((action, index) => (
@@ -223,7 +223,8 @@ export const BottomSheetSearchBar = forwardRef<
             <Icon
               name={action.icon}
               size={24}
-              color={action.color || theme.colors.primary}
+              color={action.color}
+              tone="primary"
               library={action.library || 'Ionicons'}
             />
           </Pressable>

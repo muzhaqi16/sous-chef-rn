@@ -141,11 +141,7 @@ export const CollapsiblePurchasedSection: React.FC<
         }}
       >
         <View style={styles.headerLeft}>
-          <Icon
-            name="checkmark-circle"
-            size={20}
-            color={theme.colors.success}
-          />
+          <Icon name="checkmark-circle" size={20} tone="success" />
           <Text
             size="md"
             weight="semibold"
@@ -177,11 +173,7 @@ export const CollapsiblePurchasedSection: React.FC<
             </Pressable>
           )}
           <Animated.View style={animatedChevronStyle}>
-            <Icon
-              name="chevron-down"
-              size={24}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="chevron-down" size={24} tone="textSecondary" />
           </Animated.View>
         </View>
       </Pressable>

@@ -23,6 +23,20 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const CHECKMARK_PATH = 'M3 7.5 L6 10.5 L11 4.5';
 const CHECKMARK_LENGTH = 12;
 
+// Layout animation builders defined at module scope to avoid per-render
+// allocation in list contexts. Reanimated docs explicitly recommend this.
+const CHIP_LAYOUT_TRANSITION = LinearTransition.springify()
+  .mass(0.8)
+  .damping(30)
+  .stiffness(250);
+const CHECK_LAYOUT_TRANSITION = LinearTransition;
+const CHECK_ENTERING = FadeIn.duration(TIMING.STANDARD).easing(
+  standardEasing.factory(),
+);
+const CHECK_EXITING = FadeOut.duration(TIMING.FAST).easing(
+  standardEasing.factory(),
+);
+
 type AnimatedChipProps = {
   label: string;
   selected: boolean;
@@ -110,10 +124,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer Animated.View
   // Layout animation on outer container so Pressable doesn't conflict with it
   return (
-    <Animated.View
-      style={styles.container}
-      layout={LinearTransition.springify().mass(0.8).damping(30).stiffness(250)}
-    >
+    <Animated.View style={styles.container} layout={CHIP_LAYOUT_TRANSITION}>
       <Pressable
         onPress={handlePress}
         disabled={disabled}
@@ -132,13 +143,9 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
           {!!selected && (
             <Animated.View
               style={styles.iconContainer}
-              layout={LinearTransition}
-              entering={FadeIn.duration(TIMING.STANDARD).easing(
-                standardEasing.factory(),
-              )}
-              exiting={FadeOut.duration(TIMING.FAST).easing(
-                standardEasing.factory(),
-              )}
+              layout={CHECK_LAYOUT_TRANSITION}
+              entering={CHECK_ENTERING}
+              exiting={CHECK_EXITING}
             >
               <Svg width={14} height={14} viewBox="0 0 14 14">
                 <AnimatedPath

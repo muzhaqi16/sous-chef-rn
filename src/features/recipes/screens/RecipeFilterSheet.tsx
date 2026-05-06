@@ -138,7 +138,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                   : 'checkmark-circle-outline'
               }
               size={24}
-              color={theme.colors.primary}
+              tone="primary"
             />
           </Pressable>
         </View>

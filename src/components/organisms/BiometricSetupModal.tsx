@@ -239,11 +239,7 @@ export const BiometricSetupModal = ({
             <View style={styles.container}>
               <View style={styles.iconContainer}>
                 <View style={styles.iconBackground}>
-                  <Icon
-                    name={getBiometricIcon()}
-                    size={48}
-                    color={theme.colors.primary}
-                  />
+                  <Icon name={getBiometricIcon()} size={48} tone="primary" />
                 </View>
               </View>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Pressable } from 'react-native';
+import { View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -197,9 +198,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                 <Icon
                   name={copied ? 'checkmark-circle' : 'copy-outline'}
                   size={20}
-                  color={
-                    copied ? theme.colors.success : theme.colors.textPrimary
-                  }
+                  tone={copied ? 'success' : 'textPrimary'}
                 />
               </Pressable>
             </View>

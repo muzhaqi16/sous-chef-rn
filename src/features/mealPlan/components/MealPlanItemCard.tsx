@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
 import {
   MealPlanItemCard_ItemFragmentDoc,
@@ -51,6 +52,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       onPress={() => onPress?.(item.id)}
+      android_ripple={RIPPLE.SUBTLE}
     >
       {/* Checkbox */}
       {onToggleCompleted ? (

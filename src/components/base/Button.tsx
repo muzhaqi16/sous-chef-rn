@@ -8,6 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { SPRING } from '#constants/animations';
+import { RIPPLE } from '#constants/ripple';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import { Text } from '#components/atoms/Text';
@@ -29,9 +30,6 @@ interface ButtonProps {
   accessibilityLabel?: string;
   accessibilityHint?: string;
 }
-
-const RIPPLE_PRIMARY = { color: 'rgba(255,255,255,0.2)', borderless: false };
-const RIPPLE_DEFAULT = { color: 'rgba(0,0,0,0.1)', borderless: false };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -94,7 +92,7 @@ export const Button: React.FC<ButtonProps> = ({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled || loading}
-      android_ripple={useWhiteRipple ? RIPPLE_PRIMARY : RIPPLE_DEFAULT}
+      android_ripple={useWhiteRipple ? RIPPLE.PRIMARY : RIPPLE.DEFAULT}
       accessibilityRole="button"
       accessibilityLabel={buttonLabel}
       accessibilityHint={accessibilityHint}

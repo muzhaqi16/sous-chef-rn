@@ -9,7 +9,7 @@ import {
 import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
@@ -48,7 +48,6 @@ async function performDeleteAccount(
 
 export const DeleteAccountScreen: React.FC = () => {
   const { goBack } = useAppNavigation();
-  const { theme } = useUnistyles();
 
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -104,7 +103,7 @@ export const DeleteAccountScreen: React.FC = () => {
 
   const renderErrorState = () => (
     <View style={styles.centerContainer}>
-      <Icon name="alert-circle-outline" size={48} color={theme.colors.error} />
+      <Icon name="alert-circle-outline" size={48} tone="error" />
       <Text style={styles.errorTitle}>Unable to check account status</Text>
       <Text style={styles.errorText}>
         {eligibilityError?.message || 'An error occurred. Please try again.'}
@@ -124,11 +123,7 @@ export const DeleteAccountScreen: React.FC = () => {
       contentContainerStyle={styles.contentContainer}
     >
       <View style={styles.blockedWarningContainer}>
-        <Icon
-          name="alert-circle-outline"
-          size={48}
-          color={theme.colors.warning}
-        />
+        <Icon name="alert-circle-outline" size={48} tone="warning" />
         <Text style={styles.blockedWarningTitle}>Cannot Delete Account</Text>
       </View>
 
@@ -139,7 +134,7 @@ export const DeleteAccountScreen: React.FC = () => {
       {blockers.map((blocker, index) => (
         <View key={blocker.resourceId || index} style={styles.blockerCard}>
           <View style={styles.blockerHeader}>
-            <Icon name="home-outline" size={20} color={theme.colors.primary} />
+            <Icon name="home-outline" size={20} tone="primary" />
             <Text style={styles.blockerResourceName}>
               {blocker.resourceName}
             </Text>
@@ -180,46 +175,30 @@ export const DeleteAccountScreen: React.FC = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.warningContainer}>
-          <Icon name="warning-outline" size={48} color={theme.colors.error} />
+          <Icon name="warning-outline" size={48} tone="error" />
           <Text style={styles.warningTitle}>Warning: This is permanent!</Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>What will be deleted:</Text>
           <View style={styles.bulletPoint}>
-            <Icon
-              name="close-circle-outline"
-              size={20}
-              color={theme.colors.error}
-            />
+            <Icon name="close-circle-outline" size={20} tone="error" />
             <Text style={styles.bulletText}>
               Your profile and account information
             </Text>
           </View>
           <View style={styles.bulletPoint}>
-            <Icon
-              name="close-circle-outline"
-              size={20}
-              color={theme.colors.error}
-            />
+            <Icon name="close-circle-outline" size={20} tone="error" />
             <Text style={styles.bulletText}>
               All your pantry items and inventory
             </Text>
           </View>
           <View style={styles.bulletPoint}>
-            <Icon
-              name="close-circle-outline"
-              size={20}
-              color={theme.colors.error}
-            />
+            <Icon name="close-circle-outline" size={20} tone="error" />
             <Text style={styles.bulletText}>Your shopping lists</Text>
           </View>
           <View style={styles.bulletPoint}>
-            <Icon
-              name="close-circle-outline"
-              size={20}
-              color={theme.colors.error}
-            />
+            <Icon name="close-circle-outline" size={20} tone="error" />
             <Text style={styles.bulletText}>
               All associated data and preferences
             </Text>

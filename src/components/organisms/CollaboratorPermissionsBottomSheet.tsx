@@ -210,10 +210,8 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                           <Icon
                             name={permission.granted ? 'checkmark' : 'close'}
                             size={14}
-                            color={
-                              permission.granted
-                                ? theme.colors.success
-                                : theme.colors.textSecondary
+                            tone={
+                              permission.granted ? 'success' : 'textSecondary'
                             }
                           />
                           <Text

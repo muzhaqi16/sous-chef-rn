@@ -100,7 +100,7 @@ async function performVerificationImpl(
 
 export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const route = useRoute();
-  const navigation = useNavigation();
+  const { goBack } = useNavigation();
   const { theme } = useUnistyles();
   const user = useUser();
   const updateUser = useAppStore(state => state.updateUser);
@@ -143,7 +143,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   }, [token, verifyEmail, user, updateUser, toast]);
 
   const handleGoBack = () => {
-    navigation.goBack();
+    goBack();
   };
 
   return (
@@ -173,11 +173,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
         {verificationResult === 'success' && (
           <>
             <View style={styles.iconContainer}>
-              <Icon
-                name="checkmark-circle"
-                size={64}
-                color={theme.colors.success}
-              />
+              <Icon name="checkmark-circle" size={64} tone="success" />
             </View>
             <Text
               size="xl"
@@ -205,11 +201,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
         {verificationResult === 'error' && (
           <>
             <View style={styles.iconContainer}>
-              <Icon
-                name="close-circle-outline"
-                size={64}
-                color={theme.colors.error}
-              />
+              <Icon name="close-circle-outline" size={64} tone="error" />
             </View>
             <Text
               size="xl"

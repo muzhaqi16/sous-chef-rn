@@ -395,11 +395,7 @@ export const ImageCropScreen: React.FC<
                   resizeMode="cover"
                 />
                 <View style={styles.loadingIconContainer}>
-                  <Icon
-                    color={theme.colors.textSecondary}
-                    name="image-outline"
-                    size={40}
-                  />
+                  <Icon tone="textSecondary" name="image-outline" size={40} />
                 </View>
               </View>
             )}

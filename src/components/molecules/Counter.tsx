@@ -1,5 +1,5 @@
 import React, { useLayoutEffect } from 'react';
-import Icon from '@react-native-vector-icons/ionicons';
+import { Icon } from '#utils/iconUtils';
 import { View } from 'react-native';
 import Animated, {
   useSharedValue,

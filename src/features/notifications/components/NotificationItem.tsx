@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Icon } from '#utils/iconUtils';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { NotificationItem as NotificationType } from '#store/slices/notificationSlice';
 import { getNotificationIcon } from '#utils/notifications/notificationHelpers';
@@ -21,8 +21,6 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
   onPress,
   onDismiss,
 }) => {
-  const { theme } = useUnistyles();
-
   const handlePress = () => {
     onPress(notification);
   };
@@ -54,11 +52,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
         <Icon
           name={getNotificationIcon(notification.type)}
           size={24}
-          color={
-            !notification.isRead
-              ? theme.colors.primary
-              : theme.colors.textSecondary
-          }
+          tone={!notification.isRead ? 'primary' : 'textSecondary'}
         />
       </View>
 
@@ -95,7 +89,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
           onPress={handleDismiss}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Icon name="close" size={20} color={theme.colors.textTertiary} />
+          <Icon name="close" size={20} tone="textTertiary" />
         </Pressable>
       )}
     </Pressable>

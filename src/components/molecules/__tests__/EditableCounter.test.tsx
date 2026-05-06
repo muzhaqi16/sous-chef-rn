@@ -3,7 +3,11 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { EditableCounter } from '../EditableCounter';
 
-jest.mock('@react-native-vector-icons/ionicons', () => 'Icon');
+jest.mock('@react-native-vector-icons/ionicons', () => ({
+  __esModule: true,
+  default: 'Icon',
+  Ionicons: 'Icon',
+}));
 
 jest.mock('#/utils/fractionUtils', () => ({
   parseFractionalInput: (input: string) => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { NotificationItem } from '#store/slices/notificationSlice';
 import { Text } from '#components/atoms/Text';
@@ -12,7 +12,6 @@ interface UrgentNotificationsBannerProps {
 export const UrgentNotificationsBanner: React.FC<
   UrgentNotificationsBannerProps
 > = ({ urgentNotifications }) => {
-  const { theme } = useUnistyles();
   const unreadUrgentCount = urgentNotifications.filter(n => !n.isRead).length;
 
   if (unreadUrgentCount === 0) {
@@ -21,7 +20,7 @@ export const UrgentNotificationsBanner: React.FC<
 
   return (
     <View style={styles.urgentBanner}>
-      <Icon name="warning-outline" size={20} color={theme.colors.white} />
+      <Icon name="warning-outline" size={20} tone="white" />
       <Text size="sm" weight="bold" style={styles.urgentText}>
         {unreadUrgentCount} urgent notification
         {unreadUrgentCount !== 1 ? 's' : ''}

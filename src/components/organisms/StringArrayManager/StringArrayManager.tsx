@@ -236,7 +236,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               pressed && styles.pressed,
             ]}
           >
-            <Icon name="add" size={20} color={theme.colors.primary} />
+            <Icon name="add" size={20} tone="primary" />
           </Pressable>
         )}
       </View>
@@ -255,11 +255,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               ]}
               onPress={() => handleRemove(item)}
             >
-              <Icon
-                name="close-circle-outline"
-                size={18}
-                color={theme.colors.error}
-              />
+              <Icon name="close-circle-outline" size={18} tone="error" />
             </Pressable>
           </View>
         ))}

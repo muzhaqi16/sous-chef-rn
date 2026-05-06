@@ -1,7 +1,7 @@
 import { Icon } from '#/utils/iconUtils';
 import React, { useState } from 'react';
 import { View, TextInput } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from 'react-native-gesture-handler';
 import { Text } from '#components/atoms/Text';
 
@@ -26,7 +26,6 @@ export const Row: React.FC<RowProps> = ({
   isFirst = false,
   isLast = false,
 }) => {
-  const { theme } = useUnistyles();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value ?? '');
 
@@ -61,13 +60,13 @@ export const Row: React.FC<RowProps> = ({
           onPress={handleSave}
           style={({ pressed }) => [styles.editIcon, pressed && styles.pressed]}
         >
-          <Icon name="checkmark" size={20} color={theme.colors.primary} />
+          <Icon name="checkmark" size={20} tone="primary" />
         </Pressable>
         <Pressable
           onPress={handleCancel}
           style={({ pressed }) => [styles.editIcon, pressed && styles.pressed]}
         >
-          <Icon name="close" size={20} color={theme.colors.error} />
+          <Icon name="close" size={20} tone="error" />
         </Pressable>
       </View>
     );
@@ -115,7 +114,7 @@ export const Row: React.FC<RowProps> = ({
           <Icon
             name={onSave ? 'pencil' : 'chevron-forward'}
             size={20}
-            color={theme.colors.textSecondary}
+            tone="textSecondary"
           />
         )}
       </View>

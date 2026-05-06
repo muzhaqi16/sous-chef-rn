@@ -126,11 +126,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </View>
             ) : (
               <View style={styles.avatarPlaceholder}>
-                <Icon
-                  name="person"
-                  size={32}
-                  color={theme.colors.textSecondary}
-                />
+                <Icon name="person" size={32} tone="textSecondary" />
               </View>
             )}
           </Animated.View>
@@ -138,7 +134,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             collapsable={false}
             style={[styles.profileAction, badgeStyle]}
           >
-            <Icon color={theme.colors.iconOnPrimary} name="create" size={15} />
+            <Icon tone="iconOnPrimary" name="create" size={15} />
           </Animated.View>
         </Pressable>
         <IconButton

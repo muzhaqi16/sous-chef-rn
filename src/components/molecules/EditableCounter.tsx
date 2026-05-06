@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextInput } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
-import Icon from '@react-native-vector-icons/ionicons';
+import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Label } from '#components/atoms/Label';
@@ -111,7 +111,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           <Icon
             name="remove-outline"
             size={theme.fonts.size.md}
-            color={disabled ? theme.colors.iconDisabled : theme.colors.white}
+            tone={disabled ? 'iconDisabled' : 'white'}
           />
         </Pressable>
 
@@ -151,7 +151,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           <Icon
             name="add"
             size={theme.fonts.size.md}
-            color={disabled ? theme.colors.iconDisabled : theme.colors.white}
+            tone={disabled ? 'iconDisabled' : 'white'}
           />
         </Pressable>
       </View>

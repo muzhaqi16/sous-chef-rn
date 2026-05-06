@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { object, string, ref } from 'yup';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
@@ -81,8 +81,7 @@ const resetPasswordSchema = object().shape({
 
 export const ResetPasswordScreen: React.FC = () => {
   const route = useRoute();
-  const navigation = useNavigation();
-  const { theme } = useUnistyles();
+  const { goBack } = useNavigation();
   const clearAuth = useAppStore(state => state.clearAuth);
   const { navigateToLogin } = useAuthNavigation();
   const toast = useToast();
@@ -151,7 +150,7 @@ export const ResetPasswordScreen: React.FC = () => {
   };
 
   const handleGoBack = () => {
-    navigation.goBack();
+    goBack();
   };
 
   const handleReturnToLogin = () => {
@@ -165,11 +164,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Icon
-              name="close-circle-outline"
-              size={64}
-              color={theme.colors.error}
-            />
+            <Icon name="close-circle-outline" size={64} tone="error" />
           </View>
           <Text size="xl" weight="semibold" align="center" style={styles.title}>
             Invalid Reset Link
@@ -203,11 +198,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Icon
-            name="lock-closed-outline"
-            size={64}
-            color={theme.colors.primary}
-          />
+          <Icon name="lock-closed-outline" size={64} tone="primary" />
         </View>
 
         <Text size="xl" weight="semibold" align="center" style={styles.title}>

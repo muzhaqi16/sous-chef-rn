@@ -204,11 +204,7 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
         <GestureHandlerRootView style={styles.gestureRoot}>
           <View style={styles.overlay}>
             <Animated.View style={[styles.checkContainer, checkAnimatedStyle]}>
-              <Icon
-                name="checkmark-circle"
-                size={64}
-                color={theme.colors.success}
-              />
+              <Icon name="checkmark-circle" size={64} tone="success" />
               <Text size="lg" weight="semibold" style={styles.completedText}>
                 You got it!
               </Text>

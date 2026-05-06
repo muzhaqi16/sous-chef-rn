@@ -197,11 +197,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
             <ActivityIndicator size="small" color={theme.colors.white} />
           ) : (
             <>
-              <Icon
-                name="calendar-outline"
-                size={20}
-                color={theme.colors.white}
-              />
+              <Icon name="calendar-outline" size={20} tone="white" />
               <Text size="base" weight="semibold" style={styles.confirmText}>
                 Create Meal Plan
               </Text>

@@ -317,11 +317,7 @@ export const DietaryProfileScreen: React.FC = () => {
                 pressed && styles.pressed,
               ]}
             >
-              <Icon
-                name="create-outline"
-                size={20}
-                color={theme.colors.primary}
-              />
+              <Icon name="create-outline" size={20} tone="primary" />
             </Pressable>
           </View>
           {!!profile.cookingSkillLevel && (
@@ -376,11 +372,7 @@ export const DietaryProfileScreen: React.FC = () => {
                   pressed && styles.pressed,
                 ]}
               >
-                <Icon
-                  name="create-outline"
-                  size={20}
-                  color={theme.colors.primary}
-                />
+                <Icon name="create-outline" size={20} tone="primary" />
               </Pressable>
             </View>
             {!!profile.calorieTarget && (

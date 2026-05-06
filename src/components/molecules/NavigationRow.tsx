@@ -4,6 +4,7 @@ import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { Icon as IconType } from '#utils/iconUtils';
+import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
 
 interface NavigationRowProps {
@@ -31,6 +32,7 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
     <Pressable
       style={({ pressed }) => [styles.navigationRow, pressed && styles.pressed]}
       onPress={onPress}
+      android_ripple={RIPPLE.SUBTLE}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={`Navigate to ${title}`}

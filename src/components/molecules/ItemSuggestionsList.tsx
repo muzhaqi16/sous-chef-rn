@@ -123,7 +123,7 @@ export const ItemSuggestionsList = ({
       ]}
       onPress={onAddManually}
     >
-      <Icon name="add-circle-outline" size={20} color={theme.colors.primary} />
+      <Icon name="add-circle-outline" size={20} tone="primary" />
       <Text size="base" tone="accent" weight="medium">
         {hasResults
           ? `Add "${searchQuery}" manually`

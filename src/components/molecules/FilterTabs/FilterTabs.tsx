@@ -149,7 +149,7 @@ function FilterTabsComponent<T extends string = string>({
               <Icon
                 name={actionButton.icon}
                 size={isCompact ? 14 : 16}
-                color={theme.colors.primary}
+                tone="primary"
                 library={actionButton.iconLibrary}
               />
             )}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Icon } from '#utils/iconUtils';
 import { authService } from '#/services/authService';
@@ -51,7 +51,6 @@ async function tryLoadTempPassword(email: string): Promise<string | null> {
 
 export const BiometricSetupScreen = () => {
   useScreenTransition('BiometricSetupScreen');
-  const { theme } = useUnistyles();
   const { navigateToNextStep } = useOnboardingNavigation();
   const user = useUser();
   const setUserNavigationState = useAppStore(
@@ -247,11 +246,7 @@ export const BiometricSetupScreen = () => {
         <View style={styles.container} testID="biometric-setup-container">
           <View style={styles.iconContainer}>
             <View style={styles.iconBackground}>
-              <Icon
-                name={getBiometricIcon()}
-                size={48}
-                color={theme.colors.primary}
-              />
+              <Icon name={getBiometricIcon()} size={48} tone="primary" />
             </View>
           </View>
 
@@ -266,31 +261,19 @@ export const BiometricSetupScreen = () => {
 
           <View style={styles.benefits}>
             <View style={styles.benefitItem}>
-              <Icon
-                name="checkmark-circle"
-                size={20}
-                color={theme.colors.success}
-              />
+              <Icon name="checkmark-circle" size={20} tone="success" />
               <Text size="md" style={styles.benefitText}>
                 Quick and secure access
               </Text>
             </View>
             <View style={styles.benefitItem}>
-              <Icon
-                name="checkmark-circle"
-                size={20}
-                color={theme.colors.success}
-              />
+              <Icon name="checkmark-circle" size={20} tone="success" />
               <Text size="md" style={styles.benefitText}>
                 No password required
               </Text>
             </View>
             <View style={styles.benefitItem}>
-              <Icon
-                name="checkmark-circle"
-                size={20}
-                color={theme.colors.success}
-              />
+              <Icon name="checkmark-circle" size={20} tone="success" />
               <Text size="md" style={styles.benefitText}>
                 Enhanced security
               </Text>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import { type PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
@@ -43,7 +43,6 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   onOpen,
   onWaste,
 }) => {
-  const { theme } = useUnistyles();
   const expiryInfo = getExpiryText(batch.expiresAt);
   const isActive = batch.status === BatchStatus.Active;
 
@@ -87,11 +86,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               {expiryInfo.text}
             </Text>
             {!!batch.expiresAtIsManual && (
-              <Icon
-                name="lock-closed-outline"
-                size={12}
-                color={theme.colors.textTertiary}
-              />
+              <Icon name="lock-closed-outline" size={12} tone="textTertiary" />
             )}
           </View>
         ) : null}
@@ -137,11 +132,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               ]}
               hitSlop={8}
             >
-              <Icon
-                name="open-outline"
-                size={18}
-                color={theme.colors.primary}
-              />
+              <Icon name="open-outline" size={18} tone="primary" />
             </Pressable>
           )}
           {!!onWaste && (
@@ -153,7 +144,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               ]}
               hitSlop={8}
             >
-              <Icon name="trash-outline" size={18} color={theme.colors.error} />
+              <Icon name="trash-outline" size={18} tone="error" />
             </Pressable>
           )}
         </View>

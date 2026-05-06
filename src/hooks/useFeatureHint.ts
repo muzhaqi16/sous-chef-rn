@@ -7,6 +7,13 @@ import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 
 const FEATURE_HINT_PREFIX = 'feature_hint_shown_';
 
+// Per-account: tutorials show once for each logged-in user. Switching to a
+// different account resets the tutorial state for that account.
+const buildStorageKey = (userId: string | undefined, featureId: string) =>
+  userId
+    ? `${FEATURE_HINT_PREFIX}${userId}_${featureId}`
+    : `${FEATURE_HINT_PREFIX}${featureId}`;
+
 export interface UseFeatureHintOptions {
   /** Unique identifier for this feature hint */
   featureId: string;
@@ -44,8 +51,9 @@ export interface UseFeatureHintReturn {
  * Consumers should use `hint.actions` in effect deps instead of individual
  * callbacks to avoid re-triggers when visibility state changes.
  *
- * Storage keys are scoped per-user when a user is logged in, so different users
- * on the same device get independent hint state.
+ * Storage keys are scoped per-account, so each user gets independent hint
+ * state — logging in with a different account resets the tutorials for that
+ * account.
  *
  * @example
  * const swipeHint = useFeatureHint({
@@ -73,11 +81,8 @@ export const useFeatureHint = ({
   showOnMount = false,
   delay = 0,
 }: UseFeatureHintOptions): UseFeatureHintReturn => {
-  // Per-user storage key scoping
   const userId = useAppStore(state => state.user?.id);
-  const storageKey = userId
-    ? `${FEATURE_HINT_PREFIX}${userId}_${featureId}`
-    : `${FEATURE_HINT_PREFIX}${featureId}`;
+  const storageKey = buildStorageKey(userId, featureId);
 
   // Check global showTutorials setting
   const tutorialsEnabled = useShowTutorials();
@@ -159,10 +164,7 @@ export const hasFeatureHintBeenShown = (
   featureId: string,
   userId?: string,
 ): boolean => {
-  const storageKey = userId
-    ? `${FEATURE_HINT_PREFIX}${userId}_${featureId}`
-    : `${FEATURE_HINT_PREFIX}${featureId}`;
-  return storage.getBoolean(storageKey) ?? false;
+  return storage.getBoolean(buildStorageKey(userId, featureId)) ?? false;
 };
 
 /**
@@ -172,20 +174,14 @@ export const markFeatureHintAsShown = (
   featureId: string,
   userId?: string,
 ): void => {
-  const storageKey = userId
-    ? `${FEATURE_HINT_PREFIX}${userId}_${featureId}`
-    : `${FEATURE_HINT_PREFIX}${featureId}`;
-  storage.set(storageKey, true);
+  storage.set(buildStorageKey(userId, featureId), true);
 };
 
 /**
  * Reset a feature hint (will show again next time)
  */
 export const resetFeatureHint = (featureId: string, userId?: string): void => {
-  const storageKey = userId
-    ? `${FEATURE_HINT_PREFIX}${userId}_${featureId}`
-    : `${FEATURE_HINT_PREFIX}${featureId}`;
-  storage.remove(storageKey);
+  storage.remove(buildStorageKey(userId, featureId));
 };
 
 /**

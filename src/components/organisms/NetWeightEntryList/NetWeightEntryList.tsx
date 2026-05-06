@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
@@ -33,8 +33,6 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
   onEntriesChanged,
   disabled = false,
 }) => {
-  const { theme } = useUnistyles();
-
   const handleAddEntry = () => {
     onEntriesChanged([...entries, createDefaultEntry()]);
   };
@@ -111,7 +109,7 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
               pressed && styles.pressed,
             ]}
           >
-            <Icon name="trash-outline" size={20} color={theme.colors.error} />
+            <Icon name="trash-outline" size={20} tone="error" />
           </Pressable>
         </View>
       ))}

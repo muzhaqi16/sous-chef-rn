@@ -128,11 +128,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
             </Text>
           ) : null}
           <Animated.View style={animatedChevronStyle}>
-            <Icon
-              name="chevron-down"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="chevron-down" size={20} tone="textSecondary" />
           </Animated.View>
         </View>
       </Pressable>
@@ -190,11 +186,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
                         {isLowConfidence ? ' ~' : null}
                       </Text>
                       {selected ? (
-                        <Icon
-                          name="checkmark"
-                          size={16}
-                          color={theme.colors.primary}
-                        />
+                        <Icon name="checkmark" size={16} tone="primary" />
                       ) : null}
                     </Pressable>
                   );

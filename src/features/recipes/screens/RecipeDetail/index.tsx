@@ -17,7 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import TurboImage from 'react-native-turbo-image';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { Icon } from '#utils/iconUtils';
 import { BackButton } from '#components/atoms/BackButton';
 
 import {
@@ -83,7 +83,7 @@ const SelectableIngredientItem: React.FC<
       ]}
       onPress={() => toggleIngredient(item.id)}
     >
-      <Ionicons
+      <Icon
         name={isSelected ? 'checkbox' : 'square-outline'}
         size={24}
         color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
@@ -277,11 +277,7 @@ const RecipeDetailScreen: React.FC = () => {
           </Text>
         </View>
       )}
-      <Ionicons
-        name="chevron-forward"
-        size={20}
-        color={theme.colors.textSecondary}
-      />
+      <Icon name="chevron-forward" size={20} tone="textSecondary" />
     </Pressable>
   );
 
@@ -372,11 +368,7 @@ const RecipeDetailScreen: React.FC = () => {
                   ]}
                   accessibilityLabel="Add to meal plan"
                 >
-                  <Ionicons
-                    name="calendar-outline"
-                    size={22}
-                    color={theme.colors.primary}
-                  />
+                  <Icon name="calendar-outline" size={22} tone="primary" />
                 </Pressable>
               )}
               {/* Edit button - shown when user is recipe creator */}
@@ -388,11 +380,7 @@ const RecipeDetailScreen: React.FC = () => {
                     pressed && { opacity: 0.7 },
                   ]}
                 >
-                  <Ionicons
-                    name="create-outline"
-                    size={22}
-                    color={theme.colors.primary}
-                  />
+                  <Icon name="create-outline" size={22} tone="primary" />
                 </Pressable>
               )}
               {/* Folder button - shown when not saved or saved to non-Favorites folder */}
@@ -405,10 +393,10 @@ const RecipeDetailScreen: React.FC = () => {
                   ]}
                   disabled={saving || updatingFolderTags}
                 >
-                  <Ionicons
+                  <Icon
                     name={isInOtherFolder ? 'folder' : 'folder-outline'}
                     size={22}
-                    color={theme.colors.primary}
+                    tone="primary"
                   />
                 </Pressable>
               )}
@@ -428,10 +416,10 @@ const RecipeDetailScreen: React.FC = () => {
                       color={theme.colors.favorite}
                     />
                   ) : (
-                    <Ionicons
+                    <Icon
                       name={isInFavorites ? 'heart' : 'heart-outline'}
                       size={24}
-                      color={theme.colors.favorite}
+                      tone="favorite"
                     />
                   )}
                 </Pressable>
@@ -454,11 +442,7 @@ const RecipeDetailScreen: React.FC = () => {
                   ]}
                   accessibilityLabel="Add to meal plan"
                 >
-                  <Ionicons
-                    name="calendar-outline"
-                    size={22}
-                    color={theme.colors.primary}
-                  />
+                  <Icon name="calendar-outline" size={22} tone="primary" />
                 </Pressable>
               )}
               {!!isOwner && (
@@ -469,11 +453,7 @@ const RecipeDetailScreen: React.FC = () => {
                     pressed && { opacity: 0.7 },
                   ]}
                 >
-                  <Ionicons
-                    name="create-outline"
-                    size={22}
-                    color={theme.colors.primary}
-                  />
+                  <Icon name="create-outline" size={22} tone="primary" />
                 </Pressable>
               )}
               {!!showFolderIcon && (
@@ -485,10 +465,10 @@ const RecipeDetailScreen: React.FC = () => {
                   ]}
                   disabled={saving || updatingFolderTags}
                 >
-                  <Ionicons
+                  <Icon
                     name={isInOtherFolder ? 'folder' : 'folder-outline'}
                     size={22}
-                    color={theme.colors.primary}
+                    tone="primary"
                   />
                 </Pressable>
               )}
@@ -507,10 +487,10 @@ const RecipeDetailScreen: React.FC = () => {
                       color={theme.colors.favorite}
                     />
                   ) : (
-                    <Ionicons
+                    <Icon
                       name={isInFavorites ? 'heart' : 'heart-outline'}
                       size={24}
-                      color={theme.colors.favorite}
+                      tone="favorite"
                     />
                   )}
                 </Pressable>
@@ -557,7 +537,7 @@ const RecipeDetailScreen: React.FC = () => {
                   />
                 ) : (
                   <>
-                    <Ionicons
+                    <Icon
                       name={
                         cookedCount > 0
                           ? 'checkmark-circle'
@@ -602,7 +582,7 @@ const RecipeDetailScreen: React.FC = () => {
                       hitSlop={4}
                       disabled={updatingFolderTags}
                     >
-                      <Ionicons
+                      <Icon
                         name={
                           savedRating !== null && star <= savedRating
                             ? 'star'
@@ -624,7 +604,7 @@ const RecipeDetailScreen: React.FC = () => {
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Folder</Text>
                 <View style={styles.detailValue}>
-                  <Ionicons
+                  <Icon
                     name="folder"
                     size={theme.fonts.size.sm}
                     color={
@@ -841,11 +821,7 @@ const RecipeDetailScreen: React.FC = () => {
                   <Text style={styles.viewOriginalText}>
                     View Original Recipe
                   </Text>
-                  <Ionicons
-                    name="open-outline"
-                    size={14}
-                    color={theme.colors.primary}
-                  />
+                  <Icon name="open-outline" size={14} tone="primary" />
                 </View>
               )}
             </Pressable>
@@ -869,7 +845,7 @@ const RecipeDetailScreen: React.FC = () => {
             ]}
             onPress={handleAddAllIngredients}
           >
-            <Ionicons name="list" size={24} color={theme.colors.primary} />
+            <Icon name="list" size={24} tone="primary" />
             <View style={styles.optionTextContainer}>
               <Text style={styles.optionTitle}>Add All Ingredients</Text>
               <Text style={styles.optionDescription}>
@@ -884,11 +860,7 @@ const RecipeDetailScreen: React.FC = () => {
             ]}
             onPress={openIngredientSelector}
           >
-            <Ionicons
-              name="checkmark-circle-outline"
-              size={24}
-              color={theme.colors.primary}
-            />
+            <Icon name="checkmark-circle-outline" size={24} tone="primary" />
             <View style={styles.optionTextContainer}>
               <Text style={styles.optionTitle}>Select Ingredients</Text>
               <Text style={styles.optionDescription}>
@@ -992,11 +964,7 @@ const RecipeDetailScreen: React.FC = () => {
                     onPress={() => setNewListName('')}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons
-                      name="close-circle"
-                      size={20}
-                      color={theme.colors.textSecondary}
-                    />
+                    <Icon name="close-circle" size={20} tone="textSecondary" />
                   </Pressable>
                 )}
               </View>

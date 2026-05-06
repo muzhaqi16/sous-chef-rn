@@ -283,10 +283,10 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               <Icon
                 name="remove-outline"
                 size={24}
-                color={
+                tone={
                   (parseFractionInput(quantityInput) ?? 0) <= 0
-                    ? theme.colors.textTertiary
-                    : theme.colors.textPrimary
+                    ? 'textTertiary'
+                    : 'textPrimary'
                 }
               />
             </Pressable>
@@ -336,7 +336,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               ]}
               onPress={handleIncrement}
             >
-              <Icon name="add" size={24} color={theme.colors.white} />
+              <Icon name="add" size={24} tone="white" />
             </Pressable>
           </View>
         </View>

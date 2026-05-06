@@ -78,11 +78,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
     return (
       <View style={[styles.container, style]}>
         <View style={[styles.placeholder, { height: imageHeight }]}>
-          <Icon
-            name="image-outline"
-            size={48}
-            color={theme.colors.textTertiary}
-          />
+          <Icon name="image-outline" size={48} tone="textTertiary" />
         </View>
       </View>
     );
@@ -103,11 +99,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
 
         {imageError || !currentImageUrl ? (
           <View style={styles.errorContainer}>
-            <Icon
-              name="image-outline"
-              size={48}
-              color={theme.colors.textTertiary}
-            />
+            <Icon name="image-outline" size={48} tone="textTertiary" />
           </View>
         ) : (
           <CachedImage

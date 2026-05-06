@@ -406,7 +406,7 @@ export const PantryContent = React.forwardRef<
                                 <Icon
                                   name="settings-outline"
                                   size={18}
-                                  color={theme.colors.textTertiary}
+                                  tone="textTertiary"
                                 />
                               </Pressable>
                             </View>

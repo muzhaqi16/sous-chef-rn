@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
 import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
@@ -64,7 +64,6 @@ async function loadAuthInfoAsync(
 }
 
 export function LoginScreen(): React.JSX.Element {
-  const { theme } = useUnistyles();
   const { navigateToForgotPassword, navigateToSignUp } = useAuthNavigation();
   const isLoggingIn = useAppStore(state => state.authIsLoading);
   const {
@@ -251,11 +250,7 @@ export function LoginScreen(): React.JSX.Element {
             <Icon
               name={getBiometricIcon()}
               size={24}
-              color={
-                isBiometricLoading
-                  ? theme.colors.textTertiary
-                  : theme.colors.primary
-              }
+              tone={isBiometricLoading ? 'textTertiary' : 'primary'}
             />
             <Text
               size="md"

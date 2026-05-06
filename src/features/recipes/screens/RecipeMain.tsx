@@ -294,11 +294,7 @@ const RecipeMainInner: React.FC = () => {
           accessibilityRole="button"
           accessibilityLabel="Saved recipes"
         >
-          <Icon
-            name="bookmark-outline"
-            size={24}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="bookmark-outline" size={24} tone="textSecondary" />
         </Pressable>
       </View>
       <View
@@ -326,11 +322,7 @@ const RecipeMainInner: React.FC = () => {
           accessibilityRole="button"
           accessibilityLabel="My recipes"
         >
-          <Icon
-            name="create-outline"
-            size={24}
-            color={theme.colors.textSecondary}
-          />
+          <Icon name="create-outline" size={24} tone="textSecondary" />
         </Pressable>
       </View>
       <View
@@ -359,11 +351,7 @@ const RecipeMainInner: React.FC = () => {
           <Icon
             name="options-outline"
             size={24}
-            color={
-              screen.activeFilterCount > 0
-                ? theme.colors.primary
-                : theme.colors.textSecondary
-            }
+            tone={screen.activeFilterCount > 0 ? 'primary' : 'textSecondary'}
           />
         </Pressable>
       </View>
@@ -398,11 +386,7 @@ const RecipeMainInner: React.FC = () => {
           <Icon
             name="refresh"
             size={20}
-            color={
-              screen.discovery.loading
-                ? theme.colors.textSecondary
-                : theme.colors.primary
-            }
+            tone={screen.discovery.loading ? 'textSecondary' : 'primary'}
           />
         </Pressable>
       </View>
@@ -426,7 +410,7 @@ const RecipeMainInner: React.FC = () => {
           accessibilityRole="button"
           accessibilityLabel="Clear search results"
         >
-          <Icon name="close" size={20} color={theme.colors.textSecondary} />
+          <Icon name="close" size={20} tone="textSecondary" />
         </Pressable>
       </View>
     );

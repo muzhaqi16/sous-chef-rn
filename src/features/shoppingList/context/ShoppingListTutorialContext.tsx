@@ -94,11 +94,20 @@ export const TUTORIAL_STEP_CONFIG: Record<
 };
 
 // ── Context ──
+//
+// Split into State + Actions contexts (TabBarActionsContext / OnboardingContext
+// pattern). Components that only read state (e.g. SortableItem checking
+// currentStep) won't re-render when an action callback is recreated, and
+// components that only call actions (e.g. ShoppingListModalsContext) won't
+// re-render when state changes.
 
-interface ShoppingListTutorialContextValue {
+interface ShoppingListTutorialStateContextValue {
   currentStep: ShoppingListTutorialStep;
   isActive: boolean;
+  rects: Record<string, TargetRect | null>;
+}
 
+interface ShoppingListTutorialActionsContextValue {
   // Event dispatchers (called by child components when the user completes an action)
   notifyAddButtonPressed: () => void;
   notifyItemAdded: () => void;
@@ -110,7 +119,6 @@ interface ShoppingListTutorialContextValue {
 
   // Element position registration for SpotlightCoachMark
   registerRect: (key: TutorialRectKey, rect: TargetRect | null) => void;
-  rects: Record<string, TargetRect | null>;
 
   // Skip current spotlight step and advance to the next one
   skipCurrentStep: () => void;
@@ -118,15 +126,43 @@ interface ShoppingListTutorialContextValue {
   skipAll: () => void;
 }
 
-const ShoppingListTutorialContext =
-  createContext<ShoppingListTutorialContextValue | null>(null);
+// Combined type for the backwards-compatible hook.
+type ShoppingListTutorialContextValue = ShoppingListTutorialStateContextValue &
+  ShoppingListTutorialActionsContextValue;
+
+const ShoppingListTutorialStateContext =
+  createContext<ShoppingListTutorialStateContextValue | null>(null);
+const ShoppingListTutorialActionsContext =
+  createContext<ShoppingListTutorialActionsContextValue | null>(null);
 
 /**
- * Hook to access the interactive shopping list tutorial.
+ * Hook to access tutorial state (currentStep, isActive, rects).
+ * Re-renders when state changes. Prefer this over useShoppingListTutorial
+ * for components that only read state.
+ */
+export function useShoppingListTutorialState() {
+  return useContext(ShoppingListTutorialStateContext);
+}
+
+/**
+ * Hook to access tutorial actions (notify*, registerRect, skip*).
+ * Stable across state changes — components that only fire events
+ * won't re-render on state transitions.
+ */
+export function useShoppingListTutorialActions() {
+  return useContext(ShoppingListTutorialActionsContext);
+}
+
+/**
+ * Combined hook — backwards compatible. Prefer useShoppingListTutorialState
+ * or useShoppingListTutorialActions for better performance.
  * Returns null when used outside the provider (safe for components shared across screens).
  */
-export function useShoppingListTutorial() {
-  return useContext(ShoppingListTutorialContext);
+export function useShoppingListTutorial(): ShoppingListTutorialContextValue | null {
+  const state = useContext(ShoppingListTutorialStateContext);
+  const actions = useContext(ShoppingListTutorialActionsContext);
+  if (!state || !actions) return null;
+  return { ...state, ...actions };
 }
 
 // ── Provider ──
@@ -330,9 +366,13 @@ export function ShoppingListTutorialProvider({
     currentStep !== ShoppingListTutorialStep.IDLE &&
     currentStep !== ShoppingListTutorialStep.COMPLETED;
 
-  const value: ShoppingListTutorialContextValue = {
+  const stateValue: ShoppingListTutorialStateContextValue = {
     currentStep,
     isActive,
+    rects,
+  };
+
+  const actionsValue: ShoppingListTutorialActionsContextValue = {
     notifyAddButtonPressed,
     notifyItemAdded,
     notifySheetClosed,
@@ -341,14 +381,15 @@ export function ShoppingListTutorialProvider({
     notifyPurchasedTabTapped,
     notifyMoveToPantryTapped,
     registerRect,
-    rects,
     skipCurrentStep,
     skipAll,
   };
 
   return (
-    <ShoppingListTutorialContext.Provider value={value}>
-      {children}
-    </ShoppingListTutorialContext.Provider>
+    <ShoppingListTutorialActionsContext.Provider value={actionsValue}>
+      <ShoppingListTutorialStateContext.Provider value={stateValue}>
+        {children}
+      </ShoppingListTutorialStateContext.Provider>
+    </ShoppingListTutorialActionsContext.Provider>
   );
 }

@@ -5,6 +5,7 @@ import { Counter } from './Counter';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Pressable } from 'react-native-gesture-handler';
+import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
 
 interface ItemData {
@@ -36,6 +37,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
   return (
     <Pressable
       onPress={onPress}
+      android_ripple={RIPPLE.SUBTLE}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <CachedImage

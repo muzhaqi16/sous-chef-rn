@@ -28,6 +28,11 @@ import { ProfileSkeleton } from '#components/base/Skeleton/ProfileSkeleton';
 import { useCanAccessDevTools } from '#/store/useAppStore';
 import { Text } from '#components/atoms/Text';
 
+const HEADER_TIMING = {
+  duration: 300,
+  easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+};
+
 export const ProfileScreen = () => {
   useScreenTransition('ProfileScreen');
   const canAccessDevTools = useCanAccessDevTools();
@@ -38,19 +43,15 @@ export const ProfileScreen = () => {
   const { theme } = useUnistyles();
   const actionTrayRef = useRef<ActionTrayRef>(null);
   const headerProgress = useSharedValue(0);
-  const headerTiming = {
-    duration: 300,
-    easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-  };
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: event => {
       const y = event.contentOffset.y;
       // Hysteresis: wide gap (10–40px) prevents oscillation at boundary
       // < 0.5 / > 0.5 checks work during mid-animation (vs === 0/1 which miss)
       if (y > 40 && headerProgress.get() < 0.5) {
-        headerProgress.set(withTiming(1, headerTiming));
+        headerProgress.set(withTiming(1, HEADER_TIMING));
       } else if (y <= 10 && headerProgress.get() > 0.5) {
-        headerProgress.set(withTiming(0, headerTiming));
+        headerProgress.set(withTiming(0, HEADER_TIMING));
       }
     },
   });
@@ -201,7 +202,7 @@ export const ProfileScreen = () => {
           style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}
           onPress={handleDeleteAccount}
         >
-          <Icon name="trash-outline" size={20} color={theme.colors.error} />
+          <Icon name="trash-outline" size={20} tone="error" />
           <Text
             size="md"
             weight="semibold"

@@ -120,15 +120,9 @@ const PurchaseHistoryHeader: React.FC<{ totalCount: number }> = ({
 );
 
 const PurchaseHistoryEmpty: React.FC = () => {
-  const { theme } = useUnistyles();
-
   return (
     <View style={styles.emptyContainer}>
-      <Icon
-        name="receipt-outline"
-        size={64}
-        color={theme.colors.iconDisabled}
-      />
+      <Icon name="receipt-outline" size={64} tone="iconDisabled" />
       <Text size="lg" weight="semibold" style={styles.emptyText}>
         No purchase history
       </Text>
@@ -150,8 +144,8 @@ export const PurchaseHistoryScreen: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
   const { goBack } = useAppNavigation();
-  const { theme } = useUnistyles();
   const { itemName, purchases } = route.params;
+  const { theme } = useUnistyles();
 
   return (
     <View style={styles.container}>
