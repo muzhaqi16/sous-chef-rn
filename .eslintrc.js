@@ -71,8 +71,15 @@ module.exports = {
     ],
 
     'react-hooks/rules-of-hooks': 'error',
-    // Warn level — React Compiler handles memoization deps, but this catches stale closures in useEffect
-    'react-hooks/exhaustive-deps': 'warn',
+    // Disabled — React Compiler memoizes render-scope functions automatically,
+    // so they're stable across renders when their closure deps don't change.
+    // The exhaustive-deps rule is a static analyzer that doesn't know about
+    // the Compiler and produces false positives ("function changes every render")
+    // for Compiler-stable closures. Per React's official guidance, when using
+    // `babel-plugin-react-compiler`, only `rules-of-hooks` is required — the
+    // others "don't apply" because the Compiler handles them.
+    // https://react.dev/learn/react-compiler#installing-eslint-plugin-react-hooks
+    'react-hooks/exhaustive-deps': 'off',
 
     // Warn on unused variables (underscore prefix indicates intentionally unused)
     '@typescript-eslint/no-unused-vars': ['warn', { ignoreRestSiblings: true }],

@@ -6,10 +6,14 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { ToastProvider } from '../Toast';
 import { useToast } from '../../../hooks/useToast';
 
-// Mock the toastService to prevent initialization side effects
+// Mock the toastService bridge — the Toast tests don't exercise the
+// imperative API, only the Provider's internal state machine.
 jest.mock('#/services/toastService', () => ({
+  _setToastDispatch: jest.fn(),
   toastService: {
-    init: jest.fn(),
+    success: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
   },
 }));
 

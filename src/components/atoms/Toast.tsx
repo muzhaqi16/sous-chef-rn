@@ -1,4 +1,4 @@
-import React, { useState, useRef, ReactNode, useEffect } from 'react';
+import React, { useState, ReactNode, useEffect } from 'react';
 
 import Animated, {
   useSharedValue,
@@ -16,7 +16,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { ToastContext } from '../../hooks/useToast';
-import { toastService } from '#/services/toastService';
+import { _setToastDispatch } from '#/services/toastService';
 import { SPRING, TIMING, TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 
@@ -51,28 +51,17 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   const insets = useSafeAreaInsets();
   const { theme } = useUnistyles();
 
-  // Single source of truth. The setState updater pattern lets two synchronous
-  // showToast() calls coordinate (the second updater sees the first's result),
-  // which is what the old isShowing/currentType/queue refs were faking.
+  // Updater pattern lets two synchronous showToast() calls coordinate — the
+  // second updater sees the first's result, no need for refs.
   const [{ current, queue }, setQueue] = useState<ToastQueueState>({
     current: null,
     queue: [],
   });
 
-  // toastService.init registers a stable bridge once; this ref keeps it
-  // pointing at the latest showToast closure. The dismiss ref serves the
-  // setTimeout below the same way — `() => dismissRef.current()` is a stable
-  // setTimeout callback that always dispatches the latest animateDismiss,
-  // which keeps the auto-dismiss effect's deps to just `[current]`.
-  const showToastRef = useRef<ToastFn | null>(null);
-  const dismissRef = useRef<() => void>(() => {});
-
   const translateY = useSharedValue(TOAST.OFFSCREEN_Y);
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(0);
 
-  // Bounce off state — useEffect on `current` does the rest. No ref reads here
-  // is what keeps the gesture's onEnd closure clean of `react-hooks/refs`.
   const onDismissComplete = () => {
     setQueue(prev => ({ ...prev, current: null }));
   };
@@ -93,12 +82,10 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
 
   const showToast: ToastFn = opts => {
     setQueue(prev => {
-      if (!prev.current) {
-        return { ...prev, current: opts };
-      }
+      if (!prev.current) return { ...prev, current: opts };
       // Replace in-place when nothing has an action and the type matches —
-      // swap the message without an animation cycle, drop redundant queued
-      // entries of the same kind.
+      // coalesces rapid same-type calls into one toast that ends N seconds
+      // after the *last* call (instead of a sequential parade).
       const canReplace =
         prev.current.action == null &&
         opts.action == null &&
@@ -113,48 +100,29 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
     });
   };
 
-  // Keep ref-callbacks pointing to the latest closures. Writing in an effect
-  // (not during render) is what allows the setTimeout in the auto-dismiss
-  // effect to close over a stable reference and depend only on `[current]`.
+  // Imperative bridge for non-React-tree callers (toastService).
   useEffect(() => {
-    showToastRef.current = showToast;
-    dismissRef.current = animateDismiss;
+    _setToastDispatch(showToast);
   });
 
-  // One-time wiring of the imperative toastService → showToast.
-  useEffect(() => {
-    toastService.init((message, type, options) => {
-      showToastRef.current?.({ message, type: type ?? 'default', ...options });
-    });
-  }, []);
-
-  // Animate in / re-position. Re-runs on rotation (insets change) without
-  // touching the auto-dismiss timer. Re-running on in-place replace re-targets
-  // SharedValues at their current value — Reanimated treats that as a no-op,
-  // so there's no visual flicker.
+  // Animate in + arm auto-dismiss whenever a toast becomes current. Cleanup
+  // cancels the timer on replace, gesture-dismiss, unmount. Re-running on
+  // in-place replace re-targets SharedValues at their current value (no-op
+  // visually) and resets the timer — the spam-coalescing behavior.
   useEffect(() => {
     if (!current) return;
     translateY.set(withSpring(insets.top + 16, SPRING.TOAST_ENTER));
     translateX.set(0);
     opacity.set(withTiming(1, { duration: TIMING.FAST }));
-  }, [current, insets.top, opacity, translateX, translateY]);
-
-  // Auto-dismiss timer. Cleanup cancels on replace, gesture-dismiss, unmount.
-  // Replacing a same-type toast (no action) creates a new `current` reference,
-  // so this effect re-runs and resets the timer — that's the spam-coalescing
-  // behavior: rapid same-type calls show one toast that ends N seconds after
-  // the *last* call.
-  useEffect(() => {
-    if (!current) return;
     const ms =
       current.duration === TOAST.AUTO_DISMISS_LONG
         ? TOAST.AUTO_DISMISS_LONG
         : TOAST.AUTO_DISMISS_SHORT;
-    const id = setTimeout(() => dismissRef.current(), ms);
+    const id = setTimeout(animateDismiss, ms);
     return () => clearTimeout(id);
   }, [current]);
 
-  // Once the active toast is gone, give it a beat and pop the next one.
+  // After dismissal, give it a beat before popping the next queued toast.
   useEffect(() => {
     if (current || queue.length === 0) return;
     const id = setTimeout(() => {
@@ -166,11 +134,6 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
     }, TOAST.QUEUE_DELAY);
     return () => clearTimeout(id);
   }, [current, queue.length]);
-
-  // Swipe-to-dismiss
-  const dismissFromGesture = () => {
-    animateDismiss();
-  };
 
   const panGesture = Gesture.Pan()
     .minDistance(10)
@@ -185,7 +148,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
         event.translationY < -TOAST.SWIPE_THRESHOLD ||
         Math.abs(event.translationX) > TOAST.SWIPE_THRESHOLD;
       if (shouldDismiss) {
-        scheduleOnRN(dismissFromGesture);
+        scheduleOnRN(animateDismiss);
       } else {
         translateY.set(withSpring(insets.top + 16, SPRING.TOAST_ENTER));
         translateX.set(withSpring(0, SPRING.TOAST_ENTER));
