@@ -7,7 +7,9 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
+  Linking,
 } from 'react-native';
+import { getWebAppUrl } from '#utils/environment';
 import { Pressable } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
@@ -396,9 +398,12 @@ export const ProfilePictureUploadScreen = () => {
 
           <View style={styles.formFooterLinks}>
             <Link
-              onPress={() => {
-                // handle onPress
-              }}
+              variant="subtle"
+              onPress={() =>
+                Linking.openURL(getWebAppUrl('/terms-of-service')).catch(err =>
+                  console.error('Failed to open URL:', err),
+                )
+              }
               style={styles.formFooterLinkText}
             >
               Terms of Service
@@ -416,9 +421,12 @@ export const ProfilePictureUploadScreen = () => {
             </Text>
 
             <Link
-              onPress={() => {
-                // handle onPress
-              }}
+              variant="subtle"
+              onPress={() =>
+                Linking.openURL(getWebAppUrl('/privacy-policy')).catch(err =>
+                  console.error('Failed to open URL:', err),
+                )
+              }
               style={styles.formFooterLinkText}
             >
               Privacy Policy
