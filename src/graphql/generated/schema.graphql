@@ -99,7 +99,7 @@ register, password reset, etc.) where there is no token yet.
 
 Why this exists: schema startup performs a default-deny audit and refuses
 to boot if any root-level field is missing one of @auth, @optionalAuth,
-@requireRole, @requireAccess, @requireSystemRole, @ownerOnly, or @public.
+@requireMembershipRole, @requireAccess, @requireSystemRole, @ownerOnly, or @public.
 Marking a field @public is the explicit way to say "yes, this is meant to
 be unauthenticated" — so a forgotten directive on a new mutation is a
 loud failure instead of a silent security hole.
@@ -144,17 +144,19 @@ directive @requireAccess(
 ) on FIELD_DEFINITION
 
 """
-Require specific home membership role
-Returns FORBIDDEN error if user doesn't have required role
+Require specific home membership role.
+Returns FORBIDDEN error if user doesn't have required role.
 
-Note: Uses existing MembershipRole enum (OWNER, ADMIN, MEMBER, GUEST)
+Note: Uses existing MembershipRole enum (OWNER, ADMIN, MEMBER, GUEST).
+Distinct from @requireSystemRole, which gates on the global UserRole
+enum, and from the requireUserRole resolver helper.
 
 Example:
 type Mutation {
-  deleteHome(id: ID!): Boolean @requireRole(role: OWNER)
+  deleteHome(id: ID!): Boolean @requireMembershipRole(role: OWNER)
 }
 """
-directive @requireRole(
+directive @requireMembershipRole(
   """Required membership role in the home"""
   role: MembershipRole!
 ) on FIELD_DEFINITION
@@ -4260,6 +4262,14 @@ input MultiUnitMeasurementInput {
   usUnit: String
 }
 
+"""
+Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+on the root Mutation type prevents any mutation response from being
+served from a CDN if HTTP batching is ever re-enabled (currently off,
+see src/index.ts) or if a caller proxies responses. Per-field overrides
+win, so payload types that genuinely benefit from caching (e.g. read-
+through reservation tokens) can opt back in.
+"""
 type Mutation {
   """Accept a home invitation using its token."""
   acceptHomeInvite(token: String!): MembershipPayload!
@@ -5295,8 +5305,10 @@ type PageInfo {
 }
 
 """
-Pantry/storage location for a home
-Cache: 5 minutes - updated when items added/removed
+Pantry/storage location for a home.
+Not cached at the response level: child PantryItem mutations happen frequently and
+TTL-based caching can't be invalidated mid-window. Server-side coherence is handled
+via DataLoader + Redis invalidation in resolvers (invalidatePantryItemCache).
 """
 type Pantry {
   createdAt: DateTime!
