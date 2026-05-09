@@ -37,6 +37,7 @@ import {
 enableMapSet();
 import { createAuthSlice, AuthState } from './slices/authSlice';
 import {
+  applyThemePreferenceToRuntime,
   createPreferencesSlice,
   PreferencesState,
 } from './slices/preferencesSlice';
@@ -175,6 +176,14 @@ export const useStore = create<RootState>()(
             if (error) {
               console.log('An error happened during hydration', error);
             } else {
+              // Sync the rehydrated theme preference to UnistylesRuntime
+              // BEFORE flipping `isHydrated`. This makes the persist layer
+              // the single source of truth for cold-boot theme application,
+              // so React hooks never need a side-effect to "catch up".
+              if (state?.theme) {
+                applyThemePreferenceToRuntime(state.theme);
+              }
+
               // Mark store as hydrated
               state?.setHydrated(true);
 

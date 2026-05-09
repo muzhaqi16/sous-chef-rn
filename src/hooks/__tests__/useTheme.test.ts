@@ -47,16 +47,6 @@ jest.mock('#/store/slices/preferencesSlice', () => ({
   },
 }));
 
-// `useTheme` reads the rehydrated preference via `storeApi.getState()` for the
-// one-shot post-hydration sync. Mock the store module directly so the hook
-// doesn't transitively initialize the real Zustand instance (which would need
-// every slice creator to be present).
-jest.mock('#/store', () => ({
-  storeApi: {
-    getState: () => ({ theme: mockUserThemePreference }),
-  },
-}));
-
 // Break circular dependency
 jest.mock('../../apollo/links/tokenScheduler');
 

@@ -2,6 +2,29 @@ import { StateCreator } from 'zustand';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { RootState } from '../index';
 
+/**
+ * Apply a `ThemePreference` to `UnistylesRuntime`. Shared between the in-app
+ * setter (`setTheme` action) and the post-rehydration sync run from the
+ * Zustand persist `onRehydrateStorage` callback. Single source of truth for
+ * preference → runtime translation, called from both paths so they can't
+ * diverge.
+ */
+export function applyThemePreferenceToRuntime(theme: ThemePreference): void {
+  try {
+    if (theme === ThemePreference.SYSTEM) {
+      UnistylesRuntime.setAdaptiveThemes(true);
+    } else {
+      UnistylesRuntime.setAdaptiveThemes(false);
+      const target = theme === ThemePreference.DARK ? 'dark' : 'light';
+      if (UnistylesRuntime.themeName !== target) {
+        UnistylesRuntime.setTheme(target);
+      }
+    }
+  } catch (e) {
+    if (__DEV__) console.warn('[applyThemePreferenceToRuntime] error:', e);
+  }
+}
+
 // Pantry sort preferences
 export type PantrySortOption = 'name' | 'expiry' | 'quantity' | 'recent';
 export type PantrySortDirection = 'asc' | 'desc';
@@ -105,19 +128,7 @@ export const createPreferencesSlice: StateCreator<
   setTheme: theme => {
     // Apply native theme BEFORE Zustand notifies subscribers, so all components
     // render with correct StyleSheet colors on the first pass.
-    try {
-      if (theme === ThemePreference.SYSTEM) {
-        UnistylesRuntime.setAdaptiveThemes(true);
-      } else {
-        UnistylesRuntime.setAdaptiveThemes(false);
-        UnistylesRuntime.setTheme(
-          theme === ThemePreference.DARK ? 'dark' : 'light',
-        );
-      }
-    } catch (e) {
-      // Defensive — useTheme's useEffect will re-sync if this fails
-      if (__DEV__) console.warn('[setTheme] runtime error:', e);
-    }
+    applyThemePreferenceToRuntime(theme);
     set({ theme });
   },
   setLanguage: language => set({ language }),
